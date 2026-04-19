@@ -1,9 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent`;
 
 const EXTRACTION_PROMPT = `You are analyzing a course syllabus document. Extract the course information AND all deadlines.
@@ -51,26 +48,6 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: 'Gemini API key not configured on server' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
-
-    // Verify the caller is authenticated
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      );
-    }
-
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid or expired authentication token' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 

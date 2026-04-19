@@ -43,13 +43,11 @@ export async function extractFromFile(
     throw new Error('Supabase URL not configured');
   }
 
-  const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
   const response = await fetch(`${supabaseUrl}/functions/v1/parse-syllabus`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`,
-      'apikey': anonKey ?? '',
     },
     body: JSON.stringify({ base64, mimeType }),
   });
