@@ -15,9 +15,8 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "YOUR_APPLE_ID",
-        "ascAppId": "YOUR_ASC_APP_ID",
-        "appleTeamId": "YOUR_TEAM_ID"
+        "appleId": "smallpanta@icloud.com",
+        "appleTeamId": "7T9897GFKH"
       }
     }
   }
