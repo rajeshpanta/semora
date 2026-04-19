@@ -76,6 +76,10 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         initIAP().then(() => {
           checkProStatus().then((isPro) => useAppStore.getState().setIsPro(isPro));
         });
+        // Refetch all data after sign-in so tabs show fresh data immediately
+        if (_event === 'SIGNED_IN') {
+          queryClient.removeQueries();
+        }
       }
     });
 
