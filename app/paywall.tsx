@@ -35,7 +35,7 @@ export default function PaywallScreen() {
   const router = useRouter();
   const setIsPro = useAppStore((s) => s.setIsPro);
 
-  const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>('annual');
+  const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>('monthly');
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [annualPkg, setAnnualPkg] = useState<PurchasesPackage | null>(null);
@@ -50,7 +50,7 @@ export default function PaywallScreen() {
     });
   }, []);
 
-  const annualPrice = annualPkg?.product.priceString ?? '$24.99';
+  const annualPrice = annualPkg?.product.priceString ?? '$19.99';
   const monthlyPrice = monthlyPkg?.product.priceString ?? '$3.99';
 
   const handlePurchase = async () => {
@@ -142,28 +142,7 @@ export default function PaywallScreen() {
           {/* Plan Selection */}
           <Text style={styles.sectionLabel}>CHOOSE YOUR PLAN</Text>
 
-          {/* Annual */}
-          <TouchableOpacity
-            style={[styles.planCard, selectedPlan === 'annual' && styles.planCardSelected]}
-            onPress={() => setSelectedPlan('annual')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.planRadio}>
-              <View style={[styles.radioOuter, selectedPlan === 'annual' && styles.radioOuterSelected]}>
-                {selectedPlan === 'annual' && <View style={styles.radioInner} />}
-              </View>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.planName}>Annual</Text>
-              <Text style={styles.planPrice}>{annualPrice}<Text style={styles.planPeriod}>/year</Text></Text>
-              <Text style={styles.planSub}>{selectedPlan === 'annual' ? '7-day free trial included' : ''}</Text>
-            </View>
-            <View style={styles.saveBadge}>
-              <Text style={styles.saveBadgeText}>SAVE 48%</Text>
-            </View>
-          </TouchableOpacity>
-
-          {/* Monthly */}
+          {/* Monthly — with free trial */}
           <TouchableOpacity
             style={[styles.planCard, selectedPlan === 'monthly' && styles.planCardSelected]}
             onPress={() => setSelectedPlan('monthly')}
@@ -177,7 +156,33 @@ export default function PaywallScreen() {
             <View style={{ flex: 1 }}>
               <Text style={styles.planName}>Monthly</Text>
               <Text style={styles.planPrice}>{monthlyPrice}<Text style={styles.planPeriod}>/month</Text></Text>
-              <Text style={styles.planSub}>Cancel anytime</Text>
+              <Text style={styles.planSub}>7-day free trial included</Text>
+            </View>
+            {selectedPlan === 'monthly' && (
+              <View style={styles.trialBadge}>
+                <Text style={styles.trialBadgeText}>FREE TRIAL</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          {/* Annual — best value */}
+          <TouchableOpacity
+            style={[styles.planCard, selectedPlan === 'annual' && styles.planCardSelected]}
+            onPress={() => setSelectedPlan('annual')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.planRadio}>
+              <View style={[styles.radioOuter, selectedPlan === 'annual' && styles.radioOuterSelected]}>
+                {selectedPlan === 'annual' && <View style={styles.radioInner} />}
+              </View>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.planName}>Annual</Text>
+              <Text style={styles.planPrice}>{annualPrice}<Text style={styles.planPeriod}>/year</Text></Text>
+              <Text style={styles.planSub}>Just $1.67/month</Text>
+            </View>
+            <View style={styles.saveBadge}>
+              <Text style={styles.saveBadgeText}>SAVE 58%</Text>
             </View>
           </TouchableOpacity>
 
@@ -193,16 +198,16 @@ export default function PaywallScreen() {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.ctaText}>
-                  {selectedPlan === 'annual' ? 'Try 7 Days Free' : 'Subscribe Now'}
+                  {selectedPlan === 'monthly' ? 'Try 7 Days Free' : 'Subscribe Now'}
                 </Text>
               )}
             </LinearGradient>
           </TouchableOpacity>
 
           <Text style={styles.finePrint}>
-            {selectedPlan === 'annual'
-              ? `7-day free trial, then ${annualPrice}/year. Cancel anytime.`
-              : `${monthlyPrice} billed monthly. Cancel anytime.`}
+            {selectedPlan === 'monthly'
+              ? `7-day free trial, then ${monthlyPrice}/month. Cancel anytime.`
+              : `${annualPrice} billed annually. Cancel anytime.`}
           </Text>
 
           {/* Footer Links */}
@@ -339,6 +344,15 @@ const styles = StyleSheet.create({
   },
   saveBadgeText: {
     fontSize: 11, fontWeight: '700', color: '#fff',
+    letterSpacing: 0.5,
+  },
+  trialBadge: {
+    backgroundColor: COLORS.brand,
+    paddingHorizontal: 8, paddingVertical: 4,
+    borderRadius: 6,
+  },
+  trialBadgeText: {
+    fontSize: 10, fontWeight: '700', color: '#fff',
     letterSpacing: 0.5,
   },
 

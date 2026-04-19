@@ -78,7 +78,7 @@ export default function MeScreen() {
               <>
                 <Text style={styles.proTitle}>Unlimited scans, smart plans, grade forecasts.</Text>
                 <View style={styles.proPrice}>
-                  <Text style={styles.proPriceAmount}>$24.99</Text>
+                  <Text style={styles.proPriceAmount}>$19.99</Text>
                   <Text style={styles.proPricePeriod}>/year · cancel any time</Text>
                 </View>
                 <View style={styles.proButton}>
