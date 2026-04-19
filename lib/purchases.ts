@@ -12,11 +12,30 @@ let configured = false;
 let listenerRegistered = false;
 
 export async function configure(userId?: string): Promise<void> {
-  if (Platform.OS === 'web' || configured || !API_KEY) return;
+  if (Platform.OS === 'web' || !API_KEY) return;
 
-  Purchases.setLogLevel(LOG_LEVEL.DEBUG);
-  Purchases.configure({ apiKey: API_KEY, appUserID: userId });
-  configured = true;
+  if (!configured) {
+    Purchases.setLogLevel(LOG_LEVEL.DEBUG);
+    Purchases.configure({ apiKey: API_KEY, appUserID: userId });
+    configured = true;
+  } else if (userId) {
+    // Already configured — switch to the new user
+    try {
+      await Purchases.logIn(userId);
+    } catch {
+      // logIn can fail if network is unavailable; Pro status will
+      // be stale until next successful check, but won't crash
+    }
+  }
+}
+
+export async function resetOnSignOut(): Promise<void> {
+  if (Platform.OS === 'web' || !configured) return;
+  try {
+    await Purchases.logOut();
+  } catch {
+    // logOut can fail if already anonymous; safe to ignore
+  }
 }
 
 export async function checkProStatus(): Promise<boolean> {

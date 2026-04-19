@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { QueryClient } from '@tanstack/react-query';
+import { resetOnSignOut } from '@/lib/purchases';
 
 let _queryClient: QueryClient | null = null;
 
@@ -27,6 +28,8 @@ export async function signOut() {
     // Always clear local state, even if the API call fails —
     // a stuck session is worse than a stale sign-out
     useAppStore.getState().setSelectedSemester(null);
+    useAppStore.getState().setIsPro(false);
     _queryClient?.clear();
+    resetOnSignOut().catch(() => {});
   }
 }
