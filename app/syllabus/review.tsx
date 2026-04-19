@@ -257,7 +257,7 @@ export default function SyllabusReviewScreen() {
                   <TextInput
                     style={styles.editSmallInput}
                     value={item.weight != null ? String(item.weight) : ''}
-                    onChangeText={(t) => updateItem(index, 'weight', t ? parseFloat(t) : null)}
+                    onChangeText={(t) => { const n = parseFloat(t); updateItem(index, 'weight', t && !isNaN(n) ? n : null); }}
                     placeholder="%"
                     keyboardType="decimal-pad"
                   />

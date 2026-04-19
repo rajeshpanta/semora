@@ -89,7 +89,7 @@ export interface ParseRun {
   parse_confidence: number | null;
   normalized_text: string | null;
   source_excerpts: Record<string, unknown> | null;
-  final_results: Record<string, unknown> | null;
+  final_results: unknown[] | null;
   items_accepted: number | null;
   items_rejected: number | null;
   raw_text: string | null;
