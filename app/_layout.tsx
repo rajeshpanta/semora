@@ -15,7 +15,7 @@ import { requestNotificationPermission } from '@/lib/notifications';
 import { COLORS } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
 import { setQueryClient } from '@/lib/auth';
-import { configure as configureRevenueCat, checkProStatus, addCustomerInfoListener } from '@/lib/purchases';
+import { initIAP, checkProStatus, endIAP } from '@/lib/purchases';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -57,16 +57,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session) {
         saveTimezoneIfNeeded(session.user.id);
         requestNotificationPermission();
-        configureRevenueCat(session.user.id).then(() => {
+        initIAP().then(() => {
           checkProStatus().then((isPro) => useAppStore.getState().setIsPro(isPro));
-          addCustomerInfoListener((info) => {
-            useAppStore.getState().setIsPro(!!info.entitlements.active['pro']);
-          });
         });
       }
     }).catch(() => {
-      // Network failure or Supabase unreachable — let user through
-      // so they see the sign-in screen instead of stuck splash
       setLoading(false);
     });
 
@@ -78,16 +73,16 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session) {
         saveTimezoneIfNeeded(session.user.id);
         requestNotificationPermission();
-        configureRevenueCat(session.user.id).then(() => {
+        initIAP().then(() => {
           checkProStatus().then((isPro) => useAppStore.getState().setIsPro(isPro));
-          addCustomerInfoListener((info) => {
-            useAppStore.getState().setIsPro(!!info.entitlements.active['pro']);
-          });
         });
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      endIAP();
+    };
   }, []);
 
   return (

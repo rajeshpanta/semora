@@ -1,101 +1,108 @@
 import { Platform } from 'react-native';
-import Purchases, {
-  type CustomerInfo,
-  type PurchasesPackage,
-  LOG_LEVEL,
-} from 'react-native-purchases';
+import {
+  initConnection,
+  endConnection,
+  fetchProducts,
+  requestPurchase,
+  getAvailablePurchases,
+  purchaseUpdatedListener,
+  purchaseErrorListener,
+  finishTransaction,
+  type ProductOrSubscription,
+  type Purchase,
+  type PurchaseError,
+  type EventSubscription,
+} from 'react-native-iap';
 
-const API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
-const ENTITLEMENT_ID = 'pro';
+// Product IDs — must match App Store Connect
+export const PRODUCT_IDS = {
+  monthly: 'syllabussnap_pro_monthly',
+  annual: 'syllabussnap_pro_annual',
+};
 
-let configured = false;
-let listenerRegistered = false;
+const ALL_SKUS = [PRODUCT_IDS.monthly, PRODUCT_IDS.annual];
 
-export async function configure(userId?: string): Promise<void> {
-  if (Platform.OS === 'web' || !API_KEY) return;
+let connected = false;
 
-  if (!configured) {
-    Purchases.setLogLevel(LOG_LEVEL.DEBUG);
-    Purchases.configure({ apiKey: API_KEY, appUserID: userId });
-    configured = true;
-  } else if (userId) {
-    // Already configured — switch to the new user
-    try {
-      await Purchases.logIn(userId);
-    } catch {
-      // logIn can fail if network is unavailable; Pro status will
-      // be stale until next successful check, but won't crash
-    }
-  }
-}
-
-export async function resetOnSignOut(): Promise<void> {
-  if (Platform.OS === 'web' || !configured) return;
+export async function initIAP(): Promise<void> {
+  if (Platform.OS === 'web' || connected) return;
   try {
-    await Purchases.logOut();
+    await initConnection();
+    connected = true;
   } catch {
-    // logOut can fail if already anonymous; safe to ignore
+    // StoreKit not available (simulator without config, etc.)
   }
 }
 
-export async function checkProStatus(): Promise<boolean> {
-  if (Platform.OS === 'web' || !configured) return false;
+export async function endIAP(): Promise<void> {
+  if (!connected) return;
   try {
-    const info = await Purchases.getCustomerInfo();
-    return !!info.entitlements.active[ENTITLEMENT_ID];
-  } catch {
-    return false;
-  }
+    await endConnection();
+  } catch {}
+  connected = false;
 }
 
-export async function getOfferings(): Promise<{
-  annual: PurchasesPackage | null;
-  monthly: PurchasesPackage | null;
+export async function getProducts(): Promise<{
+  monthly: ProductOrSubscription | null;
+  annual: ProductOrSubscription | null;
 } | null> {
-  if (Platform.OS === 'web' || !configured) return null;
+  if (Platform.OS === 'web' || !connected) return null;
   try {
-    const offerings = await Purchases.getOfferings();
-    const current = offerings.current;
-    if (!current) return null;
-
+    const products = await fetchProducts({ skus: ALL_SKUS });
+    if (!products) return null;
     return {
-      annual: current.annual ?? null,
-      monthly: current.monthly ?? null,
+      monthly: products.find((p) => p.id === PRODUCT_IDS.monthly) ?? null,
+      annual: products.find((p) => p.id === PRODUCT_IDS.annual) ?? null,
     };
   } catch {
     return null;
   }
 }
 
-export async function purchasePackage(
-  pkg: PurchasesPackage,
-): Promise<{ success: boolean; customerInfo?: CustomerInfo }> {
+export async function purchaseProduct(productId: string): Promise<boolean> {
+  if (Platform.OS === 'web' || !connected) return false;
   try {
-    const { customerInfo } = await Purchases.purchasePackage(pkg);
-    const isPro = !!customerInfo.entitlements.active[ENTITLEMENT_ID];
-    return { success: isPro, customerInfo };
+    await requestPurchase({
+      type: 'subs',
+      request: {
+        apple: { sku: productId },
+        google: { skus: [productId] },
+      },
+    });
+    return true;
   } catch (e: any) {
-    if (e.userCancelled) {
-      return { success: false };
-    }
+    if (e.code === 'E_USER_CANCELLED') return false;
     throw e;
   }
 }
 
-export async function restorePurchases(): Promise<boolean> {
-  if (Platform.OS === 'web' || !configured) return false;
+export async function checkProStatus(): Promise<boolean> {
+  if (Platform.OS === 'web' || !connected) return false;
   try {
-    const info = await Purchases.restorePurchases();
-    return !!info.entitlements.active[ENTITLEMENT_ID];
+    const purchases = await getAvailablePurchases();
+    return purchases.some(
+      (p) => p.productId === PRODUCT_IDS.monthly || p.productId === PRODUCT_IDS.annual,
+    );
   } catch {
     return false;
   }
 }
 
-export function addCustomerInfoListener(
-  callback: (info: CustomerInfo) => void,
-): void {
-  if (Platform.OS === 'web' || !configured || listenerRegistered) return;
-  listenerRegistered = true;
-  Purchases.addCustomerInfoUpdateListener(callback);
+export async function restorePurchases(): Promise<boolean> {
+  return checkProStatus();
+}
+
+export function setupPurchaseListeners(
+  onPurchase: (purchase: Purchase) => void,
+  onError: (error: PurchaseError) => void,
+): () => void {
+  const updateSub: EventSubscription = purchaseUpdatedListener(async (p: Purchase) => {
+    await finishTransaction({ purchase: p }).catch(() => {});
+    onPurchase(p);
+  });
+  const errorSub: EventSubscription = purchaseErrorListener(onError);
+  return () => {
+    updateSub.remove();
+    errorSub.remove();
+  };
 }

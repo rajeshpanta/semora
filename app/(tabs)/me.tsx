@@ -6,6 +6,7 @@ import { useSession } from '@/app/_layout';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTaskStats } from '@/lib/queries';
 import { signOut } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
 import { COLORS } from '@/lib/constants';
 import { useEffect } from 'react';
 
@@ -31,6 +32,42 @@ export default function MeScreen() {
   const themeMode = useAppStore((s) => s.themeMode);
   const themeModeLabel = themeMode === 'system' ? 'System' : themeMode === 'light' ? 'Light' : 'Dark';
   const router = useRouter();
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and all your data. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Are you sure?',
+              'All your semesters, courses, tasks, and grades will be permanently deleted.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete Forever',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      const { error } = await supabase.rpc('delete_user_account');
+                      if (error) throw error;
+                      await signOut();
+                    } catch (err: any) {
+                      Alert.alert('Error', err.message ?? 'Failed to delete account. Please try again.');
+                    }
+                  },
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
+  };
 
   const handleRate = async () => {
     try {
@@ -130,6 +167,11 @@ export default function MeScreen() {
           <Text style={styles.signOutText}>Sign Out</Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteAccount} activeOpacity={0.7}>
+          <FontAwesome name="trash" size={13} color={COLORS.ink3} />
+          <Text style={styles.deleteText}>Delete Account</Text>
+        </TouchableOpacity>
+
         <Text style={styles.version}>SyllabusSnap 1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
@@ -194,5 +236,7 @@ const styles = StyleSheet.create({
   // Sign out
   signOutBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, paddingVertical: 14, borderRadius: 14, backgroundColor: COLORS.card, borderWidth: 0.5, borderColor: COLORS.line, marginBottom: 16 },
   signOutText: { fontSize: 14, fontWeight: '500', color: COLORS.coral },
+  deleteBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, paddingVertical: 12, marginBottom: 16 },
+  deleteText: { fontSize: 13, color: COLORS.ink3 },
   version: { textAlign: 'center', fontSize: 14, color: COLORS.ink3 },
 });

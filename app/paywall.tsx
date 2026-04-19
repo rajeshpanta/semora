@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  ActivityIndicator, Alert, Platform,
+  ActivityIndicator, Alert, Platform, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import type { PurchasesPackage } from 'react-native-purchases';
+import type { ProductOrSubscription } from 'react-native-iap';
 import { COLORS } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
-import { getOfferings, purchasePackage, restorePurchases } from '@/lib/purchases';
+import { getProducts, purchaseProduct, restorePurchases, PRODUCT_IDS, setupPurchaseListeners } from '@/lib/purchases';
 
 const FEATURES = [
   {
@@ -38,40 +38,51 @@ export default function PaywallScreen() {
   const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>('monthly');
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
-  const [annualPkg, setAnnualPkg] = useState<PurchasesPackage | null>(null);
-  const [monthlyPkg, setMonthlyPkg] = useState<PurchasesPackage | null>(null);
+  const [monthlySub, setMonthlySub] = useState<ProductOrSubscription | null>(null);
+  const [annualSub, setAnnualSub] = useState<ProductOrSubscription | null>(null);
 
   useEffect(() => {
-    getOfferings().then((offerings) => {
-      if (offerings) {
-        setAnnualPkg(offerings.annual);
-        setMonthlyPkg(offerings.monthly);
+    getProducts().then((products) => {
+      if (products) {
+        setMonthlySub(products.monthly);
+        setAnnualSub(products.annual);
       }
     });
+
+    const removeSubs = setupPurchaseListeners(
+      () => {
+        // Purchase succeeded
+        setIsPro(true);
+        setLoading(false);
+        if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        router.back();
+      },
+      () => {
+        // Purchase error (user cancel handled in purchase())
+        setLoading(false);
+      },
+    );
+
+    return removeSubs;
   }, []);
 
-  const annualPrice = annualPkg?.product.priceString ?? '$19.99';
-  const monthlyPrice = monthlyPkg?.product.priceString ?? '$3.99';
+  const annualPrice = annualSub?.displayPrice ?? '$19.99';
+  const monthlyPrice = monthlySub?.displayPrice ?? '$3.99';
 
   const handlePurchase = async () => {
-    const pkg = selectedPlan === 'annual' ? annualPkg : monthlyPkg;
-    if (!pkg) {
-      Alert.alert('Not Available', 'Subscriptions are not configured yet. Please try again later.');
-      return;
-    }
+    const productId = selectedPlan === 'annual' ? PRODUCT_IDS.annual : PRODUCT_IDS.monthly;
 
     setLoading(true);
     try {
-      const { success } = await purchasePackage(pkg);
-      if (success) {
-        setIsPro(true);
-        if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        router.back();
+      const didPurchase = await purchaseProduct(productId);
+      if (!didPurchase) {
+        // User cancelled
+        setLoading(false);
       }
+      // Success handled by purchaseUpdatedListener above
     } catch (err: any) {
-      Alert.alert('Purchase Failed', err.message ?? 'Something went wrong. Please try again.');
-    } finally {
       setLoading(false);
+      Alert.alert('Purchase Failed', err.message ?? 'Something went wrong. Please try again.');
     }
   };
 
@@ -216,11 +227,11 @@ export default function PaywallScreen() {
               <Text style={styles.footerLink}>{restoring ? 'Restoring...' : 'Restore'}</Text>
             </TouchableOpacity>
             <Text style={styles.footerDot}> · </Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL('https://syllabussnap.app/terms')}>
               <Text style={styles.footerLink}>Terms</Text>
             </TouchableOpacity>
             <Text style={styles.footerDot}> · </Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL('https://syllabussnap.app/privacy')}>
               <Text style={styles.footerLink}>Privacy</Text>
             </TouchableOpacity>
           </View>

@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { QueryClient } from '@tanstack/react-query';
-import { resetOnSignOut } from '@/lib/purchases';
+import { endIAP } from '@/lib/purchases';
 
 let _queryClient: QueryClient | null = null;
 
@@ -30,6 +30,6 @@ export async function signOut() {
     useAppStore.getState().setSelectedSemester(null);
     useAppStore.getState().setIsPro(false);
     _queryClient?.clear();
-    resetOnSignOut().catch(() => {});
+    endIAP().catch(() => {});
   }
 }

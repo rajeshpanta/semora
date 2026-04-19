@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.SyllabusSnap"
+      "bundleIdentifier": "com.rajeshpanta.syllabussnap"
     },
     "web": {
       "bundler": "metro",
@@ -47,7 +47,8 @@
           "cameraPermission": "SyllabusSnap needs camera access to scan syllabi."
         }
       ],
-      "expo-document-picker"
+      "expo-document-picker",
+      "react-native-iap"
     ],
     "experiments": {
       "typedRoutes": true
