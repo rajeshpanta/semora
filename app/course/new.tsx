@@ -7,16 +7,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
-import { useCreateCourse, useSemesters } from '@/lib/queries';
+import { useCreateCourse, useSemesters, useCourses } from '@/lib/queries';
 import { useAppStore } from '@/store/appStore';
 import { COURSE_COLORS, COURSE_ICONS, COLORS, type CourseIcon } from '@/lib/constants';
 import { SemesterPicker } from '@/components/SemesterPicker';
+
+const FREE_COURSE_LIMIT = 3;
 
 export default function NewCourseScreen() {
   const router = useRouter();
   const createCourse = useCreateCourse();
   const { data: semesters = [] } = useSemesters();
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
+  const isPro = useAppStore((s) => s.isPro);
+  const { data: existingCourses = [] } = useCourses(selectedSemesterId);
 
   const [semesterId, setSemesterId] = useState(selectedSemesterId || '');
   const [name, setName] = useState('');
@@ -33,6 +37,17 @@ export default function NewCourseScreen() {
     }
     if (!name.trim()) {
       Alert.alert('Required', 'Please enter a course name.');
+      return;
+    }
+    if (!isPro && existingCourses.length >= FREE_COURSE_LIMIT) {
+      Alert.alert(
+        'Course Limit Reached',
+        `Free accounts support up to ${FREE_COURSE_LIMIT} courses. Upgrade to Pro for unlimited courses.`,
+        [
+          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+          { text: 'Cancel', style: 'cancel' },
+        ],
+      );
       return;
     }
 

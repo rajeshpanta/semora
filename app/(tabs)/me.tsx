@@ -111,7 +111,7 @@ export default function MeScreen() {
         {/* Preferences */}
         <Text style={styles.sectionTitle}>Preferences</Text>
         <View style={styles.settingsCard}>
-          <SettingsRow icon="bell" label="Notifications" value="1 day, 3 days" onPress={() => router.push('/settings/notifications')} />
+          <SettingsRow icon="bell" label="Notifications" value={isPro ? '1 day, 3 days' : 'Same day'} onPress={() => router.push('/settings/notifications')} />
           <SettingsRow icon="calendar" label="Calendar sync" onPress={() => router.push('/settings/calendar')} />
           <SettingsRow icon="sun-o" label="Appearance" value={themeModeLabel} onPress={() => router.push('/settings/appearance')} />
           <SettingsRow icon="th-large" label="Widgets" onPress={() => router.push('/settings/widgets')} last />

@@ -154,68 +154,67 @@ export default function CourseDetailScreen() {
         )}
 
         {/* Grade summary */}
-        {isPro ? (
-          <View style={styles.gradeCard}>
-            <GradeCard percentage={percentage} letter={letter} gradedCount={gradedCount} totalCount={tasks.length} weightAttempted={weightAttempted} weightTotal={weightTotal} />
+        <View style={styles.gradeCard}>
+          <GradeCard percentage={percentage} letter={letter} gradedCount={gradedCount} totalCount={tasks.length} weightAttempted={weightAttempted} weightTotal={weightTotal} />
 
-            {/* Grade scale display */}
-            {!editingScale ? (
-              <TouchableOpacity style={styles.scaleToggle} onPress={startEditScale}>
-                <View style={styles.scaleRow}>
-                  {(gradeScale as GradeThreshold[]).map((g) => (
-                    <Text key={g.letter} style={styles.scaleItem}>{g.letter}: {g.min}%+</Text>
-                  ))}
-                </View>
-                <Text style={styles.editScaleLink}>Edit Scale</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.scaleEditor}>
-                <Text style={styles.scaleEditorTitle}>Grade Scale</Text>
-                {scaleRows.map((row, i) => (
-                  <View key={i} style={styles.scaleEditRow}>
-                    <TextInput
-                      style={styles.scaleLetterInput}
-                      value={row.letter}
-                      onChangeText={(t) => { const r = [...scaleRows]; r[i] = { ...r[i], letter: t }; setScaleRows(r); }}
-                      maxLength={2}
-                    />
-                    <TextInput
-                      style={styles.scaleMinInput}
-                      value={String(row.min)}
-                      onChangeText={(t) => { const r = [...scaleRows]; r[i] = { ...r[i], min: parseFloat(t) || 0 }; setScaleRows(r); }}
-                      keyboardType="decimal-pad"
-                      placeholder="Min %"
-                    />
-                    <TouchableOpacity onPress={() => setScaleRows(scaleRows.filter((_, j) => j !== i))}>
-                      <FontAwesome name="times" size={14} color="#ef4444" />
-                    </TouchableOpacity>
+          {/* Grade scale — Pro only */}
+          {isPro ? (
+            <>
+              {!editingScale ? (
+                <TouchableOpacity style={styles.scaleToggle} onPress={startEditScale}>
+                  <View style={styles.scaleRow}>
+                    {(gradeScale as GradeThreshold[]).map((g) => (
+                      <Text key={g.letter} style={styles.scaleItem}>{g.letter}: {g.min}%+</Text>
+                    ))}
                   </View>
-                ))}
-                <TouchableOpacity style={styles.addScaleRow} onPress={() => setScaleRows([...scaleRows, { letter: '', min: 0 }])}>
-                  <FontAwesome name="plus" size={11} color={COLORS.brand} /><Text style={styles.addScaleText}>Add Row</Text>
+                  <Text style={styles.editScaleLink}>Edit Scale</Text>
                 </TouchableOpacity>
-                <View style={styles.scaleActions}>
-                  <TouchableOpacity style={styles.scaleCancelBtn} onPress={() => setEditingScale(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-                  <TouchableOpacity style={styles.scaleSaveBtn} onPress={saveScale}><Text style={styles.saveText}>Save Scale</Text></TouchableOpacity>
+              ) : (
+                <View style={styles.scaleEditor}>
+                  <Text style={styles.scaleEditorTitle}>Grade Scale</Text>
+                  {scaleRows.map((row, i) => (
+                    <View key={i} style={styles.scaleEditRow}>
+                      <TextInput
+                        style={styles.scaleLetterInput}
+                        value={row.letter}
+                        onChangeText={(t) => { const r = [...scaleRows]; r[i] = { ...r[i], letter: t }; setScaleRows(r); }}
+                        maxLength={2}
+                      />
+                      <TextInput
+                        style={styles.scaleMinInput}
+                        value={String(row.min)}
+                        onChangeText={(t) => { const r = [...scaleRows]; r[i] = { ...r[i], min: parseFloat(t) || 0 }; setScaleRows(r); }}
+                        keyboardType="decimal-pad"
+                        placeholder="Min %"
+                      />
+                      <TouchableOpacity onPress={() => setScaleRows(scaleRows.filter((_, j) => j !== i))}>
+                        <FontAwesome name="times" size={14} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  <TouchableOpacity style={styles.addScaleRow} onPress={() => setScaleRows([...scaleRows, { letter: '', min: 0 }])}>
+                    <FontAwesome name="plus" size={11} color={COLORS.brand} /><Text style={styles.addScaleText}>Add Row</Text>
+                  </TouchableOpacity>
+                  <View style={styles.scaleActions}>
+                    <TouchableOpacity style={styles.scaleCancelBtn} onPress={() => setEditingScale(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
+                    <TouchableOpacity style={styles.scaleSaveBtn} onPress={saveScale}><Text style={styles.saveText}>Save Scale</Text></TouchableOpacity>
+                  </View>
                 </View>
+              )}
+            </>
+          ) : (
+            <TouchableOpacity style={styles.scaleToggle} activeOpacity={0.8} onPress={() => router.push('/paywall' as any)}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <FontAwesome name="lock" size={12} color={COLORS.brand} />
+                <Text style={styles.editScaleLink}>Customize grade scale</Text>
               </View>
-            )}
-          </View>
-        ) : (
-          <TouchableOpacity style={styles.gradeCard} activeOpacity={0.8} onPress={() => router.push('/paywall' as any)}>
-            <View style={styles.lockedFeature}>
-              <View style={styles.lockedIcon}>
-                <FontAwesome name="lock" size={20} color={COLORS.brand} />
-              </View>
-              <Text style={styles.lockedTitle}>Grade Forecasts & GPA</Text>
-              <Text style={styles.lockedDesc}>Track grades, forecast your GPA, and customize grading scales.</Text>
               <View style={styles.lockedBadge}>
-                <FontAwesome name="star" size={10} color="#fff" />
+                <FontAwesome name="star" size={9} color="#fff" />
                 <Text style={styles.lockedBadgeText}>PRO</Text>
               </View>
-            </View>
-          </TouchableOpacity>
-        )}
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Edit color/icon */}
         {editing && (

@@ -24,7 +24,7 @@ export default function ScanScreen() {
     if (scanCount >= FREE_SCAN_LIMIT) {
       Alert.alert(
         'Scan Limit Reached',
-        `You've used ${scanCount} of ${FREE_SCAN_LIMIT} free scans this month. Upgrade to Pro for unlimited scanning.`,
+        `You've used your ${FREE_SCAN_LIMIT} free scans. Upgrade to Pro for unlimited syllabus scanning.`,
         [
           { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
           { text: 'Cancel', style: 'cancel' },

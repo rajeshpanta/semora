@@ -16,18 +16,18 @@ import { getOfferings, purchasePackage, restorePurchases } from '@/lib/purchases
 const FEATURES = [
   {
     icon: 'camera' as const,
-    title: 'Unlimited Syllabus Scans',
-    desc: 'Scan as many syllabi as you need. AI extracts every deadline automatically.',
+    title: 'Unlimited Scans & Courses',
+    desc: 'Scan unlimited syllabi and add as many courses as you need. No limits.',
   },
   {
     icon: 'line-chart' as const,
-    title: 'Grade Forecasts & GPA',
-    desc: 'Track your grades in real time and forecast your final GPA with precision.',
+    title: 'Grade Scale & Forecasting',
+    desc: 'Customize grading scales, forecast your GPA, and track grade trends.',
   },
   {
-    icon: 'calendar-check-o' as const,
-    title: 'Smart Study Planning',
-    desc: 'AI-powered study schedules that adapt to your workload and priorities.',
+    icon: 'bell' as const,
+    title: 'Advance Reminders & Sync',
+    desc: 'Get 1-day and 3-day advance reminders. Sync tasks to your device calendar.',
   },
 ];
 

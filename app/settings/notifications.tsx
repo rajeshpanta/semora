@@ -1,10 +1,11 @@
-import { View, Text, StyleSheet, Switch, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Switch, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/app/_layout';
 import { COLORS } from '@/lib/constants';
+import { useAppStore } from '@/store/appStore';
 
 interface ReminderPrefs {
   reminder_same_day: boolean;
@@ -21,6 +22,8 @@ const DEFAULT_PREFS: ReminderPrefs = {
 export default function NotificationSettings() {
   const { session } = useSession();
   const userId = session?.user?.id;
+  const isPro = useAppStore((s) => s.isPro);
+  const router = useRouter();
   const [prefs, setPrefs] = useState<ReminderPrefs>(DEFAULT_PREFS);
   const [loading, setLoading] = useState(true);
 
@@ -43,13 +46,25 @@ export default function NotificationSettings() {
   }, [userId]);
 
   const toggle = async (key: keyof ReminderPrefs) => {
+    // 1-day and 3-day reminders are Pro only
+    if (!isPro && (key === 'reminder_1day' || key === 'reminder_3day')) {
+      Alert.alert(
+        'Pro Feature',
+        'Advance reminders are available with SyllabusSnap Pro. Free users get same-day reminders.',
+        [
+          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+          { text: 'Cancel', style: 'cancel' },
+        ],
+      );
+      return;
+    }
+
     const previous = { ...prefs };
     const updated = { ...prefs, [key]: !prefs[key] };
     setPrefs(updated);
     if (userId) {
       const { error } = await supabase.from('profiles').update({ [key]: updated[key] }).eq('id', userId);
       if (error) {
-        // Rollback UI on failure
         setPrefs(previous);
       }
     }
@@ -79,16 +94,18 @@ export default function NotificationSettings() {
           />
           <ToggleRow
             label="1 day before"
-            subtitle="The day before it's due"
-            value={prefs.reminder_1day}
+            subtitle={isPro ? 'The day before it\'s due' : 'Pro feature'}
+            value={isPro ? prefs.reminder_1day : false}
             onToggle={() => toggle('reminder_1day')}
+            pro={!isPro}
           />
           <ToggleRow
             label="3 days before"
-            subtitle="Early heads-up"
-            value={prefs.reminder_3day}
+            subtitle={isPro ? 'Early heads-up' : 'Pro feature'}
+            value={isPro ? prefs.reminder_3day : false}
             onToggle={() => toggle('reminder_3day')}
             last
+            pro={!isPro}
           />
         </View>
 
@@ -106,17 +123,26 @@ function ToggleRow({
   value,
   onToggle,
   last,
+  pro,
 }: {
   label: string;
   subtitle: string;
   value: boolean;
   onToggle: () => void;
   last?: boolean;
+  pro?: boolean;
 }) {
   return (
     <View style={[styles.row, !last && styles.rowBorder]}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.rowLabel}>{label}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={styles.rowLabel}>{label}</Text>
+          {pro && (
+            <View style={styles.proBadge}>
+              <Text style={styles.proBadgeText}>PRO</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.rowSub}>{subtitle}</Text>
       </View>
       <Switch
@@ -139,4 +165,6 @@ const styles = StyleSheet.create({
   rowLabel: { fontSize: 15, fontWeight: '500', color: COLORS.ink },
   rowSub: { fontSize: 13, color: COLORS.ink3, marginTop: 2 },
   hint: { fontSize: 13, color: COLORS.ink3, marginTop: 14, lineHeight: 18, paddingHorizontal: 4 },
+  proBadge: { backgroundColor: COLORS.brand, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  proBadgeText: { fontSize: 9, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
 });

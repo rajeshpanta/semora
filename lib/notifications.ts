@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { differenceInDays } from 'date-fns';
+import { useAppStore } from '@/store/appStore';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -42,7 +43,7 @@ export async function scheduleTaskReminders(
   const hasPermission = await requestNotificationPermission();
   if (!hasPermission) return;
 
-  // Get user preferences
+  // Get user preferences and pro status
   let preferences = { reminder_same_day: true, reminder_1day: true, reminder_3day: true };
   if (userId) {
     const { data } = await supabase
@@ -51,6 +52,13 @@ export async function scheduleTaskReminders(
       .eq('id', userId)
       .single();
     if (data) preferences = data;
+  }
+
+  // Free users only get same-day reminders
+  const isPro = useAppStore.getState().isPro;
+  if (!isPro) {
+    preferences.reminder_1day = false;
+    preferences.reminder_3day = false;
   }
 
   const [year, month, day] = dueDate.split('-').map(Number);
