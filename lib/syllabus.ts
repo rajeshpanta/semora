@@ -146,11 +146,12 @@ async function findOrCreateSemester(
   const name = semesterName || guessCurrentSemester();
 
   // Check if semester with this name already exists
+  const escapedName = name.replace(/[%_]/g, '\\$&');
   const { data: existing } = await supabase
     .from('semesters')
     .select('id, name')
     .eq('user_id', userId)
-    .ilike('name', name)
+    .ilike('name', escapedName)
     .limit(1);
 
   if (existing && existing.length > 0) {

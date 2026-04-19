@@ -39,11 +39,13 @@ function getCalendarDays(year: number, month: number, todayDate: Date) {
   // Next month padding
   const remaining = 7 - (days.length % 7);
   if (remaining < 7) {
+    const padStart = days.length;
     for (let d = 1; d <= remaining; d++) {
       const nm = month === 11 ? 0 : month + 1;
       const ny = month === 11 ? year + 1 : year;
       const dateStr = `${ny}-${String(nm + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      days.push({ day: d, isToday: false, isCurrentMonth: false, isWeekend: (days.length + d - 1) % 7 === 0 || (days.length + d - 1) % 7 === 6, dateStr });
+      const dow = (padStart + d - 1) % 7;
+      days.push({ day: d, isToday: false, isCurrentMonth: false, isWeekend: dow === 0 || dow === 6, dateStr });
     }
   }
   return days;

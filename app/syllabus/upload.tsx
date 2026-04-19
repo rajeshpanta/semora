@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ActivityIndicator,
   Alert, Platform,
@@ -49,6 +49,12 @@ export default function SyllabusUploadScreen() {
   const [processing, setProcessing] = useState(false);
   const [status, setStatus] = useState('');
   const [step, setStep] = useState(0); // 0-4 progress steps
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+  }, []);
 
   // Auto-start processing when screen opens
   useEffect(() => {
@@ -131,7 +137,7 @@ export default function SyllabusUploadScreen() {
         );
       } else {
         setStatus(`Created "${result.courseName}" in ${result.semesterName}`);
-        setTimeout(() => navigateToReview(result), 800);
+        timerRef.current = setTimeout(() => navigateToReview(result), 800);
       }
     } catch (error: any) {
       setProcessing(false);

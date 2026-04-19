@@ -1,5 +1,13 @@
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
+import { QueryClient } from '@tanstack/react-query';
+
+let _queryClient: QueryClient | null = null;
+
+/** Call once from _layout.tsx so signOut can clear the cache */
+export function setQueryClient(qc: QueryClient) {
+  _queryClient = qc;
+}
 
 export async function signIn(email: string, password: string) {
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -19,5 +27,6 @@ export async function signOut() {
     // Always clear local state, even if the API call fails —
     // a stuck session is worse than a stale sign-out
     useAppStore.getState().setSelectedSemester(null);
+    _queryClient?.clear();
   }
 }

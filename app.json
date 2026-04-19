@@ -46,7 +46,8 @@
           "photosPermission": "SyllabusSnap needs photo access to upload syllabus images.",
           "cameraPermission": "SyllabusSnap needs camera access to scan syllabi."
         }
-      ]
+      ],
+      "expo-document-picker"
     ],
     "experiments": {
       "typedRoutes": true

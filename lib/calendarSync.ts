@@ -40,7 +40,7 @@ async function getOrCreateCalendar(): Promise<string | null> {
     try {
       const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
       if (calendars.some((c) => c.id === stored)) return stored;
-    } catch {}
+    } catch (e) { console.warn('[CalendarSync] Failed to verify stored calendar:', e); }
   }
 
   const defaultSource =
@@ -125,7 +125,7 @@ export async function syncTaskToCalendar(
       await Calendar.updateEventAsync(match.id, eventDetails);
       return;
     }
-  } catch {}
+  } catch (e) { console.warn('[CalendarSync] Failed to search/update existing event:', e); }
 
   await Calendar.createEventAsync(calendarId, eventDetails);
 }
@@ -153,7 +153,7 @@ export async function removeTaskFromCalendar(
     if (match) {
       await Calendar.deleteEventAsync(match.id);
     }
-  } catch {}
+  } catch (e) { console.warn('[CalendarSync] Failed to remove event:', e); }
 }
 
 /**
@@ -182,7 +182,7 @@ export async function syncAllTasks(semesterId: string | null): Promise<number> {
     try {
       await syncTaskToCalendar(task as Task, course.name);
       count++;
-    } catch {}
+    } catch (e) { console.warn('[CalendarSync] Failed to sync task:', e); }
   }
 
   // Mark sync as enabled
@@ -202,11 +202,11 @@ export async function unsyncAll(): Promise<void> {
   if (calendarId && Calendar) {
     try {
       await Calendar.deleteCalendarAsync(calendarId);
-    } catch {}
+    } catch (e) { console.warn('[CalendarSync] Failed to delete calendar:', e); }
   }
 
-  try { await SecureStore.deleteItemAsync(CALENDAR_ID_KEY); } catch {}
-  try { await SecureStore.deleteItemAsync(SYNCED_ENABLED_KEY); } catch {}
+  try { await SecureStore.deleteItemAsync(CALENDAR_ID_KEY); } catch (e) { console.warn('[CalendarSync] Failed to clear calendar ID:', e); }
+  try { await SecureStore.deleteItemAsync(SYNCED_ENABLED_KEY); } catch (e) { console.warn('[CalendarSync] Failed to clear sync flag:', e); }
 }
 
 /**

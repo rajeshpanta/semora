@@ -49,8 +49,6 @@ export const COURSE_ICONS = [
 
 export type CourseIcon = (typeof COURSE_ICONS)[number];
 
-export const REMINDER_OFFSETS = [0, 1, 3] as const; // days before due date
-
 // ── Design System Colors ────────────────────────────────────
 export const COLORS = {
   brand: '#6B46C1',
@@ -79,14 +77,6 @@ export const DEFAULT_GRADE_SCALE = [
   { letter: 'D', min: 60 },
   { letter: 'F', min: 0 },
 ] as const;
-
-export interface GradeResult {
-  percentage: number | null;
-  letter: string | null;
-  weightAttempted: number;
-  weightTotal: number;
-  earnedPoints: number;
-}
 
 export function calculateGrade(
   tasks: { weight: number | null; score: number | null; is_extra_credit: boolean }[],

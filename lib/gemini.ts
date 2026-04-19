@@ -1,5 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '@/lib/supabase';
+import type { GradeThreshold } from '@/types/database';
 
 export interface ExtractedItem {
   title: string;
@@ -11,11 +12,6 @@ export interface ExtractedItem {
   confidence: number;
 }
 
-export interface GradeScaleEntry {
-  letter: string;
-  min: number;
-}
-
 export interface SyllabusExtraction {
   course_name: string;
   course_code: string | null;
@@ -25,7 +21,7 @@ export interface SyllabusExtraction {
   semester_name: string | null;
   semester_start: string | null;
   semester_end: string | null;
-  grade_scale: GradeScaleEntry[] | null;
+  grade_scale: GradeThreshold[] | null;
   items: ExtractedItem[];
 }
 

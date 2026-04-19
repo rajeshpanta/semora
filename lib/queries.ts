@@ -12,8 +12,6 @@ export const queryKeys = {
   courses: (semesterId: string) => ['courses', semesterId] as const,
   allCourses: ['courses'] as const,
   tasks: (filters?: TaskFilters) => ['tasks', filters] as const,
-  todayTasks: (sid?: string | null) => ['tasks', 'today', sid] as const,
-  dueSoonTasks: (sid?: string | null) => ['tasks', 'dueSoon', sid] as const,
   taskStats: (sid?: string | null) => ['taskStats', sid] as const,
   task: (id: string) => ['task', id] as const,
   course: (id: string) => ['course', id] as const,

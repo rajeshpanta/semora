@@ -38,9 +38,14 @@ export default function CalendarSyncSettings() {
             style: 'destructive',
             onPress: async () => {
               setSyncing(true);
-              await unsyncAll();
-              setSynced(false);
-              setSyncing(false);
+              try {
+                await unsyncAll();
+                setSynced(false);
+              } catch (err: any) {
+                Alert.alert('Error', err.message ?? 'Failed to remove calendar sync.');
+              } finally {
+                setSyncing(false);
+              }
             },
           },
         ],
@@ -67,10 +72,15 @@ export default function CalendarSyncSettings() {
       }
 
       setSyncing(true);
-      const count = await syncAllTasks(selectedSemesterId);
-      setSynced(true);
-      setSyncing(false);
-      Alert.alert('Synced!', `${count} task${count !== 1 ? 's' : ''} added to your calendar.`);
+      try {
+        const count = await syncAllTasks(selectedSemesterId);
+        setSynced(true);
+        Alert.alert('Synced!', `${count} task${count !== 1 ? 's' : ''} added to your calendar.`);
+      } catch (err: any) {
+        Alert.alert('Sync Failed', err.message ?? 'Could not sync tasks. Check calendar permissions and try again.');
+      } finally {
+        setSyncing(false);
+      }
     }
   };
 

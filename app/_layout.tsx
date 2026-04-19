@@ -1,5 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
@@ -8,13 +8,13 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/components/useColorScheme';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import * as Localization from 'expo-localization';
 import { requestNotificationPermission } from '@/lib/notifications';
 import { COLORS } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
+import { setQueryClient } from '@/lib/auth';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -28,10 +28,10 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60, // 1 minute
-      refetchOnWindowFocus: true,
     },
   },
 });
+setQueryClient(queryClient);
 
 // --- Auth context ---
 const AuthContext = createContext<{
@@ -166,11 +166,6 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
-  const systemScheme = useColorScheme();
-  const themeMode = useAppStore((s) => s.themeMode);
-
-  const resolvedScheme = themeMode === 'system' ? systemScheme : themeMode;
-
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={DefaultTheme}>

@@ -105,7 +105,5 @@ export type NewSemester = Pick<Semester, 'name'> &
 export type NewCourse = Pick<Course, 'semester_id' | 'name'> &
   Partial<Pick<Course, 'instructor' | 'meeting_time' | 'office_hours' | 'color' | 'icon'>>;
 
-export type NewCourseWithScale = NewCourse & { grade_scale?: GradeThreshold[] };
-
 export type NewTask = Pick<Task, 'course_id' | 'title' | 'due_date'> &
   Partial<Pick<Task, 'description' | 'type' | 'due_time' | 'weight' | 'source' | 'parse_run_id' | 'is_extra_credit' | 'score' | 'points_earned' | 'points_possible' | 'submitted_late'>>;

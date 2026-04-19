@@ -82,9 +82,6 @@ export default function TodayScreen() {
   const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
   const todayDayIndex = (today.getDay() + 6) % 7; // Mon=0
 
-  // Completed today tasks for display
-  const allTodayTasks = todayTasks;
-  const completedToday = (stats?.completed ?? 0);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -170,13 +167,13 @@ export default function TodayScreen() {
 
         {/* Today's tasks */}
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Today · {allTodayTasks.length} tasks</Text>
+          <Text style={styles.sectionTitle}>Today · {todayTasks.length} tasks</Text>
         </View>
 
-        {allTodayTasks.length > 0 ? (
+        {todayTasks.length > 0 ? (
           <View style={styles.taskCard}>
-            {allTodayTasks.map((task, i) => {
-              const isLast = i === allTodayTasks.length - 1;
+            {todayTasks.map((task, i) => {
+              const isLast = i === todayTasks.length - 1;
               const urgent = task.due_time && !task.is_completed;
               return (
                 <TouchableOpacity

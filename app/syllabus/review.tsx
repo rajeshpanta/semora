@@ -96,7 +96,7 @@ export default function SyllabusReviewScreen() {
         // Schedule notifications
         if (task) {
           scheduleTaskReminders(
-            task.id, task.title, 'Course', task.due_date, task.due_time, session.user.id,
+            task.id, task.title, params.courseName || 'Course', task.due_date, task.due_time, session.user.id,
           ).catch(() => {});
         }
       }

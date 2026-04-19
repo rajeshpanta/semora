@@ -90,25 +90,37 @@ export default function TaskDetailScreen() {
           {
             text: 'Yes, submitted late',
             onPress: async () => {
-              await toggleComplete.mutateAsync({ id: task.id, is_completed: true, submitted_late: true });
-              if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              try {
+                await toggleComplete.mutateAsync({ id: task.id, is_completed: true, submitted_late: true });
+                if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+              } catch (err: any) {
+                Alert.alert('Error', err.message ?? 'Failed to update task.');
+              }
             },
           },
           {
             text: 'No, on time',
             onPress: async () => {
-              await toggleComplete.mutateAsync({ id: task.id, is_completed: true, submitted_late: false });
-              if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              try {
+                await toggleComplete.mutateAsync({ id: task.id, is_completed: true, submitted_late: false });
+                if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              } catch (err: any) {
+                Alert.alert('Error', err.message ?? 'Failed to update task.');
+              }
             },
           },
           { text: 'Cancel', style: 'cancel' },
         ],
       );
     } else {
-      if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(completing ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning);
+      try {
+        if (Platform.OS === 'ios') {
+          Haptics.notificationAsync(completing ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning);
+        }
+        await toggleComplete.mutateAsync({ id: task.id, is_completed: completing });
+      } catch (err: any) {
+        Alert.alert('Error', err.message ?? 'Failed to update task.');
       }
-      await toggleComplete.mutateAsync({ id: task.id, is_completed: completing });
     }
   };
 

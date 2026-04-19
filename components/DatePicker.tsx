@@ -74,10 +74,6 @@ export function DatePicker({ value, onChange, mode = 'date', placeholder }: Date
     setShow(false);
   };
 
-  const handleClear = () => {
-    setShow(false);
-  };
-
   const displayText = value
     ? mode === 'date'
       ? format(value, 'MMM d, yyyy')
