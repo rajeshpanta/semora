@@ -11,8 +11,7 @@ import { useCreateCourse, useSemesters, useCourses } from '@/lib/queries';
 import { useAppStore } from '@/store/appStore';
 import { COURSE_COLORS, COURSE_ICONS, COLORS, type CourseIcon } from '@/lib/constants';
 import { SemesterPicker } from '@/components/SemesterPicker';
-
-const FREE_COURSE_LIMIT = 3;
+import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
 
 export default function NewCourseScreen() {
   const router = useRouter();
@@ -20,9 +19,9 @@ export default function NewCourseScreen() {
   const { data: semesters = [] } = useSemesters();
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const isPro = useAppStore((s) => s.isPro);
-  const { data: existingCourses = [] } = useCourses(selectedSemesterId);
 
   const [semesterId, setSemesterId] = useState(selectedSemesterId || '');
+  const { data: existingCourses = [] } = useCourses(semesterId || null);
   const [name, setName] = useState('');
   const [instructor, setInstructor] = useState('');
   const [color, setColor] = useState(COURSE_COLORS[0]);

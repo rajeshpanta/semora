@@ -17,10 +17,14 @@ export default function ScanScreen() {
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
   const isPro = useAppStore((s) => s.isPro);
   const { data: semesters = [] } = useSemesters();
-  const { data: scanCount = 0 } = useScanCount();
+  const { data: scanCount = 0, isLoading: scanCountLoading } = useScanCount();
 
   const checkScanLimit = (): boolean => {
     if (isPro) return true;
+    if (scanCountLoading) {
+      Alert.alert('Please Wait', 'Loading your scan usage. Try again in a moment.');
+      return false;
+    }
     if (scanCount >= FREE_SCAN_LIMIT) {
       Alert.alert(
         'Scan Limit Reached',

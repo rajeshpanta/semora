@@ -2,6 +2,9 @@ import { supabase } from '@/lib/supabase';
 import { extractFromFile, type SyllabusExtraction, type ExtractedItem } from '@/lib/gemini';
 import * as FileSystem from 'expo-file-system/legacy';
 import { COURSE_COLORS, COURSE_ICONS, DEFAULT_GRADE_SCALE } from '@/lib/constants';
+import { useAppStore } from '@/store/appStore';
+
+export const FREE_COURSE_LIMIT = 2;
 
 export interface ProcessResult {
   uploadId: string;
@@ -199,6 +202,19 @@ async function findOrCreateCourse(
 
   if (existing && existing.length > 0) {
     return { courseId: existing[0].id, courseName: existing[0].name, isExisting: true };
+  }
+
+  // Check course limit for free users before creating
+  const isPro = useAppStore.getState().isPro;
+  if (!isPro) {
+    const { count } = await supabase
+      .from('courses')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('semester_id', semesterId);
+    if ((count ?? 0) >= FREE_COURSE_LIMIT) {
+      throw new Error(`Free accounts support up to ${FREE_COURSE_LIMIT} courses per semester. Upgrade to Pro for unlimited courses.`);
+    }
   }
 
   // Pick a random color and icon that aren't already used

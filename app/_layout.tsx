@@ -57,6 +57,12 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session) {
         saveTimezoneIfNeeded(session.user.id);
         requestNotificationPermission();
+        configureRevenueCat(session.user.id).then(() => {
+          checkProStatus().then((isPro) => useAppStore.getState().setIsPro(isPro));
+          addCustomerInfoListener((info) => {
+            useAppStore.getState().setIsPro(!!info.entitlements.active['pro']);
+          });
+        });
       }
     }).catch(() => {
       // Network failure or Supabase unreachable — let user through
@@ -74,13 +80,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         requestNotificationPermission();
         configureRevenueCat(session.user.id).then(() => {
           checkProStatus().then((isPro) => useAppStore.getState().setIsPro(isPro));
+          addCustomerInfoListener((info) => {
+            useAppStore.getState().setIsPro(!!info.entitlements.active['pro']);
+          });
         });
       }
-    });
-
-    addCustomerInfoListener((info) => {
-      const isPro = !!info.entitlements.active['pro'];
-      useAppStore.getState().setIsPro(isPro);
     });
 
     return () => subscription.unsubscribe();

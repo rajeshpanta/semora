@@ -9,6 +9,7 @@ const API_KEY = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
 const ENTITLEMENT_ID = 'pro';
 
 let configured = false;
+let listenerRegistered = false;
 
 export async function configure(userId?: string): Promise<void> {
   if (Platform.OS === 'web' || configured || !API_KEY) return;
@@ -75,6 +76,7 @@ export async function restorePurchases(): Promise<boolean> {
 export function addCustomerInfoListener(
   callback: (info: CustomerInfo) => void,
 ): void {
-  if (Platform.OS === 'web' || !configured) return;
+  if (Platform.OS === 'web' || !configured || listenerRegistered) return;
+  listenerRegistered = true;
   Purchases.addCustomerInfoUpdateListener(callback);
 }

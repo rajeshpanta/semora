@@ -7,12 +7,25 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
-import { processSyllabus, type ProcessResult } from '@/lib/syllabus';
+import { processSyllabus, type ProcessResult, FREE_COURSE_LIMIT } from '@/lib/syllabus';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { COLORS, COURSE_COLORS, COURSE_ICONS } from '@/lib/constants';
 
 async function createDuplicateCourse(result: ProcessResult, userId: string): Promise<ProcessResult> {
+  // Check course limit for free users
+  const isPro = useAppStore.getState().isPro;
+  if (!isPro) {
+    const { count } = await supabase
+      .from('courses')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .eq('semester_id', result.semesterId);
+    if ((count ?? 0) >= FREE_COURSE_LIMIT) {
+      throw new Error(`Free accounts support up to ${FREE_COURSE_LIMIT} courses per semester. Upgrade to Pro for unlimited courses.`);
+    }
+  }
+
   // Get used colors in this semester
   const { data: existing } = await supabase
     .from('courses')
