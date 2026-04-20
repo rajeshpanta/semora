@@ -68,13 +68,53 @@ export const useAppStore = create<AppState>((set) => ({
 const GRADE_CHECK_WINDOW = 60; // days after semester ends where student may still check grades
 
 /**
+ * Infer the current academic period from today's date.
+ * Returns a term name and year that can be matched against semester names.
+ *
+ * Standard US academic calendar:
+ *  - Spring: January – April
+ *  - Summer: May – July
+ *  - Fall: August – December
+ */
+function getCurrentAcademicPeriod(): { terms: string[]; year: number } {
+  const now = new Date();
+  const month = now.getMonth(); // 0-11
+  const year = now.getFullYear();
+
+  if (month >= 7) return { terms: ['fall', 'autumn'], year };      // Aug-Dec
+  if (month >= 4) return { terms: ['summer'], year };               // May-Jul
+  return { terms: ['spring'], year };                                // Jan-Apr
+}
+
+/**
+ * Score how well a semester name matches the current academic period.
+ * Higher score = better match. 0 = no match.
+ */
+function scoreSemesterName(name: string, period: { terms: string[]; year: number }): number {
+  const lower = name.toLowerCase();
+  let score = 0;
+
+  // Check if the name contains the current year
+  if (lower.includes(String(period.year))) score += 10;
+
+  // Check if the name contains the current term
+  for (const term of period.terms) {
+    if (lower.includes(term)) { score += 20; break; }
+  }
+
+  return score;
+}
+
+/**
  * Find the best semester to auto-select based on today's date.
  *
  * Priority:
  * 1. Exact match — today is between start_date and end_date
  * 2. Nearest by date proximity — with preference for recently-ended
  *    semester over distant future semester (grade checking window)
- * 3. Semesters without dates — most recently created (last resort)
+ * 3. Name-based inference — match semester name against current
+ *    academic period (e.g., "Fall 2026" when it's fall)
+ * 4. Last resort — most recently created
  */
 export function findCurrentSemester(semesters: Semester[]): string | null {
   if (semesters.length === 0) return null;
@@ -89,7 +129,6 @@ export function findCurrentSemester(semesters: Semester[]): string | null {
       const end = new Date(s.end_date + 'T00:00:00');
       if (today >= start && today <= end) return s.id;
     }
-    // If only start_date and no end_date, treat as possibly current
     if (s.start_date && !s.end_date) {
       const start = new Date(s.start_date + 'T00:00:00');
       if (today >= start) return s.id;
@@ -100,7 +139,6 @@ export function findCurrentSemester(semesters: Semester[]): string | null {
   const withDates = semesters.filter((s) => s.start_date || s.end_date);
 
   if (withDates.length > 0) {
-    // Categorize semesters
     const past: { semester: Semester; daysAgo: number }[] = [];
     const future: { semester: Semester; daysUntil: number }[] = [];
 
@@ -119,31 +157,19 @@ export function findCurrentSemester(semesters: Semester[]): string | null {
       }
     }
 
-    // Sort: most recently ended first, soonest starting first
     past.sort((a, b) => a.daysAgo - b.daysAgo);
     future.sort((a, b) => a.daysUntil - b.daysUntil);
 
     const nearestPast = past[0] || null;
     const nearestFuture = future[0] || null;
 
-    // No future semester → use most recently ended (checking grades)
-    if (!nearestFuture && nearestPast) {
-      return nearestPast.semester.id;
-    }
+    if (!nearestFuture && nearestPast) return nearestPast.semester.id;
+    if (!nearestPast && nearestFuture) return nearestFuture.semester.id;
 
-    // No past semester → use soonest future (prep mode)
-    if (!nearestPast && nearestFuture) {
-      return nearestFuture.semester.id;
-    }
-
-    // Both exist — decide based on grade checking window
     if (nearestPast && nearestFuture) {
-      // If past semester ended within 60 days AND it's closer than the future one
-      // → student is likely still checking grades
       if (nearestPast.daysAgo <= GRADE_CHECK_WINDOW && nearestPast.daysAgo <= nearestFuture.daysUntil) {
         return nearestPast.semester.id;
       }
-      // Otherwise pick the nearest one by raw distance
       if (nearestPast.daysAgo <= nearestFuture.daysUntil) {
         return nearestPast.semester.id;
       }
@@ -151,7 +177,16 @@ export function findCurrentSemester(semesters: Semester[]): string | null {
     }
   }
 
-  // 3. No semesters have dates — fall back to most recently created
+  // 3. Name-based inference — match "Fall 2026", "Spring 2027" etc.
+  const period = getCurrentAcademicPeriod();
+  const scored = semesters
+    .map((s) => ({ semester: s, score: scoreSemesterName(s.name, period) }))
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  if (scored.length > 0) return scored[0].semester.id;
+
+  // 4. Last resort — most recently created
   const sorted = [...semesters].sort((a, b) => b.created_at.localeCompare(a.created_at));
   return sorted[0].id;
 }
