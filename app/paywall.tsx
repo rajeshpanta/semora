@@ -223,11 +223,11 @@ export default function PaywallScreen() {
               <Text style={styles.footerLink}>{restoring ? 'Restoring...' : 'Restore'}</Text>
             </TouchableOpacity>
             <Text style={styles.footerDot}> · </Text>
-            <TouchableOpacity onPress={() => Linking.openURL('https://rajeshpanta.github.io/sylabus-snap/terms.html')}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://rajeshpanta.github.io/semora/terms.html')}>
               <Text style={styles.footerLink}>Terms</Text>
             </TouchableOpacity>
             <Text style={styles.footerDot}> · </Text>
-            <TouchableOpacity onPress={() => Linking.openURL('https://rajeshpanta.github.io/sylabus-snap/privacy.html')}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://rajeshpanta.github.io/semora/privacy.html')}>
               <Text style={styles.footerLink}>Privacy</Text>
             </TouchableOpacity>
           </View>

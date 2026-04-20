@@ -53,7 +53,7 @@ async function getOrCreateCalendar(): Promise<string | null> {
     color: '#6B46C1',
     entityType: Calendar.EntityTypes.EVENT,
     source: defaultSource as any,
-    name: 'syllabussnap',
+    name: 'semora',
     ownerAccount: 'personal',
     accessLevel: Calendar.CalendarAccessLevel.OWNER,
   });
