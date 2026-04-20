@@ -17,7 +17,8 @@
     "production": {
       "ios": {
         "appleId": "smallpanta@icloud.com",
-        "appleTeamId": "7T9897GFKH"
+        "appleTeamId": "7T9897GFKH",
+        "ascAppId": "6762589321"
       }
     }
   }
