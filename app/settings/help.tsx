@@ -66,10 +66,10 @@ export default function HelpScreen() {
           <TouchableOpacity
             style={styles.contactRow}
             activeOpacity={0.7}
-            onPress={() => Linking.openURL('mailto:help@semora.app')}
+            onPress={() => Linking.openURL('mailto:rajesh.panta08@gmail.com')}
           >
             <FontAwesome name="envelope-o" size={16} color={COLORS.ink2} />
-            <Text style={styles.contactText}>help@semora.app</Text>
+            <Text style={styles.contactText}>rajesh.panta08@gmail.com</Text>
             <FontAwesome name="chevron-right" size={11} color={COLORS.ink3} />
           </TouchableOpacity>
         </View>
