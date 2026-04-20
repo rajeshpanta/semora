@@ -257,35 +257,34 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1, shadowRadius: 4, elevation: 3,
   },
 
-  // Hero — bigger, bolder
+  // Hero
   hero: {
-    borderRadius: 24, paddingVertical: 36, paddingHorizontal: 28,
+    borderRadius: 22, paddingVertical: 28, paddingHorizontal: 24,
     marginBottom: 28, marginTop: 8,
     overflow: 'hidden', position: 'relative',
-    minHeight: 200,
   },
   heroGlow: {
-    position: 'absolute', right: -40, top: -40,
-    width: 180, height: 180, borderRadius: 90,
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    position: 'absolute', right: -30, top: -30,
+    width: 140, height: 140, borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
   heroGlow2: {
-    position: 'absolute', right: 30, bottom: -60,
-    width: 120, height: 120, borderRadius: 60,
+    position: 'absolute', right: 20, bottom: -50,
+    width: 100, height: 100, borderRadius: 50,
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
   heroTitle: {
-    fontSize: 36, fontWeight: '800', color: '#fff',
-    marginTop: 16, letterSpacing: -1,
+    fontSize: 28, fontWeight: '800', color: '#fff',
+    marginTop: 12, letterSpacing: -0.5,
   },
   heroTitleBold: {
-    fontSize: 40, fontWeight: '800',
-    color: 'rgba(255,255,255,0.7)',
-    letterSpacing: -1, marginTop: -4,
+    fontSize: 28, fontWeight: '800',
+    color: 'rgba(255,255,255,0.65)',
+    letterSpacing: -0.5, marginTop: -2,
   },
   heroSubtitle: {
-    fontSize: 16, color: 'rgba(255,255,255,0.85)',
-    marginTop: 10, lineHeight: 22, fontWeight: '500',
+    fontSize: 15, color: 'rgba(255,255,255,0.8)',
+    marginTop: 8, lineHeight: 20,
   },
 
   // Section
@@ -296,28 +295,28 @@ const styles = StyleSheet.create({
 
   // Features
   featureList: {
-    backgroundColor: COLORS.card, borderRadius: 20,
-    paddingHorizontal: 18, marginBottom: 28,
+    backgroundColor: COLORS.card, borderRadius: 18,
+    paddingHorizontal: 16, marginBottom: 28,
     borderWidth: 0.5, borderColor: COLORS.line,
   },
   featureRow: {
     flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 18, gap: 14,
+    paddingVertical: 15, gap: 14,
   },
   featureRowBorder: {
     borderBottomWidth: 0.5, borderBottomColor: COLORS.line,
   },
   featureIcon: {
-    width: 46, height: 46, borderRadius: 14,
+    width: 42, height: 42, borderRadius: 12,
     backgroundColor: COLORS.brand50,
     alignItems: 'center', justifyContent: 'center',
   },
   featureTitle: {
-    fontSize: 16, fontWeight: '700', color: COLORS.ink,
-    marginBottom: 3,
+    fontSize: 15, fontWeight: '700', color: COLORS.ink,
+    marginBottom: 2,
   },
   featureDesc: {
-    fontSize: 14, color: COLORS.ink3, lineHeight: 19,
+    fontSize: 13, color: COLORS.ink3, lineHeight: 17,
   },
 
   // Plans
@@ -342,9 +341,9 @@ const styles = StyleSheet.create({
     width: 13, height: 13, borderRadius: 6.5,
     backgroundColor: COLORS.brand,
   },
-  planName: { fontSize: 17, fontWeight: '700', color: COLORS.ink },
+  planName: { fontSize: 16, fontWeight: '700', color: COLORS.ink },
   planPrice: {
-    fontSize: 22, fontWeight: '800', color: COLORS.ink,
+    fontSize: 20, fontWeight: '800', color: COLORS.ink,
     marginTop: 2,
   },
   planPeriod: { fontSize: 14, fontWeight: '400', color: COLORS.ink2 },
