@@ -151,6 +151,7 @@ export function findCurrentSemester(semesters: Semester[]): string | null {
     }
   }
 
-  // 3. No semesters have dates — fall back to first (most recently created)
-  return semesters[0].id;
+  // 3. No semesters have dates — fall back to most recently created
+  const sorted = [...semesters].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  return sorted[0].id;
 }
