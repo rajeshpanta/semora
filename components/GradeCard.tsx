@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 
 interface GradeCardProps {
   percentage: number | null;
@@ -22,6 +23,7 @@ function getGradeColor(letter: string | null): [string, string] {
 }
 
 export function GradeCard({ percentage, letter, gradedCount, totalCount, weightAttempted, weightTotal }: GradeCardProps) {
+  const colors = useColors();
   const [color1, color2] = getGradeColor(letter);
   const barWidth = percentage != null ? Math.min(percentage, 100) : 0;
   const hasGrades = percentage != null;
@@ -30,11 +32,11 @@ export function GradeCard({ percentage, letter, gradedCount, totalCount, weightA
     <View style={styles.container}>
       <View style={styles.topRow}>
         <View>
-          <Text style={styles.label}>CURRENT GRADE</Text>
+          <Text style={[styles.label, { color: colors.ink3 }]}>CURRENT GRADE</Text>
           {hasGrades ? (
-            <Text style={styles.percentage}>{percentage!.toFixed(2)}%</Text>
+            <Text style={[styles.percentage, { color: colors.ink }]}>{percentage!.toFixed(2)}%</Text>
           ) : (
-            <Text style={styles.noGrade}>No grades yet</Text>
+            <Text style={[styles.noGrade, { color: colors.ink3 }]}>No grades yet</Text>
           )}
         </View>
         {letter && (
@@ -56,11 +58,11 @@ export function GradeCard({ percentage, letter, gradedCount, totalCount, weightA
 
       {/* Context info */}
       <View style={styles.metaRow}>
-        <Text style={styles.meta}>
+        <Text style={[styles.meta, { color: colors.ink3 }]}>
           {gradedCount} of {totalCount} graded
         </Text>
         {hasGrades && weightTotal > 0 && (
-          <Text style={styles.metaRight}>
+          <Text style={[styles.metaRight, { color: colors.ink2 }]}>
             {weightAttempted}% of {weightTotal}% attempted
           </Text>
         )}
@@ -68,8 +70,8 @@ export function GradeCard({ percentage, letter, gradedCount, totalCount, weightA
 
       {/* Helpful context when early in semester */}
       {hasGrades && weightAttempted < weightTotal && weightAttempted > 0 && (
-        <View style={styles.contextBox}>
-          <Text style={styles.contextText}>
+        <View style={[styles.contextBox, { backgroundColor: colors.brand50 }]}>
+          <Text style={[styles.contextText, { color: colors.brand }]}>
             Based on {weightAttempted}% of coursework completed.{' '}
             {percentage! >= 90 ? 'Great start!' : percentage! >= 80 ? 'Looking good!' : percentage! >= 70 ? 'Keep working!' : 'Room to improve.'}
           </Text>

@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { signUp } from '@/lib/auth';
+import { useColors } from '@/lib/theme';
 
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');
@@ -22,6 +23,7 @@ export default function SignUpScreen() {
   const [error, setError] = useState('');
   const [signedUpEmail, setSignedUpEmail] = useState('');
   const router = useRouter();
+  const colors = useColors();
 
   const handleSignUp = async () => {
     setError('');
@@ -62,43 +64,43 @@ export default function SignUpScreen() {
   // --- Confirmation screen after successful sign-up ---
   if (signedUpEmail) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
         <View style={styles.confirmContainer}>
-          <View style={styles.confirmCard}>
-            <View style={styles.confirmIconCircle}>
-              <FontAwesome name="envelope-o" size={32} color="#6B46C1" />
+          <View style={[styles.confirmCard, { backgroundColor: colors.card }]}>
+            <View style={[styles.confirmIconCircle, { backgroundColor: colors.brand50 }]}>
+              <FontAwesome name="envelope-o" size={32} color={colors.brand} />
             </View>
 
-            <Text style={styles.confirmTitle}>Confirm Your Email</Text>
+            <Text style={[styles.confirmTitle, { color: colors.ink }]}>Confirm Your Email</Text>
 
-            <Text style={styles.confirmText}>
+            <Text style={[styles.confirmText, { color: colors.ink2 }]}>
               We sent a confirmation link to
             </Text>
-            <View style={styles.emailBadge}>
-              <FontAwesome name="at" size={13} color="#6B46C1" />
+            <View style={[styles.emailBadge, { backgroundColor: colors.brand50 }]}>
+              <FontAwesome name="at" size={13} color={colors.brand} />
               <Text style={styles.emailBadgeText}>{signedUpEmail}</Text>
             </View>
 
             <View style={styles.stepsContainer}>
               <View style={styles.stepRow}>
                 <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>1</Text>
+                  <Text style={[styles.stepNumberText, { color: colors.brand }]}>1</Text>
                 </View>
-                <Text style={styles.stepText}>Open your email inbox</Text>
+                <Text style={[styles.stepText, { color: colors.ink }]}>Open your email inbox</Text>
               </View>
               <View style={styles.stepRow}>
                 <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>2</Text>
+                  <Text style={[styles.stepNumberText, { color: colors.brand }]}>2</Text>
                 </View>
-                <Text style={styles.stepText}>
+                <Text style={[styles.stepText, { color: colors.ink }]}>
                   Click the confirmation link from Semora
                 </Text>
               </View>
               <View style={styles.stepRow}>
                 <View style={styles.stepNumber}>
-                  <Text style={styles.stepNumberText}>3</Text>
+                  <Text style={[styles.stepNumberText, { color: colors.brand }]}>3</Text>
                 </View>
-                <Text style={styles.stepText}>Come back here and sign in</Text>
+                <Text style={[styles.stepText, { color: colors.ink }]}>Come back here and sign in</Text>
               </View>
             </View>
 
@@ -110,7 +112,7 @@ export default function SignUpScreen() {
             </View>
 
             <TouchableOpacity
-              style={styles.button}
+              style={[styles.button, { backgroundColor: colors.brand }]}
               onPress={() => router.replace('/(auth)/sign-in')}
               activeOpacity={0.8}
             >
@@ -128,9 +130,9 @@ export default function SignUpScreen() {
               }}
               activeOpacity={0.7}
             >
-              <Text style={styles.resendText}>
+              <Text style={[styles.resendText, { color: colors.ink2 }]}>
                 Didn't receive it?{' '}
-                <Text style={styles.resendBold}>Try again</Text>
+                <Text style={[styles.resendBold, { color: colors.brand }]}>Try again</Text>
               </Text>
             </TouchableOpacity>
           </View>
@@ -141,7 +143,7 @@ export default function SignUpScreen() {
 
   // --- Sign-up form ---
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="always"
@@ -150,16 +152,16 @@ export default function SignUpScreen() {
         >
           <View style={styles.inner}>
             <View style={styles.header}>
-              <View style={styles.logoContainer}>
+              <View style={[styles.logoContainer, { backgroundColor: colors.brand }]}>
                 <FontAwesome name="graduation-cap" size={28} color="#fff" />
               </View>
-              <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>
+              <Text style={[styles.title, { color: colors.ink }]}>Create Account</Text>
+              <Text style={[styles.subtitle, { color: colors.ink2 }]}>
                 Start organizing your semester today
               </Text>
             </View>
 
-            <View style={styles.form}>
+            <View style={[styles.form, { backgroundColor: colors.card }]}>
               {error ? (
                 <View style={styles.errorBox}>
                   <FontAwesome name="exclamation-circle" size={14} color="#dc2626" />
@@ -167,11 +169,11 @@ export default function SignUpScreen() {
                 </View>
               ) : null}
 
-              <Text style={styles.label}>Email address</Text>
+              <Text style={[styles.label, { color: colors.ink2 }]}>Email address</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
                 placeholder="you@university.edu"
-                placeholderTextColor="#c0c0cc"
+                placeholderTextColor={colors.ink3}
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
@@ -180,11 +182,11 @@ export default function SignUpScreen() {
                 returnKeyType="next"
               />
 
-              <Text style={styles.label}>Password</Text>
+              <Text style={[styles.label, { color: colors.ink2 }]}>Password</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
                 placeholder="At least 6 characters"
-                placeholderTextColor="#c0c0cc"
+                placeholderTextColor={colors.ink3}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
@@ -192,11 +194,11 @@ export default function SignUpScreen() {
                 returnKeyType="next"
               />
 
-              <Text style={styles.label}>Confirm password</Text>
+              <Text style={[styles.label, { color: colors.ink2 }]}>Confirm password</Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
                 placeholder="Re-enter your password"
-                placeholderTextColor="#c0c0cc"
+                placeholderTextColor={colors.ink3}
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
                 secureTextEntry
@@ -206,7 +208,7 @@ export default function SignUpScreen() {
               />
 
               <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
+                style={[styles.button, { backgroundColor: colors.brand }, loading && styles.buttonDisabled]}
                 onPress={handleSignUp}
                 disabled={loading}
                 activeOpacity={0.8}
@@ -225,9 +227,9 @@ export default function SignUpScreen() {
             <View style={styles.footer}>
               <Link href="/(auth)/sign-in" asChild>
                 <TouchableOpacity activeOpacity={0.7}>
-                  <Text style={styles.linkText}>
+                  <Text style={[styles.linkText, { color: colors.ink2 }]}>
                     Already have an account?{' '}
-                    <Text style={styles.linkBold}>Sign In</Text>
+                    <Text style={[styles.linkBold, { color: colors.brand }]}>Sign In</Text>
                   </Text>
                 </TouchableOpacity>
               </Link>

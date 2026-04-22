@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/app/_layout';
 import { COLORS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 import { useAppStore } from '@/store/appStore';
 
 interface ReminderPrefs {
@@ -20,6 +21,7 @@ const DEFAULT_PREFS: ReminderPrefs = {
 };
 
 export default function NotificationSettings() {
+  const colors = useColors();
   const { session } = useSession();
   const userId = session?.user?.id;
   const isPro = useAppStore((s) => s.isPro);
@@ -72,20 +74,20 @@ export default function NotificationSettings() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]}>
         <Stack.Screen options={{ title: 'Notifications' }} />
-        <ActivityIndicator style={{ marginTop: 40 }} color={COLORS.brand} />
+        <ActivityIndicator style={{ marginTop: 40 }} color={colors.brand} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Notifications' }} />
 
       <View style={styles.content}>
-        <Text style={styles.sectionTitle}>Remind me before due date</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Remind me before due date</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <ToggleRow
             label="Same day"
             subtitle="Morning of the due date"
@@ -109,7 +111,7 @@ export default function NotificationSettings() {
           />
         </View>
 
-        <Text style={styles.hint}>
+        <Text style={[styles.hint, { color: colors.ink3 }]}>
           Reminders are scheduled when tasks are created or updated. Changes here apply to new tasks.
         </Text>
       </View>
@@ -132,23 +134,24 @@ function ToggleRow({
   last?: boolean;
   pro?: boolean;
 }) {
+  const colors = useColors();
   return (
-    <View style={[styles.row, !last && styles.rowBorder]}>
+    <View style={[styles.row, !last && styles.rowBorder, !last && { borderBottomColor: colors.line }]}>
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text style={styles.rowLabel}>{label}</Text>
+          <Text style={[styles.rowLabel, { color: colors.ink }]}>{label}</Text>
           {pro && (
-            <View style={styles.proBadge}>
+            <View style={[styles.proBadge, { backgroundColor: colors.brand }]}>
               <Text style={styles.proBadgeText}>PRO</Text>
             </View>
           )}
         </View>
-        <Text style={styles.rowSub}>{subtitle}</Text>
+        <Text style={[styles.rowSub, { color: colors.ink3 }]}>{subtitle}</Text>
       </View>
       <Switch
         value={value}
         onValueChange={onToggle}
-        trackColor={{ false: COLORS.line, true: COLORS.brand }}
+        trackColor={{ false: colors.line, true: colors.brand }}
         thumbColor="#fff"
       />
     </View>

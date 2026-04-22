@@ -15,8 +15,10 @@ import {
   useTaskStats, useToggleTaskComplete, useTasks,
 } from '@/lib/queries';
 import { COLORS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 
 export default function TodayScreen() {
+  const colors = useColors();
   const { session } = useSession();
   const router = useRouter();
   const qc = useQueryClient();
@@ -86,31 +88,31 @@ export default function TodayScreen() {
   // Show loading spinner on initial data fetch (not on pull-to-refresh)
   if (semestersLoading && semesters.length === 0) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={COLORS.brand} />
+          <ActivityIndicator size="large" color={colors.brand} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.brand} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />}
       >
         {/* Header */}
-        <Text style={styles.eyeLabel}>{dateLabel}</Text>
-        <Text style={styles.greeting}>Hey, {name}</Text>
+        <Text style={[styles.eyeLabel, { color: colors.ink3 }]}>{dateLabel}</Text>
+        <Text style={[styles.greeting, { color: colors.ink }]}>Hey, {name}</Text>
         {activeSemester && (
-          <Text style={styles.semesterLabel}>{activeSemester.name}</Text>
+          <Text style={[styles.semesterLabel, { color: colors.ink3 }]}>{activeSemester.name}</Text>
         )}
 
         {/* Next Up Hero */}
         {nextUp && (
-          <View style={styles.heroCard}>
+          <View style={[styles.heroCard, { backgroundColor: colors.brand }]}>
             <View style={styles.heroTop}>
               <Text style={styles.heroEye}>NEXT UP</Text>
               <View style={styles.heroBadge}>
@@ -131,7 +133,7 @@ export default function TodayScreen() {
         {overdueTasks.length > 0 && (
           <>
             <View style={styles.sectionRow}>
-              <Text style={[styles.sectionTitle, { color: COLORS.coral }]}>Overdue · {overdueTasks.length}</Text>
+              <Text style={[styles.sectionTitle, { color: colors.coral }]}>Overdue · {overdueTasks.length}</Text>
             </View>
             <View style={styles.overdueCard}>
               {overdueTasks.map((task, i) => {
@@ -153,19 +155,19 @@ export default function TodayScreen() {
                       }}
                       hitSlop={8}
                     >
-                      <View style={[styles.cbx, { borderColor: COLORS.coral }]} />
+                      <View style={[styles.cbx, { borderColor: colors.coral }]} />
                     </TouchableOpacity>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.taskTitle}>{task.title}</Text>
+                      <Text style={[styles.taskTitle, { color: colors.ink }]}>{task.title}</Text>
                       <View style={styles.taskMeta}>
                         <View style={[styles.dot, { backgroundColor: task.courses.color }]} />
-                        <Text style={[styles.taskCourse, { color: COLORS.coral }]}>
+                        <Text style={[styles.taskCourse, { color: colors.coral }]}>
                           {task.courses.name} · {format(new Date(task.due_date + 'T00:00:00'), 'MMM d')}
                         </Text>
                       </View>
                     </View>
                     <View style={styles.overdueBadge}>
-                      <Text style={styles.overdueBadgeText}>
+                      <Text style={[styles.overdueBadgeText, { color: colors.coral }]}>
                         {differenceInDays(today, new Date(task.due_date + 'T00:00:00'))}d late
                       </Text>
                     </View>
@@ -178,18 +180,18 @@ export default function TodayScreen() {
 
         {/* Today's tasks */}
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Today · {todayTasks.length} tasks</Text>
+          <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Today · {todayTasks.length} tasks</Text>
         </View>
 
         {todayTasks.length > 0 ? (
-          <View style={styles.taskCard}>
+          <View style={[styles.taskCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
             {todayTasks.map((task, i) => {
               const isLast = i === todayTasks.length - 1;
               const urgent = task.due_time && !task.is_completed;
               return (
                 <TouchableOpacity
                   key={task.id}
-                  style={[styles.taskRow, !isLast && styles.taskRowBorder]}
+                  style={[styles.taskRow, !isLast && [styles.taskRowBorder, { borderBottomColor: colors.line }]]}
                   onPress={() => router.push(`/task/${task.id}` as any)}
                   activeOpacity={0.7}
                 >
@@ -211,49 +213,51 @@ export default function TodayScreen() {
                   >
                     <View style={[
                       styles.cbx,
-                      task.is_completed && { backgroundColor: COLORS.teal, borderColor: COLORS.teal },
-                      urgent && !task.is_completed && { borderColor: COLORS.coral },
+                      { borderColor: colors.ink3 },
+                      task.is_completed && { backgroundColor: colors.teal, borderColor: colors.teal },
+                      urgent && !task.is_completed && { borderColor: colors.coral },
                     ]}>
                       {task.is_completed && <FontAwesome name="check" size={9} color="#fff" />}
                     </View>
                   </TouchableOpacity>
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.taskTitle, task.is_completed && styles.taskDone]}>{task.title}</Text>
+                    <Text style={[styles.taskTitle, { color: colors.ink }, task.is_completed && [styles.taskDone, { color: colors.ink3 }]]}>{task.title}</Text>
                     <View style={styles.taskMeta}>
                       <View style={[styles.dot, { backgroundColor: task.courses.color }]} />
                       <Text style={[
                         styles.taskCourse,
-                        urgent && !task.is_completed && { color: COLORS.coral, fontWeight: '500' },
+                        { color: colors.ink3 },
+                        urgent && !task.is_completed && { color: colors.coral, fontWeight: '500' },
                       ]}>
                         {task.courses.name}{task.due_time && urgent ? ` · due ${task.due_time.slice(0, 5)}` : ''}
                       </Text>
                     </View>
                   </View>
                   {task.due_time && !urgent && (
-                    <Text style={styles.taskTime}>{task.due_time.slice(0, 5)}</Text>
+                    <Text style={[styles.taskTime, { color: colors.ink3 }]}>{task.due_time.slice(0, 5)}</Text>
                   )}
                 </TouchableOpacity>
               );
             })}
           </View>
         ) : (
-          <View style={styles.emptyCard}>
-            <FontAwesome name="check-circle" size={24} color={COLORS.teal} />
-            <Text style={styles.emptyText}>You're free today!</Text>
+          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <FontAwesome name="check-circle" size={24} color={colors.teal} />
+            <Text style={[styles.emptyText, { color: colors.ink3 }]}>You're free today!</Text>
             {dueSoonTasks.length > 0 ? (
-              <Text style={styles.emptySub}>
+              <Text style={[styles.emptySub, { color: colors.ink3 }]}>
                 Next up: {dueSoonTasks[0].title} ({dueSoonTasks[0].courses.name}) — due {format(new Date(dueSoonTasks[0].due_date + 'T00:00:00'), 'EEE, MMM d')}
               </Text>
             ) : stats && stats.pending > 0 ? (
-              <Text style={styles.emptySub}>
+              <Text style={[styles.emptySub, { color: colors.ink3 }]}>
                 You have {stats.pending} pending task{stats.pending > 1 ? 's' : ''} this semester. Check your courses for upcoming deadlines.
               </Text>
             ) : courses.length > 0 ? (
-              <Text style={styles.emptySub}>
+              <Text style={[styles.emptySub, { color: colors.ink3 }]}>
                 No deadlines coming up. Scan a syllabus to import your assignments automatically.
               </Text>
             ) : (
-              <Text style={styles.emptySub}>
+              <Text style={[styles.emptySub, { color: colors.ink3 }]}>
                 Get started by adding a semester and courses, or scan a syllabus.
               </Text>
             )}
@@ -261,24 +265,24 @@ export default function TodayScreen() {
         )}
 
         {/* This Week */}
-        <Text style={[styles.sectionTitle, { marginTop: 20, marginBottom: 10 }]}>This week</Text>
-        <View style={styles.weekCard}>
+        <Text style={[styles.sectionTitle, { marginTop: 20, marginBottom: 10, color: colors.ink2 }]}>This week</Text>
+        <View style={[styles.weekCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <View style={styles.weekStats}>
             <View style={styles.weekStat}>
-              <Text style={styles.weekStatNum}>{weekTasks.length}</Text>
-              <Text style={styles.weekStatLabel}>TASKS</Text>
+              <Text style={[styles.weekStatNum, { color: colors.ink }]}>{weekTasks.length}</Text>
+              <Text style={[styles.weekStatLabel, { color: colors.ink3 }]}>TASKS</Text>
             </View>
             <View style={styles.weekStat}>
-              <Text style={styles.weekStatNum}>{weekExams}</Text>
-              <Text style={styles.weekStatLabel}>EXAMS</Text>
+              <Text style={[styles.weekStatNum, { color: colors.ink }]}>{weekExams}</Text>
+              <Text style={[styles.weekStatLabel, { color: colors.ink3 }]}>EXAMS</Text>
             </View>
             <View style={styles.weekStat}>
-              <Text style={[styles.weekStatNum, weekOverdue > 0 && { color: COLORS.coral }]}>{weekOverdue}</Text>
-              <Text style={styles.weekStatLabel}>OVERDUE</Text>
+              <Text style={[styles.weekStatNum, { color: colors.ink }, weekOverdue > 0 && { color: colors.coral }]}>{weekOverdue}</Text>
+              <Text style={[styles.weekStatLabel, { color: colors.ink3 }]}>OVERDUE</Text>
             </View>
             <View style={styles.weekStat}>
-              <Text style={styles.weekStatNum}>{courses.length}</Text>
-              <Text style={styles.weekStatLabel}>COURSES</Text>
+              <Text style={[styles.weekStatNum, { color: colors.ink }]}>{courses.length}</Text>
+              <Text style={[styles.weekStatLabel, { color: colors.ink3 }]}>COURSES</Text>
             </View>
           </View>
           {/* Bar chart */}
@@ -289,15 +293,15 @@ export default function TodayScreen() {
                   styles.bar,
                   { height: `${Math.max((count / maxBucket) * 100, 5)}%` },
                   i === todayDayIndex
-                    ? { backgroundColor: COLORS.brand }
-                    : { backgroundColor: COLORS.brand100 },
+                    ? { backgroundColor: colors.brand }
+                    : { backgroundColor: colors.brand100 },
                 ]} />
               </View>
             ))}
           </View>
           <View style={styles.barLabels}>
             {dayLabels.map((l, i) => (
-              <Text key={i} style={[styles.barLabel, i === todayDayIndex && { color: COLORS.brand, fontWeight: '600' }]}>{l}</Text>
+              <Text key={i} style={[styles.barLabel, { color: colors.ink3 }, i === todayDayIndex && { color: colors.brand, fontWeight: '600' }]}>{l}</Text>
             ))}
           </View>
         </View>

@@ -13,6 +13,7 @@ import { GradeCard } from '@/components/GradeCard';
 import { COURSE_COLORS, COURSE_ICONS, COLORS, calculateGrade, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import type { GradeThreshold } from '@/types/database';
 import { useAppStore } from '@/store/appStore';
+import { useColors } from '@/lib/theme';
 
 export default function CourseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -23,6 +24,7 @@ export default function CourseDetailScreen() {
   const deleteCourse = useDeleteCourse();
   const toggleComplete = useToggleTaskComplete();
   const isPro = useAppStore((s) => s.isPro);
+  const colors = useColors();
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -35,7 +37,7 @@ export default function CourseDetailScreen() {
   const [scaleRows, setScaleRows] = useState<GradeThreshold[]>([]);
 
   if (isLoading || !course) {
-    return <View style={styles.loading}><ActivityIndicator size="large" color={COLORS.brand} /></View>;
+    return <View style={[styles.loading, { backgroundColor: colors.paper }]}><ActivityIndicator size="large" color={colors.brand} /></View>;
   }
 
   // Grade calculation
@@ -98,7 +100,7 @@ export default function CourseDetailScreen() {
   const displayIcon = editing ? editIcon : course.icon;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
         {/* Header */}
         <View style={[styles.header, { backgroundColor: displayColor + '12' }]}>
@@ -107,46 +109,46 @@ export default function CourseDetailScreen() {
           </View>
           {editing ? (
             <>
-              <TextInput style={styles.editTitle} value={editName} onChangeText={setEditName} placeholder="Course Name" placeholderTextColor={COLORS.ink3} />
-              <TextInput style={styles.editSub} value={editInstructor} onChangeText={setEditInstructor} placeholder="Instructor" placeholderTextColor={COLORS.ink3} />
-              <TextInput style={styles.editSub} value={editMeetingTime} onChangeText={setEditMeetingTime} placeholder="Meeting time (e.g. MWF 10:00 AM)" placeholderTextColor={COLORS.ink3} />
-              <TextInput style={styles.editSub} value={editOfficeHours} onChangeText={setEditOfficeHours} placeholder="Office hours (e.g. Tue 2-3 PM)" placeholderTextColor={COLORS.ink3} />
+              <TextInput style={[styles.editTitle, { color: colors.ink, borderBottomColor: colors.line }]} value={editName} onChangeText={setEditName} placeholder="Course Name" placeholderTextColor={colors.ink3} />
+              <TextInput style={[styles.editSub, { color: colors.ink2, borderBottomColor: colors.line }]} value={editInstructor} onChangeText={setEditInstructor} placeholder="Instructor" placeholderTextColor={colors.ink3} />
+              <TextInput style={[styles.editSub, { color: colors.ink2, borderBottomColor: colors.line }]} value={editMeetingTime} onChangeText={setEditMeetingTime} placeholder="Meeting time (e.g. MWF 10:00 AM)" placeholderTextColor={colors.ink3} />
+              <TextInput style={[styles.editSub, { color: colors.ink2, borderBottomColor: colors.line }]} value={editOfficeHours} onChangeText={setEditOfficeHours} placeholder="Office hours (e.g. Tue 2-3 PM)" placeholderTextColor={colors.ink3} />
             </>
           ) : (
             <>
-              <Text style={styles.headerTitle}>{course.name}</Text>
-              {course.instructor && <Text style={styles.headerSub}>{course.instructor}</Text>}
+              <Text style={[styles.headerTitle, { color: colors.ink }]}>{course.name}</Text>
+              {course.instructor && <Text style={[styles.headerSub, { color: colors.ink2 }]}>{course.instructor}</Text>}
             </>
           )}
           <View style={styles.statsRow}>
-            <View style={styles.statBadge}><Text style={styles.statNum}>{pendingCount}</Text><Text style={styles.statLabel}>pending</Text></View>
-            <View style={styles.statBadge}><Text style={[styles.statNum, { color: '#22c55e' }]}>{doneCount}</Text><Text style={styles.statLabel}>done</Text></View>
+            <View style={styles.statBadge}><Text style={styles.statNum}>{pendingCount}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>pending</Text></View>
+            <View style={styles.statBadge}><Text style={[styles.statNum, { color: '#22c55e' }]}>{doneCount}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>done</Text></View>
           </View>
         </View>
 
         {/* Course details — always show, tap to edit if empty */}
         {!editing && (
-          <TouchableOpacity style={styles.detailsCard} onPress={!course.meeting_time && !course.office_hours ? startEdit : undefined} activeOpacity={0.8}>
+          <TouchableOpacity style={[styles.detailsCard, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={!course.meeting_time && !course.office_hours ? startEdit : undefined} activeOpacity={0.8}>
             <View style={styles.detailRow}>
-              <FontAwesome name="clock-o" size={13} color={course.meeting_time ? COLORS.ink2 : COLORS.ink3} />
+              <FontAwesome name="clock-o" size={13} color={course.meeting_time ? colors.ink2 : colors.ink3} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.detailLabel}>Class Meeting</Text>
+                <Text style={[styles.detailLabel, { color: colors.ink3 }]}>Class Meeting</Text>
                 {course.meeting_time ? (
-                  <Text style={styles.detailValue}>{course.meeting_time}</Text>
+                  <Text style={[styles.detailValue, { color: colors.ink }]}>{course.meeting_time}</Text>
                 ) : (
-                  <Text style={styles.detailEmpty}>Tap Edit to add meeting time</Text>
+                  <Text style={[styles.detailEmpty, { color: colors.ink3 }]}>Tap Edit to add meeting time</Text>
                 )}
               </View>
             </View>
-            <View style={styles.detailDivider} />
+            <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
             <View style={styles.detailRow}>
-              <FontAwesome name="building-o" size={13} color={course.office_hours ? COLORS.ink2 : COLORS.ink3} />
+              <FontAwesome name="building-o" size={13} color={course.office_hours ? colors.ink2 : colors.ink3} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.detailLabel}>Office Hours</Text>
+                <Text style={[styles.detailLabel, { color: colors.ink3 }]}>Office Hours</Text>
                 {course.office_hours ? (
-                  <Text style={styles.detailValue}>{course.office_hours}</Text>
+                  <Text style={[styles.detailValue, { color: colors.ink }]}>{course.office_hours}</Text>
                 ) : (
-                  <Text style={styles.detailEmpty}>Tap Edit to add office hours</Text>
+                  <Text style={[styles.detailEmpty, { color: colors.ink3 }]}>Tap Edit to add office hours</Text>
                 )}
               </View>
             </View>
@@ -154,24 +156,24 @@ export default function CourseDetailScreen() {
         )}
 
         {/* Grade summary */}
-        <View style={styles.gradeCard}>
+        <View style={[styles.gradeCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <GradeCard percentage={percentage} letter={letter} gradedCount={gradedCount} totalCount={tasks.length} weightAttempted={weightAttempted} weightTotal={weightTotal} />
 
           {/* Grade scale — Pro only */}
           {isPro ? (
             <>
               {!editingScale ? (
-                <TouchableOpacity style={styles.scaleToggle} onPress={startEditScale}>
+                <TouchableOpacity style={[styles.scaleToggle, { borderTopColor: colors.line }]} onPress={startEditScale}>
                   <View style={styles.scaleRow}>
                     {(gradeScale as GradeThreshold[]).map((g) => (
-                      <Text key={g.letter} style={styles.scaleItem}>{g.letter}: {g.min}%+</Text>
+                      <Text key={g.letter} style={[styles.scaleItem, { color: colors.ink2 }]}>{g.letter}: {g.min}%+</Text>
                     ))}
                   </View>
-                  <Text style={styles.editScaleLink}>Edit Scale</Text>
+                  <Text style={[styles.editScaleLink, { color: colors.brand }]}>Edit Scale</Text>
                 </TouchableOpacity>
               ) : (
-                <View style={styles.scaleEditor}>
-                  <Text style={styles.scaleEditorTitle}>Grade Scale</Text>
+                <View style={[styles.scaleEditor, { borderTopColor: colors.line }]}>
+                  <Text style={[styles.scaleEditorTitle, { color: colors.ink }]}>Grade Scale</Text>
                   {scaleRows.map((row, i) => (
                     <View key={i} style={styles.scaleEditRow}>
                       <TextInput
@@ -193,22 +195,22 @@ export default function CourseDetailScreen() {
                     </View>
                   ))}
                   <TouchableOpacity style={styles.addScaleRow} onPress={() => setScaleRows([...scaleRows, { letter: '', min: 0 }])}>
-                    <FontAwesome name="plus" size={11} color={COLORS.brand} /><Text style={styles.addScaleText}>Add Row</Text>
+                    <FontAwesome name="plus" size={11} color={colors.brand} /><Text style={[styles.addScaleText, { color: colors.brand }]}>Add Row</Text>
                   </TouchableOpacity>
                   <View style={styles.scaleActions}>
-                    <TouchableOpacity style={styles.scaleCancelBtn} onPress={() => setEditingScale(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-                    <TouchableOpacity style={styles.scaleSaveBtn} onPress={saveScale}><Text style={styles.saveText}>Save Scale</Text></TouchableOpacity>
+                    <TouchableOpacity style={[styles.scaleCancelBtn, { borderColor: colors.line }]} onPress={() => setEditingScale(false)}><Text style={[styles.cancelText, { color: colors.ink2 }]}>Cancel</Text></TouchableOpacity>
+                    <TouchableOpacity style={[styles.scaleSaveBtn, { backgroundColor: colors.brand }]} onPress={saveScale}><Text style={styles.saveText}>Save Scale</Text></TouchableOpacity>
                   </View>
                 </View>
               )}
             </>
           ) : (
-            <TouchableOpacity style={styles.scaleToggle} activeOpacity={0.8} onPress={() => router.push('/paywall' as any)}>
+            <TouchableOpacity style={[styles.scaleToggle, { borderTopColor: colors.line }]} activeOpacity={0.8} onPress={() => router.push('/paywall' as any)}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <FontAwesome name="lock" size={12} color={COLORS.brand} />
-                <Text style={styles.editScaleLink}>Customize grade scale</Text>
+                <FontAwesome name="lock" size={12} color={colors.brand} />
+                <Text style={[styles.editScaleLink, { color: colors.brand }]}>Customize grade scale</Text>
               </View>
-              <View style={styles.lockedBadge}>
+              <View style={[styles.lockedBadge, { backgroundColor: colors.brand }]}>
                 <FontAwesome name="star" size={9} color="#fff" />
                 <Text style={styles.lockedBadgeText}>PRO</Text>
               </View>
@@ -218,8 +220,8 @@ export default function CourseDetailScreen() {
 
         {/* Edit color/icon */}
         {editing && (
-          <View style={styles.editCard}>
-            <Text style={styles.editLabel}>Color</Text>
+          <View style={[styles.editCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <Text style={[styles.editLabel, { color: colors.ink2 }]}>Color</Text>
             <View style={styles.colorGrid}>
               {COURSE_COLORS.map((c) => (
                 <TouchableOpacity key={c} style={[styles.colorCircle, { backgroundColor: c }, editColor === c && styles.colorSelected]} onPress={() => setEditColor(c)}>
@@ -227,16 +229,16 @@ export default function CourseDetailScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-            <Text style={styles.editLabel}>Icon</Text>
+            <Text style={[styles.editLabel, { color: colors.ink2 }]}>Icon</Text>
             <View style={styles.iconGrid}>
               {COURSE_ICONS.map((ic) => (
-                <TouchableOpacity key={ic} style={[styles.iconBtn, editIcon === ic && { borderColor: editColor, backgroundColor: editColor + '15' }]} onPress={() => setEditIcon(ic)}>
-                  <FontAwesome name={ic as any} size={16} color={editIcon === ic ? editColor : '#94a3b8'} />
+                <TouchableOpacity key={ic} style={[styles.iconBtn, { borderColor: colors.line }, editIcon === ic && { borderColor: editColor, backgroundColor: editColor + '15' }]} onPress={() => setEditIcon(ic)}>
+                  <FontAwesome name={ic as any} size={16} color={editIcon === ic ? editColor : colors.ink3} />
                 </TouchableOpacity>
               ))}
             </View>
             <View style={styles.editActions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditing(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
+              <TouchableOpacity style={[styles.cancelBtn, { borderColor: colors.line }]} onPress={() => setEditing(false)}><Text style={[styles.cancelText, { color: colors.ink2 }]}>Cancel</Text></TouchableOpacity>
               <TouchableOpacity style={[styles.saveBtn, { backgroundColor: editColor }]} onPress={saveEdit}>
                 {updateCourse.isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.saveText}>Save</Text>}
               </TouchableOpacity>
@@ -247,8 +249,8 @@ export default function CourseDetailScreen() {
         {/* Actions */}
         {!editing && (
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.actionBtn} onPress={startEdit}>
-              <FontAwesome name="pencil" size={14} color={COLORS.brand} /><Text style={styles.actionText}>Edit</Text>
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.brand50 }]} onPress={startEdit}>
+              <FontAwesome name="pencil" size={14} color={colors.brand} /><Text style={[styles.actionText, { color: colors.brand }]}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={handleDelete}>
               <FontAwesome name="trash-o" size={14} color="#ef4444" /><Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
@@ -261,9 +263,9 @@ export default function CourseDetailScreen() {
         )}
 
         {/* Tasks */}
-        <Text style={styles.sectionTitle}>Tasks ({tasks.length})</Text>
+        <Text style={[styles.sectionTitle, { color: colors.ink }]}>Tasks ({tasks.length})</Text>
         {tasks.length === 0 ? (
-          <View style={styles.emptyState}><Text style={styles.emptyText}>No tasks yet for this course</Text></View>
+          <View style={styles.emptyState}><Text style={[styles.emptyText, { color: colors.ink3 }]}>No tasks yet for this course</Text></View>
         ) : (
           tasks.map((task) => (
             <TaskItem

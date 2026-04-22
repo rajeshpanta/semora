@@ -6,44 +6,51 @@ import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/lib/constants';
+import { useColors, useResolvedScheme } from '@/lib/theme';
 
 function TabIcon({ name, color, focused }: { name: any; color: string; focused: boolean }) {
+  const colors = useColors();
   return (
-    <View style={[ts.iconWrap, focused && ts.iconActive]}>
+    <View style={[ts.iconWrap, focused && [ts.iconActive, { backgroundColor: colors.brand50 }]]}>
       <FontAwesome name={name} size={18} color={color} />
     </View>
   );
 }
 
 function ScanFab() {
+  const colors = useColors();
   return (
-    <View style={ts.fab}>
+    <View style={[ts.fab, { backgroundColor: colors.brand }]}>
       <FontAwesome name="camera" size={18} color="#fff" />
     </View>
   );
 }
 
 export default function TabLayout() {
+  const colors = useColors();
+  const scheme = useResolvedScheme();
   const isWeb = Platform.OS === 'web';
   const insets = useSafeAreaInsets();
+  const isDark = scheme === 'dark';
+  const tabBarBgRgba = isDark ? 'rgba(18,18,20,0.92)' : 'rgba(250,249,245,0.92)';
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: COLORS.brand,
-        tabBarInactiveTintColor: COLORS.ink3,
+        tabBarActiveTintColor: colors.brand,
+        tabBarInactiveTintColor: colors.ink3,
         headerShown: false,
         tabBarBackground: () =>
           !isWeb ? (
-            <BlurView intensity={80} tint="light" style={StyleSheet.absoluteFill} pointerEvents="none" />
+            <BlurView intensity={80} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} pointerEvents="none" />
           ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: COLORS.paper }]} pointerEvents="none" />
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.paper }]} pointerEvents="none" />
           ),
         tabBarStyle: {
           position: isWeb ? undefined : ('absolute' as const),
-          backgroundColor: isWeb ? COLORS.paper : `rgba(250,249,245,0.92)`,
+          backgroundColor: isWeb ? colors.paper : tabBarBgRgba,
           borderTopWidth: 0.5,
-          borderTopColor: COLORS.line,
+          borderTopColor: colors.line,
           paddingBottom: isWeb ? 8 : insets.bottom,
           paddingTop: 8,
           elevation: 0,

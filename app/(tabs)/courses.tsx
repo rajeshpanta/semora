@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTasks, useDeleteSemester } from '@/lib/queries';
 import { COLORS, calculateGrade, DEFAULT_GRADE_SCALE } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 import { differenceInDays, isToday, isPast, addDays, format } from 'date-fns';
 import type { GradeThreshold } from '@/types/database';
 import type { TaskWithCourse } from '@/lib/queries';
@@ -17,6 +18,7 @@ import type { TaskWithCourse } from '@/lib/queries';
 type CourseFilter = 'all' | 'thisWeek' | 'upcoming';
 
 export default function CoursesScreen() {
+  const colors = useColors();
   const router = useRouter();
   const [filter, setFilter] = useState<CourseFilter>('all');
   const [showPicker, setShowPicker] = useState(false);
@@ -94,22 +96,22 @@ export default function CoursesScreen() {
 
   if (semestersLoading && semesters.length === 0) {
     return (
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color={COLORS.brand} />
+          <ActivityIndicator size="large" color={colors.brand} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
         {/* Header */}
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Courses</Text>
+            <Text style={[styles.title, { color: colors.ink }]}>Courses</Text>
 
             {/* Semester selector */}
             {activeSemester ? (
@@ -118,24 +120,24 @@ export default function CoursesScreen() {
                 onPress={() => semesters.length > 1 ? setShowPicker(true) : null}
                 activeOpacity={semesters.length > 1 ? 0.7 : 1}
               >
-                <Text style={styles.semesterName}>{activeSemester.name}</Text>
+                <Text style={[styles.semesterName, { color: colors.ink2 }]}>{activeSemester.name}</Text>
                 {semesters.length > 1 && (
-                  <FontAwesome name="chevron-down" size={10} color={COLORS.ink3} style={{ marginLeft: 4 }} />
+                  <FontAwesome name="chevron-down" size={10} color={colors.ink3} style={{ marginLeft: 4 }} />
                 )}
-                <View style={styles.courseCountBadge}>
-                  <Text style={styles.courseCountText}>{courses.length}</Text>
+                <View style={[styles.courseCountBadge, { backgroundColor: colors.brand50 }]}>
+                  <Text style={[styles.courseCountText, { color: colors.brand }]}>{courses.length}</Text>
                 </View>
               </TouchableOpacity>
             ) : (
-              <Text style={styles.subtitle}>No semester selected</Text>
+              <Text style={[styles.subtitle, { color: colors.ink3 }]}>No semester selected</Text>
             )}
           </View>
 
           <View style={styles.headerActions}>
             {activeSemester && (
               <>
-                <TouchableOpacity onPress={() => router.push(`/semester/${activeSemester.id}` as any)} hitSlop={8} style={styles.headerIconBtn}>
-                  <FontAwesome name="pencil" size={13} color={COLORS.ink3} />
+                <TouchableOpacity onPress={() => router.push(`/semester/${activeSemester.id}` as any)} hitSlop={8} style={[styles.headerIconBtn, { backgroundColor: colors.card, borderColor: colors.line }]}>
+                  <FontAwesome name="pencil" size={13} color={colors.ink3} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => {
@@ -160,13 +162,13 @@ export default function CoursesScreen() {
                     );
                   }}
                   hitSlop={8}
-                  style={styles.headerIconBtn}
+                  style={[styles.headerIconBtn, { backgroundColor: colors.card, borderColor: colors.line }]}
                 >
-                  <FontAwesome name="trash-o" size={13} color={COLORS.coral} />
+                  <FontAwesome name="trash-o" size={13} color={colors.coral} />
                 </TouchableOpacity>
               </>
             )}
-            <TouchableOpacity style={styles.addBtn} onPress={() => handleNav('/course/new')} activeOpacity={0.8}>
+            <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.brand }]} onPress={() => handleNav('/course/new')} activeOpacity={0.8}>
               <FontAwesome name="plus" size={14} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -177,11 +179,11 @@ export default function CoursesScreen() {
           {(['all', 'thisWeek', 'upcoming'] as const).map((f) => (
             <TouchableOpacity
               key={f}
-              style={[styles.pill, filter === f && styles.pillActive]}
+              style={[styles.pill, { backgroundColor: colors.card, borderColor: colors.line }, filter === f && [styles.pillActive, { backgroundColor: colors.ink, borderColor: colors.ink }]]}
               onPress={() => handleFilter(f)}
               activeOpacity={0.7}
             >
-              <Text style={filter === f ? styles.pillTextActive : styles.pillText}>
+              <Text style={filter === f ? styles.pillTextActive : [styles.pillText, { color: colors.ink2 }]}>
                 {f === 'all' ? 'All' : f === 'thisWeek' ? 'This week' : 'Upcoming'}
               </Text>
             </TouchableOpacity>
@@ -203,7 +205,7 @@ export default function CoursesScreen() {
               return (
                 <TouchableOpacity
                   key={course.id}
-                  style={styles.courseCard}
+                  style={[styles.courseCard, { backgroundColor: colors.card, borderColor: colors.line }]}
                   onPress={() => router.push(`/course/${course.id}` as any)}
                   activeOpacity={0.7}
                 >
@@ -211,34 +213,34 @@ export default function CoursesScreen() {
                   <View style={styles.courseTop}>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.courseCode, { color: course.color }]}>{course.name}</Text>
-                      {course.instructor && <Text style={styles.courseInstructor}>{course.instructor}</Text>}
+                      {course.instructor && <Text style={[styles.courseInstructor, { color: colors.ink3 }]}>{course.instructor}</Text>}
                     </View>
                     <View style={[styles.upNextBadge, { backgroundColor: course.color + '15' }]}>
                       <Text style={[styles.upNextText, { color: course.color }]}>{pendingCount} UP NEXT</Text>
                     </View>
                   </View>
                   {nextTask && (
-                    <View style={styles.nextRow}>
+                    <View style={[styles.nextRow, { borderTopColor: colors.line }]}>
                       <FontAwesome
                         name={nextTask.type === 'exam' ? 'exclamation-circle' : 'clock-o'}
                         size={13}
-                        color={dueInfo?.urgent ? COLORS.coral : COLORS.ink3}
+                        color={dueInfo?.urgent ? colors.coral : colors.ink3}
                       />
-                      <Text style={styles.nextTitle} numberOfLines={1}>
+                      <Text style={[styles.nextTitle, { color: colors.ink }]} numberOfLines={1}>
                         <Text style={{ fontWeight: '500' }}>{nextTask.title}</Text>
-                        {nextTask.due_time ? <Text style={{ color: COLORS.ink3 }}> · {nextTask.due_time.slice(0, 5)}</Text> : null}
+                        {nextTask.due_time ? <Text style={{ color: colors.ink3 }}> · {nextTask.due_time.slice(0, 5)}</Text> : null}
                       </Text>
-                      <Text style={[styles.nextDue, dueInfo?.urgent && { color: COLORS.coral, fontWeight: '600' }]}>
+                      <Text style={[styles.nextDue, { color: colors.ink3 }, dueInfo?.urgent && { color: colors.coral, fontWeight: '600' }]}>
                         {dueInfo?.text}
                       </Text>
                     </View>
                   )}
                   {percentage !== null && (
                     <View style={styles.progressRow}>
-                      <View style={styles.progressBg}>
+                      <View style={[styles.progressBg, { backgroundColor: colors.line }]}>
                         <View style={[styles.progressFill, { width: `${Math.min(percentage, 100)}%`, backgroundColor: course.color }]} />
                       </View>
-                      <Text style={styles.progressText}>{percentage}%</Text>
+                      <Text style={[styles.progressText, { color: colors.ink3 }]}>{percentage}%</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -246,21 +248,21 @@ export default function CoursesScreen() {
             })}
           </View>
         ) : courses.length > 0 && filter !== 'all' ? (
-          <View style={styles.emptyCard}>
-            <Text style={styles.emptyTitle}>No courses match this filter</Text>
-            <Text style={styles.emptyText}>Try switching to "All"</Text>
+          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <Text style={[styles.emptyTitle, { color: colors.ink }]}>No courses match this filter</Text>
+            <Text style={[styles.emptyText, { color: colors.ink3 }]}>Try switching to "All"</Text>
           </View>
         ) : selectedSemesterId ? (
-          <TouchableOpacity style={styles.emptyCard} onPress={() => handleNav('/course/new')} activeOpacity={0.7}>
-            <FontAwesome name="book" size={24} color={COLORS.ink3} />
-            <Text style={styles.emptyTitle}>No courses yet</Text>
-            <Text style={styles.emptyText}>Tap to add your first course</Text>
+          <TouchableOpacity style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={() => handleNav('/course/new')} activeOpacity={0.7}>
+            <FontAwesome name="book" size={24} color={colors.ink3} />
+            <Text style={[styles.emptyTitle, { color: colors.ink }]}>No courses yet</Text>
+            <Text style={[styles.emptyText, { color: colors.ink3 }]}>Tap to add your first course</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={styles.emptyCard} onPress={() => handleNav('/semester/new')} activeOpacity={0.7}>
-            <FontAwesome name="graduation-cap" size={24} color={COLORS.ink3} />
-            <Text style={styles.emptyTitle}>No semester</Text>
-            <Text style={styles.emptyText}>Create a semester to get started</Text>
+          <TouchableOpacity style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={() => handleNav('/semester/new')} activeOpacity={0.7}>
+            <FontAwesome name="graduation-cap" size={24} color={colors.ink3} />
+            <Text style={[styles.emptyTitle, { color: colors.ink }]}>No semester</Text>
+            <Text style={[styles.emptyText, { color: colors.ink3 }]}>Create a semester to get started</Text>
           </TouchableOpacity>
         )}
       </ScrollView>
@@ -268,11 +270,11 @@ export default function CoursesScreen() {
       {/* Semester dropdown modal */}
       <Modal visible={showPicker} transparent animationType="fade" onRequestClose={() => setShowPicker(false)}>
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPicker(false)}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Semester</Text>
+              <Text style={[styles.modalTitle, { color: colors.ink }]}>Select Semester</Text>
               <TouchableOpacity onPress={() => setShowPicker(false)} hitSlop={12}>
-                <FontAwesome name="times" size={16} color={COLORS.ink3} />
+                <FontAwesome name="times" size={16} color={colors.ink3} />
               </TouchableOpacity>
             </View>
 
@@ -283,23 +285,23 @@ export default function CoursesScreen() {
                 return (
                   <TouchableOpacity
                     key={s.id}
-                    style={[styles.modalRow, i < semesters.length - 1 && styles.modalRowBorder]}
+                    style={[styles.modalRow, i < semesters.length - 1 && [styles.modalRowBorder, { borderBottomColor: colors.line }]]}
                     onPress={() => handleSelectSemester(s.id)}
                     activeOpacity={0.7}
                   >
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.modalRowName, isSelected && { color: COLORS.brand }]}>{s.name}</Text>
-                      {dateLabel ? <Text style={styles.modalRowDate}>{dateLabel}</Text> : null}
+                      <Text style={[styles.modalRowName, { color: colors.ink }, isSelected && { color: colors.brand }]}>{s.name}</Text>
+                      {dateLabel ? <Text style={[styles.modalRowDate, { color: colors.ink3 }]}>{dateLabel}</Text> : null}
                     </View>
-                    {isSelected && <FontAwesome name="check" size={14} color={COLORS.brand} />}
+                    {isSelected && <FontAwesome name="check" size={14} color={colors.brand} />}
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
 
-            <TouchableOpacity style={styles.modalAddBtn} onPress={() => { setShowPicker(false); handleNav('/semester/new'); }}>
-              <FontAwesome name="plus" size={12} color={COLORS.brand} />
-              <Text style={styles.modalAddText}>New Semester</Text>
+            <TouchableOpacity style={[styles.modalAddBtn, { borderTopColor: colors.line }]} onPress={() => { setShowPicker(false); handleNav('/semester/new'); }}>
+              <FontAwesome name="plus" size={12} color={colors.brand} />
+              <Text style={[styles.modalAddText, { color: colors.brand }]}>New Semester</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

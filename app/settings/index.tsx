@@ -1,0 +1,154 @@
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Stack, useRouter } from 'expo-router';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useSession } from '@/app/_layout';
+import { useAppStore } from '@/store/appStore';
+import { signOut } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
+import { COLORS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
+
+export default function SettingsScreen() {
+  const colors = useColors();
+  const { session } = useSession();
+  const email = session?.user?.email ?? '';
+  const name = email.split('@')[0] || 'User';
+  const isPro = useAppStore((s) => s.isPro);
+  const themeMode = useAppStore((s) => s.themeMode);
+  const themeModeLabel = themeMode === 'system' ? 'System' : themeMode === 'light' ? 'Light' : 'Dark';
+  const router = useRouter();
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This will permanently delete your account and all your data. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Are you sure?',
+              'All your semesters, courses, tasks, and grades will be permanently deleted.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete Forever',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      const { error } = await supabase.rpc('delete_user_account');
+                      if (error) throw error;
+                      await signOut();
+                    } catch (err: any) {
+                      Alert.alert('Error', err.message ?? 'Failed to delete account. Please try again.');
+                    }
+                  },
+                },
+              ],
+            );
+          },
+        },
+      ],
+    );
+  };
+
+  return (
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
+      <Stack.Screen options={{ title: 'Settings' }} />
+
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Account */}
+        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Account</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <View style={[styles.row, styles.rowBorder, { borderBottomColor: colors.line }]}>
+            <FontAwesome name="user" size={16} color={colors.ink2} style={styles.icon} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.rowLabel, { color: colors.ink }]}>{name}</Text>
+              <Text style={[styles.rowSub, { color: colors.ink3 }]}>{email}</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.row}
+            activeOpacity={0.7}
+            onPress={() => router.push('/settings/password')}
+          >
+            <FontAwesome name="lock" size={16} color={colors.ink2} style={styles.icon} />
+            <Text style={[styles.rowLabel, { flex: 1, color: colors.ink }]}>Change Password</Text>
+            <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Preferences */}
+        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Preferences</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <SettingsRow
+            icon="bell"
+            label="Notifications"
+            value={isPro ? '1 day, 3 days' : 'Same day'}
+            onPress={() => router.push('/settings/notifications')}
+          />
+          <SettingsRow
+            icon="calendar"
+            label="Calendar Sync"
+            onPress={() => router.push('/settings/calendar')}
+          />
+          <SettingsRow
+            icon="sun-o"
+            label="Appearance"
+            value={themeModeLabel}
+            onPress={() => router.push('/settings/appearance')}
+          />
+          <SettingsRow
+            icon="th-large"
+            label="Widgets"
+            onPress={() => router.push('/settings/widgets')}
+            last
+          />
+        </View>
+
+        {/* Danger zone */}
+        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Danger Zone</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={handleDeleteAccount}>
+            <FontAwesome name="trash" size={16} color={colors.coral} style={styles.icon} />
+            <Text style={[styles.rowLabel, { flex: 1, color: colors.coral }]}>Delete Account</Text>
+            <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={[styles.hint, { color: colors.ink3 }]}>
+          Deleting your account removes all data permanently and cannot be undone.
+        </Text>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function SettingsRow({ icon, label, value, last, onPress }: { icon: string; label: string; value?: string; last?: boolean; onPress?: () => void }) {
+  const colors = useColors();
+  return (
+    <TouchableOpacity style={[styles.row, !last && styles.rowBorder, !last && { borderBottomColor: colors.line }]} activeOpacity={0.7} onPress={onPress}>
+      <FontAwesome name={icon as any} size={16} color={colors.ink2} style={styles.icon} />
+      <Text style={[styles.rowLabel, { flex: 1, color: colors.ink }]}>{label}</Text>
+      {value && <Text style={[styles.rowValue, { color: colors.ink3 }]}>{value}</Text>}
+      <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: COLORS.paper },
+  content: { padding: 20, paddingBottom: 40 },
+  sectionTitle: { fontSize: 13, fontWeight: '600', color: COLORS.ink2, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
+  card: { backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 16, marginBottom: 24, borderWidth: 0.5, borderColor: COLORS.line },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
+  rowBorder: { borderBottomWidth: 0.5, borderBottomColor: COLORS.line },
+  icon: { width: 24, textAlign: 'center', marginRight: 12 },
+  rowLabel: { fontSize: 15, fontWeight: '500', color: COLORS.ink },
+  rowSub: { fontSize: 13, color: COLORS.ink3, marginTop: 2 },
+  rowValue: { fontSize: 14, color: COLORS.ink3, marginRight: 8 },
+  hint: { fontSize: 13, color: COLORS.ink3, lineHeight: 18, paddingHorizontal: 4 },
+});

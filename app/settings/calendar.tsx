@@ -4,6 +4,7 @@ import { Stack, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useEffect, useState } from 'react';
 import { COLORS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 import { useAppStore } from '@/store/appStore';
 import {
   requestCalendarPermission,
@@ -13,6 +14,7 @@ import {
 } from '@/lib/calendarSync';
 
 export default function CalendarSyncSettings() {
+  const colors = useColors();
   const [synced, setSynced] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -112,35 +114,35 @@ export default function CalendarSyncSettings() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]}>
         <Stack.Screen options={{ title: 'Calendar Sync' }} />
-        <ActivityIndicator style={{ marginTop: 40 }} color={COLORS.brand} />
+        <ActivityIndicator style={{ marginTop: 40 }} color={colors.brand} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Calendar Sync' }} />
 
       <View style={styles.content}>
-        <Text style={styles.sectionTitle}>Sync to Device Calendar</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Sync to Device Calendar</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <View style={styles.row}>
-            <FontAwesome name="calendar-check-o" size={18} color={COLORS.brand} style={{ width: 26 }} />
+            <FontAwesome name="calendar-check-o" size={18} color={colors.brand} style={{ width: 26 }} />
             <View style={{ flex: 1, marginLeft: 8 }}>
-              <Text style={styles.rowLabel}>Calendar Sync</Text>
-              <Text style={styles.rowSub}>
+              <Text style={[styles.rowLabel, { color: colors.ink }]}>Calendar Sync</Text>
+              <Text style={[styles.rowSub, { color: colors.ink3 }]}>
                 {synced ? 'Tasks are synced to "Semora" calendar' : 'Push tasks as calendar events'}
               </Text>
             </View>
             {syncing ? (
-              <ActivityIndicator size="small" color={COLORS.brand} />
+              <ActivityIndicator size="small" color={colors.brand} />
             ) : (
               <Switch
                 value={synced}
                 onValueChange={handleToggle}
-                trackColor={{ false: COLORS.line, true: COLORS.brand }}
+                trackColor={{ false: colors.line, true: colors.brand }}
                 thumbColor="#fff"
               />
             )}
@@ -149,23 +151,23 @@ export default function CalendarSyncSettings() {
 
         {synced && (
           <>
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
               <TouchableOpacity style={styles.actionRow} activeOpacity={0.7} onPress={handleResync} disabled={syncing}>
-                <FontAwesome name="refresh" size={16} color={COLORS.brand} style={{ width: 26 }} />
-                <Text style={[styles.rowLabel, { marginLeft: 8 }]}>Re-sync all tasks</Text>
-                <FontAwesome name="chevron-right" size={11} color={COLORS.ink3} />
+                <FontAwesome name="refresh" size={16} color={colors.brand} style={{ width: 26 }} />
+                <Text style={[styles.rowLabel, { marginLeft: 8, color: colors.ink }]}>Re-sync all tasks</Text>
+                <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.hint}>
+            <Text style={[styles.hint, { color: colors.ink3 }]}>
               A "Semora" calendar is created on your device. Incomplete tasks from the current semester are synced as events. Completed tasks are not included.
             </Text>
           </>
         )}
 
-        <View style={[styles.infoBox, { marginTop: 20 }]}>
-          <FontAwesome name="info-circle" size={14} color={COLORS.blue} />
-          <Text style={styles.infoText}>
+        <View style={[styles.infoBox, { marginTop: 20, backgroundColor: colors.blue50 }]}>
+          <FontAwesome name="info-circle" size={14} color={colors.blue} />
+          <Text style={[styles.infoText, { color: colors.blue }]}>
             New tasks you create will automatically appear in your calendar when sync is enabled. Deleting a task removes it from the calendar too.
           </Text>
         </View>

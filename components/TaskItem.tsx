@@ -4,6 +4,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { format, isPast, isToday, isTomorrow, differenceInDays, differenceInHours, differenceInMinutes } from 'date-fns';
 import { TASK_TYPE_LABELS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 import type { TaskWithCourse } from '@/lib/queries';
 
 interface TaskItemProps {
@@ -52,6 +53,7 @@ function getDueLabel(dueDate: Date, dueTime: string | null): string {
 }
 
 export function TaskItem({ task, onToggle, onPress }: TaskItemProps) {
+  const colors = useColors();
   const dueDate = new Date(task.due_date + 'T00:00:00');
   const overdue = !task.is_completed && isPast(dueDate) && !isToday(dueDate);
   const dueToday = isToday(dueDate);
@@ -87,7 +89,7 @@ export function TaskItem({ task, onToggle, onPress }: TaskItemProps) {
   };
 
   return (
-    <TouchableOpacity style={styles.container} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={[styles.container, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={onPress} activeOpacity={0.7}>
       <TouchableOpacity onPress={handleToggle} hitSlop={8} style={styles.checkArea}>
         <View
           style={[
@@ -103,14 +105,14 @@ export function TaskItem({ task, onToggle, onPress }: TaskItemProps) {
       </TouchableOpacity>
 
       <View style={styles.content}>
-        <Text style={[styles.title, task.is_completed && styles.titleDone]} numberOfLines={1}>
+        <Text style={[styles.title, { color: colors.ink }, task.is_completed && styles.titleDone]} numberOfLines={1}>
           {task.title}
         </Text>
         <View style={styles.metaRow}>
           <View style={[styles.courseDot, { backgroundColor: task.courses.color }]} />
-          <Text style={styles.courseName} numberOfLines={1}>{task.courses.name}</Text>
+          <Text style={[styles.courseName, { color: colors.ink2 }]} numberOfLines={1}>{task.courses.name}</Text>
           <View style={styles.typeBadge}>
-            <Text style={styles.typeText}>{TASK_TYPE_LABELS[task.type]}</Text>
+            <Text style={[styles.typeText, { color: colors.ink2 }]}>{TASK_TYPE_LABELS[task.type]}</Text>
           </View>
         </View>
       </View>
@@ -124,14 +126,15 @@ export function TaskItem({ task, onToggle, onPress }: TaskItemProps) {
         )}
         <Text style={[
           styles.dateText,
+          { color: colors.ink2 },
           overdue && styles.dateOverdue,
-          dueToday && styles.dateToday,
+          dueToday && { color: colors.brand },
           isUrgent && !overdue && styles.dateUrgent,
         ]}>
           {dueLabel}
         </Text>
         {task.due_time && !dueLabel.includes('left') && (
-          <Text style={styles.timeText}>{task.due_time.slice(0, 5)}</Text>
+          <Text style={[styles.timeText, { color: colors.ink3 }]}>{task.due_time.slice(0, 5)}</Text>
         )}
         {task.score != null && (
           <Text style={styles.scoreText}>{task.score}%</Text>

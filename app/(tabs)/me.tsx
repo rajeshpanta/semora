@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
@@ -6,11 +6,12 @@ import { useSession } from '@/app/_layout';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTaskStats } from '@/lib/queries';
 import { signOut } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
 import { COLORS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 import { useEffect } from 'react';
 
 export default function MeScreen() {
+  const colors = useColors();
   const { session } = useSession();
   const email = session?.user?.email ?? '';
   const name = email.split('@')[0] || 'User';
@@ -29,45 +30,7 @@ export default function MeScreen() {
   }, [semesters, selectedSemesterId]);
 
   const activeSemester = semesters.find((s) => s.id === selectedSemesterId);
-  const themeMode = useAppStore((s) => s.themeMode);
-  const themeModeLabel = themeMode === 'system' ? 'System' : themeMode === 'light' ? 'Light' : 'Dark';
   const router = useRouter();
-
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'This will permanently delete your account and all your data. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              'Are you sure?',
-              'All your semesters, courses, tasks, and grades will be permanently deleted.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Delete Forever',
-                  style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      const { error } = await supabase.rpc('delete_user_account');
-                      if (error) throw error;
-                      await signOut();
-                    } catch (err: any) {
-                      Alert.alert('Error', err.message ?? 'Failed to delete account. Please try again.');
-                    }
-                  },
-                },
-              ],
-            );
-          },
-        },
-      ],
-    );
-  };
 
   const handleRate = async () => {
     try {
@@ -76,39 +39,39 @@ export default function MeScreen() {
       if (available) {
         await StoreReview.requestReview();
       } else {
-        Alert.alert('Rate Us', 'Rating will be available once the app is on the App Store.');
+        Alert.alert('Rate Us', 'In-app rating is not available on this device. You can rate us directly on the App Store.');
       }
     } catch {
-      Alert.alert('Rate Us', 'Rating will be available once the app is on the App Store.');
+      Alert.alert('Rate Us', 'Unable to open the rating dialog. You can rate us directly on the App Store.');
     }
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Profile */}
         <View style={styles.profileRow}>
-          <View style={styles.avatar}><Text style={styles.avatarText}>{initial}</Text></View>
+          <View style={[styles.avatar, { backgroundColor: colors.brand }]}><Text style={styles.avatarText}>{initial}</Text></View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.profileName}>{name}</Text>
-            <Text style={styles.profileSub}>{activeSemester?.name ?? 'No semester'}</Text>
+            <Text style={[styles.profileName, { color: colors.ink }]}>{name}</Text>
+            <Text style={[styles.profileSub, { color: colors.ink3 }]}>{activeSemester?.name ?? 'No semester'}</Text>
           </View>
         </View>
 
         {/* Premium upsell / Pro active */}
-        <TouchableOpacity style={styles.proCard} activeOpacity={isPro ? 1 : 0.85} onPress={() => !isPro && router.push('/paywall' as any)}>
-          <View style={styles.proGlow} />
+        <TouchableOpacity style={[styles.proCard, { backgroundColor: colors.ink }]} activeOpacity={isPro ? 1 : 0.85} onPress={() => !isPro && router.push('/paywall' as any)}>
+          <View style={[styles.proGlow, { backgroundColor: colors.brand }]} />
           <View style={{ position: 'relative' }}>
             <View style={styles.proLabel}>
-              <FontAwesome name="star" size={11} color={COLORS.brand100} />
-              <Text style={styles.proLabelText}>SEMORA PRO</Text>
+              <FontAwesome name="star" size={11} color={colors.brand100} />
+              <Text style={[styles.proLabelText, { color: colors.brand100 }]}>SEMORA PRO</Text>
             </View>
             {isPro ? (
               <>
                 <Text style={styles.proTitle}>You have full access to all Pro features.</Text>
                 <View style={styles.proActiveBadge}>
-                  <FontAwesome name="check-circle" size={14} color={COLORS.teal} />
-                  <Text style={styles.proActiveText}>Active</Text>
+                  <FontAwesome name="check-circle" size={14} color={colors.teal} />
+                  <Text style={[styles.proActiveText, { color: colors.teal }]}>Active</Text>
                 </View>
               </>
             ) : (
@@ -119,7 +82,7 @@ export default function MeScreen() {
                   <Text style={styles.proPricePeriod}>/year · cancel any time</Text>
                 </View>
                 <View style={styles.proButton}>
-                  <Text style={styles.proButtonText}>Try 7 days free</Text>
+                  <Text style={[styles.proButtonText, { color: colors.ink }]}>Try 7 days free</Text>
                 </View>
                 <Text style={styles.proAlt}>Or $3.99/month · restore purchase</Text>
               </>
@@ -129,70 +92,48 @@ export default function MeScreen() {
 
         {/* Stats */}
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Text style={[styles.statNum, { color: COLORS.brand }]}>{courses.length}</Text>
-            <Text style={styles.statLabel}>COURSES</Text>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <Text style={[styles.statNum, { color: colors.brand }]}>{courses.length}</Text>
+            <Text style={[styles.statLabel, { color: colors.ink3 }]}>COURSES</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNum}>{stats?.completed ?? 0}</Text>
-            <Text style={styles.statLabel}>DONE</Text>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <Text style={[styles.statNum, { color: colors.ink }]}>{stats?.completed ?? 0}</Text>
+            <Text style={[styles.statLabel, { color: colors.ink3 }]}>DONE</Text>
           </View>
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-              <Text style={[styles.statNum, { color: COLORS.coral }]}>{stats?.pending ?? 0}</Text>
+              <Text style={[styles.statNum, { color: colors.coral }]}>{stats?.pending ?? 0}</Text>
             </View>
-            <Text style={styles.statLabel}>PENDING</Text>
+            <Text style={[styles.statLabel, { color: colors.ink3 }]}>PENDING</Text>
           </View>
         </View>
 
-        {/* Preferences */}
-        <Text style={styles.sectionTitle}>Preferences</Text>
-        <View style={styles.settingsCard}>
-          <SettingsRow icon="bell" label="Notifications" value={isPro ? '1 day, 3 days' : 'Same day'} onPress={() => router.push('/settings/notifications')} />
-          <SettingsRow icon="calendar" label="Calendar sync" onPress={() => router.push('/settings/calendar')} />
-          <SettingsRow icon="sun-o" label="Appearance" value={themeModeLabel} onPress={() => router.push('/settings/appearance')} />
-          <SettingsRow icon="th-large" label="Widgets" onPress={() => router.push('/settings/widgets')} last />
-        </View>
-
-        {/* Support */}
-        <Text style={styles.sectionTitle}>Support</Text>
-        <View style={styles.settingsCard}>
-          <SettingsRow icon="question-circle-o" label="Help & FAQ" onPress={() => router.push('/settings/help')} />
-          <SettingsRow icon="star-o" label="Rate Semora" last onPress={handleRate} />
+        {/* Settings & Support */}
+        <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <SettingsRow icon="cog" label="Settings" onPress={() => router.push('/settings')} colors={colors} />
+          <SettingsRow icon="question-circle-o" label="Help & FAQ" onPress={() => router.push('/settings/help')} colors={colors} />
+          <SettingsRow icon="star-o" label="Rate Semora" last onPress={handleRate} colors={colors} />
         </View>
 
         {/* Sign out */}
-        <TouchableOpacity style={styles.signOutBtn} onPress={signOut} activeOpacity={0.7}>
-          <FontAwesome name="sign-out" size={14} color={COLORS.coral} />
-          <Text style={styles.signOutText}>Sign Out</Text>
+        <TouchableOpacity style={[styles.signOutBtn, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={signOut} activeOpacity={0.7}>
+          <FontAwesome name="sign-out" size={14} color={colors.coral} />
+          <Text style={[styles.signOutText, { color: colors.coral }]}>Sign Out</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteAccount} activeOpacity={0.7}>
-          <FontAwesome name="trash" size={13} color={COLORS.ink3} />
-          <Text style={styles.deleteText}>Delete Account</Text>
-        </TouchableOpacity>
-
-        <Text style={styles.version}>Semora 1.0.0</Text>
+        <Text style={[styles.version, { color: colors.ink3 }]}>Semora 1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function SettingsRow({ icon, label, value, pro, last, onPress }: { icon: string; label: string; value?: string; pro?: boolean; last?: boolean; onPress?: () => void }) {
-  const handlePress = () => {
-    if (pro) {
-      Alert.alert('Semora Pro', 'This feature is available with Pro. Coming soon!');
-    } else if (onPress) {
-      onPress();
-    }
-  };
+function SettingsRow({ icon, label, last, onPress, colors }: { icon: string; label: string; last?: boolean; onPress?: () => void; colors?: any }) {
+  const c = colors ?? COLORS;
   return (
-    <TouchableOpacity style={[styles.settingsRow, !last && styles.settingsRowBorder]} activeOpacity={0.7} onPress={handlePress}>
-      <FontAwesome name={icon as any} size={16} color={COLORS.ink2} />
-      <Text style={styles.settingsLabel}>{label}</Text>
-      {value && <Text style={styles.settingsValue}>{value}</Text>}
-      {pro && <View style={styles.proBadge}><Text style={styles.proBadgeText}>PRO</Text></View>}
-      <FontAwesome name="chevron-right" size={11} color={COLORS.ink3} />
+    <TouchableOpacity style={[styles.settingsRow, !last && [styles.settingsRowBorder, { borderBottomColor: c.line }]]} activeOpacity={0.7} onPress={onPress}>
+      <FontAwesome name={icon as any} size={16} color={c.ink2} />
+      <Text style={[styles.settingsLabel, { color: c.ink }]}>{label}</Text>
+      <FontAwesome name="chevron-right" size={11} color={c.ink3} />
     </TouchableOpacity>
   );
 }
@@ -225,18 +166,12 @@ const styles = StyleSheet.create({
   statNum: { fontSize: 22, fontWeight: '600', color: COLORS.ink },
   statLabel: { fontSize: 14, color: COLORS.ink3, fontWeight: '500', letterSpacing: 0.5, marginTop: 2 },
   // Settings
-  sectionTitle: { fontSize: 14, fontWeight: '600', color: COLORS.ink2, marginBottom: 10 },
   settingsCard: { backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 14, marginBottom: 20, borderWidth: 0.5, borderColor: COLORS.line },
   settingsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
   settingsRowBorder: { borderBottomWidth: 0.5, borderBottomColor: COLORS.line },
   settingsLabel: { flex: 1, fontSize: 14, color: COLORS.ink },
-  settingsValue: { fontSize: 14, color: COLORS.ink3 },
-  proBadge: { backgroundColor: COLORS.brand50, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5 },
-  proBadgeText: { fontSize: 14, fontWeight: '600', color: COLORS.brand },
   // Sign out
   signOutBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, paddingVertical: 14, borderRadius: 14, backgroundColor: COLORS.card, borderWidth: 0.5, borderColor: COLORS.line, marginBottom: 16 },
   signOutText: { fontSize: 14, fontWeight: '500', color: COLORS.coral },
-  deleteBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, paddingVertical: 12, marginBottom: 16 },
-  deleteText: { fontSize: 13, color: COLORS.ink3 },
   version: { textAlign: 'center', fontSize: 14, color: COLORS.ink3 },
 });

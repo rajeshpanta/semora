@@ -12,6 +12,7 @@ import { useAppStore } from '@/store/appStore';
 import { COURSE_COLORS, COURSE_ICONS, COLORS, type CourseIcon } from '@/lib/constants';
 import { SemesterPicker } from '@/components/SemesterPicker';
 import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
+import { useColors } from '@/lib/theme';
 
 export default function NewCourseScreen() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function NewCourseScreen() {
   const [icon, setIcon] = useState<string>(COURSE_ICONS[0]);
   const [meetingTime, setMeetingTime] = useState('');
   const [officeHours, setOfficeHours] = useState('');
+  const colors = useColors();
 
   const handleSubmit = async () => {
     if (!semesterId) {
@@ -71,67 +73,67 @@ export default function NewCourseScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           {/* Preview */}
-          <View style={styles.previewRow}>
+          <View style={[styles.previewRow, { borderBottomColor: colors.line }]}>
             <View style={[styles.previewIcon, { backgroundColor: color + '20' }]}>
               <FontAwesome name={icon as any} size={22} color={color} />
             </View>
-            <Text style={styles.previewName}>{name || 'Course Name'}</Text>
+            <Text style={[styles.previewName, { color: colors.ink }]}>{name || 'Course Name'}</Text>
           </View>
 
           {/* Semester */}
-          <Text style={styles.label}>Semester *</Text>
+          <Text style={[styles.label, { color: colors.ink2 }]}>Semester *</Text>
           {semesters.length > 0 ? (
             <SemesterPicker semesters={semesters} selectedId={semesterId} onSelect={setSemesterId} />
           ) : (
-            <Text style={styles.hint}>Create a semester first</Text>
+            <Text style={[styles.hint, { color: colors.ink3 }]}>Create a semester first</Text>
           )}
 
           {/* Name */}
-          <Text style={styles.label}>Course Name *</Text>
+          <Text style={[styles.label, { color: colors.ink2 }]}>Course Name *</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
             placeholder="e.g. CS 101"
-            placeholderTextColor="#c0c0cc"
+            placeholderTextColor={colors.ink3}
             value={name}
             onChangeText={setName}
           />
 
           {/* Instructor */}
-          <Text style={styles.label}>Instructor</Text>
+          <Text style={[styles.label, { color: colors.ink2 }]}>Instructor</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
             placeholder="e.g. Prof. Smith"
-            placeholderTextColor="#c0c0cc"
+            placeholderTextColor={colors.ink3}
             value={instructor}
             onChangeText={setInstructor}
           />
 
           {/* Meeting Time */}
-          <Text style={styles.label}>Meeting Time</Text>
+          <Text style={[styles.label, { color: colors.ink2 }]}>Meeting Time</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
             placeholder="e.g. MWF 10:00-10:50 AM, Room 320"
-            placeholderTextColor="#c0c0cc"
+            placeholderTextColor={colors.ink3}
             value={meetingTime}
             onChangeText={setMeetingTime}
           />
 
           {/* Office Hours */}
-          <Text style={styles.label}>Office Hours</Text>
+          <Text style={[styles.label, { color: colors.ink2 }]}>Office Hours</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
             placeholder="e.g. Tue/Thu 2:00-3:30 PM"
-            placeholderTextColor="#c0c0cc"
+            placeholderTextColor={colors.ink3}
             value={officeHours}
             onChangeText={setOfficeHours}
           />
 
           {/* Color */}
-          <Text style={styles.label}>Color</Text>
+          <Text style={[styles.label, { color: colors.ink2 }]}>Color</Text>
           <View style={styles.colorGrid}>
             {COURSE_COLORS.map((c) => (
               <TouchableOpacity
@@ -146,16 +148,16 @@ export default function NewCourseScreen() {
           </View>
 
           {/* Icon */}
-          <Text style={styles.label}>Icon</Text>
+          <Text style={[styles.label, { color: colors.ink2 }]}>Icon</Text>
           <View style={styles.iconGrid}>
             {COURSE_ICONS.map((ic) => (
               <TouchableOpacity
                 key={ic}
-                style={[styles.iconButton, icon === ic && { borderColor: color, backgroundColor: color + '15' }]}
+                style={[styles.iconButton, { borderColor: colors.line }, icon === ic && { borderColor: color, backgroundColor: color + '15' }]}
                 onPress={() => setIcon(ic)}
                 activeOpacity={0.7}
               >
-                <FontAwesome name={ic as any} size={18} color={icon === ic ? color : '#94a3b8'} />
+                <FontAwesome name={ic as any} size={18} color={icon === ic ? color : colors.ink3} />
               </TouchableOpacity>
             ))}
           </View>

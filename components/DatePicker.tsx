@@ -5,6 +5,7 @@ import {
 import { format } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 interface DatePickerProps {
@@ -15,6 +16,7 @@ interface DatePickerProps {
 }
 
 export function DatePicker({ value, onChange, mode = 'date', placeholder }: DatePickerProps) {
+  const colors = useColors();
   const [show, setShow] = useState(false);
   const [tempValue, setTempValue] = useState<Date>(value || new Date());
 
@@ -82,13 +84,13 @@ export function DatePicker({ value, onChange, mode = 'date', placeholder }: Date
 
   return (
     <View>
-      <TouchableOpacity style={styles.button} onPress={handleOpen} activeOpacity={0.7}>
+      <TouchableOpacity style={[styles.button, { borderColor: colors.line, backgroundColor: colors.card }]} onPress={handleOpen} activeOpacity={0.7}>
         <FontAwesome
           name={mode === 'date' ? 'calendar-o' : 'clock-o'}
           size={14}
-          color={value ? COLORS.brand : COLORS.ink3}
+          color={value ? colors.brand : colors.ink3}
         />
-        <Text style={[styles.buttonText, !value && styles.placeholder]}>
+        <Text style={[styles.buttonText, { color: colors.ink }, !value && { color: colors.ink3 }]}>
           {displayText}
         </Text>
       </TouchableOpacity>
@@ -104,17 +106,17 @@ export function DatePicker({ value, onChange, mode = 'date', placeholder }: Date
           activeOpacity={1}
           onPress={handleCancel}
         >
-          <View style={styles.modalSheet}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
             {/* Toolbar */}
-            <View style={styles.toolbar}>
+            <View style={[styles.toolbar, { borderBottomColor: colors.line }]}>
               <TouchableOpacity onPress={handleCancel} hitSlop={12}>
-                <Text style={styles.cancelText}>Cancel</Text>
+                <Text style={[styles.cancelText, { color: colors.ink3 }]}>Cancel</Text>
               </TouchableOpacity>
-              <Text style={styles.toolbarTitle}>
+              <Text style={[styles.toolbarTitle, { color: colors.ink }]}>
                 {mode === 'date' ? 'Select Date' : 'Select Time'}
               </Text>
               <TouchableOpacity onPress={handleDone} hitSlop={12}>
-                <Text style={styles.doneText}>Done</Text>
+                <Text style={[styles.doneText, { color: colors.brand }]}>Done</Text>
               </TouchableOpacity>
             </View>
 

@@ -11,6 +11,7 @@ import { format, isPast, isToday } from 'date-fns';
 import { useTask, useUpdateTask, useDeleteTask, useToggleTaskComplete } from '@/lib/queries';
 import { TASK_TYPE_LABELS, TASK_TYPES, COLORS, type TaskType } from '@/lib/constants';
 import { DatePicker } from '@/components/DatePicker';
+import { useColors } from '@/lib/theme';
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -31,9 +32,10 @@ export default function TaskDetailScreen() {
   const [scorePossible, setScorePossible] = useState('');
   const [scoreMode, setScoreMode] = useState<'percent' | 'points'>('points');
   const [showScoreInput, setShowScoreInput] = useState(false);
+  const colors = useColors();
 
   if (isLoading || !task) {
-    return <View style={styles.loading}><ActivityIndicator size="large" color="#6B46C1" /></View>;
+    return <View style={[styles.loading, { backgroundColor: colors.paper }]}><ActivityIndicator size="large" color={colors.brand} /></View>;
   }
 
   const courseColor = task.courses.color;
@@ -168,50 +170,50 @@ export default function TaskDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
         {/* Course strip */}
         <View style={[styles.courseStrip, { backgroundColor: courseColor + '15' }]}>
           <View style={[styles.courseDot, { backgroundColor: courseColor }]} />
           <Text style={[styles.courseName, { color: courseColor }]}>{task.courses.name}</Text>
           <View style={styles.badges}>
-            <View style={styles.typeBadge}><Text style={styles.typeText}>{TASK_TYPE_LABELS[task.type]}</Text></View>
-            {task.is_extra_credit && <View style={styles.ecBadge}><Text style={styles.ecBadgeText}>EC</Text></View>}
+            <View style={styles.typeBadge}><Text style={[styles.typeText, { color: colors.ink2 }]}>{TASK_TYPE_LABELS[task.type]}</Text></View>
+            {task.is_extra_credit && <View style={[styles.ecBadge, { backgroundColor: colors.brand50 }]}><Text style={[styles.ecBadgeText, { color: colors.brand }]}>EC</Text></View>}
             {task.submitted_late && <View style={styles.lateBadge}><Text style={styles.lateBadgeText}>LATE</Text></View>}
           </View>
         </View>
 
         {/* Main card */}
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           {editing ? (
             <>
-              <TextInput style={styles.editInput} value={editTitle} onChangeText={setEditTitle} placeholder="Title" />
-              <TextInput style={[styles.editInput, { height: 80 }]} value={editDescription} onChangeText={setEditDescription} placeholder="Description" multiline textAlignVertical="top" />
-              <Text style={styles.editLabel}>Type</Text>
+              <TextInput style={[styles.editInput, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]} value={editTitle} onChangeText={setEditTitle} placeholder="Title" placeholderTextColor={colors.ink3} />
+              <TextInput style={[styles.editInput, { height: 80, borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]} value={editDescription} onChangeText={setEditDescription} placeholder="Description" placeholderTextColor={colors.ink3} multiline textAlignVertical="top" />
+              <Text style={[styles.editLabel, { color: colors.ink2 }]}>Type</Text>
               <View style={styles.typeRow}>
                 {TASK_TYPES.map((t) => (
-                  <TouchableOpacity key={t} style={[styles.typeChip, editType === t && styles.typeChipActive]} onPress={() => setEditType(t)}>
-                    <Text style={[styles.typeChipText, editType === t && { color: '#fff' }]}>{TASK_TYPE_LABELS[t]}</Text>
+                  <TouchableOpacity key={t} style={[styles.typeChip, editType === t && { backgroundColor: colors.brand }]} onPress={() => setEditType(t)}>
+                    <Text style={[styles.typeChipText, { color: colors.ink2 }, editType === t && { color: '#fff' }]}>{TASK_TYPE_LABELS[t]}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
               <View style={styles.dateRow}>
-                <View style={{ flex: 1 }}><Text style={styles.editLabel}>Due Date</Text><DatePicker value={editDueDate} onChange={setEditDueDate} mode="date" /></View>
-                <View style={{ flex: 1 }}><Text style={styles.editLabel}>Time</Text><DatePicker value={editDueTime} onChange={setEditDueTime} mode="time" placeholder="Optional" /></View>
+                <View style={{ flex: 1 }}><Text style={[styles.editLabel, { color: colors.ink2 }]}>Due Date</Text><DatePicker value={editDueDate} onChange={setEditDueDate} mode="date" /></View>
+                <View style={{ flex: 1 }}><Text style={[styles.editLabel, { color: colors.ink2 }]}>Time</Text><DatePicker value={editDueTime} onChange={setEditDueTime} mode="time" placeholder="Optional" /></View>
               </View>
-              <Text style={styles.editLabel}>Weight (%)</Text>
-              <TextInput style={styles.editInput} value={editWeight} onChangeText={setEditWeight} keyboardType="decimal-pad" placeholder="Optional" />
+              <Text style={[styles.editLabel, { color: colors.ink2 }]}>Weight (%)</Text>
+              <TextInput style={[styles.editInput, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]} value={editWeight} onChangeText={setEditWeight} keyboardType="decimal-pad" placeholder="Optional" placeholderTextColor={colors.ink3} />
               <View style={styles.editActions}>
-                <TouchableOpacity style={styles.cancelBtn} onPress={() => setEditing(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-                <TouchableOpacity style={styles.saveBtn} onPress={saveEdit}>
+                <TouchableOpacity style={[styles.cancelBtn, { borderColor: colors.line }]} onPress={() => setEditing(false)}><Text style={[styles.cancelText, { color: colors.ink2 }]}>Cancel</Text></TouchableOpacity>
+                <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.brand }]} onPress={saveEdit}>
                   {updateTask.isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.saveText}>Save</Text>}
                 </TouchableOpacity>
               </View>
             </>
           ) : (
             <>
-              <Text style={[styles.title, task.is_completed && styles.titleDone]}>{task.title}</Text>
-              {task.description && <Text style={styles.description}>{task.description}</Text>}
+              <Text style={[styles.title, { color: colors.ink }, task.is_completed && styles.titleDone]}>{task.title}</Text>
+              {task.description && <Text style={[styles.description, { color: colors.ink2 }]}>{task.description}</Text>}
               <View style={styles.detailsGrid}>
                 <View style={styles.detailItem}>
                   <FontAwesome name="calendar" size={13} color="#94a3b8" />
@@ -239,9 +241,9 @@ export default function TaskDetailScreen() {
 
         {/* Score section */}
         {!editing && (
-          <View style={styles.card}>
+          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
             <View style={styles.scoreHeader}>
-              <Text style={styles.scoreLabel}>GRADE</Text>
+              <Text style={[styles.scoreLabel, { color: colors.ink3 }]}>GRADE</Text>
               {task.score != null ? (
                 <View style={styles.scoreDisplay}>
                   <Text style={styles.scoreValue}>{task.score}%</Text>
@@ -259,12 +261,12 @@ export default function TaskDetailScreen() {
                     }
                     setShowScoreInput(true);
                   }}>
-                    <Text style={styles.editLink}>Edit</Text>
+                    <Text style={[styles.editLink, { color: colors.brand }]}>Edit</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <TouchableOpacity
-                  style={styles.addScoreBtn}
+                  style={[styles.addScoreBtn, { backgroundColor: colors.brand50 }]}
                   onPress={() => {
                     // Pre-fill "Total" from weight if available
                     if (task.weight) {
@@ -275,8 +277,8 @@ export default function TaskDetailScreen() {
                   }}
                   activeOpacity={0.7}
                 >
-                  <FontAwesome name="plus" size={11} color={COLORS.brand} />
-                  <Text style={styles.addScoreText}>Add Grade</Text>
+                  <FontAwesome name="plus" size={11} color={colors.brand} />
+                  <Text style={[styles.addScoreText, { color: colors.brand }]}>Add Grade</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -285,54 +287,54 @@ export default function TaskDetailScreen() {
                 {/* Mode toggle */}
                 <View style={styles.scoreModeRow}>
                   <TouchableOpacity
-                    style={[styles.scoreModeBtn, scoreMode === 'points' && styles.scoreModeBtnActive]}
+                    style={[styles.scoreModeBtn, scoreMode === 'points' && { backgroundColor: colors.brand }]}
                     onPress={() => setScoreMode('points')}
                   >
-                    <Text style={[styles.scoreModeText, scoreMode === 'points' && styles.scoreModeTextActive]}>Points (13/15)</Text>
+                    <Text style={[styles.scoreModeText, { color: colors.ink2 }, scoreMode === 'points' && styles.scoreModeTextActive]}>Points (13/15)</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.scoreModeBtn, scoreMode === 'percent' && styles.scoreModeBtnActive]}
+                    style={[styles.scoreModeBtn, scoreMode === 'percent' && { backgroundColor: colors.brand }]}
                     onPress={() => setScoreMode('percent')}
                   >
-                    <Text style={[styles.scoreModeText, scoreMode === 'percent' && styles.scoreModeTextActive]}>Percentage</Text>
+                    <Text style={[styles.scoreModeText, { color: colors.ink2 }, scoreMode === 'percent' && styles.scoreModeTextActive]}>Percentage</Text>
                   </TouchableOpacity>
                 </View>
 
                 {scoreMode === 'points' ? (
                   <>
                     {!task.weight && (
-                      <View style={styles.scoreWarning}>
-                        <FontAwesome name="info-circle" size={12} color={COLORS.amber} />
-                        <Text style={styles.scoreWarningText}>
+                      <View style={[styles.scoreWarning, { backgroundColor: colors.amber50 }]}>
+                        <FontAwesome name="info-circle" size={12} color={colors.amber} />
+                        <Text style={[styles.scoreWarningText, { color: colors.amber }]}>
                           No weight set for this assignment. Add weight in Edit or enter total below.
                         </Text>
                       </View>
                     )}
                     {task.weight != null && (
-                      <Text style={styles.scorePreFillHint}>
+                      <Text style={[styles.scorePreFillHint, { color: colors.ink3 }]}>
                         This assignment is worth {task.weight}% of your grade
                       </Text>
                     )}
                     <View style={styles.scoreInputRow}>
                       <TextInput
-                        style={styles.scoreInput}
+                        style={[styles.scoreInput, { borderColor: colors.line, color: colors.ink, backgroundColor: colors.card }]}
                         placeholder="Earned"
-                        placeholderTextColor="#c0c0cc"
+                        placeholderTextColor={colors.ink3}
                         value={scoreInput}
                         onChangeText={setScoreInput}
                         keyboardType="decimal-pad"
                         autoFocus={!!task.weight}
                       />
-                      <Text style={styles.scoreSlash}>/</Text>
+                      <Text style={[styles.scoreSlash, { color: colors.ink3 }]}>/</Text>
                       {task.weight != null ? (
-                        <View style={styles.scoreLocked}>
-                          <Text style={styles.scoreLockedText}>{task.weight}</Text>
+                        <View style={[styles.scoreLocked, { backgroundColor: colors.brand50, borderColor: colors.brand }]}>
+                          <Text style={[styles.scoreLockedText, { color: colors.brand }]}>{task.weight}</Text>
                         </View>
                       ) : (
                         <TextInput
-                          style={styles.scoreInput}
+                          style={[styles.scoreInput, { borderColor: colors.line, color: colors.ink, backgroundColor: colors.card }]}
                           placeholder="Total"
-                          placeholderTextColor="#c0c0cc"
+                          placeholderTextColor={colors.ink3}
                           value={scorePossible}
                           onChangeText={setScorePossible}
                           keyboardType="decimal-pad"
@@ -343,30 +345,30 @@ export default function TaskDetailScreen() {
                 ) : (
                   <>
                     {task.weight != null && (
-                      <Text style={styles.scorePreFillHint}>
+                      <Text style={[styles.scorePreFillHint, { color: colors.ink3 }]}>
                         Enter your percentage score on this {task.weight}% assignment
                       </Text>
                     )}
                     <View style={styles.scoreInputRow}>
                       <TextInput
-                        style={styles.scoreInput}
+                        style={[styles.scoreInput, { borderColor: colors.line, color: colors.ink, backgroundColor: colors.card }]}
                         placeholder="e.g. 86.67"
-                        placeholderTextColor="#c0c0cc"
+                        placeholderTextColor={colors.ink3}
                         value={scoreInput}
                         onChangeText={setScoreInput}
                         keyboardType="decimal-pad"
                       />
-                      <Text style={styles.scoreSlash}>%</Text>
+                      <Text style={[styles.scoreSlash, { color: colors.ink3 }]}>%</Text>
                     </View>
                   </>
                 )}
 
                 <View style={styles.scoreActionsRow}>
-                  <TouchableOpacity style={styles.scoreSubmit} onPress={handleSaveScore}>
+                  <TouchableOpacity style={[styles.scoreSubmit, { backgroundColor: colors.brand }]} onPress={handleSaveScore}>
                     <Text style={styles.scoreSubmitText}>Save Grade</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => { setShowScoreInput(false); setScoreInput(''); setScorePossible(''); }}>
-                    <Text style={styles.scoreCancelText}>Cancel</Text>
+                    <Text style={[styles.scoreCancelText, { color: colors.ink3 }]}>Cancel</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -391,8 +393,8 @@ export default function TaskDetailScreen() {
         {/* Actions */}
         {!editing && (
           <View style={styles.actionRow}>
-            <TouchableOpacity style={styles.actionBtn} onPress={startEdit}>
-              <FontAwesome name="pencil" size={14} color="#6B46C1" /><Text style={styles.actionBtnText}>Edit</Text>
+            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.brand50 }]} onPress={startEdit}>
+              <FontAwesome name="pencil" size={14} color={colors.brand} /><Text style={[styles.actionBtnText, { color: colors.brand }]}>Edit</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#fef2f2' }]} onPress={handleDelete}>
               <FontAwesome name="trash-o" size={14} color="#ef4444" /><Text style={[styles.actionBtnText, { color: '#ef4444' }]}>Delete</Text>

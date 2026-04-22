@@ -1,5 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { DefaultTheme, DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
@@ -14,6 +14,7 @@ import * as Localization from 'expo-localization';
 import { requestNotificationPermission } from '@/lib/notifications';
 import { COLORS } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
+import { ThemeColorsProvider, useResolvedScheme, useColors } from '@/lib/theme';
 import { setQueryClient } from '@/lib/auth';
 import { initIAP, checkProStatus, endIAP } from '@/lib/purchases';
 
@@ -56,10 +57,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       // Detect and save timezone on first sign-in
       if (session) {
         saveTimezoneIfNeeded(session.user.id);
-        requestNotificationPermission();
-        initIAP().then(() => {
-          checkProStatus().then((isPro) => useAppStore.getState().setIsPro(isPro));
-        });
+        requestNotificationPermission().catch(() => {});
+        initIAP()
+          .then(() => checkProStatus())
+          .then((isPro) => useAppStore.getState().setIsPro(isPro ?? false))
+          .catch(() => {});
       }
     }).catch(() => {
       setLoading(false);
@@ -72,10 +74,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (session) {
         saveTimezoneIfNeeded(session.user.id);
-        requestNotificationPermission();
-        initIAP().then(() => {
-          checkProStatus().then((isPro) => useAppStore.getState().setIsPro(isPro));
-        });
+        requestNotificationPermission().catch(() => {});
+        initIAP()
+          .then(() => checkProStatus())
+          .then((isPro) => useAppStore.getState().setIsPro(isPro ?? false))
+          .catch(() => {});
         // Refetch all data after sign-in so tabs show fresh data immediately
         if (_event === 'SIGNED_IN') {
           queryClient.removeQueries();
@@ -143,10 +146,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
   }, [session, loading, segments]);
 
+  const colors = useColors();
+
   if (loading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#6B46C1" />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.paper }}>
+        <ActivityIndicator size="large" color={colors.brand} />
       </View>
     );
   }
@@ -161,7 +166,7 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (error) throw error;
+    if (error) console.warn('Font loading error:', error);
   }, [error]);
 
   useEffect(() => {
@@ -174,16 +179,54 @@ export default function RootLayout() {
     return null;
   }
 
-  return <RootLayoutNav />;
+  return (
+    <ThemeColorsProvider>
+      <RootLayoutNav />
+    </ThemeColorsProvider>
+  );
 }
 
 function RootLayoutNav() {
+  const scheme = useResolvedScheme();
+  const colors = useColors();
+
+  const navTheme = scheme === 'dark'
+    ? {
+        ...DarkTheme,
+        colors: {
+          ...DarkTheme.colors,
+          primary: colors.brand,
+          background: colors.paper,
+          card: colors.card,
+          text: colors.ink,
+          border: colors.line,
+        },
+      }
+    : {
+        ...DefaultTheme,
+        colors: {
+          ...DefaultTheme.colors,
+          primary: colors.brand,
+          background: colors.paper,
+          card: colors.card,
+          text: colors.ink,
+          border: colors.line,
+        },
+      };
+
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={DefaultTheme}>
+      <ThemeProvider value={navTheme}>
         <AuthProvider>
           <AuthGate>
-            <Stack screenOptions={{ headerBackTitle: 'Back' }}>
+            <Stack
+              screenOptions={{
+                headerBackTitle: 'Back',
+                headerStyle: { backgroundColor: colors.card },
+                headerTintColor: colors.ink,
+                contentStyle: { backgroundColor: colors.paper },
+              }}
+            >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
               <Stack.Screen name="semester/new" options={{ presentation: 'modal', title: 'New Semester' }} />
@@ -194,6 +237,8 @@ function RootLayoutNav() {
               <Stack.Screen name="task/[id]" options={{ title: 'Task' }} />
               <Stack.Screen name="syllabus/upload" options={{ presentation: 'modal', title: 'Upload Syllabus' }} />
               <Stack.Screen name="syllabus/review" options={{ title: 'Review Items' }} />
+              <Stack.Screen name="settings/index" options={{ title: 'Settings' }} />
+              <Stack.Screen name="settings/password" options={{ title: 'Change Password' }} />
               <Stack.Screen name="settings/notifications" options={{ title: 'Notifications' }} />
               <Stack.Screen name="settings/appearance" options={{ title: 'Appearance' }} />
               <Stack.Screen name="settings/help" options={{ title: 'Help & FAQ' }} />

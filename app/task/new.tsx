@@ -11,6 +11,7 @@ import { useCreateTask, useCourses } from '@/lib/queries';
 import { useAppStore } from '@/store/appStore';
 import { TASK_TYPES, TASK_TYPE_LABELS, COLORS, type TaskType } from '@/lib/constants';
 import { DatePicker } from '@/components/DatePicker';
+import { useColors } from '@/lib/theme';
 
 export default function NewTaskScreen() {
   const router = useRouter();
@@ -29,6 +30,7 @@ export default function NewTaskScreen() {
   const [isExtraCredit, setIsExtraCredit] = useState(false);
 
   const selectedCourse = courses.find((c) => c.id === courseId);
+  const colors = useColors();
 
   const handleSubmit = async () => {
     if (!courseId) {
@@ -69,11 +71,11 @@ export default function NewTaskScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           {/* Course picker */}
-          <Text style={styles.label}>Course *</Text>
+          <Text style={[styles.label, { color: colors.ink2 }]}>Course *</Text>
           {courses.length > 0 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               <View style={styles.courseRow}>
@@ -82,6 +84,7 @@ export default function NewTaskScreen() {
                     key={c.id}
                     style={[
                       styles.courseChip,
+                      { borderColor: colors.line, backgroundColor: colors.card },
                       courseId === c.id && { backgroundColor: c.color, borderColor: c.color },
                     ]}
                     onPress={() => setCourseId(c.id)}
@@ -93,7 +96,7 @@ export default function NewTaskScreen() {
                       color={courseId === c.id ? '#fff' : c.color}
                     />
                     <Text
-                      style={[styles.courseChipText, courseId === c.id && { color: '#fff' }]}
+                      style={[styles.courseChipText, { color: colors.ink2 }, courseId === c.id && { color: '#fff' }]}
                       numberOfLines={1}
                     >
                       {c.name}
@@ -103,25 +106,25 @@ export default function NewTaskScreen() {
               </View>
             </ScrollView>
           ) : (
-            <Text style={styles.hint}>Add a course first</Text>
+            <Text style={[styles.hint, { color: colors.ink3 }]}>Add a course first</Text>
           )}
 
           {/* Title */}
-          <Text style={styles.label}>Title *</Text>
+          <Text style={[styles.label, { color: colors.ink2 }]}>Title *</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
             placeholder="e.g. Homework 3"
-            placeholderTextColor="#c0c0cc"
+            placeholderTextColor={colors.ink3}
             value={title}
             onChangeText={setTitle}
           />
 
           {/* Description */}
-          <Text style={styles.label}>Description</Text>
+          <Text style={[styles.label, { color: colors.ink2 }]}>Description</Text>
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[styles.input, styles.textArea, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
             placeholder="Add notes..."
-            placeholderTextColor="#c0c0cc"
+            placeholderTextColor={colors.ink3}
             value={description}
             onChangeText={setDescription}
             multiline
@@ -130,16 +133,16 @@ export default function NewTaskScreen() {
           />
 
           {/* Type */}
-          <Text style={styles.label}>Type</Text>
+          <Text style={[styles.label, { color: colors.ink2 }]}>Type</Text>
           <View style={styles.typeRow}>
             {TASK_TYPES.map((t) => (
               <TouchableOpacity
                 key={t}
-                style={[styles.typeChip, type === t && styles.typeChipActive]}
+                style={[styles.typeChip, type === t && { backgroundColor: colors.brand }]}
                 onPress={() => setType(t)}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.typeChipText, type === t && styles.typeChipTextActive]}>
+                <Text style={[styles.typeChipText, { color: colors.ink2 }, type === t && styles.typeChipTextActive]}>
                   {TASK_TYPE_LABELS[t]}
                 </Text>
               </TouchableOpacity>
@@ -149,21 +152,21 @@ export default function NewTaskScreen() {
           {/* Due Date & Time */}
           <View style={styles.dateRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Due Date *</Text>
+              <Text style={[styles.label, { color: colors.ink2 }]}>Due Date *</Text>
               <DatePicker value={dueDate} onChange={setDueDate} mode="date" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.label}>Time</Text>
+              <Text style={[styles.label, { color: colors.ink2 }]}>Time</Text>
               <DatePicker value={dueTime} onChange={setDueTime} mode="time" placeholder="Optional" />
             </View>
           </View>
 
           {/* Weight */}
-          <Text style={styles.label}>Weight (%)</Text>
+          <Text style={[styles.label, { color: colors.ink2 }]}>Weight (%)</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
             placeholder="e.g. 10"
-            placeholderTextColor="#c0c0cc"
+            placeholderTextColor={colors.ink3}
             value={weight}
             onChangeText={setWeight}
             keyboardType="decimal-pad"
@@ -175,16 +178,17 @@ export default function NewTaskScreen() {
             onPress={() => setIsExtraCredit(!isExtraCredit)}
             activeOpacity={0.7}
           >
-            <View style={[styles.ecCheck, isExtraCredit && styles.ecCheckActive]}>
+            <View style={[styles.ecCheck, { borderColor: colors.line }, isExtraCredit && { backgroundColor: colors.brand, borderColor: colors.brand }]}>
               {isExtraCredit && <FontAwesome name="check" size={11} color="#fff" />}
             </View>
-            <Text style={styles.ecLabel}>Extra Credit</Text>
-            <Text style={styles.ecHint}>Won't count against total weight</Text>
+            <Text style={[styles.ecLabel, { color: colors.ink }]}>Extra Credit</Text>
+            <Text style={[styles.ecHint, { color: colors.ink3 }]}>Won't count against total weight</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.button,
+              { backgroundColor: colors.brand },
               selectedCourse && { backgroundColor: selectedCourse.color },
               createTask.isPending && styles.buttonDisabled,
             ]}

@@ -9,6 +9,7 @@ import { format, startOfMonth, endOfMonth, addMonths, subMonths, isToday as isDa
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useTasks, useSemesters, useCourses, useToggleTaskComplete } from '@/lib/queries';
 import { COLORS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 import type { TaskWithCourse } from '@/lib/queries';
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -52,6 +53,7 @@ function getCalendarDays(year: number, month: number, todayDate: Date) {
 }
 
 export default function CalendarScreen() {
+  const colors = useColors();
   const router = useRouter();
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -95,23 +97,23 @@ export default function CalendarScreen() {
     .filter(Boolean);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.title}>Calendar</Text>
+            <Text style={[styles.title, { color: colors.ink }]}>Calendar</Text>
             <View style={styles.monthPickerRow}>
-              <Text style={styles.monthSubtitle}>{MONTH_NAMES[viewDate.getMonth()]} {viewDate.getFullYear()}</Text>
-              <FontAwesome name="caret-down" size={12} color={COLORS.ink3} />
+              <Text style={[styles.monthSubtitle, { color: colors.ink2 }]}>{MONTH_NAMES[viewDate.getMonth()]} {viewDate.getFullYear()}</Text>
+              <FontAwesome name="caret-down" size={12} color={colors.ink3} />
             </View>
           </View>
-          <View style={styles.modeToggle}>
-            <TouchableOpacity style={[styles.modeBtn, viewMode === 'month' && styles.modeBtnActive]} onPress={() => setViewMode('month')}>
-              <Text style={[styles.modeBtnText, viewMode === 'month' && styles.modeBtnTextActive]}>Month</Text>
+          <View style={[styles.modeToggle, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <TouchableOpacity style={[styles.modeBtn, viewMode === 'month' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('month')}>
+              <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'month' && styles.modeBtnTextActive]}>Month</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.modeBtn, viewMode === 'list' && styles.modeBtnActive]} onPress={() => setViewMode('list')}>
-              <Text style={[styles.modeBtnText, viewMode === 'list' && styles.modeBtnTextActive]}>List</Text>
+            <TouchableOpacity style={[styles.modeBtn, viewMode === 'list' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('list')}>
+              <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'list' && styles.modeBtnTextActive]}>List</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -119,13 +121,13 @@ export default function CalendarScreen() {
         {/* Month nav arrows */}
         <View style={styles.navRow}>
           <TouchableOpacity onPress={() => setViewDate(subMonths(viewDate, 1))} hitSlop={12}>
-            <FontAwesome name="chevron-left" size={13} color={COLORS.brand} />
+            <FontAwesome name="chevron-left" size={13} color={colors.brand} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => { setViewDate(new Date()); setSelectedDate(format(new Date(), 'yyyy-MM-dd')); }}>
-            <Text style={styles.todayLink}>Today</Text>
+            <Text style={[styles.todayLink, { color: colors.brand }]}>Today</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setViewDate(addMonths(viewDate, 1))} hitSlop={12}>
-            <FontAwesome name="chevron-right" size={13} color={COLORS.brand} />
+            <FontAwesome name="chevron-right" size={13} color={colors.brand} />
           </TouchableOpacity>
         </View>
 
@@ -134,7 +136,7 @@ export default function CalendarScreen() {
             {/* Day labels */}
             <View style={styles.dayLabels}>
               {DAY_LABELS.map((l, i) => (
-                <Text key={i} style={styles.dayLabelText}>{l}</Text>
+                <Text key={i} style={[styles.dayLabelText, { color: colors.ink3 }]}>{l}</Text>
               ))}
             </View>
 
@@ -154,16 +156,17 @@ export default function CalendarScreen() {
                   >
                     <View style={[
                       styles.dayInner,
-                      d.isToday && styles.dayToday,
-                      isSelected && !d.isToday && styles.daySelected,
-                      hasExam && !d.isToday && !isSelected && styles.dayExam,
+                      d.isToday && [styles.dayToday, { backgroundColor: colors.brand }],
+                      isSelected && !d.isToday && [styles.daySelected, { backgroundColor: colors.brand50, borderColor: colors.brand }],
+                      hasExam && !d.isToday && !isSelected && [styles.dayExam, { backgroundColor: colors.brand50 }],
                     ]}>
                       <Text style={[
                         styles.dayText,
-                        !d.isCurrentMonth && styles.dayOutside,
-                        d.isWeekend && d.isCurrentMonth && styles.dayWeekend,
+                        { color: colors.ink },
+                        !d.isCurrentMonth && { color: colors.ink3 },
+                        d.isWeekend && d.isCurrentMonth && { color: colors.ink3 },
                         d.isToday && styles.dayTextToday,
-                        isSelected && !d.isToday && styles.dayTextSelected,
+                        isSelected && !d.isToday && [styles.dayTextSelected, { color: colors.brand }],
                       ]}>{d.day}</Text>
                     </View>
                     {dateTasks && dateTasks.length > 0 && (
@@ -172,7 +175,7 @@ export default function CalendarScreen() {
                           <View key={j} style={[
                             styles.dot,
                             { backgroundColor: d.isToday ? '#fff' : t.courses.color },
-                            d.isToday && { borderWidth: 1, borderColor: COLORS.brand },
+                            d.isToday && { borderWidth: 1, borderColor: colors.brand },
                           ]} />
                         ))}
                       </View>
@@ -188,45 +191,45 @@ export default function CalendarScreen() {
                 {legendCourses.map((c) => c && (
                   <View key={c.id} style={styles.legendItem}>
                     <View style={[styles.legendDot, { backgroundColor: c.color }]} />
-                    <Text style={styles.legendText}>{c.name}</Text>
+                    <Text style={[styles.legendText, { color: colors.ink3 }]}>{c.name}</Text>
                   </View>
                 ))}
               </View>
             )}
 
             {/* Selected day agenda */}
-            <Text style={styles.agendaTitle}>{selectedLabel} · {selectedItemCount} items</Text>
+            <Text style={[styles.agendaTitle, { color: colors.ink2 }]}>{selectedLabel} · {selectedItemCount} items</Text>
             {selectedTasks.length > 0 ? (
-              <View style={styles.agendaCard}>
+              <View style={[styles.agendaCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
                 {selectedTasks.map((task, i) => {
                   const isLast = i === selectedTasks.length - 1;
                   return (
                     <TouchableOpacity
                       key={task.id}
-                      style={[styles.agendaRow, !isLast && styles.agendaRowBorder]}
+                      style={[styles.agendaRow, !isLast && [styles.agendaRowBorder, { borderBottomColor: colors.line }]]}
                       onPress={() => router.push(`/task/${task.id}` as any)}
                       activeOpacity={0.7}
                     >
                       <View style={styles.agendaTimeCol}>
                         {task.due_time ? (
                           <>
-                            <Text style={[styles.agendaTime, !task.is_completed && { color: COLORS.coral }]}>{task.due_time.slice(0, 5)}</Text>
-                            <Text style={[styles.agendaDueLabel, !task.is_completed && { color: COLORS.coral }]}>DUE</Text>
+                            <Text style={[styles.agendaTime, { color: colors.ink }, !task.is_completed && { color: colors.coral }]}>{task.due_time.slice(0, 5)}</Text>
+                            <Text style={[styles.agendaDueLabel, { color: colors.ink3 }, !task.is_completed && { color: colors.coral }]}>DUE</Text>
                           </>
                         ) : (
-                          <Text style={styles.agendaTime}>--:--</Text>
+                          <Text style={[styles.agendaTime, { color: colors.ink }]}>--:--</Text>
                         )}
                       </View>
                       <View style={[styles.agendaBar, { backgroundColor: task.courses.color }]} />
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.agendaTaskTitle, task.is_completed && styles.agendaTaskDone]}>{task.title}</Text>
-                        <Text style={styles.agendaTaskCourse}>{task.courses.name}</Text>
+                        <Text style={[styles.agendaTaskTitle, { color: colors.ink }, task.is_completed && [styles.agendaTaskDone, { color: colors.ink3 }]]}>{task.title}</Text>
+                        <Text style={[styles.agendaTaskCourse, { color: colors.ink3 }]}>{task.courses.name}</Text>
                       </View>
                       <TouchableOpacity
                         onPress={() => toggleComplete.mutate({ id: task.id, is_completed: !task.is_completed })}
                         hitSlop={8}
                       >
-                        <View style={[styles.cbx, task.is_completed && { backgroundColor: COLORS.teal, borderColor: COLORS.teal }]}>
+                        <View style={[styles.cbx, { borderColor: colors.ink3 }, task.is_completed && { backgroundColor: colors.teal, borderColor: colors.teal }]}>
                           {task.is_completed && <FontAwesome name="check" size={9} color="#fff" />}
                         </View>
                       </TouchableOpacity>
@@ -235,8 +238,8 @@ export default function CalendarScreen() {
                 })}
               </View>
             ) : (
-              <View style={styles.agendaEmpty}>
-                <Text style={styles.agendaEmptyText}>No tasks on this date</Text>
+              <View style={[styles.agendaEmpty, { backgroundColor: colors.card, borderColor: colors.line }]}>
+                <Text style={[styles.agendaEmptyText, { color: colors.ink3 }]}>No tasks on this date</Text>
               </View>
             )}
           </>
@@ -250,32 +253,32 @@ export default function CalendarScreen() {
                 const label = isDateToday(dateObj) ? 'Today' : format(dateObj, 'EEE, MMM d');
                 return (
                   <View key={dateStr} style={{ marginBottom: 14 }}>
-                    <Text style={styles.listDateLabel}>{label} · {dateTasks.length}</Text>
-                    <View style={styles.agendaCard}>
+                    <Text style={[styles.listDateLabel, { color: colors.ink2 }]}>{label} · {dateTasks.length}</Text>
+                    <View style={[styles.agendaCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
                       {dateTasks.map((task, i) => (
                         <TouchableOpacity
                           key={task.id}
-                          style={[styles.agendaRow, i < dateTasks.length - 1 && styles.agendaRowBorder]}
+                          style={[styles.agendaRow, i < dateTasks.length - 1 && [styles.agendaRowBorder, { borderBottomColor: colors.line }]]}
                           onPress={() => router.push(`/task/${task.id}` as any)}
                           activeOpacity={0.7}
                         >
                           <View style={styles.agendaTimeCol}>
                             {task.due_time ? (
-                              <Text style={[styles.agendaTime, !task.is_completed && { color: COLORS.coral }]}>{task.due_time.slice(0, 5)}</Text>
+                              <Text style={[styles.agendaTime, { color: colors.ink }, !task.is_completed && { color: colors.coral }]}>{task.due_time.slice(0, 5)}</Text>
                             ) : (
-                              <Text style={styles.agendaTime}>--:--</Text>
+                              <Text style={[styles.agendaTime, { color: colors.ink }]}>--:--</Text>
                             )}
                           </View>
                           <View style={[styles.agendaBar, { backgroundColor: task.courses.color }]} />
                           <View style={{ flex: 1 }}>
-                            <Text style={[styles.agendaTaskTitle, task.is_completed && styles.agendaTaskDone]}>{task.title}</Text>
-                            <Text style={styles.agendaTaskCourse}>{task.courses.name}</Text>
+                            <Text style={[styles.agendaTaskTitle, { color: colors.ink }, task.is_completed && [styles.agendaTaskDone, { color: colors.ink3 }]]}>{task.title}</Text>
+                            <Text style={[styles.agendaTaskCourse, { color: colors.ink3 }]}>{task.courses.name}</Text>
                           </View>
                           <TouchableOpacity
                             onPress={() => toggleComplete.mutate({ id: task.id, is_completed: !task.is_completed })}
                             hitSlop={8}
                           >
-                            <View style={[styles.cbx, task.is_completed && { backgroundColor: COLORS.teal, borderColor: COLORS.teal }]}>
+                            <View style={[styles.cbx, { borderColor: colors.ink3 }, task.is_completed && { backgroundColor: colors.teal, borderColor: colors.teal }]}>
                               {task.is_completed && <FontAwesome name="check" size={9} color="#fff" />}
                             </View>
                           </TouchableOpacity>
@@ -286,8 +289,8 @@ export default function CalendarScreen() {
                 );
               })
             ) : (
-              <View style={styles.agendaEmpty}>
-                <Text style={styles.agendaEmptyText}>No tasks this month</Text>
+              <View style={[styles.agendaEmpty, { backgroundColor: colors.card, borderColor: colors.line }]}>
+                <Text style={[styles.agendaEmptyText, { color: colors.ink3 }]}>No tasks this month</Text>
               </View>
             )}
           </>

@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { COLORS, TASK_TYPE_LABELS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 import { scheduleTaskReminders } from '@/lib/notifications';
 import type { ExtractedItem } from '@/lib/gemini';
 
@@ -33,6 +34,7 @@ export default function SyllabusReviewScreen() {
     }
   });
   const [saving, setSaving] = useState(false);
+  const colors = useColors();
 
   const acceptedCount = items.filter((i) => i.accepted).length;
 
@@ -139,25 +141,25 @@ export default function SyllabusReviewScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
         {/* Header */}
         {/* Course info banner */}
         {params.courseName && (
-          <View style={styles.courseBanner}>
-            <FontAwesome name="book" size={14} color={COLORS.brand} />
+          <View style={[styles.courseBanner, { backgroundColor: colors.brand50 }]}>
+            <FontAwesome name="book" size={14} color={colors.brand} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.courseBannerName}>{params.courseName}</Text>
-              {params.semesterName && <Text style={styles.courseBannerSem}>{params.semesterName}</Text>}
+              <Text style={[styles.courseBannerName, { color: colors.brand }]}>{params.courseName}</Text>
+              {params.semesterName && <Text style={[styles.courseBannerSem, { color: colors.ink3 }]}>{params.semesterName}</Text>}
             </View>
-            <View style={styles.autoCreatedBadge}><Text style={styles.autoCreatedText}>AUTO</Text></View>
+            <View style={[styles.autoCreatedBadge, { backgroundColor: colors.teal50 }]}><Text style={[styles.autoCreatedText, { color: colors.teal }]}>AUTO</Text></View>
           </View>
         )}
 
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.title}>{items.length} items found</Text>
-            <Text style={styles.subtitle}>{acceptedCount} selected to save</Text>
+            <Text style={[styles.title, { color: colors.ink }]}>{items.length} items found</Text>
+            <Text style={[styles.subtitle, { color: colors.ink3 }]}>{acceptedCount} selected to save</Text>
           </View>
           <TouchableOpacity
             onPress={() => {
@@ -165,7 +167,7 @@ export default function SyllabusReviewScreen() {
               setItems((prev) => prev.map((i) => ({ ...i, accepted: !allAccepted })));
             }}
           >
-            <Text style={styles.toggleAllText}>
+            <Text style={[styles.toggleAllText, { color: colors.brand }]}>
               {items.every((i) => i.accepted) ? 'Deselect all' : 'Select all'}
             </Text>
           </TouchableOpacity>
@@ -173,11 +175,11 @@ export default function SyllabusReviewScreen() {
 
         {/* Items */}
         {items.map((item, index) => (
-          <View key={index} style={[styles.itemCard, !item.accepted && styles.itemRejected]}>
+          <View key={index} style={[styles.itemCard, { backgroundColor: colors.card, borderColor: colors.line }, !item.accepted && styles.itemRejected]}>
             <View style={styles.itemTop}>
               {/* Accept toggle */}
               <TouchableOpacity onPress={() => toggleAccept(index)} hitSlop={8}>
-                <View style={[styles.cbx, item.accepted && styles.cbxActive]}>
+                <View style={[styles.cbx, { borderColor: colors.ink3 }, item.accepted && { backgroundColor: colors.teal, borderColor: colors.teal }]}>
                   {item.accepted && <FontAwesome name="check" size={10} color="#fff" />}
                 </View>
               </TouchableOpacity>
@@ -185,39 +187,39 @@ export default function SyllabusReviewScreen() {
               <View style={{ flex: 1 }}>
                 {item.editing ? (
                   <TextInput
-                    style={styles.editInput}
+                    style={[styles.editInput, { color: colors.ink, borderBottomColor: colors.brand }]}
                     value={item.title}
                     onChangeText={(t) => updateItem(index, 'title', t)}
                   />
                 ) : (
-                  <Text style={[styles.itemTitle, !item.accepted && styles.itemTitleRejected]}>
+                  <Text style={[styles.itemTitle, { color: colors.ink }, !item.accepted && { textDecorationLine: 'line-through', color: colors.ink3 }]}>
                     {item.title}
                   </Text>
                 )}
 
                 <View style={styles.itemMeta}>
-                  <View style={styles.typeBadge}>
-                    <Text style={styles.typeText}>{TASK_TYPE_LABELS[item.type] || item.type}</Text>
+                  <View style={[styles.typeBadge, { backgroundColor: colors.brand50 }]}>
+                    <Text style={[styles.typeText, { color: colors.brand }]}>{TASK_TYPE_LABELS[item.type] || item.type}</Text>
                   </View>
-                  <Text style={styles.itemDate}>
+                  <Text style={[styles.itemDate, { color: colors.ink2 }]}>
                     {item.due_date ? format(new Date(item.due_date + 'T00:00:00'), 'MMM d, yyyy') : 'No date'}
                   </Text>
-                  {item.due_time && <Text style={styles.itemTime}>{item.due_time}</Text>}
-                  {item.weight != null && <Text style={styles.itemWeight}>{item.weight}%</Text>}
+                  {item.due_time && <Text style={[styles.itemTime, { color: colors.ink3 }]}>{item.due_time}</Text>}
+                  {item.weight != null && <Text style={[styles.itemWeight, { color: colors.ink3 }]}>{item.weight}%</Text>}
                 </View>
 
                 {/* Confidence indicator */}
                 {item.confidence < 0.8 && (
-                  <View style={styles.lowConfidence}>
-                    <FontAwesome name="exclamation-triangle" size={10} color={COLORS.amber} />
-                    <Text style={styles.lowConfidenceText}>Low confidence — please verify</Text>
+                  <View style={[styles.lowConfidence, { backgroundColor: colors.amber50 }]}>
+                    <FontAwesome name="exclamation-triangle" size={10} color={colors.amber} />
+                    <Text style={[styles.lowConfidenceText, { color: colors.amber }]}>Low confidence — please verify</Text>
                   </View>
                 )}
               </View>
 
               {/* Edit toggle */}
               <TouchableOpacity onPress={() => toggleEdit(index)} hitSlop={8}>
-                <FontAwesome name={item.editing ? 'check-circle' : 'pencil'} size={16} color={item.editing ? COLORS.teal : COLORS.ink3} />
+                <FontAwesome name={item.editing ? 'check-circle' : 'pencil'} size={16} color={item.editing ? colors.teal : colors.ink3} />
               </TouchableOpacity>
             </View>
 
@@ -225,16 +227,16 @@ export default function SyllabusReviewScreen() {
             {item.editing && (
               <View style={styles.editFields}>
                 {/* Type selector */}
-                <Text style={styles.editFieldLabel}>Type</Text>
+                <Text style={[styles.editFieldLabel, { color: colors.ink3 }]}>Type</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View style={styles.typeChipRow}>
                     {(['assignment', 'quiz', 'exam', 'project', 'reading', 'other'] as const).map((t) => (
                       <TouchableOpacity
                         key={t}
-                        style={[styles.typeChip, item.type === t && styles.typeChipActive]}
+                        style={[styles.typeChip, item.type === t && { backgroundColor: colors.brand }]}
                         onPress={() => updateItem(index, 'type', t)}
                       >
-                        <Text style={[styles.typeChipText, item.type === t && styles.typeChipTextActive]}>
+                        <Text style={[styles.typeChipText, { color: colors.ink2 }, item.type === t && styles.typeChipTextActive]}>
                           {TASK_TYPE_LABELS[t]}
                         </Text>
                       </TouchableOpacity>
@@ -243,42 +245,45 @@ export default function SyllabusReviewScreen() {
                 </ScrollView>
 
                 <View style={styles.editRow}>
-                  <Text style={styles.editLabel}>Date:</Text>
+                  <Text style={[styles.editLabel, { color: colors.ink3 }]}>Date:</Text>
                   <TextInput
-                    style={styles.editSmallInput}
+                    style={[styles.editSmallInput, { borderColor: colors.line, color: colors.ink }]}
                     value={item.due_date}
                     onChangeText={(t) => updateItem(index, 'due_date', t)}
                     placeholder="YYYY-MM-DD"
+                    placeholderTextColor={colors.ink3}
                   />
                 </View>
                 <View style={styles.editRow}>
-                  <Text style={styles.editLabel}>Time:</Text>
+                  <Text style={[styles.editLabel, { color: colors.ink3 }]}>Time:</Text>
                   <TextInput
-                    style={styles.editSmallInput}
+                    style={[styles.editSmallInput, { borderColor: colors.line, color: colors.ink }]}
                     value={item.due_time || ''}
                     onChangeText={(t) => updateItem(index, 'due_time', t || null)}
                     placeholder="HH:MM"
+                    placeholderTextColor={colors.ink3}
                   />
                 </View>
                 <View style={styles.editRow}>
-                  <Text style={styles.editLabel}>Weight:</Text>
+                  <Text style={[styles.editLabel, { color: colors.ink3 }]}>Weight:</Text>
                   <TextInput
-                    style={styles.editSmallInput}
+                    style={[styles.editSmallInput, { borderColor: colors.line, color: colors.ink }]}
                     value={item.weight != null ? String(item.weight) : ''}
                     onChangeText={(t) => { const n = parseFloat(t); updateItem(index, 'weight', t && !isNaN(n) ? n : null); }}
                     placeholder="%"
+                    placeholderTextColor={colors.ink3}
                     keyboardType="decimal-pad"
                   />
                 </View>
 
                 {/* Description */}
-                <Text style={styles.editFieldLabel}>Description</Text>
+                <Text style={[styles.editFieldLabel, { color: colors.ink3 }]}>Description</Text>
                 <TextInput
-                  style={styles.editDescInput}
+                  style={[styles.editDescInput, { borderColor: colors.line, color: colors.ink, backgroundColor: colors.card }]}
                   value={item.description || ''}
                   onChangeText={(t) => updateItem(index, 'description', t || null)}
                   placeholder="Add notes..."
-                  placeholderTextColor={COLORS.ink3}
+                  placeholderTextColor={colors.ink3}
                   multiline
                   numberOfLines={2}
                   textAlignVertical="top"
@@ -287,25 +292,25 @@ export default function SyllabusReviewScreen() {
             )}
 
             {item.description && !item.editing && (
-              <Text style={styles.itemDesc}>{item.description}</Text>
+              <Text style={[styles.itemDesc, { color: colors.ink3 }]}>{item.description}</Text>
             )}
           </View>
         ))}
 
         {items.length === 0 && (
           <View style={styles.emptyCard}>
-            <FontAwesome name="search" size={24} color={COLORS.ink3} />
-            <Text style={styles.emptyText}>No deadlines found in this document</Text>
-            <Text style={styles.emptySub}>Try uploading a different syllabus</Text>
+            <FontAwesome name="search" size={24} color={colors.ink3} />
+            <Text style={[styles.emptyText, { color: colors.ink }]}>No deadlines found in this document</Text>
+            <Text style={[styles.emptySub, { color: colors.ink3 }]}>Try uploading a different syllabus</Text>
           </View>
         )}
       </ScrollView>
 
       {/* Save button */}
       {items.length > 0 && (
-        <View style={styles.footer}>
+        <View style={[styles.footer, { backgroundColor: colors.paper, borderTopColor: colors.line }]}>
           <TouchableOpacity
-            style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+            style={[styles.saveBtn, { backgroundColor: colors.brand }, saving && styles.saveBtnDisabled]}
             onPress={handleSave}
             disabled={saving || acceptedCount === 0}
             activeOpacity={0.8}

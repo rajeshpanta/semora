@@ -10,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import type { ProductOrSubscription } from 'react-native-iap';
 import { COLORS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 import { useAppStore } from '@/store/appStore';
 import { getProducts, purchaseProduct, restorePurchases, PRODUCT_IDS, setupPurchaseListeners } from '@/lib/purchases';
 
@@ -36,6 +37,7 @@ const FEATURES = [
 export default function PaywallScreen() {
   const router = useRouter();
   const setIsPro = useAppStore((s) => s.setIsPro);
+  const colors = useColors();
 
   const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>('monthly');
   const [loading, setLoading] = useState(false);
@@ -108,21 +110,21 @@ export default function PaywallScreen() {
   };
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, { backgroundColor: colors.paper }]}>
       <SafeAreaView style={styles.safe} edges={['top']}>
         {/* Fixed close button outside ScrollView */}
-        <TouchableOpacity style={styles.closeBtn} onPress={handleClose} hitSlop={16}>
-          <FontAwesome name="times" size={20} color={COLORS.ink2} />
+        <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.card }]} onPress={handleClose} hitSlop={16}>
+          <FontAwesome name="times" size={20} color={colors.ink2} />
         </TouchableOpacity>
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} bounces={false}>
 
           {/* Hero */}
-          <View style={styles.hero}>
-            <View style={styles.heroGlow} />
+          <View style={[styles.hero, { backgroundColor: colors.ink }]}>
+            <View style={[styles.heroGlow, { backgroundColor: colors.brand }]} />
             <View style={styles.proLabel}>
-              <FontAwesome name="star" size={11} color={COLORS.brand100} />
-              <Text style={styles.proLabelText}>SEMORA PRO</Text>
+              <FontAwesome name="star" size={11} color={colors.brand100} />
+              <Text style={[styles.proLabelText, { color: colors.brand100 }]}>SEMORA PRO</Text>
             </View>
             <Text style={styles.heroTitle}>Unlimited scans, smart plans, grade forecasts.</Text>
             <Text style={styles.heroSubtitle}>
@@ -131,42 +133,42 @@ export default function PaywallScreen() {
           </View>
 
           {/* Features */}
-          <Text style={styles.sectionLabel}>WHAT YOU GET</Text>
-          <View style={styles.featureList}>
+          <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>WHAT YOU GET</Text>
+          <View style={[styles.featureList, { backgroundColor: colors.card, borderColor: colors.line }]}>
             {FEATURES.map((f, i) => (
-              <View key={i} style={[styles.featureRow, i < FEATURES.length - 1 && styles.featureRowBorder]}>
-                <View style={styles.featureIcon}>
-                  <FontAwesome name={f.icon} size={15} color={COLORS.brand} />
+              <View key={i} style={[styles.featureRow, i < FEATURES.length - 1 && { borderBottomWidth: 0.5, borderBottomColor: colors.line }]}>
+                <View style={[styles.featureIcon, { backgroundColor: colors.brand50 }]}>
+                  <FontAwesome name={f.icon} size={15} color={colors.brand} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.featureTitle}>{f.title}</Text>
-                  <Text style={styles.featureDesc}>{f.desc}</Text>
+                  <Text style={[styles.featureTitle, { color: colors.ink }]}>{f.title}</Text>
+                  <Text style={[styles.featureDesc, { color: colors.ink3 }]}>{f.desc}</Text>
                 </View>
               </View>
             ))}
           </View>
 
           {/* Plan Selection */}
-          <Text style={styles.sectionLabel}>CHOOSE YOUR PLAN</Text>
+          <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>CHOOSE YOUR PLAN</Text>
 
           {/* Monthly */}
           <TouchableOpacity
-            style={[styles.planCard, selectedPlan === 'monthly' && styles.planCardSelected]}
+            style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.line }, selectedPlan === 'monthly' && { backgroundColor: colors.brand50, borderColor: colors.brand }]}
             onPress={() => setSelectedPlan('monthly')}
             activeOpacity={0.8}
           >
             <View style={styles.planRadio}>
-              <View style={[styles.radioOuter, selectedPlan === 'monthly' && styles.radioOuterSelected]}>
-                {selectedPlan === 'monthly' && <View style={styles.radioInner} />}
+              <View style={[styles.radioOuter, { borderColor: colors.ink3 }, selectedPlan === 'monthly' && { borderColor: colors.brand }]}>
+                {selectedPlan === 'monthly' && <View style={[styles.radioInner, { backgroundColor: colors.brand }]} />}
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.planName}>Monthly</Text>
-              <Text style={styles.planPrice}>{monthlyPrice}<Text style={styles.planPeriod}>/month</Text></Text>
-              <Text style={styles.planSub}>7-day free trial included</Text>
+              <Text style={[styles.planName, { color: colors.ink }]}>Monthly</Text>
+              <Text style={[styles.planPrice, { color: colors.ink }]}>{monthlyPrice}<Text style={[styles.planPeriod, { color: colors.ink2 }]}>/month</Text></Text>
+              <Text style={[styles.planSub, { color: colors.ink3 }]}>7-day free trial included</Text>
             </View>
             {selectedPlan === 'monthly' && (
-              <View style={styles.trialBadge}>
+              <View style={[styles.trialBadge, { backgroundColor: colors.brand }]}>
                 <Text style={styles.trialBadgeText}>FREE TRIAL</Text>
               </View>
             )}
@@ -174,21 +176,21 @@ export default function PaywallScreen() {
 
           {/* Annual */}
           <TouchableOpacity
-            style={[styles.planCard, selectedPlan === 'annual' && styles.planCardSelected]}
+            style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.line }, selectedPlan === 'annual' && { backgroundColor: colors.brand50, borderColor: colors.brand }]}
             onPress={() => setSelectedPlan('annual')}
             activeOpacity={0.8}
           >
             <View style={styles.planRadio}>
-              <View style={[styles.radioOuter, selectedPlan === 'annual' && styles.radioOuterSelected]}>
-                {selectedPlan === 'annual' && <View style={styles.radioInner} />}
+              <View style={[styles.radioOuter, { borderColor: colors.ink3 }, selectedPlan === 'annual' && { borderColor: colors.brand }]}>
+                {selectedPlan === 'annual' && <View style={[styles.radioInner, { backgroundColor: colors.brand }]} />}
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.planName}>Annual</Text>
-              <Text style={styles.planPrice}>{annualPrice}<Text style={styles.planPeriod}>/year</Text></Text>
-              <Text style={styles.planSub}>Just $1.67/month</Text>
+              <Text style={[styles.planName, { color: colors.ink }]}>Annual</Text>
+              <Text style={[styles.planPrice, { color: colors.ink }]}>{annualPrice}<Text style={[styles.planPeriod, { color: colors.ink2 }]}>/year</Text></Text>
+              <Text style={[styles.planSub, { color: colors.ink3 }]}>Just $1.67/month</Text>
             </View>
-            <View style={styles.saveBadge}>
+            <View style={[styles.saveBadge, { backgroundColor: colors.teal }]}>
               <Text style={styles.saveBadgeText}>SAVE 58%</Text>
             </View>
           </TouchableOpacity>
@@ -211,7 +213,7 @@ export default function PaywallScreen() {
             </LinearGradient>
           </TouchableOpacity>
 
-          <Text style={styles.finePrint}>
+          <Text style={[styles.finePrint, { color: colors.ink3 }]}>
             {selectedPlan === 'monthly'
               ? `7-day free trial, then ${monthlyPrice}/month. Cancel anytime.`
               : `${annualPrice} billed annually. Cancel anytime.`}
@@ -220,15 +222,15 @@ export default function PaywallScreen() {
           {/* Footer */}
           <View style={styles.footer}>
             <TouchableOpacity onPress={handleRestore} disabled={restoring}>
-              <Text style={styles.footerLink}>{restoring ? 'Restoring...' : 'Restore'}</Text>
+              <Text style={[styles.footerLink, { color: colors.ink3 }]}>{restoring ? 'Restoring...' : 'Restore'}</Text>
             </TouchableOpacity>
-            <Text style={styles.footerDot}> · </Text>
+            <Text style={[styles.footerDot, { color: colors.ink3 }]}> · </Text>
             <TouchableOpacity onPress={() => Linking.openURL('https://rajeshpanta.github.io/semora/terms.html')}>
-              <Text style={styles.footerLink}>Terms</Text>
+              <Text style={[styles.footerLink, { color: colors.ink3 }]}>Terms</Text>
             </TouchableOpacity>
-            <Text style={styles.footerDot}> · </Text>
+            <Text style={[styles.footerDot, { color: colors.ink3 }]}> · </Text>
             <TouchableOpacity onPress={() => Linking.openURL('https://rajeshpanta.github.io/semora/privacy.html')}>
-              <Text style={styles.footerLink}>Privacy</Text>
+              <Text style={[styles.footerLink, { color: colors.ink3 }]}>Privacy</Text>
             </TouchableOpacity>
           </View>
 

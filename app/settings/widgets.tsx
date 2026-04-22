@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const WIDGET_W = SCREEN_W - 80; // mimic real widget width
@@ -11,6 +12,7 @@ const WIDGET_W = SCREEN_W - 80; // mimic real widget width
 // ── Realistic Widget Previews ──────────────────────────────
 
 function TodayWidgetPreview() {
+  const colors = useColors();
   const tasks = [
     { color: '#6366f1', title: 'Essay Draft', course: 'ENG 201', time: '11:59 PM' },
     { color: '#ef4444', title: 'Ch. 5 Problems', course: 'MATH 301', time: '5:00 PM' },
@@ -20,18 +22,18 @@ function TodayWidgetPreview() {
     <View style={wp.container}>
       <View style={wp.glass}>
         <View style={wp.header}>
-          <FontAwesome name="sun-o" size={12} color={COLORS.brand} />
-          <Text style={wp.headerTitle}>Today</Text>
-          <Text style={wp.headerBadge}>3 tasks</Text>
+          <FontAwesome name="sun-o" size={12} color={colors.brand} />
+          <Text style={[wp.headerTitle, { color: colors.ink }]}>Today</Text>
+          <Text style={[wp.headerBadge, { color: colors.ink3, backgroundColor: colors.paper }]}>3 tasks</Text>
         </View>
         {tasks.map((t, i) => (
           <View key={i} style={[wp.taskRow, i < tasks.length - 1 && wp.taskBorder]}>
             <View style={[wp.dot, { backgroundColor: t.color }]} />
             <View style={{ flex: 1 }}>
-              <Text style={wp.taskTitle}>{t.title}</Text>
-              <Text style={wp.taskCourse}>{t.course}</Text>
+              <Text style={[wp.taskTitle, { color: colors.ink }]}>{t.title}</Text>
+              <Text style={[wp.taskCourse, { color: colors.ink3 }]}>{t.course}</Text>
             </View>
-            <Text style={wp.taskTime}>{t.time}</Text>
+            <Text style={[wp.taskTime, { color: colors.ink3 }]}>{t.time}</Text>
           </View>
         ))}
       </View>
@@ -40,6 +42,7 @@ function TodayWidgetPreview() {
 }
 
 function WeekWidgetPreview() {
+  const colors = useColors();
   const days = [
     { day: 'Mon', count: 2, items: ['Quiz 3', 'Reading'] },
     { day: 'Wed', count: 1, items: ['Midterm'] },
@@ -49,14 +52,14 @@ function WeekWidgetPreview() {
     <View style={wp.container}>
       <View style={wp.glass}>
         <View style={wp.header}>
-          <FontAwesome name="calendar" size={12} color={COLORS.coral} />
-          <Text style={wp.headerTitle}>This Week</Text>
-          <Text style={wp.headerBadge}>6 due</Text>
+          <FontAwesome name="calendar" size={12} color={colors.coral} />
+          <Text style={[wp.headerTitle, { color: colors.ink }]}>This Week</Text>
+          <Text style={[wp.headerBadge, { color: colors.ink3, backgroundColor: colors.paper }]}>6 due</Text>
         </View>
         <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
           {days.map((d, i) => (
             <View key={i} style={wp.dayCol}>
-              <Text style={wp.dayLabel}>{d.day}</Text>
+              <Text style={[wp.dayLabel, { color: colors.ink3 }]}>{d.day}</Text>
               <View style={wp.dayBar}>
                 {d.items.map((item, j) => (
                   <View key={j} style={[wp.dayChip, { backgroundColor: j === 0 ? '#6366f1' : j === 1 ? '#ef4444' : '#10b981' }]}>
@@ -73,6 +76,7 @@ function WeekWidgetPreview() {
 }
 
 function GradeWidgetPreview() {
+  const colors = useColors();
   const grades = [
     { course: 'ENG 201', pct: 94, letter: 'A', color: '#6366f1' },
     { course: 'MATH 301', pct: 87, letter: 'B+', color: '#ef4444' },
@@ -82,17 +86,17 @@ function GradeWidgetPreview() {
     <View style={wp.container}>
       <View style={wp.glass}>
         <View style={wp.header}>
-          <FontAwesome name="bar-chart" size={12} color={COLORS.teal} />
-          <Text style={wp.headerTitle}>Grades</Text>
+          <FontAwesome name="bar-chart" size={12} color={colors.teal} />
+          <Text style={[wp.headerTitle, { color: colors.ink }]}>Grades</Text>
         </View>
         {grades.map((g, i) => (
           <View key={i} style={[wp.gradeRow, i < grades.length - 1 && wp.taskBorder]}>
             <View style={[wp.gradeDot, { backgroundColor: g.color }]} />
-            <Text style={wp.gradeCourse}>{g.course}</Text>
+            <Text style={[wp.gradeCourse, { color: colors.ink }]}>{g.course}</Text>
             <View style={wp.gradeBarTrack}>
               <View style={[wp.gradeBarFill, { width: `${g.pct}%`, backgroundColor: g.color }]} />
             </View>
-            <Text style={wp.gradeLetter}>{g.letter}</Text>
+            <Text style={[wp.gradeLetter, { color: colors.ink }]}>{g.letter}</Text>
           </View>
         ))}
       </View>
@@ -101,14 +105,15 @@ function GradeWidgetPreview() {
 }
 
 function QuickAddWidgetPreview() {
+  const colors = useColors();
   return (
     <View style={[wp.container, { alignSelf: 'flex-start', width: (WIDGET_W - 12) / 2 }]}>
       <View style={[wp.glass, { alignItems: 'center', paddingVertical: 20 }]}>
-        <View style={wp.quickAddCircle}>
+        <View style={[wp.quickAddCircle, { backgroundColor: colors.brand, shadowColor: colors.brand }]}>
           <FontAwesome name="plus" size={22} color="#fff" />
         </View>
-        <Text style={[wp.headerTitle, { marginTop: 8 }]}>Quick Add</Text>
-        <Text style={[wp.taskCourse, { textAlign: 'center' }]}>Tap to add a task</Text>
+        <Text style={[wp.headerTitle, { marginTop: 8, color: colors.ink }]}>Quick Add</Text>
+        <Text style={[wp.taskCourse, { textAlign: 'center', color: colors.ink3 }]}>Tap to add a task</Text>
       </View>
     </View>
   );
@@ -148,8 +153,9 @@ const WIDGETS = [
 ];
 
 export default function WidgetsSettings() {
+  const colors = useColors();
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Widgets' }} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
@@ -177,7 +183,7 @@ export default function WidgetsSettings() {
 
         {/* Widget showcase */}
         {WIDGETS.map((w, i) => (
-          <View key={i} style={styles.showcaseCard}>
+          <View key={i} style={[styles.showcaseCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
             {/* Label bar */}
             <LinearGradient
               colors={w.gradient}
@@ -191,7 +197,7 @@ export default function WidgetsSettings() {
               </View>
             </LinearGradient>
 
-            <Text style={styles.showcaseSub}>{w.subtitle}</Text>
+            <Text style={[styles.showcaseSub, { color: colors.ink2 }]}>{w.subtitle}</Text>
 
             {/* Live-looking preview */}
             <View style={styles.previewWrap}>
@@ -203,16 +209,16 @@ export default function WidgetsSettings() {
         {/* Footer info */}
         <View style={styles.footerInfo}>
           <View style={styles.footerRow}>
-            <FontAwesome name="star" size={11} color={COLORS.brand} />
-            <Text style={styles.footerText}>Widgets will be available in a future update</Text>
+            <FontAwesome name="star" size={11} color={colors.brand} />
+            <Text style={[styles.footerText, { color: colors.ink3 }]}>Widgets will be available in a future update</Text>
           </View>
           <View style={styles.footerRow}>
-            <FontAwesome name="wifi" size={11} color={COLORS.ink3} />
-            <Text style={styles.footerText}>Works offline with your most recent data</Text>
+            <FontAwesome name="wifi" size={11} color={colors.ink3} />
+            <Text style={[styles.footerText, { color: colors.ink3 }]}>Works offline with your most recent data</Text>
           </View>
           <View style={styles.footerRow}>
-            <FontAwesome name="lock" size={11} color={COLORS.ink3} />
-            <Text style={styles.footerText}>Your data stays on-device and is never shared</Text>
+            <FontAwesome name="lock" size={11} color={colors.ink3} />
+            <Text style={[styles.footerText, { color: colors.ink3 }]}>Your data stays on-device and is never shared</Text>
           </View>
         </View>
       </ScrollView>

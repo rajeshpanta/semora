@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { signIn } from '@/lib/auth';
+import { useColors } from '@/lib/theme';
 
 export default function SignInScreen() {
   const [email, setEmail] = useState('');
@@ -20,6 +21,7 @@ export default function SignInScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [errorType, setErrorType] = useState<'confirm' | 'credentials' | 'generic' | ''>('');
+  const colors = useColors();
 
   const handleSignIn = async () => {
     setError('');
@@ -67,7 +69,7 @@ export default function SignInScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
       <ScrollView
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="always"
@@ -76,14 +78,14 @@ export default function SignInScreen() {
       >
         <View style={styles.inner}>
           <View style={styles.header}>
-            <View style={styles.logoContainer}>
+            <View style={[styles.logoContainer, { backgroundColor: colors.brand }]}>
               <FontAwesome name="graduation-cap" size={28} color="#fff" />
             </View>
-            <Text style={styles.title}>Semora</Text>
-            <Text style={styles.subtitle}>Never miss a deadline again</Text>
+            <Text style={[styles.title, { color: colors.ink }]}>Semora</Text>
+            <Text style={[styles.subtitle, { color: colors.ink2 }]}>Never miss a deadline again</Text>
           </View>
 
-          <View style={styles.form}>
+          <View style={[styles.form, { backgroundColor: colors.card }]}>
             {error ? (
               <View
                 style={[
@@ -114,11 +116,11 @@ export default function SignInScreen() {
               </View>
             ) : null}
 
-            <Text style={styles.label}>Email address</Text>
+            <Text style={[styles.label, { color: colors.ink2 }]}>Email address</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
               placeholder="you@university.edu"
-              placeholderTextColor="#c0c0cc"
+              placeholderTextColor={colors.ink3}
               value={email}
               onChangeText={(t) => {
                 setEmail(t);
@@ -131,11 +133,11 @@ export default function SignInScreen() {
               textContentType="emailAddress"
             />
 
-            <Text style={styles.label}>Password</Text>
+            <Text style={[styles.label, { color: colors.ink2 }]}>Password</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
               placeholder="Enter your password"
-              placeholderTextColor="#c0c0cc"
+              placeholderTextColor={colors.ink3}
               value={password}
               onChangeText={(t) => {
                 setPassword(t);
@@ -149,7 +151,7 @@ export default function SignInScreen() {
             />
 
             <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+              style={[styles.button, { backgroundColor: colors.brand }, loading && styles.buttonDisabled]}
               onPress={handleSignIn}
               disabled={loading}
               activeOpacity={0.8}
@@ -168,9 +170,9 @@ export default function SignInScreen() {
           <View style={styles.footer}>
             <Link href="/(auth)/sign-up" asChild>
               <TouchableOpacity activeOpacity={0.7}>
-                <Text style={styles.linkText}>
+                <Text style={[styles.linkText, { color: colors.ink2 }]}>
                   Don't have an account?{' '}
-                  <Text style={styles.linkBold}>Create one</Text>
+                  <Text style={[styles.linkBold, { color: colors.brand }]}>Create one</Text>
                 </Text>
               </TouchableOpacity>
             </Link>

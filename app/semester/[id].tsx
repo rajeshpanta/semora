@@ -11,6 +11,7 @@ import { useSemesters, useUpdateSemester, useDeleteSemester } from '@/lib/querie
 import { COLORS } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
 import { DatePicker } from '@/components/DatePicker';
+import { useColors } from '@/lib/theme';
 
 export default function SemesterDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -19,6 +20,7 @@ export default function SemesterDetailScreen() {
   const updateSemester = useUpdateSemester();
   const deleteSemester = useDeleteSemester();
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
+  const colors = useColors();
 
   const semester = semesters.find((s) => s.id === id);
 
@@ -35,7 +37,7 @@ export default function SemesterDetailScreen() {
   }, [semester]);
 
   if (isLoading || !semester) {
-    return <View style={styles.loading}><ActivityIndicator size="large" color="#6B46C1" /></View>;
+    return <View style={[styles.loading, { backgroundColor: colors.paper }]}><ActivityIndicator size="large" color={colors.brand} /></View>;
   }
 
   const handleSave = async () => {
@@ -77,26 +79,26 @@ export default function SemesterDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <View style={styles.iconRow}>
-            <View style={styles.iconCircle}>
-              <FontAwesome name="graduation-cap" size={22} color="#6B46C1" />
+            <View style={[styles.iconCircle, { backgroundColor: colors.brand50 }]}>
+              <FontAwesome name="graduation-cap" size={22} color={colors.brand} />
             </View>
           </View>
 
-          <Text style={styles.label}>Semester Name *</Text>
-          <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="e.g. Fall 2026" placeholderTextColor="#c0c0cc" />
+          <Text style={[styles.label, { color: colors.ink2 }]}>Semester Name *</Text>
+          <TextInput style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]} value={name} onChangeText={setName} placeholder="e.g. Fall 2026" placeholderTextColor={colors.ink3} />
 
-          <Text style={styles.label}>Start Date</Text>
+          <Text style={[styles.label, { color: colors.ink2 }]}>Start Date</Text>
           <DatePicker value={startDate} onChange={setStartDate} placeholder="Select start date" />
 
-          <Text style={styles.label}>End Date</Text>
+          <Text style={[styles.label, { color: colors.ink2 }]}>End Date</Text>
           <DatePicker value={endDate} onChange={setEndDate} placeholder="Select end date" />
 
           <TouchableOpacity
-            style={[styles.button, updateSemester.isPending && styles.buttonDisabled]}
+            style={[styles.button, { backgroundColor: colors.brand }, updateSemester.isPending && styles.buttonDisabled]}
             onPress={handleSave}
             disabled={updateSemester.isPending}
             activeOpacity={0.8}

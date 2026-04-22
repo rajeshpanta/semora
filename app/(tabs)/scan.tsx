@@ -8,10 +8,12 @@ import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 import { COLORS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useScanCount, FREE_SCAN_LIMIT } from '@/lib/queries';
 
 export default function ScanScreen() {
+  const colors = useColors();
   const router = useRouter();
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
@@ -142,15 +144,15 @@ export default function ScanScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Scan syllabus</Text>
-        <Text style={styles.subtitle}>
+        <Text style={[styles.title, { color: colors.ink }]}>Scan syllabus</Text>
+        <Text style={[styles.subtitle, { color: colors.ink2 }]}>
           Snap it, upload it, or drag it in.{'\n'}We'll pull every deadline.
         </Text>
 
         {/* Scan frame */}
-        <View style={styles.scanFrame}>
+        <View style={[styles.scanFrame, { backgroundColor: colors.brand }]}>
           <View style={styles.frameCorners}>
             <View style={[styles.corner, styles.tl]} />
             <View style={[styles.corner, styles.tr]} />
@@ -170,48 +172,48 @@ export default function ScanScreen() {
 
         {/* Actions */}
         <View style={styles.actions}>
-          <TouchableOpacity style={styles.actionCard} onPress={handleTakePhoto} activeOpacity={0.7}>
-            <View style={[styles.actionIcon, { backgroundColor: COLORS.brand50 }]}>
-              <FontAwesome name="camera" size={18} color={COLORS.brand} />
+          <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={handleTakePhoto} activeOpacity={0.7}>
+            <View style={[styles.actionIcon, { backgroundColor: colors.brand50 }]}>
+              <FontAwesome name="camera" size={18} color={colors.brand} />
             </View>
             <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Take a photo</Text>
-              <Text style={styles.actionSub}>Printed handout or whiteboard</Text>
+              <Text style={[styles.actionTitle, { color: colors.ink }]}>Take a photo</Text>
+              <Text style={[styles.actionSub, { color: colors.ink3 }]}>Printed handout or whiteboard</Text>
             </View>
-            <FontAwesome name="chevron-right" size={12} color={COLORS.ink3} />
+            <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionCard} onPress={handleUploadPDF} activeOpacity={0.7}>
-            <View style={[styles.actionIcon, { backgroundColor: COLORS.coral50 }]}>
-              <FontAwesome name="file-pdf-o" size={18} color={COLORS.coral} />
+          <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={handleUploadPDF} activeOpacity={0.7}>
+            <View style={[styles.actionIcon, { backgroundColor: colors.coral50 }]}>
+              <FontAwesome name="file-pdf-o" size={18} color={colors.coral} />
             </View>
             <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Upload PDF</Text>
-              <Text style={styles.actionSub}>Email attachment or download</Text>
+              <Text style={[styles.actionTitle, { color: colors.ink }]}>Upload PDF</Text>
+              <Text style={[styles.actionSub, { color: colors.ink3 }]}>Email attachment or download</Text>
             </View>
-            <FontAwesome name="chevron-right" size={12} color={COLORS.ink3} />
+            <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionCard} onPress={handleChooseFromPhotos} activeOpacity={0.7}>
-            <View style={[styles.actionIcon, { backgroundColor: COLORS.teal50 }]}>
-              <FontAwesome name="image" size={17} color={COLORS.teal} />
+          <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={handleChooseFromPhotos} activeOpacity={0.7}>
+            <View style={[styles.actionIcon, { backgroundColor: colors.teal50 }]}>
+              <FontAwesome name="image" size={17} color={colors.teal} />
             </View>
             <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Choose from Photos</Text>
-              <Text style={styles.actionSub}>Select from your photo library</Text>
+              <Text style={[styles.actionTitle, { color: colors.ink }]}>Choose from Photos</Text>
+              <Text style={[styles.actionSub, { color: colors.ink3 }]}>Select from your photo library</Text>
             </View>
-            <FontAwesome name="chevron-right" size={12} color={COLORS.ink3} />
+            <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.actionCard} onPress={handlePickFromFiles} activeOpacity={0.7}>
-            <View style={[styles.actionIcon, { backgroundColor: COLORS.blue50 }]}>
-              <FontAwesome name="folder-open-o" size={16} color={COLORS.blue} />
+          <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={handlePickFromFiles} activeOpacity={0.7}>
+            <View style={[styles.actionIcon, { backgroundColor: colors.blue50 }]}>
+              <FontAwesome name="folder-open-o" size={16} color={colors.blue} />
             </View>
             <View style={styles.actionContent}>
-              <Text style={styles.actionTitle}>Pick from Files</Text>
-              <Text style={styles.actionSub}>iCloud Drive, Google Drive...</Text>
+              <Text style={[styles.actionTitle, { color: colors.ink }]}>Pick from Files</Text>
+              <Text style={[styles.actionSub, { color: colors.ink3 }]}>iCloud Drive, Google Drive...</Text>
             </View>
-            <FontAwesome name="chevron-right" size={12} color={COLORS.ink3} />
+            <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>
         </View>
       </ScrollView>

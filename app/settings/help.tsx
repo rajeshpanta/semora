@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useState } from 'react';
 import { COLORS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 
 const FAQS: { q: string; a: string }[] = [
   {
@@ -33,44 +34,45 @@ const FAQS: { q: string; a: string }[] = [
 ];
 
 export default function HelpScreen() {
+  const colors = useColors();
   const [expanded, setExpanded] = useState<number | null>(null);
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Help & FAQ' }} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionTitle}>Frequently Asked Questions</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Frequently Asked Questions</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           {FAQS.map((faq, i) => (
             <TouchableOpacity
               key={i}
-              style={[styles.faqRow, i < FAQS.length - 1 && styles.faqBorder]}
+              style={[styles.faqRow, i < FAQS.length - 1 && styles.faqBorder, i < FAQS.length - 1 && { borderBottomColor: colors.line }]}
               activeOpacity={0.7}
               onPress={() => setExpanded(expanded === i ? null : i)}
             >
               <View style={styles.faqHeader}>
-                <Text style={styles.faqQ}>{faq.q}</Text>
+                <Text style={[styles.faqQ, { color: colors.ink }]}>{faq.q}</Text>
                 <FontAwesome
                   name={expanded === i ? 'chevron-up' : 'chevron-down'}
                   size={11}
-                  color={COLORS.ink3}
+                  color={colors.ink3}
                 />
               </View>
-              {expanded === i && <Text style={styles.faqA}>{faq.a}</Text>}
+              {expanded === i && <Text style={[styles.faqA, { color: colors.ink2 }]}>{faq.a}</Text>}
             </TouchableOpacity>
           ))}
         </View>
 
-        <Text style={[styles.sectionTitle, { marginTop: 28 }]}>Contact Support</Text>
-        <View style={styles.card}>
+        <Text style={[styles.sectionTitle, { marginTop: 28, color: colors.ink2 }]}>Contact Support</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <TouchableOpacity
             style={styles.contactRow}
             activeOpacity={0.7}
             onPress={() => Linking.openURL('mailto:rajesh.panta08@gmail.com')}
           >
-            <FontAwesome name="envelope-o" size={16} color={COLORS.ink2} />
-            <Text style={styles.contactText}>rajesh.panta08@gmail.com</Text>
-            <FontAwesome name="chevron-right" size={11} color={COLORS.ink3} />
+            <FontAwesome name="envelope-o" size={16} color={colors.ink2} />
+            <Text style={[styles.contactText, { color: colors.ink }]}>rajesh.panta08@gmail.com</Text>
+            <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
           </TouchableOpacity>
         </View>
       </ScrollView>

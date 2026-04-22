@@ -11,6 +11,7 @@ import { processSyllabus, type ProcessResult, FREE_COURSE_LIMIT } from '@/lib/sy
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { COLORS, COURSE_COLORS, COURSE_ICONS } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
 
 async function createDuplicateCourse(result: ProcessResult, userId: string): Promise<ProcessResult> {
   // Check course limit for free users
@@ -58,6 +59,7 @@ export default function SyllabusUploadScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ fileUri?: string; fileName?: string; mimeType?: string }>();
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
+  const colors = useColors();
 
   const [processing, setProcessing] = useState(false);
   const [status, setStatus] = useState('');
@@ -181,50 +183,50 @@ export default function SyllabusUploadScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['bottom']}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <View style={styles.center}>
         {/* File info */}
-        <View style={styles.fileChip}>
+        <View style={[styles.fileChip, { backgroundColor: colors.brand50 }]}>
           <FontAwesome
             name={params.mimeType?.includes('image') ? 'image' : 'file-pdf-o'}
             size={14}
-            color={COLORS.brand}
+            color={colors.brand}
           />
-          <Text style={styles.fileName} numberOfLines={1}>{params.fileName || 'Document'}</Text>
+          <Text style={[styles.fileName, { color: colors.brand }]} numberOfLines={1}>{params.fileName || 'Document'}</Text>
         </View>
 
         {/* Progress */}
         <View style={styles.progressContainer}>
           {processing ? (
             <>
-              <View style={styles.spinnerRing}>
-                <ActivityIndicator size="large" color={COLORS.brand} />
+              <View style={[styles.spinnerRing, { backgroundColor: colors.brand50 }]}>
+                <ActivityIndicator size="large" color={colors.brand} />
               </View>
-              <Text style={styles.statusText}>{status}</Text>
+              <Text style={[styles.statusText, { color: colors.ink }]}>{status}</Text>
 
               {/* Progress steps */}
               <View style={styles.steps}>
                 <StepDot active={step >= 1} done={step > 1} label="Upload" />
-                <View style={[styles.stepLine, step >= 2 && styles.stepLineDone]} />
+                <View style={[styles.stepLine, step >= 2 && { backgroundColor: colors.teal }]} />
                 <StepDot active={step >= 2} done={step > 2} label="AI Extract" />
-                <View style={[styles.stepLine, step >= 3 && styles.stepLineDone]} />
+                <View style={[styles.stepLine, step >= 3 && { backgroundColor: colors.teal }]} />
                 <StepDot active={step >= 3} done={step > 3} label="Organize" />
-                <View style={[styles.stepLine, step >= 4 && styles.stepLineDone]} />
+                <View style={[styles.stepLine, step >= 4 && { backgroundColor: colors.teal }]} />
                 <StepDot active={step >= 4} done={step >= 4} label="Review" />
               </View>
 
-              <Text style={styles.hint}>This may take 10-30 seconds</Text>
+              <Text style={[styles.hint, { color: colors.ink3 }]}>This may take 10-30 seconds</Text>
             </>
           ) : (
             <>
-              <View style={styles.readyIcon}>
-                <FontAwesome name="magic" size={32} color={COLORS.brand} />
+              <View style={[styles.readyIcon, { backgroundColor: colors.brand50 }]}>
+                <FontAwesome name="magic" size={32} color={colors.brand} />
               </View>
-              <Text style={styles.readyTitle}>Ready to scan</Text>
-              <Text style={styles.readyText}>
+              <Text style={[styles.readyTitle, { color: colors.ink }]}>Ready to scan</Text>
+              <Text style={[styles.readyText, { color: colors.ink3 }]}>
                 We'll extract the course name, semester,{'\n'}and all deadlines automatically.
               </Text>
-              <TouchableOpacity style={styles.startBtn} onPress={handleProcess} activeOpacity={0.8}>
+              <TouchableOpacity style={[styles.startBtn, { backgroundColor: colors.brand }]} onPress={handleProcess} activeOpacity={0.8}>
                 <FontAwesome name="bolt" size={16} color="#fff" />
                 <Text style={styles.startBtnText}>Start Scanning</Text>
               </TouchableOpacity>
@@ -237,12 +239,13 @@ export default function SyllabusUploadScreen() {
 }
 
 function StepDot({ active, done, label }: { active: boolean; done: boolean; label: string }) {
+  const colors = useColors();
   return (
     <View style={sdStyles.container}>
-      <View style={[sdStyles.dot, active && sdStyles.dotActive, done && sdStyles.dotDone]}>
+      <View style={[sdStyles.dot, active && { borderColor: colors.brand }, done && { backgroundColor: colors.teal, borderColor: colors.teal }]}>
         {done && <FontAwesome name="check" size={8} color="#fff" />}
       </View>
-      <Text style={[sdStyles.label, active && sdStyles.labelActive]}>{label}</Text>
+      <Text style={[sdStyles.label, { color: colors.ink3 }, active && { color: colors.brand }]}>{label}</Text>
     </View>
   );
 }

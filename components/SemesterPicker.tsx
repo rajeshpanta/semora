@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import type { Semester } from '@/types/database';
+import { useColors } from '@/lib/theme';
 
 interface SemesterPickerProps {
   semesters: Semester[];
@@ -9,6 +10,7 @@ interface SemesterPickerProps {
 }
 
 export function SemesterPicker({ semesters, selectedId, onSelect }: SemesterPickerProps) {
+  const colors = useColors();
   if (semesters.length === 0) return null;
 
   return (
@@ -18,11 +20,11 @@ export function SemesterPicker({ semesters, selectedId, onSelect }: SemesterPick
         return (
           <TouchableOpacity
             key={s.id}
-            style={[styles.chip, active && styles.chipActive]}
+            style={[styles.chip, { borderColor: colors.line }, active && { backgroundColor: colors.brand, borderColor: colors.brand }]}
             onPress={() => onSelect(s.id)}
             activeOpacity={0.7}
           >
-            <Text style={[styles.chipText, active && styles.chipTextActive]}>
+            <Text style={[styles.chipText, { color: colors.ink2 }, active && styles.chipTextActive]}>
               {s.name}
             </Text>
           </TouchableOpacity>
