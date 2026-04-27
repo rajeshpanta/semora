@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.rajeshpanta.syllabussnap",
-      "buildNumber": "7",
+      "buildNumber": "8",
       "appleTeamId": "7T9897GFKH",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
@@ -49,8 +49,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Semora needs photo access to upload syllabus images.",
-          "cameraPermission": "Semora needs camera access to scan syllabi."
+          "photosPermission": "Semora accesses your photo library so you can select existing images of your syllabus to import. For example, choose a saved screenshot of your course syllabus and Semora will extract assignments, exam dates, and due dates into your semester calendar.",
+          "cameraPermission": "Semora uses your camera to take photos of printed or paper syllabus pages. For example, snap a photo of your professor's printed syllabus and Semora will automatically extract assignments, exam dates, and due dates into your semester calendar."
         }
       ],
       "expo-document-picker",
