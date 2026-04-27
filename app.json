@@ -17,7 +17,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.rajeshpanta.syllabussnap",
-      "buildNumber": "6",
+      "buildNumber": "7",
       "appleTeamId": "7T9897GFKH",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
