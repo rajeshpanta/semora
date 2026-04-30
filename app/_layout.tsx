@@ -2,10 +2,11 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DefaultTheme, DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, router as globalRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Linking from 'expo-linking';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { ActivityIndicator, Platform, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { supabase } from '@/lib/supabase';
@@ -16,7 +17,7 @@ import { COLORS } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
 import { ThemeColorsProvider, useResolvedScheme, useColors } from '@/lib/theme';
 import { setQueryClient } from '@/lib/auth';
-import { initIAP, checkProStatus, endIAP } from '@/lib/purchases';
+import { initIAP, refreshProStatus, endIAP } from '@/lib/purchases';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -59,8 +60,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         saveTimezoneIfNeeded(session.user.id);
         requestNotificationPermission().catch(() => {});
         initIAP()
-          .then(() => checkProStatus())
-          .then((isPro) => useAppStore.getState().setIsPro(isPro ?? false))
+          .then(() => refreshProStatus())
+          .then((entitlement) => useAppStore.getState().setIsPro(entitlement.is_pro))
           .catch(() => {});
       }
     }).catch(() => {
@@ -76,8 +77,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         saveTimezoneIfNeeded(session.user.id);
         requestNotificationPermission().catch(() => {});
         initIAP()
-          .then(() => checkProStatus())
-          .then((isPro) => useAppStore.getState().setIsPro(isPro ?? false))
+          .then(() => refreshProStatus())
+          .then((entitlement) => useAppStore.getState().setIsPro(entitlement.is_pro))
           .catch(() => {});
         // Refetch all data after sign-in so tabs show fresh data immediately
         if (_event === 'SIGNED_IN') {
@@ -86,8 +87,41 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
+    // Deep-link handling for password reset flow.
+    // Supabase email link looks like: semora://auth/reset?code=<auth_code>
+    const handleDeepLink = async (url: string) => {
+      const parsed = Linking.parse(url);
+      const path = (parsed.path ?? '').replace(/^\//, '');
+      if (parsed.hostname === 'auth' && path === 'reset') {
+        const code = typeof parsed.queryParams?.code === 'string' ? parsed.queryParams.code : null;
+        if (!code) return;
+
+        // Tell AuthGate to pause its redirect logic while we exchange the code and route.
+        useAppStore.getState().setInPasswordReset(true);
+
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          useAppStore.getState().setInPasswordReset(false);
+          Alert.alert(
+            'Reset link invalid',
+            'This password reset link is invalid or has expired. Please request a new one.',
+          );
+          globalRouter.replace('/(auth)/sign-in');
+          return;
+        }
+
+        globalRouter.replace('/(auth)/reset-password');
+      }
+    };
+
+    Linking.getInitialURL().then((url) => {
+      if (url) handleDeepLink(url);
+    });
+    const linkSub = Linking.addEventListener('url', ({ url }) => handleDeepLink(url));
+
     return () => {
       subscription.unsubscribe();
+      linkSub.remove();
       endIAP();
     };
   }, []);
@@ -133,9 +167,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, loading } = useSession();
   const segments = useSegments();
   const router = useRouter();
+  const inPasswordReset = useAppStore((s) => s.inPasswordReset);
 
   useEffect(() => {
     if (loading) return;
+    // Pause redirects while a password reset is in progress so the recovery
+    // session doesn't punt the user into (tabs) before they pick a new password.
+    if (inPasswordReset) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
@@ -144,7 +182,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     } else if (session && inAuthGroup) {
       router.replace('/(tabs)');
     }
-  }, [session, loading, segments]);
+  }, [session, loading, segments, inPasswordReset]);
 
   const colors = useColors();
 
@@ -229,6 +267,8 @@ function RootLayoutNav() {
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)/forgot-password" options={{ headerShown: false }} />
+              <Stack.Screen name="(auth)/reset-password" options={{ headerShown: false }} />
               <Stack.Screen name="semester/new" options={{ presentation: 'modal', title: 'New Semester' }} />
               <Stack.Screen name="semester/[id]" options={{ title: 'Edit Semester' }} />
               <Stack.Screen name="course/new" options={{ presentation: 'modal', title: 'New Course' }} />
@@ -239,6 +279,7 @@ function RootLayoutNav() {
               <Stack.Screen name="syllabus/review" options={{ title: 'Review Items' }} />
               <Stack.Screen name="settings/index" options={{ title: 'Settings' }} />
               <Stack.Screen name="settings/password" options={{ title: 'Change Password' }} />
+              <Stack.Screen name="settings/delete-account" options={{ title: 'Delete Account' }} />
               <Stack.Screen name="settings/notifications" options={{ title: 'Notifications' }} />
               <Stack.Screen name="settings/appearance" options={{ title: 'Appearance' }} />
               <Stack.Screen name="settings/help" options={{ title: 'Help & FAQ' }} />

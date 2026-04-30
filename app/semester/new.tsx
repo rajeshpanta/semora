@@ -7,16 +7,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
-import { useCreateSemester } from '@/lib/queries';
+import { useCreateSemester, useSemesters } from '@/lib/queries';
 import { COLORS } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
 import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
+import { FREE_SEMESTER_LIMIT } from '@/lib/syllabus';
 
 export default function NewSemesterScreen() {
   const router = useRouter();
   const createSemester = useCreateSemester();
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
+  const isPro = useAppStore((s) => s.isPro);
+  const { data: existingSemesters = [] } = useSemesters();
   const colors = useColors();
 
   const [name, setName] = useState('');
@@ -26,6 +29,18 @@ export default function NewSemesterScreen() {
   const handleSubmit = async () => {
     if (!name.trim()) {
       Alert.alert('Required', 'Please enter a semester name.');
+      return;
+    }
+
+    if (!isPro && existingSemesters.length >= FREE_SEMESTER_LIMIT) {
+      Alert.alert(
+        'Semester Limit Reached',
+        `Free accounts support up to ${FREE_SEMESTER_LIMIT} semester. Upgrade to Pro for unlimited semesters.`,
+        [
+          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+          { text: 'Cancel', style: 'cancel' },
+        ],
+      );
       return;
     }
 

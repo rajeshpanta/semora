@@ -13,6 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { signUp } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
+import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
 
 export default function SignUpScreen() {
@@ -21,7 +23,6 @@ export default function SignUpScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [signedUpEmail, setSignedUpEmail] = useState('');
   const router = useRouter();
   const colors = useColors();
 
@@ -45,8 +46,28 @@ export default function SignUpScreen() {
     }
     setLoading(true);
     try {
-      await signUp(email.trim(), password);
-      setSignedUpEmail(email.trim());
+      const data = await signUp(email.trim(), password);
+
+      // Supabase returns success with empty identities when the email is already registered
+      // (user-enumeration prevention). Detect this and route to sign-in.
+      if (data.user && (!data.user.identities || data.user.identities.length === 0)) {
+        setError('An account with this email already exists. Try signing in instead.');
+        return;
+      }
+
+      // If Supabase auto-created a session (email confirmation disabled), sign out so the
+      // user must explicitly sign in with their new credentials.
+      const needsConfirm = !data.session;
+
+      // Set the banner BEFORE signOut so the sign-in screen has it ready when AuthGate redirects.
+      useAppStore.getState().setPostSignupBanner({ email: email.trim(), needsConfirm });
+
+      if (data.session) {
+        await supabase.auth.signOut();
+      }
+
+      // Explicit navigation in case AuthGate is slow to react. AuthGate would redirect anyway.
+      router.replace('/(auth)/sign-in');
     } catch (err: any) {
       const msg = err.message || '';
       if (msg.includes('already registered') || msg.includes('already been registered')) {
@@ -60,86 +81,6 @@ export default function SignUpScreen() {
       setLoading(false);
     }
   };
-
-  // --- Confirmation screen after successful sign-up ---
-  if (signedUpEmail) {
-    return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
-        <View style={styles.confirmContainer}>
-          <View style={[styles.confirmCard, { backgroundColor: colors.card }]}>
-            <View style={[styles.confirmIconCircle, { backgroundColor: colors.brand50 }]}>
-              <FontAwesome name="envelope-o" size={32} color={colors.brand} />
-            </View>
-
-            <Text style={[styles.confirmTitle, { color: colors.ink }]}>Confirm Your Email</Text>
-
-            <Text style={[styles.confirmText, { color: colors.ink2 }]}>
-              We sent a confirmation link to
-            </Text>
-            <View style={[styles.emailBadge, { backgroundColor: colors.brand50 }]}>
-              <FontAwesome name="at" size={13} color={colors.brand} />
-              <Text style={styles.emailBadgeText}>{signedUpEmail}</Text>
-            </View>
-
-            <View style={styles.stepsContainer}>
-              <View style={styles.stepRow}>
-                <View style={styles.stepNumber}>
-                  <Text style={[styles.stepNumberText, { color: colors.brand }]}>1</Text>
-                </View>
-                <Text style={[styles.stepText, { color: colors.ink }]}>Open your email inbox</Text>
-              </View>
-              <View style={styles.stepRow}>
-                <View style={styles.stepNumber}>
-                  <Text style={[styles.stepNumberText, { color: colors.brand }]}>2</Text>
-                </View>
-                <Text style={[styles.stepText, { color: colors.ink }]}>
-                  Click the confirmation link from Semora
-                </Text>
-              </View>
-              <View style={styles.stepRow}>
-                <View style={styles.stepNumber}>
-                  <Text style={[styles.stepNumberText, { color: colors.brand }]}>3</Text>
-                </View>
-                <Text style={[styles.stepText, { color: colors.ink }]}>Come back here and sign in</Text>
-              </View>
-            </View>
-
-            <View style={styles.tipBox}>
-              <FontAwesome name="lightbulb-o" size={14} color="#f59e0b" />
-              <Text style={styles.tipText}>
-                Don't see the email? Check your spam or junk folder.
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: colors.brand }]}
-              onPress={() => router.replace('/(auth)/sign-in')}
-              activeOpacity={0.8}
-            >
-              <FontAwesome name="arrow-left" size={14} color="#fff" />
-              <Text style={styles.buttonText}>Go to Sign In</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.resendBtn}
-              onPress={() => {
-                setSignedUpEmail('');
-                setEmail(signedUpEmail);
-                setPassword('');
-                setConfirmPassword('');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.resendText, { color: colors.ink2 }]}>
-                Didn't receive it?{' '}
-                <Text style={[styles.resendBold, { color: colors.brand }]}>Try again</Text>
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
 
   // --- Sign-up form ---
   return (

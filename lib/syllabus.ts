@@ -5,6 +5,7 @@ import { COURSE_COLORS, COURSE_ICONS, DEFAULT_GRADE_SCALE } from '@/lib/constant
 import { useAppStore } from '@/store/appStore';
 
 export const FREE_COURSE_LIMIT = 2;
+export const FREE_SEMESTER_LIMIT = 1;
 
 export interface ProcessResult {
   uploadId: string;
@@ -113,7 +114,7 @@ export async function processSyllabus(
       upload_id: upload.id,
       course_id: courseId,
       method: 'rule_plus_gemini',
-      gemini_model: 'gemini-3-flash-preview',
+      gemini_model: 'gemini-2.5-flash',
       parse_confidence: extraction.items.length > 0
         ? extraction.items.reduce((sum, i) => sum + i.confidence, 0) / extraction.items.length
         : null,

@@ -12,7 +12,7 @@ import type { ProductOrSubscription } from 'react-native-iap';
 import { COLORS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useAppStore } from '@/store/appStore';
-import { getProducts, purchaseProduct, restorePurchases, PRODUCT_IDS, setupPurchaseListeners } from '@/lib/purchases';
+import { getProducts, purchaseProduct, restorePurchases, validateProEntitlement, PRODUCT_IDS, setupPurchaseListeners } from '@/lib/purchases';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -54,11 +54,22 @@ export default function PaywallScreen() {
     });
 
     const removeSubs = setupPurchaseListeners(
-      () => {
-        setIsPro(true);
+      async () => {
+        // StoreKit reports purchase complete — but we don't grant Pro
+        // until our edge function has verified the receipt with Apple
+        // and written the entitlement row tied to this Semora account.
+        const entitlement = await validateProEntitlement();
+        setIsPro(entitlement.is_pro);
         setLoading(false);
-        if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        handleClose();
+        if (entitlement.is_pro) {
+          if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          handleClose();
+        } else {
+          Alert.alert(
+            'Verification Pending',
+            'Your purchase went through but we couldn\'t verify it with the App Store yet. Tap Restore in a moment to retry.',
+          );
+        }
       },
       () => { setLoading(false); },
     );
@@ -93,8 +104,8 @@ export default function PaywallScreen() {
     setRestoring(true);
     try {
       const restored = await restorePurchases();
+      setIsPro(restored);
       if (restored) {
-        setIsPro(true);
         if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Restored', 'Your Pro subscription has been restored.', [
           { text: 'OK', onPress: handleClose },

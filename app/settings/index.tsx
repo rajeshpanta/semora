@@ -1,11 +1,9 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useSession } from '@/app/_layout';
 import { useAppStore } from '@/store/appStore';
-import { signOut } from '@/lib/auth';
-import { supabase } from '@/lib/supabase';
 import { COLORS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 
@@ -18,42 +16,6 @@ export default function SettingsScreen() {
   const themeMode = useAppStore((s) => s.themeMode);
   const themeModeLabel = themeMode === 'system' ? 'System' : themeMode === 'light' ? 'Light' : 'Dark';
   const router = useRouter();
-
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'This will permanently delete your account and all your data. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              'Are you sure?',
-              'All your semesters, courses, tasks, and grades will be permanently deleted.',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Delete Forever',
-                  style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      const { error } = await supabase.rpc('delete_user_account');
-                      if (error) throw error;
-                      await signOut();
-                    } catch (err: any) {
-                      Alert.alert('Error', err.message ?? 'Failed to delete account. Please try again.');
-                    }
-                  },
-                },
-              ],
-            );
-          },
-        },
-      ],
-    );
-  };
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
@@ -112,7 +74,7 @@ export default function SettingsScreen() {
         {/* Danger zone */}
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Danger Zone</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={handleDeleteAccount}>
+          <TouchableOpacity style={styles.row} activeOpacity={0.7} onPress={() => router.push('/settings/delete-account')}>
             <FontAwesome name="trash" size={16} color={colors.coral} style={styles.icon} />
             <Text style={[styles.rowLabel, { flex: 1, color: colors.coral }]}>Delete Account</Text>
             <FontAwesome name="chevron-right" size={11} color={colors.ink3} />

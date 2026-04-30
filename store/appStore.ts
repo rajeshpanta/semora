@@ -37,6 +37,10 @@ interface AppState {
   setIsPro: (value: boolean) => void;
   subscriptionPlan: 'annual' | 'monthly' | null;
   setSubscriptionPlan: (plan: 'annual' | 'monthly' | null) => void;
+  postSignupBanner: { email: string; needsConfirm: boolean } | null;
+  setPostSignupBanner: (banner: { email: string; needsConfirm: boolean } | null) => void;
+  inPasswordReset: boolean;
+  setInPasswordReset: (v: boolean) => void;
 }
 
 function deleteItem(key: string) {
@@ -63,6 +67,10 @@ export const useAppStore = create<AppState>((set) => ({
   setIsPro: (value) => set({ isPro: value }),
   subscriptionPlan: null,
   setSubscriptionPlan: (plan) => set({ subscriptionPlan: plan }),
+  postSignupBanner: null,
+  setPostSignupBanner: (banner) => set({ postSignupBanner: banner }),
+  inPasswordReset: false,
+  setInPasswordReset: (v) => set({ inPasswordReset: v }),
 }));
 
 const GRADE_CHECK_WINDOW = 60; // days after semester ends where student may still check grades
