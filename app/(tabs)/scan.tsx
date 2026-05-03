@@ -124,12 +124,25 @@ export default function ScanScreen() {
     }
   };
 
+  // Mirrors ALLOWED_MIME_TYPES in the parse-syllabus Edge Function.
+  // iCloud Drive / Files contains HEIC / HEIF photos by default on iOS
+  // (the system camera writes HEIC); restricting this list to JPG/PNG
+  // hid those from the picker even though the backend accepts them.
+  const FILE_PICKER_MIME = [
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'image/heic',
+    'image/heif',
+    'image/webp',
+  ];
+
   const handlePickFromFiles = async () => {
     if (!checkScanLimit()) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const result = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf', 'image/jpeg', 'image/png'],
+      type: FILE_PICKER_MIME,
       copyToCacheDirectory: true,
     });
 

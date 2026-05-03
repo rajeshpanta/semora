@@ -3,6 +3,7 @@ import { extractFromFile, type SyllabusExtraction, type ExtractedItem } from '@/
 import * as FileSystem from 'expo-file-system/legacy';
 import { COURSE_COLORS, COURSE_ICONS, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
+import { suggestCurrentSemesterName } from '@/lib/semesters';
 
 export const FREE_COURSE_LIMIT = 2;
 export const FREE_SEMESTER_LIMIT = 1;
@@ -45,8 +46,6 @@ export async function processSyllabus(
     extraction.course_name,
     extraction.course_code,
     extraction.instructor,
-    extraction.meeting_time,
-    extraction.office_hours,
   );
 
   // 3b. Apply extracted grade scale if found (only for new courses or if existing has default)
@@ -71,6 +70,50 @@ export async function processSyllabus(
         .from('courses')
         .update({ grade_scale: extraction.grade_scale })
         .eq('id', courseId);
+    }
+  }
+
+  // 3c. Insert structured meeting + office hours rows from Gemini,
+  // *only for newly created courses*. Re-uploading a syllabus for an
+  // existing course should never clobber user edits — if a row is
+  // wrong they fix it via the course detail editor. Errors here are
+  // logged but don't fail the whole upload; the course + tasks already
+  // saved are more valuable than the schedule rows.
+  if (!isExisting) {
+    if (extraction.meetings.length > 0) {
+      const { error: meetingErr } = await supabase
+        .from('course_meetings')
+        .insert(
+          extraction.meetings.map((m) => ({
+            user_id: userId,
+            course_id: courseId,
+            days_of_week: m.days_of_week,
+            start_time: m.start_time,
+            end_time: m.end_time,
+            kind: m.kind,
+            location: m.location,
+          })),
+        );
+      if (meetingErr) {
+        console.warn('[processSyllabus] course_meetings insert failed:', meetingErr.message);
+      }
+    }
+    if (extraction.office_hours_blocks.length > 0) {
+      const { error: ohErr } = await supabase
+        .from('course_office_hours')
+        .insert(
+          extraction.office_hours_blocks.map((o) => ({
+            user_id: userId,
+            course_id: courseId,
+            days_of_week: o.days_of_week,
+            start_time: o.start_time,
+            end_time: o.end_time,
+            location: o.location,
+          })),
+        );
+      if (ohErr) {
+        console.warn('[processSyllabus] course_office_hours insert failed:', ohErr.message);
+      }
     }
   }
 
@@ -147,7 +190,7 @@ async function findOrCreateSemester(
   startDate: string | null,
   endDate: string | null,
 ): Promise<{ semesterId: string; semesterName: string }> {
-  const name = semesterName || guessCurrentSemester();
+  const name = semesterName || suggestCurrentSemesterName();
 
   // Check if semester with this name already exists
   const escapedName = name.replace(/[%_]/g, '\\$&');
@@ -184,8 +227,6 @@ async function findOrCreateCourse(
   courseName: string,
   courseCode: string | null,
   instructor: string | null,
-  meetingTime: string | null,
-  officeHours: string | null,
 ): Promise<{ courseId: string; courseName: string; isExisting: boolean }> {
   const name = courseCode
     ? `${courseCode} - ${courseName.replace(courseCode, '').replace(/^[\s\-–—]+/, '').trim() || courseName}`
@@ -236,8 +277,6 @@ async function findOrCreateCourse(
       semester_id: semesterId,
       name: name.length > 50 ? name.slice(0, 50) : name,
       instructor,
-      meeting_time: meetingTime,
-      office_hours: officeHours,
       color,
       icon,
     })
@@ -246,15 +285,6 @@ async function findOrCreateCourse(
 
   if (error) throw new Error(`Failed to create course: ${error.message}`);
   return { courseId: created.id, courseName: created.name, isExisting: false };
-}
-
-function guessCurrentSemester(): string {
-  const now = new Date();
-  const month = now.getMonth();
-  const year = now.getFullYear();
-  if (month >= 7) return `Fall ${year}`;
-  if (month >= 4) return `Summer ${year}`;
-  return `Spring ${year}`;
 }
 
 function decode(base64: string): Uint8Array {

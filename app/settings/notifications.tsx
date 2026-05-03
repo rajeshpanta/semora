@@ -37,7 +37,7 @@ export default function NotificationSettings() {
           .from('profiles')
           .select('reminder_same_day, reminder_1day, reminder_3day')
           .eq('id', userId)
-          .single();
+          .maybeSingle();
         if (data) setPrefs(data);
       } catch {
         // Network or DB error — show defaults, don't hang

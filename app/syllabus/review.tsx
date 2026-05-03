@@ -74,8 +74,8 @@ export default function SyllabusReviewScreen() {
       // Create tasks for each accepted item
       let savedCount = 0;
       for (const item of accepted) {
-        // Validate due_time format before saving
-        const dueTime = item.due_time && /^\d{2}:\d{2}$/.test(item.due_time)
+        // Validate due_time format before saving (HH:MM in 00:00–23:59 only).
+        const dueTime = item.due_time && /^([01]\d|2[0-3]):[0-5]\d$/.test(item.due_time)
           ? `${item.due_time}:00`
           : null;
 

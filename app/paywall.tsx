@@ -13,6 +13,7 @@ import { COLORS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useAppStore } from '@/store/appStore';
 import { getProducts, purchaseProduct, restorePurchases, validateProEntitlement, PRODUCT_IDS, setupPurchaseListeners } from '@/lib/purchases';
+import { supabase } from '@/lib/supabase';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -37,6 +38,7 @@ const FEATURES = [
 export default function PaywallScreen() {
   const router = useRouter();
   const setIsPro = useAppStore((s) => s.setIsPro);
+  const setSubscriptionPlan = useAppStore((s) => s.setSubscriptionPlan);
   const colors = useColors();
 
   const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>('monthly');
@@ -58,8 +60,18 @@ export default function PaywallScreen() {
         // StoreKit reports purchase complete — but we don't grant Pro
         // until our edge function has verified the receipt with Apple
         // and written the entitlement row tied to this Semora account.
+        const { data: { session: startSession } } = await supabase.auth.getSession();
+        const expectedUserId = startSession?.user.id;
         const entitlement = await validateProEntitlement();
+        // Race guard: if the session changed mid-validation (signed out,
+        // switched accounts), don't write a stale entitlement to the store.
+        const { data: { session: endSession } } = await supabase.auth.getSession();
+        if (endSession?.user.id !== expectedUserId) {
+          setLoading(false);
+          return;
+        }
         setIsPro(entitlement.is_pro);
+        setSubscriptionPlan(entitlement.plan);
         setLoading(false);
         if (entitlement.is_pro) {
           if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -103,13 +115,26 @@ export default function PaywallScreen() {
   const handleRestore = async () => {
     setRestoring(true);
     try {
-      const restored = await restorePurchases();
-      setIsPro(restored);
-      if (restored) {
+      const { data: { session: startSession } } = await supabase.auth.getSession();
+      const expectedUserId = startSession?.user.id;
+      const entitlement = await restorePurchases();
+      // Race guard: see purchase listener above.
+      const { data: { session: endSession } } = await supabase.auth.getSession();
+      if (endSession?.user.id !== expectedUserId) {
+        return;
+      }
+      setIsPro(entitlement.is_pro);
+      setSubscriptionPlan(entitlement.plan);
+      if (entitlement.is_pro) {
         if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Restored', 'Your Pro subscription has been restored.', [
           { text: 'OK', onPress: handleClose },
         ]);
+      } else if (entitlement.restoreError === 'linked_other_account') {
+        Alert.alert(
+          'Subscription Linked Elsewhere',
+          'This subscription is linked to a different Semora account. To use it on this device, sign in to the account that originally purchased it. If that account no longer exists, please contact support.',
+        );
       } else {
         Alert.alert('No Subscription Found', 'We couldn\'t find an active subscription for this account.');
       }

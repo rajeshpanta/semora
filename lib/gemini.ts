@@ -1,6 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '@/lib/supabase';
-import type { GradeThreshold } from '@/types/database';
+import type { GradeThreshold, CourseMeetingKind } from '@/types/database';
 
 export interface ExtractedItem {
   title: string;
@@ -12,12 +12,30 @@ export interface ExtractedItem {
   confidence: number;
 }
 
+// Structured schedule extraction. Times come back already padded to
+// "HH:MM:00" by the Edge Function so they slot straight into Postgres
+// `time` columns.
+export interface ExtractedMeeting {
+  days_of_week: number[];
+  start_time: string | null;
+  end_time: string | null;
+  kind: CourseMeetingKind;
+  location: string | null;
+}
+
+export interface ExtractedOfficeHours {
+  days_of_week: number[] | null;
+  start_time: string | null;
+  end_time: string | null;
+  location: string | null;
+}
+
 export interface SyllabusExtraction {
   course_name: string;
   course_code: string | null;
   instructor: string | null;
-  meeting_time: string | null;
-  office_hours: string | null;
+  meetings: ExtractedMeeting[];
+  office_hours_blocks: ExtractedOfficeHours[];
   semester_name: string | null;
   semester_start: string | null;
   semester_end: string | null;
@@ -57,5 +75,13 @@ export async function extractFromFile(
     throw new Error(error.error || `Server error: ${response.status}`);
   }
 
-  return await response.json() as SyllabusExtraction;
+  // Defensive normalization: an older Edge Function deployment won't
+  // include the structured arrays. Default them to [] so consumers can
+  // rely on non-optional types without nil-safety boilerplate.
+  const raw = (await response.json()) as Partial<SyllabusExtraction>;
+  return {
+    ...raw,
+    meetings: raw.meetings ?? [],
+    office_hours_blocks: raw.office_hours_blocks ?? [],
+  } as SyllabusExtraction;
 }

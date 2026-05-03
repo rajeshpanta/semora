@@ -1,38 +1,59 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, Alert, Platform, Keyboard,
+  ScrollView, ActivityIndicator, Alert, Platform, Keyboard, Linking,
 } from 'react-native';
+import { supabase } from '@/lib/supabase';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
-import { useCourse, useTasks, useUpdateCourse, useDeleteCourse, useToggleTaskComplete } from '@/lib/queries';
+import {
+  useCourse, useTasks, useUpdateCourse, useDeleteCourse, useToggleTaskComplete,
+  useCreateCourseMeeting, useUpdateCourseMeeting, useDeleteCourseMeeting,
+  useCreateCourseOfficeHours, useUpdateCourseOfficeHours, useDeleteCourseOfficeHours,
+  useLatestSyllabus,
+} from '@/lib/queries';
 import { TaskItem } from '@/components/TaskItem';
 import { GradeCard } from '@/components/GradeCard';
+import { ScheduleEditor, type ScheduleBlock, isNewBlock } from '@/components/ScheduleEditor';
 import { COURSE_COLORS, COURSE_ICONS, COLORS, calculateGrade, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import type { GradeThreshold } from '@/types/database';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
+import { formatMeetings } from '@/lib/schedule';
 
 export default function CourseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data: course, isLoading } = useCourse(id!);
   const { data: tasks = [] } = useTasks({ courseId: id });
+  const { data: syllabus } = useLatestSyllabus(id);
   const updateCourse = useUpdateCourse();
   const deleteCourse = useDeleteCourse();
   const toggleComplete = useToggleTaskComplete();
+  const createMeeting = useCreateCourseMeeting();
+  const updateMeeting = useUpdateCourseMeeting();
+  const deleteMeeting = useDeleteCourseMeeting();
+  const createOfficeHours = useCreateCourseOfficeHours();
+  const updateOfficeHours = useUpdateCourseOfficeHours();
+  const deleteOfficeHours = useDeleteCourseOfficeHours();
   const isPro = useAppStore((s) => s.isPro);
   const colors = useColors();
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editInstructor, setEditInstructor] = useState('');
-  const [editMeetingTime, setEditMeetingTime] = useState('');
-  const [editOfficeHours, setEditOfficeHours] = useState('');
   const [editColor, setEditColor] = useState('');
   const [editIcon, setEditIcon] = useState('');
+  // Multi-block schedule. Existing rows from the DB carry their real
+  // id; new blocks the user adds get a "new-" id (see
+  // ScheduleEditor.NEW_BLOCK_PREFIX). saveEdit diffs against the
+  // course's joined course_meetings to compute create/update/delete.
+  const [editMeetings, setEditMeetings] = useState<ScheduleBlock[]>([]);
+  // Office hours reuse the same block shape; ScheduleBlock.kind is
+  // ignored on save since the office hours table has no kind column.
+  const [editOfficeHourBlocks, setEditOfficeHourBlocks] = useState<ScheduleBlock[]>([]);
   const [editingScale, setEditingScale] = useState(false);
   const [scaleRows, setScaleRows] = useState<GradeThreshold[]>([]);
 
@@ -49,24 +70,149 @@ export default function CourseDetailScreen() {
   const startEdit = () => {
     setEditName(course.name);
     setEditInstructor(course.instructor || '');
-    setEditMeetingTime(course.meeting_time || '');
-    setEditOfficeHours(course.office_hours || '');
     setEditColor(course.color);
     setEditIcon(course.icon);
+    setEditMeetings(
+      (course.course_meetings ?? []).map((m) => ({
+        id: m.id,
+        days_of_week: m.days_of_week,
+        start_time: m.start_time,
+        end_time: m.end_time,
+        kind: m.kind,
+      })),
+    );
+    setEditOfficeHourBlocks(
+      (course.course_office_hours ?? []).map((o) => ({
+        id: o.id,
+        // The DB allows null days for "by appointment"; the editor
+        // requires non-null. Coerce; the user can pick chips on edit.
+        days_of_week: o.days_of_week ?? [],
+        start_time: o.start_time,
+        end_time: o.end_time,
+        kind: 'lecture' as const, // ignored on save
+      })),
+    );
     setEditing(true);
   };
 
   const saveEdit = async () => {
+    // Per-block sanity check before the DB course_meetings_time_order /
+    // course_office_hours_time_order constraints fire. Skip blocks the
+    // user added but never filled (no days picked) — those are dropped
+    // at save time.
+    const blocksToPersist = editMeetings.filter((m) => m.days_of_week.length > 0);
+    const ohToPersist = editOfficeHourBlocks.filter((m) => m.days_of_week.length > 0);
+    for (const m of [...blocksToPersist, ...ohToPersist]) {
+      if (m.start_time && m.end_time && m.start_time >= m.end_time) {
+        Alert.alert('Invalid schedule', 'End time must be after start time.');
+        return;
+      }
+    }
     try {
+      // 1. Update course-level fields. Schedule lives in course_meetings
+      // (a child table), so this mutation doesn't carry days/times —
+      // those go through the meeting mutations below.
       await updateCourse.mutateAsync({
         id: course.id,
         name: editName.trim(),
         instructor: editInstructor.trim() || undefined,
-        meeting_time: editMeetingTime.trim() || undefined,
-        office_hours: editOfficeHours.trim() || undefined,
         color: editColor,
         icon: editIcon,
       } as any);
+
+      // 2. Diff meetings: create new- blocks, delete originals not
+      // present anymore, update existing blocks whose fields changed.
+      const original = course.course_meetings ?? [];
+      const keptIds = new Set(blocksToPersist.filter((m) => !isNewBlock(m.id)).map((m) => m.id));
+      const toDelete = original.filter((m) => !keptIds.has(m.id));
+      const toCreate = blocksToPersist.filter((m) => isNewBlock(m.id));
+      const toUpdate = blocksToPersist.filter((m) => {
+        if (isNewBlock(m.id)) return false;
+        const orig = original.find((o) => o.id === m.id);
+        if (!orig) return false;
+        // Compare by stringifying days array — small enough that this
+        // is cheaper than threading a deep-equal helper through.
+        return (
+          orig.kind !== m.kind ||
+          orig.start_time !== m.start_time ||
+          orig.end_time !== m.end_time ||
+          JSON.stringify(orig.days_of_week) !== JSON.stringify(m.days_of_week)
+        );
+      });
+
+      const meetingOps: Promise<unknown>[] = [
+        ...toCreate.map((m) =>
+          createMeeting.mutateAsync({
+            course_id: course.id,
+            days_of_week: m.days_of_week,
+            start_time: m.start_time,
+            end_time: m.end_time,
+            kind: m.kind,
+          }),
+        ),
+        ...toUpdate.map((m) =>
+          updateMeeting.mutateAsync({
+            id: m.id,
+            days_of_week: m.days_of_week,
+            start_time: m.start_time,
+            end_time: m.end_time,
+            kind: m.kind,
+          }),
+        ),
+        ...toDelete.map((m) =>
+          deleteMeeting.mutateAsync({ id: m.id, courseId: course.id }),
+        ),
+      ];
+
+      // 3. Office hours diff — same shape as meetings, different table.
+      // ScheduleBlock.kind is dropped since course_office_hours has no
+      // kind column.
+      const ohOriginal = course.course_office_hours ?? [];
+      const ohKeptIds = new Set(ohToPersist.filter((m) => !isNewBlock(m.id)).map((m) => m.id));
+      const ohToDelete = ohOriginal.filter((m) => !ohKeptIds.has(m.id));
+      const ohToCreate = ohToPersist.filter((m) => isNewBlock(m.id));
+      const ohToUpdate = ohToPersist.filter((m) => {
+        if (isNewBlock(m.id)) return false;
+        const orig = ohOriginal.find((o) => o.id === m.id);
+        if (!orig) return false;
+        return (
+          orig.start_time !== m.start_time ||
+          orig.end_time !== m.end_time ||
+          JSON.stringify(orig.days_of_week ?? []) !== JSON.stringify(m.days_of_week)
+        );
+      });
+
+      const ohOps: Promise<unknown>[] = [
+        ...ohToCreate.map((m) =>
+          createOfficeHours.mutateAsync({
+            course_id: course.id,
+            days_of_week: m.days_of_week,
+            start_time: m.start_time,
+            end_time: m.end_time,
+          }),
+        ),
+        ...ohToUpdate.map((m) =>
+          updateOfficeHours.mutateAsync({
+            id: m.id,
+            days_of_week: m.days_of_week,
+            start_time: m.start_time,
+            end_time: m.end_time,
+          }),
+        ),
+        ...ohToDelete.map((m) =>
+          deleteOfficeHours.mutateAsync({ id: m.id, courseId: course.id }),
+        ),
+      ];
+
+      const results = await Promise.allSettled([...meetingOps, ...ohOps]);
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      if (failed > 0) {
+        Alert.alert(
+          'Saved partially',
+          `${failed} schedule change${failed === 1 ? '' : 's'} did not save. Try again.`,
+        );
+      }
+
       Keyboard.dismiss();
       if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setEditing(false);
@@ -94,6 +240,29 @@ export default function CourseDetailScreen() {
     ]);
   };
 
+  // Open the most recent uploaded syllabus in the system viewer.
+  // Storage URLs are signed on demand (60s) so the bucket can stay
+  // private. If the row exists but the file was never uploaded
+  // successfully (Phase-6 catch path treats storage upload as
+  // non-critical), the signed URL still resolves but yields a 404 —
+  // surface that as a clear message rather than a silent failure.
+  const handleViewSyllabus = async () => {
+    if (!syllabus) return;
+    try {
+      const { data, error } = await supabase.storage
+        .from('syllabi')
+        .createSignedUrl(syllabus.storage_path, 60);
+      if (error) throw error;
+      if (!data?.signedUrl) {
+        Alert.alert('Cannot open', 'The syllabus file is missing from storage.');
+        return;
+      }
+      await Linking.openURL(data.signedUrl);
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Failed to open syllabus.');
+    }
+  };
+
   const pendingCount = tasks.filter((t) => !t.is_completed).length;
   const doneCount = tasks.filter((t) => t.is_completed).length;
   const displayColor = editing ? editColor : course.color;
@@ -111,8 +280,6 @@ export default function CourseDetailScreen() {
             <>
               <TextInput style={[styles.editTitle, { color: colors.ink, borderBottomColor: colors.line }]} value={editName} onChangeText={setEditName} placeholder="Course Name" placeholderTextColor={colors.ink3} />
               <TextInput style={[styles.editSub, { color: colors.ink2, borderBottomColor: colors.line }]} value={editInstructor} onChangeText={setEditInstructor} placeholder="Instructor" placeholderTextColor={colors.ink3} />
-              <TextInput style={[styles.editSub, { color: colors.ink2, borderBottomColor: colors.line }]} value={editMeetingTime} onChangeText={setEditMeetingTime} placeholder="Meeting time (e.g. MWF 10:00 AM)" placeholderTextColor={colors.ink3} />
-              <TextInput style={[styles.editSub, { color: colors.ink2, borderBottomColor: colors.line }]} value={editOfficeHours} onChangeText={setEditOfficeHours} placeholder="Office hours (e.g. Tue 2-3 PM)" placeholderTextColor={colors.ink3} />
             </>
           ) : (
             <>
@@ -126,34 +293,73 @@ export default function CourseDetailScreen() {
           </View>
         </View>
 
-        {/* Course details — always show, tap to edit if empty */}
-        {!editing && (
-          <TouchableOpacity style={[styles.detailsCard, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={!course.meeting_time && !course.office_hours ? startEdit : undefined} activeOpacity={0.8}>
-            <View style={styles.detailRow}>
-              <FontAwesome name="clock-o" size={13} color={course.meeting_time ? colors.ink2 : colors.ink3} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.detailLabel, { color: colors.ink3 }]}>Class Meeting</Text>
-                {course.meeting_time ? (
-                  <Text style={[styles.detailValue, { color: colors.ink }]}>{course.meeting_time}</Text>
-                ) : (
-                  <Text style={[styles.detailEmpty, { color: colors.ink3 }]}>Tap Edit to add meeting time</Text>
-                )}
+        {/* Course details — always show, tap empty card to edit. */}
+        {!editing && (() => {
+          const scheduleText = formatMeetings(course.course_meetings);
+          const officeHoursText = formatMeetings(
+            (course.course_office_hours ?? []).map((o) => ({
+              days_of_week: o.days_of_week ?? [],
+              start_time: o.start_time,
+              end_time: o.end_time,
+            })),
+          );
+          const hasAnyMeeting = !!scheduleText;
+          const hasAnyOfficeHours = !!officeHoursText;
+          return (
+            <TouchableOpacity
+              style={[styles.detailsCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+              onPress={!hasAnyMeeting && !hasAnyOfficeHours ? startEdit : undefined}
+              activeOpacity={0.8}
+            >
+              <View style={styles.detailRow}>
+                <FontAwesome name="clock-o" size={13} color={hasAnyMeeting ? colors.ink2 : colors.ink3} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.detailLabel, { color: colors.ink3 }]}>Class Schedule</Text>
+                  {scheduleText ? (
+                    <Text style={[styles.detailValue, { color: colors.ink }]}>{scheduleText}</Text>
+                  ) : (
+                    <Text style={[styles.detailEmpty, { color: colors.ink3 }]}>Tap Edit to add a schedule</Text>
+                  )}
+                </View>
               </View>
-            </View>
-            <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
-            <View style={styles.detailRow}>
-              <FontAwesome name="building-o" size={13} color={course.office_hours ? colors.ink2 : colors.ink3} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.detailLabel, { color: colors.ink3 }]}>Office Hours</Text>
-                {course.office_hours ? (
-                  <Text style={[styles.detailValue, { color: colors.ink }]}>{course.office_hours}</Text>
-                ) : (
-                  <Text style={[styles.detailEmpty, { color: colors.ink3 }]}>Tap Edit to add office hours</Text>
-                )}
+              <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
+              <View style={styles.detailRow}>
+                <FontAwesome name="building-o" size={13} color={hasAnyOfficeHours ? colors.ink2 : colors.ink3} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.detailLabel, { color: colors.ink3 }]}>Office Hours</Text>
+                  {officeHoursText ? (
+                    <Text style={[styles.detailValue, { color: colors.ink }]}>{officeHoursText}</Text>
+                  ) : (
+                    <Text style={[styles.detailEmpty, { color: colors.ink3 }]}>Tap Edit to add office hours</Text>
+                  )}
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        )}
+              {/* Original syllabus link — only when a successful upload
+                  exists. Tapping shorts out the parent's onPress (which
+                  is the empty-card → startEdit shortcut) by handling
+                  the press itself. */}
+              {syllabus && (
+                <>
+                  <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
+                  <TouchableOpacity
+                    style={styles.detailRow}
+                    onPress={handleViewSyllabus}
+                    activeOpacity={0.7}
+                  >
+                    <FontAwesome name="file-text-o" size={13} color={colors.ink2} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.detailLabel, { color: colors.ink3 }]}>Syllabus</Text>
+                      <Text style={[styles.detailValue, { color: course.color }]} numberOfLines={1}>
+                        View original {syllabus.file_name ? `· ${syllabus.file_name}` : ''}
+                      </Text>
+                    </View>
+                    <FontAwesome name="external-link" size={11} color={colors.ink3} />
+                  </TouchableOpacity>
+                </>
+              )}
+            </TouchableOpacity>
+          );
+        })()}
 
         {/* Grade summary */}
         <View style={[styles.gradeCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
@@ -221,6 +427,22 @@ export default function CourseDetailScreen() {
         {/* Edit color/icon */}
         {editing && (
           <View style={[styles.editCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <Text style={[styles.editLabel, { color: colors.ink2, marginTop: 0 }]}>Schedule</Text>
+            <ScheduleEditor
+              value={editMeetings}
+              onChange={setEditMeetings}
+              accentColor={editColor}
+              hint="Pick the days this class meets. Times are optional but power Today's class list. Add another meeting if you have a lab or discussion section on a different day."
+            />
+            <Text style={[styles.editLabel, { color: colors.ink2 }]}>Office hours</Text>
+            <ScheduleEditor
+              value={editOfficeHourBlocks}
+              onChange={setEditOfficeHourBlocks}
+              accentColor={editColor}
+              showKind={false}
+              noun="office hour block"
+              hint="Optional. Add the days and times your instructor or TA holds office hours. Use the free-text field above for room or Zoom info."
+            />
             <Text style={[styles.editLabel, { color: colors.ink2 }]}>Color</Text>
             <View style={styles.colorGrid}>
               {COURSE_COLORS.map((c) => (

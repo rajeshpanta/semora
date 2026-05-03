@@ -4,6 +4,10 @@ import { supabase } from '@/lib/supabase';
 import { differenceInDays } from 'date-fns';
 import { useAppStore } from '@/store/appStore';
 
+// iOS silently drops new notifications once a single app has 64 pending.
+// Stay a few under to leave headroom for re-schedules that race with prune.
+const MAX_SCHEDULED_NOTIFICATIONS = 60;
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -13,6 +17,40 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
+
+function getTriggerTime(notif: Notifications.NotificationRequest): number {
+  const trig: any = notif.trigger;
+  if (!trig) return Number.POSITIVE_INFINITY;
+  if (typeof trig.timestamp === 'number') return trig.timestamp;
+  if (trig.date) {
+    const t = trig.date instanceof Date ? trig.date.getTime() : new Date(trig.date).getTime();
+    if (!Number.isNaN(t)) return t;
+  }
+  if (trig.value) {
+    const t = new Date(trig.value).getTime();
+    if (!Number.isNaN(t)) return t;
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+/**
+ * If we're at/over the iOS 64-pending cap, drop the furthest-out reminders.
+ * Same-day reminders matter most; 3-day-ahead reminders for tasks weeks
+ * out are the cheapest to lose.
+ */
+async function pruneToCapIfNeeded() {
+  if (Platform.OS === 'web') return;
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    if (scheduled.length <= MAX_SCHEDULED_NOTIFICATIONS) return;
+
+    const sorted = [...scheduled].sort((a, b) => getTriggerTime(b) - getTriggerTime(a));
+    const overflow = scheduled.length - MAX_SCHEDULED_NOTIFICATIONS;
+    for (let i = 0; i < overflow; i++) {
+      await Notifications.cancelScheduledNotificationAsync(sorted[i].identifier);
+    }
+  } catch {}
+}
 
 export async function requestNotificationPermission(): Promise<boolean> {
   if (Platform.OS === 'web') return false;
@@ -43,14 +81,16 @@ export async function scheduleTaskReminders(
   const hasPermission = await requestNotificationPermission();
   if (!hasPermission) return;
 
-  // Get user preferences and pro status
+  // Get user preferences and pro status. Use maybeSingle so a brand-new
+  // OAuth user whose profile row hasn't propagated yet falls cleanly to
+  // defaults rather than throwing.
   let preferences = { reminder_same_day: true, reminder_1day: true, reminder_3day: true };
   if (userId) {
     const { data } = await supabase
       .from('profiles')
       .select('reminder_same_day, reminder_1day, reminder_3day')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
     if (data) preferences = data;
   }
 
@@ -103,6 +143,8 @@ export async function scheduleTaskReminders(
       },
     });
   }
+
+  await pruneToCapIfNeeded();
 }
 
 export async function cancelTaskReminders(taskId: string) {

@@ -6,16 +6,43 @@ import { useSession } from '@/app/_layout';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTaskStats } from '@/lib/queries';
 import { signOut } from '@/lib/auth';
+import { displayName } from '@/lib/user';
 import { COLORS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function MeScreen() {
   const colors = useColors();
   const { session } = useSession();
-  const email = session?.user?.email ?? '';
-  const name = email.split('@')[0] || 'User';
+  const name = displayName(session?.user, 'User');
   const initial = (name[0] ?? '?').toUpperCase();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = () => {
+    if (signingOut) return;
+    Alert.alert(
+      'Sign out?',
+      'You\'ll need to sign in again to use Semora.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            setSigningOut(true);
+            try {
+              await signOut();
+            } finally {
+              // Don't reset on success — the screen unmounts when the
+              // session clears and AuthGate redirects to sign-in.
+              // Reset only matters if signOut throws.
+              setSigningOut(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
@@ -116,9 +143,20 @@ export default function MeScreen() {
         </View>
 
         {/* Sign out */}
-        <TouchableOpacity style={[styles.signOutBtn, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={signOut} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={[
+            styles.signOutBtn,
+            { backgroundColor: colors.card, borderColor: colors.line },
+            signingOut && { opacity: 0.5 },
+          ]}
+          onPress={handleSignOut}
+          disabled={signingOut}
+          activeOpacity={0.7}
+        >
           <FontAwesome name="sign-out" size={14} color={colors.coral} />
-          <Text style={[styles.signOutText, { color: colors.coral }]}>Sign Out</Text>
+          <Text style={[styles.signOutText, { color: colors.coral }]}>
+            {signingOut ? 'Signing out...' : 'Sign Out'}
+          </Text>
         </TouchableOpacity>
 
         <Text style={[styles.version, { color: colors.ink3 }]}>Semora 1.0.0</Text>

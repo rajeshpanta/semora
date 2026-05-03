@@ -12,10 +12,11 @@ import { useAppStore } from '@/store/appStore';
 import { TASK_TYPES, TASK_TYPE_LABELS, COLORS, type TaskType } from '@/lib/constants';
 import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
+import { formatLocalDate } from '@/lib/dates';
 
 export default function NewTaskScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ courseId?: string }>();
+  const params = useLocalSearchParams<{ courseId?: string; defaultDate?: string }>();
   const createTask = useCreateTask();
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const { data: courses = [] } = useCourses(selectedSemesterId);
@@ -24,7 +25,11 @@ export default function NewTaskScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<TaskType>('assignment');
-  const [dueDate, setDueDate] = useState<Date | null>(null);
+  // Optional defaultDate=today prefill for quick-add from the Today tab.
+  // Falls through to null otherwise so the existing manual flow is unchanged.
+  const [dueDate, setDueDate] = useState<Date | null>(
+    params.defaultDate === 'today' ? new Date() : null,
+  );
   const [dueTime, setDueTime] = useState<Date | null>(null);
   const [weight, setWeight] = useState('');
   const [isExtraCredit, setIsExtraCredit] = useState(false);
@@ -52,7 +57,7 @@ export default function NewTaskScreen() {
         title: title.trim(),
         description: description.trim() || undefined,
         type,
-        due_date: dueDate.toISOString().split('T')[0],
+        due_date: formatLocalDate(dueDate),
         due_time: dueTime
           ? `${String(dueTime.getHours()).padStart(2, '0')}:${String(dueTime.getMinutes()).padStart(2, '0')}:00`
           : undefined,

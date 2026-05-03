@@ -7,19 +7,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
-import { useSemesters, useUpdateSemester, useDeleteSemester } from '@/lib/queries';
+import { useSemesters, useUpdateSemester } from '@/lib/queries';
 import { COLORS } from '@/lib/constants';
-import { useAppStore } from '@/store/appStore';
 import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
+import { formatLocalDate } from '@/lib/dates';
 
 export default function SemesterDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data: semesters = [], isLoading } = useSemesters();
   const updateSemester = useUpdateSemester();
-  const deleteSemester = useDeleteSemester();
-  const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
   const colors = useColors();
 
   const semester = semesters.find((s) => s.id === id);
@@ -49,8 +47,8 @@ export default function SemesterDetailScreen() {
       await updateSemester.mutateAsync({
         id: semester.id,
         name: name.trim(),
-        start_date: startDate ? startDate.toISOString().split('T')[0] : null,
-        end_date: endDate ? endDate.toISOString().split('T')[0] : null,
+        start_date: startDate ? formatLocalDate(startDate) : null,
+        end_date: endDate ? formatLocalDate(endDate) : null,
       });
       Keyboard.dismiss();
       if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -58,24 +56,6 @@ export default function SemesterDetailScreen() {
     } catch (err: any) {
       Alert.alert('Error', err.message ?? 'Something went wrong. Please try again.');
     }
-  };
-
-  const handleDelete = () => {
-    Alert.alert('Delete Semester', 'This will delete all courses and tasks in this semester.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete', style: 'destructive',
-        onPress: async () => {
-          try {
-            await deleteSemester.mutateAsync(semester.id);
-            setSelectedSemester(null);
-            router.back();
-          } catch (err: any) {
-            Alert.alert('Delete Failed', err.message ?? 'Something went wrong. Please try again.');
-          }
-        },
-      },
-    ]);
   };
 
   return (
@@ -112,11 +92,6 @@ export default function SemesterDetailScreen() {
               </>
             )}
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.deleteBtn} onPress={handleDelete} activeOpacity={0.7}>
-            <FontAwesome name="trash-o" size={14} color="#ef4444" />
-            <Text style={styles.deleteText}>Delete Semester</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -135,6 +110,4 @@ const styles = StyleSheet.create({
   button: { flexDirection: 'row', height: 50, backgroundColor: COLORS.brand, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 24, gap: 8 },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  deleteBtn: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 16, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: '#fee2e2', backgroundColor: '#fef2f2' },
-  deleteText: { color: '#ef4444', fontSize: 14, fontWeight: '600' },
 });

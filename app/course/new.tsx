@@ -7,28 +7,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
-import { useCreateCourse, useSemesters, useCourses } from '@/lib/queries';
+import { useCreateCourse, useCreateCourseMeeting, useSemesters, useCourses } from '@/lib/queries';
 import { useAppStore } from '@/store/appStore';
 import { COURSE_COLORS, COURSE_ICONS, COLORS, type CourseIcon } from '@/lib/constants';
 import { SemesterPicker } from '@/components/SemesterPicker';
+import { ScheduleEditor, type ScheduleBlock } from '@/components/ScheduleEditor';
 import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
 import { useColors } from '@/lib/theme';
 
 export default function NewCourseScreen() {
   const router = useRouter();
   const createCourse = useCreateCourse();
+  const createMeeting = useCreateCourseMeeting();
   const { data: semesters = [] } = useSemesters();
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const isPro = useAppStore((s) => s.isPro);
 
   const [semesterId, setSemesterId] = useState(selectedSemesterId || '');
-  const { data: existingCourses = [] } = useCourses(semesterId || null);
+  const { data: existingCourses = [], isLoading: existingCoursesLoading } = useCourses(semesterId || null);
   const [name, setName] = useState('');
   const [instructor, setInstructor] = useState('');
   const [color, setColor] = useState(COURSE_COLORS[0]);
   const [icon, setIcon] = useState<string>(COURSE_ICONS[0]);
-  const [meetingTime, setMeetingTime] = useState('');
-  const [officeHours, setOfficeHours] = useState('');
+  const [meetings, setMeetings] = useState<ScheduleBlock[]>([]);
   const colors = useColors();
 
   const handleSubmit = async () => {
@@ -38,6 +39,14 @@ export default function NewCourseScreen() {
     }
     if (!name.trim()) {
       Alert.alert('Required', 'Please enter a course name.');
+      return;
+    }
+    // Wait for the count query to finish before applying the free-tier
+    // check — without this guard, a fast double-tap could submit while
+    // existingCourses is still [] from the initial load and bypass the
+    // client-side warning. (The DB-level enforce_free_course_limit
+    // trigger is the real backstop and is handled in the catch below.)
+    if (existingCoursesLoading) {
       return;
     }
     if (!isPro && existingCourses.length >= FREE_COURSE_LIMIT) {
@@ -52,22 +61,72 @@ export default function NewCourseScreen() {
       return;
     }
 
+    // Per-meeting validation: skip blocks the user added but never
+    // filled (no days picked) — those won't be persisted. For the rest,
+    // mirror the DB course_meetings_time_order check so we surface a
+    // friendly alert before the insert errors.
+    const meetingsToSave = meetings.filter((m) => m.days_of_week.length > 0);
+    for (const m of meetingsToSave) {
+      if (m.start_time && m.end_time && m.start_time >= m.end_time) {
+        Alert.alert('Invalid schedule', 'End time must be after start time.');
+        return;
+      }
+    }
+
     try {
-      await createCourse.mutateAsync({
+      const created = await createCourse.mutateAsync({
         semester_id: semesterId,
         name: name.trim(),
         instructor: instructor.trim() || undefined,
-        meeting_time: meetingTime.trim() || undefined,
-        office_hours: officeHours.trim() || undefined,
         color,
         icon,
       });
+
+      // Insert meetings in parallel after the course exists. If a meeting
+      // fails (e.g. transient network), surface it but don't roll back —
+      // the course is saved and the user can fix meetings via edit.
+      if (meetingsToSave.length > 0) {
+        const results = await Promise.allSettled(
+          meetingsToSave.map((m) =>
+            createMeeting.mutateAsync({
+              course_id: created.id,
+              days_of_week: m.days_of_week,
+              start_time: m.start_time,
+              end_time: m.end_time,
+              kind: m.kind,
+            }),
+          ),
+        );
+        const failed = results.filter((r) => r.status === 'rejected').length;
+        if (failed > 0) {
+          Alert.alert(
+            'Course saved',
+            `${failed} of ${meetingsToSave.length} meetings could not be saved. Open the course to retry.`,
+          );
+        }
+      }
+
       if (Platform.OS === 'ios') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       Keyboard.dismiss();
       router.back();
     } catch (err: any) {
+      // The server-side trigger raises with errcode P0001 and a
+      // user-friendly message when the free-tier limit is hit.
+      // Surface that as the same upgrade prompt the client check shows.
+      const isLimitError = err?.code === 'P0001' || /free accounts support/i.test(err?.message ?? '');
+      if (isLimitError && !isPro) {
+        Alert.alert(
+          'Course Limit Reached',
+          err.message,
+          [
+            { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+            { text: 'Cancel', style: 'cancel' },
+          ],
+        );
+        return;
+      }
       Alert.alert('Error', err.message || 'Failed to create course.');
     }
   };
@@ -112,24 +171,15 @@ export default function NewCourseScreen() {
             onChangeText={setInstructor}
           />
 
-          {/* Meeting Time */}
-          <Text style={[styles.label, { color: colors.ink2 }]}>Meeting Time</Text>
-          <TextInput
-            style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
-            placeholder="e.g. MWF 10:00-10:50 AM, Room 320"
-            placeholderTextColor={colors.ink3}
-            value={meetingTime}
-            onChangeText={setMeetingTime}
-          />
-
-          {/* Office Hours */}
-          <Text style={[styles.label, { color: colors.ink2 }]}>Office Hours</Text>
-          <TextInput
-            style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
-            placeholder="e.g. Tue/Thu 2:00-3:30 PM"
-            placeholderTextColor={colors.ink3}
-            value={officeHours}
-            onChangeText={setOfficeHours}
+          {/* Schedule (structured) — multi-block: lecture + lab can each
+              be their own meeting on different days/times. Office hours
+              live on the detail screen post-create. */}
+          <Text style={[styles.label, { color: colors.ink2 }]}>Schedule</Text>
+          <ScheduleEditor
+            value={meetings}
+            onChange={setMeetings}
+            accentColor={color}
+            hint="Optional — add a meeting to see this class on the Today tab. You can leave it blank if your school hasn't finalized the schedule, and add a separate meeting for a lab or discussion section."
           />
 
           {/* Color */}
@@ -163,9 +213,9 @@ export default function NewCourseScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.button, { backgroundColor: color }, createCourse.isPending && styles.buttonDisabled]}
+            style={[styles.button, { backgroundColor: color }, (createCourse.isPending || existingCoursesLoading) && styles.buttonDisabled]}
             onPress={handleSubmit}
-            disabled={createCourse.isPending}
+            disabled={createCourse.isPending || existingCoursesLoading}
             activeOpacity={0.8}
           >
             {createCourse.isPending ? (

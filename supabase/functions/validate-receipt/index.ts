@@ -28,6 +28,12 @@ const APPLE_SANDBOX_URL = 'https://sandbox.itunes.apple.com/verifyReceipt';
 const PRODUCT_MONTHLY = 'semora_pro_monthly';
 const PRODUCT_ANNUAL = 'semora_pro_annual';
 
+// Per-user rolling 1-hour cap. Legitimate use: ~5–10 calls/hour
+// (purchase + restore + cold-launch + retries on flaky network).
+// 30 leaves comfortable headroom while blocking abuse that would
+// otherwise burn our compute and Apple's shared-secret quota.
+const HOURLY_CAP = 30;
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -38,6 +44,25 @@ function jsonResponse(body: unknown, status: number) {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+async function logCall(
+  adminClient: ReturnType<typeof createClient>,
+  userId: string,
+  status: 'success' | 'failed' | 'rate_limited',
+  durationMs: number,
+  errorCode?: string,
+) {
+  try {
+    await adminClient.from('receipt_validation_log').insert({
+      user_id: userId,
+      status,
+      error_code: errorCode ?? null,
+      duration_ms: durationMs,
+    });
+  } catch (err) {
+    console.error('[validate-receipt] Failed to log call:', err);
+  }
 }
 
 interface AppleReceiptInfo {
@@ -52,6 +77,13 @@ interface AppleVerifyResponse {
   receipt?: { in_app?: AppleReceiptInfo[] };
 }
 
+// Cap Apple's verifyReceipt round-trip. Apple has been observed to hang
+// for 30s+ during incidents; without a timeout, the whole purchase
+// verification flow stalls and the user stares at a paywall spinner.
+// Both production and sandbox calls share this budget — if production
+// times out, we fail rather than spending another 15s trying sandbox.
+const APPLE_TIMEOUT_MS = 15_000;
+
 async function verifyWithApple(receipt: string): Promise<AppleVerifyResponse> {
   const body = JSON.stringify({
     'receipt-data': receipt,
@@ -59,11 +91,11 @@ async function verifyWithApple(receipt: string): Promise<AppleVerifyResponse> {
     'exclude-old-transactions': true,
   });
 
-  // Try production first
   const prodResp = await fetch(APPLE_PROD_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body,
+    signal: AbortSignal.timeout(APPLE_TIMEOUT_MS),
   });
   const prodJson = (await prodResp.json()) as AppleVerifyResponse;
 
@@ -73,6 +105,7 @@ async function verifyWithApple(receipt: string): Promise<AppleVerifyResponse> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body,
+      signal: AbortSignal.timeout(APPLE_TIMEOUT_MS),
     });
     return (await sandboxResp.json()) as AppleVerifyResponse;
   }
@@ -124,7 +157,31 @@ serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+
   try {
+    // 0. Bound the request body before req.json() buffers it.
+    //    Apple receipts are ~150KB tops; 256KB is generous headroom.
+    //    Two-step defense:
+    //      a) Require a numeric Content-Length header. A chunked-encoded
+    //         request omits it; without this guard an attacker could
+    //         ship a 50MB body and we'd burn memory parsing it.
+    //      b) Reject when the declared length exceeds the cap.
+    //    Legitimate clients (supabase-js, native fetch with a JSON body)
+    //    always set Content-Length, so this is safe to require.
+    const MAX_BODY_BYTES = 256 * 1024;
+    const contentLengthRaw = req.headers.get('content-length');
+    if (!contentLengthRaw) {
+      return jsonResponse({ error: 'Content-Length required' }, 411);
+    }
+    const contentLength = parseInt(contentLengthRaw, 10);
+    if (!Number.isFinite(contentLength) || contentLength < 0) {
+      return jsonResponse({ error: 'Invalid Content-Length' }, 400);
+    }
+    if (contentLength > MAX_BODY_BYTES) {
+      return jsonResponse({ error: 'Request body too large' }, 413);
+    }
+
     // 1. Authenticate the caller
     const authHeader = req.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -139,6 +196,36 @@ serve(async (req) => {
       return jsonResponse({ error: 'Invalid or expired session' }, 401);
     }
     const userId = userData.user.id;
+
+    // 1b. Per-user rolling 1-hour rate limit (service role bypasses RLS).
+    // Apple's verifyReceipt has its own rate limit, but an authenticated
+    // user can still burn our edge-function CPU and Apple's shared-secret
+    // quota by hammering this endpoint. The cap also protects against a
+    // misbehaving client stuck in a retry loop.
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+    const { count: recentCount, error: countError } = await adminClient
+      .from('receipt_validation_log')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', oneHourAgo);
+
+    if (countError) {
+      console.error('[validate-receipt] Rate limit check failed:', countError);
+      return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
+    }
+
+    if ((recentCount ?? 0) >= HOURLY_CAP) {
+      await logCall(adminClient, userId, 'rate_limited', Date.now() - startTime);
+      return jsonResponse(
+        {
+          error:
+            'Too many receipt validations. Please wait a few minutes before trying again.',
+        },
+        429,
+      );
+    }
 
     // 2. Apple shared secret must be configured for any validation to occur
     if (!APPLE_SHARED_SECRET) {
@@ -172,12 +259,34 @@ serve(async (req) => {
     try {
       appleResp = await verifyWithApple(receipt);
     } catch (err) {
+      const isTimeout = err instanceof DOMException && err.name === 'TimeoutError';
       console.error('[validate-receipt] Apple fetch failed:', err);
-      return jsonResponse({ error: 'Could not reach Apple. Please try again.' }, 502);
+      await logCall(
+        adminClient,
+        userId,
+        'failed',
+        Date.now() - startTime,
+        isTimeout ? 'apple_timeout' : 'apple_unreachable',
+      );
+      return jsonResponse(
+        {
+          error: isTimeout
+            ? 'Apple is taking too long to verify. Please try again in a moment.'
+            : 'Could not reach Apple. Please try again.',
+        },
+        isTimeout ? 504 : 502,
+      );
     }
 
     if (appleResp.status !== 0) {
       console.error('[validate-receipt] Apple returned status:', appleResp.status);
+      await logCall(
+        adminClient,
+        userId,
+        'failed',
+        Date.now() - startTime,
+        `apple_status_${appleResp.status}`,
+      );
       return jsonResponse(
         { error: `Receipt validation failed (Apple status ${appleResp.status})` },
         400,
@@ -186,19 +295,29 @@ serve(async (req) => {
 
     const active = pickLatestActive(appleResp);
 
-    // 5. Upsert entitlement row (service role bypasses RLS)
-    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-    // Block cross-account claim: if this transaction is already
-    // bound to a different Semora user, refuse rather than rebind.
+    // 5. Upsert entitlement row (adminClient created above for rate-limit check)
+    // Block cross-account claim. Two things to check:
+    //   1. Is this OTI currently bound to a *different* Semora user?
+    //   2. Was this OTI ever consumed by an account that's now deleted?
+    //      (Entitlement row CASCADEd, but the consumed_transactions
+    //      ledger row survives — that's its whole purpose.)
     if (active && active.originalTransactionId) {
+      const oti = active.originalTransactionId;
+
       const { data: existing } = await adminClient
         .from('entitlements')
         .select('user_id')
-        .eq('original_transaction_id', active.originalTransactionId)
+        .eq('original_transaction_id', oti)
         .maybeSingle();
 
       if (existing && existing.user_id !== userId) {
+        await logCall(
+          adminClient,
+          userId,
+          'failed',
+          Date.now() - startTime,
+          'cross_account_oti',
+        );
         return jsonResponse(
           {
             error:
@@ -207,6 +326,35 @@ serve(async (req) => {
           },
           409,
         );
+      }
+
+      // No live entitlement for this OTI — but maybe one was deleted.
+      // Only check the ledger when there's no current entitlement,
+      // otherwise we'd block the legitimate same-user re-validation.
+      if (!existing) {
+        const { data: consumed } = await adminClient
+          .from('consumed_transactions')
+          .select('original_transaction_id')
+          .eq('original_transaction_id', oti)
+          .maybeSingle();
+
+        if (consumed) {
+          await logCall(
+            adminClient,
+            userId,
+            'failed',
+            Date.now() - startTime,
+            'oti_consumed_deleted_account',
+          );
+          return jsonResponse(
+            {
+              error:
+                'This subscription was previously linked to a Semora account that has been deleted. ' +
+                'Please contact support to transfer it to your current account.',
+            },
+            409,
+          );
+        }
       }
     }
 
@@ -240,8 +388,34 @@ serve(async (req) => {
 
     if (upsertError) {
       console.error('[validate-receipt] Upsert failed:', upsertError);
+      await logCall(
+        adminClient,
+        userId,
+        'failed',
+        Date.now() - startTime,
+        'entitlement_upsert_failed',
+      );
       return jsonResponse({ error: 'Could not save entitlement. Please try again.' }, 500);
     }
+
+    // Record this OTI in the ledger. Done AFTER the entitlement upsert
+    // so that if entitlement write fails, we don't lock the user out
+    // of their own subscription on retry. Ledger write failure is
+    // logged but non-fatal — the entitlement uniqueness on OTI still
+    // blocks cross-account claim while both rows exist.
+    if (active && active.originalTransactionId) {
+      const { error: ledgerError } = await adminClient
+        .from('consumed_transactions')
+        .upsert(
+          { original_transaction_id: active.originalTransactionId },
+          { onConflict: 'original_transaction_id' },
+        );
+      if (ledgerError) {
+        console.error('[validate-receipt] Ledger write failed:', ledgerError);
+      }
+    }
+
+    await logCall(adminClient, userId, 'success', Date.now() - startTime);
 
     return jsonResponse(
       {

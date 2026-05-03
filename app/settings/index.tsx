@@ -6,12 +6,14 @@ import { useSession } from '@/app/_layout';
 import { useAppStore } from '@/store/appStore';
 import { COLORS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { displayName, hasEmailPassword } from '@/lib/user';
 
 export default function SettingsScreen() {
   const colors = useColors();
   const { session } = useSession();
   const email = session?.user?.email ?? '';
-  const name = email.split('@')[0] || 'User';
+  const name = displayName(session?.user, 'User');
+  const showChangePassword = hasEmailPassword(session?.user);
   const isPro = useAppStore((s) => s.isPro);
   const themeMode = useAppStore((s) => s.themeMode);
   const themeModeLabel = themeMode === 'system' ? 'System' : themeMode === 'light' ? 'Light' : 'Dark';
@@ -25,22 +27,24 @@ export default function SettingsScreen() {
         {/* Account */}
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Account</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <View style={[styles.row, styles.rowBorder, { borderBottomColor: colors.line }]}>
+          <View style={[styles.row, showChangePassword && styles.rowBorder, showChangePassword && { borderBottomColor: colors.line }]}>
             <FontAwesome name="user" size={16} color={colors.ink2} style={styles.icon} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.rowLabel, { color: colors.ink }]}>{name}</Text>
               <Text style={[styles.rowSub, { color: colors.ink3 }]}>{email}</Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={styles.row}
-            activeOpacity={0.7}
-            onPress={() => router.push('/settings/password')}
-          >
-            <FontAwesome name="lock" size={16} color={colors.ink2} style={styles.icon} />
-            <Text style={[styles.rowLabel, { flex: 1, color: colors.ink }]}>Change Password</Text>
-            <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
-          </TouchableOpacity>
+          {showChangePassword && (
+            <TouchableOpacity
+              style={styles.row}
+              activeOpacity={0.7}
+              onPress={() => router.push('/settings/password')}
+            >
+              <FontAwesome name="lock" size={16} color={colors.ink2} style={styles.icon} />
+              <Text style={[styles.rowLabel, { flex: 1, color: colors.ink }]}>Change Password</Text>
+              <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Preferences */}

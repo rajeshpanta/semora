@@ -1,6 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import type { Semester, Course, Task, NewSemester, NewCourse, NewTask } from '@/types/database';
+import type {
+  Semester, Course, Task, NewSemester, NewCourse, NewTask,
+  CourseMeeting, NewCourseMeeting,
+  CourseOfficeHours, NewCourseOfficeHours,
+} from '@/types/database';
 import { format, addDays } from 'date-fns';
 import { scheduleTaskReminders, cancelTaskReminders } from '@/lib/notifications';
 import { syncTaskToCalendar, removeTaskFromCalendar, isSyncEnabled } from '@/lib/calendarSync';
@@ -15,6 +19,9 @@ export const queryKeys = {
   taskStats: (sid?: string | null) => ['taskStats', sid] as const,
   task: (id: string) => ['task', id] as const,
   course: (id: string) => ['course', id] as const,
+  // Course meetings live as joined data on the course rows (useCourses/
+  // useCourse select with course_meetings(*)). Mutations invalidate the
+  // course caches above. No standalone key needed for fetching.
 };
 
 // ── Types ───────────────────────────────────────────────────
@@ -54,7 +61,7 @@ export function useCourses(semesterId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('courses')
-        .select('*')
+        .select('*, course_meetings(*), course_office_hours(*)')
         .eq('semester_id', semesterId!)
         .order('name');
       if (error) throw error;
@@ -70,7 +77,7 @@ export function useCourse(id: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('courses')
-        .select('*')
+        .select('*, course_meetings(*), course_office_hours(*)')
         .eq('id', id)
         .single();
       if (error) throw error;
@@ -183,6 +190,28 @@ export function useScanCount() {
   });
 }
 
+// Latest uploaded syllabus for a course. Used by the course detail
+// screen to render a "View Syllabus" link — the storage path is signed
+// on demand when the user taps, so we only persist the cheap pointer
+// here. Returns null when nothing has been uploaded for this course.
+export function useLatestSyllabus(courseId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['syllabusUploads', 'latest', courseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('syllabus_uploads')
+        .select('storage_path, file_name, created_at')
+        .eq('course_id', courseId!)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!courseId,
+  });
+}
+
 // ── Mutation Hooks ──────────────────────────────────────────
 
 async function getUserId() {
@@ -245,6 +274,21 @@ export function useDeleteSemester() {
   const invalidateAll = useInvalidateAll();
   return useMutation({
     mutationFn: async (id: string) => {
+      // Postgres cascades the child tasks, but local notifications and
+      // synced calendar events live on the device — clean them up first
+      // so the user doesn't get push reminders for deleted tasks.
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('id, courses!inner(semester_id)')
+        .eq('courses.semester_id', id);
+      if (tasks?.length) {
+        const syncOn = isSyncEnabled();
+        for (const t of tasks) {
+          cancelTaskReminders(t.id).catch(() => {});
+          if (syncOn) removeTaskFromCalendar(t.id).catch(() => {});
+        }
+      }
+
       const { error } = await supabase.from('semesters').delete().eq('id', id);
       if (error) throw error;
     },
@@ -299,10 +343,145 @@ export function useDeleteCourse() {
   const invalidateAll = useInvalidateAll();
   return useMutation({
     mutationFn: async (id: string) => {
+      // Same as semester delete: tear down device-side reminders and
+      // calendar events for cascaded tasks before the DB delete.
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('id')
+        .eq('course_id', id);
+      if (tasks?.length) {
+        const syncOn = isSyncEnabled();
+        for (const t of tasks) {
+          cancelTaskReminders(t.id).catch(() => {});
+          if (syncOn) removeTaskFromCalendar(t.id).catch(() => {});
+        }
+      }
+
       const { error } = await supabase.from('courses').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: invalidateAll,
+  });
+}
+
+// Course meetings
+//
+// Meetings are read as joined data on courses (useCourses/useCourse).
+// These mutations write directly to course_meetings and invalidate the
+// course caches so the join refreshes. The cross-tenant FK trigger
+// (migration 018) blocks writes whose course_id resolves to another
+// user's course.
+
+export function useCreateCourseMeeting() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: NewCourseMeeting) => {
+      const user_id = await getUserId();
+      const { data: result, error } = await supabase
+        .from('course_meetings')
+        .insert({ ...data, user_id })
+        .select()
+        .single();
+      if (error) throw error;
+      return result as CourseMeeting;
+    },
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: queryKeys.course(result.course_id) });
+      qc.invalidateQueries({ queryKey: queryKeys.allCourses });
+    },
+  });
+}
+
+export function useUpdateCourseMeeting() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...data }: { id: string } & Partial<NewCourseMeeting>) => {
+      const { data: result, error } = await supabase
+        .from('course_meetings')
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return result as CourseMeeting;
+    },
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: queryKeys.course(result.course_id) });
+      qc.invalidateQueries({ queryKey: queryKeys.allCourses });
+    },
+  });
+}
+
+export function useDeleteCourseMeeting() {
+  const qc = useQueryClient();
+  return useMutation({
+    // Pass courseId alongside id so onSuccess can scope invalidation
+    // without re-fetching the row that was just deleted.
+    mutationFn: async ({ id }: { id: string; courseId: string }) => {
+      const { error } = await supabase.from('course_meetings').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: queryKeys.course(variables.courseId) });
+      qc.invalidateQueries({ queryKey: queryKeys.allCourses });
+    },
+  });
+}
+
+// Course office hours — same shape as course meetings; reads via the
+// useCourse / useCourses join, mutations invalidate course caches.
+
+export function useCreateCourseOfficeHours() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: NewCourseOfficeHours) => {
+      const user_id = await getUserId();
+      const { data: result, error } = await supabase
+        .from('course_office_hours')
+        .insert({ ...data, user_id })
+        .select()
+        .single();
+      if (error) throw error;
+      return result as CourseOfficeHours;
+    },
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: queryKeys.course(result.course_id) });
+      qc.invalidateQueries({ queryKey: queryKeys.allCourses });
+    },
+  });
+}
+
+export function useUpdateCourseOfficeHours() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...data }: { id: string } & Partial<NewCourseOfficeHours>) => {
+      const { data: result, error } = await supabase
+        .from('course_office_hours')
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return result as CourseOfficeHours;
+    },
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: queryKeys.course(result.course_id) });
+      qc.invalidateQueries({ queryKey: queryKeys.allCourses });
+    },
+  });
+}
+
+export function useDeleteCourseOfficeHours() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id }: { id: string; courseId: string }) => {
+      const { error } = await supabase.from('course_office_hours').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: queryKeys.course(variables.courseId) });
+      qc.invalidateQueries({ queryKey: queryKeys.allCourses });
+    },
   });
 }
 
@@ -397,17 +576,8 @@ export function useDeleteTask() {
     mutationFn: async (id: string) => {
       cancelTaskReminders(id).catch(() => {});
 
-      // Fetch task info before deleting so we can remove the calendar event
       if (isSyncEnabled()) {
-        const { data: task } = await supabase
-          .from('tasks')
-          .select('title, due_date, courses(name)')
-          .eq('id', id)
-          .single();
-        if (task) {
-          const courseName = (task as any).courses?.name || 'Course';
-          removeTaskFromCalendar(task.title, courseName, task.due_date).catch(() => {});
-        }
+        removeTaskFromCalendar(id).catch(() => {});
       }
 
       const { error } = await supabase.from('tasks').delete().eq('id', id);
@@ -444,7 +614,7 @@ export function useToggleTaskComplete() {
       if (is_completed) {
         cancelTaskReminders(id).catch(() => {});
         if (isSyncEnabled()) {
-          removeTaskFromCalendar(data.title, courseName, data.due_date).catch(() => {});
+          removeTaskFromCalendar(id).catch(() => {});
         }
       } else {
         scheduleTaskReminders(id, data.title, courseName, data.due_date, data.due_time, data.user_id).catch(() => {});

@@ -11,16 +11,13 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTasks, useDeleteSemester } from '@/lib/queries';
 import { COLORS, calculateGrade, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
-import { differenceInDays, isToday, isPast, addDays, format } from 'date-fns';
+import { differenceInDays, isToday, isPast, format } from 'date-fns';
 import type { GradeThreshold } from '@/types/database';
 import type { TaskWithCourse } from '@/lib/queries';
-
-type CourseFilter = 'all' | 'thisWeek' | 'upcoming';
 
 export default function CoursesScreen() {
   const colors = useColors();
   const router = useRouter();
-  const [filter, setFilter] = useState<CourseFilter>('all');
   const [showPicker, setShowPicker] = useState(false);
 
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
@@ -43,15 +40,77 @@ export default function CoursesScreen() {
     router.push(route as any);
   };
 
-  const handleFilter = (f: CourseFilter) => {
-    setFilter(f);
-    if (Platform.OS === 'ios') Haptics.selectionAsync();
+  // The + button surfaces both creation paths: AI scan (Gemini-backed,
+  // fills name + instructor + schedule + tasks from a syllabus) and
+  // manual entry (no syllabus on hand, or class hasn't published one).
+  // The Scan tab in the bottom nav stays as a direct entry point for
+  // users who land with a syllabus already in hand.
+  const handleAddCourse = () => {
+    Alert.alert(
+      'Add a course',
+      'Scan a syllabus and the AI fills everything in — or type it yourself.',
+      [
+        { text: 'Scan syllabus', onPress: () => handleNav('/scan') },
+        { text: 'Add manually', onPress: () => handleNav('/course/new') },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
   };
 
   const handleSelectSemester = (id: string) => {
     setSelectedSemester(id);
     setShowPicker(false);
     if (Platform.OS === 'ios') Haptics.selectionAsync();
+  };
+
+  // Per-row management menu in the picker modal. Single hub for edit /
+  // delete on any semester (active or not). Closing the picker before
+  // navigating to /semester/[id] avoids the modal lingering over the
+  // edit screen.
+  const handleSemesterMenu = (s: typeof semesters[0]) => {
+    Alert.alert(s.name, undefined, [
+      {
+        text: 'Edit',
+        onPress: () => {
+          setShowPicker(false);
+          router.push(`/semester/${s.id}` as any);
+        },
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => confirmDeleteSemester(s),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const confirmDeleteSemester = (s: typeof semesters[0]) => {
+    Alert.alert(
+      'Delete Semester',
+      `Delete "${s.name}" and all its courses and tasks? This cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteSemester.mutateAsync(s.id);
+              // If we deleted the active semester, clear selection so
+              // the useEffect at the top picks a new one (or shows
+              // the empty state when nothing's left).
+              if (s.id === selectedSemesterId) {
+                setSelectedSemester(null);
+              }
+              setShowPicker(false);
+            } catch (err: any) {
+              Alert.alert('Delete Failed', err.message ?? 'Something went wrong. Please try again.');
+            }
+          },
+        },
+      ],
+    );
   };
 
   // Helpers per course
@@ -62,18 +121,6 @@ export default function CoursesScreen() {
     return ct[0] || null;
   };
   const getPendingCount = (courseId: string) => getCourseTasks(courseId).filter((t) => !t.is_completed).length;
-
-  // Filter courses
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const weekEnd = format(addDays(new Date(), 7), 'yyyy-MM-dd');
-
-  const filteredCourses = courses.filter((course) => {
-    if (filter === 'all') return true;
-    const courseTasks = getCourseTasks(course.id).filter((t) => !t.is_completed);
-    if (filter === 'thisWeek') return courseTasks.some((t) => t.due_date >= today && t.due_date <= weekEnd);
-    if (filter === 'upcoming') return courseTasks.some((t) => t.due_date > today);
-    return true;
-  });
 
   function getDueLabel(task: TaskWithCourse): { text: string; urgent: boolean } {
     const due = new Date(task.due_date + 'T00:00:00');
@@ -113,17 +160,18 @@ export default function CoursesScreen() {
           <View style={{ flex: 1 }}>
             <Text style={[styles.title, { color: colors.ink }]}>Courses</Text>
 
-            {/* Semester selector */}
+            {/* Semester selector — single hub for switch / edit / delete /
+                create. Always tappable when a semester exists, even with
+                only one, since the picker modal is also where edit and
+                delete live now. */}
             {activeSemester ? (
               <TouchableOpacity
                 style={styles.semesterSelector}
-                onPress={() => semesters.length > 1 ? setShowPicker(true) : null}
-                activeOpacity={semesters.length > 1 ? 0.7 : 1}
+                onPress={() => setShowPicker(true)}
+                activeOpacity={0.7}
               >
                 <Text style={[styles.semesterName, { color: colors.ink2 }]}>{activeSemester.name}</Text>
-                {semesters.length > 1 && (
-                  <FontAwesome name="chevron-down" size={10} color={colors.ink3} style={{ marginLeft: 4 }} />
-                )}
+                <FontAwesome name="chevron-down" size={10} color={colors.ink3} style={{ marginLeft: 4 }} />
                 <View style={[styles.courseCountBadge, { backgroundColor: colors.brand50 }]}>
                   <Text style={[styles.courseCountText, { color: colors.brand }]}>{courses.length}</Text>
                 </View>
@@ -134,66 +182,16 @@ export default function CoursesScreen() {
           </View>
 
           <View style={styles.headerActions}>
-            {activeSemester && (
-              <>
-                <TouchableOpacity onPress={() => router.push(`/semester/${activeSemester.id}` as any)} hitSlop={8} style={[styles.headerIconBtn, { backgroundColor: colors.card, borderColor: colors.line }]}>
-                  <FontAwesome name="pencil" size={13} color={colors.ink3} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    Alert.alert(
-                      'Delete Semester',
-                      `Delete "${activeSemester.name}" and all its courses and tasks?`,
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        {
-                          text: 'Delete',
-                          style: 'destructive',
-                          onPress: async () => {
-                            try {
-                              await deleteSemester.mutateAsync(activeSemester.id);
-                              setSelectedSemester(null);
-                            } catch (err: any) {
-                              Alert.alert('Delete Failed', err.message ?? 'Something went wrong. Please try again.');
-                            }
-                          },
-                        },
-                      ],
-                    );
-                  }}
-                  hitSlop={8}
-                  style={[styles.headerIconBtn, { backgroundColor: colors.card, borderColor: colors.line }]}
-                >
-                  <FontAwesome name="trash-o" size={13} color={colors.coral} />
-                </TouchableOpacity>
-              </>
-            )}
-            <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.brand }]} onPress={() => handleNav('/course/new')} activeOpacity={0.8}>
+            <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.brand }]} onPress={handleAddCourse} activeOpacity={0.8}>
               <FontAwesome name="plus" size={14} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Filter pills */}
-        <View style={styles.pills}>
-          {(['all', 'thisWeek', 'upcoming'] as const).map((f) => (
-            <TouchableOpacity
-              key={f}
-              style={[styles.pill, { backgroundColor: colors.card, borderColor: colors.line }, filter === f && [styles.pillActive, { backgroundColor: colors.ink, borderColor: colors.ink }]]}
-              onPress={() => handleFilter(f)}
-              activeOpacity={0.7}
-            >
-              <Text style={filter === f ? styles.pillTextActive : [styles.pillText, { color: colors.ink2 }]}>
-                {f === 'all' ? 'All' : f === 'thisWeek' ? 'This week' : 'Upcoming'}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
         {/* Course cards */}
-        {filteredCourses.length > 0 ? (
+        {courses.length > 0 ? (
           <View style={styles.courseList}>
-            {filteredCourses.map((course) => {
+            {courses.map((course) => {
               const courseTasks = getCourseTasks(course.id);
               const nextTask = getNextTask(course.id);
               const pendingCount = getPendingCount(course.id);
@@ -202,6 +200,11 @@ export default function CoursesScreen() {
               const { percentage } = calculateGrade(gradeTasks, scale);
               const dueInfo = nextTask ? getDueLabel(nextTask) : null;
 
+              // A course "needs schedule" when it has no structured
+              // course_meetings rows — without them the Today tab can't
+              // surface this class. Tapping the card goes to detail
+              // where Edit is one tap away.
+              const needsSchedule = (course.course_meetings ?? []).length === 0;
               return (
                 <TouchableOpacity
                   key={course.id}
@@ -219,6 +222,15 @@ export default function CoursesScreen() {
                       <Text style={[styles.upNextText, { color: course.color }]}>{pendingCount} UP NEXT</Text>
                     </View>
                   </View>
+                  {needsSchedule && (
+                    <View style={[styles.needsScheduleRow, { borderTopColor: colors.line, backgroundColor: colors.amber50 }]}>
+                      <FontAwesome name="calendar-o" size={12} color={colors.amber} />
+                      <Text style={[styles.needsScheduleText, { color: colors.amber }]}>
+                        No schedule yet — won't appear on Today
+                      </Text>
+                      <Text style={[styles.needsScheduleAction, { color: colors.amber }]}>Add →</Text>
+                    </View>
+                  )}
                   {nextTask && (
                     <View style={[styles.nextRow, { borderTopColor: colors.line }]}>
                       <FontAwesome
@@ -247,13 +259,8 @@ export default function CoursesScreen() {
               );
             })}
           </View>
-        ) : courses.length > 0 && filter !== 'all' ? (
-          <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
-            <Text style={[styles.emptyTitle, { color: colors.ink }]}>No courses match this filter</Text>
-            <Text style={[styles.emptyText, { color: colors.ink3 }]}>Try switching to "All"</Text>
-          </View>
         ) : selectedSemesterId ? (
-          <TouchableOpacity style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={() => handleNav('/course/new')} activeOpacity={0.7}>
+          <TouchableOpacity style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={handleAddCourse} activeOpacity={0.7}>
             <FontAwesome name="book" size={24} color={colors.ink3} />
             <Text style={[styles.emptyTitle, { color: colors.ink }]}>No courses yet</Text>
             <Text style={[styles.emptyText, { color: colors.ink3 }]}>Tap to add your first course</Text>
@@ -283,18 +290,36 @@ export default function CoursesScreen() {
                 const isSelected = s.id === selectedSemesterId;
                 const dateLabel = getSemesterDateLabel(s);
                 return (
-                  <TouchableOpacity
+                  // Row split into two press targets: the main area
+                  // switches the active semester, the trailing ⋯ button
+                  // opens the edit / delete menu. Two siblings (rather
+                  // than nested TouchableOpacities) so the menu tap
+                  // doesn't also fire the row-switch handler.
+                  <View
                     key={s.id}
                     style={[styles.modalRow, i < semesters.length - 1 && [styles.modalRowBorder, { borderBottomColor: colors.line }]]}
-                    onPress={() => handleSelectSemester(s.id)}
-                    activeOpacity={0.7}
                   >
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.modalRowName, { color: colors.ink }, isSelected && { color: colors.brand }]}>{s.name}</Text>
-                      {dateLabel ? <Text style={[styles.modalRowDate, { color: colors.ink3 }]}>{dateLabel}</Text> : null}
-                    </View>
-                    {isSelected && <FontAwesome name="check" size={14} color={colors.brand} />}
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.modalRowMain}
+                      onPress={() => handleSelectSemester(s.id)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.modalRowName, { color: colors.ink }, isSelected && { color: colors.brand }]}>{s.name}</Text>
+                        {dateLabel ? <Text style={[styles.modalRowDate, { color: colors.ink3 }]}>{dateLabel}</Text> : null}
+                      </View>
+                      {isSelected && <FontAwesome name="check" size={14} color={colors.brand} />}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.modalRowMenu}
+                      onPress={() => handleSemesterMenu(s)}
+                      activeOpacity={0.6}
+                      hitSlop={8}
+                      accessibilityLabel={`Manage ${s.name}`}
+                    >
+                      <FontAwesome name="ellipsis-h" size={14} color={colors.ink3} />
+                    </TouchableOpacity>
+                  </View>
                 );
               })}
             </ScrollView>
@@ -323,15 +348,7 @@ const styles = StyleSheet.create({
   courseCountBadge: { marginLeft: 8, backgroundColor: COLORS.brand50, paddingHorizontal: 7, paddingVertical: 1, borderRadius: 8 },
   courseCountText: { fontSize: 12, fontWeight: '700', color: COLORS.brand },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 6 },
-  headerIconBtn: { width: 32, height: 32, borderRadius: 10, backgroundColor: COLORS.card, borderWidth: 0.5, borderColor: COLORS.line, justifyContent: 'center', alignItems: 'center' },
   addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.brand, justifyContent: 'center', alignItems: 'center' },
-
-  // Filter pills
-  pills: { flexDirection: 'row', gap: 6, marginBottom: 14 },
-  pill: { paddingHorizontal: 11, paddingVertical: 5, borderRadius: 6, backgroundColor: COLORS.card, borderWidth: 0.5, borderColor: COLORS.line },
-  pillActive: { backgroundColor: COLORS.ink, borderColor: COLORS.ink },
-  pillText: { fontSize: 14, fontWeight: '600', color: COLORS.ink2 },
-  pillTextActive: { fontSize: 14, fontWeight: '600', color: '#fff' },
 
   // Course cards
   courseList: { gap: 10 },
@@ -342,6 +359,13 @@ const styles = StyleSheet.create({
   courseInstructor: { fontSize: 14, color: COLORS.ink3, marginTop: 3 },
   upNextBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
   upNextText: { fontSize: 14, fontWeight: '600' },
+  needsScheduleRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    marginTop: 10, paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 8,
+  },
+  needsScheduleText: { flex: 1, fontSize: 12, fontWeight: '500' },
+  needsScheduleAction: { fontSize: 12, fontWeight: '700' },
   nextRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 10, marginTop: 10, borderTopWidth: 0.5, borderTopColor: COLORS.line },
   nextTitle: { flex: 1, fontSize: 14, color: COLORS.ink },
   nextDue: { fontSize: 14, color: COLORS.ink3, fontWeight: '500' },
@@ -361,7 +385,9 @@ const styles = StyleSheet.create({
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 },
   modalTitle: { fontSize: 17, fontWeight: '600', color: COLORS.ink },
   modalList: { paddingHorizontal: 20 },
-  modalRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
+  modalRow: { flexDirection: 'row', alignItems: 'center' },
+  modalRowMain: { flex: 1, flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
+  modalRowMenu: { paddingVertical: 14, paddingHorizontal: 12, marginLeft: 4 },
   modalRowBorder: { borderBottomWidth: 0.5, borderBottomColor: COLORS.line },
   modalRowName: { fontSize: 15, fontWeight: '500', color: COLORS.ink },
   modalRowDate: { fontSize: 13, color: COLORS.ink3, marginTop: 2 },

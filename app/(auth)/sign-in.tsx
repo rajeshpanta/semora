@@ -13,20 +13,24 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { signIn } from '@/lib/auth';
+import * as AppleAuthentication from 'expo-apple-authentication';
+import { signIn, signInWithApple, signInWithGoogle, isAppleSignInAvailable } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
 
 export default function SignInScreen() {
-  // Reactive subscription — re-renders this screen whenever the banner appears,
-  // even if the screen instance was already mounted before sign-up navigated here.
+  // Reactive subscription — re-renders this screen whenever the banner
+  // appears (set by reset-password.tsx after a successful password change,
+  // so the user sees confirmation when they're bounced back here to sign in).
   const banner = useAppStore((s) => s.postSignupBanner);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<'apple' | 'google' | null>(null);
+  const [appleAvailable, setAppleAvailable] = useState(false);
   const [error, setError] = useState('');
   const [errorType, setErrorType] = useState<'confirm' | 'credentials' | 'generic' | ''>('');
   const [resending, setResending] = useState(false);
@@ -38,6 +42,52 @@ export default function SignInScreen() {
       setEmail(banner.email);
     }
   }, [banner?.email]);
+
+  // Detect Apple sign-in availability once at mount. Returns false on
+  // Android, on iOS sims without an Apple ID, and on devices below iOS 13.
+  useEffect(() => {
+    isAppleSignInAvailable().then(setAppleAvailable);
+  }, []);
+
+  const handleApple = async () => {
+    setError('');
+    setErrorType('');
+    setOauthLoading('apple');
+    try {
+      await signInWithApple();
+      useAppStore.getState().setPostSignupBanner(null);
+    } catch (err: any) {
+      // User-cancel on iOS reports as ERR_REQUEST_CANCELED — silent ignore.
+      if (err?.code === 'ERR_REQUEST_CANCELED' || err?.code === 'ERR_CANCELED') {
+        return;
+      }
+      setError(err?.message ?? 'Sign in with Apple failed. Please try again.');
+      setErrorType('generic');
+    } finally {
+      setOauthLoading(null);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setError('');
+    setErrorType('');
+    setOauthLoading('google');
+    try {
+      await signInWithGoogle();
+      useAppStore.getState().setPostSignupBanner(null);
+    } catch (err: any) {
+      // SIGN_IN_CANCELLED / IN_PROGRESS — silently ignore. Other codes
+      // bubble up.
+      const code = err?.code;
+      if (code === '12501' || code === 'SIGN_IN_CANCELLED' || code === '-5') {
+        return;
+      }
+      setError(err?.message ?? 'Sign in with Google failed. Please try again.');
+      setErrorType('generic');
+    } finally {
+      setOauthLoading(null);
+    }
+  };
 
   const handleResend = async () => {
     if (!banner || resending) return;
@@ -118,6 +168,47 @@ export default function SignInScreen() {
           </View>
 
           <View style={[styles.form, { backgroundColor: colors.card }]}>
+            {/* OAuth buttons — preferred path. Email/password kept below
+                as a fallback during the migration; will be removed once
+                OAuth is verified working. */}
+            <View style={styles.oauthGroup}>
+              {appleAvailable ? (
+                <AppleAuthentication.AppleAuthenticationButton
+                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                  buttonStyle={
+                    colors.paper === '#FAF9F5' || colors.paper === '#fff'
+                      ? AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                      : AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                  }
+                  cornerRadius={12}
+                  style={styles.appleButton}
+                  onPress={handleApple}
+                />
+              ) : null}
+
+              <TouchableOpacity
+                style={[styles.googleButton, oauthLoading === 'google' && styles.buttonDisabled]}
+                onPress={handleGoogle}
+                disabled={oauthLoading !== null}
+                activeOpacity={0.8}
+              >
+                {oauthLoading === 'google' ? (
+                  <ActivityIndicator color="#1f1f1f" size="small" />
+                ) : (
+                  <>
+                    <FontAwesome name="google" size={16} color="#1f1f1f" />
+                    <Text style={styles.googleButtonText}>Continue with Google</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.divider}>
+              <View style={[styles.dividerLine, { backgroundColor: colors.line }]} />
+              <Text style={[styles.dividerText, { color: colors.ink3 }]}>or</Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.line }]} />
+            </View>
+
             {banner && !error ? (
               <View style={styles.successBox}>
                 <FontAwesome name="check-circle" size={15} color="#16a34a" />
@@ -236,17 +327,6 @@ export default function SignInScreen() {
                 </>
               )}
             </TouchableOpacity>
-          </View>
-
-          <View style={styles.footer}>
-            <Link href="/(auth)/sign-up" asChild>
-              <TouchableOpacity activeOpacity={0.7}>
-                <Text style={[styles.linkText, { color: colors.ink2 }]}>
-                  Don't have an account?{' '}
-                  <Text style={[styles.linkBold, { color: colors.brand }]}>Create one</Text>
-                </Text>
-              </TouchableOpacity>
-            </Link>
           </View>
         </View>
       </ScrollView>
@@ -425,16 +505,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  footer: {
+  oauthGroup: {
+    gap: 10,
+    marginBottom: 4,
+  },
+  appleButton: {
+    height: 50,
+    width: '100%',
+  },
+  googleButton: {
+    flexDirection: 'row',
+    height: 50,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 24,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: '#dadce0',
   },
-  linkText: {
-    fontSize: 14,
-    color: '#6b7280',
+  googleButtonText: {
+    color: '#1f1f1f',
+    fontSize: 15,
+    fontWeight: '600',
   },
-  linkBold: {
-    color: '#6B46C1',
-    fontWeight: '700',
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginVertical: 16,
   },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontSize: 12, fontWeight: '600' },
 });

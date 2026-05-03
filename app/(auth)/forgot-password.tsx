@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ActivityIndicator, ScrollView, Alert,
@@ -16,7 +16,17 @@ export default function ForgotPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [error, setError] = useState('');
+
+  // Decrement the cooldown once per second. Without a client-side
+  // throttle, tap-spamming the resend link surfaces Supabase's
+  // server-side rate-limit error to the user as a confusing alert.
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendCooldown]);
 
   const sendResetEmail = async (target: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(target, {
@@ -39,6 +49,9 @@ export default function ForgotPasswordScreen() {
     try {
       await sendResetEmail(email.trim());
       setSent(true);
+      // Start the cooldown immediately — the first send counts as a
+      // send for rate-limit purposes.
+      setResendCooldown(30);
     } catch (err: any) {
       setError(err.message ?? 'Could not send reset email. Please try again.');
     } finally {
@@ -47,11 +60,12 @@ export default function ForgotPasswordScreen() {
   };
 
   const handleResend = async () => {
-    if (resending) return;
+    if (resending || resendCooldown > 0) return;
     setResending(true);
     try {
       await sendResetEmail(email.trim());
       Alert.alert('Sent', 'Check your inbox for the new reset link.');
+      setResendCooldown(30);
     } catch (err: any) {
       Alert.alert('Couldn\'t resend', err.message ?? 'Please try again in a moment.');
     } finally {
@@ -91,13 +105,17 @@ export default function ForgotPasswordScreen() {
             <TouchableOpacity
               style={styles.secondaryBtn}
               onPress={handleResend}
-              disabled={resending}
+              disabled={resending || resendCooldown > 0}
               activeOpacity={0.7}
             >
               <Text style={[styles.secondaryBtnText, { color: colors.ink3 }]}>
                 Didn't get it?{' '}
-                <Text style={{ color: colors.brand, fontWeight: '700' }}>
-                  {resending ? 'Sending…' : 'Resend'}
+                <Text style={{ color: colors.brand, fontWeight: '700', opacity: resendCooldown > 0 ? 0.5 : 1 }}>
+                  {resending
+                    ? 'Sending…'
+                    : resendCooldown > 0
+                      ? `Resend in ${resendCooldown}s`
+                      : 'Resend'}
                 </Text>
               </Text>
             </TouchableOpacity>

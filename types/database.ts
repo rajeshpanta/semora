@@ -35,13 +35,44 @@ export interface Course {
   semester_id: string;
   name: string;
   instructor: string | null;
-  meeting_time: string | null;
-  office_hours: string | null;
   color: string;
   icon: string;
   grade_scale: GradeThreshold[];
   created_at: string;
   updated_at: string;
+  /** Populated when the row is fetched with `course_meetings(*)` joined. */
+  course_meetings?: CourseMeeting[];
+  /** Populated when the row is fetched with `course_office_hours(*)` joined. */
+  course_office_hours?: CourseOfficeHours[];
+}
+
+export type CourseMeetingKind = 'lecture' | 'lab' | 'discussion' | 'other';
+
+export interface CourseMeeting {
+  id: string;
+  user_id: string;
+  course_id: string;
+  /** JS getDay() values, 0=Sun..6=Sat. Always non-empty per DB constraint. */
+  days_of_week: number[];
+  start_time: string | null;
+  end_time: string | null;
+  kind: CourseMeetingKind;
+  location: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface CourseOfficeHours {
+  id: string;
+  user_id: string;
+  course_id: string;
+  /** Nullable: "by appointment" rows have no fixed days. */
+  days_of_week: number[] | null;
+  start_time: string | null;
+  end_time: string | null;
+  location: string | null;
+  notes: string | null;
+  created_at: string;
 }
 
 export interface Task {
@@ -103,7 +134,14 @@ export type NewSemester = Pick<Semester, 'name'> &
   Partial<Pick<Semester, 'start_date' | 'end_date' | 'is_active'>>;
 
 export type NewCourse = Pick<Course, 'semester_id' | 'name'> &
-  Partial<Pick<Course, 'instructor' | 'meeting_time' | 'office_hours' | 'color' | 'icon'>>;
+  Partial<Pick<Course, 'instructor' | 'color' | 'icon'>>;
+
+// user_id is set by the caller from session before insert (matches NewCourse / NewTask convention).
+export type NewCourseMeeting = Pick<CourseMeeting, 'course_id' | 'days_of_week'> &
+  Partial<Pick<CourseMeeting, 'start_time' | 'end_time' | 'kind' | 'location' | 'notes'>>;
+
+export type NewCourseOfficeHours = Pick<CourseOfficeHours, 'course_id'> &
+  Partial<Pick<CourseOfficeHours, 'days_of_week' | 'start_time' | 'end_time' | 'location' | 'notes'>>;
 
 export type NewTask = Pick<Task, 'course_id' | 'title' | 'due_date'> &
   Partial<Pick<Task, 'description' | 'type' | 'due_time' | 'weight' | 'source' | 'parse_run_id' | 'is_extra_credit' | 'score' | 'points_earned' | 'points_possible' | 'submitted_late'>>;

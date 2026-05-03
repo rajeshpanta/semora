@@ -1,19 +1,39 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { COLORS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useSession } from '@/app/_layout';
+import { hasEmailPassword } from '@/lib/user';
 
 export default function ChangePasswordScreen() {
   const colors = useColors();
   const router = useRouter();
+  const { session } = useSession();
+  const email = session?.user?.email ?? '';
+  const canChangePassword = hasEmailPassword(session?.user);
+
+  // OAuth-only users have no password to change. The Settings screen
+  // already hides this row for them, but bounce out anyway in case
+  // someone deep-links here.
+  useEffect(() => {
+    if (!canChangePassword && session) {
+      router.replace('/settings');
+    }
+  }, [canChangePassword, session]);
+
+  const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleChangePassword = async () => {
+    if (!currentPassword.trim()) {
+      Alert.alert('Error', 'Please enter your current password.');
+      return;
+    }
     if (!newPassword.trim()) {
       Alert.alert('Error', 'Please enter a new password.');
       return;
@@ -26,9 +46,30 @@ export default function ChangePasswordScreen() {
       Alert.alert('Error', 'Passwords do not match.');
       return;
     }
+    if (newPassword === currentPassword) {
+      Alert.alert('Error', 'New password must be different from your current password.');
+      return;
+    }
+    if (!email) {
+      Alert.alert('Error', 'Could not determine your account. Please sign in again.');
+      return;
+    }
 
     setLoading(true);
     try {
+      // Re-verify the current password before allowing the change. Without
+      // this, brief access to an unlocked, signed-in phone is enough to
+      // change the password and lock out the owner.
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password: currentPassword,
+      });
+      if (authError) {
+        Alert.alert('Incorrect password', 'Your current password is incorrect.');
+        setLoading(false);
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
       Alert.alert('Success', 'Your password has been updated.', [
@@ -46,6 +87,22 @@ export default function ChangePasswordScreen() {
       <Stack.Screen options={{ title: 'Change Password' }} />
 
       <View style={styles.content}>
+        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Current Password</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <TextInput
+            style={[styles.input, { color: colors.ink }]}
+            placeholder="Current password"
+            placeholderTextColor={colors.ink3}
+            secureTextEntry
+            autoCapitalize="none"
+            autoComplete="current-password"
+            textContentType="password"
+            value={currentPassword}
+            onChangeText={setCurrentPassword}
+            editable={!loading}
+          />
+        </View>
+
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>New Password</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <TextInput
@@ -54,8 +111,11 @@ export default function ChangePasswordScreen() {
             placeholderTextColor={colors.ink3}
             secureTextEntry
             autoCapitalize="none"
+            autoComplete="new-password"
+            textContentType="newPassword"
             value={newPassword}
             onChangeText={setNewPassword}
+            editable={!loading}
           />
           <View style={[styles.divider, { backgroundColor: colors.line }]} />
           <TextInput
@@ -64,8 +124,11 @@ export default function ChangePasswordScreen() {
             placeholderTextColor={colors.ink3}
             secureTextEntry
             autoCapitalize="none"
+            autoComplete="new-password"
+            textContentType="newPassword"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
+            editable={!loading}
           />
         </View>
 

@@ -42,16 +42,19 @@ export default function ResetPasswordScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       const userEmail = user?.email ?? '';
 
-      // Clear the in-progress flag and sign out so AuthGate routes to sign-in.
+      // Clear the in-progress flag BEFORE signOut so AuthGate doesn't
+      // pin the user back to /reset-password during the sign-out
+      // transition.
       useAppStore.getState().setInPasswordReset(false);
 
-      // Reuse the post-signup banner so the user sees a success message on sign-in.
+      // signOut wipes the banner via resetUserState, so set it AFTER
+      // signOut returns. Sign-in.tsx subscribes reactively and will
+      // pick up the new banner on its next render.
+      await signOut();
       useAppStore.getState().setPostSignupBanner({
         email: userEmail,
         needsConfirm: false,
       });
-
-      await signOut();
     } catch (err: any) {
       setError(err.message ?? 'Could not update password. Please try again.');
       setLoading(false);

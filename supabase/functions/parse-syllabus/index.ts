@@ -27,8 +27,23 @@ Return a single JSON object with this structure:
   "course_name": "Introduction to Computer Science" (the full course name),
   "course_code": "CS 101" (short code if visible, or null),
   "instructor": "Prof. Smith" (instructor name if visible, or null),
-  "meeting_time": "MWF 10:00-10:50 AM, Room 320" (class meeting days/times/location if visible, or null),
-  "office_hours": "Tue/Thu 2:00-3:30 PM, Office 412" (professor office hours if visible, or null),
+  "meetings": [
+    {
+      "days_of_week": [1, 3, 5] (REQUIRED, non-empty. JS getDay() values: 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday, 5=Friday, 6=Saturday. Map "MWF" -> [1,3,5], "TR" or "TTh" -> [2,4], etc.),
+      "start_time": "10:00" (HH:MM 24-hour, or null if not stated),
+      "end_time": "10:50" (HH:MM 24-hour, or null if not stated),
+      "kind": "lecture" (one of: lecture, lab, discussion, other. Default lecture if uncertain),
+      "location": "Boyd 312" (room/online location if stated, or null)
+    }
+  ] (Each meeting block represents one recurring time slot. A class with lecture MWF 10-11 + lab Tu 2-4 returns TWO entries. Return [] if no schedule is stated.),
+  "office_hours_blocks": [
+    {
+      "days_of_week": [2, 4] (Same encoding as meetings. May be null/omitted for "by appointment"),
+      "start_time": "14:00" (HH:MM 24-hour, or null),
+      "end_time": "15:30" (HH:MM 24-hour, or null),
+      "location": "Office 412" (or "Zoom: link" or null)
+    }
+  ] (One entry per recurring office hour block. Return [] if none stated.),
   "semester_name": "Fall 2026" (semester/term name if visible, or null),
   "semester_start": "2026-08-25" (semester start date in YYYY-MM-DD if visible, or null),
   "semester_end": "2026-12-15" (semester end date in YYYY-MM-DD if visible, or null),
@@ -89,6 +104,31 @@ serve(async (req) => {
   const startTime = Date.now();
 
   try {
+    // 0. Bound the request body before req.json() buffers it.
+    //    Base64-encoded PDFs are checked at 10M chars after parse; the
+    //    JSON wrapper adds a few dozen bytes, so 11MB is the right cap
+    //    on the raw HTTP body.
+    //    Two-step defense:
+    //      a) Require a numeric Content-Length header. Chunked-encoded
+    //         requests omit it; without this, a malicious caller could
+    //         stream 100MB and exhaust edge-function memory before the
+    //         post-parse length check kicks in.
+    //      b) Reject when the declared length exceeds the cap.
+    //    Legitimate clients (supabase-js, native fetch with a JSON body)
+    //    always set Content-Length, so this is safe to require.
+    const MAX_BODY_BYTES = 11 * 1024 * 1024;
+    const contentLengthRaw = req.headers.get('content-length');
+    if (!contentLengthRaw) {
+      return jsonResponse({ error: 'Content-Length required' }, 411);
+    }
+    const contentLength = parseInt(contentLengthRaw, 10);
+    if (!Number.isFinite(contentLength) || contentLength < 0) {
+      return jsonResponse({ error: 'Invalid Content-Length' }, 400);
+    }
+    if (contentLength > MAX_BODY_BYTES) {
+      return jsonResponse({ error: 'File too large. Maximum size is approximately 7.5 MB.' }, 413);
+    }
+
     // 1. Validate JWT against Supabase auth
     const authHeader = req.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -234,7 +274,7 @@ serve(async (req) => {
           ? item.type
           : 'other',
         due_date: item.due_date,
-        due_time: item.due_time && /^\d{2}:\d{2}$/.test(item.due_time) ? item.due_time : null,
+        due_time: item.due_time && /^([01]\d|2[0-3]):[0-5]\d$/.test(item.due_time) ? item.due_time : null,
         weight: typeof item.weight === 'number' ? item.weight : null,
         description: item.description || null,
         confidence:
@@ -243,12 +283,48 @@ serve(async (req) => {
             : 0.5,
       }));
 
+    // Strict per-row validation for the structured schedule blocks. Bad
+    // rows are dropped; partial extraction is preferred over rejecting
+    // the whole upload because Gemini got one row wrong.
+    const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+    const isValidDays = (v: unknown): v is number[] =>
+      Array.isArray(v) && v.length > 0 && v.every((n) => Number.isInteger(n) && n >= 0 && n <= 6);
+    const cleanTime = (v: unknown) =>
+      typeof v === 'string' && TIME_RE.test(v) ? `${v}:00` : null;
+
+    const meetings = (Array.isArray(result.meetings) ? result.meetings : [])
+      .filter((m: any) => isValidDays(m?.days_of_week))
+      .map((m: any) => ({
+        days_of_week: m.days_of_week,
+        start_time: cleanTime(m.start_time),
+        end_time: cleanTime(m.end_time),
+        kind: ['lecture', 'lab', 'discussion', 'other'].includes(m.kind) ? m.kind : 'lecture',
+        location: typeof m.location === 'string' && m.location.trim() ? m.location.trim() : null,
+      }))
+      // Time-order check mirrors the DB constraint so the client
+      // doesn't have to handle a 23514 error per row.
+      .filter((m: any) => !m.start_time || !m.end_time || m.start_time < m.end_time);
+
+    const office_hours_blocks = (Array.isArray(result.office_hours_blocks) ? result.office_hours_blocks : [])
+      // days_of_week is nullable here ("by appointment"); only filter rows where it's
+      // present-but-malformed.
+      .filter((o: any) =>
+        o?.days_of_week == null || isValidDays(o.days_of_week),
+      )
+      .map((o: any) => ({
+        days_of_week: o.days_of_week ?? null,
+        start_time: cleanTime(o.start_time),
+        end_time: cleanTime(o.end_time),
+        location: typeof o.location === 'string' && o.location.trim() ? o.location.trim() : null,
+      }))
+      .filter((o: any) => !o.start_time || !o.end_time || o.start_time < o.end_time);
+
     const extraction = {
       course_name: result.course_name || 'Unknown Course',
       course_code: result.course_code || null,
       instructor: result.instructor || null,
-      meeting_time: result.meeting_time || null,
-      office_hours: result.office_hours || null,
+      meetings,
+      office_hours_blocks,
       semester_name: result.semester_name || null,
       semester_start: result.semester_start || null,
       semester_end: result.semester_end || null,

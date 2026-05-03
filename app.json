@@ -19,6 +19,7 @@
       "bundleIdentifier": "com.rajeshpanta.syllabussnap",
       "buildNumber": "8",
       "appleTeamId": "7T9897GFKH",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -32,6 +33,12 @@
       "expo-router",
       "expo-secure-store",
       "expo-localization",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Semora uses Face ID to verify your identity before deleting your account."
+        }
+      ],
       "@react-native-community/datetimepicker",
       [
         "expo-calendar",
@@ -54,7 +61,13 @@
         }
       ],
       "expo-document-picker",
-      "react-native-iap"
+      "react-native-iap",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.106719403227-9qu6ehvh8d12a24l978ljdd4j7cda9pl"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -81,6 +81,15 @@ export interface ProEntitlement {
   is_pro: boolean;
   plan: 'monthly' | 'annual' | null;
   expires_at: string | null;
+  /**
+   * Reason a restore/validation didn't activate Pro for this account,
+   * even though the device receipt is valid. Set by validateProEntitlement
+   * when the edge function returns 409 (subscription bound to another
+   * Semora account, or to a deleted account). Callers that surface UI
+   * (e.g. the Restore button) should check this and show a specific
+   * message instead of a generic "no subscription found".
+   */
+  restoreError?: 'linked_other_account' | null;
 }
 
 const EMPTY_ENTITLEMENT: ProEntitlement = {
@@ -159,10 +168,22 @@ export async function validateProEntitlement(): Promise<ProEntitlement> {
       body: { receipt, platform: Platform.OS },
     });
 
-    if (error || !data) {
-      // Network or server hiccup — fall back to whatever the DB row says
-      return await getServerEntitlement();
+    if (error) {
+      // 409 means the receipt is bound to a *different* Semora account
+      // (or one that's been deleted). The user can't unlock Pro on this
+      // account no matter how many times they tap Restore — surface the
+      // reason so the UI can explain instead of saying "no subscription
+      // found", which is misleading.
+      const status = (error as any)?.context?.status;
+      const fallback = await getServerEntitlement();
+      if (status === 409) {
+        return { ...fallback, restoreError: 'linked_other_account' };
+      }
+      // Network or other server hiccup — just return whatever the DB says.
+      return fallback;
     }
+
+    if (!data) return await getServerEntitlement();
 
     return {
       is_pro: !!data.is_pro,
@@ -191,12 +212,11 @@ export async function refreshProStatus(): Promise<ProEntitlement> {
 }
 
 /**
- * Restore: same as a fresh validation. Returns true if the user
- * ended up with an active Pro entitlement.
+ * Restore: same as a fresh validation. Returns the validated
+ * entitlement so callers can update both isPro and the plan label.
  */
-export async function restorePurchases(): Promise<boolean> {
-  const entitlement = await validateProEntitlement();
-  return entitlement.is_pro;
+export async function restorePurchases(): Promise<ProEntitlement> {
+  return await validateProEntitlement();
 }
 
 export function setupPurchaseListeners(

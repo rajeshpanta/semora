@@ -12,6 +12,7 @@ import { useTask, useUpdateTask, useDeleteTask, useToggleTaskComplete } from '@/
 import { TASK_TYPE_LABELS, TASK_TYPES, COLORS, type TaskType } from '@/lib/constants';
 import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
+import { formatLocalDate } from '@/lib/dates';
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -65,7 +66,7 @@ export default function TaskDetailScreen() {
         title: editTitle.trim(),
         description: editDescription.trim() || undefined,
         type: editType,
-        due_date: editDueDate!.toISOString().split('T')[0],
+        due_date: formatLocalDate(editDueDate!),
         due_time: editDueTime
           ? `${String(editDueTime.getHours()).padStart(2, '0')}:${String(editDueTime.getMinutes()).padStart(2, '0')}:00`
           : undefined,

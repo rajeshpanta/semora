@@ -8,6 +8,7 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 
 const THEME_KEY = 'semora_theme';
 const SEMESTER_KEY = 'semora_semester';
+const RESET_KEY = 'semora_reset_in_progress';
 
 function getItem(key: string): string | null {
   if (Platform.OS === 'web') return null;
@@ -28,6 +29,13 @@ const initialTheme = (() => {
 
 const initialSemester = getItem(SEMESTER_KEY);
 
+// Recovery sessions survive app-kill: the Supabase session is real
+// in SecureStore, but the in-memory inPasswordReset flag is gone, so
+// AuthGate would route the user straight to (tabs) without forcing
+// them to set a new password. Persist this flag so it can re-arm
+// AuthGate after a cold start.
+const initialInPasswordReset = getItem(RESET_KEY) === 'true';
+
 interface AppState {
   selectedSemesterId: string | null;
   setSelectedSemester: (id: string | null) => void;
@@ -41,6 +49,13 @@ interface AppState {
   setPostSignupBanner: (banner: { email: string; needsConfirm: boolean } | null) => void;
   inPasswordReset: boolean;
   setInPasswordReset: (v: boolean) => void;
+  /**
+   * Reset every user-scoped field to its initial value. Called from
+   * signOut so user B doesn't inherit user A's selected semester,
+   * Pro state, plan, banners, or recovery-flow flags. Theme is left
+   * alone — it's a device preference, not a user preference.
+   */
+  resetUserState: () => void;
 }
 
 function deleteItem(key: string) {
@@ -69,8 +84,26 @@ export const useAppStore = create<AppState>((set) => ({
   setSubscriptionPlan: (plan) => set({ subscriptionPlan: plan }),
   postSignupBanner: null,
   setPostSignupBanner: (banner) => set({ postSignupBanner: banner }),
-  inPasswordReset: false,
-  setInPasswordReset: (v) => set({ inPasswordReset: v }),
+  inPasswordReset: initialInPasswordReset,
+  setInPasswordReset: (v) => {
+    set({ inPasswordReset: v });
+    if (v) {
+      setItem(RESET_KEY, 'true');
+    } else {
+      deleteItem(RESET_KEY);
+    }
+  },
+  resetUserState: () => {
+    set({
+      selectedSemesterId: null,
+      isPro: false,
+      subscriptionPlan: null,
+      postSignupBanner: null,
+      inPasswordReset: false,
+    });
+    deleteItem(SEMESTER_KEY);
+    deleteItem(RESET_KEY);
+  },
 }));
 
 const GRADE_CHECK_WINDOW = 60; // days after semester ends where student may still check grades

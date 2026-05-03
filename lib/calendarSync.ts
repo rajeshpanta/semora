@@ -5,6 +5,40 @@ import type { Task } from '@/types/database';
 
 const CALENDAR_ID_KEY = 'semora_calendar_id';
 const SYNCED_ENABLED_KEY = 'semora_cal_enabled';
+// taskId → calendar event id, JSON-encoded. Title-based dedup broke
+// when a task got renamed or duplicated; a stable map is what we want.
+const EVENT_MAP_KEY = 'semora_event_map';
+
+function readEventMap(): Record<string, string> {
+  if (Platform.OS === 'web') return {};
+  try {
+    const raw = SecureStore.getItem(EVENT_MAP_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeEventMap(map: Record<string, string>) {
+  if (Platform.OS === 'web') return;
+  try { SecureStore.setItem(EVENT_MAP_KEY, JSON.stringify(map)); } catch {}
+}
+
+function setEventId(taskId: string, eventId: string) {
+  const map = readEventMap();
+  map[taskId] = eventId;
+  writeEventMap(map);
+}
+
+function clearEventId(taskId: string) {
+  const map = readEventMap();
+  if (map[taskId]) {
+    delete map[taskId];
+    writeEventMap(map);
+  }
+}
 
 // Lazy-load expo-calendar to avoid crash in Expo Go
 async function getCalendarModule() {
@@ -109,51 +143,41 @@ export async function syncTaskToCalendar(
       endDate,
       allDay: true,
       notes: task.description || undefined,
-      alarms: [{ relativeOffset: -480 }], // 8 hours before (morning of)
+      // Positive offset = minutes after start; 540 = 9:00 AM the day of.
+      alarms: [{ relativeOffset: 540 }],
     };
   }
 
-  // Search for existing event by title in this calendar to handle dedup
-  // without needing a large persistent map
-  try {
-    const rangeStart = new Date(year, month - 1, day - 1);
-    const rangeEnd = new Date(year, month - 1, day + 2);
-    const existing = await Calendar.getEventsAsync([calendarId], rangeStart, rangeEnd);
-    const match = existing.find((e) => e.title === eventDetails.title);
-
-    if (match) {
-      await Calendar.updateEventAsync(match.id, eventDetails);
+  // Use the stable task→event map. If we have a known event id, update
+  // it; if the user manually deleted that event in Calendar.app the
+  // update throws, so fall back to creating a fresh one.
+  const existingEventId = readEventMap()[task.id];
+  if (existingEventId) {
+    try {
+      await Calendar.updateEventAsync(existingEventId, eventDetails);
       return;
+    } catch (e) {
+      console.warn('[CalendarSync] Stored event missing, recreating:', e);
+      clearEventId(task.id);
     }
-  } catch (e) { console.warn('[CalendarSync] Failed to search/update existing event:', e); }
+  }
 
-  await Calendar.createEventAsync(calendarId, eventDetails);
+  const newId = await Calendar.createEventAsync(calendarId, eventDetails);
+  setEventId(task.id, newId);
 }
 
-export async function removeTaskFromCalendar(
-  taskTitle: string,
-  courseName: string,
-  dueDate: string,
-): Promise<void> {
+export async function removeTaskFromCalendar(taskId: string): Promise<void> {
   if (Platform.OS === 'web') return;
   const Calendar = await getCalendarModule();
   if (!Calendar) return;
 
-  const calId = SecureStore.getItem(CALENDAR_ID_KEY);
-  if (!calId) return;
-
-  const eventTitle = `${taskTitle} — ${courseName}`;
-  const [year, month, day] = dueDate.split('-').map(Number);
+  const eventId = readEventMap()[taskId];
+  if (!eventId) return;
 
   try {
-    const rangeStart = new Date(year, month - 1, day - 1);
-    const rangeEnd = new Date(year, month - 1, day + 2);
-    const events = await Calendar.getEventsAsync([calId], rangeStart, rangeEnd);
-    const match = events.find((e) => e.title === eventTitle);
-    if (match) {
-      await Calendar.deleteEventAsync(match.id);
-    }
+    await Calendar.deleteEventAsync(eventId);
   } catch (e) { console.warn('[CalendarSync] Failed to remove event:', e); }
+  clearEventId(taskId);
 }
 
 /**
@@ -207,6 +231,7 @@ export async function unsyncAll(): Promise<void> {
 
   try { await SecureStore.deleteItemAsync(CALENDAR_ID_KEY); } catch (e) { console.warn('[CalendarSync] Failed to clear calendar ID:', e); }
   try { await SecureStore.deleteItemAsync(SYNCED_ENABLED_KEY); } catch (e) { console.warn('[CalendarSync] Failed to clear sync flag:', e); }
+  try { await SecureStore.deleteItemAsync(EVENT_MAP_KEY); } catch (e) { console.warn('[CalendarSync] Failed to clear event map:', e); }
 }
 
 /**
@@ -236,4 +261,16 @@ export async function isSynced(): Promise<boolean> {
  */
 export function isSyncEnabled(): boolean {
   return SecureStore.getItem(SYNCED_ENABLED_KEY) === 'true';
+}
+
+/**
+ * Clear local calendar-sync references on sign-out so the next user
+ * to sign in on the same device does NOT inherit the previous user's
+ * calendar mapping. Doesn't delete the calendar itself — that belongs
+ * to the iOS account, not the Semora account.
+ */
+export async function clearLocalSyncState(): Promise<void> {
+  try { await SecureStore.deleteItemAsync(CALENDAR_ID_KEY); } catch {}
+  try { await SecureStore.deleteItemAsync(SYNCED_ENABLED_KEY); } catch {}
+  try { await SecureStore.deleteItemAsync(EVENT_MAP_KEY); } catch {}
 }
