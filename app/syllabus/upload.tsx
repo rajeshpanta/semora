@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
-import { processSyllabus, type ProcessResult, FREE_COURSE_LIMIT } from '@/lib/syllabus';
+import { processSyllabus, type ProcessResult, FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { COLORS, COURSE_COLORS, COURSE_ICONS } from '@/lib/constants';
@@ -50,7 +50,9 @@ async function createDuplicateCourse(result: ProcessResult, userId: string): Pro
     .select()
     .single();
 
-  if (error) throw new Error(`Failed to create duplicate: ${error.message}`);
+  // Preserve original error so callers can detect P0001 (free-tier
+  // trigger) and surface the Upgrade prompt instead of a generic alert.
+  if (error) throw error;
 
   return { ...result, courseId: newCourse.id, courseName: newCourse.name, isExistingCourse: false };
 }
@@ -138,14 +140,21 @@ export default function SyllabusUploadScreen() {
                   const dupResult = await createDuplicateCourse(result, session.user.id);
                   navigateToReview(dupResult);
                 } catch (err: any) {
-                  Alert.alert('Error', err.message);
                   // No fallback to "add to existing" anymore (would
                   // duplicate tasks). Send the user back to the scan
                   // tab so the spinner resolves.
                   setProcessing(false);
                   setStep(0);
                   setStatus('');
-                  router.back();
+                  if (isFreeLimitError(err)) {
+                    Alert.alert('Course Limit Reached', err.message, [
+                      { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+                      { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
+                    ]);
+                  } else {
+                    Alert.alert('Error', err.message);
+                    router.back();
+                  }
                 }
               },
             },
@@ -164,6 +173,19 @@ export default function SyllabusUploadScreen() {
       setProcessing(false);
       setStep(0);
       setStatus('');
+      // Free-tier limit (scan or course) — surface the Upgrade prompt
+      // even when the client thought the user was Pro (stale isPro).
+      if (isFreeLimitError(error)) {
+        Alert.alert(
+          'Pro feature',
+          error.message,
+          [
+            { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+            { text: 'Go Back', onPress: () => router.back(), style: 'cancel' },
+          ],
+        );
+        return;
+      }
       Alert.alert(
         'Scan Failed',
         error.message || 'Failed to process syllabus. Please try again.',

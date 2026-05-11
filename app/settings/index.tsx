@@ -2,8 +2,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useQuery } from '@tanstack/react-query';
 import { useSession } from '@/app/_layout';
 import { useAppStore } from '@/store/appStore';
+import { supabase } from '@/lib/supabase';
 import { COLORS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { displayName, hasEmailPassword } from '@/lib/user';
@@ -11,6 +13,7 @@ import { displayName, hasEmailPassword } from '@/lib/user';
 export default function SettingsScreen() {
   const colors = useColors();
   const { session } = useSession();
+  const userId = session?.user?.id;
   const email = session?.user?.email ?? '';
   const name = displayName(session?.user, 'User');
   const showChangePassword = hasEmailPassword(session?.user);
@@ -18,6 +21,32 @@ export default function SettingsScreen() {
   const themeMode = useAppStore((s) => s.themeMode);
   const themeModeLabel = themeMode === 'system' ? 'System' : themeMode === 'light' ? 'Light' : 'Dark';
   const router = useRouter();
+
+  // Reflect the user's *actual* enabled reminders on the settings row,
+  // not just what's available on their tier. Filter Pro-only flags out
+  // for free users so the display matches what the scheduler actually
+  // fires (see lib/notifications.ts where 1d/3d are forced off for
+  // free users at schedule time).
+  const { data: reminderPrefs } = useQuery({
+    queryKey: ['reminderPrefs', userId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('reminder_same_day, reminder_1day, reminder_3day')
+        .eq('id', userId!)
+        .maybeSingle();
+      return data ?? { reminder_same_day: true, reminder_1day: true, reminder_3day: true };
+    },
+    enabled: !!userId,
+  });
+  const reminderLabel = (() => {
+    if (!reminderPrefs) return undefined; // hide value while loading
+    const parts: string[] = [];
+    if (reminderPrefs.reminder_same_day) parts.push('Same day');
+    if (isPro && reminderPrefs.reminder_1day) parts.push('1 day');
+    if (isPro && reminderPrefs.reminder_3day) parts.push('3 days');
+    return parts.length === 0 ? 'Off' : parts.join(', ');
+  })();
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
@@ -53,7 +82,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon="bell"
             label="Notifications"
-            value={isPro ? '1 day, 3 days' : 'Same day'}
+            value={reminderLabel}
             onPress={() => router.push('/settings/notifications')}
           />
           <SettingsRow

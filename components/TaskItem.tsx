@@ -54,10 +54,13 @@ function getDueLabel(dueDate: Date, dueTime: string | null): string {
 
 export function TaskItem({ task, onToggle, onPress }: TaskItemProps) {
   const colors = useColors();
-  const dueDate = new Date(task.due_date + 'T00:00:00');
-  const overdue = !task.is_completed && isPast(dueDate) && !isToday(dueDate);
-  const dueToday = isToday(dueDate);
-  const dueLabel = getDueLabel(dueDate, task.due_time);
+  // Schema requires due_date but a malformed row would render
+  // "Invalid Date" without this guard. Skip the date calculations and
+  // show "No due date" — the rest of the row is still useful.
+  const dueDate = task.due_date ? new Date(task.due_date + 'T00:00:00') : null;
+  const overdue = !task.is_completed && !!dueDate && isPast(dueDate) && !isToday(dueDate);
+  const dueToday = !!dueDate && isToday(dueDate);
+  const dueLabel = dueDate ? getDueLabel(dueDate, task.due_time) : 'No due date';
   const isUrgent = dueLabel.includes('left') || dueLabel === 'Due today' || dueLabel === 'Tomorrow';
 
   const handleToggle = () => {

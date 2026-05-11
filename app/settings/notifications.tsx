@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, Switch, ActivityIndicator, Alert } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/app/_layout';
 import { COLORS } from '@/lib/constants';
@@ -26,6 +27,7 @@ export default function NotificationSettings() {
   const userId = session?.user?.id;
   const isPro = useAppStore((s) => s.isPro);
   const router = useRouter();
+  const qc = useQueryClient();
   const [prefs, setPrefs] = useState<ReminderPrefs>(DEFAULT_PREFS);
   const [loading, setLoading] = useState(true);
 
@@ -68,6 +70,9 @@ export default function NotificationSettings() {
       const { error } = await supabase.from('profiles').update({ [key]: updated[key] }).eq('id', userId);
       if (error) {
         setPrefs(previous);
+      } else {
+        // Keep the Settings index row in sync — it reads the same prefs.
+        qc.invalidateQueries({ queryKey: ['reminderPrefs', userId] });
       }
     }
   };

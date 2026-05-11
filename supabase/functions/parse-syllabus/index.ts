@@ -262,12 +262,24 @@ serve(async (req) => {
       );
     }
 
-    // 5. Validate and clean items
+    // 5. Validate and clean items.
+    // Date validation is two-stage: format regex catches obvious junk,
+    // round-trip Date check catches logical errors like 2026-02-30 or
+    // 2026-13-01 that the regex accepts. UTC construction avoids the
+    // Edge Function's process timezone shifting the comparison.
+    const isValidDate = (s: unknown): s is string => {
+      if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+      const [y, m, d] = s.split('-').map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      return (
+        dt.getUTCFullYear() === y &&
+        dt.getUTCMonth() === m - 1 &&
+        dt.getUTCDate() === d
+      );
+    };
+
     const items = (result.items || [])
-      .filter(
-        (item: any) =>
-          item.title && item.due_date && /^\d{4}-\d{2}-\d{2}$/.test(item.due_date),
-      )
+      .filter((item: any) => item.title && isValidDate(item.due_date))
       .map((item: any) => ({
         title: item.title,
         type: ['assignment', 'quiz', 'exam', 'project', 'reading', 'other'].includes(item.type)
@@ -326,8 +338,12 @@ serve(async (req) => {
       meetings,
       office_hours_blocks,
       semester_name: result.semester_name || null,
-      semester_start: result.semester_start || null,
-      semester_end: result.semester_end || null,
+      // Validate before persisting — these go straight to a Postgres
+      // `date` column and a bad string (e.g. "Fall 2026") would 22007 on
+      // insert. The isValidDate check also catches Gemini-mangled values
+      // like 2026-02-30. Null is fine for both fields.
+      semester_start: isValidDate(result.semester_start) ? result.semester_start : null,
+      semester_end: isValidDate(result.semester_end) ? result.semester_end : null,
       grade_scale:
         Array.isArray(result.grade_scale) && result.grade_scale.length > 0
           ? result.grade_scale

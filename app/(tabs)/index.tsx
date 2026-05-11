@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
-  RefreshControl, TouchableOpacity, Alert, ActivityIndicator,
+  RefreshControl, TouchableOpacity, Alert, ActivityIndicator, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
+import * as Notifications from 'expo-notifications';
 import { format, startOfWeek, addDays, differenceInDays, isToday as isDateToday, isPast, startOfDay } from 'date-fns';
 import { useSession } from '@/app/_layout';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
@@ -139,6 +140,21 @@ export default function TodayScreen() {
     }, [qc]),
   );
 
+  // Notification-permission banner. Reminders are core to the app's value
+  // (advance warning before deadlines). If the OS prompt was denied or
+  // never answered, the scheduler runs but nothing fires — and the user
+  // doesn't know why. Re-check on every focus so dismissing the banner by
+  // enabling in Settings takes effect on tab re-entry.
+  const [notifPermDenied, setNotifPermDenied] = useState(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS === 'web') return;
+      Notifications.getPermissionsAsync()
+        .then(({ status }) => setNotifPermDenied(status !== 'granted'))
+        .catch(() => {});
+    }, []),
+  );
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     qc.invalidateQueries().then(() => setRefreshing(false));
@@ -241,6 +257,24 @@ export default function TodayScreen() {
         </Text>
         {activeSemester && (
           <Text style={[styles.semesterLabel, { color: colors.ink3 }]}>{activeSemester.name}</Text>
+        )}
+
+        {/* Notification permission nudge. Surfaces when the OS prompt was
+            denied / never answered. Tapping opens the device's Semora
+            notification settings — iOS does not allow re-prompting in-app
+            once the user has dismissed the system dialog. */}
+        {notifPermDenied && (
+          <TouchableOpacity
+            style={[styles.notifBanner, { backgroundColor: colors.amber50, borderColor: colors.amber }]}
+            onPress={() => Linking.openSettings().catch(() => {})}
+            activeOpacity={0.7}
+          >
+            <FontAwesome name="bell-slash" size={14} color={colors.amber} />
+            <Text style={[styles.notifBannerText, { color: colors.ink }]}>
+              Turn on notifications to get reminders before deadlines
+            </Text>
+            <FontAwesome name="chevron-right" size={11} color={colors.amber} />
+          </TouchableOpacity>
         )}
 
         {/* Today's classes — only renders when a course meets today. Hidden
@@ -701,6 +735,13 @@ const styles = StyleSheet.create({
   eyeLabel: { fontSize: 14, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.ink3 },
   greeting: { fontSize: 26, fontWeight: '600', color: COLORS.ink, letterSpacing: -0.5, marginTop: 4, marginBottom: 2 },
   semesterLabel: { fontSize: 14, color: COLORS.ink3, fontWeight: '500', marginBottom: 16 },
+  notifBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderRadius: 12, borderWidth: 1,
+    marginBottom: 16,
+  },
+  notifBannerText: { flex: 1, fontSize: 13, fontWeight: '500' },
   // Hero
   heroCard: { backgroundColor: COLORS.brand, borderRadius: 22, padding: 16, marginBottom: 18 },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },

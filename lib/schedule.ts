@@ -12,6 +12,14 @@
 // are local wall-clock "HH:MM:SS" strings (Postgres `time` format) —
 // never timezone-shifted, so DST weeks don't shift the schedule.
 //
+// Timezone policy: schedule is always interpreted in the *device's*
+// local timezone at read time. A student traveling will see their
+// classes shift to whatever wall-clock matches their device. This is
+// deliberate — student-facing apps that anchored to a "course timezone"
+// would surface 8am classes at 2am for someone visiting another
+// country, which is worse than the simpler device-local rule. The
+// Today tab filters use `new Date().getDay()` which respects this.
+//
 // The editor-facing block shape lives in components/ScheduleEditor as
 // `ScheduleBlock` (since it includes UI-only fields like a stable id).
 // This module owns the value formatters + day labels.

@@ -335,6 +335,10 @@ export function useUpdateCourse() {
       qc.invalidateQueries({ queryKey: queryKeys.courses(result.semester_id) });
       qc.invalidateQueries({ queryKey: queryKeys.course(result.id) });
       qc.invalidateQueries({ queryKey: queryKeys.allCourses });
+      // Task rows carry a joined snapshot of course.name/color/icon
+      // (see useTasks select). Invalidate so open lists pick up the
+      // edit instead of waiting out the 1-min stale time.
+      qc.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
 }

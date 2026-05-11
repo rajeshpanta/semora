@@ -8,6 +8,15 @@ import { suggestCurrentSemesterName } from '@/lib/semesters';
 export const FREE_COURSE_LIMIT = 2;
 export const FREE_SEMESTER_LIMIT = 1;
 
+// Detect a free-tier limit error raised by one of the DB triggers
+// (enforce_free_{semester,course,scan}_limit — all raise errcode
+// P0001). Used by every call site that inserts into a free-tier-gated
+// table so the client surfaces an Upgrade prompt instead of a generic
+// error when the client-cached isPro state is stale.
+export function isFreeLimitError(err: any): boolean {
+  return err?.code === 'P0001' || /free accounts support|2 free scans/i.test(err?.message ?? '');
+}
+
 export interface ProcessResult {
   uploadId: string;
   parseRunId: string;
@@ -217,7 +226,10 @@ async function findOrCreateSemester(
     .select()
     .single();
 
-  if (error) throw new Error(`Failed to create semester: ${error.message}`);
+  // Preserve original error so callers can detect P0001 (free-tier
+  // semester trigger) and surface a clean Upgrade prompt instead of
+  // the "Failed to create semester: …" wrapper.
+  if (error) throw error;
   return { semesterId: created.id, semesterName: created.name };
 }
 
@@ -283,7 +295,10 @@ async function findOrCreateCourse(
     .select()
     .single();
 
-  if (error) throw new Error(`Failed to create course: ${error.message}`);
+  // Preserve the original PostgrestError so callers can detect P0001
+  // (free-tier trigger). Wrapping it in a new Error stripped `.code` and
+  // forced every caller to regex the message.
+  if (error) throw error;
   return { courseId: created.id, courseName: created.name, isExisting: false };
 }
 

@@ -12,7 +12,7 @@ import { COLORS } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
 import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
-import { FREE_SEMESTER_LIMIT } from '@/lib/syllabus';
+import { FREE_SEMESTER_LIMIT, isFreeLimitError } from '@/lib/syllabus';
 import { formatLocalDate } from '@/lib/dates';
 import { suggestSemesters } from '@/lib/semesters';
 
@@ -68,6 +68,21 @@ export default function NewSemesterScreen() {
       setSelectedSemester(result.id);
       router.back();
     } catch (err: any) {
+      // Free-tier limit trigger fires if the client-cached isPro was
+      // stale (subscription lapsed since launch). Surface the Upgrade
+      // prompt rather than a generic alert. No isPro guard — the trigger
+      // already canonical-checked the entitlements table.
+      if (isFreeLimitError(err)) {
+        Alert.alert(
+          'Semester Limit Reached',
+          err.message,
+          [
+            { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+            { text: 'Cancel', style: 'cancel' },
+          ],
+        );
+        return;
+      }
       Alert.alert('Error', err.message || 'Failed to create semester.');
     }
   };

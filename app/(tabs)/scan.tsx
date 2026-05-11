@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
@@ -18,10 +19,23 @@ export default function ScanScreen() {
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
   const isPro = useAppStore((s) => s.isPro);
+  const qc = useQueryClient();
   const { data: semesters = [] } = useSemesters();
   const { data: scanCount = 0, isLoading: scanCountLoading } = useScanCount();
 
-  const checkScanLimit = (): boolean => {
+  // After a scan completes, syllabus_uploads is inserted by processSyllabus
+  // and the server count goes up. Re-entering the scan tab without
+  // invalidation would read the 1-minute-stale cache — so the "Last Free
+  // Scan" warning could miss-fire and the limit check could let through
+  // a scan that the DB then blocks (M2 surfaces P0001 as the fallback, but
+  // catching it here is cleaner UX).
+  useFocusEffect(
+    useCallback(() => {
+      qc.invalidateQueries({ queryKey: ['scanCount'] });
+    }, [qc]),
+  );
+
+  const checkScanLimit = async (): Promise<boolean> => {
     if (isPro) return true;
     if (scanCountLoading) {
       Alert.alert('Please Wait', 'Loading your scan usage. Try again in a moment.');
@@ -37,6 +51,22 @@ export default function ScanScreen() {
         ],
       );
       return false;
+    }
+    // Heads-up before the user burns their last free scan, so they can
+    // decide to upgrade instead of finding out only after the fact.
+    if (scanCount === FREE_SCAN_LIMIT - 1) {
+      return new Promise((resolve) => {
+        Alert.alert(
+          'Last Free Scan',
+          `This will use your last of ${FREE_SCAN_LIMIT} free scans. After this you'll need Pro for more.`,
+          [
+            { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+            { text: 'Upgrade', onPress: () => { router.push('/paywall' as any); resolve(false); } },
+            { text: 'Use Last Scan', onPress: () => resolve(true) },
+          ],
+          { cancelable: true, onDismiss: () => resolve(false) },
+        );
+      });
     }
     return true;
   };
@@ -54,7 +84,7 @@ export default function ScanScreen() {
   };
 
   const handleTakePhoto = async () => {
-    if (!checkScanLimit()) return;
+    if (!(await checkScanLimit())) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -79,7 +109,7 @@ export default function ScanScreen() {
   };
 
   const handleUploadPDF = async () => {
-    if (!checkScanLimit()) return;
+    if (!(await checkScanLimit())) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const result = await DocumentPicker.getDocumentAsync({
@@ -98,7 +128,7 @@ export default function ScanScreen() {
   };
 
   const handleChooseFromPhotos = async () => {
-    if (!checkScanLimit()) return;
+    if (!(await checkScanLimit())) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -138,7 +168,7 @@ export default function ScanScreen() {
   ];
 
   const handlePickFromFiles = async () => {
-    if (!checkScanLimit()) return;
+    if (!(await checkScanLimit())) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const result = await DocumentPicker.getDocumentAsync({

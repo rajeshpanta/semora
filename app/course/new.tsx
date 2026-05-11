@@ -12,7 +12,7 @@ import { useAppStore } from '@/store/appStore';
 import { COURSE_COLORS, COURSE_ICONS, COLORS, type CourseIcon } from '@/lib/constants';
 import { SemesterPicker } from '@/components/SemesterPicker';
 import { ScheduleEditor, type ScheduleBlock } from '@/components/ScheduleEditor';
-import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
+import { FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
 import { useColors } from '@/lib/theme';
 
 export default function NewCourseScreen() {
@@ -85,6 +85,7 @@ export default function NewCourseScreen() {
       // Insert meetings in parallel after the course exists. If a meeting
       // fails (e.g. transient network), surface it but don't roll back —
       // the course is saved and the user can fix meetings via edit.
+      let meetingsFailed = 0;
       if (meetingsToSave.length > 0) {
         const results = await Promise.allSettled(
           meetingsToSave.map((m) =>
@@ -97,17 +98,32 @@ export default function NewCourseScreen() {
             }),
           ),
         );
-        const failed = results.filter((r) => r.status === 'rejected').length;
-        if (failed > 0) {
+        const rejections = results.filter(
+          (r): r is PromiseRejectedResult => r.status === 'rejected',
+        );
+        meetingsFailed = rejections.length;
+        if (rejections.length > 0) {
+          for (const r of rejections) {
+            console.warn('[createCourse] meeting insert rejected:', r.reason);
+          }
+          const firstMsg = String(
+            (r => r?.message ?? r)(rejections[0].reason) ?? 'Unknown error',
+          );
           Alert.alert(
             'Course saved',
-            `${failed} of ${meetingsToSave.length} meetings could not be saved. Open the course to retry.`,
+            `${rejections.length} of ${meetingsToSave.length} meeting${
+              meetingsToSave.length === 1 ? '' : 's'
+            } didn't save. Open the course to retry.\n\n${firstMsg}`,
           );
         }
       }
 
       if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Haptics.notificationAsync(
+          meetingsFailed === 0
+            ? Haptics.NotificationFeedbackType.Success
+            : Haptics.NotificationFeedbackType.Warning,
+        );
       }
       Keyboard.dismiss();
       router.back();
@@ -115,8 +131,9 @@ export default function NewCourseScreen() {
       // The server-side trigger raises with errcode P0001 and a
       // user-friendly message when the free-tier limit is hit.
       // Surface that as the same upgrade prompt the client check shows.
-      const isLimitError = err?.code === 'P0001' || /free accounts support/i.test(err?.message ?? '');
-      if (isLimitError && !isPro) {
+      // No isPro guard — if the trigger fired, the server says they're
+      // free regardless of what client state thinks (stale isPro race).
+      if (isFreeLimitError(err)) {
         Alert.alert(
           'Course Limit Reached',
           err.message,

@@ -134,6 +134,15 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         useAppStore.getState().setInPasswordReset(true);
       }
 
+      // SIGNED_OUT fires on token-refresh failure, cross-device sign-out,
+      // server-side revocation, and account deletion — paths that bypass
+      // lib/auth.ts:signOut(). Mirror its store + cache cleanup here so
+      // user A's data never lingers for user B's next session.
+      if (_event === 'SIGNED_OUT') {
+        useAppStore.getState().resetUserState();
+        queryClient.clear();
+      }
+
       if (session) {
         saveTimezoneIfNeeded(session.user.id);
         requestNotificationPermission().catch(() => {});

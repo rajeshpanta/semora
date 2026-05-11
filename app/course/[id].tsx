@@ -101,7 +101,15 @@ export default function CourseDetailScreen() {
     // user added but never filled (no days picked) — those are dropped
     // at save time.
     const blocksToPersist = editMeetings.filter((m) => m.days_of_week.length > 0);
-    const ohToPersist = editOfficeHourBlocks.filter((m) => m.days_of_week.length > 0);
+    // Office hours: drop new empty rows (user added a block and never filled
+    // it), but keep existing empty-day rows. course_office_hours.days_of_week
+    // is nullable per migration 018 to represent "by appointment" — the
+    // Gemini parser writes those, and the editor coerces null → [] on load
+    // for chip rendering. Filtering them out here would treat them as
+    // user-removed and delete the row on every save.
+    const ohToPersist = editOfficeHourBlocks.filter(
+      (m) => !isNewBlock(m.id) || m.days_of_week.length > 0,
+    );
     for (const m of [...blocksToPersist, ...ohToPersist]) {
       if (m.start_time && m.end_time && m.start_time >= m.end_time) {
         Alert.alert('Invalid schedule', 'End time must be after start time.');
@@ -205,16 +213,34 @@ export default function CourseDetailScreen() {
       ];
 
       const results = await Promise.allSettled([...meetingOps, ...ohOps]);
-      const failed = results.filter((r) => r.status === 'rejected').length;
-      if (failed > 0) {
+      const rejections = results.filter(
+        (r): r is PromiseRejectedResult => r.status === 'rejected',
+      );
+      if (rejections.length > 0) {
+        // Log every reason — the alert only shows the first, but the
+        // others are still useful in dev logs.
+        for (const r of rejections) {
+          console.warn('[saveEdit] schedule mutation rejected:', r.reason);
+        }
+        const firstMsg = String(
+          (r => r?.message ?? r)(rejections[0].reason) ?? 'Unknown error',
+        );
         Alert.alert(
           'Saved partially',
-          `${failed} schedule change${failed === 1 ? '' : 's'} did not save. Try again.`,
+          `${rejections.length} of ${results.length} schedule change${
+            results.length === 1 ? '' : 's'
+          } didn't save.\n\n${firstMsg}`,
         );
       }
 
       Keyboard.dismiss();
-      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS === 'ios') {
+        Haptics.notificationAsync(
+          rejections.length === 0
+            ? Haptics.NotificationFeedbackType.Success
+            : Haptics.NotificationFeedbackType.Warning,
+        );
+      }
       setEditing(false);
     } catch (err: any) { Alert.alert('Error', err.message); }
   };

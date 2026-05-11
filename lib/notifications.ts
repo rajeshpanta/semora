@@ -72,11 +72,15 @@ export async function scheduleTaskReminders(
   taskId: string,
   taskTitle: string,
   courseName: string,
-  dueDate: string,
+  dueDate: string | null | undefined,
   dueTime?: string | null,
   userId?: string,
 ) {
   if (Platform.OS === 'web') return;
+  // Schema marks tasks.due_date NOT NULL, but a malformed row coming
+  // from direct DB manipulation would crash split('-') below. Bail
+  // quietly rather than throw out of the toggle-complete flow.
+  if (!dueDate) return;
 
   const hasPermission = await requestNotificationPermission();
   if (!hasPermission) return;

@@ -109,12 +109,18 @@ export function calculateGrade(
     return { percentage: null, letter: null, weightAttempted: 0, weightTotal, earnedPoints: 0 };
   }
 
-  // Current grade = weighted average of scores on attempted work
-  // Example: assignment worth 15% of grade, student scores 86% on it
-  //   weightedSum = 15 * 86 = 1290
-  //   weightAttempted = 15
-  //   percentage = 1290 / 15 = 86%  → that's the real grade
-  const percentage = weightedSum / weightAttempted;
+  // Current grade = base weighted average + extra-credit bonus.
+  // EC weights contribute to weightedSum but not weightAttempted, so they
+  // act as bonus points that inflate the numerator without growing the
+  // denominator. Display is clamped to 100% — every letter scale tops
+  // out at A+, so a raw 108% adds no useful signal beyond "maxed out".
+  //
+  // Example: midterm 30%/80 + homework 20%/100 + EC 5%/100
+  //   weightedSum     = 30*80 + 20*100 + 5*100 = 4900
+  //   weightAttempted = 30 + 20 = 50   (EC excluded)
+  //   raw %           = 4900 / 50 = 98%   (= 88% base + 10% EC bonus)
+  const rawPercentage = weightedSum / weightAttempted;
+  const percentage = Math.min(rawPercentage, 100);
   const sorted = [...scale].sort((a, b) => b.min - a.min);
   const letter = sorted.find((g) => percentage >= g.min)?.letter ?? 'F';
 
