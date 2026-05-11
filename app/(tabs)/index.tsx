@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, Platform,
   RefreshControl, TouchableOpacity, Alert, ActivityIndicator, Linking,
+  AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -143,17 +144,28 @@ export default function TodayScreen() {
   // Notification-permission banner. Reminders are core to the app's value
   // (advance warning before deadlines). If the OS prompt was denied or
   // never answered, the scheduler runs but nothing fires — and the user
-  // doesn't know why. Re-check on every focus so dismissing the banner by
-  // enabling in Settings takes effect on tab re-entry.
+  // doesn't know why.
+  //
+  // Re-check on three signals so the banner clears as soon as the user
+  // enables notifications:
+  //   - tab focus (useFocusEffect)        — switching tabs
+  //   - app foreground (AppState)         — returning from iOS Settings
+  //     while Today is already the active tab; useFocusEffect alone
+  //     misses this case because focus never changed.
   const [notifPermDenied, setNotifPermDenied] = useState(false);
-  useFocusEffect(
-    useCallback(() => {
-      if (Platform.OS === 'web') return;
-      Notifications.getPermissionsAsync()
-        .then(({ status }) => setNotifPermDenied(status !== 'granted'))
-        .catch(() => {});
-    }, []),
-  );
+  const refreshNotifPerm = useCallback(() => {
+    if (Platform.OS === 'web') return;
+    Notifications.getPermissionsAsync()
+      .then(({ status }) => setNotifPermDenied(status !== 'granted'))
+      .catch(() => {});
+  }, []);
+  useFocusEffect(refreshNotifPerm);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') refreshNotifPerm();
+    });
+    return () => sub.remove();
+  }, [refreshNotifPerm]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);

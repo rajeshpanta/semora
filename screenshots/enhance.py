@@ -7,7 +7,9 @@ from google.genai import types
 from PIL import Image
 import sys, os, io, time
 
-API_KEY = "AIzaSyARpanOjtuMrIXXhYNr8yHuIwYyhkMSJj4"
+API_KEY = os.environ.get("GEMINI_API_KEY")
+if not API_KEY:
+    sys.exit("GEMINI_API_KEY env var is required. Export it before running this script — never hardcode the key here. (The previous hardcoded key was auto-revoked by Google after it was pushed to GitHub.)")
 client = genai.Client(api_key=API_KEY)
 
 SCREENSHOTS = [
