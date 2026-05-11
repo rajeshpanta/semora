@@ -41,7 +41,10 @@ export default function PaywallScreen() {
   const setSubscriptionPlan = useAppStore((s) => s.setSubscriptionPlan);
   const colors = useColors();
 
-  const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>('monthly');
+  // Annual is the recommended path — surfaced first in the UI and
+  // pre-selected so the Subscribe button reflects the better-value
+  // option without the user having to tap.
+  const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>('annual');
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [monthlySub, setMonthlySub] = useState<ProductOrSubscription | null>(null);
@@ -187,6 +190,28 @@ export default function PaywallScreen() {
           {/* Plan Selection */}
           <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>CHOOSE YOUR PLAN</Text>
 
+          {/* Annual — first and pre-selected to steer users toward the
+              better-value plan. */}
+          <TouchableOpacity
+            style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.line }, selectedPlan === 'annual' && { backgroundColor: colors.brand50, borderColor: colors.brand }]}
+            onPress={() => setSelectedPlan('annual')}
+            activeOpacity={0.8}
+          >
+            <View style={styles.planRadio}>
+              <View style={[styles.radioOuter, { borderColor: colors.ink3 }, selectedPlan === 'annual' && { borderColor: colors.brand }]}>
+                {selectedPlan === 'annual' && <View style={[styles.radioInner, { backgroundColor: colors.brand }]} />}
+              </View>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.planName, { color: colors.ink }]}>Annual</Text>
+              <Text style={[styles.planPrice, { color: colors.ink }]}>{annualPrice}<Text style={[styles.planPeriod, { color: colors.ink2 }]}>/year</Text></Text>
+              <Text style={[styles.planSub, { color: colors.ink3 }]}>Just $1.67/month</Text>
+            </View>
+            <View style={[styles.saveBadge, { backgroundColor: colors.teal }]}>
+              <Text style={styles.saveBadgeText}>SAVE 58%</Text>
+            </View>
+          </TouchableOpacity>
+
           {/* Monthly */}
           <TouchableOpacity
             style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.line }, selectedPlan === 'monthly' && { backgroundColor: colors.brand50, borderColor: colors.brand }]}
@@ -208,27 +233,6 @@ export default function PaywallScreen() {
                 <Text style={styles.trialBadgeText}>FREE TRIAL</Text>
               </View>
             )}
-          </TouchableOpacity>
-
-          {/* Annual */}
-          <TouchableOpacity
-            style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.line }, selectedPlan === 'annual' && { backgroundColor: colors.brand50, borderColor: colors.brand }]}
-            onPress={() => setSelectedPlan('annual')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.planRadio}>
-              <View style={[styles.radioOuter, { borderColor: colors.ink3 }, selectedPlan === 'annual' && { borderColor: colors.brand }]}>
-                {selectedPlan === 'annual' && <View style={[styles.radioInner, { backgroundColor: colors.brand }]} />}
-              </View>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.planName, { color: colors.ink }]}>Annual</Text>
-              <Text style={[styles.planPrice, { color: colors.ink }]}>{annualPrice}<Text style={[styles.planPeriod, { color: colors.ink2 }]}>/year</Text></Text>
-              <Text style={[styles.planSub, { color: colors.ink3 }]}>Just $1.67/month</Text>
-            </View>
-            <View style={[styles.saveBadge, { backgroundColor: colors.teal }]}>
-              <Text style={styles.saveBadgeText}>SAVE 58%</Text>
-            </View>
           </TouchableOpacity>
 
           {/* CTA */}
