@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -100,6 +100,22 @@ export default function SettingsScreen() {
             icon="th-large"
             label="Widgets"
             onPress={() => router.push('/settings/widgets')}
+            last
+          />
+        </View>
+
+        {/* Legal — Apple requires Terms + Privacy to be reachable outside the paywall. */}
+        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Legal</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <SettingsRow
+            icon="file-text-o"
+            label="Terms of Service"
+            onPress={() => Linking.openURL('https://rajeshpanta.github.io/semora/terms.html')}
+          />
+          <SettingsRow
+            icon="shield"
+            label="Privacy Policy"
+            onPress={() => Linking.openURL('https://rajeshpanta.github.io/semora/privacy.html')}
             last
           />
         </View>

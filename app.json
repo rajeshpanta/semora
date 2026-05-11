@@ -57,7 +57,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Semora accesses your photo library so you can select existing images of your syllabus to import. For example, choose a saved screenshot of your course syllabus and Semora will extract assignments, exam dates, and due dates into your semester calendar.",
-          "cameraPermission": "Semora uses your camera to take photos of printed or paper syllabus pages. For example, snap a photo of your professor's printed syllabus and Semora will automatically extract assignments, exam dates, and due dates into your semester calendar."
+          "cameraPermission": "Semora uses your camera to take photos of printed or paper syllabus pages. For example, snap a photo of your professor's printed syllabus and Semora will automatically extract assignments, exam dates, and due dates into your semester calendar.",
+          "microphonePermission": false
         }
       ],
       "expo-document-picker",
