@@ -71,7 +71,9 @@ export default function PaywallScreen() {
         const { data: { session: endSession } } = await supabase.auth.getSession();
         if (endSession?.user.id !== expectedUserId) {
           setLoading(false);
-          return;
+          // Don't finish the transaction — let StoreKit redeliver it
+          // once the right account is signed in.
+          return false;
         }
         setIsPro(entitlement.is_pro);
         setSubscriptionPlan(entitlement.plan);
@@ -79,12 +81,25 @@ export default function PaywallScreen() {
         if (entitlement.is_pro) {
           if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           handleClose();
-        } else {
-          Alert.alert(
-            'Verification Pending',
-            'Your purchase went through but we couldn\'t verify it with the App Store yet. Tap Restore in a moment to retry.',
-          );
+          // Only ack the StoreKit transaction once the server entitlement
+          // is written. Otherwise a crash here would charge the user
+          // without granting Pro.
+          return true;
         }
+        if (entitlement.restoreError === 'linked_other_account') {
+          Alert.alert(
+            'Subscription Linked Elsewhere',
+            'This subscription is linked to a different Semora account. Sign in to that account to use Pro on this device, or contact support if it no longer exists.',
+          );
+          // Terminal: retrying on this account will never succeed, so
+          // ack the receipt instead of looping it every launch.
+          return true;
+        }
+        Alert.alert(
+          'Verification Pending',
+          'Your purchase went through but we couldn\'t verify it with the App Store yet. Tap Restore in a moment to retry.',
+        );
+        return false;
       },
       () => { setLoading(false); },
     );

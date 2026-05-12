@@ -97,6 +97,41 @@ export function formatMeetings(
     .join(' · ');
 }
 
+/** Office hours variant: same as formatMeetings, plus a "By appointment"
+ *  line for rows whose days_of_week is null (the Gemini parser emits
+ *  these when a syllabus says office hours are by appointment only, and
+ *  the UI must surface them rather than filtering them out as empty).
+ *  Multiple by-appointment rows collapse to a single label. */
+export function formatOfficeHours(
+  rows:
+    | ReadonlyArray<{
+        days_of_week: number[] | null;
+        start_time: string | null;
+        end_time: string | null;
+      }>
+    | null
+    | undefined,
+): string | null {
+  if (!rows || rows.length === 0) return null;
+  const parts: string[] = [];
+  if (rows.some((r) => r.days_of_week === null)) {
+    parts.push('By appointment');
+  }
+  const scheduled = rows
+    .filter(
+      (r): r is { days_of_week: number[]; start_time: string | null; end_time: string | null } =>
+        Array.isArray(r.days_of_week) && r.days_of_week.length > 0,
+    )
+    .map((r) => ({
+      days_of_week: r.days_of_week,
+      start_time: r.start_time,
+      end_time: r.end_time,
+    }));
+  const scheduledText = formatMeetings(scheduled);
+  if (scheduledText) parts.push(scheduledText);
+  return parts.length > 0 ? parts.join(' · ') : null;
+}
+
 /** Parse "HH:MM[:SS]" into a Date with today's date and the given time.
  *  The date portion is meaningless — only used to feed time-mode pickers. */
 export function timeStringToDate(t: string | null | undefined): Date | null {

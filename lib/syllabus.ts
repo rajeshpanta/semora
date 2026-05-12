@@ -244,18 +244,48 @@ async function findOrCreateCourse(
     ? `${courseCode} - ${courseName.replace(courseCode, '').replace(/^[\s\-–—]+/, '').trim() || courseName}`
     : courseName;
 
-  // Check if a course with similar name exists in this semester
-  const searchTerm = (courseCode || courseName).replace(/[%_]/g, '\\$&');
-  const { data: existing } = await supabase
-    .from('courses')
-    .select('id, name')
-    .eq('user_id', userId)
-    .eq('semester_id', semesterId)
-    .ilike('name', `%${searchTerm}%`)
-    .limit(1);
+  // Find an existing course in this semester that represents the same
+  // class. The previous version used `ilike '%term%'`, which falsely
+  // matched "CS 10" against an existing "CS 101" and dropped every
+  // freshly-extracted task on the floor under the "Course Already
+  // Exists" dialog. Match the code as a prefix and then verify the
+  // next character is a non-alphanumeric boundary so we don't conflate
+  // adjacent course numbers.
+  const trimmedCode = courseCode?.trim();
+  const trimmedCourseName = courseName.trim();
+  const escapeLike = (s: string) => s.replace(/[%_\\]/g, '\\$&');
 
-  if (existing && existing.length > 0) {
-    return { courseId: existing[0].id, courseName: existing[0].name, isExisting: true };
+  let existing: { id: string; name: string } | null = null;
+  if (trimmedCode) {
+    const { data } = await supabase
+      .from('courses')
+      .select('id, name')
+      .eq('user_id', userId)
+      .eq('semester_id', semesterId)
+      .ilike('name', `${escapeLike(trimmedCode)}%`);
+    const codeLower = trimmedCode.toLowerCase();
+    existing = (data ?? []).find((c) => {
+      const lower = c.name.toLowerCase();
+      if (!lower.startsWith(codeLower)) return false;
+      const nextChar = lower.charAt(codeLower.length);
+      // Match only at a word boundary: end-of-string or a separator
+      // (space, dash, colon). Rejects "CS 101" when searching "CS 10".
+      return nextChar === '' || !/[a-z0-9]/i.test(nextChar);
+    }) ?? null;
+  } else {
+    // No course code — fall back to case-insensitive exact-name match.
+    const { data } = await supabase
+      .from('courses')
+      .select('id, name')
+      .eq('user_id', userId)
+      .eq('semester_id', semesterId)
+      .ilike('name', escapeLike(trimmedCourseName))
+      .limit(1);
+    existing = data?.[0] ?? null;
+  }
+
+  if (existing) {
+    return { courseId: existing.id, courseName: existing.name, isExisting: true };
   }
 
   // Check course limit for free users before creating

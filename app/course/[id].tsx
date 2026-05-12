@@ -21,7 +21,7 @@ import { COURSE_COLORS, COURSE_ICONS, COLORS, calculateGrade, DEFAULT_GRADE_SCAL
 import type { GradeThreshold } from '@/types/database';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
-import { formatMeetings } from '@/lib/schedule';
+import { formatMeetings, formatOfficeHours } from '@/lib/schedule';
 
 export default function CourseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -54,6 +54,12 @@ export default function CourseDetailScreen() {
   // Office hours reuse the same block shape; ScheduleBlock.kind is
   // ignored on save since the office hours table has no kind column.
   const [editOfficeHourBlocks, setEditOfficeHourBlocks] = useState<ScheduleBlock[]>([]);
+  // IDs of office-hour rows that loaded with days_of_week=null
+  // ("by appointment"). The editor coerces null → [] for chip rendering;
+  // we use this set on save to write null back instead of [], otherwise
+  // editing only the time on a by-appointment row silently destroys the
+  // "by appointment" state and the chip stops rendering.
+  const [byAppointmentIds, setByAppointmentIds] = useState<Set<string>>(new Set());
   const [editingScale, setEditingScale] = useState(false);
   const [scaleRows, setScaleRows] = useState<GradeThreshold[]>([]);
 
@@ -91,6 +97,13 @@ export default function CourseDetailScreen() {
         end_time: o.end_time,
         kind: 'lecture' as const, // ignored on save
       })),
+    );
+    setByAppointmentIds(
+      new Set(
+        (course.course_office_hours ?? [])
+          .filter((o) => o.days_of_week === null)
+          .map((o) => o.id),
+      ),
     );
     setEditing(true);
   };
@@ -190,6 +203,11 @@ export default function CourseDetailScreen() {
         );
       });
 
+      // For rows that started life as "by appointment" (null days),
+      // round-trip null back to the DB rather than the editor's [] —
+      // see byAppointmentIds above.
+      const persistedDays = (id: string, days: number[]): number[] | null =>
+        byAppointmentIds.has(id) && days.length === 0 ? null : days;
       const ohOps: Promise<unknown>[] = [
         ...ohToCreate.map((m) =>
           createOfficeHours.mutateAsync({
@@ -202,7 +220,7 @@ export default function CourseDetailScreen() {
         ...ohToUpdate.map((m) =>
           updateOfficeHours.mutateAsync({
             id: m.id,
-            days_of_week: m.days_of_week,
+            days_of_week: persistedDays(m.id, m.days_of_week),
             start_time: m.start_time,
             end_time: m.end_time,
           }),
@@ -322,13 +340,7 @@ export default function CourseDetailScreen() {
         {/* Course details — always show, tap empty card to edit. */}
         {!editing && (() => {
           const scheduleText = formatMeetings(course.course_meetings);
-          const officeHoursText = formatMeetings(
-            (course.course_office_hours ?? []).map((o) => ({
-              days_of_week: o.days_of_week ?? [],
-              start_time: o.start_time,
-              end_time: o.end_time,
-            })),
-          );
+          const officeHoursText = formatOfficeHours(course.course_office_hours);
           const hasAnyMeeting = !!scheduleText;
           const hasAnyOfficeHours = !!officeHoursText;
           return (

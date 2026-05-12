@@ -220,12 +220,23 @@ export async function restorePurchases(): Promise<ProEntitlement> {
 }
 
 export function setupPurchaseListeners(
-  onPurchase: (purchase: Purchase) => void,
+  // Return `true` once the purchase has been server-validated and the
+  // user is safely Pro; the listener will then finalize the StoreKit
+  // transaction. Return `false` to leave the transaction unfinished,
+  // in which case StoreKit will redeliver it via this same listener
+  // (or via the launch-time refreshProStatus flow) on the next attempt.
+  // Finalizing before validation is unsafe: a crash between
+  // finishTransaction and the entitlement write would leave the user
+  // charged but with no entitlement row, since iOS would drop the
+  // unfinished receipt on its next purge.
+  onPurchase: (purchase: Purchase) => Promise<boolean>,
   onError: (error: PurchaseError) => void,
 ): () => void {
   const updateSub: EventSubscription = purchaseUpdatedListener(async (p: Purchase) => {
-    await finishTransaction({ purchase: p }).catch(() => {});
-    onPurchase(p);
+    const validated = await onPurchase(p).catch(() => false);
+    if (validated) {
+      await finishTransaction({ purchase: p }).catch(() => {});
+    }
   });
   const errorSub: EventSubscription = purchaseErrorListener(onError);
   return () => {

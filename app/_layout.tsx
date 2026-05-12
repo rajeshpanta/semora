@@ -99,9 +99,17 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       async () => {
         const { data: { session: startSession } } = await supabase.auth.getSession();
         const expectedUserId = startSession?.user.id;
-        if (!expectedUserId) return;
+        // No signed-in user — leave the StoreKit transaction pending so
+        // it gets re-delivered after sign-in instead of being lost.
+        if (!expectedUserId) return false;
         const entitlement = await validateProEntitlement();
         await writeEntitlementIfStillCurrent(expectedUserId, entitlement);
+        // Ack the StoreKit transaction once it has reached a terminal
+        // state: either Pro is granted, or the receipt is bound to a
+        // different Semora account (no retry on this device will help).
+        // Transient failures (network, 5xx) leave the transaction
+        // pending so StoreKit redelivers it on the next launch.
+        return entitlement.is_pro || entitlement.restoreError === 'linked_other_account';
       },
       () => {},
     );

@@ -109,9 +109,9 @@ export default function MeScreen() {
                   <Text style={styles.proPricePeriod}>/year · cancel any time</Text>
                 </View>
                 <View style={styles.proButton}>
-                  <Text style={[styles.proButtonText, { color: colors.ink }]}>Try 7 days free</Text>
+                  <Text style={[styles.proButtonText, { color: colors.ink }]}>Upgrade to Pro</Text>
                 </View>
-                <Text style={styles.proAlt}>Or $3.99/month · restore purchase</Text>
+                <Text style={styles.proAlt}>Or $3.99/month with 7-day free trial</Text>
               </>
             )}
           </View>
