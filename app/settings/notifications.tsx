@@ -140,7 +140,7 @@ export default function NotificationSettings() {
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <ToggleRow
             label="Same day"
-            subtitle="Morning of the due date"
+            subtitle="Morning of, plus a last call before the deadline"
             value={prefs.reminder_same_day}
             onToggle={() => toggle('reminder_same_day')}
           />

@@ -20,6 +20,7 @@ import { COLORS, FONTS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { displayName } from '@/lib/user';
 import { formatTimeOfDay, classTimeStatus } from '@/lib/schedule';
+import { updateTodayWidget } from '@/lib/widgetBridge';
 
 // Max overdue rows shown before collapsing into a "Show N more" expander.
 // 5 covers the typical case (0–3) without truncating; only kicks in when
@@ -183,6 +184,15 @@ export default function TodayScreen() {
     setRefreshing(true);
     qc.invalidateQueries().then(() => setRefreshing(false));
   }, []);
+
+  // Keep the home-screen widget in sync with "what's next". Fires on every
+  // app open and whenever the due-soon window changes (import, complete,
+  // delete) — best-effort, never user-visible on failure.
+  useEffect(() => {
+    const ts = format(new Date(), 'yyyy-MM-dd');
+    const tm = format(addDays(new Date(), 1), 'yyyy-MM-dd');
+    updateTodayWidget(dueSoonTasks, ts, tm);
+  }, [dueSoonTasks]);
 
   // Ask for an App Store rating at a genuine happy moment. `ahaPaywallShown`
   // is only set after a successful first import, so reaching here means the

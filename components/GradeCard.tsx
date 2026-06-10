@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { COLORS, FONTS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 
@@ -80,6 +81,115 @@ export function GradeCard({ percentage, letter, gradedCount, totalCount, weightA
     </View>
   );
 }
+
+/* ─────────────────────────────────────────────────────────────────────
+ * What-if calculator: "what average do I need on the REMAINING work to
+ * land each letter grade?" Built entirely from data the syllabus scan
+ * already extracted (weights + grade scale) — Power Planner's most-loved
+ * feature, and our paywall already promises "Grade Forecasting".
+ *
+ * Math (consistent with calculateGrade):
+ *   earnedPoints = Σ(weight × score / 100)   — points banked so far
+ *   remaining    = weightTotal − weightAttempted
+ *   final% if remaining averages r:  (earnedPoints + r/100 × remaining) / weightTotal × 100
+ *   required r for target T:         (T/100 × weightTotal − earnedPoints) / remaining × 100
+ * ──────────────────────────────────────────────────────────────────── */
+
+export function WhatIfCard({
+  earnedPoints, weightAttempted, weightTotal, scale, isPro, onUpgrade,
+}: {
+  earnedPoints: number;
+  weightAttempted: number;
+  weightTotal: number;
+  scale: { letter: string; min: number }[];
+  isPro: boolean;
+  onUpgrade: () => void;
+}) {
+  const colors = useColors();
+
+  // Meaningless until at least one grade exists; hidden when weights
+  // were never set up.
+  if (weightTotal <= 0 || weightAttempted <= 0) return null;
+  const remaining = Math.max(0, weightTotal - weightAttempted);
+  const targets = [...scale].sort((a, b) => b.min - a.min).filter((g) => g.min > 0);
+  if (targets.length === 0) return null;
+
+  // Pro gate — teaser that sells the exact value, taps to paywall.
+  if (!isPro) {
+    return (
+      <TouchableOpacity style={[wiStyles.wrap, { borderTopColor: colors.line }]} onPress={onUpgrade} activeOpacity={0.75}>
+        <View style={wiStyles.headRow}>
+          <Text style={[wiStyles.title, { color: colors.ink }]}>What do I need?</Text>
+          <View style={[wiStyles.proPill, { backgroundColor: colors.brand }]}>
+            <Text style={wiStyles.proPillText}>PRO</Text>
+          </View>
+        </View>
+        <Text style={[wiStyles.teaser, { color: colors.ink3 }]}>
+          See the exact average you need on your remaining {Math.round(remaining)}% of coursework to land an
+          {' '}{targets[0].letter} — or any grade. Computed from this course{'’'}s real weights.
+        </Text>
+      </TouchableOpacity>
+    );
+  }
+
+  if (remaining < 0.5) {
+    return (
+      <View style={[wiStyles.wrap, { borderTopColor: colors.line }]}>
+        <Text style={[wiStyles.title, { color: colors.ink }]}>What do I need?</Text>
+        <Text style={[wiStyles.teaser, { color: colors.ink3 }]}>
+          All weighted work is graded — your final grade is locked in.
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[wiStyles.wrap, { borderTopColor: colors.line }]}>
+      <View style={wiStyles.headRow}>
+        <Text style={[wiStyles.title, { color: colors.ink }]}>What do I need?</Text>
+        <Text style={[wiStyles.remainingNote, { color: colors.ink3 }]}>{Math.round(remaining)}% still to play for</Text>
+      </View>
+      {targets.map((g) => {
+        const required = ((g.min / 100) * weightTotal - earnedPoints) / remaining * 100;
+        let label: string;
+        let tone: string;
+        if (required <= 0) {
+          label = 'Locked in';
+          tone = colors.teal;
+        } else if (required <= 100) {
+          label = `avg ${Math.ceil(required)}% on the rest`;
+          tone = required > 90 ? colors.coral : colors.ink2;
+        } else {
+          label = 'Out of reach';
+          tone = colors.ink3;
+        }
+        return (
+          <View key={g.letter} style={wiStyles.row}>
+            <Text style={[wiStyles.rowLetter, { color: colors.ink }]}>{g.letter}</Text>
+            <Text style={[wiStyles.rowMin, { color: colors.ink3 }]}>{g.min}%+</Text>
+            <View style={{ flex: 1 }} />
+            {required <= 0 && <FontAwesome name="check" size={11} color={colors.teal} style={{ marginRight: 5 }} />}
+            <Text style={[wiStyles.rowReq, { color: tone }]}>{label}</Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+const wiStyles = StyleSheet.create({
+  wrap: { borderTopWidth: 0.5, marginTop: 14, paddingTop: 12 },
+  headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
+  title: { fontFamily: FONTS.displaySemibold, fontSize: 16 },
+  remainingNote: { fontSize: 11.5, fontWeight: '600' },
+  proPill: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5 },
+  proPillText: { fontSize: 9, fontWeight: '800', color: '#fff', letterSpacing: 0.6 },
+  teaser: { fontSize: 13, lineHeight: 18, marginTop: 2 },
+  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
+  rowLetter: { fontSize: 14.5, fontWeight: '800', width: 30 },
+  rowMin: { fontSize: 12, fontWeight: '500' },
+  rowReq: { fontSize: 13.5, fontWeight: '700' },
+});
 
 const styles = StyleSheet.create({
   container: { marginBottom: 4 },

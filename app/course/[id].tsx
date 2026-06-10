@@ -15,7 +15,7 @@ import {
   useLatestSyllabus,
 } from '@/lib/queries';
 import { TaskItem } from '@/components/TaskItem';
-import { GradeCard } from '@/components/GradeCard';
+import { GradeCard, WhatIfCard } from '@/components/GradeCard';
 import { ScheduleEditor, type ScheduleBlock, isNewBlock } from '@/components/ScheduleEditor';
 import { COURSE_COLORS, COURSE_ICONS, COLORS, FONTS, calculateGrade, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import type { GradeThreshold } from '@/types/database';
@@ -70,7 +70,7 @@ export default function CourseDetailScreen() {
   // Grade calculation
   const gradeScale = course.grade_scale || DEFAULT_GRADE_SCALE;
   const gradeTasks = tasks.map((t) => ({ weight: t.weight, score: t.score, is_extra_credit: t.is_extra_credit }));
-  const { percentage, letter, weightAttempted, weightTotal } = calculateGrade(gradeTasks, gradeScale as GradeThreshold[]);
+  const { percentage, letter, weightAttempted, weightTotal, earnedPoints } = calculateGrade(gradeTasks, gradeScale as GradeThreshold[]);
   const gradedCount = tasks.filter((t) => t.score != null).length;
 
   const startEdit = () => {
@@ -402,6 +402,19 @@ export default function CourseDetailScreen() {
         {/* Grade summary */}
         <View style={[styles.gradeCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <GradeCard percentage={percentage} letter={letter} gradedCount={gradedCount} totalCount={tasks.length} weightAttempted={weightAttempted} weightTotal={weightTotal} />
+
+          {/* What-if forecast — the "what do I need on the final?" answer,
+              from the weights the scan already extracted. Pro feature
+              (paywall promises "Grade Forecasting"); free users get a
+              teaser that routes to the paywall. */}
+          <WhatIfCard
+            earnedPoints={earnedPoints}
+            weightAttempted={weightAttempted}
+            weightTotal={weightTotal}
+            scale={gradeScale as GradeThreshold[]}
+            isPro={isPro}
+            onUpgrade={() => router.push('/paywall' as any)}
+          />
 
           {/* Grade scale — Pro only */}
           {isPro ? (

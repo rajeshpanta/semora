@@ -20,6 +20,11 @@
       "buildNumber": "10",
       "appleTeamId": "7T9897GFKH",
       "usesAppleSignIn": true,
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.rajeshpanta.syllabussnap"
+        ]
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -30,6 +35,7 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
+      "@bacons/apple-targets",
       "expo-router",
       "expo-secure-store",
       "expo-localization",

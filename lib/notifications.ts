@@ -148,6 +148,36 @@ export async function scheduleTaskReminders(
     });
   }
 
+  // "Last call" — a second same-day nudge so a single alert isn't the only
+  // line of defense (the most-requested reminder feature in this category:
+  // "keep nudging me until it's done"). Free tier: it's same-day-scoped,
+  // matching the free promise. cancelTaskReminders matches on data.taskId,
+  // so these are cleaned up with the rest.
+  //   - timed tasks:    2 hours before the deadline ("due in 2 hours")
+  //   - end-of-day:     7 PM ("due tonight"), complementing the 9 AM one
+  if (preferences.reminder_same_day) {
+    const lastCall = dueTime
+      ? new Date(year, month - 1, day, hour, minute - 120, 0)
+      : new Date(year, month - 1, day, 19, 0, 0);
+    const lastCallBody = dueTime
+      ? `${taskTitle} is due in 2 hours`
+      : `${taskTitle} is due tonight`;
+    if (lastCall > now) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `⏰ ${courseName}`,
+          body: lastCallBody,
+          data: { taskId },
+          sound: true,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: lastCall,
+        },
+      });
+    }
+  }
+
   await pruneToCapIfNeeded();
 }
 

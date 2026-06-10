@@ -172,11 +172,11 @@ export default function WidgetsSettings() {
             </View>
             <Text style={styles.heroTitle}>Home Screen Widgets</Text>
             <View style={styles.comingSoonBadge}>
-              <FontAwesome name="clock-o" size={11} color="#fff" />
-              <Text style={styles.comingSoonText}>Coming Soon</Text>
+              <FontAwesome name="check-circle" size={11} color="#fff" />
+              <Text style={styles.comingSoonText}>Up Next is live</Text>
             </View>
             <Text style={styles.heroSub}>
-              We're building native widgets so you can see tasks, grades, and deadlines right from your home screen.
+              Long-press your Home Screen → tap + → search "Semora" to add the Up Next widget. More widgets are on the way.
             </Text>
           </LinearGradient>
         </View>
@@ -210,7 +210,7 @@ export default function WidgetsSettings() {
         <View style={styles.footerInfo}>
           <View style={styles.footerRow}>
             <FontAwesome name="star" size={11} color={colors.brand} />
-            <Text style={[styles.footerText, { color: colors.ink3 }]}>Widgets will be available in a future update</Text>
+            <Text style={[styles.footerText, { color: colors.ink3 }]}>Up Next (small & medium) is available now — more widget types coming</Text>
           </View>
           <View style={styles.footerRow}>
             <FontAwesome name="wifi" size={11} color={colors.ink3} />
