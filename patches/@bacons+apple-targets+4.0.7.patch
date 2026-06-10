@@ -1,0 +1,49 @@
+diff --git a/node_modules/@bacons/apple-targets/build/with-xcode-changes.js b/node_modules/@bacons/apple-targets/build/with-xcode-changes.js
+index 343bcb9..7a877ec 100644
+--- a/node_modules/@bacons/apple-targets/build/with-xcode-changes.js
++++ b/node_modules/@bacons/apple-targets/build/with-xcode-changes.js
+@@ -207,20 +207,35 @@ async function applyXcodeChanges(config, project, props) {
+         }
+     }
+     if (targetToUpdate) {
+-        // Remove existing build phases
+-        targetToUpdate.props.buildConfigurationList.props.buildConfigurations.forEach((config) => {
++        // PATCH(semora): the original code re-read
++        // targetToUpdate.props.buildConfigurationList AFTER removing its
++        // references, which resolves to undefined on incremental prebuilds
++        // (a second pass over an existing project — exactly what EAS's
++        // "Configure Xcode project" phase does) and crashed with
++        // "Cannot read properties of undefined (reading 'removeFromProject')".
++        // Snapshot the list/configs up front and guard every access.
++        const existingConfigList = targetToUpdate.props.buildConfigurationList;
++        const existingConfigs = existingConfigList && existingConfigList.props && existingConfigList.props.buildConfigurations
++            ? [...existingConfigList.props.buildConfigurations]
++            : [];
++        existingConfigs.forEach((config) => {
++            if (!config)
++                return;
+             config.getReferrers().forEach((ref) => {
+                 ref.removeReference(config.uuid);
+             });
+             config.removeFromProject();
+         });
+-        // Remove existing build configuration list
+-        targetToUpdate.props.buildConfigurationList
+-            .getReferrers()
+-            .forEach((ref) => {
+-            ref.removeReference(targetToUpdate.props.buildConfigurationList.uuid);
+-        });
+-        targetToUpdate.props.buildConfigurationList.removeFromProject();
++        if (existingConfigList) {
++            existingConfigList
++                .getReferrers()
++                .forEach((ref) => {
++                ref.removeReference(existingConfigList.uuid);
++            });
++            if (typeof existingConfigList.removeFromProject === "function") {
++                existingConfigList.removeFromProject();
++            }
++        }
+         // Create new build phases
+         targetToUpdate.props.buildConfigurationList =
+             (0, configuration_list_1.createConfigurationListForType)(project, props);
