@@ -24,6 +24,12 @@ export const PRODUCT_IDS = {
 const ALL_SKUS = [PRODUCT_IDS.monthly, PRODUCT_IDS.annual];
 
 let connected = false;
+// The native layer resolves a SKU's purchase TYPE from a cache that only
+// fetchProducts populates. Requesting a subscription before a successful
+// fetch makes iOS treat it as an in-app product and fail (silently, via
+// the error listener). Track fetch success so purchaseProduct can warm
+// the cache first.
+let productsFetched = false;
 
 export async function initIAP(): Promise<void> {
   if (Platform.OS === 'web' || connected) return;
@@ -60,6 +66,7 @@ export async function getProducts(): Promise<{
     // falls back to hardcoded prices (wrong for other storefronts).
     const products = await fetchProducts({ skus: ALL_SKUS, type: 'subs' });
     if (!products) return null;
+    productsFetched = products.length > 0;
     return {
       monthly: products.find((p) => p.id === PRODUCT_IDS.monthly) ?? null,
       annual: products.find((p) => p.id === PRODUCT_IDS.annual) ?? null,
@@ -78,6 +85,15 @@ export async function purchaseProduct(productId: string): Promise<boolean> {
     await initIAP();
     if (!connected) {
       throw new Error('Cannot reach the App Store right now. Please try again in a moment.');
+    }
+  }
+  // Warm the native product cache so the SKU is known as a SUBSCRIPTION
+  // before we request it (see productsFetched note above). Without this,
+  // a paywall opened before products loaded bought nothing, silently.
+  if (!productsFetched) {
+    await getProducts();
+    if (!productsFetched) {
+      throw new Error('Could not load subscription details from the App Store. Please try again in a moment.');
     }
   }
   try {

@@ -114,7 +114,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         // pending so StoreKit redelivers it on the next launch.
         return entitlement.is_pro || entitlement.restoreError === 'linked_other_account';
       },
-      () => {},
+      // Background listener: no UI here (alerts at random moments would be
+      // jarring) — the paywall's own listener surfaces user-facing errors.
+      (err: any) => { console.warn('[IAP] purchase error:', err?.code, err?.message); },
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {

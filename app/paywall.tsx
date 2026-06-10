@@ -119,7 +119,17 @@ export default function PaywallScreen() {
         );
         return false;
       },
-      () => { setLoading(false); },
+      (err: any) => {
+        // The native layer reports purchase failures through THIS channel
+        // (the request promise still resolves) — swallowing them made the
+        // Subscribe button look dead. Surface everything except the user
+        // closing the payment sheet themselves.
+        setLoading(false);
+        const code = err?.code;
+        if (code !== 'user-cancelled' && code !== 'E_USER_CANCELLED') {
+          Alert.alert('Purchase Failed', err?.message ?? 'Something went wrong. Please try again.');
+        }
+      },
     );
 
     return removeSubs;
