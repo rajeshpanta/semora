@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { signIn, signUp, signInWithApple, signInWithGoogle, isAppleSignInAvailable } from '@/lib/auth';
+import { signIn, signInWithApple, signInWithGoogle, isAppleSignInAvailable } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
@@ -26,10 +26,11 @@ export default function SignInScreen() {
   const banner = useAppStore((s) => s.postSignupBanner);
 
   // New installs land here straight from onboarding, so account CREATION
-  // is the default framing; returning users switch with one tap. Before
-  // this, the screen was sign-in-only — there was literally no email
-  // sign-up path in the app. A live banner (email-confirm pending, or
-  // password just reset) means the account already exists → sign-in mode.
+  // is the default framing. By policy, accounts are created ONLY via
+  // Apple/Google OAuth — there is deliberately no email sign-up. The
+  // email/password form is a sign-in-only path for existing accounts,
+  // revealed by the mode toggle. A live banner (email-confirm pending,
+  // or password just reset) means the account exists → sign-in mode.
   const [mode, setMode] = useState<'signup' | 'signin'>(
     useAppStore.getState().postSignupBanner ? 'signin' : 'signup',
   );
@@ -111,47 +112,6 @@ export default function SignInScreen() {
     }
   };
 
-  const handleSignUp = async () => {
-    setError('');
-    setErrorType('');
-
-    if (!email.trim()) {
-      setError('Please enter your email address.');
-      setErrorType('generic');
-      return;
-    }
-    if (!password || password.length < 6) {
-      setError('Please choose a password with at least 6 characters.');
-      setErrorType('generic');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { needsConfirm } = await signUp(email.trim(), password);
-      if (needsConfirm) {
-        // Confirmation email sent — flip to sign-in framing with the
-        // existing "Account Created / check your email" banner.
-        useAppStore.getState().setPostSignupBanner({ email: email.trim(), needsConfirm: true });
-        setMode('signin');
-        setPassword('');
-      }
-      // With confirmations disabled a session exists now and AuthGate
-      // routes straight into the app — nothing else to do here.
-    } catch (err: any) {
-      if (err?.code === 'email_exists') {
-        setError('An account with this email already exists. Sign in below.');
-        setErrorType('credentials');
-        setMode('signin');
-      } else {
-        setError(err.message || 'Could not create your account. Please try again.');
-        setErrorType('generic');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSignIn = async () => {
     setError('');
     setErrorType('');
@@ -223,9 +183,9 @@ export default function SignInScreen() {
           </View>
 
           <View style={[styles.form, { backgroundColor: colors.card }]}>
-            {/* OAuth buttons — preferred path. Email/password kept below
-                as a fallback during the migration; will be removed once
-                OAuth is verified working. */}
+            {/* OAuth buttons — the ONLY way to create an account (policy:
+                no email sign-up). The email/password form below is
+                sign-in-only, for accounts that already exist. */}
             <View style={styles.oauthGroup}>
               {appleAvailable ? (
                 <AppleAuthentication.AppleAuthenticationButton
@@ -259,16 +219,18 @@ export default function SignInScreen() {
 
               {mode === 'signup' && (
                 <Text style={[styles.oauthHint, { color: colors.ink3 }]}>
-                  One tap — your account is created automatically.
+                  One tap with Apple or Google — your account is created automatically.
                 </Text>
               )}
             </View>
 
-            <View style={styles.divider}>
-              <View style={[styles.dividerLine, { backgroundColor: colors.line }]} />
-              <Text style={[styles.dividerText, { color: colors.ink3 }]}>or</Text>
-              <View style={[styles.dividerLine, { backgroundColor: colors.line }]} />
-            </View>
+            {mode === 'signin' && (
+              <View style={styles.divider}>
+                <View style={[styles.dividerLine, { backgroundColor: colors.line }]} />
+                <Text style={[styles.dividerText, { color: colors.ink3 }]}>or</Text>
+                <View style={[styles.dividerLine, { backgroundColor: colors.line }]} />
+              </View>
+            )}
 
             {banner && !error ? (
               <View style={styles.successBox}>
@@ -321,77 +283,79 @@ export default function SignInScreen() {
               </View>
             ) : null}
 
-            <Text style={[styles.label, { color: colors.ink2 }]}>Email address</Text>
-            <TextInput
-              style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
-              placeholder="you@university.edu"
-              placeholderTextColor={colors.ink3}
-              value={email}
-              onChangeText={(t) => {
-                setEmail(t);
-                if (error) { setError(''); setErrorType(''); }
-              }}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-              returnKeyType="next"
-              textContentType="emailAddress"
-            />
-
-            <Text style={[styles.label, { color: colors.ink2 }]}>Password</Text>
-            <View style={styles.inputWrap}>
-              <TextInput
-                style={[styles.input, styles.inputWithIcon, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
-                placeholder={mode === 'signup' ? 'Choose a password (6+ characters)' : 'Enter your password'}
-                placeholderTextColor={colors.ink3}
-                value={password}
-                onChangeText={(t) => {
-                  setPassword(t);
-                  if (error) { setError(''); setErrorType(''); }
-                }}
-                secureTextEntry={!showPassword}
-                autoComplete={mode === 'signup' ? 'new-password' : 'password'}
-                returnKeyType="done"
-                onSubmitEditing={mode === 'signup' ? handleSignUp : handleSignIn}
-                textContentType={mode === 'signup' ? 'newPassword' : 'password'}
-              />
-              <TouchableOpacity
-                style={styles.eyeBtn}
-                onPress={() => setShowPassword((v) => !v)}
-                activeOpacity={0.6}
-                hitSlop={8}
-              >
-                <FontAwesome name={showPassword ? 'eye-slash' : 'eye'} size={16} color={colors.ink3} />
-              </TouchableOpacity>
-            </View>
-
             {mode === 'signin' && (
-              <Link href="/(auth)/forgot-password" asChild>
-                <TouchableOpacity style={styles.forgotLink} activeOpacity={0.7}>
-                  <Text style={[styles.forgotText, { color: colors.brand }]}>
-                    Forgot password?
-                  </Text>
+              <>
+                <Text style={[styles.label, { color: colors.ink2 }]}>Email address</Text>
+                <TextInput
+                  style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
+                  placeholder="you@university.edu"
+                  placeholderTextColor={colors.ink3}
+                  value={email}
+                  onChangeText={(t) => {
+                    setEmail(t);
+                    if (error) { setError(''); setErrorType(''); }
+                  }}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  returnKeyType="next"
+                  textContentType="emailAddress"
+                />
+
+                <Text style={[styles.label, { color: colors.ink2 }]}>Password</Text>
+                <View style={styles.inputWrap}>
+                  <TextInput
+                    style={[styles.input, styles.inputWithIcon, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
+                    placeholder="Enter your password"
+                    placeholderTextColor={colors.ink3}
+                    value={password}
+                    onChangeText={(t) => {
+                      setPassword(t);
+                      if (error) { setError(''); setErrorType(''); }
+                    }}
+                    secureTextEntry={!showPassword}
+                    autoComplete="password"
+                    returnKeyType="done"
+                    onSubmitEditing={handleSignIn}
+                    textContentType="password"
+                  />
+                  <TouchableOpacity
+                    style={styles.eyeBtn}
+                    onPress={() => setShowPassword((v) => !v)}
+                    activeOpacity={0.6}
+                    hitSlop={8}
+                  >
+                    <FontAwesome name={showPassword ? 'eye-slash' : 'eye'} size={16} color={colors.ink3} />
+                  </TouchableOpacity>
+                </View>
+
+                <Link href="/(auth)/forgot-password" asChild>
+                  <TouchableOpacity style={styles.forgotLink} activeOpacity={0.7}>
+                    <Text style={[styles.forgotText, { color: colors.brand }]}>
+                      Forgot password?
+                    </Text>
+                  </TouchableOpacity>
+                </Link>
+
+                <TouchableOpacity
+                  style={[styles.button, { backgroundColor: colors.brand }, loading && styles.buttonDisabled]}
+                  onPress={handleSignIn}
+                  disabled={loading}
+                  activeOpacity={0.8}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      <FontAwesome name="sign-in" size={16} color="#fff" />
+                      <Text style={styles.buttonText}>Sign In</Text>
+                    </>
+                  )}
                 </TouchableOpacity>
-              </Link>
+              </>
             )}
 
-            <TouchableOpacity
-              style={[styles.button, { backgroundColor: colors.brand }, loading && styles.buttonDisabled]}
-              onPress={mode === 'signup' ? handleSignUp : handleSignIn}
-              disabled={loading}
-              activeOpacity={0.8}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <>
-                  <FontAwesome name={mode === 'signup' ? 'user-plus' : 'sign-in'} size={16} color="#fff" />
-                  <Text style={styles.buttonText}>{mode === 'signup' ? 'Create Account' : 'Sign In'}</Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            {/* Mode toggle — the path that didn't exist before. */}
+            {/* Mode toggle — email form is for EXISTING accounts only. */}
             <TouchableOpacity
               style={styles.modeToggle}
               onPress={() => {
