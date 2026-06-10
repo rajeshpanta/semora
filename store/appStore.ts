@@ -15,9 +15,11 @@ const RESET_KEY = 'semora_reset_in_progress';
 const ONBOARDED_KEY = 'semora_onboarded';
 const AHA_PAYWALL_KEY = 'semora_aha_paywall';
 const REVIEW_REQUESTED_KEY = 'semora_review_requested';
-// Captured during onboarding (before sign-in), so they live on the device.
-// userName personalizes the greeting; defaultTerm pre-fills the first
-// semester's name. Both are best-effort niceties, harmless if stale.
+// Captured during onboarding (before sign-in). userName personalizes the
+// greeting; defaultTerm pre-fills the first semester's name. Unlike the
+// one-time flags above these are USER personalization, not device state —
+// resetUserState clears them on sign-out so user B never gets greeted
+// with user A's name.
 const USER_NAME_KEY = 'semora_user_name';
 const DEFAULT_TERM_KEY = 'semora_default_term';
 
@@ -156,9 +158,17 @@ export const useAppStore = create<AppState>((set) => ({
       subscriptionPlan: null,
       postSignupBanner: null,
       inPasswordReset: false,
+      // Onboarding personalization is user-scoped — clear it so the next
+      // account on this device isn't greeted with the previous user's name
+      // or term. (hasOnboarded/ahaPaywallShown/reviewRequested stay:
+      // those are genuinely device-level one-time flags.)
+      userName: null,
+      defaultTerm: null,
     });
     deleteItem(SEMESTER_KEY);
     deleteItem(RESET_KEY);
+    deleteItem(USER_NAME_KEY);
+    deleteItem(DEFAULT_TERM_KEY);
   },
 }));
 

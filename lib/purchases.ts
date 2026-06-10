@@ -168,7 +168,18 @@ export async function getServerEntitlement(): Promise<ProEntitlement> {
  * Never throws.
  */
 export async function validateProEntitlement(): Promise<ProEntitlement> {
-  if (Platform.OS === 'web' || !connected) return EMPTY_ENTITLEMENT;
+  if (Platform.OS === 'web') return EMPTY_ENTITLEMENT;
+  // Launch-time init can fail (store outage, parental restrictions). A bare
+  // "not pro" here would visibly downgrade a real subscriber on Restore —
+  // retry the connection, and if StoreKit is still unreachable answer from
+  // the server row, marking a negative answer transient (we don't KNOW).
+  if (!connected) {
+    await initIAP();
+    if (!connected) {
+      const fallback = await getServerEntitlement();
+      return fallback.is_pro ? fallback : { ...fallback, transient: true };
+    }
+  }
 
   try {
     // react-native-iap v15 (Nitro) removed Purchase.transactionReceipt.

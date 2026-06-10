@@ -72,11 +72,18 @@ export default function SyllabusReviewScreen() {
   };
 
   const handleSave = async () => {
+    if (saving) return;
     const accepted = items.filter((i) => i.accepted);
     if (accepted.length === 0) {
       Alert.alert('No Items', 'Please accept at least one item to save.');
       return;
     }
+
+    // Disable the button BEFORE any await — the primer below suspends this
+    // function while the button would otherwise still be tappable, and a
+    // second tap would run the whole insert loop twice (duplicate tasks).
+    setSaving(true);
+    Keyboard.dismiss();
 
     // Primed permission ask at the moment of maximum motivation — the user
     // is saving N concrete deadlines. Only when the OS prompt has never
@@ -106,9 +113,6 @@ export default function SyllabusReviewScreen() {
         // Permission check failing should never block the save.
       }
     }
-
-    setSaving(true);
-    Keyboard.dismiss();
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -173,8 +177,11 @@ export default function SyllabusReviewScreen() {
       // Reverse trial: at the peak of value (deadlines just imported), offer
       // Pro once, framed as momentum rather than a block. Only for free users
       // who haven't seen this prompt yet; `replace` so Back doesn't return
-      // here. Everyone else gets the normal confirmation.
-      if (!isPro && !ahaPaywallShown && savedCount > 0) {
+      // here. Requires a FULLY successful save — on partial failure the user
+      // must see the "Saved! (N failed)" alert below, not a paywall that
+      // hides it; the aha flag stays unset so the trial offer fires on the
+      // next complete save instead.
+      if (!isPro && !ahaPaywallShown && savedCount > 0 && savedCount === accepted.length) {
         setAhaPaywallShown(true);
         router.replace({
           pathname: '/paywall',

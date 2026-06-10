@@ -200,10 +200,22 @@ async function findOrCreateSemester(
   endDate: string | null,
 ): Promise<{ semesterId: string; semesterName: string }> {
   // Priority: what the syllabus itself says > the term the user picked
-  // during onboarding > a generic date-based suggestion. Without the
-  // middle step, the onboarding "Which term are you starting?" answer
-  // was never used on the scan path — the one the funnel pushes.
-  const name = semesterName || useAppStore.getState().defaultTerm || suggestCurrentSemesterName();
+  // during onboarding > a generic date-based suggestion. The onboarding
+  // term only applies to the user's VERY FIRST semester — it persists on
+  // the device forever, so without this guard a scan a year later (or by
+  // a second account on the same device) would file tasks under a stale
+  // "Summer 2026" instead of the current term.
+  let onboardingTerm: string | null = null;
+  if (!semesterName) {
+    const { count } = await supabase
+      .from('semesters')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    if ((count ?? 0) === 0) {
+      onboardingTerm = useAppStore.getState().defaultTerm;
+    }
+  }
+  const name = semesterName || onboardingTerm || suggestCurrentSemesterName();
 
   // Check if semester with this name already exists
   const escapedName = name.replace(/[%_]/g, '\\$&');

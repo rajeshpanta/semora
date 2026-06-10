@@ -99,10 +99,14 @@ export default function SignInScreen() {
   };
 
   const handleResend = async () => {
-    if (!banner || resending) return;
+    // Works from the post-signup banner OR from the "email not confirmed"
+    // sign-in error (legacy unconfirmed accounts have no banner — the
+    // typed email is the only address we have).
+    const target = banner?.email || email.trim();
+    if (!target || resending) return;
     setResending(true);
     try {
-      const { error } = await supabase.auth.resend({ type: 'signup', email: banner.email });
+      const { error } = await supabase.auth.resend({ type: 'signup', email: target });
       if (error) throw error;
       Alert.alert('Email sent', 'We resent the confirmation email. Check your inbox and spam folder.');
     } catch (err: any) {
@@ -236,11 +240,16 @@ export default function SignInScreen() {
               <View style={styles.successBox}>
                 <FontAwesome name="check-circle" size={15} color="#16a34a" />
                 <View style={styles.errorContent}>
-                  <Text style={styles.successTitle}>Account Created</Text>
+                  {/* With email sign-up removed (OAuth-only policy), a
+                      needsConfirm:false banner can only come from the
+                      password-reset flow — title it accordingly. */}
+                  <Text style={styles.successTitle}>
+                    {banner.needsConfirm ? 'Account Created' : 'Password Updated'}
+                  </Text>
                   <Text style={styles.successText}>
                     {banner.needsConfirm
                       ? 'Check your email for a confirmation link, then sign in below.'
-                      : 'Welcome to Semora! Sign in with your new credentials.'}
+                      : 'Sign in below with your new password.'}
                   </Text>
                   {banner.needsConfirm && (
                     <TouchableOpacity onPress={handleResend} disabled={resending} activeOpacity={0.7}>
@@ -279,6 +288,13 @@ export default function SignInScreen() {
                   >
                     {error}
                   </Text>
+                  {errorType === 'confirm' && (
+                    <TouchableOpacity onPress={handleResend} disabled={resending} activeOpacity={0.7}>
+                      <Text style={styles.successLink}>
+                        {resending ? 'Sending...' : 'Resend confirmation email'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
             ) : null}

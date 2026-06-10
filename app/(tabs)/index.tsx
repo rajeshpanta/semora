@@ -163,7 +163,12 @@ export default function TodayScreen() {
   const refreshNotifPerm = useCallback(() => {
     if (Platform.OS === 'web') return;
     Notifications.getPermissionsAsync()
-      .then(({ status }) => setNotifPermDenied(status !== 'granted'))
+      // Only true DENIED shows the banner. 'undetermined' (fresh install,
+      // OS prompt never shown) must NOT: the banner's openSettings() leads
+      // to a Settings page with no Notifications row until the app has
+      // requested authorization once — a dead-end. Those users get the
+      // primed ask during their first syllabus save instead.
+      .then(({ status }) => setNotifPermDenied(status === 'denied'))
       .catch(() => {});
   }, []);
   useFocusEffect(refreshNotifPerm);

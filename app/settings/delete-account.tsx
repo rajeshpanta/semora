@@ -28,8 +28,8 @@ const OAUTH_CANCEL_CODES = new Set([
  * errors (no biometric hardware AND no passcode set, etc.) so the caller
  * can decide whether to fall through to a different verification path.
  */
-async function verifyDeviceOwner(): Promise<boolean> {
-  if (Platform.OS === 'web') return true;
+async function verifyDeviceOwner(): Promise<{ verified: boolean; reason: 'ok' | 'cancelled' | 'unavailable' }> {
+  if (Platform.OS === 'web') return { verified: true, reason: 'ok' };
   const hasHardware = await LocalAuthentication.hasHardwareAsync();
   if (!hasHardware) {
     throw new Error('This device does not support biometric verification.');
@@ -41,7 +41,15 @@ async function verifyDeviceOwner(): Promise<boolean> {
     disableDeviceFallback: false,
     requireConfirmation: false,
   });
-  return result.success;
+  if (result.success) return { verified: true, reason: 'ok' };
+  // success:false is NOT only user-cancel: expo-local-authentication
+  // resolves (never rejects) with codes like not_enrolled /
+  // passcode_not_set / lockout. Silently swallowing those left the
+  // delete button doing nothing on devices without biometrics+passcode
+  // (e.g. App Review test devices) — a 5.1.1(v) review risk.
+  const code = (result as any).error as string | undefined;
+  const cancelled = code === 'user_cancel' || code === 'system_cancel' || code === 'app_cancel';
+  return { verified: false, reason: cancelled ? 'cancelled' : 'unavailable' };
 }
 
 export default function DeleteAccountScreen() {
@@ -85,9 +93,9 @@ export default function DeleteAccountScreen() {
       // OAuth re-auth alone isn't enough here: Google's native sheet
       // doesn't biometric-gate at the OS level, so an unlocked phone
       // would otherwise let anyone tap their way through.
-      let verified: boolean;
+      let ownerCheck: { verified: boolean; reason: 'ok' | 'cancelled' | 'unavailable' };
       try {
-        verified = await verifyDeviceOwner();
+        ownerCheck = await verifyDeviceOwner();
       } catch (err: any) {
         Alert.alert(
           'Cannot verify identity',
@@ -96,8 +104,16 @@ export default function DeleteAccountScreen() {
         setLoading(false);
         return;
       }
-      if (!verified) {
-        // User cancelled the biometric prompt — silent abort.
+      if (!ownerCheck.verified) {
+        if (ownerCheck.reason === 'unavailable') {
+          // No biometrics enrolled and no passcode — explain instead of
+          // the button silently doing nothing.
+          Alert.alert(
+            'Cannot verify identity',
+            'Set up Face ID, Touch ID, or a device passcode in iOS Settings, then try again.',
+          );
+        }
+        // 'cancelled' — user dismissed the prompt; silent abort.
         setLoading(false);
         return;
       }

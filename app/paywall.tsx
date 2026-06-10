@@ -82,6 +82,17 @@ export default function PaywallScreen() {
           // once the right account is signed in.
           return false;
         }
+        // Transient failure = we don't actually know. Don't write a false
+        // downgrade (the concurrent _layout listener may have already
+        // validated and written Pro); leave the transaction pending.
+        if (entitlement.transient && !entitlement.is_pro) {
+          setLoading(false);
+          Alert.alert(
+            'Verification Pending',
+            'Your purchase went through but we couldn\'t verify it yet. Tap Restore in a moment to retry.',
+          );
+          return false;
+        }
         setIsPro(entitlement.is_pro);
         setSubscriptionPlan(entitlement.plan);
         setLoading(false);
