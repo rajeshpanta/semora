@@ -126,9 +126,22 @@ export default function PaywallScreen() {
         // closing the payment sheet themselves.
         setLoading(false);
         const code = err?.code;
-        if (code !== 'user-cancelled' && code !== 'E_USER_CANCELLED') {
-          Alert.alert('Purchase Failed', err?.message ?? 'Something went wrong. Please try again.');
+        if (code === 'user-cancelled' || code === 'E_USER_CANCELLED') return;
+        // A previous purchase is sitting unfinished (we don't ack until
+        // server validation succeeds). Re-buying is blocked by StoreKit —
+        // the way out is validating the existing transaction via Restore.
+        if (code === 'duplicate-purchase' || code === 'already-owned' || code === 'pending') {
+          Alert.alert(
+            'Almost There',
+            'Your earlier purchase is still being finalized. Tap Complete Purchase to finish activating Pro.',
+            [
+              { text: 'Complete Purchase', onPress: () => handleRestore() },
+              { text: 'Later', style: 'cancel' },
+            ],
+          );
+          return;
         }
+        Alert.alert('Purchase Failed', err?.message ?? 'Something went wrong. Please try again.');
       },
     );
 

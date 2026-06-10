@@ -5,6 +5,7 @@ import {
   fetchProducts,
   requestPurchase,
   getReceiptDataIOS,
+  requestReceiptRefreshIOS,
   purchaseUpdatedListener,
   purchaseErrorListener,
   finishTransaction,
@@ -213,6 +214,20 @@ export async function validateProEntitlement(): Promise<ProEntitlement> {
       receipt = (await getReceiptDataIOS()) ?? null;
     } catch {
       receipt = null;
+    }
+    // TestFlight/sandbox quirk: the app receipt often doesn't exist on
+    // disk until explicitly refreshed — fresh installs validated "no
+    // subscription" right after a successful purchase, leaving the
+    // transaction pending forever ("duplicate purchase" on retry).
+    if (!receipt) {
+      try {
+        receipt = (await requestReceiptRefreshIOS()) ?? null;
+      } catch {
+        receipt = null;
+      }
+      if (!receipt) {
+        try { receipt = (await getReceiptDataIOS()) ?? null; } catch {}
+      }
     }
 
     // No local receipt means nothing to validate. Don't blow away an
