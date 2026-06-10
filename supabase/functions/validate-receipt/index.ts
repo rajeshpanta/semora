@@ -215,6 +215,10 @@ serve(async (req) => {
       .from('receipt_validation_log')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
+      // Don't count throttle rows toward the cap — otherwise every
+      // rejected retry extended the lockout (a user told "wait a few
+      // minutes" who retried stayed locked out indefinitely).
+      .neq('status', 'rate_limited')
       .gte('created_at', oneHourAgo);
 
     if (countError) {
@@ -293,6 +297,22 @@ serve(async (req) => {
         Date.now() - startTime,
         `apple_status_${appleResp.status}`,
       );
+      // 21004 = OUR shared secret is wrong — a server misconfiguration,
+      // not a bad receipt. 21005 = Apple temporarily unavailable. Both
+      // must read as retryable/server-side (5xx) so the client treats
+      // them as transient instead of telling a payer "validation failed".
+      if (appleResp.status === 21004) {
+        return jsonResponse(
+          { error: 'Server is not configured for receipt validation. Please contact support.' },
+          503,
+        );
+      }
+      if (appleResp.status === 21005) {
+        return jsonResponse(
+          { error: 'Apple\'s servers are busy. Please try again in a moment.' },
+          503,
+        );
+      }
       return jsonResponse(
         { error: `Receipt validation failed (Apple status ${appleResp.status})` },
         400,

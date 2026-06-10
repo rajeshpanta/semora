@@ -35,8 +35,11 @@ let productsFetched = false;
 export async function initIAP(): Promise<void> {
   if (Platform.OS === 'web' || connected) return;
   try {
-    await initConnection();
-    connected = true;
+    // Native NEVER throws here — failures (Screen Time purchase
+    // restrictions, store unavailable) resolve `false`. Treating that as
+    // connected used to brick IAP for the whole session.
+    const ok = await initConnection();
+    connected = ok === true;
   } catch {
     // StoreKit not available (simulator without config, etc.)
   }
@@ -166,15 +169,21 @@ export async function getServerEntitlement(): Promise<ProEntitlement> {
     if (error) return { ...EMPTY_ENTITLEMENT, transient: true };
     if (!data) return EMPTY_ENTITLEMENT;
 
-    // Honor expiry on the client too — if the row says active but
-    // the date is past, treat as inactive until the server re-validates.
+    // Honor expiry on the client too — if the row says active but the
+    // date is past, treat as inactive for DISPLAY. Mark it transient:
+    // the row may simply be stale (Apple auto-renewed but nothing has
+    // re-validated since), and the client clock isn't authoritative —
+    // writing a hard downgrade here visibly de-Pro'd paying subscribers
+    // mid-session at every billing boundary. The heavy path (full
+    // receipt re-validation) is the only one allowed to say "expired".
     const expiresAt = data.expires_at ? new Date(data.expires_at).getTime() : null;
-    const stillActive = data.is_pro && (expiresAt === null || expiresAt > Date.now());
+    const clockSaysExpired = data.is_pro && expiresAt !== null && expiresAt <= Date.now();
 
     return {
-      is_pro: stillActive,
+      is_pro: data.is_pro && !clockSaysExpired,
       plan: (data.plan as 'monthly' | 'annual' | null) ?? null,
       expires_at: data.expires_at,
+      ...(clockSaysExpired ? { transient: true } : {}),
     };
   } catch {
     return { ...EMPTY_ENTITLEMENT, transient: true };
@@ -190,7 +199,23 @@ export async function getServerEntitlement(): Promise<ProEntitlement> {
  * Returns the validated entitlement (or inactive on any failure).
  * Never throws.
  */
-export async function validateProEntitlement(): Promise<ProEntitlement> {
+export async function validateProEntitlement(opts?: {
+  /**
+   * Allow requestReceiptRefreshIOS (= AppStore.sync()), which can show a
+   * SYSTEM Apple-ID sign-in prompt. Only user-initiated flows (a purchase
+   * just completed, an explicit Restore tap) may do this — running it on
+   * the silent launch refresh prompted every receipt-less TestFlight/App
+   * Review install for credentials on every cold start.
+   */
+  interactiveRefresh?: boolean;
+  /**
+   * Refresh the receipt even when one exists. StoreKit2 purchases don't
+   * reliably update the legacy receipt file, so right after a purchase
+   * the on-disk receipt can be STALE (no transactions) — validating it
+   * returns not-pro forever. Used by validateAfterPurchase's retry.
+   */
+  forceRefresh?: boolean;
+} ): Promise<ProEntitlement> {
   if (Platform.OS === 'web') return EMPTY_ENTITLEMENT;
   // Launch-time init can fail (store outage, parental restrictions). A bare
   // "not pro" here would visibly downgrade a real subscriber on Restore —
@@ -210,16 +235,20 @@ export async function validateProEntitlement(): Promise<ProEntitlement> {
     // exactly the format the validate-receipt edge function POSTs to
     // Apple's verifyReceipt.
     let receipt: string | null = null;
-    try {
-      receipt = (await getReceiptDataIOS()) ?? null;
-    } catch {
-      receipt = null;
+    if (!opts?.forceRefresh) {
+      try {
+        receipt = (await getReceiptDataIOS()) ?? null;
+      } catch {
+        receipt = null;
+      }
     }
-    // TestFlight/sandbox quirk: the app receipt often doesn't exist on
-    // disk until explicitly refreshed — fresh installs validated "no
-    // subscription" right after a successful purchase, leaving the
+    // TestFlight/sandbox quirk: the app receipt often doesn't exist (or
+    // is stale) until explicitly refreshed — fresh installs validated
+    // "no subscription" right after a successful purchase, leaving the
     // transaction pending forever ("duplicate purchase" on retry).
-    if (!receipt) {
+    // GATED on interactiveRefresh: AppStore.sync() can pop a system
+    // Apple-ID prompt, unacceptable on silent launch refreshes.
+    if (!receipt && (opts?.interactiveRefresh || opts?.forceRefresh)) {
       try {
         receipt = (await requestReceiptRefreshIOS()) ?? null;
       } catch {
@@ -254,7 +283,13 @@ export async function validateProEntitlement(): Promise<ProEntitlement> {
       if (status === 409) {
         return { ...fallback, restoreError: 'linked_other_account' };
       }
-      // Network or other server hiccup — just return whatever the DB says.
+      // Any other server failure (429 rate-limit, 5xx, misconfig, bad
+      // gateway) means we DON'T KNOW — if the DB has no positive row,
+      // mark the negative transient so the UI says "try again" instead
+      // of "No Subscription Found" / silently de-Pro-ing a payer.
+      if (!fallback.is_pro) {
+        return { ...fallback, transient: true };
+      }
       return fallback;
     }
 
@@ -275,23 +310,39 @@ export async function validateProEntitlement(): Promise<ProEntitlement> {
  * Reads the server entitlement first (cheap, single row), then —
  * if there's a local receipt — also kicks off a server validation
  * so the entitlement stays in sync with new purchases / expirations.
+ * NEVER interactive: a launch-time AppStore.sync() would prompt for
+ * Apple-ID credentials on receipt-less installs.
  */
 export async function refreshProStatus(): Promise<ProEntitlement> {
-  // Local receipt validation is the authoritative path when
-  // the device has one — it both refreshes the row and tells us
-  // the latest expiry. Without one, fall back to a plain DB read.
   if (Platform.OS !== 'web' && connected) {
-    return await validateProEntitlement();
+    return await validateProEntitlement({ interactiveRefresh: false });
   }
   return await getServerEntitlement();
 }
 
 /**
- * Restore: same as a fresh validation. Returns the validated
- * entitlement so callers can update both isPro and the plan label.
+ * Restore: same as a fresh validation, but user-initiated — allowed to
+ * refresh the receipt (may show Apple's own sign-in sheet, which is the
+ * expected Restore UX).
  */
 export async function restorePurchases(): Promise<ProEntitlement> {
-  return await validateProEntitlement();
+  return await validateAfterPurchase();
+}
+
+/**
+ * Validation for flows where a purchase DEFINITELY exists (a purchase
+ * event just fired, or the user tapped Restore claiming one). If the
+ * first pass says "no subscription" with no other explanation, the
+ * on-disk receipt must be stale (StoreKit2 purchases don't reliably
+ * update the legacy receipt) — force one refresh and re-validate
+ * instead of looping "Verification Pending" forever.
+ */
+export async function validateAfterPurchase(): Promise<ProEntitlement> {
+  let e = await validateProEntitlement({ interactiveRefresh: true });
+  if (!e.is_pro && !e.restoreError && !e.transient) {
+    e = await validateProEntitlement({ interactiveRefresh: true, forceRefresh: true });
+  }
+  return e;
 }
 
 export function setupPurchaseListeners(

@@ -17,7 +17,7 @@ import { COLORS } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
 import { ThemeColorsProvider, useResolvedScheme, useColors } from '@/lib/theme';
 import { setQueryClient } from '@/lib/auth';
-import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateProEntitlement, setupPurchaseListeners } from '@/lib/purchases';
+import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateAfterPurchase, setupPurchaseListeners } from '@/lib/purchases';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -84,10 +84,19 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     // Light path: cheap single-row read on the entitlements table.
     // Used for TOKEN_REFRESHED / USER_UPDATED — a token rotation
     // can't change Pro status, so there's no reason to re-validate
-    // with Apple every ~50 minutes.
+    // with Apple every ~50 minutes. EXCEPT: if the row looks expired
+    // by the client clock (transient flag), the row is probably just
+    // stale post-renewal — escalate to a full (non-interactive)
+    // receipt re-validation instead of writing a downgrade.
     const lightRefreshProForSession = (expectedUserId: string) => {
       getServerEntitlement()
-        .then((e) => writeEntitlementIfStillCurrent(expectedUserId, e))
+        .then((e) => {
+          if (e.transient) {
+            refreshProForSession(expectedUserId);
+            return;
+          }
+          return writeEntitlementIfStillCurrent(expectedUserId, e);
+        })
         .catch(() => {});
     };
 
@@ -105,7 +114,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         // No signed-in user — leave the StoreKit transaction pending so
         // it gets re-delivered after sign-in instead of being lost.
         if (!expectedUserId) return false;
-        const entitlement = await validateProEntitlement();
+        const entitlement = await validateAfterPurchase();
         await writeEntitlementIfStillCurrent(expectedUserId, entitlement);
         // Ack the StoreKit transaction once it has reached a terminal
         // state: either Pro is granted, or the receipt is bound to a

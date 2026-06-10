@@ -12,7 +12,8 @@ import type { ProductOrSubscription } from 'react-native-iap';
 import { COLORS, FONTS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useAppStore } from '@/store/appStore';
-import { getProducts, purchaseProduct, restorePurchases, validateProEntitlement, PRODUCT_IDS, setupPurchaseListeners } from '@/lib/purchases';
+import { getProducts, purchaseProduct, restorePurchases, validateAfterPurchase, PRODUCT_IDS, setupPurchaseListeners } from '@/lib/purchases';
+import { isEligibleForIntroOfferIOS } from 'react-native-iap';
 import { supabase } from '@/lib/supabase';
 
 const { width: SCREEN_W } = Dimensions.get('window');
@@ -56,12 +57,22 @@ export default function PaywallScreen() {
   const [restoring, setRestoring] = useState(false);
   const [monthlySub, setMonthlySub] = useState<ProductOrSubscription | null>(null);
   const [annualSub, setAnnualSub] = useState<ProductOrSubscription | null>(null);
+  // Whether THIS Apple ID still qualifies for the 7-day intro trial.
+  // Re-subscribers don't — promising them a free trial the sheet won't
+  // honor reads as a bait-and-switch (and is an App Review risk).
+  const [trialEligible, setTrialEligible] = useState(true);
 
   useEffect(() => {
     getProducts().then((products) => {
       if (products) {
         setMonthlySub(products.monthly);
         setAnnualSub(products.annual);
+        const groupId = (products.monthly as any)?.subscriptionInfoIOS?.subscriptionGroupId;
+        if (groupId) {
+          isEligibleForIntroOfferIOS(groupId)
+            .then((ok: boolean) => setTrialEligible(ok !== false))
+            .catch(() => {});
+        }
       }
     });
 
@@ -72,7 +83,7 @@ export default function PaywallScreen() {
         // and written the entitlement row tied to this Semora account.
         const { data: { session: startSession } } = await supabase.auth.getSession();
         const expectedUserId = startSession?.user.id;
-        const entitlement = await validateProEntitlement();
+        const entitlement = await validateAfterPurchase();
         // Race guard: if the session changed mid-validation (signed out,
         // switched accounts), don't write a stale entitlement to the store.
         const { data: { session: endSession } } = await supabase.auth.getSession();
@@ -127,6 +138,16 @@ export default function PaywallScreen() {
         setLoading(false);
         const code = err?.code;
         if (code === 'user-cancelled' || code === 'E_USER_CANCELLED') return;
+        // Ask to Buy: a kid's purchase is awaiting parental approval.
+        // StoreKit reports this via 'deferred-payment' — it is NOT a
+        // failure; the transaction arrives automatically once approved.
+        if (code === 'deferred-payment') {
+          Alert.alert(
+            'Waiting for Approval',
+            'This purchase needs approval (Ask to Buy). Pro will activate automatically as soon as it\'s approved — nothing else to do.',
+          );
+          return;
+        }
         // A previous purchase is sitting unfinished (we don't ack until
         // server validation succeeds). Re-buying is blocked by StoreKit —
         // the way out is validating the existing transaction via Restore.
@@ -314,11 +335,11 @@ export default function PaywallScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.planName, { color: colors.ink }]}>Monthly</Text>
               <Text style={[styles.planPrice, { color: colors.ink }]}>{monthlyPrice}<Text style={[styles.planPeriod, { color: colors.ink2 }]}>/month</Text></Text>
-              <Text style={[styles.planSub, { color: colors.ink3 }]}>7-day free trial included</Text>
+              <Text style={[styles.planSub, { color: colors.ink3 }]}>{trialEligible ? '7-day free trial included' : 'Auto-renews monthly'}</Text>
             </View>
             {selectedPlan === 'monthly' && (
               <View style={[styles.trialBadge, { backgroundColor: colors.brand }]}>
-                <Text style={styles.trialBadgeText}>FREE TRIAL</Text>
+                <Text style={styles.trialBadgeText}>{trialEligible ? 'FREE TRIAL' : 'FLEXIBLE'}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -335,7 +356,7 @@ export default function PaywallScreen() {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.ctaText}>
-                  {selectedPlan === 'monthly' ? 'Try 7 Days Free' : 'Subscribe Now'}
+                  {selectedPlan === 'monthly' && trialEligible ? 'Try 7 Days Free' : 'Subscribe Now'}
                 </Text>
               )}
             </LinearGradient>
@@ -343,7 +364,9 @@ export default function PaywallScreen() {
 
           <Text style={[styles.finePrint, { color: colors.ink3 }]}>
             {selectedPlan === 'monthly'
-              ? `7-day free trial, then ${monthlyPrice}/month. Cancel anytime.`
+              ? trialEligible
+                ? `7-day free trial, then ${monthlyPrice}/month. Cancel anytime.`
+                : `${monthlyPrice}/month. Cancel anytime.`
               : `${annualPrice} billed annually. Cancel anytime.`}
           </Text>
 
