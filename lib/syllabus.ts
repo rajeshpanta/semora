@@ -4,6 +4,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { COURSE_COLORS, COURSE_ICONS, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
 import { suggestCurrentSemesterName } from '@/lib/semesters';
+import { FREE_SCAN_LIMIT } from '@/lib/queries';
 
 export const FREE_COURSE_LIMIT = 2;
 export const FREE_SEMESTER_LIMIT = 1;
@@ -14,7 +15,7 @@ export const FREE_SEMESTER_LIMIT = 1;
 // table so the client surfaces an Upgrade prompt instead of a generic
 // error when the client-cached isPro state is stale.
 export function isFreeLimitError(err: any): boolean {
-  return err?.code === 'P0001' || /free accounts support|2 free scans/i.test(err?.message ?? '');
+  return err?.code === 'P0001' || /free accounts support|\d+ free scans/i.test(err?.message ?? '');
 }
 
 export interface ProcessResult {
@@ -48,8 +49,8 @@ export async function processSyllabus(
       .from('syllabus_uploads')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId);
-    if ((count ?? 0) >= 2) {
-      throw new Error("You've used your 2 free scans. Upgrade to Pro for unlimited syllabus scanning.");
+    if ((count ?? 0) >= FREE_SCAN_LIMIT) {
+      throw new Error(`You've used your ${FREE_SCAN_LIMIT} free scans. Upgrade to Pro for unlimited syllabus scanning.`);
     }
   }
 

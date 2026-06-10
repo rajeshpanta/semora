@@ -96,7 +96,7 @@ export function GradeCard({ percentage, letter, gradedCount, totalCount, weightA
  * ──────────────────────────────────────────────────────────────────── */
 
 export function WhatIfCard({
-  earnedPoints, weightAttempted, weightTotal, scale, isPro, onUpgrade,
+  earnedPoints, weightAttempted, weightTotal, scale, isPro, onUpgrade, pendingEcWeight = 0,
 }: {
   earnedPoints: number;
   weightAttempted: number;
@@ -104,6 +104,10 @@ export function WhatIfCard({
   scale: { letter: string; min: number }[];
   isPro: boolean;
   onUpgrade: () => void;
+  /** Total weight of NOT-yet-graded extra-credit tasks — extra achievable
+   *  points beyond the remaining regular work (matches calculateGrade's
+   *  EC-as-bonus semantics). */
+  pendingEcWeight?: number;
 }) {
   const colors = useColors();
 
@@ -113,6 +117,19 @@ export function WhatIfCard({
   const remaining = Math.max(0, weightTotal - weightAttempted);
   const targets = [...scale].sort((a, b) => b.min - a.min).filter((g) => g.min > 0);
   if (targets.length === 0) return null;
+
+  // All regular work graded — same terminal copy for BOTH tiers (the free
+  // teaser used to promise "your remaining 0% of coursework").
+  if (remaining < 0.5) {
+    return (
+      <View style={[wiStyles.wrap, { borderTopColor: colors.line }]}>
+        <Text style={[wiStyles.title, { color: colors.ink }]}>What do I need?</Text>
+        <Text style={[wiStyles.teaser, { color: colors.ink3 }]}>
+          All weighted work is graded — your final grade is locked in.
+        </Text>
+      </View>
+    );
+  }
 
   // Pro gate — teaser that sells the exact value, taps to paywall.
   if (!isPro) {
@@ -132,16 +149,9 @@ export function WhatIfCard({
     );
   }
 
-  if (remaining < 0.5) {
-    return (
-      <View style={[wiStyles.wrap, { borderTopColor: colors.line }]}>
-        <Text style={[wiStyles.title, { color: colors.ink }]}>What do I need?</Text>
-        <Text style={[wiStyles.teaser, { color: colors.ink3 }]}>
-          All weighted work is graded — your final grade is locked in.
-        </Text>
-      </View>
-    );
-  }
+  // Max achievable average counting pending extra credit as bonus points
+  // (same numerator-only treatment calculateGrade gives graded EC).
+  const maxReachable = ((remaining + pendingEcWeight) / remaining) * 100;
 
   return (
     <View style={[wiStyles.wrap, { borderTopColor: colors.line }]}>
@@ -149,7 +159,7 @@ export function WhatIfCard({
         <Text style={[wiStyles.title, { color: colors.ink }]}>What do I need?</Text>
         <Text style={[wiStyles.remainingNote, { color: colors.ink3 }]}>{Math.round(remaining)}% still to play for</Text>
       </View>
-      {targets.map((g) => {
+      {targets.map((g, idx) => {
         const required = ((g.min / 100) * weightTotal - earnedPoints) / remaining * 100;
         let label: string;
         let tone: string;
@@ -159,12 +169,18 @@ export function WhatIfCard({
         } else if (required <= 100) {
           label = `avg ${Math.ceil(required)}% on the rest`;
           tone = required > 90 ? colors.coral : colors.ink2;
+        } else if (required <= maxReachable) {
+          // Only reachable by also banking the ungraded extra credit.
+          label = 'Needs extra credit';
+          tone = colors.amber;
         } else {
           label = 'Out of reach';
           tone = colors.ink3;
         }
         return (
-          <View key={g.letter} style={wiStyles.row}>
+          // Composite key: the user-editable scale can contain duplicate
+          // or empty letters; letter alone collides.
+          <View key={`${g.letter}-${g.min}-${idx}`} style={wiStyles.row}>
             <Text style={[wiStyles.rowLetter, { color: colors.ink }]}>{g.letter}</Text>
             <Text style={[wiStyles.rowMin, { color: colors.ink3 }]}>{g.min}%+</Text>
             <View style={{ flex: 1 }} />

@@ -147,12 +147,20 @@ export default function SyllabusUploadScreen() {
         setStatus(ANTICIPATION[ai]);
       }, 2200);
 
-      const result = await processSyllabus(
-        params.fileUri,
-        params.fileName || 'syllabus.pdf',
-        params.mimeType || 'application/pdf',
-        session.user.id,
-      );
+      // Hard ceiling so the locked modal can never strand the user if the
+      // pipeline hangs (network black hole, edge function stall). On
+      // timeout the existing Scan Failed alert offers Try Again / Go Back.
+      const result = await Promise.race([
+        processSyllabus(
+          params.fileUri,
+          params.fileName || 'syllabus.pdf',
+          params.mimeType || 'application/pdf',
+          session.user.id,
+        ),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('This is taking longer than expected. Please try again.')), 120_000),
+        ),
+      ]);
 
       stopRotation();
       setStep(3);

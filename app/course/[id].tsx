@@ -414,6 +414,9 @@ export default function CourseDetailScreen() {
             scale={gradeScale as GradeThreshold[]}
             isPro={isPro}
             onUpgrade={() => router.push('/paywall' as any)}
+            pendingEcWeight={tasks
+              .filter((t) => t.is_extra_credit && t.score == null && t.weight != null)
+              .reduce((sum, t) => sum + (t.weight ?? 0), 0)}
           />
 
           {/* Grade scale — Pro only */}

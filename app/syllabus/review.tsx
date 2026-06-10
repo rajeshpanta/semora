@@ -81,10 +81,15 @@ export default function SyllabusReviewScreen() {
     }
 
     // Inline-edited dates are free text — catch malformed ones up front
-    // instead of silently dropping rows mid-save.
-    const badDates = accepted.filter(
-      (i) => !/^\d{4}-\d{2}-\d{2}$/.test(i.due_date) || isNaN(new Date(i.due_date + 'T00:00:00').getTime()),
-    );
+    // instead of silently dropping rows mid-save. Round-trip check catches
+    // impossible calendar dates (2026-02-30 parses but rolls to Mar 2).
+    const isRealDate = (s: string) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+      const [y, m, d] = s.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+    };
+    const badDates = accepted.filter((i) => !isRealDate(i.due_date));
     if (badDates.length > 0) {
       const names = badDates.slice(0, 3).map((b) => `"${b.title}"`).join(', ');
       Alert.alert(

@@ -10,7 +10,36 @@ struct WidgetTask: Codable, Identifiable {
   var title: String
   var course: String
   var colorHex: String
+  // Written-at-sync label, used only as a fallback when dueDate is absent
+  // (payloads from older app versions).
   var dueLabel: String
+  // Raw "yyyy-MM-dd" — labels are recomputed from this at RENDER time so
+  // "Tomorrow" correctly becomes "Today" after midnight even if the app
+  // hasn't been opened.
+  var dueDate: String?
+}
+
+enum DueLabel {
+  static let formatter: DateFormatter = {
+    let f = DateFormatter()
+    f.dateFormat = "yyyy-MM-dd"
+    f.timeZone = TimeZone.current
+    return f
+  }()
+
+  static func compute(_ task: WidgetTask, now: Date) -> String {
+    guard let raw = task.dueDate, let due = formatter.date(from: raw) else {
+      return task.dueLabel
+    }
+    let cal = Calendar.current
+    if cal.isDate(due, inSameDayAs: now) { return "Today" }
+    if due < cal.startOfDay(for: now) { return "Overdue" }
+    if let tomorrow = cal.date(byAdding: .day, value: 1, to: now), cal.isDate(due, inSameDayAs: tomorrow) {
+      return "Tomorrow"
+    }
+    let days = cal.dateComponents([.day], from: cal.startOfDay(for: now), to: due).day ?? 0
+    return "In \(days) days"
+  }
 }
 
 struct WidgetPayload: Codable {
@@ -63,23 +92,31 @@ struct Provider: TimelineProvider {
         updatedAt: "",
         dueTodayCount: 2,
         items: [
-          WidgetTask(id: "1", title: "Problem Set 3", course: "PSYCH 201", colorHex: "#6B46C1", dueLabel: "Today"),
-          WidgetTask(id: "2", title: "Midterm Exam", course: "CS 101", colorHex: "#D85A30", dueLabel: "Tomorrow"),
-          WidgetTask(id: "3", title: "Lab Report", course: "CHEM 110", colorHex: "#0F6E56", dueLabel: "In 3 days"),
+          WidgetTask(id: "1", title: "Problem Set 3", course: "PSYCH 201", colorHex: "#6B46C1", dueLabel: "Today", dueDate: nil),
+          WidgetTask(id: "2", title: "Midterm Exam", course: "CS 101", colorHex: "#D85A30", dueLabel: "Tomorrow", dueDate: nil),
+          WidgetTask(id: "3", title: "Lab Report", course: "CHEM 110", colorHex: "#0F6E56", dueLabel: "In 3 days", dueDate: nil),
         ]
       )
     )
   }
 
   func getSnapshot(in context: Context, completion: @escaping (Entry) -> Void) {
-    completion(Entry(date: Date(), payload: SharedData.read() ?? placeholder(in: context).payload))
+    let real = SharedData.read()
+    completion(Entry(date: Date(), payload: real ?? (context.isPreview ? placeholder(in: context).payload : nil)))
   }
 
   func getTimeline(in context: Context, completion: @escaping (Timeline<Entry>) -> Void) {
-    let entry = Entry(date: Date(), payload: SharedData.read())
-    // Refresh roughly hourly; the app also force-reloads on data changes.
-    let next = Calendar.current.date(byAdding: .hour, value: 1, to: Date()) ?? Date().addingTimeInterval(3600)
-    completion(Timeline(entries: [entry], policy: .after(next)))
+    let payload = SharedData.read()
+    let now = Date()
+    var entries = [Entry(date: now, payload: payload)]
+    // Midnight entry: labels are computed per entry date, so "Tomorrow"
+    // flips to "Today" overnight even if the app is never opened.
+    let cal = Calendar.current
+    if let midnight = cal.date(byAdding: .day, value: 1, to: cal.startOfDay(for: now)) {
+      entries.append(Entry(date: midnight, payload: payload))
+    }
+    let next = cal.date(byAdding: .hour, value: 1, to: now) ?? now.addingTimeInterval(3600)
+    completion(Timeline(entries: entries, policy: .after(next)))
   }
 }
 
@@ -87,6 +124,7 @@ struct Provider: TimelineProvider {
 
 struct TaskRow: View {
   let task: WidgetTask
+  let now: Date
   var body: some View {
     HStack(spacing: 7) {
       Circle()
@@ -102,9 +140,10 @@ struct TaskRow: View {
           .lineLimit(1)
       }
       Spacer(minLength: 4)
-      Text(task.dueLabel)
+      let label = DueLabel.compute(task, now: now)
+      Text(label)
         .font(.system(size: 10, weight: .bold))
-        .foregroundStyle(task.dueLabel == "Today" ? Color.brand : Color.secondary)
+        .foregroundStyle(label == "Today" || label == "Overdue" ? Color.brand : Color.secondary)
     }
   }
 }
@@ -127,6 +166,7 @@ struct EmptyStateView: View {
 
 struct SmallView: View {
   let payload: WidgetPayload?
+  let now: Date
   var body: some View {
     if let p = payload, let first = p.items.first {
       VStack(alignment: .leading, spacing: 5) {
@@ -149,7 +189,7 @@ struct SmallView: View {
         Text(first.title)
           .font(.system(size: 14, weight: .bold, design: .serif))
           .lineLimit(2)
-        Text("\(first.course) · \(first.dueLabel)")
+        Text("\(first.course) · \(DueLabel.compute(first, now: now))")
           .font(.system(size: 10))
           .foregroundStyle(.secondary)
           .lineLimit(1)
@@ -164,6 +204,7 @@ struct SmallView: View {
 
 struct MediumView: View {
   let payload: WidgetPayload?
+  let now: Date
   var body: some View {
     if let p = payload, !p.items.isEmpty {
       VStack(alignment: .leading, spacing: 6) {
@@ -178,7 +219,7 @@ struct MediumView: View {
             .foregroundStyle(.secondary)
         }
         ForEach(p.items.prefix(3)) { t in
-          TaskRow(task: t)
+          TaskRow(task: t, now: now)
         }
         Spacer(minLength: 0)
       }
@@ -214,9 +255,9 @@ struct SemoraWidgetEntryView: View {
   var body: some View {
     switch family {
     case .systemMedium:
-      MediumView(payload: entry.payload)
+      MediumView(payload: entry.payload, now: entry.date)
     default:
-      SmallView(payload: entry.payload)
+      SmallView(payload: entry.payload, now: entry.date)
     }
   }
 }

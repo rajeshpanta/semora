@@ -47,7 +47,13 @@ export async function getProducts(): Promise<{
   monthly: ProductOrSubscription | null;
   annual: ProductOrSubscription | null;
 } | null> {
-  if (Platform.OS === 'web' || !connected) return null;
+  if (Platform.OS === 'web') return null;
+  // Launch-time init can fail; retry here so price displays (paywall,
+  // Me tab) aren't permanently stuck on fallbacks for the session.
+  if (!connected) {
+    await initIAP();
+    if (!connected) return null;
+  }
   try {
     // type defaults to 'in-app' in react-native-iap v15 — our SKUs are
     // subscriptions, so omitting it returns [] and the paywall silently

@@ -44,6 +44,9 @@ export function updateTodayWidget(
       course: t.courses?.name ?? 'Course',
       colorHex: t.courses?.color ?? '#6B46C1',
       dueLabel: dueLabelFor(t.due_date, todayStr, tomorrowStr),
+      // Raw date so the widget recomputes the label at render time —
+      // "Tomorrow" must become "Today" after midnight without an app open.
+      dueDate: t.due_date,
     }));
     const dueTodayCount = upcoming.filter((t) => t.due_date <= todayStr).length;
 

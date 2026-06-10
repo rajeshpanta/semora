@@ -63,7 +63,17 @@ export async function requestCalendarPermission(): Promise<boolean> {
 
 // ── Calendar CRUD ──────────────────────────────────────────
 
+// Single-flight: concurrent callers (bulk import syncing several tasks at
+// once) share one create/adopt pass instead of racing to create duplicates.
+let calendarInFlight: Promise<string | null> | null = null;
+
 async function getOrCreateCalendar(): Promise<string | null> {
+  if (calendarInFlight) return calendarInFlight;
+  calendarInFlight = getOrCreateCalendarInner().finally(() => { calendarInFlight = null; });
+  return calendarInFlight;
+}
+
+async function getOrCreateCalendarInner(): Promise<string | null> {
   const Calendar = await getCalendarModule();
   if (!Calendar) return null;
 
@@ -80,15 +90,15 @@ async function getOrCreateCalendar(): Promise<string | null> {
 
   // Sign-out clears CALENDAR_ID_KEY but deliberately leaves the device
   // calendar alone — so re-enabling sync used to create a SECOND
-  // "Semora" calendar every time. Remove any orphaned Semora calendar
-  // (its events belong to a session this device no longer tracks)
-  // before creating a fresh one.
-  for (const c of calendars) {
-    if (c.title === 'Semora' && c.allowsModifications && c.id !== stored) {
-      try { await Calendar.deleteCalendarAsync(c.id); } catch (e) {
-        console.warn('[CalendarSync] Failed to remove orphaned Semora calendar:', e);
-      }
-    }
+  // "Semora" calendar every time. ADOPT the existing Semora calendar
+  // instead of deleting it: with iCloud calendars, deletion would
+  // propagate to the user's OTHER devices and destroy data they still
+  // see there. Stale events left from a previous session get pruned by
+  // syncAllTasks' reconciliation pass.
+  const existing = calendars.find((c) => c.title === 'Semora' && c.allowsModifications);
+  if (existing) {
+    SecureStore.setItem(CALENDAR_ID_KEY, existing.id);
+    return existing.id;
   }
 
   const defaultSource =
@@ -221,7 +231,12 @@ export async function syncAllTasks(semesterId: string | null): Promise<number> {
     .eq('is_completed', false)
     .order('due_date');
 
-  if (error || !tasks) return 0;
+  // A failed task query must not report success — the settings toggle
+  // would show "Synced!" while nothing happened and the flag stayed unset.
+  if (error) {
+    throw new Error('Could not load your tasks — check your connection and try again.');
+  }
+  if (!tasks) return 0;
 
   let count = 0;
   for (const task of tasks) {

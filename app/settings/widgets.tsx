@@ -123,11 +123,13 @@ function QuickAddWidgetPreview() {
 
 const WIDGETS = [
   {
-    name: 'Today Tasks',
-    subtitle: 'See what\u2019s due at a glance',
+    // Shipped as the "Up Next" WidgetKit widget (targets/widget).
+    name: 'Up Next',
+    subtitle: 'Your next deadlines at a glance',
     sizes: 'Small \u00b7 Medium',
     gradient: ['#6B46C1', '#9F7AEA'] as [string, string],
     Preview: TodayWidgetPreview,
+    live: true,
   },
   {
     name: 'Due This Week',
@@ -135,6 +137,7 @@ const WIDGETS = [
     sizes: 'Medium \u00b7 Large',
     gradient: ['#D85A30', '#F6A06B'] as [string, string],
     Preview: WeekWidgetPreview,
+    live: false,
   },
   {
     name: 'Grade Summary',
@@ -142,6 +145,7 @@ const WIDGETS = [
     sizes: 'Small \u00b7 Medium',
     gradient: ['#0F6E56', '#34D399'] as [string, string],
     Preview: GradeWidgetPreview,
+    live: false,
   },
   {
     name: 'Quick Add',
@@ -149,6 +153,7 @@ const WIDGETS = [
     sizes: 'Small',
     gradient: ['#185FA5', '#60A5FA'] as [string, string],
     Preview: QuickAddWidgetPreview,
+    live: false,
   },
 ];
 
@@ -193,7 +198,7 @@ export default function WidgetsSettings() {
             >
               <Text style={styles.showcaseName}>{w.name}</Text>
               <View style={styles.sizeBadge}>
-                <Text style={styles.sizeText}>{w.sizes}</Text>
+                <Text style={styles.sizeText}>{w.live ? w.sizes : 'Coming soon'}</Text>
               </View>
             </LinearGradient>
 

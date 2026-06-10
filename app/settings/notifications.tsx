@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Switch, ActivityIndicator, Alert, TouchableOpacity, Linking, Platform } from 'react-native';
+import { View, Text, StyleSheet, Switch, ActivityIndicator, Alert, TouchableOpacity, Linking, Platform, AppState } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -44,6 +44,15 @@ export default function NotificationSettings() {
       .then(({ status }) => setOsPermission(status as any))
       .catch(() => {});
   };
+
+  // Re-check when the app returns from iOS Settings, so the banner clears
+  // the moment the user flips notifications on out there.
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (s) => {
+      if (s === 'active') refreshOsPermission();
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     refreshOsPermission();

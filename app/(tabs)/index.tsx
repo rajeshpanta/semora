@@ -84,7 +84,7 @@ export default function TodayScreen() {
   const { data: semesters = [], isLoading: semestersLoading } = useSemesters();
   const { data: courses = [] } = useCourses(selectedSemesterId);
   const { data: todayTasks = [] } = useTodayTasks(selectedSemesterId);
-  const { data: dueSoonTasks = [] } = useDueSoonTasks(selectedSemesterId);
+  const { data: dueSoonTasks = [], isSuccess: dueSoonLoaded } = useDueSoonTasks(selectedSemesterId);
   const { data: stats } = useTaskStats(selectedSemesterId);
   const toggleComplete = useToggleTaskComplete();
 
@@ -187,12 +187,15 @@ export default function TodayScreen() {
 
   // Keep the home-screen widget in sync with "what's next". Fires on every
   // app open and whenever the due-soon window changes (import, complete,
-  // delete) — best-effort, never user-visible on failure.
+  // delete) — best-effort, never user-visible on failure. Gated on the
+  // query actually SUCCEEDING: the [] default during loading (or an
+  // offline launch) must not blow away a valid stored payload.
   useEffect(() => {
+    if (!dueSoonLoaded) return;
     const ts = format(new Date(), 'yyyy-MM-dd');
     const tm = format(addDays(new Date(), 1), 'yyyy-MM-dd');
     updateTodayWidget(dueSoonTasks, ts, tm);
-  }, [dueSoonTasks]);
+  }, [dueSoonTasks, dueSoonLoaded]);
 
   // Ask for an App Store rating at a genuine happy moment. `ahaPaywallShown`
   // is only set after a successful first import, so reaching here means the
