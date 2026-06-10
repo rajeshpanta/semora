@@ -18,6 +18,7 @@ import { signIn, signInWithApple, signInWithGoogle, isAppleSignInAvailable } fro
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
+import { FONTS } from '@/lib/constants';
 
 export default function SignInScreen() {
   // Reactive subscription — re-renders this screen whenever the banner
@@ -44,6 +45,11 @@ export default function SignInScreen() {
   const [errorType, setErrorType] = useState<'confirm' | 'credentials' | 'generic' | ''>('');
   const [resending, setResending] = useState(false);
   const colors = useColors();
+  // Name + term captured in onboarding — pay them off HERE, at the
+  // conversion-critical moment, so the wall reads as the completion of
+  // "Save my semester" rather than a generic gate.
+  const onboardName = useAppStore((s) => s.userName);
+  const onboardTerm = useAppStore((s) => s.defaultTerm);
 
   // Pre-fill email from the banner whenever it arrives (after fresh signup).
   useEffect(() => {
@@ -172,21 +178,30 @@ export default function SignInScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.inner}>
+          {/* Soft brand glow — same depth language as onboarding. */}
+          <View pointerEvents="none" style={[styles.glow, { backgroundColor: colors.brand, opacity: 0.06 }]} />
           <View style={styles.header}>
-            <View style={[styles.logoContainer, { backgroundColor: colors.brand }]}>
-              <FontAwesome name="graduation-cap" size={28} color="#fff" />
+            <View style={styles.brandRow}>
+              <View style={[styles.brandDot, { backgroundColor: colors.brand }]} />
+              <Text style={[styles.brandWord, { color: colors.ink }]}>Semora</Text>
             </View>
             <Text style={[styles.title, { color: colors.ink }]}>
-              {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+              {mode === 'signup'
+                ? onboardName
+                  ? `Save your semester,\n${onboardName}.`
+                  : 'Create your account'
+                : 'Welcome back'}
             </Text>
             <Text style={[styles.subtitle, { color: colors.ink2 }]}>
               {mode === 'signup'
-                ? 'Save your semester and never miss a deadline'
+                ? onboardTerm
+                  ? `One tap, and your ${onboardTerm} deadlines are saved.`
+                  : 'Save your semester and never miss a deadline'
                 : 'Sign in to pick up where you left off'}
             </Text>
           </View>
 
-          <View style={[styles.form, { backgroundColor: colors.card }]}>
+          <View style={styles.form}>
             {/* OAuth buttons — the ONLY way to create an account (policy:
                 no email sign-up). The email/password form below is
                 sign-in-only, for accounts that already exist. */}
@@ -199,7 +214,7 @@ export default function SignInScreen() {
                       ? AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
                       : AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
                   }
-                  cornerRadius={12}
+                  cornerRadius={18}
                   style={styles.appleButton}
                   onPress={handleApple}
                 />
@@ -411,45 +426,32 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
+  glow: {
+    position: 'absolute', top: -160, right: -120,
+    width: 340, height: 340, borderRadius: 170,
+  },
   header: {
-    alignItems: 'center',
-    marginBottom: 32,
+    alignItems: 'flex-start',
+    marginBottom: 28,
   },
-  logoContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    backgroundColor: '#6B46C1',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#6B46C1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 26 },
+  brandDot: { width: 10, height: 10, borderRadius: 3 },
+  brandWord: { fontFamily: FONTS.displaySemibold, fontSize: 18 },
   title: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#1e1b4b',
-    letterSpacing: -0.5,
+    fontFamily: FONTS.display,
+    fontSize: 32,
+    lineHeight: 37,
+    letterSpacing: -0.6,
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 15.5,
+    lineHeight: 22,
     color: '#6b7280',
-    marginTop: 4,
+    marginTop: 10,
   },
-  form: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    elevation: 4,
-  },
+  // No card wrapper — the buttons/form sit directly on the warm paper,
+  // matching the onboarding's editorial language.
+  form: {},
   label: {
     fontSize: 13,
     fontWeight: '600',
@@ -536,9 +538,9 @@ const styles = StyleSheet.create({
   },
   button: {
     flexDirection: 'row',
-    height: 50,
+    height: 56,
     backgroundColor: '#6B46C1',
-    borderRadius: 12,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: 22,
@@ -567,13 +569,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   oauthGroup: {
-    gap: 10,
+    gap: 12,
     marginBottom: 4,
   },
   oauthHint: {
-    fontSize: 12,
+    fontSize: 12.5,
     textAlign: 'center',
-    marginTop: 2,
+    marginTop: 6,
   },
   modeToggle: {
     alignItems: 'center',
@@ -585,14 +587,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   appleButton: {
-    height: 50,
+    height: 56,
     width: '100%',
   },
   googleButton: {
     flexDirection: 'row',
-    height: 50,
+    height: 56,
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,
