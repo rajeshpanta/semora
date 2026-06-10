@@ -10,14 +10,24 @@ import * as Haptics from 'expo-haptics';
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
-import { COLORS, TASK_TYPE_LABELS } from '@/lib/constants';
+import { COLORS, FONTS, TASK_TYPE_LABELS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { scheduleTaskReminders } from '@/lib/notifications';
+import { useAppStore } from '@/store/appStore';
 import type { ExtractedItem } from '@/lib/gemini';
 
 interface ReviewItem extends ExtractedItem {
   accepted: boolean;
   editing: boolean;
+}
+
+// The date TextInput updates due_date on every keystroke, so this renders
+// against partial strings like "2026-1". date-fns format() THROWS on an
+// Invalid Date — crashing the screen mid-edit. Render the raw string until
+// it parses.
+function formatDateSafe(d: string): string {
+  const dt = new Date(d + 'T00:00:00');
+  return isNaN(dt.getTime()) ? d : format(dt, 'MMM d, yyyy');
 }
 
 export default function SyllabusReviewScreen() {
@@ -35,6 +45,9 @@ export default function SyllabusReviewScreen() {
   });
   const [saving, setSaving] = useState(false);
   const colors = useColors();
+  const isPro = useAppStore((s) => s.isPro);
+  const ahaPaywallShown = useAppStore((s) => s.ahaPaywallShown);
+  const setAhaPaywallShown = useAppStore((s) => s.setAhaPaywallShown);
 
   const acceptedCount = items.filter((i) => i.accepted).length;
 
@@ -127,6 +140,19 @@ export default function SyllabusReviewScreen() {
 
       if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+      // Reverse trial: at the peak of value (deadlines just imported), offer
+      // Pro once, framed as momentum rather than a block. Only for free users
+      // who haven't seen this prompt yet; `replace` so Back doesn't return
+      // here. Everyone else gets the normal confirmation.
+      if (!isPro && !ahaPaywallShown && savedCount > 0) {
+        setAhaPaywallShown(true);
+        router.replace({
+          pathname: '/paywall',
+          params: { context: 'postScan', count: String(savedCount), courseId: params.courseId },
+        } as any);
+        return;
+      }
+
       Alert.alert(
         'Saved!',
         `${savedCount} task${savedCount !== 1 ? 's' : ''} added to your course.${savedCount < accepted.length ? ` (${accepted.length - savedCount} failed)` : ''}`,
@@ -202,7 +228,7 @@ export default function SyllabusReviewScreen() {
                     <Text style={[styles.typeText, { color: colors.brand }]}>{TASK_TYPE_LABELS[item.type] || item.type}</Text>
                   </View>
                   <Text style={[styles.itemDate, { color: colors.ink2 }]}>
-                    {item.due_date ? format(new Date(item.due_date + 'T00:00:00'), 'MMM d, yyyy') : 'No date'}
+                    {item.due_date ? formatDateSafe(item.due_date) : 'No date'}
                   </Text>
                   {item.due_time && <Text style={[styles.itemTime, { color: colors.ink3 }]}>{item.due_time}</Text>}
                   {item.weight != null && <Text style={[styles.itemWeight, { color: colors.ink3 }]}>{item.weight}%</Text>}
@@ -339,7 +365,7 @@ const styles = StyleSheet.create({
   autoCreatedBadge: { backgroundColor: COLORS.teal50, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 },
   autoCreatedText: { fontSize: 9, fontWeight: '700', color: COLORS.teal },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 },
-  title: { fontSize: 22, fontWeight: '600', color: COLORS.ink },
+  title: { fontFamily: FONTS.displaySemibold, fontSize: 23, color: COLORS.ink },
   subtitle: { fontSize: 13, color: COLORS.ink3, marginTop: 2 },
   toggleAllText: { fontSize: 13, fontWeight: '600', color: COLORS.brand },
   // Item card

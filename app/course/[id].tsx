@@ -17,7 +17,7 @@ import {
 import { TaskItem } from '@/components/TaskItem';
 import { GradeCard } from '@/components/GradeCard';
 import { ScheduleEditor, type ScheduleBlock, isNewBlock } from '@/components/ScheduleEditor';
-import { COURSE_COLORS, COURSE_ICONS, COLORS, calculateGrade, DEFAULT_GRADE_SCALE } from '@/lib/constants';
+import { COURSE_COLORS, COURSE_ICONS, COLORS, FONTS, calculateGrade, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import type { GradeThreshold } from '@/types/database';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 100 },
   header: { borderRadius: 18, padding: 24, alignItems: 'center', marginBottom: 14 },
   headerIcon: { width: 64, height: 64, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: '#0f172a' },
+  headerTitle: { fontFamily: FONTS.display, fontSize: 23, color: '#0f172a' },
   headerSub: { fontSize: 14, color: '#64748b', marginTop: 2 },
   editTitle: { fontSize: 20, fontWeight: '700', color: '#0f172a', textAlign: 'center', borderBottomWidth: 1, borderBottomColor: '#e5e7eb', paddingBottom: 4, width: '100%' },
   editSub: { fontSize: 14, color: '#64748b', textAlign: 'center', borderBottomWidth: 1, borderBottomColor: '#e5e7eb', paddingBottom: 4, marginTop: 4, width: '100%' },

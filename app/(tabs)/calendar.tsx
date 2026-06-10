@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isToday as isDateToday } from 'date-fns';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useTasks, useSemesters, useCourses, useToggleTaskComplete } from '@/lib/queries';
-import { COLORS } from '@/lib/constants';
+import { COLORS, FONTS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import type { TaskWithCourse } from '@/lib/queries';
 
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   content: { padding: 18, paddingBottom: 120 },
   // Header
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
-  title: { fontSize: 26, fontWeight: '600', color: COLORS.ink, letterSpacing: -0.5 },
+  title: { fontFamily: FONTS.displaySemibold, fontSize: 27, color: COLORS.ink, letterSpacing: -0.5 },
   monthPickerRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
   monthSubtitle: { fontSize: 14, color: COLORS.ink2, fontWeight: '500' },
   modeToggle: { flexDirection: 'row', backgroundColor: COLORS.card, borderRadius: 9, padding: 3, borderWidth: 0.5, borderColor: COLORS.line },

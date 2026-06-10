@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS } from '@/lib/constants';
+import { COLORS, FONTS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 
 interface GradeCardProps {
@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   container: { marginBottom: 4 },
   topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
   label: { fontSize: 14, fontWeight: '700', color: COLORS.ink3, letterSpacing: 0.5 },
-  percentage: { fontSize: 28, fontWeight: '800', color: COLORS.ink, marginTop: 2 },
+  percentage: { fontFamily: FONTS.display, fontSize: 30, color: COLORS.ink, marginTop: 2 },
   noGrade: { fontSize: 16, color: COLORS.ink3, marginTop: 4 },
   letterBadge: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
   letterText: { fontSize: 24, fontWeight: '800', color: '#fff' },

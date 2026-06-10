@@ -10,8 +10,29 @@ import * as Haptics from 'expo-haptics';
 import { processSyllabus, type ProcessResult, FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
-import { COLORS, COURSE_COLORS, COURSE_ICONS } from '@/lib/constants';
+import { COLORS, FONTS, COURSE_COLORS, COURSE_ICONS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+
+const TYPE_SINGULAR: Record<string, string> = {
+  assignment: 'assignment', quiz: 'quiz', exam: 'exam',
+  project: 'project', reading: 'reading', other: 'item',
+};
+const TYPE_PLURAL: Record<string, string> = {
+  assignment: 'assignments', quiz: 'quizzes', exam: 'exams',
+  project: 'projects', reading: 'readings', other: 'items',
+};
+// Exams first — they're what students care about most — then the rest.
+const TYPE_ORDER = ['exam', 'assignment', 'quiz', 'project', 'reading', 'other'];
+
+function summarizeItems(items: { type: string }[]): { type: string; count: number; label: string }[] {
+  const counts: Record<string, number> = {};
+  for (const it of items) counts[it.type] = (counts[it.type] || 0) + 1;
+  return TYPE_ORDER.filter((t) => counts[t]).map((t) => ({
+    type: t,
+    count: counts[t],
+    label: `${counts[t]} ${counts[t] === 1 ? TYPE_SINGULAR[t] : TYPE_PLURAL[t]}`,
+  }));
+}
 
 async function createDuplicateCourse(result: ProcessResult, userId: string): Promise<ProcessResult> {
   // Check course limit for free users
@@ -66,11 +87,32 @@ export default function SyllabusUploadScreen() {
   const [processing, setProcessing] = useState(false);
   const [status, setStatus] = useState('');
   const [step, setStep] = useState(0); // 0-4 progress steps
+  // The "aha" payload — set once extraction succeeds for a new course so we
+  // can show a celebratory summary instead of silently jumping to review.
+  const [summary, setSummary] = useState<ProcessResult | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rotateRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Cleanup timer on unmount
+  // Build anticipation while Gemini works (10-30s) — specific, sequential
+  // lines read as "real work happening" far better than one static spinner.
+  const ANTICIPATION = [
+    'Reading your syllabus…',
+    'Finding exam dates…',
+    'Extracting assignment due dates…',
+    'Reading the grading breakdown…',
+    'Building your calendar…',
+  ];
+
+  const stopRotation = () => {
+    if (rotateRef.current) { clearInterval(rotateRef.current); rotateRef.current = null; }
+  };
+
+  // Cleanup timers on unmount
   useEffect(() => {
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      stopRotation();
+    };
   }, []);
 
   // Auto-start processing when screen opens
@@ -96,7 +138,14 @@ export default function SyllabusUploadScreen() {
       if (!session) throw new Error('Not authenticated');
 
       setStep(2);
-      setStatus('Analyzing with AI...');
+      setStatus(ANTICIPATION[0]);
+      // Cycle the anticipation copy while the (slow) extraction runs.
+      let ai = 0;
+      stopRotation();
+      rotateRef.current = setInterval(() => {
+        ai = (ai + 1) % ANTICIPATION.length;
+        setStatus(ANTICIPATION[ai]);
+      }, 2200);
 
       const result = await processSyllabus(
         params.fileUri,
@@ -105,6 +154,7 @@ export default function SyllabusUploadScreen() {
         session.user.id,
       );
 
+      stopRotation();
       setStep(3);
       setStatus('Found deadlines!');
 
@@ -165,11 +215,18 @@ export default function SyllabusUploadScreen() {
             },
           ],
         );
+      } else if (result.extraction.items.length === 0) {
+        // Nothing to celebrate — let the review screen show its "no
+        // deadlines found" empty state with the try-again guidance.
+        navigateToReview(result);
       } else {
-        setStatus(`Created "${result.courseName}" in ${result.semesterName}`);
-        timerRef.current = setTimeout(() => navigateToReview(result), 800);
+        // The aha moment: stop here and celebrate what we found instead of
+        // silently skipping to the review list. Let the user *feel* the magic.
+        setProcessing(false);
+        setSummary(result);
       }
     } catch (error: any) {
+      stopRotation();
       setProcessing(false);
       setStep(0);
       setStatus('');
@@ -225,7 +282,38 @@ export default function SyllabusUploadScreen() {
 
         {/* Progress */}
         <View style={styles.progressContainer}>
-          {processing ? (
+          {summary ? (
+            <>
+              <View style={[styles.celebrateIcon, { backgroundColor: colors.teal50 }]}>
+                <Text style={styles.celebrateEmoji}>🎉</Text>
+              </View>
+              <Text style={[styles.celebrateTitle, { color: colors.ink }]}>
+                Found {summary.extraction.items.length} deadline{summary.extraction.items.length !== 1 ? 's' : ''}!
+              </Text>
+              <Text style={[styles.celebrateSub, { color: colors.ink3 }]}>
+                in {summary.courseName} · {summary.semesterName}
+              </Text>
+
+              <View style={styles.chipWrap}>
+                {summarizeItems(summary.extraction.items).map((b) => (
+                  <View key={b.type} style={[styles.chip, { backgroundColor: colors.brand50 }]}>
+                    <Text style={[styles.chipText, { color: colors.brand }]}>{b.label}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={[styles.startBtn, { backgroundColor: colors.brand }]}
+                onPress={() => navigateToReview(summary)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.startBtnText}>
+                  Review {summary.extraction.items.length} deadline{summary.extraction.items.length !== 1 ? 's' : ''}
+                </Text>
+                <FontAwesome name="arrow-right" size={15} color="#fff" />
+              </TouchableOpacity>
+            </>
+          ) : processing ? (
             <>
               <View style={[styles.spinnerRing, { backgroundColor: colors.brand50 }]}>
                 <ActivityIndicator size="large" color={colors.brand} />
@@ -300,7 +388,15 @@ const styles = StyleSheet.create({
   stepLineDone: { backgroundColor: COLORS.teal },
   hint: { fontSize: 12, color: COLORS.ink3 },
   readyIcon: { width: 72, height: 72, borderRadius: 36, backgroundColor: COLORS.brand50, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  readyTitle: { fontSize: 20, fontWeight: '600', color: COLORS.ink, marginBottom: 8 },
+  // Celebration / aha
+  celebrateIcon: { width: 84, height: 84, borderRadius: 42, justifyContent: 'center', alignItems: 'center', marginBottom: 18 },
+  celebrateEmoji: { fontSize: 42 },
+  celebrateTitle: { fontFamily: FONTS.display, fontSize: 26, letterSpacing: -0.5, textAlign: 'center' },
+  celebrateSub: { fontSize: 14, textAlign: 'center', marginTop: 6 },
+  chipWrap: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 20, marginBottom: 28, paddingHorizontal: 8 },
+  chip: { paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20 },
+  chipText: { fontSize: 13, fontWeight: '600' },
+  readyTitle: { fontFamily: FONTS.displaySemibold, fontSize: 21, color: COLORS.ink, marginBottom: 8 },
   readyText: { fontSize: 14, color: COLORS.ink3, textAlign: 'center', lineHeight: 20, marginBottom: 24 },
   startBtn: { flexDirection: 'row', height: 52, paddingHorizontal: 32, backgroundColor: COLORS.brand, borderRadius: 14, justifyContent: 'center', alignItems: 'center', gap: 10 },
   startBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },

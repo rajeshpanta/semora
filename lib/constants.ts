@@ -70,6 +70,14 @@ export const COLORS = {
   amber50: '#FAEEDA',
 } as const;
 
+// Typography. `display` is the Fraunces serif used for headlines (loaded in
+// app/_layout.tsx); body text stays on the system font for legibility.
+export const FONTS = {
+  display: 'Fraunces_700Bold',
+  displaySemibold: 'Fraunces_600SemiBold',
+  displayItalic: 'Fraunces_400Regular_Italic',
+} as const;
+
 export const DEFAULT_GRADE_SCALE = [
   { letter: 'A', min: 90 },
   { letter: 'B', min: 80 },

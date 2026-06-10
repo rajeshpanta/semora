@@ -9,6 +9,17 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 const THEME_KEY = 'semora_theme';
 const SEMESTER_KEY = 'semora_semester';
 const RESET_KEY = 'semora_reset_in_progress';
+// Device-level one-time flags. Unlike the keys above these are NOT
+// user-scoped — onboarding, the post-scan reverse-trial paywall, and the
+// rating prompt should each happen once per device, not once per account.
+const ONBOARDED_KEY = 'semora_onboarded';
+const AHA_PAYWALL_KEY = 'semora_aha_paywall';
+const REVIEW_REQUESTED_KEY = 'semora_review_requested';
+// Captured during onboarding (before sign-in), so they live on the device.
+// userName personalizes the greeting; defaultTerm pre-fills the first
+// semester's name. Both are best-effort niceties, harmless if stale.
+const USER_NAME_KEY = 'semora_user_name';
+const DEFAULT_TERM_KEY = 'semora_default_term';
 
 function getItem(key: string): string | null {
   if (Platform.OS === 'web') return null;
@@ -36,6 +47,14 @@ const initialSemester = getItem(SEMESTER_KEY);
 // AuthGate after a cold start.
 const initialInPasswordReset = getItem(RESET_KEY) === 'true';
 
+// Read synchronously at module load so AuthGate / Today can branch on the
+// first render without a flash (same approach as theme/semester above).
+const initialOnboarded = getItem(ONBOARDED_KEY) === 'true';
+const initialAhaPaywallShown = getItem(AHA_PAYWALL_KEY) === 'true';
+const initialReviewRequested = getItem(REVIEW_REQUESTED_KEY) === 'true';
+const initialUserName = getItem(USER_NAME_KEY);
+const initialDefaultTerm = getItem(DEFAULT_TERM_KEY);
+
 interface AppState {
   selectedSemesterId: string | null;
   setSelectedSemester: (id: string | null) => void;
@@ -49,6 +68,18 @@ interface AppState {
   setPostSignupBanner: (banner: { email: string; needsConfirm: boolean } | null) => void;
   inPasswordReset: boolean;
   setInPasswordReset: (v: boolean) => void;
+  // Device-level one-time flags (see *_KEY notes above). Persisted so they
+  // survive relaunch but intentionally left out of resetUserState().
+  hasOnboarded: boolean;
+  setHasOnboarded: (v: boolean) => void;
+  ahaPaywallShown: boolean;
+  setAhaPaywallShown: (v: boolean) => void;
+  reviewRequested: boolean;
+  setReviewRequested: (v: boolean) => void;
+  userName: string | null;
+  setUserName: (v: string | null) => void;
+  defaultTerm: string | null;
+  setDefaultTerm: (v: string | null) => void;
   /**
    * Reset every user-scoped field to its initial value. Called from
    * signOut so user B doesn't inherit user A's selected semester,
@@ -92,6 +123,31 @@ export const useAppStore = create<AppState>((set) => ({
     } else {
       deleteItem(RESET_KEY);
     }
+  },
+  hasOnboarded: initialOnboarded,
+  setHasOnboarded: (v) => {
+    set({ hasOnboarded: v });
+    if (v) { setItem(ONBOARDED_KEY, 'true'); } else { deleteItem(ONBOARDED_KEY); }
+  },
+  ahaPaywallShown: initialAhaPaywallShown,
+  setAhaPaywallShown: (v) => {
+    set({ ahaPaywallShown: v });
+    if (v) { setItem(AHA_PAYWALL_KEY, 'true'); } else { deleteItem(AHA_PAYWALL_KEY); }
+  },
+  reviewRequested: initialReviewRequested,
+  setReviewRequested: (v) => {
+    set({ reviewRequested: v });
+    if (v) { setItem(REVIEW_REQUESTED_KEY, 'true'); } else { deleteItem(REVIEW_REQUESTED_KEY); }
+  },
+  userName: initialUserName,
+  setUserName: (v) => {
+    set({ userName: v });
+    if (v) { setItem(USER_NAME_KEY, v); } else { deleteItem(USER_NAME_KEY); }
+  },
+  defaultTerm: initialDefaultTerm,
+  setDefaultTerm: (v) => {
+    set({ defaultTerm: v });
+    if (v) { setItem(DEFAULT_TERM_KEY, v); } else { deleteItem(DEFAULT_TERM_KEY); }
   },
   resetUserState: () => {
     set({

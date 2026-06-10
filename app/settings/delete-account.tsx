@@ -105,6 +105,19 @@ export default function DeleteAccountScreen() {
       // The RPC checks auth.users.last_sign_in_at within 5 minutes, so we
       // refresh it here via a real sign-in (password or OAuth re-prompt)
       // right before calling delete.
+      //
+      // Capture WHO is being deleted before re-auth: the OAuth sheet is a
+      // full sign-in and the user can pick a DIFFERENT Apple ID / Google
+      // account there — which would swap the Supabase session and make the
+      // delete RPC below destroy the wrong account.
+      const { data: { session: preAuthSession } } = await supabase.auth.getSession();
+      const targetUserId = preAuthSession?.user.id;
+      if (!targetUserId) {
+        Alert.alert('Error', 'Could not determine your account. Please sign in again.');
+        setLoading(false);
+        return;
+      }
+
       if (usesPassword) {
         const { error: authError } = await supabase.auth.signInWithPassword({
           email,
@@ -126,6 +139,19 @@ export default function DeleteAccountScreen() {
           }
           throw err;
         }
+      }
+
+      // Re-auth must have landed on the SAME account. If the user picked a
+      // different identity in the OAuth sheet, abort — deleting now would
+      // destroy whichever account they just signed into.
+      const { data: { session: postAuthSession } } = await supabase.auth.getSession();
+      if (postAuthSession?.user.id !== targetUserId) {
+        Alert.alert(
+          'Different account',
+          'You verified with a different account than the one you are deleting. Nothing was deleted — sign back in to the account you want to remove and try again.',
+        );
+        setLoading(false);
+        return;
       }
 
       const { error: rpcError } = await supabase.rpc('delete_user_account');

@@ -632,6 +632,9 @@ export function useToggleTaskComplete() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       qc.invalidateQueries({ queryKey: ['taskStats'] });
+      // ['tasks'] does NOT prefix-match the single-task key ['task', id] —
+      // without this, the task detail screen shows a stale completion state.
+      qc.invalidateQueries({ queryKey: ['task'] });
     },
   });
 }

@@ -21,10 +21,13 @@ export default function NewSemesterScreen() {
   const createSemester = useCreateSemester();
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
   const isPro = useAppStore((s) => s.isPro);
+  const defaultTerm = useAppStore((s) => s.defaultTerm);
   const { data: existingSemesters = [] } = useSemesters();
   const colors = useColors();
 
-  const [name, setName] = useState('');
+  // Pre-fill with the term picked during onboarding, but only for the very
+  // first semester — after that it's almost certainly a different term.
+  const [name, setName] = useState(existingSemesters.length === 0 ? (defaultTerm ?? '') : '');
   const [startDate, setStartDate] = useState<Date | null>(null);
   const [endDate, setEndDate] = useState<Date | null>(null);
   // Computed once per mount; the suggestions don't change while the

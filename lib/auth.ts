@@ -106,6 +106,16 @@ export async function signInWithGoogle() {
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
   const result = await GoogleSignin.signIn();
+  // v13+ RESOLVES user-cancel as { type: 'cancelled', data: null } instead
+  // of rejecting. Without this check the cancel fell through to the
+  // missing-idToken throw below — a plain Error with no `code` — so every
+  // caller's SIGN_IN_CANCELLED filter missed it and the user saw a
+  // "sign-in failed" error for simply dismissing the sheet.
+  if ((result as any)?.type === 'cancelled') {
+    const cancelErr: any = new Error('Google sign-in was cancelled.');
+    cancelErr.code = 'SIGN_IN_CANCELLED';
+    throw cancelErr;
+  }
   // The new google-signin lib v13+ returns { type, data } where type is
   // 'success' or 'cancelled'. Older shape (v11–) returned the user info
   // directly. Support both for resilience.

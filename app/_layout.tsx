@@ -1,4 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { Fraunces_600SemiBold, Fraunces_700Bold, Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces';
 import { DefaultTheme, DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useFonts } from 'expo-font';
@@ -58,8 +59,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     // userId at call time and re-check the live session before writing.
     const writeEntitlementIfStillCurrent = async (
       expectedUserId: string,
-      entitlement: { is_pro: boolean; plan: 'monthly' | 'annual' | null },
+      entitlement: { is_pro: boolean; plan: 'monthly' | 'annual' | null; transient?: boolean },
     ) => {
+      // Transient = network/server hiccup, not a real answer. Writing it
+      // would downgrade a paying user's Pro state until the next refresh.
+      if (entitlement.transient) return;
       const { data: { session: current } } = await supabase.auth.getSession();
       if (current?.user.id !== expectedUserId) return;
       const store = useAppStore.getState();
@@ -302,6 +306,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const segments = useSegments();
   const router = useRouter();
   const inPasswordReset = useAppStore((s) => s.inPasswordReset);
+  const hasOnboarded = useAppStore((s) => s.hasOnboarded);
 
   useEffect(() => {
     if (loading) return;
@@ -329,13 +334,20 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     const inAuthGroup = segments[0] === '(auth)';
+    const onOnboarding = (segments[0] as string) === 'onboarding';
 
-    if (!session && !inAuthGroup) {
-      router.replace('/(auth)/sign-in');
-    } else if (session && inAuthGroup) {
+    if (!session) {
+      // First launch on this device: sell the value before the sign-up
+      // wall. Once onboarded, fall through to the normal sign-in redirect.
+      if (!hasOnboarded) {
+        if (!onOnboarding) router.replace('/onboarding' as any);
+      } else if (!inAuthGroup) {
+        router.replace('/(auth)/sign-in');
+      }
+    } else if (session && (inAuthGroup || onOnboarding)) {
       router.replace('/(tabs)');
     }
-  }, [session, loading, segments, inPasswordReset]);
+  }, [session, loading, segments, inPasswordReset, hasOnboarded]);
 
   const colors = useColors();
 
@@ -353,6 +365,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+    // Editorial serif display face — used for headlines to lift the whole
+    // app from "default iOS" to a more refined, premium feel.
+    Fraunces_600SemiBold,
+    Fraunces_700Bold,
+    Fraunces_400Regular_Italic,
     ...FontAwesome.font,
   });
 
@@ -419,6 +436,7 @@ function RootLayoutNav() {
               }}
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="onboarding" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)/forgot-password" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)/reset-password" options={{ headerShown: false }} />

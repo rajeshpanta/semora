@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTasks, useDeleteSemester } from '@/lib/queries';
-import { COLORS, calculateGrade, DEFAULT_GRADE_SCALE } from '@/lib/constants';
+import { COLORS, FONTS, calculateGrade, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { differenceInDays, isToday, isPast, format } from 'date-fns';
 import type { GradeThreshold } from '@/types/database';
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
 
   // Header
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
-  title: { fontSize: 26, fontWeight: '700', color: COLORS.ink, letterSpacing: -0.5 },
+  title: { fontFamily: FONTS.display, fontSize: 27, color: COLORS.ink, letterSpacing: -0.5 },
   subtitle: { fontSize: 14, color: COLORS.ink3, marginTop: 4 },
   semesterSelector: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   semesterName: { fontSize: 15, fontWeight: '500', color: COLORS.ink2 },

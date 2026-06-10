@@ -7,7 +7,7 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTaskStats } from '@/lib/queries';
 import { signOut } from '@/lib/auth';
 import { displayName } from '@/lib/user';
-import { COLORS } from '@/lib/constants';
+import { COLORS, FONTS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useEffect, useState } from 'react';
 
@@ -182,14 +182,14 @@ const styles = StyleSheet.create({
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 8, marginBottom: 20 },
   avatar: { width: 58, height: 58, borderRadius: 29, backgroundColor: COLORS.brand, justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#fff', fontSize: 22, fontWeight: '600' },
-  profileName: { fontSize: 19, fontWeight: '600', color: COLORS.ink },
+  profileName: { fontFamily: FONTS.displaySemibold, fontSize: 20, color: COLORS.ink },
   profileSub: { fontSize: 14, color: COLORS.ink3, marginTop: 2 },
   // Pro card — bold premium design
   proCard: { backgroundColor: COLORS.ink, borderRadius: 22, padding: 22, marginBottom: 20, overflow: 'hidden' },
   proGlow: { position: 'absolute', right: -30, top: -30, width: 140, height: 140, borderRadius: 70, backgroundColor: COLORS.brand, opacity: 0.4 },
   proLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   proLabelText: { fontSize: 12, fontWeight: '800', letterSpacing: 1.5, color: COLORS.brand100 },
-  proTitle: { fontSize: 22, fontWeight: '700', color: '#fff', lineHeight: 28, maxWidth: 240 },
+  proTitle: { fontFamily: FONTS.display, fontSize: 22, color: '#fff', lineHeight: 28, maxWidth: 240 },
   proPrice: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 16 },
   proPriceAmount: { fontSize: 28, fontWeight: '800', color: '#fff' },
   proPricePeriod: { fontSize: 14, color: 'rgba(255,255,255,0.6)' },

@@ -69,6 +69,10 @@ interface AppleReceiptInfo {
   product_id?: string;
   expires_date_ms?: string;
   original_transaction_id?: string;
+  // Present when Apple Support refunded/revoked the transaction. A
+  // cancelled transaction must never grant entitlement, even if its
+  // expires_date is still in the future.
+  cancellation_date_ms?: string;
 }
 
 interface AppleVerifyResponse {
@@ -137,6 +141,8 @@ function pickLatestActive(resp: AppleVerifyResponse): {
     ) {
       continue;
     }
+    // Refunded/revoked by Apple — does not grant Pro regardless of expiry.
+    if (tx.cancellation_date_ms) continue;
     const expiresMs = tx.expires_date_ms ? Number(tx.expires_date_ms) : NaN;
     if (!Number.isFinite(expiresMs) || expiresMs <= now) continue;
 
@@ -375,8 +381,15 @@ serve(async (req) => {
           is_pro: false,
           plan: null,
           expires_at: null,
-          original_transaction_id: null,
-          product_id: null,
+          // Deliberately OMIT original_transaction_id / product_id here.
+          // Nulling the OTI on a lapsed validation used to orphan the
+          // binding: when the same user later renewed (same Apple OTI),
+          // the entitlement lookup found no row carrying that OTI, fell
+          // through to the consumed_transactions ledger, and 409'd a
+          // legitimate renewal as "linked to a deleted account" —
+          // permanently locking the subscriber out. Upsert only updates
+          // the columns provided, so omitting them preserves the binding
+          // across lapses while is_pro correctly goes false.
           platform,
           last_validated_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),

@@ -4,12 +4,12 @@ import {
   ActivityIndicator, Alert, Platform, Linking, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import type { ProductOrSubscription } from 'react-native-iap';
-import { COLORS } from '@/lib/constants';
+import { COLORS, FONTS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useAppStore } from '@/store/appStore';
 import { getProducts, purchaseProduct, restorePurchases, validateProEntitlement, PRODUCT_IDS, setupPurchaseListeners } from '@/lib/purchases';
@@ -37,14 +37,21 @@ const FEATURES = [
 
 export default function PaywallScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ context?: string; count?: string; courseId?: string }>();
   const setIsPro = useAppStore((s) => s.setIsPro);
   const setSubscriptionPlan = useAppStore((s) => s.setSubscriptionPlan);
   const colors = useColors();
 
-  // Annual is the recommended path — surfaced first in the UI and
-  // pre-selected so the Subscribe button reflects the better-value
-  // option without the user having to tap.
-  const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>('annual');
+  // Reverse-trial entry: opened automatically right after the first scan's
+  // "aha". Lead with the free trial (momentum, not a block) and dismiss to
+  // the freshly-populated course rather than back to the review list.
+  const isPostScan = params.context === 'postScan';
+  const importedCount = Number(params.count) || 0;
+
+  // Annual is the recommended path for the default paywall (better value,
+  // surfaced first). The post-scan reverse trial instead leads with the
+  // monthly free trial, so the CTA reads "Try 7 Days Free".
+  const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>(isPostScan ? 'monthly' : 'annual');
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [monthlySub, setMonthlySub] = useState<ProductOrSubscription | null>(null);
@@ -111,6 +118,17 @@ export default function PaywallScreen() {
   const monthlyPrice = monthlySub?.displayPrice ?? '$3.99';
 
   const handleClose = () => {
+    // From the post-scan reverse trial, "back" would land on the review
+    // list (which we already saved). Send the user to their new course
+    // instead — or Today if we somehow don't have the id.
+    if (isPostScan) {
+      if (params.courseId) {
+        router.replace(`/course/${params.courseId}` as any);
+      } else {
+        router.replace('/(tabs)' as any);
+      }
+      return;
+    }
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -139,6 +157,12 @@ export default function PaywallScreen() {
       // Race guard: see purchase listener above.
       const { data: { session: endSession } } = await supabase.auth.getSession();
       if (endSession?.user.id !== expectedUserId) {
+        return;
+      }
+      // Transient network/server failure — we don't actually know the
+      // answer, so don't write it and don't claim "no subscription".
+      if (entitlement.transient && !entitlement.is_pro) {
+        Alert.alert('Connection Issue', 'We couldn\'t reach the server to check your subscription. Please try again in a moment.');
         return;
       }
       setIsPro(entitlement.is_pro);
@@ -180,10 +204,25 @@ export default function PaywallScreen() {
               <FontAwesome name="star" size={11} color={colors.brand100} />
               <Text style={[styles.proLabelText, { color: colors.brand100 }]}>SEMORA PRO</Text>
             </View>
-            <Text style={styles.heroTitle}>Unlimited scans, smart plans, grade forecasts.</Text>
-            <Text style={styles.heroSubtitle}>
-              Everything you need to ace your semester.
-            </Text>
+            {isPostScan ? (
+              <>
+                <Text style={styles.heroTitle}>
+                  {importedCount > 0
+                    ? `You just imported ${importedCount} deadline${importedCount !== 1 ? 's' : ''} 🎉`
+                    : 'Your first scan is done 🎉'}
+                </Text>
+                <Text style={styles.heroSubtitle}>
+                  Keep the momentum — go unlimited and put every class on autopilot.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.heroTitle}>Unlimited scans, smart plans, grade forecasts.</Text>
+                <Text style={styles.heroSubtitle}>
+                  Everything you need to ace your semester.
+                </Text>
+              </>
+            )}
           </View>
 
           {/* Features */}
@@ -329,8 +368,8 @@ const styles = StyleSheet.create({
     fontSize: 12, fontWeight: '800', letterSpacing: 1.5, color: COLORS.brand100,
   },
   heroTitle: {
-    fontSize: 20, fontWeight: '700', color: '#fff',
-    lineHeight: 26, maxWidth: 240,
+    fontFamily: FONTS.display, fontSize: 22, color: '#fff',
+    lineHeight: 28, maxWidth: 260,
   },
   heroSubtitle: {
     fontSize: 14, color: 'rgba(255,255,255,0.55)',

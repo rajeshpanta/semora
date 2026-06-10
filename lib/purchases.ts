@@ -4,7 +4,7 @@ import {
   endConnection,
   fetchProducts,
   requestPurchase,
-  getAvailablePurchases,
+  getReceiptDataIOS,
   purchaseUpdatedListener,
   purchaseErrorListener,
   finishTransaction,
@@ -49,7 +49,10 @@ export async function getProducts(): Promise<{
 } | null> {
   if (Platform.OS === 'web' || !connected) return null;
   try {
-    const products = await fetchProducts({ skus: ALL_SKUS });
+    // type defaults to 'in-app' in react-native-iap v15 — our SKUs are
+    // subscriptions, so omitting it returns [] and the paywall silently
+    // falls back to hardcoded prices (wrong for other storefronts).
+    const products = await fetchProducts({ skus: ALL_SKUS, type: 'subs' });
     if (!products) return null;
     return {
       monthly: products.find((p) => p.id === PRODUCT_IDS.monthly) ?? null,
@@ -61,7 +64,16 @@ export async function getProducts(): Promise<{
 }
 
 export async function purchaseProduct(productId: string): Promise<boolean> {
-  if (Platform.OS === 'web' || !connected) return false;
+  if (Platform.OS === 'web') return false;
+  // A failed launch-time init used to make this a silent no-op forever.
+  // Retry the connection here; if the store is genuinely unreachable,
+  // throw so the paywall surfaces a real message instead of nothing.
+  if (!connected) {
+    await initIAP();
+    if (!connected) {
+      throw new Error('Cannot reach the App Store right now. Please try again in a moment.');
+    }
+  }
   try {
     await requestPurchase({
       type: 'subs',
@@ -72,7 +84,9 @@ export async function purchaseProduct(productId: string): Promise<boolean> {
     });
     return true;
   } catch (e: any) {
-    if (e.code === 'E_USER_CANCELLED') return false;
+    // v15 (Nitro) reports cancellation as ErrorCode.UserCancelled
+    // ('user-cancelled'); keep the legacy code for safety.
+    if (e?.code === 'user-cancelled' || e?.code === 'E_USER_CANCELLED') return false;
     throw e;
   }
 }
@@ -90,6 +104,13 @@ export interface ProEntitlement {
    * message instead of a generic "no subscription found".
    */
   restoreError?: 'linked_other_account' | null;
+  /**
+   * True when this result reflects a TRANSIENT failure (network down,
+   * server 5xx) rather than a real "not subscribed" answer. Callers that
+   * persist Pro state must skip the write when this is set — otherwise a
+   * blip would visibly downgrade a paying user until the next refresh.
+   */
+  transient?: boolean;
 }
 
 const EMPTY_ENTITLEMENT: ProEntitlement = {
@@ -117,7 +138,10 @@ export async function getServerEntitlement(): Promise<ProEntitlement> {
       .eq('user_id', session.user.id)
       .maybeSingle();
 
-    if (error || !data) return EMPTY_ENTITLEMENT;
+    // Query error = we don't KNOW the answer — mark transient so callers
+    // don't write a false downgrade. A missing row is a genuine "not pro".
+    if (error) return { ...EMPTY_ENTITLEMENT, transient: true };
+    if (!data) return EMPTY_ENTITLEMENT;
 
     // Honor expiry on the client too — if the row says active but
     // the date is past, treat as inactive until the server re-validates.
@@ -130,7 +154,7 @@ export async function getServerEntitlement(): Promise<ProEntitlement> {
       expires_at: data.expires_at,
     };
   } catch {
-    return EMPTY_ENTITLEMENT;
+    return { ...EMPTY_ENTITLEMENT, transient: true };
   }
 }
 
@@ -147,17 +171,20 @@ export async function validateProEntitlement(): Promise<ProEntitlement> {
   if (Platform.OS === 'web' || !connected) return EMPTY_ENTITLEMENT;
 
   try {
-    const purchases = await getAvailablePurchases();
-    // iOS receipts are device-wide — any purchase carries the full app receipt.
-    const purchaseWithReceipt = purchases.find(
-      (p) => typeof (p as any).transactionReceipt === 'string' && (p as any).transactionReceipt.length > 0,
-    ) as (Purchase & { transactionReceipt?: string }) | undefined;
-
-    const receipt = purchaseWithReceipt?.transactionReceipt;
+    // react-native-iap v15 (Nitro) removed Purchase.transactionReceipt.
+    // getReceiptDataIOS() returns the device-wide base64 app receipt —
+    // exactly the format the validate-receipt edge function POSTs to
+    // Apple's verifyReceipt.
+    let receipt: string | null = null;
+    try {
+      receipt = (await getReceiptDataIOS()) ?? null;
+    } catch {
+      receipt = null;
+    }
 
     // No local receipt means nothing to validate. Don't blow away an
     // existing server entitlement — just return what the server says.
-    if (!receipt) {
+    if (!receipt || receipt.length === 0) {
       return await getServerEntitlement();
     }
 

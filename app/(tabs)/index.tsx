@@ -16,7 +16,7 @@ import {
   useSemesters, useCourses, useTodayTasks, useDueSoonTasks,
   useTaskStats, useToggleTaskComplete, useTasks,
 } from '@/lib/queries';
-import { COLORS } from '@/lib/constants';
+import { COLORS, FONTS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { displayName } from '@/lib/user';
 import { formatTimeOfDay, classTimeStatus } from '@/lib/schedule';
@@ -54,9 +54,11 @@ export default function TodayScreen() {
   // get a wall of red. Tap "Show N more" to expand inline.
   const [showAllOverdue, setShowAllOverdue] = useState(false);
 
-  // Empty fallback so the greeting can degrade to just "Good morning" when we
-  // have no usable name (vs. the old "Good morning, there" which read awkwardly).
-  const userName = displayName(session?.user, '');
+  // Prefer the real account name; fall back to the name captured during
+  // onboarding (before sign-in) so the greeting feels personal from day one.
+  // Empty string as the last resort degrades to just "Good morning".
+  const onboardingName = useAppStore((s) => s.userName);
+  const userName = displayName(session?.user, onboardingName ?? '');
   // Bump every minute so `today`, `nowHHMM`, and the greeting refresh while
   // the screen sits open — without this, the NOW badge wouldn't appear when
   // a class actually starts and the greeting would be stuck on "Good morning"
@@ -73,6 +75,9 @@ export default function TodayScreen() {
 
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
+  const ahaPaywallShown = useAppStore((s) => s.ahaPaywallShown);
+  const reviewRequested = useAppStore((s) => s.reviewRequested);
+  const setReviewRequested = useAppStore((s) => s.setReviewRequested);
   const { data: semesters = [], isLoading: semestersLoading } = useSemesters();
   const { data: courses = [] } = useCourses(selectedSemesterId);
   const { data: todayTasks = [] } = useTodayTasks(selectedSemesterId);
@@ -170,6 +175,27 @@ export default function TodayScreen() {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     qc.invalidateQueries().then(() => setRefreshing(false));
+  }, []);
+
+  // Ask for an App Store rating at a genuine happy moment. `ahaPaywallShown`
+  // is only set after a successful first import, so reaching here means the
+  // user has already felt the value. Running on mount (not focus) defers the
+  // prompt to a *later* app launch — never in the same session as the
+  // post-scan paywall, so the two never stack. Fires once, ever.
+  useEffect(() => {
+    if (!ahaPaywallShown || reviewRequested || Platform.OS === 'web') return;
+    const t = setTimeout(async () => {
+      try {
+        const StoreReview = await import('expo-store-review');
+        if (await StoreReview.isAvailableAsync()) {
+          await StoreReview.requestReview();
+          setReviewRequested(true);
+        }
+      } catch {
+        // Non-critical — try again next launch.
+      }
+    }, 1800);
+    return () => clearTimeout(t);
   }, []);
 
   // Today's classes — flatMap over course_meetings so a course with a
@@ -745,7 +771,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
   content: { padding: 18, paddingBottom: 120 },
   eyeLabel: { fontSize: 14, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.ink3 },
-  greeting: { fontSize: 26, fontWeight: '600', color: COLORS.ink, letterSpacing: -0.5, marginTop: 4, marginBottom: 2 },
+  greeting: { fontFamily: FONTS.displaySemibold, fontSize: 27, color: COLORS.ink, letterSpacing: -0.5, marginTop: 4, marginBottom: 2 },
   semesterLabel: { fontSize: 14, color: COLORS.ink3, fontWeight: '500', marginBottom: 16 },
   notifBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
