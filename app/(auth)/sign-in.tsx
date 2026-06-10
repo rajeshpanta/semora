@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { signIn, signInWithApple, signInWithGoogle, isAppleSignInAvailable } from '@/lib/auth';
+import { signIn, signUp, signInWithApple, signInWithGoogle, isAppleSignInAvailable } from '@/lib/auth';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
@@ -25,6 +25,14 @@ export default function SignInScreen() {
   // so the user sees confirmation when they're bounced back here to sign in).
   const banner = useAppStore((s) => s.postSignupBanner);
 
+  // New installs land here straight from onboarding, so account CREATION
+  // is the default framing; returning users switch with one tap. Before
+  // this, the screen was sign-in-only — there was literally no email
+  // sign-up path in the app. A live banner (email-confirm pending, or
+  // password just reset) means the account already exists → sign-in mode.
+  const [mode, setMode] = useState<'signup' | 'signin'>(
+    useAppStore.getState().postSignupBanner ? 'signin' : 'signup',
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -103,6 +111,47 @@ export default function SignInScreen() {
     }
   };
 
+  const handleSignUp = async () => {
+    setError('');
+    setErrorType('');
+
+    if (!email.trim()) {
+      setError('Please enter your email address.');
+      setErrorType('generic');
+      return;
+    }
+    if (!password || password.length < 6) {
+      setError('Please choose a password with at least 6 characters.');
+      setErrorType('generic');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { needsConfirm } = await signUp(email.trim(), password);
+      if (needsConfirm) {
+        // Confirmation email sent — flip to sign-in framing with the
+        // existing "Account Created / check your email" banner.
+        useAppStore.getState().setPostSignupBanner({ email: email.trim(), needsConfirm: true });
+        setMode('signin');
+        setPassword('');
+      }
+      // With confirmations disabled a session exists now and AuthGate
+      // routes straight into the app — nothing else to do here.
+    } catch (err: any) {
+      if (err?.code === 'email_exists') {
+        setError('An account with this email already exists. Sign in below.');
+        setErrorType('credentials');
+        setMode('signin');
+      } else {
+        setError(err.message || 'Could not create your account. Please try again.');
+        setErrorType('generic');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSignIn = async () => {
     setError('');
     setErrorType('');
@@ -163,8 +212,14 @@ export default function SignInScreen() {
             <View style={[styles.logoContainer, { backgroundColor: colors.brand }]}>
               <FontAwesome name="graduation-cap" size={28} color="#fff" />
             </View>
-            <Text style={[styles.title, { color: colors.ink }]}>Semora</Text>
-            <Text style={[styles.subtitle, { color: colors.ink2 }]}>Never miss a deadline again</Text>
+            <Text style={[styles.title, { color: colors.ink }]}>
+              {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.ink2 }]}>
+              {mode === 'signup'
+                ? 'Save your semester and never miss a deadline'
+                : 'Sign in to pick up where you left off'}
+            </Text>
           </View>
 
           <View style={[styles.form, { backgroundColor: colors.card }]}>
@@ -201,6 +256,12 @@ export default function SignInScreen() {
                   </>
                 )}
               </TouchableOpacity>
+
+              {mode === 'signup' && (
+                <Text style={[styles.oauthHint, { color: colors.ink3 }]}>
+                  One tap — your account is created automatically.
+                </Text>
+              )}
             </View>
 
             <View style={styles.divider}>
@@ -281,7 +342,7 @@ export default function SignInScreen() {
             <View style={styles.inputWrap}>
               <TextInput
                 style={[styles.input, styles.inputWithIcon, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
-                placeholder="Enter your password"
+                placeholder={mode === 'signup' ? 'Choose a password (6+ characters)' : 'Enter your password'}
                 placeholderTextColor={colors.ink3}
                 value={password}
                 onChangeText={(t) => {
@@ -289,10 +350,10 @@ export default function SignInScreen() {
                   if (error) { setError(''); setErrorType(''); }
                 }}
                 secureTextEntry={!showPassword}
-                autoComplete="password"
+                autoComplete={mode === 'signup' ? 'new-password' : 'password'}
                 returnKeyType="done"
-                onSubmitEditing={handleSignIn}
-                textContentType="password"
+                onSubmitEditing={mode === 'signup' ? handleSignUp : handleSignIn}
+                textContentType={mode === 'signup' ? 'newPassword' : 'password'}
               />
               <TouchableOpacity
                 style={styles.eyeBtn}
@@ -304,17 +365,19 @@ export default function SignInScreen() {
               </TouchableOpacity>
             </View>
 
-            <Link href="/(auth)/forgot-password" asChild>
-              <TouchableOpacity style={styles.forgotLink} activeOpacity={0.7}>
-                <Text style={[styles.forgotText, { color: colors.brand }]}>
-                  Forgot password?
-                </Text>
-              </TouchableOpacity>
-            </Link>
+            {mode === 'signin' && (
+              <Link href="/(auth)/forgot-password" asChild>
+                <TouchableOpacity style={styles.forgotLink} activeOpacity={0.7}>
+                  <Text style={[styles.forgotText, { color: colors.brand }]}>
+                    Forgot password?
+                  </Text>
+                </TouchableOpacity>
+              </Link>
+            )}
 
             <TouchableOpacity
               style={[styles.button, { backgroundColor: colors.brand }, loading && styles.buttonDisabled]}
-              onPress={handleSignIn}
+              onPress={mode === 'signup' ? handleSignUp : handleSignIn}
               disabled={loading}
               activeOpacity={0.8}
             >
@@ -322,10 +385,28 @@ export default function SignInScreen() {
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <>
-                  <FontAwesome name="sign-in" size={16} color="#fff" />
-                  <Text style={styles.buttonText}>Sign In</Text>
+                  <FontAwesome name={mode === 'signup' ? 'user-plus' : 'sign-in'} size={16} color="#fff" />
+                  <Text style={styles.buttonText}>{mode === 'signup' ? 'Create Account' : 'Sign In'}</Text>
                 </>
               )}
+            </TouchableOpacity>
+
+            {/* Mode toggle — the path that didn't exist before. */}
+            <TouchableOpacity
+              style={styles.modeToggle}
+              onPress={() => {
+                setMode(mode === 'signup' ? 'signin' : 'signup');
+                setError('');
+                setErrorType('');
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.modeToggleText, { color: colors.ink3 }]}>
+                {mode === 'signup' ? 'Already have an account? ' : 'New to Semora? '}
+                <Text style={{ color: colors.brand, fontWeight: '700' }}>
+                  {mode === 'signup' ? 'Sign in' : 'Create account'}
+                </Text>
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -508,6 +589,20 @@ const styles = StyleSheet.create({
   oauthGroup: {
     gap: 10,
     marginBottom: 4,
+  },
+  oauthHint: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  modeToggle: {
+    alignItems: 'center',
+    marginTop: 16,
+    paddingVertical: 4,
+  },
+  modeToggleText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   appleButton: {
     height: 50,

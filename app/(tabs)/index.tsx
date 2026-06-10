@@ -54,11 +54,13 @@ export default function TodayScreen() {
   // get a wall of red. Tap "Show N more" to expand inline.
   const [showAllOverdue, setShowAllOverdue] = useState(false);
 
-  // Prefer the real account name; fall back to the name captured during
-  // onboarding (before sign-in) so the greeting feels personal from day one.
-  // Empty string as the last resort degrades to just "Good morning".
+  // The name the user TYPED in onboarding ("What should we call you?") is
+  // their explicit preference — it beats everything, including the email
+  // local-part that displayName falls back to (nobody wants "Good morning,
+  // coollax45"). Account metadata names are the fallback; empty string as
+  // the last resort degrades to just "Good morning".
   const onboardingName = useAppStore((s) => s.userName);
-  const userName = displayName(session?.user, onboardingName ?? '');
+  const userName = (onboardingName ?? '').trim() || displayName(session?.user, '');
   // Bump every minute so `today`, `nowHHMM`, and the greeting refresh while
   // the screen sits open — without this, the NOW badge wouldn't appear when
   // a class actually starts and the greeting would be stuck on "Good morning"
@@ -606,17 +608,23 @@ export default function TodayScreen() {
                 </TouchableOpacity>
               </>
             ) : semesters.length === 0 ? (
+              // Scanner-first: the scan flow auto-creates the semester AND
+              // course (findOrCreateSemester/Course), so the magic moment is
+              // one tap away. Manual setup is the slow path — demote it.
               <>
                 <Text style={[styles.emptySub, { color: colors.ink3 }]}>
-                  Set up your semester to start tracking deadlines.
+                  Snap your syllabus and Semora builds your semester — courses, deadlines, exams.
                 </Text>
                 <TouchableOpacity
                   style={[styles.emptyCta, { backgroundColor: colors.brand }]}
-                  onPress={() => router.push('/semester/new')}
+                  onPress={() => router.push('/scan' as any)}
                   activeOpacity={0.85}
                 >
-                  <FontAwesome name="plus" size={14} color="#fff" />
-                  <Text style={styles.emptyCtaText}>Create your first semester</Text>
+                  <FontAwesome name="camera" size={14} color="#fff" />
+                  <Text style={styles.emptyCtaText}>Scan your syllabus</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/semester/new')} activeOpacity={0.7} hitSlop={8}>
+                  <Text style={[styles.emptySecondary, { color: colors.ink3 }]}>Or set up manually</Text>
                 </TouchableOpacity>
               </>
             ) : (
@@ -837,6 +845,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
   },
   emptyCtaText: { fontSize: 14, fontWeight: '600', color: '#fff' },
+  emptySecondary: { fontSize: 13, fontWeight: '500', marginTop: 12, textDecorationLine: 'underline' },
   // Week
   weekCard: { backgroundColor: COLORS.card, borderRadius: 18, padding: 14, borderWidth: 0.5, borderColor: COLORS.line },
   weekStats: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },

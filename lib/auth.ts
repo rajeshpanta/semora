@@ -46,6 +46,29 @@ export async function signIn(email: string, password: string) {
 }
 
 /**
+ * Create a new email/password account.
+ *
+ * Returns needsConfirm=true when Supabase email confirmation is on (the
+ * default) — the user must tap the link we emailed before signing in.
+ * If confirmations are disabled, a session is returned and AuthGate
+ * routes straight into the app.
+ *
+ * Throws Error with code 'email_exists' when the address already has an
+ * account: Supabase anti-enumeration returns a fake user with EMPTY
+ * identities instead of an error for existing confirmed emails.
+ */
+export async function signUp(email: string, password: string): Promise<{ needsConfirm: boolean }> {
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) throw error;
+  if (data.user && (data.user.identities?.length ?? 0) === 0) {
+    const exists: any = new Error('An account with this email already exists. Sign in instead.');
+    exists.code = 'email_exists';
+    throw exists;
+  }
+  return { needsConfirm: !data.session };
+}
+
+/**
  * Sign in with Apple (iOS).
  *
  * Native Apple sheet → returns identityToken (JWT) → handed to Supabase

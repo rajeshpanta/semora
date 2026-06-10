@@ -12,7 +12,8 @@ import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { COLORS, FONTS, TASK_TYPE_LABELS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
-import { scheduleTaskReminders } from '@/lib/notifications';
+import * as Notifications from 'expo-notifications';
+import { scheduleTaskReminders, requestNotificationPermission } from '@/lib/notifications';
 import { useAppStore } from '@/store/appStore';
 import type { ExtractedItem } from '@/lib/gemini';
 
@@ -75,6 +76,35 @@ export default function SyllabusReviewScreen() {
     if (accepted.length === 0) {
       Alert.alert('No Items', 'Please accept at least one item to save.');
       return;
+    }
+
+    // Primed permission ask at the moment of maximum motivation — the user
+    // is saving N concrete deadlines. Only when the OS prompt has never
+    // been shown ('undetermined'); granted users sail through and denied
+    // users are handled by the Today-screen recovery banner. Asked BEFORE
+    // the save so reminder scheduling below runs with permission settled.
+    if (Platform.OS !== 'web') {
+      try {
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status === 'undetermined') {
+          const wantsReminders = await new Promise<boolean>((resolve) => {
+            Alert.alert(
+              'Never miss these deadlines',
+              `Want a heads-up before each of the ${accepted.length} deadline${accepted.length !== 1 ? 's' : ''} you're importing?`,
+              [
+                { text: 'Not now', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Remind me', onPress: () => resolve(true) },
+              ],
+              { cancelable: true, onDismiss: () => resolve(false) },
+            );
+          });
+          if (wantsReminders) {
+            await requestNotificationPermission().catch(() => {});
+          }
+        }
+      } catch {
+        // Permission check failing should never block the save.
+      }
     }
 
     setSaving(true);

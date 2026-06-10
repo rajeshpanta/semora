@@ -199,7 +199,11 @@ async function findOrCreateSemester(
   startDate: string | null,
   endDate: string | null,
 ): Promise<{ semesterId: string; semesterName: string }> {
-  const name = semesterName || suggestCurrentSemesterName();
+  // Priority: what the syllabus itself says > the term the user picked
+  // during onboarding > a generic date-based suggestion. Without the
+  // middle step, the onboarding "Which term are you starting?" answer
+  // was never used on the scan path — the one the funnel pushes.
+  const name = semesterName || useAppStore.getState().defaultTerm || suggestCurrentSemesterName();
 
   // Check if semester with this name already exists
   const escapedName = name.replace(/[%_]/g, '\\$&');

@@ -13,7 +13,6 @@ import 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import * as Localization from 'expo-localization';
-import { requestNotificationPermission } from '@/lib/notifications';
 import { COLORS } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
 import { ThemeColorsProvider, useResolvedScheme, useColors } from '@/lib/theme';
@@ -122,10 +121,13 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setLoading(false);
 
-      // Detect and save timezone on first sign-in
+      // Detect and save timezone on first sign-in.
+      // NOTE: notification permission is deliberately NOT requested here.
+      // An un-primed OS dialog at launch (empty app, zero deadlines)
+      // converts at ~40-50%; the review screen primes it after the first
+      // import instead ("Want reminders before these N deadlines?").
       if (session) {
         saveTimezoneIfNeeded(session.user.id);
-        requestNotificationPermission().catch(() => {});
         refreshProForSession(session.user.id);
       }
     }).catch(() => {
@@ -157,7 +159,6 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (session) {
         saveTimezoneIfNeeded(session.user.id);
-        requestNotificationPermission().catch(() => {});
 
         if (_event === 'SIGNED_IN') {
           // Account switch / fresh sign-in — full revalidation, plus
