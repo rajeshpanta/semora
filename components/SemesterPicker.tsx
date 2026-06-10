@@ -20,7 +20,7 @@ export function SemesterPicker({ semesters, selectedId, onSelect }: SemesterPick
         return (
           <TouchableOpacity
             key={s.id}
-            style={[styles.chip, { borderColor: colors.line }, active && { backgroundColor: colors.brand, borderColor: colors.brand }]}
+            style={[styles.chip, { borderColor: colors.line, backgroundColor: colors.card }, active && { backgroundColor: colors.brand, borderColor: colors.brand }]}
             onPress={() => onSelect(s.id)}
             activeOpacity={0.7}
           >

@@ -140,11 +140,14 @@ export default function ScanScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       quality: 0.8,
-      allowsMultipleSelection: true,
+      // Single-select until the pipeline supports multi-page: with
+      // multi-select on, every page after the first was silently dropped
+      // — the UI must not promise what the scan can't do.
+      allowsMultipleSelection: false,
+      selectionLimit: 1,
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      // For multiple images, process the first one (multi-page support later)
       const asset = result.assets[0];
       navigateToUpload(
         asset.uri,
@@ -167,6 +170,20 @@ export default function ScanScreen() {
     'image/webp',
   ];
 
+  // Some Files-app providers omit mimeType. Falling back to PDF for an
+  // image mislabels the bytes sent to the parser — infer from extension.
+  const inferMimeFromName = (name?: string | null): string => {
+    const ext = (name ?? '').split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'jpg': case 'jpeg': return 'image/jpeg';
+      case 'png': return 'image/png';
+      case 'heic': return 'image/heic';
+      case 'heif': return 'image/heif';
+      case 'webp': return 'image/webp';
+      default: return 'application/pdf';
+    }
+  };
+
   const handlePickFromFiles = async () => {
     if (!(await checkScanLimit())) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -181,7 +198,7 @@ export default function ScanScreen() {
       navigateToUpload(
         asset.uri,
         asset.name || 'syllabus',
-        asset.mimeType || 'application/pdf',
+        asset.mimeType || inferMimeFromName(asset.name),
       );
     }
   };

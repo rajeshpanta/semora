@@ -4,7 +4,7 @@ import {
   Alert, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { processSyllabus, type ProcessResult, FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
@@ -269,6 +269,11 @@ export default function SyllabusUploadScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
+      {/* While the pipeline is running, dismissing this modal (swipe-down /
+          header back) would burn a free scan and orphan the extraction —
+          the work finishes headless and the user never sees the results.
+          Lock the sheet until processing settles. */}
+      <Stack.Screen options={{ gestureEnabled: !processing, headerBackVisible: !processing }} />
       <View style={styles.center}>
         {/* File info */}
         <View style={[styles.fileChip, { backgroundColor: colors.brand50 }]}>

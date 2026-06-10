@@ -47,7 +47,7 @@ export function GradeCard({ percentage, letter, gradedCount, totalCount, weightA
       </View>
 
       {/* Progress bar */}
-      <View style={styles.barBg}>
+      <View style={[styles.barBg, { backgroundColor: colors.line }]}>
         <LinearGradient
           colors={[color1, color2]}
           style={[styles.barFill, { width: `${barWidth}%` }]}

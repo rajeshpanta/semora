@@ -226,9 +226,12 @@ export default function TodayScreen() {
   const weekExams = weekTasks.filter((t) => t.type === 'exam').length;
   const weekOverdue = weekTasks.filter((t) => !t.is_completed && new Date(t.due_date + 'T00:00:00') < todayStart && !isDateToday(new Date(t.due_date + 'T00:00:00'))).length;
   const todayStr = format(today, 'yyyy-MM-dd');
+  // Only today-or-later, incomplete tasks: the "busiest day" callout is a
+  // plan-ahead nudge — pointing it at Monday's already-done work on a
+  // Thursday is noise.
   const dayBuckets = Array.from({ length: 7 }, (_, i) => {
     const d = format(addDays(weekStart, i), 'yyyy-MM-dd');
-    return weekTasks.filter((t) => t.due_date === d).length;
+    return d >= todayStr ? weekTasks.filter((t) => t.due_date === d && !t.is_completed).length : 0;
   });
 
   // "This week" highlight — single actionable callout. Priority: next
@@ -304,8 +307,9 @@ export default function TodayScreen() {
           <Text style={[styles.semesterLabel, { color: colors.ink3 }]}>{activeSemester.name}</Text>
         )}
 
-        {/* Notification permission nudge. Surfaces when the OS prompt was
-            denied / never answered. Tapping opens the device's Semora
+        {/* Notification permission nudge. Surfaces ONLY when the OS prompt
+            was explicitly denied (never-asked users get the primed ask in
+            the review screen instead). Tapping opens the device's Semora
             notification settings — iOS does not allow re-prompting in-app
             once the user has dismissed the system dialog. */}
         {notifPermDenied && (

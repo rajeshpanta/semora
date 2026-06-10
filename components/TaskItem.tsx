@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
-import { format, isPast, isToday, isTomorrow, differenceInDays, differenceInHours, differenceInMinutes } from 'date-fns';
+import { format, isPast, isToday, isTomorrow, differenceInDays, differenceInCalendarDays, differenceInHours, differenceInMinutes } from 'date-fns';
 import { TASK_TYPE_LABELS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import type { TaskWithCourse } from '@/lib/queries';
@@ -46,7 +46,10 @@ function getDueLabel(dueDate: Date, dueTime: string | null): string {
 
   if (isTomorrow(dueDate)) return 'Tomorrow';
 
-  const daysUntil = differenceInDays(dueDate, now);
+  // Calendar diff, not 24h-period diff: dueDate is midnight, so the
+  // fractional-day truncation made every label one day short
+  // ("In 1 days" for a task due in 2).
+  const daysUntil = differenceInCalendarDays(dueDate, now);
   if (daysUntil <= 7) return `In ${daysUntil} days`;
 
   return format(dueDate, 'MMM d');
@@ -60,7 +63,13 @@ export function TaskItem({ task, onToggle, onPress }: TaskItemProps) {
   const dueDate = task.due_date ? new Date(task.due_date + 'T00:00:00') : null;
   const overdue = !task.is_completed && !!dueDate && isPast(dueDate) && !isToday(dueDate);
   const dueToday = !!dueDate && isToday(dueDate);
-  const dueLabel = dueDate ? getDueLabel(dueDate, task.due_time) : 'No due date';
+  // A task completed ON TIME must not keep aging into "N days late" —
+  // late labels only make sense for incomplete or submitted-late tasks.
+  const dueLabel = !dueDate
+    ? 'No due date'
+    : task.is_completed && !task.submitted_late
+      ? format(dueDate, 'MMM d')
+      : getDueLabel(dueDate, task.due_time);
   const isUrgent = dueLabel.includes('left') || dueLabel === 'Due today' || dueLabel === 'Tomorrow';
 
   const handleToggle = () => {
@@ -114,7 +123,7 @@ export function TaskItem({ task, onToggle, onPress }: TaskItemProps) {
         <View style={styles.metaRow}>
           <View style={[styles.courseDot, { backgroundColor: task.courses.color }]} />
           <Text style={[styles.courseName, { color: colors.ink2 }]} numberOfLines={1}>{task.courses.name}</Text>
-          <View style={styles.typeBadge}>
+          <View style={[styles.typeBadge, { backgroundColor: colors.line }]}>
             <Text style={[styles.typeText, { color: colors.ink2 }]}>{TASK_TYPE_LABELS[task.type]}</Text>
           </View>
         </View>
@@ -122,10 +131,14 @@ export function TaskItem({ task, onToggle, onPress }: TaskItemProps) {
 
       <View style={styles.dateCol}>
         {task.submitted_late && (
-          <View style={styles.lateBadge}><Text style={styles.lateBadgeText}>LATE</Text></View>
+          <View style={[styles.lateBadge, { backgroundColor: colors.coral50 }]}>
+            <Text style={[styles.lateBadgeText, { color: colors.coral }]}>LATE</Text>
+          </View>
         )}
         {overdue && !task.submitted_late && (
-          <View style={styles.overdueBadge}><Text style={styles.overdueBadgeText}>OVERDUE</Text></View>
+          <View style={[styles.overdueBadge, { backgroundColor: colors.amber50 }]}>
+            <Text style={[styles.overdueBadgeText, { color: colors.amber }]}>OVERDUE</Text>
+          </View>
         )}
         <Text style={[
           styles.dateText,

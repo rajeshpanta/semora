@@ -1,7 +1,10 @@
-import { View, Text, StyleSheet, Switch, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, Switch, ActivityIndicator, Alert, TouchableOpacity, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
+import * as Notifications from 'expo-notifications';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { requestNotificationPermission } from '@/lib/notifications';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/app/_layout';
@@ -30,9 +33,21 @@ export default function NotificationSettings() {
   const qc = useQueryClient();
   const [prefs, setPrefs] = useState<ReminderPrefs>(DEFAULT_PREFS);
   const [loading, setLoading] = useState(true);
+  // OS-level permission. Without this check the toggles look functional
+  // while every reminder is silently dead (scheduling no-ops when the
+  // user denied or never granted notifications).
+  const [osPermission, setOsPermission] = useState<'granted' | 'denied' | 'undetermined'>('granted');
+
+  const refreshOsPermission = () => {
+    if (Platform.OS === 'web') return;
+    Notifications.getPermissionsAsync()
+      .then(({ status }) => setOsPermission(status as any))
+      .catch(() => {});
+  };
 
   useEffect(() => {
-    if (!userId) return;
+    refreshOsPermission();
+    if (!userId) { setLoading(false); return; }
     (async () => {
       try {
         const { data } = await supabase
@@ -48,6 +63,17 @@ export default function NotificationSettings() {
       }
     })();
   }, [userId]);
+
+  const handleEnableNotifications = async () => {
+    if (osPermission === 'undetermined') {
+      // OS prompt never shown — we can ask directly.
+      await requestNotificationPermission().catch(() => {});
+      refreshOsPermission();
+    } else {
+      // Denied — only iOS Settings can flip it now.
+      Linking.openSettings().catch(() => {});
+    }
+  };
 
   const toggle = async (key: keyof ReminderPrefs) => {
     // 1-day and 3-day reminders are Pro only
@@ -91,6 +117,25 @@ export default function NotificationSettings() {
       <Stack.Screen options={{ title: 'Notifications' }} />
 
       <View style={styles.content}>
+        {osPermission !== 'granted' && (
+          <TouchableOpacity
+            style={[styles.permBanner, { backgroundColor: colors.amber50, borderColor: colors.amber }]}
+            onPress={handleEnableNotifications}
+            activeOpacity={0.75}
+          >
+            <FontAwesome name="bell-slash" size={14} color={colors.amber} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.permBannerTitle, { color: colors.ink }]}>Notifications are off</Text>
+              <Text style={[styles.permBannerSub, { color: colors.ink2 }]}>
+                {osPermission === 'undetermined'
+                  ? 'Tap to allow notifications so reminders can reach you.'
+                  : 'Reminders can\'t be delivered. Tap to enable them in iOS Settings.'}
+              </Text>
+            </View>
+            <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
+          </TouchableOpacity>
+        )}
+
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Remind me before due date</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <ToggleRow
@@ -175,4 +220,10 @@ const styles = StyleSheet.create({
   hint: { fontSize: 13, color: COLORS.ink3, marginTop: 14, lineHeight: 18, paddingHorizontal: 4 },
   proBadge: { backgroundColor: COLORS.brand, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   proBadgeText: { fontSize: 9, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
+  permBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderRadius: 14, borderWidth: 1, padding: 12, marginBottom: 16,
+  },
+  permBannerTitle: { fontSize: 14, fontWeight: '700' },
+  permBannerSub: { fontSize: 12.5, marginTop: 1, lineHeight: 17 },
 });

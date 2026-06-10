@@ -10,6 +10,8 @@ import { displayName } from '@/lib/user';
 import { COLORS, FONTS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useEffect, useState } from 'react';
+import Constants from 'expo-constants';
+import { getProducts } from '@/lib/purchases';
 
 export default function MeScreen() {
   const colors = useColors();
@@ -17,6 +19,16 @@ export default function MeScreen() {
   const name = displayName(session?.user, 'User');
   const initial = (name[0] ?? '?').toUpperCase();
   const [signingOut, setSigningOut] = useState(false);
+  // Real store prices (regional/currency-correct); hardcoded strings are
+  // only the fallback while products load or the store is unreachable.
+  const [annualPrice, setAnnualPrice] = useState('$19.99');
+  const [monthlyPrice, setMonthlyPrice] = useState('$3.99');
+  useEffect(() => {
+    getProducts().then((p) => {
+      if (p?.annual?.displayPrice) setAnnualPrice(p.annual.displayPrice);
+      if (p?.monthly?.displayPrice) setMonthlyPrice(p.monthly.displayPrice);
+    }).catch(() => {});
+  }, []);
 
   const handleSignOut = () => {
     if (signingOut) return;
@@ -105,13 +117,13 @@ export default function MeScreen() {
               <>
                 <Text style={styles.proTitle}>Unlimited scans, smart plans, grade forecasts.</Text>
                 <View style={styles.proPrice}>
-                  <Text style={styles.proPriceAmount}>$19.99</Text>
+                  <Text style={styles.proPriceAmount}>{annualPrice}</Text>
                   <Text style={styles.proPricePeriod}>/year · cancel any time</Text>
                 </View>
                 <View style={styles.proButton}>
                   <Text style={[styles.proButtonText, { color: colors.ink }]}>Upgrade to Pro</Text>
                 </View>
-                <Text style={styles.proAlt}>Or $3.99/month with 7-day free trial</Text>
+                <Text style={styles.proAlt}>Or {monthlyPrice}/month with 7-day free trial</Text>
               </>
             )}
           </View>
@@ -159,7 +171,9 @@ export default function MeScreen() {
           </Text>
         </TouchableOpacity>
 
-        <Text style={[styles.version, { color: colors.ink3 }]}>Semora 1.0.0</Text>
+        <Text style={[styles.version, { color: colors.ink3 }]}>
+          Semora {Constants.expoConfig?.version ?? '1.1'}
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );

@@ -14,6 +14,7 @@ import { COLORS, FONTS, TASK_TYPE_LABELS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import * as Notifications from 'expo-notifications';
 import { scheduleTaskReminders, requestNotificationPermission } from '@/lib/notifications';
+import { isSyncEnabled, syncTaskToCalendar } from '@/lib/calendarSync';
 import { useAppStore } from '@/store/appStore';
 import type { ExtractedItem } from '@/lib/gemini';
 
@@ -76,6 +77,20 @@ export default function SyllabusReviewScreen() {
     const accepted = items.filter((i) => i.accepted);
     if (accepted.length === 0) {
       Alert.alert('No Items', 'Please accept at least one item to save.');
+      return;
+    }
+
+    // Inline-edited dates are free text — catch malformed ones up front
+    // instead of silently dropping rows mid-save.
+    const badDates = accepted.filter(
+      (i) => !/^\d{4}-\d{2}-\d{2}$/.test(i.due_date) || isNaN(new Date(i.due_date + 'T00:00:00').getTime()),
+    );
+    if (badDates.length > 0) {
+      const names = badDates.slice(0, 3).map((b) => `"${b.title}"`).join(', ');
+      Alert.alert(
+        'Check dates',
+        `${names}${badDates.length > 3 ? ` and ${badDates.length - 3} more` : ''} ${badDates.length === 1 ? 'has' : 'have'} an invalid date. Use YYYY-MM-DD.`,
+      );
       return;
     }
 
@@ -150,11 +165,20 @@ export default function SyllabusReviewScreen() {
 
         savedCount++;
 
-        // Schedule notifications
+        // Schedule notifications + mirror to the device calendar. Awaited
+        // (not fire-and-forget) so a 14-task import doesn't fire 14
+        // concurrent schedulers that each prune the iOS 64-notification
+        // cap against a stale snapshot.
         if (task) {
-          scheduleTaskReminders(
+          await scheduleTaskReminders(
             task.id, task.title, params.courseName || 'Course', task.due_date, task.due_time, session.user.id,
           ).catch(() => {});
+          // Bulk import is the app's main task-creation path — it must
+          // sync like every other create, or "calendar sync" silently
+          // misses the very tasks the scan funnel produces.
+          if (isSyncEnabled()) {
+            await syncTaskToCalendar(task as any, params.courseName || 'Course').catch(() => {});
+          }
         }
       }
 

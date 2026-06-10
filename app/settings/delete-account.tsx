@@ -12,6 +12,7 @@ import { signOut, signInWithApple, signInWithGoogle } from '@/lib/auth';
 import { useSession } from '@/app/_layout';
 import { useColors } from '@/lib/theme';
 import { hasEmailPassword, primaryProvider } from '@/lib/user';
+import { useAppStore } from '@/store/appStore';
 
 const OAUTH_CANCEL_CODES = new Set([
   'ERR_REQUEST_CANCELED', 'ERR_CANCELED',
@@ -60,6 +61,7 @@ export default function DeleteAccountScreen() {
   const email = user?.email ?? '';
   const usesPassword = hasEmailPassword(user);
   const provider = primaryProvider(user);
+  const isPro = useAppStore((s) => s.isPro);
 
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -193,6 +195,9 @@ export default function DeleteAccountScreen() {
             <Text style={[styles.warningTitle, { color: colors.coral }]}>This is permanent</Text>
             <Text style={[styles.warningText, { color: colors.ink2 }]}>
               All your semesters, courses, tasks, grades, and uploaded syllabi will be deleted. This cannot be undone.
+              {isPro
+                ? '\n\nDeleting your account does NOT cancel your Pro subscription — Apple keeps billing until you cancel it in Settings → Apple Account → Subscriptions.'
+                : ''}
             </Text>
           </View>
         </View>

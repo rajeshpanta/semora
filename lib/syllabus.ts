@@ -37,6 +37,22 @@ export async function processSyllabus(
 ): Promise<ProcessResult> {
   const startTime = Date.now();
 
+  // 0. Enforce the free scan limit BEFORE any writes. The DB trigger on
+  //    syllabus_uploads fires at step 4 — by then the semester, course,
+  //    meetings, and grade scale have already been created, leaving
+  //    orphan rows when the limit trips (and burning Gemini compute).
+  //    Message wording must satisfy isFreeLimitError's "2 free scans"
+  //    pattern so callers surface the Upgrade prompt.
+  if (!useAppStore.getState().isPro) {
+    const { count } = await supabase
+      .from('syllabus_uploads')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    if ((count ?? 0) >= 2) {
+      throw new Error("You've used your 2 free scans. Upgrade to Pro for unlimited syllabus scanning.");
+    }
+  }
+
   // 1. Extract with Gemini
   const extraction = await extractFromFile(fileUri, mimeType);
 

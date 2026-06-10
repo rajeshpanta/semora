@@ -120,13 +120,31 @@ export default function CalendarScreen() {
 
         {/* Month nav arrows */}
         <View style={styles.navRow}>
-          <TouchableOpacity onPress={() => setViewDate(subMonths(viewDate, 1))} hitSlop={12}>
+          {/* Month arrows also move the selection into the viewed month —
+              keeping e.g. "today" selected while browsing March made the
+              agenda claim "no tasks on this date" for a month it wasn't
+              even showing. */}
+          <TouchableOpacity
+            onPress={() => {
+              const d = subMonths(viewDate, 1);
+              setViewDate(d);
+              setSelectedDate(format(startOfMonth(d), 'yyyy-MM-dd'));
+            }}
+            hitSlop={12}
+          >
             <FontAwesome name="chevron-left" size={13} color={colors.brand} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => { setViewDate(new Date()); setSelectedDate(format(new Date(), 'yyyy-MM-dd')); }}>
             <Text style={[styles.todayLink, { color: colors.brand }]}>Today</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setViewDate(addMonths(viewDate, 1))} hitSlop={12}>
+          <TouchableOpacity
+            onPress={() => {
+              const d = addMonths(viewDate, 1);
+              setViewDate(d);
+              setSelectedDate(format(startOfMonth(d), 'yyyy-MM-dd'));
+            }}
+            hitSlop={12}
+          >
             <FontAwesome name="chevron-right" size={13} color={colors.brand} />
           </TouchableOpacity>
         </View>

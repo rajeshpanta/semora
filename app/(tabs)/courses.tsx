@@ -11,7 +11,7 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTasks, useDeleteSemester } from '@/lib/queries';
 import { COLORS, FONTS, calculateGrade, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
-import { differenceInDays, isToday, isPast, format } from 'date-fns';
+import { differenceInCalendarDays, isToday, isPast, format } from 'date-fns';
 import type { GradeThreshold } from '@/types/database';
 import type { TaskWithCourse } from '@/lib/queries';
 
@@ -127,7 +127,9 @@ export default function CoursesScreen() {
     const now = new Date();
     if (isToday(due)) return { text: task.due_time ? `due ${task.due_time.slice(0, 5)}` : 'due today', urgent: true };
     if (isPast(due)) return { text: 'overdue', urgent: true };
-    const days = differenceInDays(due, now);
+    // Calendar diff — `due` is midnight, so a 24h-period diff truncated
+    // to 0 for tomorrow ("tomorrow" was unreachable, showed "0 days").
+    const days = differenceInCalendarDays(due, now);
     if (days === 1) return { text: 'tomorrow', urgent: true };
     if (days <= 3) return { text: `${days} days`, urgent: true };
     return { text: `in ${days} days`, urgent: false };

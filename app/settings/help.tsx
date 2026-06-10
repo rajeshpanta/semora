@@ -17,7 +17,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'How do reminders work?',
-    a: 'Go to Me > Notifications to choose when you want reminders — same day, 1 day before, or 3 days before a due date. Reminders are scheduled when tasks are created.',
+    a: 'Go to Me > Settings > Notifications to choose when you want reminders — same day, 1 day before, or 3 days before a due date. Reminders are scheduled when tasks are created.',
   },
   {
     q: 'How is my grade calculated?',

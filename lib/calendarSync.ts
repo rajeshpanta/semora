@@ -69,12 +69,26 @@ async function getOrCreateCalendar(): Promise<string | null> {
 
   const stored = SecureStore.getItem(CALENDAR_ID_KEY);
 
+  // One calendar fetch serves both checks below.
+  let calendars: Awaited<ReturnType<typeof Calendar.getCalendarsAsync>> = [];
+  try {
+    calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+  } catch (e) { console.warn('[CalendarSync] Failed to list calendars:', e); }
+
   // Verify stored calendar still exists
-  if (stored) {
-    try {
-      const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
-      if (calendars.some((c) => c.id === stored)) return stored;
-    } catch (e) { console.warn('[CalendarSync] Failed to verify stored calendar:', e); }
+  if (stored && calendars.some((c) => c.id === stored)) return stored;
+
+  // Sign-out clears CALENDAR_ID_KEY but deliberately leaves the device
+  // calendar alone — so re-enabling sync used to create a SECOND
+  // "Semora" calendar every time. Remove any orphaned Semora calendar
+  // (its events belong to a session this device no longer tracks)
+  // before creating a fresh one.
+  for (const c of calendars) {
+    if (c.title === 'Semora' && c.allowsModifications && c.id !== stored) {
+      try { await Calendar.deleteCalendarAsync(c.id); } catch (e) {
+        console.warn('[CalendarSync] Failed to remove orphaned Semora calendar:', e);
+      }
+    }
   }
 
   const defaultSource =
@@ -176,8 +190,17 @@ export async function removeTaskFromCalendar(taskId: string): Promise<void> {
 
   try {
     await Calendar.deleteEventAsync(eventId);
-  } catch (e) { console.warn('[CalendarSync] Failed to remove event:', e); }
-  clearEventId(taskId);
+    clearEventId(taskId);
+  } catch (e: any) {
+    // Only drop the mapping when the event is genuinely gone. A transient
+    // failure (permission revoked, etc.) must keep the mapping so a retry
+    // can still find the event — dropping it orphaned the event forever.
+    if (/not found|does not exist|doesn'?t exist|no event/i.test(e?.message ?? '')) {
+      clearEventId(taskId);
+    } else {
+      console.warn('[CalendarSync] Failed to remove event (mapping kept):', e);
+    }
+  }
 }
 
 /**
@@ -209,6 +232,23 @@ export async function syncAllTasks(semesterId: string | null): Promise<number> {
     } catch (e) { console.warn('[CalendarSync] Failed to sync task:', e); }
   }
 
+  // Every single event failed (permission revoked, calendar unavailable):
+  // reporting success and flipping the enabled flag would show a working
+  // toggle over a dead sync. Surface it instead.
+  if (tasks.length > 0 && count === 0) {
+    throw new Error('Could not add events to your calendar. Check Semora\'s calendar permission in iOS Settings and try again.');
+  }
+
+  // Prune events for tasks no longer in this semester's incomplete set
+  // (semester switch, completed/deleted elsewhere) so the device calendar
+  // mirrors the active semester instead of accumulating stale events.
+  const liveIds = new Set(tasks.map((t: any) => t.id));
+  for (const taskId of Object.keys(readEventMap())) {
+    if (!liveIds.has(taskId)) {
+      try { await removeTaskFromCalendar(taskId); } catch {}
+    }
+  }
+
   // Mark sync as enabled
   SecureStore.setItem(SYNCED_ENABLED_KEY, 'true');
 
@@ -238,6 +278,7 @@ export async function unsyncAll(): Promise<void> {
  * Check if calendar sync is currently active.
  */
 export async function isSynced(): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
   const enabled = SecureStore.getItem(SYNCED_ENABLED_KEY);
   if (enabled !== 'true') return false;
 
@@ -260,7 +301,12 @@ export async function isSynced(): Promise<boolean> {
  * Used by task mutations to decide whether to auto-sync.
  */
 export function isSyncEnabled(): boolean {
-  return SecureStore.getItem(SYNCED_ENABLED_KEY) === 'true';
+  if (Platform.OS === 'web') return false;
+  try {
+    return SecureStore.getItem(SYNCED_ENABLED_KEY) === 'true';
+  } catch {
+    return false;
+  }
 }
 
 /**

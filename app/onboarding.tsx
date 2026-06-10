@@ -206,7 +206,7 @@ function Hook({ colors }: { colors: C }) {
         Your semester,{'\n'}organized in{'\n'}one snap.
       </Animated.Text>
       <Animated.Text entering={FadeInDown.delay(160).duration(420)} style={[styles.lead, { color: colors.ink2 }]}>
-        Turn any syllabus into a calendar of every deadline — in seconds, without typing a thing.
+        Turn any syllabus — a photo or a PDF — into a calendar of every deadline. In seconds, without typing a thing.
       </Animated.Text>
       <Animated.View entering={FadeInDown.delay(280).duration(480)} style={styles.heroCardWrap}>
         <View pointerEvents="none" style={[styles.miniResultCard, { backgroundColor: colors.card, borderColor: colors.line, transform: [{ scale: 0.92 }, { rotate: '-3deg' }] }]}>
@@ -231,9 +231,12 @@ function Hook({ colors }: { colors: C }) {
 
 // One line of the sample syllabus. `at` is the line's vertical position as
 // a fraction of the document — used to flash it as the beam passes.
-const DOC_LINES: { text: string; at: number; deadline?: boolean; faint?: boolean }[] = [
+// `deadline` lines flash brand as the beam passes; `meta` lines (class
+// schedule, office hours) flash too — the scanner extracts those as well,
+// and the demo should show it understands more than due dates.
+const DOC_LINES: { text: string; at: number; deadline?: boolean; meta?: boolean; faint?: boolean }[] = [
   { text: 'PSYCH 201 · Cognitive Psychology', at: 0.06 },
-  { text: 'Fall — Dr. Reyes · MWF 10:00', at: 0.13, faint: true },
+  { text: 'Fall — Dr. Reyes · MWF 10:00', at: 0.13, meta: true, faint: true },
   { text: 'Weekly readings: chapters 1–14', at: 0.26, faint: true },
   { text: 'Quizzes every other Friday', at: 0.35, faint: true },
   { text: 'Midterm Exam — Oct 14, in class', at: 0.46, deadline: true },
@@ -241,23 +244,35 @@ const DOC_LINES: { text: string; at: number; deadline?: boolean; faint?: boolean
   { text: 'Late work: −10% per day', at: 0.66, faint: true },
   { text: 'Group Presentation — Nov 4', at: 0.76, deadline: true },
   { text: 'Final Project — due Dec 9', at: 0.87, deadline: true },
-  { text: 'Office hours: Tue 2–4, Rm 114', at: 0.95, faint: true },
+  { text: 'Office hours: Tue 2–4, Rm 114', at: 0.95, meta: true, faint: true },
 ];
 
 const DOC_H = 300;
 const SCAN_MS = 2400;
 
 function DocLine({ colors, line, beam }: { colors: C; line: typeof DOC_LINES[number]; beam: SharedValue<number> }) {
-  // Deadline lines flash brand as the beam passes; others stay put.
+  // Deadline lines flash brand; schedule/office-hours (`meta`) flash a
+  // softer teal so the demo shows the scanner reads MORE than due dates.
   const aStyle = useAnimatedStyle(() => {
-    if (!line.deadline) return {};
-    return {
-      backgroundColor: interpolateColor(
-        beam.value,
-        [line.at - 0.04, line.at, line.at + 0.18],
-        ['rgba(238,237,254,0)', 'rgba(107,70,193,0.22)', 'rgba(238,237,254,0.9)'],
-      ),
-    };
+    if (line.deadline) {
+      return {
+        backgroundColor: interpolateColor(
+          beam.value,
+          [line.at - 0.04, line.at, line.at + 0.18],
+          ['rgba(238,237,254,0)', 'rgba(107,70,193,0.22)', 'rgba(238,237,254,0.9)'],
+        ),
+      };
+    }
+    if (line.meta) {
+      return {
+        backgroundColor: interpolateColor(
+          beam.value,
+          [line.at - 0.04, line.at, line.at + 0.18],
+          ['rgba(225,245,238,0)', 'rgba(15,110,86,0.18)', 'rgba(225,245,238,0.8)'],
+        ),
+      };
+    }
+    return {};
   });
   return (
     <Animated.View style={[styles.docLineWrap, aStyle]}>
@@ -361,7 +376,7 @@ function LiveDemo({ colors, phase, onDone }: { colors: C; phase: DemoPhase; onDo
             ))}
             <Animated.View entering={FadeInDown.delay(150 + RESULT_ROWS.length * 170).springify().damping(16)}>
               <View style={styles.row}>
-                <Text style={[styles.moreRow, { color: colors.brand }]}>+ 10 more, already on the calendar</Text>
+                <Text style={[styles.moreRow, { color: colors.brand }]}>+ 10 more, plus class times & office hours</Text>
               </View>
             </Animated.View>
           </View>
@@ -378,7 +393,7 @@ function Outcome({ colors }: { colors: C }) {
     <View style={styles.stepPad}>
       <Text style={[styles.display2, { color: colors.ink }]}>Then it runs{'\n'}your semester</Text>
       <Text style={[styles.lead, { color: colors.ink2, marginBottom: 22 }]}>
-        Reminders before every due date. A Today view that thinks ahead. Your grade in every class.
+        Reminders before every due date. Deadlines synced to your phone{'’'}s calendar. Your grade in every class — and what you need on the final.
       </Text>
 
       {/* Reminder notification mockup */}
@@ -388,7 +403,10 @@ function Outcome({ colors }: { colors: C }) {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.mockNotifTitle, { color: colors.ink }]}>Semora · Reminder</Text>
-          <Text style={[styles.mockNotifBody, { color: colors.ink2 }]}>Problem Set 3 is due tomorrow, 11:59 PM</Text>
+          {/* Same-day copy — every tier actually receives this one
+              (1-day-before reminders are Pro). Don't demo a Pro feature
+              as the default experience. */}
+          <Text style={[styles.mockNotifBody, { color: colors.ink2 }]}>Problem Set 3 is due tonight, 11:59 PM</Text>
         </View>
         <Text style={[styles.mockNotifTime, { color: colors.ink3 }]}>now</Text>
       </Animated.View>
