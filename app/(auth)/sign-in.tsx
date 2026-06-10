@@ -50,6 +50,15 @@ export default function SignInScreen() {
   // "Save my semester" rather than a generic gate.
   const onboardName = useAppStore((s) => s.userName);
   const onboardTerm = useAppStore((s) => s.defaultTerm);
+  const painPoint = useAppStore((s) => s.painPoint);
+
+  // Mirror the user's own words from the "what should Semora fix first?"
+  // question — the close speaks to the pain THEY named.
+  const painLine =
+    painPoint === 'deadlines' ? 'Never miss another deadline'
+    : painPoint === 'planning' ? 'Your whole semester, one place'
+    : painPoint === 'grades' ? 'Know your grade in every class'
+    : null;
 
   // Pre-fill email from the banner whenever it arrives (after fresh signup).
   useEffect(() => {
@@ -194,9 +203,11 @@ export default function SignInScreen() {
             </Text>
             <Text style={[styles.subtitle, { color: colors.ink2 }]}>
               {mode === 'signup'
-                ? onboardTerm
-                  ? `One tap, and your ${onboardTerm} deadlines are saved.`
-                  : 'Save your semester and never miss a deadline'
+                ? painLine
+                  ? `${painLine} — one tap, and ${onboardTerm ?? 'your semester'} is saved.`
+                  : onboardTerm
+                    ? `One tap, and your ${onboardTerm} deadlines are saved.`
+                    : 'Save your semester and never miss a deadline'
                 : 'Sign in to pick up where you left off'}
             </Text>
           </View>

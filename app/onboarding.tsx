@@ -9,17 +9,15 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
-  FadeInDown, SlideInRight, SlideInLeft, SlideOutLeft, SlideOutRight,
-  useSharedValue, useAnimatedStyle, withRepeat, withSequence, withTiming, Easing,
+  FadeIn, FadeInDown, SlideInRight, SlideInLeft, SlideOutLeft, SlideOutRight,
+  useSharedValue, useAnimatedStyle, withTiming, Easing, interpolateColor, runOnJS,
+  type SharedValue,
 } from 'react-native-reanimated';
 import { useColors } from '@/lib/theme';
 import { FONTS } from '@/lib/constants';
-import { useAppStore } from '@/store/appStore';
+import { useAppStore, type PainPoint } from '@/store/appStore';
 
-const STEP_COUNT = 4;
-const PAPER_W = 172;
-const PAPER_H = 204;
-const BEAM_TRAVEL = PAPER_H - 44;
+const STEP_COUNT = 4; // hook · live demo · outcome · personalize
 
 /** Current + adjacent academic terms, with a sensible default for today. */
 function useTermOptions() {
@@ -35,65 +33,71 @@ function useTermOptions() {
   }, []);
 }
 
+type DemoPhase = 'idle' | 'scanning' | 'done';
+
 export default function OnboardingScreen() {
   const colors = useColors();
   const router = useRouter();
   const setHasOnboarded = useAppStore((s) => s.setHasOnboarded);
   const setUserName = useAppStore((s) => s.setUserName);
   const setDefaultTerm = useAppStore((s) => s.setDefaultTerm);
+  const setPainPoint = useAppStore((s) => s.setPainPoint);
 
   const { options: termOptions, def: defaultTerm } = useTermOptions();
   const [step, setStep] = useState(0);
-  // Drives the slide direction of the step transition (forward vs Back).
   const dirRef = useRef<'fwd' | 'back'>('fwd');
   const [name, setName] = useState('');
   const [term, setTerm] = useState<string>(defaultTerm);
+  const [pain, setPain] = useState<PainPoint | null>(null);
+  // The live-demo state machine lives up here so the footer CTA can drive it.
+  const [demoPhase, setDemoPhase] = useState<DemoPhase>('idle');
 
   const tap = () => { if (Platform.OS === 'ios') Haptics.selectionAsync(); };
 
   const finish = () => {
     setUserName(name.trim() || null);
     setDefaultTerm(term || null);
+    setPainPoint(pain);
     setHasOnboarded(true);
     router.replace('/(auth)/sign-in');
+  };
+
+  const goTo = (target: number, dir: 'fwd' | 'back') => {
+    dirRef.current = dir;
+    if (target === 1) setDemoPhase('idle'); // re-arm the demo when revisited
+    setStep(target);
   };
 
   const next = () => {
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Keyboard.dismiss();
-    if (step < STEP_COUNT - 1) {
-      dirRef.current = 'fwd';
-      setStep(step + 1);
-    } else {
-      finish();
+    // On the demo step the CTA first RUNS the demo, then advances.
+    if (step === 1 && demoPhase === 'idle') {
+      setDemoPhase('scanning');
+      return;
     }
+    if (step < STEP_COUNT - 1) goTo(step + 1, 'fwd');
+    else finish();
   };
 
-  const back = () => {
-    tap();
-    if (step > 0) {
-      dirRef.current = 'back';
-      setStep(step - 1);
-    }
-  };
+  const back = () => { tap(); if (step > 0) goTo(step - 1, 'back'); };
 
   // Skip never bypasses the whole flow — it fast-forwards to the
   // personalize step so even skippers make one small commitment before
-  // the account wall (best-converting pattern). Hidden on the hook step
-  // and on the final step (where the CTA itself finishes).
-  const skip = () => {
-    tap();
-    dirRef.current = 'fwd';
-    setStep(STEP_COUNT - 1);
-  };
+  // the account wall. Hidden on the hook and final steps.
+  const skip = () => { tap(); goTo(STEP_COUNT - 1, 'fwd'); };
 
-  // Benefit-led CTAs: each label sells the NEXT screen; the last one
-  // ("Save my semester") hands off into the account wall's "Save your
-  // semester, {name}" headline so the wall reads as completion, not a gate.
-  const CTA_LABELS = ['Show me how', 'See what it finds', 'Make it mine', 'Save my semester'];
+  const CTA_LABELS: Record<number, string> = {
+    0: 'Try it on a real syllabus',
+    1: demoPhase === 'idle' ? 'Scan the sample syllabus'
+      : demoPhase === 'scanning' ? 'Scanning…'
+      : 'See what I get',
+    2: 'Make it mine',
+    3: 'Save my semester',
+  };
+  const ctaDisabled = step === 1 && demoPhase === 'scanning';
   const isLast = step === STEP_COUNT - 1;
 
-  // CTA press micro-interaction.
   const ctaScale = useSharedValue(1);
   const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
 
@@ -102,10 +106,9 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
-      {/* Soft brand glow for depth */}
       <View pointerEvents="none" style={[styles.glow, { backgroundColor: colors.brand, opacity: 0.06 }]} />
 
-      {/* Top bar: brand + skip */}
+      {/* Top bar */}
       <View style={styles.topBar}>
         <View style={styles.brandRow}>
           <View style={[styles.brandDot, { backgroundColor: colors.brand }]} />
@@ -121,33 +124,24 @@ export default function OnboardingScreen() {
       {/* Progress */}
       <View style={styles.progress}>
         {Array.from({ length: STEP_COUNT }).map((_, i) => (
-          <View
-            key={i}
-            style={[
-              styles.bar,
-              { backgroundColor: colors.brand50 },
-              i <= step && { backgroundColor: colors.brand },
-            ]}
-          />
+          <View key={i} style={[styles.bar, { backgroundColor: colors.brand50 }, i <= step && { backgroundColor: colors.brand }]} />
         ))}
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <View style={styles.stage}>
-            {/* Keyed so the transition replays on every step change. */}
             <Animated.View key={step} entering={entering} exiting={exiting} style={styles.stepWrap}>
-              {step === 0 && <Welcome colors={colors} />}
-              {step === 1 && <Snap colors={colors} />}
-              {step === 2 && <Extract colors={colors} />}
+              {step === 0 && <Hook colors={colors} />}
+              {step === 1 && <LiveDemo colors={colors} phase={demoPhase} onDone={() => setDemoPhase('done')} />}
+              {step === 2 && <Outcome colors={colors} />}
               {step === 3 && (
                 <Personalize
                   colors={colors}
-                  name={name}
-                  setName={setName}
-                  term={term}
-                  setTerm={(t) => { setTerm(t); tap(); }}
+                  name={name} setName={setName}
+                  term={term} setTerm={(t) => { setTerm(t); tap(); }}
                   termOptions={termOptions}
+                  pain={pain} setPain={(p) => { setPain(p); tap(); }}
                 />
               )}
             </Animated.View>
@@ -162,14 +156,15 @@ export default function OnboardingScreen() {
         )}
         <Animated.View style={[{ width: '100%' }, ctaStyle]}>
           <TouchableOpacity
-            style={[styles.cta, { backgroundColor: colors.brand }]}
+            style={[styles.cta, { backgroundColor: colors.brand }, ctaDisabled && { opacity: 0.55 }]}
             onPress={next}
+            disabled={ctaDisabled}
             onPressIn={() => { ctaScale.value = withTiming(0.97, { duration: 90 }); }}
             onPressOut={() => { ctaScale.value = withTiming(1, { duration: 130 }); }}
             activeOpacity={0.9}
           >
             <Text style={styles.ctaText}>{CTA_LABELS[step]}</Text>
-            <FontAwesome name="arrow-right" size={15} color="#fff" style={{ marginTop: 1 }} />
+            {!ctaDisabled && <FontAwesome name="arrow-right" size={15} color="#fff" style={{ marginTop: 1 }} />}
           </TouchableOpacity>
         </Animated.View>
         {step > 0 ? (
@@ -188,54 +183,20 @@ export default function OnboardingScreen() {
 
 type C = ReturnType<typeof useColors>;
 
-const EXTRACT_ROWS = [
-  { color: 'coral' as const, title: 'Midterm Exam', date: 'Oct 14' },
-  { color: 'brand' as const, title: 'Problem Set 3', date: 'Oct 21' },
-  { color: 'teal' as const, title: 'Final Project', date: 'Dec 9' },
+const RESULT_ROWS = [
+  { color: 'coral' as const, title: 'Midterm Exam', date: 'Oct 14', kind: 'EXAM' },
+  { color: 'brand' as const, title: 'Problem Set 3', date: 'Oct 21', kind: 'HW' },
+  { color: 'blue' as const, title: 'Group Presentation', date: 'Nov 4', kind: 'PROJ' },
+  { color: 'teal' as const, title: 'Final Project', date: 'Dec 9', kind: 'PROJ' },
 ];
 
-/** The "extracted deadlines" card — the product's payoff, reused as the
- *  Welcome hero (static) and the Extract step (staggered reveal). */
-function ExtractCard({ colors, animated }: { colors: C; animated: boolean }) {
-  // A light haptic as each row "arrives" — the AI reveal should be felt.
-  useEffect(() => {
-    if (!animated || Platform.OS !== 'ios') return;
-    const timers = EXTRACT_ROWS.map((_, i) =>
-      setTimeout(() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); }, 380 + i * 230),
-    );
-    return () => timers.forEach(clearTimeout);
-  }, [animated]);
-
-  const rowColor = (k: 'coral' | 'brand' | 'teal') =>
-    k === 'coral' ? colors.coral : k === 'teal' ? colors.teal : colors.brand;
-
-  return (
-    <View style={[styles.extractCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
-      <View style={styles.extractHead}>
-        <FontAwesome name="magic" size={13} color={colors.brand} />
-        <Text style={[styles.extractHeadText, { color: colors.brand }]}>EXTRACTED FOR YOU · 3 OF 14</Text>
-      </View>
-      {EXTRACT_ROWS.map((r, i) => {
-        const row = (
-          <View style={[styles.row, i < EXTRACT_ROWS.length - 1 && { borderBottomColor: colors.line, borderBottomWidth: 0.5 }]}>
-            <View style={[styles.rowDot, { backgroundColor: rowColor(r.color) }]} />
-            <Text style={[styles.rowTitle, { color: colors.ink }]}>{r.title}</Text>
-            <Text style={[styles.rowDate, { color: colors.ink3 }]}>{r.date}</Text>
-          </View>
-        );
-        return animated ? (
-          <Animated.View key={i} entering={FadeInDown.delay(320 + i * 230).springify().damping(16)}>
-            {row}
-          </Animated.View>
-        ) : (
-          <View key={i}>{row}</View>
-        );
-      })}
-    </View>
-  );
+function rowColor(colors: C, k: 'coral' | 'brand' | 'teal' | 'blue') {
+  return k === 'coral' ? colors.coral : k === 'teal' ? colors.teal : k === 'blue' ? colors.blue : colors.brand;
 }
 
-function Welcome({ colors }: { colors: C }) {
+/* ------------------------------------------------ step 0: hook */
+
+function Hook({ colors }: { colors: C }) {
   return (
     <View style={styles.stepPad}>
       <Animated.Text entering={FadeInDown.duration(420)} style={[styles.kicker, { color: colors.brand }]}>
@@ -247,92 +208,238 @@ function Welcome({ colors }: { colors: C }) {
       <Animated.Text entering={FadeInDown.delay(160).duration(420)} style={[styles.lead, { color: colors.ink2 }]}>
         Turn any syllabus into a calendar of every deadline — in seconds, without typing a thing.
       </Animated.Text>
-      {/* The payoff, shown before we ask for anything. */}
       <Animated.View entering={FadeInDown.delay(280).duration(480)} style={styles.heroCardWrap}>
-        <View pointerEvents="none" style={{ transform: [{ scale: 0.88 }, { rotate: '-3deg' }] }}>
-          <ExtractCard colors={colors} animated={false} />
+        <View pointerEvents="none" style={[styles.miniResultCard, { backgroundColor: colors.card, borderColor: colors.line, transform: [{ scale: 0.92 }, { rotate: '-3deg' }] }]}>
+          <View style={styles.extractHead}>
+            <FontAwesome name="magic" size={13} color={colors.brand} />
+            <Text style={[styles.extractHeadText, { color: colors.brand }]}>EXTRACTED FOR YOU</Text>
+          </View>
+          {RESULT_ROWS.slice(0, 3).map((r, i) => (
+            <View key={i} style={[styles.row, i < 2 && { borderBottomColor: colors.line, borderBottomWidth: 0.5 }]}>
+              <View style={[styles.rowDot, { backgroundColor: rowColor(colors, r.color) }]} />
+              <Text style={[styles.rowTitle, { color: colors.ink }]}>{r.title}</Text>
+              <Text style={[styles.rowDate, { color: colors.ink3 }]}>{r.date}</Text>
+            </View>
+          ))}
         </View>
       </Animated.View>
     </View>
   );
 }
 
-function Snap({ colors }: { colors: C }) {
-  // The wow moment: a glowing beam sweeps the page, "reading" it.
-  const beam = useSharedValue(0);
-  useEffect(() => {
-    beam.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 1700, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 500 }), // hold at the bottom
-        withTiming(0, { duration: 0 }),   // jump back, then sweep again
-        withTiming(0, { duration: 350 }),
+/* ------------------------------------------------ step 1: LIVE DEMO */
+
+// One line of the sample syllabus. `at` is the line's vertical position as
+// a fraction of the document — used to flash it as the beam passes.
+const DOC_LINES: { text: string; at: number; deadline?: boolean; faint?: boolean }[] = [
+  { text: 'PSYCH 201 · Cognitive Psychology', at: 0.06 },
+  { text: 'Fall — Dr. Reyes · MWF 10:00', at: 0.13, faint: true },
+  { text: 'Weekly readings: chapters 1–14', at: 0.26, faint: true },
+  { text: 'Quizzes every other Friday', at: 0.35, faint: true },
+  { text: 'Midterm Exam — Oct 14, in class', at: 0.46, deadline: true },
+  { text: 'Problem Set 3 — due Oct 21, 11:59 PM', at: 0.57, deadline: true },
+  { text: 'Late work: −10% per day', at: 0.66, faint: true },
+  { text: 'Group Presentation — Nov 4', at: 0.76, deadline: true },
+  { text: 'Final Project — due Dec 9', at: 0.87, deadline: true },
+  { text: 'Office hours: Tue 2–4, Rm 114', at: 0.95, faint: true },
+];
+
+const DOC_H = 300;
+const SCAN_MS = 2400;
+
+function DocLine({ colors, line, beam }: { colors: C; line: typeof DOC_LINES[number]; beam: SharedValue<number> }) {
+  // Deadline lines flash brand as the beam passes; others stay put.
+  const aStyle = useAnimatedStyle(() => {
+    if (!line.deadline) return {};
+    return {
+      backgroundColor: interpolateColor(
+        beam.value,
+        [line.at - 0.04, line.at, line.at + 0.18],
+        ['rgba(238,237,254,0)', 'rgba(107,70,193,0.22)', 'rgba(238,237,254,0.9)'],
       ),
-      -1,
-    );
-  }, []);
+    };
+  });
+  return (
+    <Animated.View style={[styles.docLineWrap, aStyle]}>
+      <Text
+        numberOfLines={1}
+        style={[
+          styles.docLine,
+          { color: line.faint ? colors.ink3 : colors.ink },
+          line.deadline && { fontWeight: '700' },
+        ]}
+      >
+        {line.text}
+      </Text>
+    </Animated.View>
+  );
+}
+
+function LiveDemo({ colors, phase, onDone }: { colors: C; phase: DemoPhase; onDone: () => void }) {
+  const beam = useSharedValue(0);
+  const [count, setCount] = useState(0);
+
+  // Run the sweep when the footer CTA flips us to 'scanning'.
+  useEffect(() => {
+    if (phase !== 'scanning') return;
+    beam.value = 0;
+    beam.value = withTiming(1, { duration: SCAN_MS, easing: Easing.inOut(Easing.ease) }, (finished) => {
+      if (finished) runOnJS(onDone)();
+    });
+    // Haptic tick as each deadline line is crossed.
+    if (Platform.OS === 'ios') {
+      const ticks = DOC_LINES.filter((l) => l.deadline).map((l) =>
+        setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}), l.at * SCAN_MS),
+      );
+      return () => ticks.forEach(clearTimeout);
+    }
+  }, [phase]);
+
+  // Count up the found-deadlines number once the scan completes.
+  useEffect(() => {
+    if (phase !== 'done') { setCount(0); return; }
+    if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    let n = 0;
+    const iv = setInterval(() => {
+      n += 1;
+      setCount(n);
+      if (n >= 14) clearInterval(iv);
+    }, 55);
+    return () => clearInterval(iv);
+  }, [phase]);
+
   const beamStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: beam.value * BEAM_TRAVEL }],
+    transform: [{ translateY: beam.value * (DOC_H - 36) }],
+    opacity: phase === 'scanning' ? 1 : 0,
   }));
-  // Tinted "read so far" wash that follows the beam down the page.
-  const readStyle = useAnimatedStyle(() => ({
-    height: 24 + beam.value * BEAM_TRAVEL,
-  }));
+  const washStyle = useAnimatedStyle(() => ({ height: beam.value * DOC_H }));
 
   return (
     <View style={styles.stepPad}>
-      <View style={styles.artWrap}>
-        <View style={[styles.paperBack, { backgroundColor: colors.brand50 }]} />
-        <View style={[styles.paper, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <View style={[styles.pLine, { backgroundColor: colors.ink, width: '55%', height: 9 }]} />
-          <View style={[styles.pLine, { backgroundColor: colors.line, width: '85%' }]} />
-          <View style={[styles.pLine, { backgroundColor: colors.line, width: '70%' }]} />
-          <View style={[styles.pLine, { backgroundColor: colors.line, width: '80%' }]} />
-          <View style={[styles.pLine, { backgroundColor: colors.line, width: '40%' }]} />
-          <Animated.View pointerEvents="none" style={[styles.readWash, { backgroundColor: colors.brand }, readStyle]} />
-          <Animated.View pointerEvents="none" style={[styles.beamWrap, beamStyle]}>
-            <LinearGradient
-              colors={['rgba(107,70,193,0)', 'rgba(107,70,193,0.30)', '#6B46C1', 'rgba(107,70,193,0.30)', 'rgba(107,70,193,0)']}
-              style={styles.beam}
-            />
-          </Animated.View>
-        </View>
-      </View>
-      <Text style={[styles.display2, { color: colors.ink }]}>Snap your syllabus</Text>
-      <Text style={[styles.lead, { color: colors.ink2 }]}>
-        A photo, a PDF, or a screenshot. Semora reads it the way you would — only faster.
-      </Text>
-    </View>
-  );
-}
-
-function Extract({ colors }: { colors: C }) {
-  return (
-    <View style={styles.stepPad}>
-      <View style={styles.artWrap}>
-        <Animated.View entering={FadeInDown.duration(360)}>
-          <ExtractCard colors={colors} animated />
+      {phase !== 'done' ? (
+        <>
+          <Text style={[styles.display2, { color: colors.ink }]}>
+            {phase === 'scanning' ? 'Reading it…' : 'A real syllabus.\nWatch this.'}
+          </Text>
+          <Text style={[styles.lead, { color: colors.ink2, marginBottom: 18 }]}>
+            {phase === 'scanning'
+              ? 'Finding every date that matters.'
+              : 'This is a page from an intro psych syllabus. Tap the button to scan it.'}
+          </Text>
+          {/* The sample document */}
+          <View style={styles.docWrap}>
+            <View style={[styles.docBack, { backgroundColor: colors.brand50 }]} />
+            <View style={[styles.doc, { backgroundColor: colors.card, borderColor: colors.line }]}>
+              {DOC_LINES.map((l, i) => (
+                <DocLine key={i} colors={colors} line={l} beam={beam} />
+              ))}
+              <Animated.View pointerEvents="none" style={[styles.docWash, { backgroundColor: colors.brand }, washStyle]} />
+              <Animated.View pointerEvents="none" style={[styles.beamWrap, beamStyle]}>
+                <LinearGradient
+                  colors={['rgba(107,70,193,0)', 'rgba(107,70,193,0.30)', '#6B46C1', 'rgba(107,70,193,0.30)', 'rgba(107,70,193,0)']}
+                  style={styles.beam}
+                />
+              </Animated.View>
+            </View>
+          </View>
+        </>
+      ) : (
+        <Animated.View entering={FadeIn.duration(260)}>
+          <Text style={[styles.kicker, { color: colors.teal }]}>SCANNED IN 2.4 SECONDS</Text>
+          <Text style={[styles.display2, { color: colors.ink }]}>
+            <Text style={{ color: colors.brand }}>{count}</Text> deadlines,{'\n'}zero typing
+          </Text>
+          <View style={[styles.resultCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            {RESULT_ROWS.map((r, i) => (
+              <Animated.View key={i} entering={FadeInDown.delay(150 + i * 170).springify().damping(16)}>
+                <View style={[styles.row, { borderBottomColor: colors.line, borderBottomWidth: 0.5 }]}>
+                  <View style={[styles.rowDot, { backgroundColor: rowColor(colors, r.color) }]} />
+                  <Text style={[styles.rowTitle, { color: colors.ink }]}>{r.title}</Text>
+                  <Text style={[styles.rowDate, { color: colors.ink3 }]}>{r.date}</Text>
+                </View>
+              </Animated.View>
+            ))}
+            <Animated.View entering={FadeInDown.delay(150 + RESULT_ROWS.length * 170).springify().damping(16)}>
+              <View style={styles.row}>
+                <Text style={[styles.moreRow, { color: colors.brand }]}>+ 10 more, already on the calendar</Text>
+              </View>
+            </Animated.View>
+          </View>
         </Animated.View>
-      </View>
-      <Text style={[styles.display2, { color: colors.ink }]}>Every date,{'\n'}found for you</Text>
-      <Text style={[styles.lead, { color: colors.ink2 }]}>
-        Assignments, quizzes, and exams — sorted into your term, with reminders before each one.
-      </Text>
+      )}
     </View>
   );
 }
+
+/* ------------------------------------------------ step 2: outcome */
+
+function Outcome({ colors }: { colors: C }) {
+  return (
+    <View style={styles.stepPad}>
+      <Text style={[styles.display2, { color: colors.ink }]}>Then it runs{'\n'}your semester</Text>
+      <Text style={[styles.lead, { color: colors.ink2, marginBottom: 22 }]}>
+        Reminders before every due date. A Today view that thinks ahead. Your grade in every class.
+      </Text>
+
+      {/* Reminder notification mockup */}
+      <Animated.View entering={FadeInDown.delay(120).springify().damping(17)} style={[styles.mockNotif, { backgroundColor: colors.card, borderColor: colors.line }]}>
+        <View style={[styles.mockNotifIcon, { backgroundColor: colors.brand }]}>
+          <FontAwesome name="bell" size={12} color="#fff" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.mockNotifTitle, { color: colors.ink }]}>Semora · Reminder</Text>
+          <Text style={[styles.mockNotifBody, { color: colors.ink2 }]}>Problem Set 3 is due tomorrow, 11:59 PM</Text>
+        </View>
+        <Text style={[styles.mockNotifTime, { color: colors.ink3 }]}>now</Text>
+      </Animated.View>
+
+      {/* Next Up mockup */}
+      <Animated.View entering={FadeInDown.delay(260).springify().damping(17)} style={[styles.mockNextUp, { backgroundColor: colors.brand }]}>
+        <View style={styles.mockNextUpHead}>
+          <Text style={styles.mockNextUpLabel}>NEXT UP</Text>
+          <View style={styles.mockTodayBadge}><Text style={styles.mockTodayBadgeText}>TODAY</Text></View>
+        </View>
+        <Text style={styles.mockNextUpTitle}>PSYCH 201 · Midterm Exam</Text>
+        <Text style={styles.mockNextUpSub}>Tuesday, Oct 14 · in class</Text>
+      </Animated.View>
+
+      {/* Grade mockup */}
+      <Animated.View entering={FadeInDown.delay(400).springify().damping(17)} style={[styles.mockGrade, { backgroundColor: colors.card, borderColor: colors.line }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.mockGradeLabel, { color: colors.ink3 }]}>CURRENT GRADE · PSYCH 201</Text>
+          <Text style={[styles.mockGradeValue, { color: colors.ink }]}>86.7%</Text>
+          <View style={[styles.mockGradeTrack, { backgroundColor: colors.brand50 }]}>
+            <View style={[styles.mockGradeFill, { backgroundColor: colors.teal, width: '86%' }]} />
+          </View>
+        </View>
+        <View style={[styles.mockGradeBadge, { backgroundColor: colors.teal }]}>
+          <Text style={styles.mockGradeBadgeText}>B+</Text>
+        </View>
+      </Animated.View>
+    </View>
+  );
+}
+
+/* ------------------------------------------------ step 3: personalize */
+
+const PAIN_OPTIONS: { key: PainPoint; label: string }[] = [
+  { key: 'deadlines', label: 'Missing deadlines' },
+  { key: 'planning', label: 'Messy planning' },
+  { key: 'grades', label: 'Grade anxiety' },
+];
 
 function Personalize({
-  colors, name, setName, term, setTerm, termOptions,
+  colors, name, setName, term, setTerm, termOptions, pain, setPain,
 }: {
   colors: C; name: string; setName: (v: string) => void;
   term: string; setTerm: (v: string) => void; termOptions: string[];
+  pain: PainPoint | null; setPain: (v: PainPoint) => void;
 }) {
   return (
     <View style={styles.stepPad}>
       <Text style={[styles.display2, { color: colors.ink }]}>Let{'’'}s make it yours</Text>
-      <Text style={[styles.lead, { color: colors.ink2, marginBottom: 28 }]}>
-        A couple of details so Semora feels like home.
+      <Text style={[styles.lead, { color: colors.ink2, marginBottom: 24 }]}>
+        Thirty seconds of setup, a whole semester of calm.
       </Text>
 
       <Text style={[styles.fieldLabel, { color: colors.ink3 }]}>WHAT SHOULD WE CALL YOU?</Text>
@@ -347,7 +454,7 @@ function Personalize({
         maxLength={40}
       />
 
-      <Text style={[styles.fieldLabel, { color: colors.ink3, marginTop: 30 }]}>WHICH TERM ARE YOU STARTING?</Text>
+      <Text style={[styles.fieldLabel, { color: colors.ink3, marginTop: 26 }]}>WHICH TERM ARE YOU STARTING?</Text>
       <View style={styles.chipWrap}>
         {termOptions.map((t) => {
           const active = t === term;
@@ -356,13 +463,26 @@ function Personalize({
               key={t}
               onPress={() => setTerm(t)}
               activeOpacity={0.8}
-              style={[
-                styles.chip,
-                { borderColor: colors.line, backgroundColor: colors.card },
-                active && { backgroundColor: colors.brand, borderColor: colors.brand },
-              ]}
+              style={[styles.chip, { borderColor: colors.line, backgroundColor: colors.card }, active && { backgroundColor: colors.brand, borderColor: colors.brand }]}
             >
               <Text style={[styles.chipText, { color: active ? '#fff' : colors.ink2 }]}>{t}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      <Text style={[styles.fieldLabel, { color: colors.ink3, marginTop: 26 }]}>WHAT SHOULD SEMORA FIX FIRST?</Text>
+      <View style={styles.chipWrap}>
+        {PAIN_OPTIONS.map((p) => {
+          const active = p.key === pain;
+          return (
+            <TouchableOpacity
+              key={p.key}
+              onPress={() => setPain(p.key)}
+              activeOpacity={0.8}
+              style={[styles.chip, { borderColor: colors.line, backgroundColor: colors.card }, active && { backgroundColor: colors.brand, borderColor: colors.brand }]}
+            >
+              <Text style={[styles.chipText, { color: active ? '#fff' : colors.ink2 }]}>{p.label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -381,41 +501,75 @@ const styles = StyleSheet.create({
   skip: { fontSize: 15, fontWeight: '600' },
   progress: { flexDirection: 'row', gap: 6, paddingHorizontal: 24, marginTop: 14 },
   bar: { flex: 1, height: 4, borderRadius: 999 },
-  // Top-anchored (not centered) so steps share an optical top line and the
-  // composition doesn't float in Pro-Max-sized voids.
   stage: { flex: 1, paddingHorizontal: 28 },
-  stepWrap: { flex: 1, paddingTop: 30 },
+  stepWrap: { flex: 1, paddingTop: 26 },
   stepPad: { paddingVertical: 8 },
 
-  kicker: { fontSize: 12, fontWeight: '800', letterSpacing: 2, marginBottom: 18 },
+  kicker: { fontSize: 12, fontWeight: '800', letterSpacing: 2, marginBottom: 14 },
   display: { fontFamily: FONTS.display, fontSize: 42, lineHeight: 46, letterSpacing: -1 },
-  display2: { fontFamily: FONTS.display, fontSize: 34, lineHeight: 38, letterSpacing: -0.6, marginTop: 8 },
-  lead: { fontSize: 16.5, lineHeight: 25, marginTop: 18, maxWidth: 360 },
-  heroCardWrap: { alignItems: 'center', marginTop: 30 },
+  display2: { fontFamily: FONTS.display, fontSize: 33, lineHeight: 38, letterSpacing: -0.6 },
+  lead: { fontSize: 16.5, lineHeight: 25, marginTop: 14, maxWidth: 360 },
+  heroCardWrap: { alignItems: 'center', marginTop: 28 },
 
-  // Art
-  artWrap: { height: 244, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  paperBack: { position: 'absolute', width: PAPER_W - 4, height: PAPER_H - 4, borderRadius: 18, transform: [{ rotate: '-8deg' }] },
-  paper: {
-    width: PAPER_W, height: PAPER_H, borderRadius: 18, borderWidth: 0.5, padding: 20, gap: 12,
-    transform: [{ rotate: '4deg' }], overflow: 'hidden',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 6,
-  },
-  pLine: { height: 7, borderRadius: 4 },
-  readWash: { position: 'absolute', top: 0, left: 0, right: 0, opacity: 0.05 },
-  beamWrap: { position: 'absolute', left: 0, right: 0, top: 0 },
-  beam: { height: 36 },
-
-  extractCard: {
+  // Hook mini card
+  miniResultCard: {
     width: 290, borderRadius: 20, borderWidth: 0.5, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 4,
     shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 6,
   },
   extractHead: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 6 },
   extractHeadText: { fontSize: 11, fontWeight: '800', letterSpacing: 1 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   rowDot: { width: 9, height: 9, borderRadius: 5 },
   rowTitle: { flex: 1, fontSize: 15, fontWeight: '500' },
   rowDate: { fontSize: 13, fontWeight: '600' },
+  moreRow: { fontSize: 13.5, fontWeight: '700' },
+
+  // Live demo document
+  docWrap: { alignItems: 'center', marginTop: 4 },
+  docBack: { position: 'absolute', width: 296, height: DOC_H - 6, borderRadius: 18, transform: [{ rotate: '-4deg' }], top: 8 },
+  doc: {
+    width: 304, height: DOC_H, borderRadius: 18, borderWidth: 0.5, paddingHorizontal: 18, paddingVertical: 16,
+    justifyContent: 'space-between', overflow: 'hidden', transform: [{ rotate: '1.5deg' }],
+    shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 6,
+  },
+  docLineWrap: { borderRadius: 5, paddingHorizontal: 4, paddingVertical: 1.5, marginHorizontal: -4 },
+  docLine: { fontSize: 12.5, lineHeight: 17 },
+  docWash: { position: 'absolute', top: 0, left: 0, right: 0, opacity: 0.05 },
+  beamWrap: { position: 'absolute', left: 0, right: 0, top: 0 },
+  beam: { height: 36 },
+
+  // Demo result
+  resultCard: {
+    borderRadius: 20, borderWidth: 0.5, paddingHorizontal: 16, paddingTop: 6, paddingBottom: 6, marginTop: 20,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 12 }, shadowOpacity: 0.08, shadowRadius: 20, elevation: 6,
+  },
+
+  // Outcome mockups
+  mockNotif: {
+    flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 18, borderWidth: 0.5, padding: 14,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.07, shadowRadius: 14, elevation: 4,
+  },
+  mockNotifIcon: { width: 30, height: 30, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  mockNotifTitle: { fontSize: 13, fontWeight: '700' },
+  mockNotifBody: { fontSize: 13, marginTop: 1 },
+  mockNotifTime: { fontSize: 11.5, alignSelf: 'flex-start' },
+  mockNextUp: { borderRadius: 18, padding: 16, marginTop: 12 },
+  mockNextUpHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  mockNextUpLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
+  mockTodayBadge: { backgroundColor: 'rgba(255,255,255,0.22)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  mockTodayBadgeText: { color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 },
+  mockNextUpTitle: { color: '#fff', fontSize: 16.5, fontWeight: '700' },
+  mockNextUpSub: { color: 'rgba(255,255,255,0.75)', fontSize: 13, marginTop: 3 },
+  mockGrade: {
+    flexDirection: 'row', alignItems: 'center', gap: 14, borderRadius: 18, borderWidth: 0.5, padding: 16, marginTop: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.07, shadowRadius: 14, elevation: 4,
+  },
+  mockGradeLabel: { fontSize: 10.5, fontWeight: '800', letterSpacing: 1 },
+  mockGradeValue: { fontFamily: FONTS.display, fontSize: 26, marginTop: 2 },
+  mockGradeTrack: { height: 6, borderRadius: 999, marginTop: 8, overflow: 'hidden' },
+  mockGradeFill: { height: 6, borderRadius: 999 },
+  mockGradeBadge: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  mockGradeBadgeText: { color: '#fff', fontSize: 18, fontWeight: '800' },
 
   // Personalize
   fieldLabel: { fontSize: 11.5, fontWeight: '800', letterSpacing: 1.4, marginBottom: 10 },

@@ -5,6 +5,9 @@ import { Platform } from 'react-native';
 import type { Semester } from '@/types/database';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
+// The struggle the user picked in onboarding — used to tailor the auth
+// wall and (later) paywall copy to their own words.
+export type PainPoint = 'deadlines' | 'planning' | 'grades';
 
 const THEME_KEY = 'semora_theme';
 const SEMESTER_KEY = 'semora_semester';
@@ -22,6 +25,7 @@ const REVIEW_REQUESTED_KEY = 'semora_review_requested';
 // with user A's name.
 const USER_NAME_KEY = 'semora_user_name';
 const DEFAULT_TERM_KEY = 'semora_default_term';
+const PAIN_POINT_KEY = 'semora_pain_point';
 
 function getItem(key: string): string | null {
   if (Platform.OS === 'web') return null;
@@ -56,6 +60,7 @@ const initialAhaPaywallShown = getItem(AHA_PAYWALL_KEY) === 'true';
 const initialReviewRequested = getItem(REVIEW_REQUESTED_KEY) === 'true';
 const initialUserName = getItem(USER_NAME_KEY);
 const initialDefaultTerm = getItem(DEFAULT_TERM_KEY);
+const initialPainPoint = getItem(PAIN_POINT_KEY) as PainPoint | null;
 
 interface AppState {
   selectedSemesterId: string | null;
@@ -82,6 +87,8 @@ interface AppState {
   setUserName: (v: string | null) => void;
   defaultTerm: string | null;
   setDefaultTerm: (v: string | null) => void;
+  painPoint: PainPoint | null;
+  setPainPoint: (v: PainPoint | null) => void;
   /**
    * Reset every user-scoped field to its initial value. Called from
    * signOut so user B doesn't inherit user A's selected semester,
@@ -151,6 +158,11 @@ export const useAppStore = create<AppState>((set) => ({
     set({ defaultTerm: v });
     if (v) { setItem(DEFAULT_TERM_KEY, v); } else { deleteItem(DEFAULT_TERM_KEY); }
   },
+  painPoint: initialPainPoint,
+  setPainPoint: (v) => {
+    set({ painPoint: v });
+    if (v) { setItem(PAIN_POINT_KEY, v); } else { deleteItem(PAIN_POINT_KEY); }
+  },
   resetUserState: () => {
     set({
       selectedSemesterId: null,
@@ -164,11 +176,13 @@ export const useAppStore = create<AppState>((set) => ({
       // those are genuinely device-level one-time flags.)
       userName: null,
       defaultTerm: null,
+      painPoint: null,
     });
     deleteItem(SEMESTER_KEY);
     deleteItem(RESET_KEY);
     deleteItem(USER_NAME_KEY);
     deleteItem(DEFAULT_TERM_KEY);
+    deleteItem(PAIN_POINT_KEY);
   },
 }));
 
