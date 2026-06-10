@@ -1,7 +1,12 @@
 /** @type {import('@bacons/apple-targets').Config} */
 module.exports = {
   type: 'widget',
-  name: 'Semora Today',
+  // No spaces: EAS registers credentials under the sanitized name
+  // ("SemoraToday") but matches the Xcode target by its literal name —
+  // "Semora Today" made signing assignment fail with "Could not find
+  // target 'SemoraToday' in project.pbxproj". User-visible widget name
+  // is unaffected (set by configurationDisplayName in index.swift).
+  name: 'SemoraToday',
   // Widgets use modern WidgetKit APIs (containerBackground) — iOS 17+.
   deploymentTarget: '17.0',
   entitlements: {
