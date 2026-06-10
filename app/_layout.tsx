@@ -165,6 +165,20 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           // wipe cached queries so tabs render the new user's data.
           refreshProForSession(session.user.id);
           queryClient.removeQueries();
+
+          // Persist the onboarding name to the account, but ONLY when the
+          // account has no real name of its own (email users, Apple
+          // Hide-My-Email) — never overwrite a proper Apple/Google name.
+          // Makes the typed name survive reinstalls and show on Me/profile.
+          const onboardName = useAppStore.getState().userName?.trim();
+          if (onboardName) {
+            const meta = session.user.user_metadata ?? {};
+            const hasRealName = [meta.full_name, meta.name, meta.given_name]
+              .some((v) => typeof v === 'string' && v.trim().length > 0);
+            if (!hasRealName) {
+              supabase.auth.updateUser({ data: { full_name: onboardName } }).catch(() => {});
+            }
+          }
         } else if (_event === 'TOKEN_REFRESHED' || _event === 'USER_UPDATED') {
           // Cheap server-only read — token rotations don't change Pro.
           lightRefreshProForSession(session.user.id);
