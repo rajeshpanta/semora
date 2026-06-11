@@ -16,6 +16,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import * as x509 from 'npm:@peculiar/x509@1.12.3';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -47,7 +48,8 @@ function jsonResponse(body: unknown, status: number) {
 }
 
 async function logCall(
-  adminClient: ReturnType<typeof createClient>,
+  // deno-lint-ignore no-explicit-any
+  adminClient: any,
   userId: string,
   status: 'success' | 'failed' | 'rate_limited',
   durationMs: number,
@@ -115,6 +117,105 @@ async function verifyWithApple(receipt: string): Promise<AppleVerifyResponse> {
   }
 
   return prodJson;
+}
+
+// ── StoreKit 2 JWS verification ─────────────────────────────────────
+// Modern purchases arrive as an Apple-SIGNED JWS transaction (the
+// client's purchase.purchaseToken). Verifying it here needs no shared
+// secret, no verifyReceipt round-trip, and — crucially — no legacy app
+// receipt on the device (whose absence caused Apple-ID password prompts
+// and "no subscription found" loops in TestFlight).
+//
+// Trust model: the JWS embeds its x5c certificate chain. We (1) pin the
+// chain's root to Apple Root CA - G3 by SHA-256 of its DER, (2) verify
+// each certificate's signature against its issuer, (3) check validity
+// windows, (4) verify the ES256 signature with the leaf key, and only
+// then (5) trust the payload's bundleId/productId/expiry/revocation.
+
+const APPLE_ROOT_CA_G3_SHA256 = '63343abfb89a6a03ebb57e9b3f5fa7be7c4f5c756f3017b3a8c488c3653e9179';
+
+x509.cryptoProvider.set(crypto);
+
+function b64urlToBytes(s: string): Uint8Array {
+  const b64 = s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '=');
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+async function sha256Hex(bytes: ArrayBuffer): Promise<string> {
+  const d = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+interface JwsTransaction {
+  bundleId?: string;
+  productId?: string;
+  originalTransactionId?: string;
+  transactionId?: string;
+  expiresDate?: number; // ms
+  revocationDate?: number;
+  type?: string;
+  environment?: string;
+}
+
+async function verifyAppleJws(jws: string): Promise<{
+  productId: string;
+  expiresAt: Date;
+  originalTransactionId: string;
+} | null> {
+  const parts = jws.split('.');
+  if (parts.length !== 3) throw new Error('Malformed transaction token');
+
+  const header = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[0])));
+  if (header.alg !== 'ES256' || !Array.isArray(header.x5c) || header.x5c.length < 2) {
+    throw new Error('Unsupported transaction token');
+  }
+
+  // Build the certificate chain (leaf first).
+  const certs = header.x5c.map((b64: string) => new x509.X509Certificate(b64urlToBytes(b64.replace(/-/g, '+').replace(/_/g, '/')).buffer as ArrayBuffer));
+
+  // 1. Root must be Apple Root CA - G3, byte-for-byte (pinned hash).
+  const rootHash = await sha256Hex(certs[certs.length - 1].rawData);
+  if (rootHash !== APPLE_ROOT_CA_G3_SHA256) {
+    throw new Error('Untrusted certificate chain');
+  }
+
+  // 2. Each cert must be signed by the next one up, and currently valid.
+  const now = new Date();
+  for (let i = 0; i < certs.length; i++) {
+    if (now < certs[i].notBefore || now > certs[i].notAfter) {
+      throw new Error('Certificate expired');
+    }
+    const issuer = certs[i + 1] ?? certs[i]; // root self-signed
+    const ok = await certs[i].verify({ publicKey: issuer.publicKey, signatureOnly: true });
+    if (!ok) throw new Error('Broken certificate chain');
+  }
+
+  // 3. Verify the JWS signature with the leaf certificate's key.
+  const leafKey = await certs[0].publicKey.export(crypto);
+  const data = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
+  const valid = await crypto.subtle.verify(
+    { name: 'ECDSA', hash: 'SHA-256' },
+    leafKey,
+    b64urlToBytes(parts[2]),
+    data,
+  );
+  if (!valid) throw new Error('Invalid transaction signature');
+
+  // 4. Only now read the payload.
+  const tx: JwsTransaction = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[1])));
+  if (tx.bundleId !== 'com.rajeshpanta.syllabussnap') throw new Error('Wrong app');
+  if (tx.productId !== PRODUCT_MONTHLY && tx.productId !== PRODUCT_ANNUAL) return null;
+  if (tx.revocationDate) return null; // refunded/revoked
+  if (!tx.expiresDate || tx.expiresDate <= Date.now()) return null; // lapsed
+
+  return {
+    productId: tx.productId,
+    expiresAt: new Date(tx.expiresDate),
+    originalTransactionId: tx.originalTransactionId ?? tx.transactionId ?? '',
+  };
 }
 
 function pickLatestActive(resp: AppleVerifyResponse): {
@@ -246,28 +347,60 @@ serve(async (req) => {
       );
     }
 
-    // 3. Parse + validate body
-    let body: { receipt?: string; platform?: string };
+    // 3. Parse + validate body. Two credential shapes:
+    //    - jws: StoreKit2 signed transaction (preferred — verified locally
+    //      against Apple's pinned root, no shared secret, no receipt file)
+    //    - receipt: legacy base64 app receipt (verifyReceipt round-trip)
+    let body: { receipt?: string; jws?: string; platform?: string };
     try {
       body = await req.json();
     } catch {
       return jsonResponse({ error: 'Invalid request body' }, 400);
     }
 
-    const receipt = body.receipt;
+    const receipt = typeof body.receipt === 'string' ? body.receipt : null;
+    const jws = typeof body.jws === 'string' ? body.jws : null;
     const platform = body.platform === 'android' ? 'android' : 'ios';
-    if (!receipt || typeof receipt !== 'string' || receipt.length < 20 || receipt.length > 200_000) {
+    const receiptUsable = receipt != null && receipt.length >= 20 && receipt.length <= 200_000;
+    const jwsUsable = jws != null && jws.length >= 100 && jws.length <= 64_000;
+    if (!receiptUsable && !jwsUsable) {
       return jsonResponse({ error: 'Missing or malformed receipt' }, 400);
     }
 
-    // 4. Validate with Apple (Android not yet supported)
+    // 4. Validate (Android not yet supported)
     if (platform !== 'ios') {
       return jsonResponse({ error: 'Android receipt validation not yet supported' }, 501);
     }
 
+    // ── Path A: signed JWS transaction ────────────────────────────
+    if (jwsUsable) {
+      let jwsActive: Awaited<ReturnType<typeof verifyAppleJws>>;
+      try {
+        jwsActive = await verifyAppleJws(jws!);
+      } catch (err) {
+        console.error('[validate-receipt] JWS verification failed:', err);
+        await logCall(adminClient, userId, 'failed', Date.now() - startTime, 'jws_invalid');
+        // If a legacy receipt was also provided, fall through to it below
+        // instead of failing the whole request.
+        jwsActive = null;
+        if (!receiptUsable) {
+          return jsonResponse({ error: 'Invalid purchase token' }, 400);
+        }
+      }
+      if (jwsActive) {
+        return await writeEntitlementAndRespond(adminClient, userId, platform, jwsActive, startTime);
+      }
+      // jws verified but inactive (lapsed/revoked/foreign product):
+      // when no receipt fallback, record the inactive state honestly.
+      if (!receiptUsable) {
+        return await writeEntitlementAndRespond(adminClient, userId, platform, null, startTime);
+      }
+    }
+
+    // ── Path B: legacy app receipt via Apple verifyReceipt ───────
     let appleResp: AppleVerifyResponse;
     try {
-      appleResp = await verifyWithApple(receipt);
+      appleResp = await verifyWithApple(receipt!);
     } catch (err) {
       const isTimeout = err instanceof DOMException && err.name === 'TimeoutError';
       console.error('[validate-receipt] Apple fetch failed:', err);
@@ -319,7 +452,25 @@ serve(async (req) => {
       );
     }
 
-    const active = pickLatestActive(appleResp);
+    return await writeEntitlementAndRespond(adminClient, userId, platform, pickLatestActive(appleResp), startTime);
+  } catch (err) {
+    console.error('[validate-receipt] Unhandled error:', err);
+    return jsonResponse({ error: 'An unexpected error occurred. Please try again.' }, 500);
+  }
+});
+
+
+// Shared by the JWS and legacy-receipt paths: cross-account OTI guard,
+// entitlement upsert (inactive writes preserve the OTI binding), ledger,
+// and the success response.
+async function writeEntitlementAndRespond(
+  // deno-lint-ignore no-explicit-any
+  adminClient: any,
+  userId: string,
+  platform: string,
+  active: { productId: string; expiresAt: Date; originalTransactionId: string } | null,
+  startTime: number,
+): Promise<Response> {
 
     // 5. Upsert entitlement row (adminClient created above for rate-limit check)
     // Block cross-account claim. Two things to check:
@@ -458,8 +609,4 @@ serve(async (req) => {
       },
       200,
     );
-  } catch (err) {
-    console.error('[validate-receipt] Unhandled error:', err);
-    return jsonResponse({ error: 'An unexpected error occurred. Please try again.' }, 500);
-  }
-});
+}

@@ -6,6 +6,7 @@ import {
   requestPurchase,
   getReceiptDataIOS,
   requestReceiptRefreshIOS,
+  getAvailablePurchases,
   purchaseUpdatedListener,
   purchaseErrorListener,
   finishTransaction,
@@ -137,6 +138,14 @@ export interface ProEntitlement {
    * blip would visibly downgrade a paying user until the next refresh.
    */
   transient?: boolean;
+  /**
+   * Internal: true when this answer came from actually validating a
+   * credential (JWS or receipt) with the server — false/absent when we
+   * had nothing to validate and just read the DB row. Lets
+   * validateAfterPurchase skip its rescue pass when the first pass
+   * already searched (and possibly prompted) and found no credential.
+   */
+  usedCredential?: boolean;
 }
 
 const EMPTY_ENTITLEMENT: ProEntitlement = {
@@ -199,6 +208,24 @@ export async function getServerEntitlement(): Promise<ProEntitlement> {
  * Returns the validated entitlement (or inactive on any failure).
  * Never throws.
  */
+/**
+ * Newest StoreKit2 signed transaction (JWS) for one of our subscription
+ * SKUs, read from Transaction.currentEntitlements — read-only and
+ * PROMPT-FREE (unlike AppStore.sync). Preferred validation credential:
+ * works even when the legacy receipt file is absent or stale.
+ */
+async function getLatestSubscriptionJws(): Promise<string | null> {
+  try {
+    const purchases = await getAvailablePurchases();
+    const subs = (purchases ?? [])
+      .filter((p: any) => ALL_SKUS.includes(p?.productId) && typeof p?.purchaseToken === 'string' && p.purchaseToken.length > 0)
+      .sort((a: any, b: any) => (b?.transactionDate ?? 0) - (a?.transactionDate ?? 0));
+    return subs[0]?.purchaseToken ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function validateProEntitlement(opts?: {
   /**
    * Allow requestReceiptRefreshIOS (= AppStore.sync()), which can show a
@@ -215,6 +242,8 @@ export async function validateProEntitlement(opts?: {
    * returns not-pro forever. Used by validateAfterPurchase's retry.
    */
   forceRefresh?: boolean;
+  /** Signed transaction from a just-fired purchase event (purchaseToken). */
+  jws?: string;
 } ): Promise<ProEntitlement> {
   if (Platform.OS === 'web') return EMPTY_ENTITLEMENT;
   // Launch-time init can fail (store outage, parental restrictions). A bare
@@ -230,10 +259,16 @@ export async function validateProEntitlement(opts?: {
   }
 
   try {
-    // react-native-iap v15 (Nitro) removed Purchase.transactionReceipt.
-    // getReceiptDataIOS() returns the device-wide base64 app receipt —
-    // exactly the format the validate-receipt edge function POSTs to
-    // Apple's verifyReceipt.
+    // ── Credential acquisition, in trust order ──────────────────
+    // 1. JWS from a just-fired purchase event (caller-provided)
+    // 2. JWS from Transaction.currentEntitlements (prompt-free read)
+    // 3. Legacy app receipt from disk (prompt-free read)
+    // 4. Receipt refresh = AppStore.sync() — MAY SHOW a system Apple-ID
+    //    prompt, so only for user-initiated flows. This ordering ended
+    //    the password-prompt-on-every-refresh loop: silent paths never
+    //    reach step 4, and steps 1-2 make it almost never needed.
+    const jws: string | null = opts?.jws ?? (await getLatestSubscriptionJws());
+
     let receipt: string | null = null;
     if (!opts?.forceRefresh) {
       try {
@@ -242,13 +277,12 @@ export async function validateProEntitlement(opts?: {
         receipt = null;
       }
     }
-    // TestFlight/sandbox quirk: the app receipt often doesn't exist (or
-    // is stale) until explicitly refreshed — fresh installs validated
-    // "no subscription" right after a successful purchase, leaving the
-    // transaction pending forever ("duplicate purchase" on retry).
-    // GATED on interactiveRefresh: AppStore.sync() can pop a system
-    // Apple-ID prompt, unacceptable on silent launch refreshes.
-    if (!receipt && (opts?.interactiveRefresh || opts?.forceRefresh)) {
+    // forceRefresh must ALWAYS run the sync — its whole purpose is to
+    // manufacture a fresh receipt for the rescue pass even when a JWS
+    // exists (an old deployed server can't read the JWS; only a fresh
+    // receipt unsticks it). interactiveRefresh syncs only as a last
+    // resort, when there's no credential at all.
+    if (opts?.forceRefresh || (!jws && !receipt && opts?.interactiveRefresh)) {
       try {
         receipt = (await requestReceiptRefreshIOS()) ?? null;
       } catch {
@@ -259,17 +293,20 @@ export async function validateProEntitlement(opts?: {
       }
     }
 
-    // No local receipt means nothing to validate. Don't blow away an
-    // existing server entitlement — just return what the server says.
-    if (!receipt || receipt.length === 0) {
+    // Nothing to validate with. Don't blow away an existing server
+    // entitlement — just return what the server says.
+    if (!jws && (!receipt || receipt.length === 0)) {
       return await getServerEntitlement();
     }
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return EMPTY_ENTITLEMENT;
 
+    // Send both when available: the new server prefers the JWS (local
+    // crypto verification, no Apple round-trip); an older deployed
+    // server ignores `jws` and still works off the legacy receipt.
     const { data, error } = await supabase.functions.invoke('validate-receipt', {
-      body: { receipt, platform: Platform.OS },
+      body: { ...(jws ? { jws } : {}), ...(receipt ? { receipt } : {}), platform: Platform.OS },
     });
 
     if (error) {
@@ -279,26 +316,49 @@ export async function validateProEntitlement(opts?: {
       // reason so the UI can explain instead of saying "no subscription
       // found", which is misleading.
       const status = (error as any)?.context?.status;
+      // Defense-in-depth for deployment ordering: an OLD deployed server
+      // doesn't understand `jws` and 400s when no legacy receipt was
+      // included. In user-initiated flows, manufacture the receipt once
+      // (AppStore.sync — acceptable: user is mid-Restore/purchase) and
+      // retry so a payer is never stranded behind a server upgrade.
+      if (status !== 409 && jws && !receipt && opts?.interactiveRefresh && !opts?.forceRefresh) {
+        let rescued: string | null = null;
+        try { rescued = (await requestReceiptRefreshIOS()) ?? null; } catch {}
+        if (rescued) {
+          const second = await supabase.functions.invoke('validate-receipt', {
+            body: { receipt: rescued, platform: Platform.OS },
+          });
+          if (!second.error && second.data) {
+            return {
+              is_pro: !!second.data.is_pro,
+              plan: (second.data.plan as 'monthly' | 'annual' | null) ?? null,
+              expires_at: second.data.expires_at ?? null,
+              usedCredential: true,
+            };
+          }
+        }
+      }
       const fallback = await getServerEntitlement();
       if (status === 409) {
-        return { ...fallback, restoreError: 'linked_other_account' };
+        return { ...fallback, restoreError: 'linked_other_account', usedCredential: true };
       }
       // Any other server failure (429 rate-limit, 5xx, misconfig, bad
       // gateway) means we DON'T KNOW — if the DB has no positive row,
       // mark the negative transient so the UI says "try again" instead
       // of "No Subscription Found" / silently de-Pro-ing a payer.
       if (!fallback.is_pro) {
-        return { ...fallback, transient: true };
+        return { ...fallback, transient: true, usedCredential: true };
       }
-      return fallback;
+      return { ...fallback, usedCredential: true };
     }
 
-    if (!data) return await getServerEntitlement();
+    if (!data) return { ...(await getServerEntitlement()), usedCredential: true };
 
     return {
       is_pro: !!data.is_pro,
       plan: (data.plan as 'monthly' | 'annual' | null) ?? null,
       expires_at: data.expires_at ?? null,
+      usedCredential: true,
     };
   } catch {
     return await getServerEntitlement();
@@ -337,10 +397,32 @@ export async function restorePurchases(): Promise<ProEntitlement> {
  * update the legacy receipt) — force one refresh and re-validate
  * instead of looping "Verification Pending" forever.
  */
-export async function validateAfterPurchase(): Promise<ProEntitlement> {
-  let e = await validateProEntitlement({ interactiveRefresh: true });
-  if (!e.is_pro && !e.restoreError && !e.transient) {
-    e = await validateProEntitlement({ interactiveRefresh: true, forceRefresh: true });
+export async function validateAfterPurchase(
+  purchase?: Purchase,
+  opts?: {
+    /**
+     * False for BACKGROUND deliveries (the global launch listener gets
+     * redelivered pending transactions with zero user action) — those
+     * must never reach AppStore.sync's Apple-ID prompt. Default true
+     * (paywall purchase event / explicit Restore tap).
+     */
+    interactive?: boolean;
+  },
+): Promise<ProEntitlement> {
+  const interactive = opts?.interactive !== false;
+  // The purchase event carries its own signed transaction (JWS) — the
+  // strongest possible credential, available instantly with no receipt
+  // file and no Apple-ID prompt.
+  const jws = (purchase as any)?.purchaseToken as string | undefined;
+  let e = await validateProEntitlement({ interactiveRefresh: interactive, jws });
+  // Rescue pass (stale legacy receipt) only when: user-initiated, the
+  // first pass actually validated a credential (if it had NOTHING, its
+  // interactive sync already came up empty — a second sync would just
+  // stack another password prompt), and the answer was a definitive no.
+  if (interactive && e.usedCredential && !e.is_pro && !e.restoreError && !e.transient) {
+    // Keep the event JWS — it's the strongest credential; forceRefresh
+    // adds a freshly-synced receipt alongside it for old-server compat.
+    e = await validateProEntitlement({ interactiveRefresh: true, forceRefresh: true, jws });
   }
   return e;
 }

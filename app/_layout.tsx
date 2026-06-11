@@ -108,13 +108,15 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     // validate-receipt, but the edge function is idempotent on
     // original_transaction_id, so the dup is a no-op.
     const removePurchaseListeners = setupPurchaseListeners(
-      async () => {
+      async (p) => {
         const { data: { session: startSession } } = await supabase.auth.getSession();
         const expectedUserId = startSession?.user.id;
         // No signed-in user — leave the StoreKit transaction pending so
         // it gets re-delivered after sign-in instead of being lost.
         if (!expectedUserId) return false;
-        const entitlement = await validateAfterPurchase();
+        // Background redelivery (cold-start pending transactions): never
+        // allowed to trigger an Apple-ID prompt.
+        const entitlement = await validateAfterPurchase(p, { interactive: false });
         await writeEntitlementIfStillCurrent(expectedUserId, entitlement);
         // Ack the StoreKit transaction once it has reached a terminal
         // state: either Pro is granted, or the receipt is bound to a

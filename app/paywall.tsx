@@ -77,13 +77,13 @@ export default function PaywallScreen() {
     });
 
     const removeSubs = setupPurchaseListeners(
-      async () => {
+      async (p) => {
         // StoreKit reports purchase complete — but we don't grant Pro
-        // until our edge function has verified the receipt with Apple
+        // until our edge function has verified the signed transaction
         // and written the entitlement row tied to this Semora account.
         const { data: { session: startSession } } = await supabase.auth.getSession();
         const expectedUserId = startSession?.user.id;
-        const entitlement = await validateAfterPurchase();
+        const entitlement = await validateAfterPurchase(p);
         // Race guard: if the session changed mid-validation (signed out,
         // switched accounts), don't write a stale entitlement to the store.
         const { data: { session: endSession } } = await supabase.auth.getSession();
