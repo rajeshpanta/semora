@@ -46,6 +46,11 @@ export default function NewSemesterScreen() {
       return;
     }
 
+    if (startDate && endDate && endDate < startDate) {
+      Alert.alert('Check dates', 'The end date must be on or after the start date.');
+      return;
+    }
+
     if (!isPro && existingSemesters.length >= FREE_SEMESTER_LIMIT) {
       Alert.alert(
         'Semester Limit Reached',

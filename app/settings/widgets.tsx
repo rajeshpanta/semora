@@ -223,7 +223,7 @@ export default function WidgetsSettings() {
           </View>
           <View style={styles.footerRow}>
             <FontAwesome name="lock" size={11} color={colors.ink3} />
-            <Text style={[styles.footerText, { color: colors.ink3 }]}>Your data stays on-device and is never shared</Text>
+            <Text style={[styles.footerText, { color: colors.ink3 }]}>The widget reads only the schedule already on your device</Text>
           </View>
         </View>
       </ScrollView>

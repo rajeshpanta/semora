@@ -4,7 +4,7 @@ import {
   Alert, ActivityIndicator, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { supabase } from '@/lib/supabase';
 import { signOut } from '@/lib/auth';
@@ -13,6 +13,7 @@ import { useColors } from '@/lib/theme';
 
 export default function ResetPasswordScreen() {
   const colors = useColors();
+  const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -55,6 +56,12 @@ export default function ResetPasswordScreen() {
         email: userEmail,
         needsConfirm: false,
       });
+
+      // signOut clears the session but leaves us inside the (auth) group on
+      // /reset-password, so AuthGate's "no session" redirect doesn't fire —
+      // navigate explicitly or the user is stranded on a frozen screen.
+      setLoading(false);
+      router.replace('/(auth)/sign-in');
     } catch (err: any) {
       setError(err.message ?? 'Could not update password. Please try again.');
       setLoading(false);

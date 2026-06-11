@@ -19,6 +19,14 @@ Notifications.setNotificationHandler({
 });
 
 function getTriggerTime(notif: Notifications.NotificationRequest): number {
+  // Authoritative source: we stamp the fire time into data at schedule
+  // time. The native trigger read back by getAllScheduledNotificationsAsync
+  // is shape-unstable across platforms/SDKs (iOS returns dateComponents,
+  // not timestamp/date/value), which made every notification score
+  // Infinity and the "drop furthest-out" prune evict arbitrary reminders.
+  const fireAt = (notif.content.data as any)?.fireAt;
+  if (typeof fireAt === 'number' && Number.isFinite(fireAt)) return fireAt;
+
   const trig: any = notif.trigger;
   if (!trig) return Number.POSITIVE_INFINITY;
   if (typeof trig.timestamp === 'number') return trig.timestamp;
@@ -138,7 +146,7 @@ export async function scheduleTaskReminders(
       content: {
         title: `📚 ${courseName}`,
         body: `${taskTitle} is ${label}`,
-        data: { taskId },
+        data: { taskId, fireAt: triggerDate.getTime() },
         sound: true,
       },
       trigger: {
@@ -167,7 +175,7 @@ export async function scheduleTaskReminders(
         content: {
           title: `⏰ ${courseName}`,
           body: lastCallBody,
-          data: { taskId },
+          data: { taskId, fireAt: lastCall.getTime() },
           sound: true,
         },
         trigger: {

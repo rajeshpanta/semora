@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter, useFocusEffect } from 'expo-router';
@@ -89,7 +89,14 @@ export default function ScanScreen() {
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Camera access is needed to scan syllabi.');
+      Alert.alert(
+        'Camera Access Needed',
+        'Camera access is needed to scan syllabi. You can enable it in Settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ],
+      );
       return;
     }
 
@@ -133,7 +140,14 @@ export default function ScanScreen() {
 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission Required', 'Photo library access is needed to select syllabus images.');
+      Alert.alert(
+        'Photo Access Needed',
+        'Photo library access is needed to select syllabus images. You can enable it in Settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ],
+      );
       return;
     }
 

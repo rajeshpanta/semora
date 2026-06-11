@@ -49,7 +49,8 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "Semora needs calendar access to sync your task due dates."
+          "calendarPermission": "Semora needs calendar access to sync your task due dates.",
+          "remindersPermission": false
         }
       ],
       [

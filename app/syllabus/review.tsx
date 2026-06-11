@@ -99,6 +99,17 @@ export default function SyllabusReviewScreen() {
       return;
     }
 
+    // A cleared title would otherwise save a blank-named task that's
+    // impossible to identify in the list. Block it up front.
+    const blankTitles = accepted.filter((i) => !i.title.trim());
+    if (blankTitles.length > 0) {
+      Alert.alert(
+        'Add titles',
+        `${blankTitles.length === 1 ? 'One item has' : `${blankTitles.length} items have`} no title. Give each accepted item a title before saving.`,
+      );
+      return;
+    }
+
     // Disable the button BEFORE any await — the primer below suspends this
     // function while the button would otherwise still be tappable, and a
     // second tap would run the whole insert loop twice (duplicate tasks).
@@ -151,7 +162,7 @@ export default function SyllabusReviewScreen() {
           .insert({
             user_id: session.user.id,
             course_id: params.courseId,
-            title: item.title,
+            title: item.title.trim(),
             description: item.description,
             type: item.type,
             due_date: item.due_date,

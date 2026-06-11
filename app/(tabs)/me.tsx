@@ -12,6 +12,7 @@ import { useColors } from '@/lib/theme';
 import { useEffect, useState } from 'react';
 import Constants from 'expo-constants';
 import { getProducts } from '@/lib/purchases';
+import { isEligibleForIntroOfferIOS } from 'react-native-iap';
 
 export default function MeScreen() {
   const colors = useColors();
@@ -23,10 +24,20 @@ export default function MeScreen() {
   // only the fallback while products load or the store is unreachable.
   const [annualPrice, setAnnualPrice] = useState('$19.99');
   const [monthlyPrice, setMonthlyPrice] = useState('$3.99');
+  // Default OFF: only promise the 7-day trial once Apple confirms THIS
+  // Apple ID is still intro-offer eligible. Promising a trial the payment
+  // sheet won't honor (re-subscribers) is a bait-and-switch / App Review risk.
+  const [trialEligible, setTrialEligible] = useState(false);
   useEffect(() => {
     getProducts().then((p) => {
       if (p?.annual?.displayPrice) setAnnualPrice(p.annual.displayPrice);
       if (p?.monthly?.displayPrice) setMonthlyPrice(p.monthly.displayPrice);
+      const groupId = (p?.monthly as any)?.subscriptionInfoIOS?.subscriptionGroupId;
+      if (groupId) {
+        isEligibleForIntroOfferIOS(groupId)
+          .then((ok: boolean) => setTrialEligible(ok === true))
+          .catch(() => {});
+      }
     }).catch(() => {});
   }, []);
 
@@ -123,7 +134,11 @@ export default function MeScreen() {
                 <View style={styles.proButton}>
                   <Text style={[styles.proButtonText, { color: colors.ink }]}>Upgrade to Pro</Text>
                 </View>
-                <Text style={styles.proAlt}>Or {monthlyPrice}/month with 7-day free trial</Text>
+                <Text style={styles.proAlt}>
+                  {trialEligible
+                    ? `Or ${monthlyPrice}/month with 7-day free trial`
+                    : `Or ${monthlyPrice}/month`}
+                </Text>
               </>
             )}
           </View>
@@ -172,7 +187,7 @@ export default function MeScreen() {
         </TouchableOpacity>
 
         <Text style={[styles.version, { color: colors.ink3 }]}>
-          Semora {Constants.expoConfig?.version ?? '1.1'}
+          Semora {Constants.expoConfig?.version ?? '1.2'}
         </Text>
       </ScrollView>
     </SafeAreaView>

@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { useSemesters, useUpdateSemester } from '@/lib/queries';
 import { COLORS } from '@/lib/constants';
 import { DatePicker } from '@/components/DatePicker';
+import { NotFound } from '@/components/NotFound';
 import { useColors } from '@/lib/theme';
 import { formatLocalDate } from '@/lib/dates';
 
@@ -34,13 +35,20 @@ export default function SemesterDetailScreen() {
     }
   }, [semester]);
 
-  if (isLoading || !semester) {
+  if (isLoading) {
     return <View style={[styles.loading, { backgroundColor: colors.paper }]}><ActivityIndicator size="large" color={colors.brand} /></View>;
+  }
+  if (!semester) {
+    return <NotFound title="Semester unavailable" message="This semester no longer exists." onBack={() => router.back()} />;
   }
 
   const handleSave = async () => {
     if (!name.trim()) {
       Alert.alert('Required', 'Please enter a semester name.');
+      return;
+    }
+    if (startDate && endDate && endDate < startDate) {
+      Alert.alert('Check dates', 'The end date must be on or after the start date.');
       return;
     }
     try {

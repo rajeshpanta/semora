@@ -11,13 +11,14 @@ import { format, isPast, isToday } from 'date-fns';
 import { useTask, useUpdateTask, useDeleteTask, useToggleTaskComplete } from '@/lib/queries';
 import { TASK_TYPE_LABELS, TASK_TYPES, COLORS, type TaskType } from '@/lib/constants';
 import { DatePicker } from '@/components/DatePicker';
+import { NotFound } from '@/components/NotFound';
 import { useColors } from '@/lib/theme';
 import { formatLocalDate } from '@/lib/dates';
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { data: task, isLoading } = useTask(id!);
+  const { data: task, isLoading, isError } = useTask(id!);
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
   const toggleComplete = useToggleTaskComplete();
@@ -35,8 +36,11 @@ export default function TaskDetailScreen() {
   const [showScoreInput, setShowScoreInput] = useState(false);
   const colors = useColors();
 
-  if (isLoading || !task) {
+  if (isLoading) {
     return <View style={[styles.loading, { backgroundColor: colors.paper }]}><ActivityIndicator size="large" color={colors.brand} /></View>;
+  }
+  if (isError || !task || !task.courses) {
+    return <NotFound title="Task unavailable" message="This task couldn't be loaded. It may have been deleted." onBack={() => router.back()} />;
   }
 
   const courseColor = task.courses.color;
@@ -60,6 +64,10 @@ export default function TaskDetailScreen() {
   };
 
   const saveEdit = async () => {
+    if (!editTitle.trim()) {
+      Alert.alert('Required', 'Please enter a task title.');
+      return;
+    }
     try {
       await updateTask.mutateAsync({
         id: task.id,

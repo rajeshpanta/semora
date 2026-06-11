@@ -17,6 +17,7 @@ import {
 import { TaskItem } from '@/components/TaskItem';
 import { GradeCard, WhatIfCard } from '@/components/GradeCard';
 import { ScheduleEditor, type ScheduleBlock, isNewBlock } from '@/components/ScheduleEditor';
+import { NotFound } from '@/components/NotFound';
 import { COURSE_COLORS, COURSE_ICONS, COLORS, FONTS, calculateGrade, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import type { GradeThreshold } from '@/types/database';
 import { useAppStore } from '@/store/appStore';
@@ -26,7 +27,7 @@ import { formatMeetings, formatOfficeHours } from '@/lib/schedule';
 export default function CourseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { data: course, isLoading } = useCourse(id!);
+  const { data: course, isLoading, isError } = useCourse(id!);
   const { data: tasks = [] } = useTasks({ courseId: id });
   const { data: syllabus } = useLatestSyllabus(id);
   const updateCourse = useUpdateCourse();
@@ -63,8 +64,11 @@ export default function CourseDetailScreen() {
   const [editingScale, setEditingScale] = useState(false);
   const [scaleRows, setScaleRows] = useState<GradeThreshold[]>([]);
 
-  if (isLoading || !course) {
+  if (isLoading) {
     return <View style={[styles.loading, { backgroundColor: colors.paper }]}><ActivityIndicator size="large" color={colors.brand} /></View>;
+  }
+  if (isError || !course) {
+    return <NotFound title="Course unavailable" message="This course couldn't be loaded. It may have been deleted." onBack={() => router.back()} />;
   }
 
   // Grade calculation
@@ -109,6 +113,10 @@ export default function CourseDetailScreen() {
   };
 
   const saveEdit = async () => {
+    if (!editName.trim()) {
+      Alert.alert('Required', 'Please enter a course name.');
+      return;
+    }
     // Per-block sanity check before the DB course_meetings_time_order /
     // course_office_hours_time_order constraints fire. Skip blocks the
     // user added but never filled (no days picked) — those are dropped
