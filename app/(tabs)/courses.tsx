@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
 
   // Semester dropdown modal
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', paddingHorizontal: 28 },
-  modalContent: { backgroundColor: COLORS.card, borderRadius: 22, paddingTop: 20, paddingBottom: 8, maxHeight: 400 },
+  modalContent: { backgroundColor: COLORS.card, borderRadius: 22, paddingTop: 20, paddingBottom: 8, maxHeight: 400, width: '100%', maxWidth: 420, alignSelf: 'center' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 },
   modalTitle: { fontSize: 17, fontWeight: '600', color: COLORS.ink },
   modalList: { paddingHorizontal: 20 },

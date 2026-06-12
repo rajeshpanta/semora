@@ -171,7 +171,7 @@ struct SmallView: View {
     if let p = payload, let first = p.items.first {
       VStack(alignment: .leading, spacing: 5) {
         HStack {
-          Text("NEXT UP")
+          Text("UP NEXT")
             .font(.system(size: 9, weight: .heavy))
             .foregroundStyle(Color.brand)
             .kerning(1)

@@ -14,7 +14,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { useColors } from '@/lib/theme';
-import { FONTS } from '@/lib/constants';
+import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useAppStore, type PainPoint } from '@/store/appStore';
 
 const STEP_COUNT = 4; // hook · live demo · outcome · personalize
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
   skip: { fontSize: 15, fontWeight: '600' },
   progress: { flexDirection: 'row', gap: 6, paddingHorizontal: 24, marginTop: 14 },
   bar: { flex: 1, height: 4, borderRadius: 999 },
-  stage: { flex: 1, paddingHorizontal: 28 },
+  stage: { flex: 1, paddingHorizontal: 28, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   stepWrap: { flex: 1, paddingTop: 26 },
   stepPad: { paddingVertical: 8 },
 
@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 15, fontWeight: '600' },
 
   // Footer
-  footer: { paddingHorizontal: 24, paddingBottom: 10, alignItems: 'center', gap: 4 },
+  footer: { paddingHorizontal: 24, paddingBottom: 10, alignItems: 'center', gap: 4, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   reassure: { fontSize: 12.5, fontWeight: '500', marginBottom: 8 },
   cta: { flexDirection: 'row', height: 56, width: '100%', borderRadius: 18, alignItems: 'center', justifyContent: 'center', gap: 9 },
   ctaText: { color: '#fff', fontSize: 17, fontWeight: '700' },

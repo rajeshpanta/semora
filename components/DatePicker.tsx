@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { format } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { COLORS } from '@/lib/constants';
+import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
@@ -165,6 +165,9 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 34,
+    width: '100%',
+    maxWidth: SCREEN_MAX_WIDTH,
+    alignSelf: 'center',
   },
   toolbar: {
     flexDirection: 'row',
