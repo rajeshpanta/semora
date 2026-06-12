@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isToday as isDateToday } from 'date-fns';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useTasks, useSemesters, useCourses, useToggleTaskComplete } from '@/lib/queries';
-import { COLORS, FONTS } from '@/lib/constants';
+import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import type { TaskWithCourse } from '@/lib/queries';
 
@@ -322,7 +322,7 @@ export default function CalendarScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
-  content: { padding: 18, paddingBottom: 120 },
+  content: { padding: 18, paddingBottom: 120, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   // Header
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
   title: { fontFamily: FONTS.displaySemibold, fontSize: 27, color: COLORS.ink, letterSpacing: -0.5 },

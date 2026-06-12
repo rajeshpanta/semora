@@ -9,7 +9,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { useCreateCourse, useCreateCourseMeeting, useSemesters, useCourses } from '@/lib/queries';
 import { useAppStore } from '@/store/appStore';
-import { COURSE_COLORS, COURSE_ICONS, COLORS, type CourseIcon } from '@/lib/constants';
+import { COURSE_COLORS, COURSE_ICONS, COLORS, SCREEN_MAX_WIDTH, type CourseIcon } from '@/lib/constants';
 import { SemesterPicker } from '@/components/SemesterPicker';
 import { ScheduleEditor, type ScheduleBlock } from '@/components/ScheduleEditor';
 import { FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
@@ -252,7 +252,7 @@ export default function NewCourseScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: 20, paddingBottom: 40, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   card: { backgroundColor: '#fff', borderRadius: 20, padding: 24, borderWidth: 1, borderColor: '#edf0f7' },
   previewRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#f1f5f9' },
   previewIcon: { width: 48, height: 48, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },

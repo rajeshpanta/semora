@@ -6,8 +6,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 
-const { width: SCREEN_W } = Dimensions.get('window');
-const WIDGET_W = SCREEN_W - 80; // mimic real widget width
+// Clamp so the mock widget previews stay phone-sized on iPad instead of
+// ballooning to the full screen width. Orientation is locked + full screen,
+// so a module-load read is stable (no rotation/Split View to react to).
+const WIDGET_W = Math.min(Dimensions.get('window').width - 80, 320);
 
 // ── Realistic Widget Previews ──────────────────────────────
 

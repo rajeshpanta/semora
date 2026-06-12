@@ -9,7 +9,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { format, isPast, isToday } from 'date-fns';
 import { useTask, useUpdateTask, useDeleteTask, useToggleTaskComplete } from '@/lib/queries';
-import { TASK_TYPE_LABELS, TASK_TYPES, COLORS, type TaskType } from '@/lib/constants';
+import { TASK_TYPE_LABELS, TASK_TYPES, COLORS, SCREEN_MAX_WIDTH, type TaskType } from '@/lib/constants';
 import { DatePicker } from '@/components/DatePicker';
 import { NotFound } from '@/components/NotFound';
 import { useColors } from '@/lib/theme';
@@ -418,7 +418,7 @@ export default function TaskDetailScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 20, paddingBottom: 100 },
+  content: { padding: 20, paddingBottom: 100, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   courseStrip: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, marginBottom: 14 },
   courseDot: { width: 10, height: 10, borderRadius: 5 },
   courseName: { fontSize: 14, fontWeight: '600', flex: 1 },

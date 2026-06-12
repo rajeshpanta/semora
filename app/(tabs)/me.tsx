@@ -7,7 +7,7 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTaskStats } from '@/lib/queries';
 import { signOut } from '@/lib/auth';
 import { displayName } from '@/lib/user';
-import { COLORS, FONTS } from '@/lib/constants';
+import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useEffect, useState } from 'react';
 import Constants from 'expo-constants';
@@ -207,7 +207,7 @@ function SettingsRow({ icon, label, last, onPress, colors }: { icon: string; lab
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
-  content: { padding: 20, paddingBottom: 120 },
+  content: { padding: 20, paddingBottom: 120, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 8, marginBottom: 20 },
   avatar: { width: 58, height: 58, borderRadius: 29, backgroundColor: COLORS.brand, justifyContent: 'center', alignItems: 'center' },
   avatarText: { color: '#fff', fontSize: 22, fontWeight: '600' },

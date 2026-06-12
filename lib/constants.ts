@@ -1,3 +1,8 @@
+// Caps main content width so screens read well on iPad (portrait, full
+// screen) instead of stretching edge-to-edge. Applied to each screen's
+// scroll/content container via `width:'100%', maxWidth, alignSelf:'center'`.
+export const SCREEN_MAX_WIDTH = 600;
+
 export const TASK_TYPES = [
   'assignment',
   'quiz',

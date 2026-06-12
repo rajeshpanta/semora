@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTasks, useDeleteSemester } from '@/lib/queries';
-import { COLORS, FONTS, calculateGrade, DEFAULT_GRADE_SCALE } from '@/lib/constants';
+import { COLORS, FONTS, calculateGrade, DEFAULT_GRADE_SCALE, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { differenceInCalendarDays, isToday, isPast, format } from 'date-fns';
 import type { GradeThreshold } from '@/types/database';
@@ -339,7 +339,7 @@ export default function CoursesScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
-  content: { padding: 18, paddingBottom: 120 },
+  content: { padding: 18, paddingBottom: 120, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
 
   // Header
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },

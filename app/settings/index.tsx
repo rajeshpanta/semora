@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useSession } from '@/app/_layout';
 import { useAppStore } from '@/store/appStore';
 import { supabase } from '@/lib/supabase';
-import { COLORS } from '@/lib/constants';
+import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { displayName, hasEmailPassword } from '@/lib/user';
 
@@ -152,7 +152,7 @@ function SettingsRow({ icon, label, value, last, onPress }: { icon: string; labe
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: 20, paddingBottom: 40, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   sectionTitle: { fontSize: 13, fontWeight: '600', color: COLORS.ink2, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
   card: { backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 16, marginBottom: 24, borderWidth: 0.5, borderColor: COLORS.line },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },

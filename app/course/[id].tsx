@@ -18,7 +18,7 @@ import { TaskItem } from '@/components/TaskItem';
 import { GradeCard, WhatIfCard } from '@/components/GradeCard';
 import { ScheduleEditor, type ScheduleBlock, isNewBlock } from '@/components/ScheduleEditor';
 import { NotFound } from '@/components/NotFound';
-import { COURSE_COLORS, COURSE_ICONS, COLORS, FONTS, calculateGrade, DEFAULT_GRADE_SCALE } from '@/lib/constants';
+import { COURSE_COLORS, COURSE_ICONS, COLORS, FONTS, calculateGrade, DEFAULT_GRADE_SCALE, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import type { GradeThreshold } from '@/types/database';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
@@ -568,7 +568,7 @@ export default function CourseDetailScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  content: { padding: 20, paddingBottom: 100 },
+  content: { padding: 20, paddingBottom: 100, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   header: { borderRadius: 18, padding: 24, alignItems: 'center', marginBottom: 14 },
   headerIcon: { width: 64, height: 64, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
   headerTitle: { fontFamily: FONTS.display, fontSize: 23, color: '#0f172a' },

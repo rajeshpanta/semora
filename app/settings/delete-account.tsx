@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { signOut, signInWithApple, signInWithGoogle } from '@/lib/auth';
 import { useSession } from '@/app/_layout';
 import { useColors } from '@/lib/theme';
+import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { hasEmailPassword, primaryProvider } from '@/lib/user';
 import { useAppStore } from '@/store/appStore';
 
@@ -262,7 +263,7 @@ export default function DeleteAccountScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  content: { padding: 20 },
+  content: { padding: 20, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   warningBox: {
     flexDirection: 'row', alignItems: 'flex-start',
     padding: 14, borderRadius: 12, borderWidth: 1, marginBottom: 24,

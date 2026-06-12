@@ -16,7 +16,7 @@ import {
   useSemesters, useCourses, useTodayTasks, useDueSoonTasks,
   useTaskStats, useToggleTaskComplete, useTasks,
 } from '@/lib/queries';
-import { COLORS, FONTS } from '@/lib/constants';
+import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { displayName } from '@/lib/user';
 import { formatTimeOfDay, classTimeStatus } from '@/lib/schedule';
@@ -799,7 +799,7 @@ export default function TodayScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
-  content: { padding: 18, paddingBottom: 120 },
+  content: { padding: 18, paddingBottom: 120, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   eyeLabel: { fontSize: 14, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.ink3 },
   greeting: { fontFamily: FONTS.displaySemibold, fontSize: 27, color: COLORS.ink, letterSpacing: -0.5, marginTop: 4, marginBottom: 2 },
   semesterLabel: { fontSize: 14, color: COLORS.ink3, fontWeight: '500', marginBottom: 16 },

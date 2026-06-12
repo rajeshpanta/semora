@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  ActivityIndicator, Alert, Platform, Linking, Dimensions,
+  ActivityIndicator, Alert, Platform, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -9,14 +9,12 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import type { ProductOrSubscription } from 'react-native-iap';
-import { COLORS, FONTS } from '@/lib/constants';
+import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useAppStore } from '@/store/appStore';
 import { getProducts, purchaseProduct, restorePurchases, validateAfterPurchase, PRODUCT_IDS, setupPurchaseListeners } from '@/lib/purchases';
 import { isEligibleForIntroOfferIOS } from 'react-native-iap';
 import { supabase } from '@/lib/supabase';
-
-const { width: SCREEN_W } = Dimensions.get('window');
 
 const FEATURES = [
   {
@@ -394,7 +392,7 @@ export default function PaywallScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: COLORS.paper },
   safe: { flex: 1 },
-  content: { paddingHorizontal: 20, paddingBottom: 40 },
+  content: { paddingHorizontal: 20, paddingBottom: 40, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
 
   // Close — fixed at top right, outside scroll
   closeBtn: {

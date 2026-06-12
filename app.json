@@ -15,7 +15,8 @@
       "backgroundColor": "#0c0b24"
     },
     "ios": {
-      "supportsTablet": false,
+      "supportsTablet": true,
+      "requireFullScreen": true,
       "bundleIdentifier": "com.rajeshpanta.syllabussnap",
       "buildNumber": "14",
       "appleTeamId": "7T9897GFKH",

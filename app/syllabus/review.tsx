@@ -10,7 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
-import { COLORS, FONTS, TASK_TYPE_LABELS } from '@/lib/constants';
+import { COLORS, FONTS, TASK_TYPE_LABELS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import * as Notifications from 'expo-notifications';
 import { scheduleTaskReminders, requestNotificationPermission } from '@/lib/notifications';
@@ -435,7 +435,7 @@ export default function SyllabusReviewScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
-  content: { padding: 18, paddingBottom: 100 },
+  content: { padding: 18, paddingBottom: 100, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   courseBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: COLORS.brand50, padding: 12, borderRadius: 12, marginBottom: 16 },
   courseBannerName: { fontSize: 14, fontWeight: '600', color: COLORS.brand },
   courseBannerSem: { fontSize: 11, color: COLORS.ink3, marginTop: 1 },

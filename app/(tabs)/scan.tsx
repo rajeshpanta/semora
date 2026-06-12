@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
-import { COLORS, FONTS } from '@/lib/constants';
+import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useScanCount, FREE_SCAN_LIMIT } from '@/lib/queries';
@@ -297,7 +297,7 @@ export default function ScanScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
-  content: { padding: 20, paddingBottom: 120 },
+  content: { padding: 20, paddingBottom: 120, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   title: { fontFamily: FONTS.displaySemibold, fontSize: 27, color: COLORS.ink, letterSpacing: -0.5 },
   subtitle: { fontSize: 14, color: COLORS.ink2, marginTop: 4, lineHeight: 19 },
   scanFrame: { backgroundColor: COLORS.brand, borderRadius: 22, padding: 22, marginVertical: 18, alignItems: 'center' },

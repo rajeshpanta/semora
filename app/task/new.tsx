@@ -9,7 +9,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { useCreateTask, useCourses } from '@/lib/queries';
 import { useAppStore } from '@/store/appStore';
-import { TASK_TYPES, TASK_TYPE_LABELS, COLORS, type TaskType } from '@/lib/constants';
+import { TASK_TYPES, TASK_TYPE_LABELS, COLORS, SCREEN_MAX_WIDTH, type TaskType } from '@/lib/constants';
 import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
 import { formatLocalDate } from '@/lib/dates';
@@ -218,7 +218,7 @@ export default function NewTaskScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: 20, paddingBottom: 40, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   card: { backgroundColor: '#fff', borderRadius: 20, padding: 24, borderWidth: 1, borderColor: '#edf0f7' },
   label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 16 },
   hint: { fontSize: 13, color: '#94a3b8', fontStyle: 'italic' },
