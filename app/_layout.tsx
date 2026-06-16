@@ -18,6 +18,8 @@ import { useAppStore } from '@/store/appStore';
 import { ThemeColorsProvider, useResolvedScheme, useColors } from '@/lib/theme';
 import { setQueryClient } from '@/lib/auth';
 import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateAfterPurchase, setupPurchaseListeners } from '@/lib/purchases';
+import { rescheduleAllTaskReminders, cancelAllRemindersOnSignOut } from '@/lib/notifications';
+import { clearLocalSyncState } from '@/lib/calendarSync';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -66,18 +68,40 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data: { session: current } } = await supabase.auth.getSession();
       if (current?.user.id !== expectedUserId) return;
       const store = useAppStore.getState();
+      const wasPro = store.isPro;
       store.setIsPro(entitlement.is_pro);
       store.setSubscriptionPlan(entitlement.plan);
+      // Reschedule whenever Pro status CHANGES — scheduleTaskReminders reads isPro
+      // at schedule time, so existing tasks' reminders go stale on a change:
+      //   • false→true (upgrade / reinstall re-establishing entitlement / a
+      //     background purchase): add the 1-/3-day advance reminders.
+      //   • true→false (subscription lapsed or downgraded): STRIP the advance
+      //     reminders, forcing the user back to same-day only — otherwise someone
+      //     could buy one month, front-load a whole semester of tasks, cancel, and
+      //     keep the Pro advance reminders for free.
+      // The transient (network/renewal-blip) guard above returns before this, so a
+      // paying user is never falsely stripped mid-renewal. Permission-gated +
+      // concurrency-guarded internally; isPro is already written above, so the
+      // reschedule reads the new status.
+      if (wasPro !== entitlement.is_pro) {
+        rescheduleAllTaskReminders(expectedUserId);
+      }
     };
 
     // Heavy path: opens StoreKit, fetches the device receipt, and POSTs
     // to validate-receipt (Apple verifyReceipt round-trip). Only run on
     // events where the answer might genuinely have changed: first
     // session resolved at launch, or a fresh sign-in.
-    const refreshProForSession = (expectedUserId: string) => {
+    const refreshProForSession = (expectedUserId: string, rescheduleAfter = false) => {
       initIAP()
         .then(() => refreshProStatus())
         .then((e) => writeEntitlementIfStillCurrent(expectedUserId, e))
+        // After a fresh sign-in, local reminders were cleared by the prior
+        // SIGNED_OUT (or never existed on a new device / reinstall). Reschedule
+        // them HERE — after the entitlement is written — so a Pro user gets
+        // their 1-/3-day advance reminders, not just same-day. (The reschedule
+        // is guarded against concurrent runs and won't prompt for permission.)
+        .then(() => { if (rescheduleAfter) rescheduleAllTaskReminders(expectedUserId); })
         .catch(() => {});
     };
 
@@ -118,6 +142,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         // allowed to trigger an Apple-ID prompt.
         const entitlement = await validateAfterPurchase(p, { interactive: false });
         await writeEntitlementIfStillCurrent(expectedUserId, entitlement);
+        // Newly Pro via a background-delivered purchase (Ask to Buy, redelivery):
+        // reschedule so existing tasks get the 1-/3-day advance reminders.
+        if (entitlement.is_pro) rescheduleAllTaskReminders(expectedUserId);
         // Ack the StoreKit transaction once it has reached a terminal
         // state: either Pro is granted, or the receipt is bound to a
         // different Semora account (no retry on this device will help).
@@ -168,15 +195,26 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       if (_event === 'SIGNED_OUT') {
         useAppStore.getState().resetUserState();
         queryClient.clear();
+        // Match lib/auth.ts:signOut()'s device teardown — these paths bypass
+        // it, so without this user A's scheduled reminders keep firing and
+        // their tasks stay synced in the device calendar under user B.
+        if (Platform.OS !== 'web') {
+          // Helper (not the raw cancel) so it also invalidates any in-flight
+          // reschedule racing this sign-out — otherwise the loop could
+          // re-create user A's reminders for user B after the cancel.
+          cancelAllRemindersOnSignOut();
+          clearLocalSyncState().catch(() => {});
+        }
       }
 
       if (session) {
         saveTimezoneIfNeeded(session.user.id);
 
         if (_event === 'SIGNED_IN') {
-          // Account switch / fresh sign-in — full revalidation, plus
-          // wipe cached queries so tabs render the new user's data.
-          refreshProForSession(session.user.id);
+          // Account switch / fresh sign-in — full revalidation (and reschedule
+          // local reminders, which SIGNED_OUT cleared / a new device lacks),
+          // plus wipe cached queries so tabs render the new user's data.
+          refreshProForSession(session.user.id, true);
           queryClient.removeQueries();
 
           // Persist the onboarding name to the account, but ONLY when the
@@ -247,6 +285,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           globalRouter.replace('/(auth)/sign-in');
           return;
         }
+        // PKCE flow: exchangeCodeForSession emits SIGNED_IN, NOT
+        // PASSWORD_RECOVERY, so the listener never pins the user to the reset
+        // screen. Set the flag here so AuthGate keeps them on /reset-password
+        // instead of bouncing a valid session straight into (tabs).
+        useAppStore.getState().setInPasswordReset(true);
         globalRouter.replace('/(auth)/reset-password');
         return;
       }

@@ -173,6 +173,33 @@ export function useTaskStats(semesterId: string | null) {
   });
 }
 
+/**
+ * Whether the user has ANY incomplete task, across all semesters. Gates the
+ * "turn on reminders" nudge so it only reaches users who actually have
+ * deadlines to be reminded about — brand-new users with no tasks never see it
+ * (they get the in-context primer at their first syllabus save instead).
+ * Scoped to user_id, not the selected semester, to match
+ * rescheduleAllTaskReminders, which schedules across every incomplete task.
+ */
+export function useHasPendingTasks() {
+  return useQuery({
+    // Rides the ['tasks'] key prefix on purpose: every task mutation already
+    // calls invalidateQueries({ queryKey: ['tasks'] }), so this gate refreshes
+    // automatically with no per-mutation wiring and no in-session staleness.
+    queryKey: ['tasks', 'hasPending'],
+    queryFn: async () => {
+      const userId = await getUserId();
+      const { count, error } = await supabase
+        .from('tasks')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_completed', false);
+      if (error) throw error;
+      return (count ?? 0) > 0;
+    },
+  });
+}
+
 export const FREE_SCAN_LIMIT = 2;
 
 export function useScanCount() {

@@ -83,6 +83,9 @@ export async function scheduleTaskReminders(
   dueDate: string | null | undefined,
   dueTime?: string | null,
   userId?: string,
+  // Batch path (rescheduleAllTaskReminders) passes prefs + isPro fetched ONCE
+  // for the whole run, so we don't repeat an identical profiles read per task.
+  prefetched?: { reminder_same_day: boolean; reminder_1day: boolean; reminder_3day: boolean; isPro: boolean },
 ) {
   if (Platform.OS === 'web') return;
   // Schema marks tasks.due_date NOT NULL, but a malformed row coming
@@ -97,17 +100,27 @@ export async function scheduleTaskReminders(
   // OAuth user whose profile row hasn't propagated yet falls cleanly to
   // defaults rather than throwing.
   let preferences = { reminder_same_day: true, reminder_1day: true, reminder_3day: true };
-  if (userId) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('reminder_same_day, reminder_1day, reminder_3day')
-      .eq('id', userId)
-      .maybeSingle();
-    if (data) preferences = data;
+  let isPro: boolean;
+  if (prefetched) {
+    preferences = {
+      reminder_same_day: prefetched.reminder_same_day,
+      reminder_1day: prefetched.reminder_1day,
+      reminder_3day: prefetched.reminder_3day,
+    };
+    isPro = prefetched.isPro;
+  } else {
+    if (userId) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('reminder_same_day, reminder_1day, reminder_3day')
+        .eq('id', userId)
+        .maybeSingle();
+      if (data) preferences = data;
+    }
+    isPro = useAppStore.getState().isPro;
   }
 
   // Free users only get same-day reminders
-  const isPro = useAppStore.getState().isPro;
   if (!isPro) {
     preferences.reminder_1day = false;
     preferences.reminder_3day = false;
@@ -196,5 +209,93 @@ export async function cancelTaskReminders(taskId: string) {
     if (notif.content.data?.taskId === taskId) {
       await Notifications.cancelScheduledNotificationAsync(notif.identifier);
     }
+  }
+}
+
+/**
+ * Re-schedule reminders for every incomplete task. Call this the moment Pro
+ * is newly activated: scheduleTaskReminders reads isPro at schedule time, so
+ * tasks created while free only ever got the same-day reminder. Without this,
+ * the 1-/3-day advance reminders (a headline Pro feature) never appear for
+ * existing tasks until each one is edited. Idempotent (cancel + reschedule).
+ */
+let rescheduleInFlight = false;
+// Bumped on every sign-out (via cancelAllRemindersOnSignOut). An in-flight
+// reschedule captures this at start and bails the moment it changes, so a
+// sign-out that races the per-task loop can't re-create the signed-out user's
+// reminders AFTER the cancel-all — which would leak A's task titles to user B
+// on the same device.
+let rescheduleGeneration = 0;
+
+/**
+ * Cancel all scheduled reminders on sign-out AND invalidate any in-flight
+ * reschedule. Use this on EVERY sign-out path instead of calling
+ * Notifications.cancelAllScheduledNotificationsAsync() directly, so a
+ * concurrent rescheduleAllTaskReminders stops instead of re-creating the
+ * signed-out user's reminders after the cancel.
+ */
+export async function cancelAllRemindersOnSignOut(): Promise<void> {
+  // Bump first (synchronously, before any await) so an in-flight reschedule
+  // sees the new generation even if the cancel below hasn't resolved yet.
+  rescheduleGeneration += 1;
+  if (Platform.OS === 'web') return;
+  try {
+    await Notifications.cancelAllScheduledNotificationsAsync();
+  } catch {
+    // Best-effort.
+  }
+}
+
+export async function rescheduleAllTaskReminders(userId: string): Promise<void> {
+  // Guard against the dual purchase listeners (paywall + _layout) both firing
+  // a full reschedule concurrently, which would double-schedule every task.
+  if (Platform.OS === 'web' || !userId || rescheduleInFlight) return;
+  // Set the flag BEFORE any await so a second concurrent call (the dual
+  // purchase listeners fire together) sees it — the event loop can't
+  // interleave before the first await.
+  rescheduleInFlight = true;
+  // Snapshot the generation. If a sign-out lands mid-loop it bumps this, and
+  // we abort instead of re-creating the signed-out user's reminders.
+  const gen = rescheduleGeneration;
+  try {
+    // Permission CHECK, not request — never pop the OS prompt during a
+    // background Pro-activation reschedule.
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return;
+    // Read prefs + isPro ONCE for the whole batch — scheduleTaskReminders would
+    // otherwise issue an identical per-task profiles read for every task.
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('reminder_same_day, reminder_1day, reminder_3day')
+      .eq('id', userId)
+      .maybeSingle();
+    const prefetched = {
+      reminder_same_day: profile ? profile.reminder_same_day : true,
+      reminder_1day: profile ? profile.reminder_1day : true,
+      reminder_3day: profile ? profile.reminder_3day : true,
+      isPro: useAppStore.getState().isPro,
+    };
+    const { data } = await supabase
+      .from('tasks')
+      .select('id, title, due_date, due_time, courses(name)')
+      .eq('user_id', userId)
+      .eq('is_completed', false);
+    if (!data) return;
+    for (const t of data as any[]) {
+      // A sign-out fired cancelAllRemindersOnSignOut() during the loop — stop
+      // now, or the remaining iterations would re-create this user's reminders
+      // for whoever signs in next on this device.
+      if (rescheduleGeneration !== gen) return;
+      const courseName =
+        (Array.isArray(t.courses) ? t.courses[0]?.name : t.courses?.name) || 'Course';
+      await cancelTaskReminders(t.id);
+      // Re-check after the await — the sign-out could have landed in between.
+      if (rescheduleGeneration !== gen) return;
+      await scheduleTaskReminders(t.id, t.title, courseName, t.due_date, t.due_time, userId, prefetched);
+    }
+  } catch {
+    // Best-effort — a failed reschedule must never break the purchase flow.
+  } finally {
+    rescheduleInFlight = false;
   }
 }

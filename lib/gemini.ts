@@ -46,6 +46,7 @@ export interface SyllabusExtraction {
 export async function extractFromFile(
   fileUri: string,
   mimeType: string,
+  signal?: AbortSignal,
 ): Promise<SyllabusExtraction> {
   const base64 = await FileSystem.readAsStringAsync(fileUri, {
     encoding: 'base64',
@@ -68,6 +69,7 @@ export async function extractFromFile(
       'Authorization': `Bearer ${session.access_token}`,
     },
     body: JSON.stringify({ base64, mimeType }),
+    signal,
   });
 
   if (!response.ok) {

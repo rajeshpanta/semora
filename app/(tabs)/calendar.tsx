@@ -10,6 +10,7 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useTasks, useSemesters, useCourses, useToggleTaskComplete } from '@/lib/queries';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import type { TaskWithCourse } from '@/lib/queries';
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -54,6 +55,7 @@ function getCalendarDays(year: number, month: number, todayDate: Date) {
 
 export default function CalendarScreen() {
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
   const router = useRouter();
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -98,7 +100,7 @@ export default function CalendarScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.headerRow}>
           <View>

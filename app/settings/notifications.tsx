@@ -4,12 +4,13 @@ import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import * as Notifications from 'expo-notifications';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { requestNotificationPermission } from '@/lib/notifications';
+import { requestNotificationPermission, rescheduleAllTaskReminders } from '@/lib/notifications';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/app/_layout';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 
 interface ReminderPrefs {
@@ -26,6 +27,7 @@ const DEFAULT_PREFS: ReminderPrefs = {
 
 export default function NotificationSettings() {
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
   const { session } = useSession();
   const userId = session?.user?.id;
   const isPro = useAppStore((s) => s.isPro);
@@ -76,8 +78,11 @@ export default function NotificationSettings() {
   const handleEnableNotifications = async () => {
     if (osPermission === 'undetermined') {
       // OS prompt never shown — we can ask directly.
-      await requestNotificationPermission().catch(() => {});
+      const granted = await requestNotificationPermission().catch(() => false);
       refreshOsPermission();
+      // Reminders couldn't be delivered while permission was off, so existing
+      // tasks were never scheduled — schedule them now that it's granted.
+      if (granted && userId) rescheduleAllTaskReminders(userId);
     } else {
       // Denied — only iOS Settings can flip it now.
       Linking.openSettings().catch(() => {});
@@ -108,6 +113,11 @@ export default function NotificationSettings() {
       } else {
         // Keep the Settings index row in sync — it reads the same prefs.
         qc.invalidateQueries({ queryKey: ['reminderPrefs', userId] });
+        // Apply the new preference to EXISTING tasks, not just future ones —
+        // scheduleTaskReminders reads these prefs fresh, so a full reschedule
+        // adds/removes the toggled reminder across the user's current backlog.
+        // No-op if notifications aren't granted (permission-checked internally).
+        rescheduleAllTaskReminders(userId);
       }
     }
   };
@@ -125,7 +135,7 @@ export default function NotificationSettings() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Notifications' }} />
 
-      <View style={styles.content}>
+      <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
         {osPermission !== 'granted' && (
           <TouchableOpacity
             style={[styles.permBanner, { backgroundColor: colors.amber50, borderColor: colors.amber }]}
@@ -171,7 +181,7 @@ export default function NotificationSettings() {
         </View>
 
         <Text style={[styles.hint, { color: colors.ink3 }]}>
-          Reminders are scheduled when tasks are created or updated. Changes here apply to new tasks.
+          Reminders are scheduled when tasks are created or updated. Changes here apply to all your tasks.
         </Text>
       </View>
     </SafeAreaView>

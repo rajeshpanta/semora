@@ -9,8 +9,10 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { supabase } from '@/lib/supabase';
 import { signOut, signInWithApple, signInWithGoogle } from '@/lib/auth';
+import { unsyncAll } from '@/lib/calendarSync';
 import { useSession } from '@/app/_layout';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { hasEmailPassword, primaryProvider } from '@/lib/user';
 import { useAppStore } from '@/store/appStore';
@@ -56,6 +58,7 @@ async function verifyDeviceOwner(): Promise<{ verified: boolean; reason: 'ok' | 
 
 export default function DeleteAccountScreen() {
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
   const router = useRouter();
   const { session } = useSession();
   const user = session?.user;
@@ -176,6 +179,12 @@ export default function DeleteAccountScreen() {
       const { error: rpcError } = await supabase.rpc('delete_user_account');
       if (rpcError) throw rpcError;
 
+      // Permanent deletion is the one case where the on-device "Semora"
+      // calendar + its synced events must also go — signOut's
+      // clearLocalSyncState deliberately leaves them, which would otherwise
+      // strand the user's task titles in iOS Calendar after deletion.
+      await unsyncAll().catch(() => {});
+
       await signOut();
     } catch (err: any) {
       Alert.alert('Could not delete account', err.message ?? 'Please try again.');
@@ -189,7 +198,7 @@ export default function DeleteAccountScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Delete Account' }} />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="handled">
         <View style={[styles.warningBox, { backgroundColor: colors.coral50, borderColor: colors.coral }]}>
           <FontAwesome name="exclamation-triangle" size={20} color={colors.coral} />
           <View style={styles.warningTextWrap}>

@@ -9,6 +9,7 @@ import { signOut } from '@/lib/auth';
 import { displayName } from '@/lib/user';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { useEffect, useState } from 'react';
 import Constants from 'expo-constants';
 import { getProducts } from '@/lib/purchases';
@@ -16,6 +17,7 @@ import { isEligibleForIntroOfferIOS } from 'react-native-iap';
 
 export default function MeScreen() {
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
   const { session } = useSession();
   const name = displayName(session?.user, 'User');
   const initial = (name[0] ?? '?').toUpperCase();
@@ -98,7 +100,7 @@ export default function MeScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         {/* Profile */}
         <View style={styles.profileRow}>
           <View style={[styles.avatar, { backgroundColor: colors.brand }]}><Text style={styles.avatarText}>{initial}</Text></View>

@@ -14,6 +14,7 @@ import { SemesterPicker } from '@/components/SemesterPicker';
 import { ScheduleEditor, type ScheduleBlock } from '@/components/ScheduleEditor';
 import { FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 
 export default function NewCourseScreen() {
   const router = useRouter();
@@ -31,6 +32,7 @@ export default function NewCourseScreen() {
   const [icon, setIcon] = useState<string>(COURSE_ICONS[0]);
   const [meetings, setMeetings] = useState<ScheduleBlock[]>([]);
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
 
   const handleSubmit = async () => {
     if (!semesterId) {
@@ -150,7 +152,7 @@ export default function NewCourseScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="always">
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           {/* Preview */}
           <View style={[styles.previewRow, { borderBottomColor: colors.line }]}>

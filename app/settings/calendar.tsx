@@ -5,6 +5,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useEffect, useState } from 'react';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import {
   requestCalendarPermission,
@@ -15,11 +16,16 @@ import {
 
 export default function CalendarSyncSettings() {
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
   const [synced, setSynced] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const isPro = useAppStore((s) => s.isPro);
+  // Sync was enabled while Pro but the subscription has since lapsed — auto-sync
+  // is gated on isPro (isSyncEnabled), so it's actually paused. Reflect that
+  // honestly instead of showing a healthy "synced" toggle that isn't working.
+  const syncPaused = synced && !isPro;
   const router = useRouter();
 
   useEffect(() => {
@@ -101,6 +107,16 @@ export default function CalendarSyncSettings() {
   };
 
   const handleResync = async () => {
+    // Defense in depth: the re-sync row is hidden for non-Pro, but never let an
+    // explicit re-sync run without an active subscription (syncAllTasks isn't
+    // gated by isSyncEnabled the way auto-sync is).
+    if (!isPro) {
+      Alert.alert('Pro Feature', 'Calendar sync is available with Semora Pro.', [
+        { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      return;
+    }
     setSyncing(true);
     try {
       const count = await syncAllTasks(selectedSemesterId);
@@ -125,15 +141,19 @@ export default function CalendarSyncSettings() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Calendar Sync' }} />
 
-      <View style={styles.content}>
+      <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Sync to Device Calendar</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <View style={styles.row}>
             <FontAwesome name="calendar-check-o" size={18} color={colors.brand} style={{ width: 26 }} />
             <View style={{ flex: 1, marginLeft: 8 }}>
               <Text style={[styles.rowLabel, { color: colors.ink }]}>Calendar Sync</Text>
-              <Text style={[styles.rowSub, { color: colors.ink3 }]}>
-                {synced ? 'Tasks are synced to "Semora" calendar' : 'Push tasks as calendar events'}
+              <Text style={[styles.rowSub, { color: syncPaused ? colors.amber : colors.ink3 }]}>
+                {syncPaused
+                  ? 'Paused — resubscribe to Pro to resume syncing'
+                  : synced
+                  ? 'Tasks are synced to "Semora" calendar'
+                  : 'Push tasks as calendar events'}
               </Text>
             </View>
             {syncing ? (
@@ -149,7 +169,16 @@ export default function CalendarSyncSettings() {
           </View>
         </View>
 
-        {synced && (
+        {syncPaused && (
+          <View style={[styles.infoBox, { backgroundColor: colors.amber50 }]}>
+            <FontAwesome name="exclamation-circle" size={14} color={colors.amber} />
+            <Text style={[styles.infoText, { color: colors.amber }]}>
+              Your Pro subscription ended, so calendar sync is paused. Resubscribe to resume, or turn it off to remove the Semora calendar.
+            </Text>
+          </View>
+        )}
+
+        {synced && isPro && (
           <>
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
               <TouchableOpacity style={styles.actionRow} activeOpacity={0.7} onPress={handleResync} disabled={syncing}>

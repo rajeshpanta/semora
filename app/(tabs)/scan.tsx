@@ -10,11 +10,13 @@ import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useScanCount, FREE_SCAN_LIMIT } from '@/lib/queries';
 
 export default function ScanScreen() {
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
   const router = useRouter();
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
@@ -219,7 +221,7 @@ export default function ScanScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         <Text style={[styles.title, { color: colors.ink }]}>Scan syllabus</Text>
         <Text style={[styles.subtitle, { color: colors.ink2 }]}>
           Snap it, upload it, or drag it in.{'\n'}We'll pull every deadline.

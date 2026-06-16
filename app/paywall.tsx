@@ -11,8 +11,10 @@ import * as Haptics from 'expo-haptics';
 import type { ProductOrSubscription } from 'react-native-iap';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { getProducts, purchaseProduct, restorePurchases, validateAfterPurchase, PRODUCT_IDS, setupPurchaseListeners } from '@/lib/purchases';
+import { rescheduleAllTaskReminders } from '@/lib/notifications';
 import { isEligibleForIntroOfferIOS } from 'react-native-iap';
 import { supabase } from '@/lib/supabase';
 
@@ -40,6 +42,7 @@ export default function PaywallScreen() {
   const setIsPro = useAppStore((s) => s.setIsPro);
   const setSubscriptionPlan = useAppStore((s) => s.setSubscriptionPlan);
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
 
   // Reverse-trial entry: opened automatically right after the first scan's
   // "aha". Lead with the free trial (momentum, not a block) and dismiss to
@@ -56,9 +59,10 @@ export default function PaywallScreen() {
   const [monthlySub, setMonthlySub] = useState<ProductOrSubscription | null>(null);
   const [annualSub, setAnnualSub] = useState<ProductOrSubscription | null>(null);
   // Whether THIS Apple ID still qualifies for the 7-day intro trial.
-  // Re-subscribers don't — promising them a free trial the sheet won't
-  // honor reads as a bait-and-switch (and is an App Review risk).
-  const [trialEligible, setTrialEligible] = useState(true);
+  // Default OFF (pessimistic): re-subscribers don't qualify, and promising a
+  // trial the payment sheet won't honor is a bait-and-switch / App Review
+  // risk. Flipped true only once isEligibleForIntroOfferIOS confirms it.
+  const [trialEligible, setTrialEligible] = useState(false);
 
   useEffect(() => {
     getProducts().then((products) => {
@@ -68,7 +72,7 @@ export default function PaywallScreen() {
         const groupId = (products.monthly as any)?.subscriptionInfoIOS?.subscriptionGroupId;
         if (groupId) {
           isEligibleForIntroOfferIOS(groupId)
-            .then((ok: boolean) => setTrialEligible(ok !== false))
+            .then((ok: boolean) => setTrialEligible(ok === true))
             .catch(() => {});
         }
       }
@@ -106,6 +110,9 @@ export default function PaywallScreen() {
         setSubscriptionPlan(entitlement.plan);
         setLoading(false);
         if (entitlement.is_pro) {
+          // Newly Pro: existing tasks only have same-day reminders (scheduled
+          // while free). Reschedule so the 1-/3-day advance reminders appear.
+          if (expectedUserId) rescheduleAllTaskReminders(expectedUserId);
           if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           handleClose();
           // Only ack the StoreKit transaction once the server entitlement
@@ -221,6 +228,7 @@ export default function PaywallScreen() {
       setIsPro(entitlement.is_pro);
       setSubscriptionPlan(entitlement.plan);
       if (entitlement.is_pro) {
+        if (expectedUserId) rescheduleAllTaskReminders(expectedUserId);
         if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Restored', 'Your Pro subscription has been restored.', [
           { text: 'OK', onPress: handleClose },
@@ -248,7 +256,7 @@ export default function PaywallScreen() {
           <FontAwesome name="times" size={20} color={colors.ink2} />
         </TouchableOpacity>
 
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} bounces={false}>
+        <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false} bounces={false}>
 
           {/* Hero */}
           <View style={[styles.hero, { backgroundColor: colors.ink }]}>

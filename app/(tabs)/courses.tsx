@@ -11,12 +11,14 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTasks, useDeleteSemester } from '@/lib/queries';
 import { COLORS, FONTS, calculateGrade, DEFAULT_GRADE_SCALE, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { differenceInCalendarDays, isToday, isPast, format } from 'date-fns';
 import type { GradeThreshold } from '@/types/database';
 import type { TaskWithCourse } from '@/lib/queries';
 
 export default function CoursesScreen() {
   const colors = useColors();
+  const { contentMaxWidth, isWide } = useResponsive();
   const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
 
@@ -155,7 +157,7 @@ export default function CoursesScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
 
         {/* Header */}
         <View style={styles.headerRow}>
@@ -192,7 +194,7 @@ export default function CoursesScreen() {
 
         {/* Course cards */}
         {courses.length > 0 ? (
-          <View style={styles.courseList}>
+          <View style={[styles.courseList, isWide && styles.courseListWide]}>
             {courses.map((course) => {
               const courseTasks = getCourseTasks(course.id);
               const nextTask = getNextTask(course.id);
@@ -210,7 +212,7 @@ export default function CoursesScreen() {
               return (
                 <TouchableOpacity
                   key={course.id}
-                  style={[styles.courseCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+                  style={[styles.courseCard, isWide && styles.courseCardWide, { backgroundColor: colors.card, borderColor: colors.line }]}
                   onPress={() => router.push(`/course/${course.id}` as any)}
                   activeOpacity={0.7}
                 >
@@ -354,6 +356,9 @@ const styles = StyleSheet.create({
 
   // Course cards
   courseList: { gap: 10 },
+  // Wide windows (iPad landscape / large Split View): 2-column grid.
+  courseListWide: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  courseCardWide: { flexBasis: '47%', flexGrow: 1, maxWidth: '49%' },
   courseCard: { backgroundColor: COLORS.card, borderRadius: 18, padding: 14, borderWidth: 0.5, borderColor: COLORS.line, position: 'relative', overflow: 'hidden' },
   colorStrip: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
   courseTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },

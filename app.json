@@ -4,7 +4,6 @@
     "slug": "semora",
     "version": "1.2",
     "runtimeVersion": "1.0.0",
-    "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "semora",
     "userInterfaceStyle": "automatic",
@@ -16,7 +15,6 @@
     },
     "ios": {
       "supportsTablet": true,
-      "requireFullScreen": true,
       "bundleIdentifier": "com.rajeshpanta.syllabussnap",
       "buildNumber": "14",
       "appleTeamId": "7T9897GFKH",
@@ -27,7 +25,16 @@
         ]
       },
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UISupportedInterfaceOrientations": [
+          "UIInterfaceOrientationPortrait"
+        ],
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ]
       }
     },
     "web": {

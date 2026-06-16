@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { COLORS, FONTS, TASK_TYPE_LABELS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import * as Notifications from 'expo-notifications';
 import { scheduleTaskReminders, requestNotificationPermission } from '@/lib/notifications';
 import { isSyncEnabled, syncTaskToCalendar } from '@/lib/calendarSync';
@@ -47,6 +48,7 @@ export default function SyllabusReviewScreen() {
   });
   const [saving, setSaving] = useState(false);
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
   const isPro = useAppStore((s) => s.isPro);
   const ahaPaywallShown = useAppStore((s) => s.ahaPaywallShown);
   const setAhaPaywallShown = useAppStore((s) => s.setAhaPaywallShown);
@@ -245,7 +247,7 @@ export default function SyllabusReviewScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="always">
         {/* Header */}
         {/* Course info banner */}
         {params.courseName && (
@@ -481,7 +483,7 @@ const styles = StyleSheet.create({
   emptySub: { fontSize: 13, color: COLORS.ink3 },
   // Footer
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 18, paddingBottom: 34, backgroundColor: COLORS.paper, borderTopWidth: 0.5, borderTopColor: COLORS.line },
-  saveBtn: { height: 52, backgroundColor: COLORS.brand, borderRadius: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8 },
+  saveBtn: { height: 52, backgroundColor: COLORS.brand, borderRadius: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   saveBtnDisabled: { opacity: 0.5 },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

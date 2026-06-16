@@ -14,13 +14,15 @@ import { useSession } from '@/app/_layout';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import {
   useSemesters, useCourses, useTodayTasks, useDueSoonTasks,
-  useTaskStats, useToggleTaskComplete, useTasks,
+  useTaskStats, useToggleTaskComplete, useTasks, useHasPendingTasks,
 } from '@/lib/queries';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { displayName } from '@/lib/user';
 import { formatTimeOfDay, classTimeStatus } from '@/lib/schedule';
 import { updateTodayWidget } from '@/lib/widgetBridge';
+import { rescheduleAllTaskReminders, requestNotificationPermission } from '@/lib/notifications';
 
 // Max overdue rows shown before collapsing into a "Show N more" expander.
 // 5 covers the typical case (0–3) without truncating; only kicks in when
@@ -47,6 +49,7 @@ function greetingFor(hour: number): string {
 
 export default function TodayScreen() {
   const colors = useColors();
+  const { contentMaxWidth, width } = useResponsive();
   const { session } = useSession();
   const router = useRouter();
   const qc = useQueryClient();
@@ -161,6 +164,18 @@ export default function TodayScreen() {
   //     while Today is already the active tab; useFocusEffect alone
   //     misses this case because focus never changed.
   const [notifPermDenied, setNotifPermDenied] = useState(false);
+  // Permission is 'undetermined' (the in-app prompt has never been shown).
+  // Paired with hasPendingTasks to nudge reinstall / new-device users — who
+  // have cloud-synced tasks but, post-reinstall, no notification grant yet.
+  const [notifPermUndetermined, setNotifPermUndetermined] = useState(false);
+  const { data: hasPendingTasks } = useHasPendingTasks();
+  // Last-seen OS permission status, so we can detect the *moment* it flips to
+  // 'granted' (primer accept, settings toggle, or the user enabling it in iOS
+  // Settings and returning). On that transition we reschedule every task: a
+  // reinstall / new-device sign-in can't schedule yet because permission is
+  // still 'undetermined' at sign-in, and nothing else re-runs it afterward, so
+  // pre-existing cloud-synced tasks would otherwise get no local reminders.
+  const prevNotifStatus = useRef<string | null>(null);
   const refreshNotifPerm = useCallback(() => {
     if (Platform.OS === 'web') return;
     Notifications.getPermissionsAsync()
@@ -169,9 +184,39 @@ export default function TodayScreen() {
       // to a Settings page with no Notifications row until the app has
       // requested authorization once — a dead-end. Those users get the
       // primed ask during their first syllabus save instead.
-      .then(({ status }) => setNotifPermDenied(status === 'denied'))
+      .then(({ status }) => {
+        setNotifPermDenied(status === 'denied');
+        setNotifPermUndetermined(status === 'undetermined');
+        const prev = prevNotifStatus.current;
+        prevNotifStatus.current = status;
+        // Reschedule only on an OBSERVED transition into granted — not on a
+        // cold launch that's already granted (prev === null), so we don't
+        // reschedule on every app open. Idempotent + guarded internally.
+        if (status === 'granted' && (prev === 'denied' || prev === 'undetermined')) {
+          const uid = session?.user?.id;
+          if (uid) rescheduleAllTaskReminders(uid);
+        }
+      })
       .catch(() => {});
-  }, []);
+  }, [session?.user?.id]);
+  // Banner CTA: show the OS prompt (works only while 'undetermined'), then
+  // re-read permission — refreshNotifPerm's transition logic reschedules every
+  // task on the undetermined→granted flip and clears the banner.
+  const onEnableReminders = useCallback(() => {
+    requestNotificationPermission()
+      .then((granted) => {
+        // Reschedule directly on grant instead of relying only on
+        // refreshNotifPerm's transition detection. The rescheduleInFlight
+        // guard makes any duplicate from the transition path a no-op, so the
+        // reinstall user's cloud-synced tasks always get reminders here.
+        if (granted) {
+          const uid = session?.user?.id;
+          if (uid) rescheduleAllTaskReminders(uid);
+        }
+      })
+      .catch(() => {})
+      .finally(() => refreshNotifPerm());
+  }, [refreshNotifPerm, session?.user?.id]);
   useFocusEffect(refreshNotifPerm);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
@@ -307,7 +352,7 @@ export default function TodayScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
       <ScrollView
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />}
       >
@@ -334,6 +379,25 @@ export default function TodayScreen() {
             <FontAwesome name="bell-slash" size={14} color={colors.amber} />
             <Text style={[styles.notifBannerText, { color: colors.ink }]}>
               Turn on notifications to get reminders before deadlines
+            </Text>
+            <FontAwesome name="chevron-right" size={11} color={colors.amber} />
+          </TouchableOpacity>
+        )}
+
+        {/* Reminders never enabled (e.g. after a reinstall — cloud tasks were
+            restored but the OS notification grant is gone). Unlike the denied
+            banner, this CTA shows the OS prompt directly, which still works
+            while the status is 'undetermined'. Gated on hasPendingTasks so
+            brand-new users with nothing to be reminded about don't see it. */}
+        {notifPermUndetermined && hasPendingTasks === true && (
+          <TouchableOpacity
+            style={[styles.notifBanner, { backgroundColor: colors.amber50, borderColor: colors.amber }]}
+            onPress={onEnableReminders}
+            activeOpacity={0.7}
+          >
+            <FontAwesome name="bell" size={14} color={colors.amber} />
+            <Text style={[styles.notifBannerText, { color: colors.ink }]}>
+              Turn on reminders to get notified before deadlines
             </Text>
             <FontAwesome name="chevron-right" size={11} color={colors.amber} />
           </TouchableOpacity>
@@ -784,7 +848,7 @@ export default function TodayScreen() {
           tab bar (~80px tall on iOS). */}
       {courses.length > 0 && (
         <TouchableOpacity
-          style={[styles.fab, { backgroundColor: colors.brand }]}
+          style={[styles.fab, { right: Math.max(18, (width - contentMaxWidth) / 2 + 18), backgroundColor: colors.brand }]}
           onPress={() => router.push('/task/new?defaultDate=today' as any)}
           activeOpacity={0.85}
           accessibilityRole="button"

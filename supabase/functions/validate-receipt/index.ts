@@ -23,6 +23,13 @@ const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const APPLE_SHARED_SECRET = Deno.env.get('APPLE_SHARED_SECRET') ?? '';
 
+// When 'true', Sandbox/TestFlight transactions do NOT grant production Pro.
+// Default OFF: App Review purchases in the Sandbox environment, so blocking
+// it outright would fail review ("IAP doesn't work"). Keep this off through
+// launch + each update review, then set BLOCK_SANDBOX_PRO=true once live so
+// sandbox receipts can't mint real entitlements for TestFlight testers.
+const BLOCK_SANDBOX = Deno.env.get('BLOCK_SANDBOX_PRO') === 'true';
+
 const APPLE_PROD_URL = 'https://buy.itunes.apple.com/verifyReceipt';
 const APPLE_SANDBOX_URL = 'https://sandbox.itunes.apple.com/verifyReceipt';
 
@@ -79,6 +86,7 @@ interface AppleReceiptInfo {
 
 interface AppleVerifyResponse {
   status: number;
+  environment?: string; // "Sandbox" | "Production"
   latest_receipt_info?: AppleReceiptInfo[];
   receipt?: { in_app?: AppleReceiptInfo[] };
 }
@@ -207,6 +215,9 @@ async function verifyAppleJws(jws: string): Promise<{
   // 4. Only now read the payload.
   const tx: JwsTransaction = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[1])));
   if (tx.bundleId !== 'com.rajeshpanta.syllabussnap') throw new Error('Wrong app');
+  // Don't let a Sandbox/TestFlight transaction grant production Pro (gated so
+  // App Review's sandbox purchase still works until BLOCK_SANDBOX_PRO is set).
+  if (BLOCK_SANDBOX && tx.environment && tx.environment !== 'Production') return null;
   if (tx.productId !== PRODUCT_MONTHLY && tx.productId !== PRODUCT_ANNUAL) return null;
   if (tx.revocationDate) return null; // refunded/revoked
   if (!tx.expiresDate || tx.expiresDate <= Date.now()) return null; // lapsed
@@ -452,7 +463,13 @@ serve(async (req) => {
       );
     }
 
-    return await writeEntitlementAndRespond(adminClient, userId, platform, pickLatestActive(appleResp), startTime);
+    // Legacy receipt path: same Sandbox gate (write an inactive entitlement
+    // rather than grant Pro from a sandbox receipt when blocking is enabled).
+    const active =
+      BLOCK_SANDBOX && appleResp.environment && appleResp.environment !== 'Production'
+        ? null
+        : pickLatestActive(appleResp);
+    return await writeEntitlementAndRespond(adminClient, userId, platform, active, startTime);
   } catch (err) {
     console.error('[validate-receipt] Unhandled error:', err);
     return jsonResponse({ error: 'An unexpected error occurred. Please try again.' }, 500);

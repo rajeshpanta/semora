@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { supabase } from '@/lib/supabase';
+import { useAppStore } from '@/store/appStore';
 import type { Task } from '@/types/database';
 
 const CALENDAR_ID_KEY = 'semora_calendar_id';
@@ -318,7 +319,13 @@ export async function isSynced(): Promise<boolean> {
 export function isSyncEnabled(): boolean {
   if (Platform.OS === 'web') return false;
   try {
-    return SecureStore.getItem(SYNCED_ENABLED_KEY) === 'true';
+    // Gate ongoing auto-sync on BOTH the user's choice AND an active Pro sub.
+    // Calendar sync is Pro-only, but it was previously gated only at ENABLE time
+    // (settings/calendar.tsx) — so a monthly subscriber who turned it on, then
+    // cancelled, kept auto-syncing every new/edited task for the whole semester.
+    // Checking isPro here stops a lapsed user immediately, and resumes
+    // automatically if they re-subscribe (the enabled flag persists).
+    return SecureStore.getItem(SYNCED_ENABLED_KEY) === 'true' && useAppStore.getState().isPro;
   } catch {
     return false;
   }

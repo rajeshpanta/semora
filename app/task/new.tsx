@@ -12,6 +12,7 @@ import { useAppStore } from '@/store/appStore';
 import { TASK_TYPES, TASK_TYPE_LABELS, COLORS, SCREEN_MAX_WIDTH, type TaskType } from '@/lib/constants';
 import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { formatLocalDate } from '@/lib/dates';
 
 export default function NewTaskScreen() {
@@ -36,6 +37,7 @@ export default function NewTaskScreen() {
 
   const selectedCourse = courses.find((c) => c.id === courseId);
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
 
   const handleSubmit = async () => {
     if (!courseId) {
@@ -55,13 +57,13 @@ export default function NewTaskScreen() {
       await createTask.mutateAsync({
         course_id: courseId,
         title: title.trim(),
-        description: description.trim() || undefined,
+        description: description.trim() || null,
         type,
         due_date: formatLocalDate(dueDate),
         due_time: dueTime
           ? `${String(dueTime.getHours()).padStart(2, '0')}:${String(dueTime.getMinutes()).padStart(2, '0')}:00`
-          : undefined,
-        weight: weight ? parseFloat(weight) : undefined,
+          : null,
+        weight: weight.trim() ? parseFloat(weight) : null,
         is_extra_credit: isExtraCredit,
         _courseName: selectedCourse?.name,
       } as any);
@@ -77,7 +79,7 @@ export default function NewTaskScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="always">
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           {/* Course picker */}
           <Text style={[styles.label, { color: colors.ink2 }]}>Course *</Text>

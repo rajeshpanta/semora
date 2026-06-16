@@ -8,10 +8,12 @@ import { useAppStore } from '@/store/appStore';
 import { supabase } from '@/lib/supabase';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { displayName, hasEmailPassword } from '@/lib/user';
 
 export default function SettingsScreen() {
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
   const { session } = useSession();
   const userId = session?.user?.id;
   const email = session?.user?.email ?? '';
@@ -52,7 +54,7 @@ export default function SettingsScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Settings' }} />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         {/* Account */}
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Account</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>

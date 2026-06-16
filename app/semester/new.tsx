@@ -12,6 +12,7 @@ import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
 import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { FREE_SEMESTER_LIMIT, isFreeLimitError } from '@/lib/syllabus';
 import { formatLocalDate } from '@/lib/dates';
 import { suggestSemesters } from '@/lib/semesters';
@@ -24,6 +25,7 @@ export default function NewSemesterScreen() {
   const defaultTerm = useAppStore((s) => s.defaultTerm);
   const { data: existingSemesters = [] } = useSemesters();
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
 
   // Pre-fill with the term picked during onboarding, but only for the very
   // first semester — after that it's almost certainly a different term.
@@ -97,7 +99,7 @@ export default function NewSemesterScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="always">
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <View style={styles.iconRow}>
             <View style={[styles.iconCircle, { backgroundColor: colors.brand50 }]}>

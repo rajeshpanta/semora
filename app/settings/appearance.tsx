@@ -5,6 +5,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useAppStore, ThemeMode } from '@/store/appStore';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 
 const OPTIONS: { mode: ThemeMode; label: string; icon: string; description: string; disabled?: boolean }[] = [
   { mode: 'system', label: 'System', icon: 'mobile-phone', description: 'Match your device setting' },
@@ -14,6 +15,7 @@ const OPTIONS: { mode: ThemeMode; label: string; icon: string; description: stri
 
 export default function AppearanceSettings() {
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
   const themeMode = useAppStore((s) => s.themeMode);
   const setThemeMode = useAppStore((s) => s.setThemeMode);
 
@@ -21,7 +23,7 @@ export default function AppearanceSettings() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Appearance' }} />
 
-      <View style={styles.content}>
+      <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Theme</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           {OPTIONS.map((opt, i) => (

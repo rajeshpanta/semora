@@ -22,6 +22,7 @@ import { COURSE_COLORS, COURSE_ICONS, COLORS, FONTS, calculateGrade, DEFAULT_GRA
 import type { GradeThreshold } from '@/types/database';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { formatMeetings, formatOfficeHours } from '@/lib/schedule';
 
 export default function CourseDetailScreen() {
@@ -41,6 +42,7 @@ export default function CourseDetailScreen() {
   const deleteOfficeHours = useDeleteCourseOfficeHours();
   const isPro = useAppStore((s) => s.isPro);
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -144,7 +146,9 @@ export default function CourseDetailScreen() {
       await updateCourse.mutateAsync({
         id: course.id,
         name: editName.trim(),
-        instructor: editInstructor.trim() || undefined,
+        // Explicit null so clearing the instructor persists (PostgREST strips
+        // undefined keys — same null-vs-undefined fix as the task edit).
+        instructor: editInstructor.trim() || null,
         color: editColor,
         icon: editIcon,
       } as any);
@@ -322,7 +326,7 @@ export default function CourseDetailScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="always">
         {/* Header */}
         <View style={[styles.header, { backgroundColor: displayColor + '12' }]}>
           <View style={[styles.headerIcon, { backgroundColor: displayColor + '25' }]}>

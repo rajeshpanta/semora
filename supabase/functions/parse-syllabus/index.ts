@@ -11,6 +11,10 @@ const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GE
 
 const DAILY_CAP = 20;
 
+// Free tier: 2 successful extractions, lifetime (matches lib/queries
+// FREE_SCAN_LIMIT). Enforced server-side below so it can't be bypassed.
+const FREE_SCAN_LIMIT = 2;
+
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
   'image/png',
@@ -157,6 +161,9 @@ serve(async (req) => {
       .from('gemini_call_log')
       .select('id', { count: 'exact', head: true })
       .eq('user_id', userId)
+      // Don't count throttle rows toward the cap — otherwise every rejected
+      // retry extends the lockout and a legit user stays blocked early.
+      .neq('status', 'rate_limited')
       .gte('created_at', oneDayAgo);
 
     if (countError) {
@@ -170,6 +177,41 @@ serve(async (req) => {
         { error: `You've reached the daily scan limit of ${DAILY_CAP}. Please try again in 24 hours.` },
         429,
       );
+    }
+
+    // 2b. Free-tier hard cap (2 lifetime extractions), enforced server-side
+    // BEFORE the paid Gemini call. The syllabus_uploads DB trigger only fires
+    // when the client voluntarily inserts an upload row AFTER extraction — so
+    // a client that skips that insert (or calls this endpoint directly) would
+    // otherwise get unlimited free extractions. is_pro() is SECURITY DEFINER
+    // and granted to service_role, so the admin client can call it.
+    const { data: proResult, error: proErr } = await adminClient.rpc('is_pro', { uid: userId });
+    if (proErr) {
+      // Fail closed AS TRANSIENT (503) — never demote a paying user to the
+      // free cap on an RPC blip.
+      console.error('[parse-syllabus] is_pro check failed:', proErr);
+      return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
+    }
+    if (proResult !== true) {
+      // Count syllabus_uploads — the SAME source the client gate
+      // (lib/syllabus.ts) and the enforce_free_scan_limit DB trigger use. A
+      // divergent counter (e.g. gemini_call_log, which logs every round-trip
+      // even when extraction is abandoned / client-aborted) would 402 a
+      // legitimate user for a scan they never received.
+      const { count: scanCount, error: scanErr } = await adminClient
+        .from('syllabus_uploads')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId);
+      if (scanErr) {
+        console.error('[parse-syllabus] scan count failed:', scanErr);
+        return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
+      }
+      if ((scanCount ?? 0) >= FREE_SCAN_LIMIT) {
+        return jsonResponse(
+          { error: `You've used your ${FREE_SCAN_LIMIT} free scans. Upgrade to Pro for unlimited syllabus scanning.` },
+          402,
+        );
+      }
     }
 
     // 3. Parse and validate request body

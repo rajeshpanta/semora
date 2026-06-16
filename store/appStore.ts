@@ -26,6 +26,10 @@ const REVIEW_REQUESTED_KEY = 'semora_review_requested';
 const USER_NAME_KEY = 'semora_user_name';
 const DEFAULT_TERM_KEY = 'semora_default_term';
 const PAIN_POINT_KEY = 'semora_pain_point';
+// Pro entitlement — persisted so a paying user isn't shown free-tier UI on
+// every cold start before the async server revalidation resolves. User-scoped:
+// cleared by resetUserState on sign-out so user B never inherits user A's Pro.
+const PRO_KEY = 'semora_is_pro';
 
 function getItem(key: string): string | null {
   if (Platform.OS === 'web') return null;
@@ -45,6 +49,7 @@ const initialTheme = (() => {
 })();
 
 const initialSemester = getItem(SEMESTER_KEY);
+const initialIsPro = getItem(PRO_KEY) === 'true';
 
 // Recovery sessions survive app-kill: the Supabase session is real
 // in SecureStore, but the in-memory inPasswordReset flag is gone, so
@@ -118,8 +123,11 @@ export const useAppStore = create<AppState>((set) => ({
     set({ themeMode: mode });
     setItem(THEME_KEY, mode);
   },
-  isPro: false,
-  setIsPro: (value) => set({ isPro: value }),
+  isPro: initialIsPro,
+  setIsPro: (value) => {
+    set({ isPro: value });
+    if (value) { setItem(PRO_KEY, 'true'); } else { deleteItem(PRO_KEY); }
+  },
   subscriptionPlan: null,
   setSubscriptionPlan: (plan) => set({ subscriptionPlan: plan }),
   postSignupBanner: null,
@@ -179,6 +187,7 @@ export const useAppStore = create<AppState>((set) => ({
       painPoint: null,
     });
     deleteItem(SEMESTER_KEY);
+    deleteItem(PRO_KEY);
     deleteItem(RESET_KEY);
     deleteItem(USER_NAME_KEY);
     deleteItem(DEFAULT_TERM_KEY);

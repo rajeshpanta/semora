@@ -35,6 +35,7 @@ export async function processSyllabus(
   fileName: string,
   mimeType: string,
   userId: string,
+  signal?: AbortSignal,
 ): Promise<ProcessResult> {
   const startTime = Date.now();
 
@@ -54,8 +55,14 @@ export async function processSyllabus(
     }
   }
 
-  // 1. Extract with Gemini
-  const extraction = await extractFromFile(fileUri, mimeType);
+  // 1. Extract with Gemini (abortable — the caller's timeout aborts the fetch)
+  const extraction = await extractFromFile(fileUri, mimeType, signal);
+
+  // Bail BEFORE any DB writes if the caller aborted (e.g. the 120s timeout):
+  // otherwise we create an orphan semester/course/upload the user never sees
+  // and burn a free scan. The fetch abort above covers a hung request; this
+  // guards the gap between extraction returning and the first write.
+  if (signal?.aborted) throw new Error('Scan cancelled — please try again.');
 
   // 2. Find or create semester
   const { semesterId, semesterName } = await findOrCreateSemester(

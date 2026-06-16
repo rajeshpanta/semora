@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { useSession } from '@/app/_layout';
 import { hasEmailPassword } from '@/lib/user';
 
 export default function ChangePasswordScreen() {
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
   const router = useRouter();
   const { session } = useSession();
   const email = session?.user?.email ?? '';
@@ -86,7 +88,7 @@ export default function ChangePasswordScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Change Password' }} />
 
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Current Password</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <TextInput
@@ -146,7 +148,7 @@ export default function ChangePasswordScreen() {
             <Text style={styles.buttonText}>Update Password</Text>
           )}
         </TouchableOpacity>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

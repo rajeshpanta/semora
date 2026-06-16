@@ -150,17 +150,23 @@ export default function SyllabusUploadScreen() {
       // Hard ceiling so the locked modal can never strand the user if the
       // pipeline hangs (network black hole, edge function stall). On
       // timeout the existing Scan Failed alert offers Try Again / Go Back.
-      const result = await Promise.race([
-        processSyllabus(
-          params.fileUri,
-          params.fileName || 'syllabus.pdf',
-          params.mimeType || 'application/pdf',
-          session.user.id,
-        ),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('This is taking longer than expected. Please try again.')), 120_000),
-        ),
-      ]);
+      // Hard ceiling via AbortController so a hung pipeline can't strand the
+      // locked modal. Critically, abort() CANCELS the in-flight Gemini fetch
+      // so processSyllabus bails before any DB writes — no orphan course /
+      // double-burned scan that the old Promise.race timeout left behind.
+      const controller = new AbortController();
+      let timedOut = false;
+      const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 120_000);
+      const result = await processSyllabus(
+        params.fileUri,
+        params.fileName || 'syllabus.pdf',
+        params.mimeType || 'application/pdf',
+        session.user.id,
+        controller.signal,
+      ).catch((err) => {
+        if (timedOut) throw new Error('This is taking longer than expected. Please try again.');
+        throw err;
+      }).finally(() => clearTimeout(timeout));
 
       stopRotation();
       setStep(3);

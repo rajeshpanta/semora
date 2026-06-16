@@ -13,6 +13,7 @@ import { TASK_TYPE_LABELS, TASK_TYPES, COLORS, SCREEN_MAX_WIDTH, type TaskType }
 import { DatePicker } from '@/components/DatePicker';
 import { NotFound } from '@/components/NotFound';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { formatLocalDate } from '@/lib/dates';
 
 export default function TaskDetailScreen() {
@@ -35,6 +36,7 @@ export default function TaskDetailScreen() {
   const [scoreMode, setScoreMode] = useState<'percent' | 'points'>('points');
   const [showScoreInput, setShowScoreInput] = useState(false);
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
 
   if (isLoading) {
     return <View style={[styles.loading, { backgroundColor: colors.paper }]}><ActivityIndicator size="large" color={colors.brand} /></View>;
@@ -72,13 +74,16 @@ export default function TaskDetailScreen() {
       await updateTask.mutateAsync({
         id: task.id,
         title: editTitle.trim(),
-        description: editDescription.trim() || undefined,
+        // Send explicit null (not undefined) for cleared fields — PostgREST
+        // omits undefined keys, so undefined silently keeps the old value
+        // when the user clears a time/weight/description on an edit.
+        description: editDescription.trim() || null,
         type: editType,
         due_date: formatLocalDate(editDueDate!),
         due_time: editDueTime
           ? `${String(editDueTime.getHours()).padStart(2, '0')}:${String(editDueTime.getMinutes()).padStart(2, '0')}:00`
-          : undefined,
-        weight: editWeight ? parseFloat(editWeight) : undefined,
+          : null,
+        weight: editWeight.trim() ? parseFloat(editWeight) : null,
       });
       Keyboard.dismiss();
       if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -140,14 +145,19 @@ export default function TaskDetailScreen() {
 
     if (scoreMode === 'points') {
       const earned = parseFloat(scoreInput);
-      // Use task.weight if available, otherwise use manual input
-      const possible = task.weight != null ? task.weight : parseFloat(scorePossible);
+      // Points possible is the raw total on THIS assignment — never the grade
+      // weight. A 20%-weighted exam can still be scored out of 50 points.
+      const possible = parseFloat(scorePossible);
       if (isNaN(earned) || earned < 0) {
         Alert.alert('Invalid', 'Please enter points earned.');
         return;
       }
       if (isNaN(possible) || possible <= 0) {
         Alert.alert('Invalid', 'Please enter total points possible.');
+        return;
+      }
+      if (!task.is_extra_credit && earned > possible) {
+        Alert.alert('Invalid', 'Points earned can\'t exceed the total (mark it extra credit if it can).');
         return;
       }
       score = parseFloat(((earned / possible) * 100).toFixed(2));
@@ -180,7 +190,7 @@ export default function TaskDetailScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="always">
         {/* Course strip */}
         <View style={[styles.courseStrip, { backgroundColor: courseColor + '15' }]}>
           <View style={[styles.courseDot, { backgroundColor: courseColor }]} />
@@ -257,17 +267,11 @@ export default function TaskDetailScreen() {
                 <View style={styles.scoreDisplay}>
                   <Text style={styles.scoreValue}>{task.score}%</Text>
                   <TouchableOpacity onPress={() => {
-                    // Pre-fill from existing score
-                    if (task.weight) {
-                      // Convert percentage back to points for points mode
-                      const earned = parseFloat(((task.score! / 100) * task.weight).toFixed(2));
-                      setScoreInput(String(earned));
-                      setScorePossible(String(task.weight));
-                      setScoreMode('points');
-                    } else {
-                      setScoreInput(String(task.score));
-                      setScoreMode('percent');
-                    }
+                    // The stored score IS a percentage — edit it directly in
+                    // percent mode (points mode would need the original total,
+                    // which isn't stored).
+                    setScoreInput(String(task.score));
+                    setScoreMode('percent');
                     setShowScoreInput(true);
                   }}>
                     <Text style={[styles.editLink, { color: colors.brand }]}>Edit</Text>
@@ -276,14 +280,7 @@ export default function TaskDetailScreen() {
               ) : (
                 <TouchableOpacity
                   style={[styles.addScoreBtn, { backgroundColor: colors.brand50 }]}
-                  onPress={() => {
-                    // Pre-fill "Total" from weight if available
-                    if (task.weight) {
-                      setScorePossible(String(task.weight));
-                      setScoreMode('points');
-                    }
-                    setShowScoreInput(true);
-                  }}
+                  onPress={() => setShowScoreInput(true)}
                   activeOpacity={0.7}
                 >
                   <FontAwesome name="plus" size={11} color={colors.brand} />
@@ -335,20 +332,14 @@ export default function TaskDetailScreen() {
                         autoFocus={!!task.weight}
                       />
                       <Text style={[styles.scoreSlash, { color: colors.ink3 }]}>/</Text>
-                      {task.weight != null ? (
-                        <View style={[styles.scoreLocked, { backgroundColor: colors.brand50, borderColor: colors.brand }]}>
-                          <Text style={[styles.scoreLockedText, { color: colors.brand }]}>{task.weight}</Text>
-                        </View>
-                      ) : (
-                        <TextInput
-                          style={[styles.scoreInput, { borderColor: colors.line, color: colors.ink, backgroundColor: colors.card }]}
-                          placeholder="Total"
-                          placeholderTextColor={colors.ink3}
-                          value={scorePossible}
-                          onChangeText={setScorePossible}
-                          keyboardType="decimal-pad"
-                        />
-                      )}
+                      <TextInput
+                        style={[styles.scoreInput, { borderColor: colors.line, color: colors.ink, backgroundColor: colors.card }]}
+                        placeholder="Total"
+                        placeholderTextColor={colors.ink3}
+                        value={scorePossible}
+                        onChangeText={setScorePossible}
+                        keyboardType="decimal-pad"
+                      />
                     </View>
                   </>
                 ) : (

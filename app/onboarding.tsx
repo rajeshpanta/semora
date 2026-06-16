@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, TextInput,
-  Platform, KeyboardAvoidingView, Keyboard, TouchableWithoutFeedback,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
+  Platform, KeyboardAvoidingView, Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -14,6 +14,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useAppStore, type PainPoint } from '@/store/appStore';
 
@@ -37,6 +38,7 @@ type DemoPhase = 'idle' | 'scanning' | 'done';
 
 export default function OnboardingScreen() {
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
   const router = useRouter();
   const setHasOnboarded = useAppStore((s) => s.setHasOnboarded);
   const setUserName = useAppStore((s) => s.setUserName);
@@ -109,7 +111,7 @@ export default function OnboardingScreen() {
       <View pointerEvents="none" style={[styles.glow, { backgroundColor: colors.brand, opacity: 0.06 }]} />
 
       {/* Top bar */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { maxWidth: contentMaxWidth }]}>
         <View style={styles.brandRow}>
           <View style={[styles.brandDot, { backgroundColor: colors.brand }]} />
           <Text style={[styles.brandWord, { color: colors.ink }]}>Semora</Text>
@@ -122,35 +124,39 @@ export default function OnboardingScreen() {
       </View>
 
       {/* Progress */}
-      <View style={styles.progress}>
+      <View style={[styles.progress, { maxWidth: contentMaxWidth }]}>
         {Array.from({ length: STEP_COUNT }).map((_, i) => (
           <View key={i} style={[styles.bar, { backgroundColor: colors.brand50 }, i <= step && { backgroundColor: colors.brand }]} />
         ))}
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View style={styles.stage}>
-            <Animated.View key={step} entering={entering} exiting={exiting} style={styles.stepWrap}>
-              {step === 0 && <Hook colors={colors} />}
-              {step === 1 && <LiveDemo colors={colors} phase={demoPhase} onDone={() => setDemoPhase('done')} />}
-              {step === 2 && <Outcome colors={colors} />}
-              {step === 3 && (
-                <Personalize
-                  colors={colors}
-                  name={name} setName={setName}
-                  term={term} setTerm={(t) => { setTerm(t); tap(); }}
-                  termOptions={termOptions}
-                  pain={pain} setPain={(p) => { setPain(p); tap(); }}
-                />
-              )}
-            </Animated.View>
-          </View>
-        </TouchableWithoutFeedback>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.stageScroll, { maxWidth: contentMaxWidth }]}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        >
+          <Animated.View key={step} entering={entering} exiting={exiting}>
+            {step === 0 && <Hook colors={colors} />}
+            {step === 1 && <LiveDemo colors={colors} phase={demoPhase} onDone={() => setDemoPhase('done')} />}
+            {step === 2 && <Outcome colors={colors} />}
+            {step === 3 && (
+              <Personalize
+                colors={colors}
+                name={name} setName={setName}
+                term={term} setTerm={(t) => { setTerm(t); tap(); }}
+                termOptions={termOptions}
+                pain={pain} setPain={(p) => { setPain(p); tap(); }}
+              />
+            )}
+          </Animated.View>
+        </ScrollView>
       </KeyboardAvoidingView>
 
       {/* Footer */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { maxWidth: contentMaxWidth }]}>
         {step === 0 && (
           <Text style={[styles.reassure, { color: colors.ink3 }]}>Free to try · takes 30 seconds</Text>
         )}
@@ -512,15 +518,19 @@ function Personalize({
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   glow: { position: 'absolute', top: -120, right: -100, width: 340, height: 340, borderRadius: 170 },
-  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 4, height: 40 },
+  topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 4, height: 40, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   brandDot: { width: 10, height: 10, borderRadius: 3 },
   brandWord: { fontFamily: FONTS.displaySemibold, fontSize: 18 },
   skip: { fontSize: 15, fontWeight: '600' },
-  progress: { flexDirection: 'row', gap: 6, paddingHorizontal: 24, marginTop: 14 },
+  progress: { flexDirection: 'row', gap: 6, paddingHorizontal: 24, marginTop: 14, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   bar: { flex: 1, height: 4, borderRadius: 999 },
   stage: { flex: 1, paddingHorizontal: 28, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   stepWrap: { flex: 1, paddingTop: 26 },
+  // Scrollable step area: fills the stage when content is short (portrait /
+  // tall), and scrolls when content exceeds the viewport (iPad landscape /
+  // short height) so no step clips behind the pinned footer CTA.
+  stageScroll: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 26, paddingBottom: 24, width: '100%', alignSelf: 'center' },
   stepPad: { paddingVertical: 8 },
 
   kicker: { fontSize: 12, fontWeight: '800', letterSpacing: 2, marginBottom: 14 },

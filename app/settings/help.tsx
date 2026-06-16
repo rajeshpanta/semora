@@ -5,6 +5,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useState } from 'react';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 
 const FAQS: { q: string; a: string }[] = [
   {
@@ -35,12 +36,13 @@ const FAQS: { q: string; a: string }[] = [
 
 export default function HelpScreen() {
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
   const [expanded, setExpanded] = useState<number | null>(null);
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Help & FAQ' }} />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Frequently Asked Questions</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           {FAQS.map((faq, i) => (

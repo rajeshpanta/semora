@@ -12,6 +12,7 @@ import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { DatePicker } from '@/components/DatePicker';
 import { NotFound } from '@/components/NotFound';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { formatLocalDate } from '@/lib/dates';
 
 export default function SemesterDetailScreen() {
@@ -20,6 +21,7 @@ export default function SemesterDetailScreen() {
   const { data: semesters = [], isLoading } = useSemesters();
   const updateSemester = useUpdateSemester();
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
 
   const semester = semesters.find((s) => s.id === id);
 
@@ -68,7 +70,7 @@ export default function SemesterDetailScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="always">
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="always">
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <View style={styles.iconRow}>
             <View style={[styles.iconCircle, { backgroundColor: colors.brand50 }]}>

@@ -3,8 +3,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS } from '@/lib/constants';
+import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 
 // Clamp so the mock widget previews stay phone-sized on iPad instead of
 // ballooning to the full screen width. Orientation is locked + full screen,
@@ -161,10 +162,11 @@ const WIDGETS = [
 
 export default function WidgetsSettings() {
   const colors = useColors();
+  const { contentMaxWidth } = useResponsive();
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Widgets' }} />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
 
         {/* Hero */}
         <View style={styles.hero}>
@@ -290,7 +292,7 @@ const wp = StyleSheet.create({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
-  content: { paddingBottom: 50 },
+  content: { paddingBottom: 50, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   // Hero
   hero: { marginBottom: 24 },
   heroGradient: { paddingHorizontal: 24, paddingTop: 36, paddingBottom: 30, borderBottomLeftRadius: 28, borderBottomRightRadius: 28 },

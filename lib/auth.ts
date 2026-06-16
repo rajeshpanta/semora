@@ -1,4 +1,3 @@
-import * as Notifications from 'expo-notifications';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { Platform } from 'react-native';
@@ -7,6 +6,7 @@ import { useAppStore } from '@/store/appStore';
 import { QueryClient } from '@tanstack/react-query';
 import { endIAP } from '@/lib/purchases';
 import { clearLocalSyncState } from '@/lib/calendarSync';
+import { cancelAllRemindersOnSignOut } from '@/lib/notifications';
 
 /**
  * Web Client ID from Google Cloud Console (Authentication → Credentials).
@@ -166,9 +166,9 @@ export async function signOut() {
 
     // Cancel pending notifications so user A's reminders don't fire
     // for user B (which would also leak A's task titles via banners).
-    if (Platform.OS !== 'web') {
-      Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
-    }
+    // Use the helper (not the raw cancel) so it also invalidates any
+    // in-flight reschedule racing this sign-out.
+    cancelAllRemindersOnSignOut();
 
     // Drop calendar-sync references — without this, B's app would
     // push events into A's "Semora" calendar.
