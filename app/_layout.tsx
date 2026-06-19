@@ -19,6 +19,7 @@ import { ThemeColorsProvider, useResolvedScheme, useColors } from '@/lib/theme';
 import { setQueryClient } from '@/lib/auth';
 import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateAfterPurchase, setupPurchaseListeners } from '@/lib/purchases';
 import { rescheduleAllTaskReminders, cancelAllRemindersOnSignOut } from '@/lib/notifications';
+import { track } from '@/lib/analytics';
 import { clearLocalSyncState } from '@/lib/calendarSync';
 
 export { ErrorBoundary } from 'expo-router';
@@ -186,6 +187,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
+      track('app_opened', { screen: 'launch', signed_in: !!session });
 
       // Detect and save timezone on first sign-in.
       // NOTE: notification permission is deliberately NOT requested here.
@@ -246,6 +248,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           // plus wipe cached queries so tabs render the new user's data.
           refreshProForSession(session.user.id, true);
           queryClient.removeQueries();
+          track('signed_in', { screen: 'auth' });
 
           // Persist the onboarding name to the account, but ONLY when the
           // account has no real name of its own (email users, Apple

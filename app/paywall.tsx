@@ -15,6 +15,7 @@ import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { getProducts, purchaseProduct, restorePurchases, validateAfterPurchase, PRODUCT_IDS, setupPurchaseListeners } from '@/lib/purchases';
 import { rescheduleAllTaskReminders } from '@/lib/notifications';
+import { track } from '@/lib/analytics';
 import { isEligibleForIntroOfferIOS } from 'react-native-iap';
 import { supabase } from '@/lib/supabase';
 
@@ -50,6 +51,10 @@ export default function PaywallScreen() {
   // the freshly-populated course rather than back to the review list.
   const isPostScan = params.context === 'postScan';
   const importedCount = Number(params.count) || 0;
+
+  useEffect(() => {
+    track('paywall_viewed', { screen: 'paywall', context: params.context ?? 'direct' });
+  }, []);
 
   // Annual is the recommended path for the default paywall (better value,
   // surfaced first). The post-scan reverse trial instead leads with the

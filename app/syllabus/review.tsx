@@ -17,6 +17,7 @@ import * as Notifications from 'expo-notifications';
 import { scheduleTaskReminders, requestNotificationPermission } from '@/lib/notifications';
 import { isSyncEnabled, syncTaskToCalendar } from '@/lib/calendarSync';
 import { useAppStore } from '@/store/appStore';
+import { track } from '@/lib/analytics';
 import type { ExtractedItem } from '@/lib/gemini';
 
 interface ReviewItem extends ExtractedItem {
@@ -194,6 +195,7 @@ export default function SyllabusReviewScreen() {
 
       // The batch committed: every accepted row is now a real task.
       const savedCount = tasks.length;
+      track('tasks_saved', { screen: 'review', count: savedCount });
 
       // Schedule notifications + mirror to the device calendar AFTER the
       // commit. Awaited (not fire-and-forget) so a 14-task import doesn't

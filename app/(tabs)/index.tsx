@@ -24,6 +24,7 @@ import { displayName } from '@/lib/user';
 import { formatTimeOfDay, classTimeStatus } from '@/lib/schedule';
 import { updateTodayWidget } from '@/lib/widgetBridge';
 import { rescheduleAllTaskReminders, requestNotificationPermission } from '@/lib/notifications';
+import { track } from '@/lib/analytics';
 
 // Max overdue rows shown before collapsing into a "Show N more" expander.
 // 5 covers the typical case (0–3) without truncating; only kicks in when
@@ -239,6 +240,7 @@ export default function TodayScreen() {
     async (vars: { id: string; is_completed: boolean; submitted_late?: boolean }) => {
       try {
         await toggleComplete.mutateAsync(vars);
+        if (vars.is_completed) track('task_completed', { screen: 'today', late: !!vars.submitted_late });
         if (Platform.OS === 'ios') {
           // Completing (incl. late) = Success/Warning, un-completing = Warning,
           // matching task/[id].tsx's feedback mapping.

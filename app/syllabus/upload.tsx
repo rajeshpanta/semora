@@ -10,6 +10,7 @@ import * as Haptics from 'expo-haptics';
 import { processSyllabus, type ProcessResult, FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
+import { track } from '@/lib/analytics';
 import { COLORS, FONTS, COURSE_COLORS, COURSE_ICONS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
@@ -171,6 +172,7 @@ export default function SyllabusUploadScreen() {
       }).finally(() => clearTimeout(timeout));
 
       stopRotation();
+      track('scan_completed', { screen: 'scan', count: result.extraction.items.length });
       setStep(3);
       setStatus('Found deadlines!');
 
@@ -242,6 +244,7 @@ export default function SyllabusUploadScreen() {
         setSummary(result);
       }
     } catch (error: any) {
+      track('scan_failed', { screen: 'scan' });
       stopRotation();
       setProcessing(false);
       setStep(0);
