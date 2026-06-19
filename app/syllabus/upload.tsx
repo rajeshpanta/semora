@@ -244,7 +244,6 @@ export default function SyllabusUploadScreen() {
         setSummary(result);
       }
     } catch (error: any) {
-      track('scan_failed', { screen: 'scan' });
       stopRotation();
       setProcessing(false);
       setStep(0);
@@ -252,6 +251,8 @@ export default function SyllabusUploadScreen() {
       // Free-tier limit (scan or course) — surface the Upgrade prompt
       // even when the client thought the user was Pro (stale isPro).
       if (isFreeLimitError(error)) {
+        // Hit the free limit -> upsell. Expected, not a failure.
+        track('scan_limit_hit', { screen: 'scan' });
         Alert.alert(
           'Pro feature',
           error.message,
@@ -262,6 +263,8 @@ export default function SyllabusUploadScreen() {
         );
         return;
       }
+      // A real failure (network, Gemini, parse, timeout) — capture why.
+      track('scan_failed', { screen: 'scan', reason: String(error?.message ?? error).slice(0, 200) });
       Alert.alert(
         'Scan Failed',
         error.message || 'Failed to process syllabus. Please try again.',
