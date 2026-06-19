@@ -309,13 +309,13 @@ export default function TaskDetailScreen() {
                 <View style={styles.scoreModeRow}>
                   <TouchableOpacity
                     style={[styles.scoreModeBtn, scoreMode === 'points' && { backgroundColor: colors.brand }]}
-                    onPress={() => setScoreMode('points')}
+                    onPress={() => { if (scoreMode !== 'points') { setScoreMode('points'); setScoreInput(''); setScorePossible(''); } }}
                   >
                     <Text style={[styles.scoreModeText, { color: colors.ink2 }, scoreMode === 'points' && styles.scoreModeTextActive]}>Points (13/15)</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.scoreModeBtn, scoreMode === 'percent' && { backgroundColor: colors.brand }]}
-                    onPress={() => setScoreMode('percent')}
+                    onPress={() => { if (scoreMode !== 'percent') { setScoreMode('percent'); setScoreInput(''); setScorePossible(''); } }}
                   >
                     <Text style={[styles.scoreModeText, { color: colors.ink2 }, scoreMode === 'percent' && styles.scoreModeTextActive]}>Percentage</Text>
                   </TouchableOpacity>

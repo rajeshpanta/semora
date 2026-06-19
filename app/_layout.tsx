@@ -350,9 +350,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     Linking.getInitialURL().then((url) => {
-      if (url) handleDeepLink(url);
+      if (url) handleDeepLink(url).catch((e) => console.warn('[deeplink] init:', e));
+    }).catch(() => {});
+    const linkSub = Linking.addEventListener('url', ({ url }) => {
+      handleDeepLink(url).catch((e) => console.warn('[deeplink]:', e));
     });
-    const linkSub = Linking.addEventListener('url', ({ url }) => handleDeepLink(url));
 
     return () => {
       subscription.unsubscribe();
