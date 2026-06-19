@@ -20,7 +20,13 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    // Keep the content from floating in a vast empty iPad frame; a no-op on
+    // phones (< 600pt wide).
+    maxWidth: 600,
+    width: '100%',
+    alignSelf: 'center',
   },
   title: {
     fontSize: 20,

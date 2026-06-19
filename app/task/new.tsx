@@ -12,7 +12,7 @@ import { useAppStore } from '@/store/appStore';
 import { TASK_TYPES, TASK_TYPE_LABELS, COLORS, SCREEN_MAX_WIDTH, type TaskType } from '@/lib/constants';
 import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
-import { useResponsive } from '@/lib/responsive';
+import { useResponsive, gridItemBasis } from '@/lib/responsive';
 import { formatLocalDate } from '@/lib/dates';
 
 export default function NewTaskScreen() {
@@ -37,7 +37,7 @@ export default function NewTaskScreen() {
 
   const selectedCourse = courses.find((c) => c.id === courseId);
   const colors = useColors();
-  const { contentMaxWidth } = useResponsive();
+  const { contentMaxWidth, isWide, columns, width } = useResponsive();
 
   const handleSubmit = async () => {
     if (!courseId) {
@@ -80,17 +80,21 @@ export default function NewTaskScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="always">
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+        <View style={[styles.card, { padding: width < 360 ? 16 : 24, backgroundColor: colors.card, borderColor: colors.line }]}>
           {/* Course picker */}
           <Text style={[styles.label, { color: colors.ink2 }]}>Course *</Text>
           {courses.length > 0 ? (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              <View style={styles.courseRow}>
+            isWide ? (
+              // iPad/wide: wrap courses into a 2-3 column grid instead of an
+              // iPhone-style horizontal scroll, so they fill the width.
+              <View style={styles.courseWrap}>
                 {courses.map((c) => (
                   <TouchableOpacity
                     key={c.id}
                     style={[
                       styles.courseChip,
+                      styles.courseChipWide,
+                      { flexBasis: gridItemBasis(columns) },
                       { borderColor: colors.line, backgroundColor: colors.card },
                       courseId === c.id && { backgroundColor: c.color, borderColor: c.color },
                     ]}
@@ -111,7 +115,36 @@ export default function NewTaskScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-            </ScrollView>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.courseRow}>
+                  {courses.map((c) => (
+                    <TouchableOpacity
+                      key={c.id}
+                      style={[
+                        styles.courseChip,
+                        { borderColor: colors.line, backgroundColor: colors.card },
+                        courseId === c.id && { backgroundColor: c.color, borderColor: c.color },
+                      ]}
+                      onPress={() => setCourseId(c.id)}
+                      activeOpacity={0.7}
+                    >
+                      <FontAwesome
+                        name={c.icon as any}
+                        size={12}
+                        color={courseId === c.id ? '#fff' : c.color}
+                      />
+                      <Text
+                        style={[styles.courseChipText, { color: colors.ink2 }, courseId === c.id && { color: '#fff' }]}
+                        numberOfLines={1}
+                      >
+                        {c.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            )
           ) : (
             <Text style={[styles.hint, { color: colors.ink3 }]}>Add a course first</Text>
           )}
@@ -145,7 +178,12 @@ export default function NewTaskScreen() {
             {TASK_TYPES.map((t) => (
               <TouchableOpacity
                 key={t}
-                style={[styles.typeChip, type === t && { backgroundColor: colors.brand }]}
+                style={[
+                  styles.typeChip,
+                  isWide && styles.typeChipWide,
+                  isWide && { flexBasis: gridItemBasis(columns) },
+                  type === t && { backgroundColor: colors.brand },
+                ]}
                 onPress={() => setType(t)}
                 activeOpacity={0.7}
               >
@@ -227,10 +265,13 @@ const styles = StyleSheet.create({
   input: { height: 48, borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 12, backgroundColor: '#fafafa', paddingHorizontal: 16, fontSize: 15, color: '#111' },
   textArea: { height: 80, paddingTop: 12 },
   courseRow: { flexDirection: 'row', gap: 8 },
+  courseWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   courseChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5, borderColor: '#e5e7eb', backgroundColor: '#fafafa' },
+  courseChipWide: { flexGrow: 1 },
   courseChipText: { fontSize: 13, fontWeight: '600', color: '#374151' },
   typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   typeChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#f1f5f9' },
+  typeChipWide: { flexGrow: 1, alignItems: 'center' },
   typeChipActive: { backgroundColor: COLORS.brand },
   typeChipText: { fontSize: 12, fontWeight: '600', color: '#64748b' },
   typeChipTextActive: { color: '#fff' },

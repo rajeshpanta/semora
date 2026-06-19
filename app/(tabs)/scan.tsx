@@ -85,6 +85,10 @@ export default function ScanScreen() {
     } as any);
   };
 
+  // Remaining free scans for FREE users — clamped to 0 so the copy never
+  // reads "-1 left" if the server count ever overshoots the limit.
+  const remainingScans = Math.max(FREE_SCAN_LIMIT - scanCount, 0);
+
   const handleTakePhoto = async () => {
     if (!(await checkScanLimit())) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -227,6 +231,29 @@ export default function ScanScreen() {
           Snap it, upload it, or drag it in.{'\n'}We'll pull every deadline.
         </Text>
 
+        {/* Free-scan usage. Pro = unlimited; free users see how many of
+            their FREE_SCAN_LIMIT scans remain so the upsell isn't a
+            surprise. Hidden while the count is still loading. */}
+        {isPro ? (
+          <View style={[styles.scanCountPill, { backgroundColor: colors.brand50 }]}>
+            <FontAwesome name="check-circle" size={12} color={colors.brand} />
+            <Text style={[styles.scanCountText, { color: colors.brand }]}>Unlimited scans</Text>
+          </View>
+        ) : !scanCountLoading ? (
+          <View style={[styles.scanCountPill, { backgroundColor: remainingScans === 0 ? colors.coral50 : colors.brand50 }]}>
+            <FontAwesome
+              name={remainingScans === 0 ? 'lock' : 'bolt'}
+              size={12}
+              color={remainingScans === 0 ? colors.coral : colors.brand}
+            />
+            <Text style={[styles.scanCountText, { color: remainingScans === 0 ? colors.coral : colors.brand }]}>
+              {remainingScans === 0
+                ? `No free scans left of ${FREE_SCAN_LIMIT}`
+                : `${remainingScans} of ${FREE_SCAN_LIMIT} free scan${remainingScans === 1 ? '' : 's'} left`}
+            </Text>
+          </View>
+        ) : null}
+
         {/* Scan frame */}
         <View style={[styles.scanFrame, { backgroundColor: colors.brand }]}>
           <View style={styles.frameCorners}>
@@ -248,7 +275,13 @@ export default function ScanScreen() {
 
         {/* Actions */}
         <View style={styles.actions}>
-          <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={handleTakePhoto} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+            onPress={handleTakePhoto}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Take a photo of a printed handout or whiteboard"
+          >
             <View style={[styles.actionIcon, { backgroundColor: colors.brand50 }]}>
               <FontAwesome name="camera" size={18} color={colors.brand} />
             </View>
@@ -259,7 +292,13 @@ export default function ScanScreen() {
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={handleUploadPDF} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+            onPress={handleUploadPDF}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Upload a PDF from an email attachment or download"
+          >
             <View style={[styles.actionIcon, { backgroundColor: colors.coral50 }]}>
               <FontAwesome name="file-pdf-o" size={18} color={colors.coral} />
             </View>
@@ -270,7 +309,13 @@ export default function ScanScreen() {
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={handleChooseFromPhotos} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+            onPress={handleChooseFromPhotos}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Choose a syllabus image from your photo library"
+          >
             <View style={[styles.actionIcon, { backgroundColor: colors.teal50 }]}>
               <FontAwesome name="image" size={17} color={colors.teal} />
             </View>
@@ -281,7 +326,13 @@ export default function ScanScreen() {
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={handlePickFromFiles} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+            onPress={handlePickFromFiles}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Pick a syllabus from Files, iCloud Drive, or Google Drive"
+          >
             <View style={[styles.actionIcon, { backgroundColor: colors.blue50 }]}>
               <FontAwesome name="folder-open-o" size={16} color={colors.blue} />
             </View>
@@ -291,6 +342,16 @@ export default function ScanScreen() {
             </View>
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>
+        </View>
+
+        {/* Photo/camera scans capture a single page; PDFs are read in full.
+            Non-blocking heads-up so a multi-page paper syllabus isn't
+            silently truncated to its first page. */}
+        <View style={styles.multiPageNote}>
+          <FontAwesome name="info-circle" size={13} color={colors.ink3} style={styles.multiPageNoteIcon} />
+          <Text style={[styles.multiPageNoteText, { color: colors.ink3 }]}>
+            Photo scans capture one page. For a multi-page syllabus, upload a PDF or scan the pages into a single PDF.
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -302,6 +363,8 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 120, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   title: { fontFamily: FONTS.displaySemibold, fontSize: 27, color: COLORS.ink, letterSpacing: -0.5 },
   subtitle: { fontSize: 14, color: COLORS.ink2, marginTop: 4, lineHeight: 19 },
+  scanCountPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, marginTop: 12 },
+  scanCountText: { fontSize: 13, fontWeight: '600' },
   scanFrame: { backgroundColor: COLORS.brand, borderRadius: 22, padding: 22, marginVertical: 18, alignItems: 'center' },
   frameCorners: { width: '100%', height: 128, justifyContent: 'center', alignItems: 'center', position: 'relative' },
   corner: { position: 'absolute', width: 24, height: 24, borderColor: '#fff', borderWidth: 2.5 },
@@ -319,4 +382,7 @@ const styles = StyleSheet.create({
   actionContent: { flex: 1 },
   actionTitle: { fontSize: 14, fontWeight: '500', color: COLORS.ink },
   actionSub: { fontSize: 14, color: COLORS.ink3, marginTop: 2 },
+  multiPageNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 7, marginTop: 14, paddingHorizontal: 4 },
+  multiPageNoteIcon: { marginTop: 1 },
+  multiPageNoteText: { flex: 1, fontSize: 12, color: COLORS.ink3, lineHeight: 17 },
 });

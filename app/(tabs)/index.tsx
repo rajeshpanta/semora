@@ -9,6 +9,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
+import * as Haptics from 'expo-haptics';
 import { format, startOfWeek, addDays, differenceInDays, isToday as isDateToday, isPast, startOfDay } from 'date-fns';
 import { useSession } from '@/app/_layout';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
@@ -229,6 +230,31 @@ export default function TodayScreen() {
     setRefreshing(true);
     qc.invalidateQueries().then(() => setRefreshing(false));
   }, []);
+
+  // Centralized inline-toggle handler so the checkbox and the Past-Due
+  // dialog share the same haptic + error treatment as the task-detail
+  // screen. A failed toggle would otherwise silently revert on the next
+  // refetch, leaving the user thinking a task was completed when it wasn't.
+  const runToggle = useCallback(
+    async (vars: { id: string; is_completed: boolean; submitted_late?: boolean }) => {
+      try {
+        await toggleComplete.mutateAsync(vars);
+        if (Platform.OS === 'ios') {
+          // Completing (incl. late) = Success/Warning, un-completing = Warning,
+          // matching task/[id].tsx's feedback mapping.
+          const type = vars.is_completed
+            ? (vars.submitted_late
+                ? Haptics.NotificationFeedbackType.Warning
+                : Haptics.NotificationFeedbackType.Success)
+            : Haptics.NotificationFeedbackType.Warning;
+          Haptics.notificationAsync(type);
+        }
+      } catch {
+        Alert.alert('Couldn\'t update', 'Something went wrong — try again.');
+      }
+    },
+    [toggleComplete],
+  );
 
   // Keep the home-screen widget in sync with "what's next". Fires on every
   // app open and whenever the due-soon window changes (import, complete,
@@ -496,12 +522,15 @@ export default function TodayScreen() {
                     <TouchableOpacity
                       onPress={() => {
                         Alert.alert('Past Due Date', 'Was this submitted late?', [
-                          { text: 'Yes, late', onPress: () => toggleComplete.mutate({ id: task.id, is_completed: true, submitted_late: true }) },
-                          { text: 'No, on time', onPress: () => toggleComplete.mutate({ id: task.id, is_completed: true, submitted_late: false }) },
+                          { text: 'Yes, late', onPress: () => runToggle({ id: task.id, is_completed: true, submitted_late: true }) },
+                          { text: 'No, on time', onPress: () => runToggle({ id: task.id, is_completed: true, submitted_late: false }) },
                           { text: 'Cancel', style: 'cancel' },
                         ]);
                       }}
                       hitSlop={8}
+                      disabled={toggleComplete.isPending}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Mark ${task.title} complete`}
                     >
                       <View style={[styles.cbx, { borderColor: colors.coral }]} />
                     </TouchableOpacity>
@@ -621,15 +650,18 @@ export default function TodayScreen() {
                       const isOverdue = !task.is_completed && isPast(dueD) && !isDateToday(dueD);
                       if (!task.is_completed && isOverdue) {
                         Alert.alert('Past Due Date', 'Was this submitted late?', [
-                          { text: 'Yes, late', onPress: () => toggleComplete.mutate({ id: task.id, is_completed: true, submitted_late: true }) },
-                          { text: 'No, on time', onPress: () => toggleComplete.mutate({ id: task.id, is_completed: true, submitted_late: false }) },
+                          { text: 'Yes, late', onPress: () => runToggle({ id: task.id, is_completed: true, submitted_late: true }) },
+                          { text: 'No, on time', onPress: () => runToggle({ id: task.id, is_completed: true, submitted_late: false }) },
                           { text: 'Cancel', style: 'cancel' },
                         ]);
                       } else {
-                        toggleComplete.mutate({ id: task.id, is_completed: !task.is_completed });
+                        runToggle({ id: task.id, is_completed: !task.is_completed });
                       }
                     }}
                     hitSlop={8}
+                    disabled={toggleComplete.isPending}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Mark ${task.title} ${task.is_completed ? 'incomplete' : 'complete'}`}
                   >
                     <View style={[
                       styles.cbx,

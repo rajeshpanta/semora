@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   ActivityIndicator, Alert, Platform, Linking,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -42,7 +42,8 @@ export default function PaywallScreen() {
   const setIsPro = useAppStore((s) => s.setIsPro);
   const setSubscriptionPlan = useAppStore((s) => s.setSubscriptionPlan);
   const colors = useColors();
-  const { contentMaxWidth } = useResponsive();
+  const { contentMaxWidth, isXWide } = useResponsive();
+  const insets = useSafeAreaInsets();
 
   // Reverse-trial entry: opened automatically right after the first scan's
   // "aha". Lead with the free trial (momentum, not a block) and dismiss to
@@ -252,7 +253,7 @@ export default function PaywallScreen() {
     <View style={[styles.screen, { backgroundColor: colors.paper }]}>
       <SafeAreaView style={styles.safe} edges={['top']}>
         {/* Fixed close button outside ScrollView */}
-        <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.card }]} onPress={handleClose} hitSlop={16}>
+        <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.card, top: insets.top + 8 }]} onPress={handleClose} hitSlop={16} accessibilityRole="button" accessibilityLabel="Close">
           <FontAwesome name="times" size={20} color={colors.ink2} />
         </TouchableOpacity>
 
@@ -305,10 +306,13 @@ export default function PaywallScreen() {
           {/* Plan Selection */}
           <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>CHOOSE YOUR PLAN</Text>
 
+          {/* On a big iPad the two plan cards sit side-by-side; everywhere
+              else they stack (iPhone unchanged). */}
+          <View style={isXWide && styles.planRow}>
           {/* Annual — first and pre-selected to steer users toward the
               better-value plan. */}
           <TouchableOpacity
-            style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.line }, selectedPlan === 'annual' && { backgroundColor: colors.brand50, borderColor: colors.brand }]}
+            style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.line }, isXWide && styles.planCardWide, selectedPlan === 'annual' && { backgroundColor: colors.brand50, borderColor: colors.brand }]}
             onPress={() => setSelectedPlan('annual')}
             activeOpacity={0.8}
           >
@@ -329,7 +333,7 @@ export default function PaywallScreen() {
 
           {/* Monthly */}
           <TouchableOpacity
-            style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.line }, selectedPlan === 'monthly' && { backgroundColor: colors.brand50, borderColor: colors.brand }]}
+            style={[styles.planCard, { backgroundColor: colors.card, borderColor: colors.line }, isXWide && styles.planCardWide, selectedPlan === 'monthly' && { backgroundColor: colors.brand50, borderColor: colors.brand }]}
             onPress={() => setSelectedPlan('monthly')}
             activeOpacity={0.8}
           >
@@ -349,6 +353,7 @@ export default function PaywallScreen() {
               </View>
             )}
           </TouchableOpacity>
+          </View>
 
           {/* CTA */}
           <TouchableOpacity onPress={handlePurchase} disabled={loading} activeOpacity={0.85} style={{ marginTop: 20 }}>
@@ -404,7 +409,9 @@ const styles = StyleSheet.create({
 
   // Close — fixed at top right, outside scroll
   closeBtn: {
-    position: 'absolute', top: 56, right: 20, zIndex: 10,
+    // `top` is applied inline from useSafeAreaInsets().top + 8 so the button
+    // clears the notch / Dynamic Island in portrait AND landscape.
+    position: 'absolute', right: 20, zIndex: 10,
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: 'rgba(255,255,255,0.85)',
     alignItems: 'center', justifyContent: 'center',
@@ -478,6 +485,9 @@ const styles = StyleSheet.create({
     padding: 14, marginBottom: 8,
     borderWidth: 1.5, borderColor: COLORS.line,
   },
+  // isXWide: two plan cards side-by-side on a big iPad.
+  planRow: { flexDirection: 'row', gap: 12 },
+  planCardWide: { flex: 1, marginBottom: 8 },
   planCardSelected: {
     backgroundColor: COLORS.brand50,
     borderColor: COLORS.brand,

@@ -18,6 +18,7 @@ import { signIn, signInWithApple, signInWithGoogle, isAppleSignInAvailable } fro
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 import { FONTS } from '@/lib/constants';
 
 export default function SignInScreen() {
@@ -45,6 +46,7 @@ export default function SignInScreen() {
   const [errorType, setErrorType] = useState<'confirm' | 'credentials' | 'generic' | ''>('');
   const [resending, setResending] = useState(false);
   const colors = useColors();
+  const { width, height, isLandscape, isWide } = useResponsive();
   // Name + term captured in onboarding — pay them off HERE, at the
   // conversion-critical moment, so the wall reads as the completion of
   // "Save my semester" rather than a generic gate.
@@ -181,14 +183,33 @@ export default function SignInScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { minHeight: height }]}
         keyboardShouldPersistTaps="always"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.inner}>
+        <View
+          style={[
+            styles.inner,
+            {
+              maxWidth: isWide ? Math.min(width - 64, 560) : 440,
+              paddingHorizontal: 24,
+            },
+          ]}
+        >
           {/* Soft brand glow — same depth language as onboarding. */}
-          <View pointerEvents="none" style={[styles.glow, { backgroundColor: colors.brand, opacity: 0.06 }]} />
+          <View
+            pointerEvents="none"
+            style={[
+              styles.glow,
+              {
+                backgroundColor: colors.brand,
+                opacity: 0.06,
+                top: isLandscape ? -100 : -160,
+                right: isLandscape ? -80 : -120,
+              },
+            ]}
+          />
           <View style={styles.header}>
             <View style={styles.brandRow}>
               <View style={[styles.brandDot, { backgroundColor: colors.brand }]} />
@@ -436,6 +457,7 @@ const styles = StyleSheet.create({
     maxWidth: 440,
     width: '100%',
     alignSelf: 'center',
+    overflow: 'hidden',
   },
   glow: {
     position: 'absolute', top: -160, right: -120,

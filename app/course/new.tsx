@@ -32,7 +32,7 @@ export default function NewCourseScreen() {
   const [icon, setIcon] = useState<string>(COURSE_ICONS[0]);
   const [meetings, setMeetings] = useState<ScheduleBlock[]>([]);
   const colors = useColors();
-  const { contentMaxWidth } = useResponsive();
+  const { contentMaxWidth, isWide } = useResponsive();
 
   const handleSubmit = async () => {
     if (!semesterId) {
@@ -203,30 +203,36 @@ export default function NewCourseScreen() {
 
           {/* Color */}
           <Text style={[styles.label, { color: colors.ink2 }]}>Color</Text>
-          <View style={styles.colorGrid}>
+          <View style={[styles.colorGrid, isWide && styles.colorGridWide]}>
             {COURSE_COLORS.map((c) => (
               <TouchableOpacity
                 key={c}
-                style={[styles.colorCircle, { backgroundColor: c }, color === c && styles.colorSelected]}
+                style={[styles.colorCircle, isWide && styles.colorCircleWide, { backgroundColor: c }, color === c && styles.colorSelected]}
                 onPress={() => setColor(c)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Color ${c}`}
+                accessibilityState={{ selected: color === c }}
               >
-                {color === c && <FontAwesome name="check" size={12} color="#fff" />}
+                {color === c && <FontAwesome name="check" size={isWide ? 14 : 12} color="#fff" />}
               </TouchableOpacity>
             ))}
           </View>
 
           {/* Icon */}
           <Text style={[styles.label, { color: colors.ink2 }]}>Icon</Text>
-          <View style={styles.iconGrid}>
+          <View style={[styles.iconGrid, isWide && styles.iconGridWide]}>
             {COURSE_ICONS.map((ic) => (
               <TouchableOpacity
                 key={ic}
-                style={[styles.iconButton, { borderColor: colors.line }, icon === ic && { borderColor: color, backgroundColor: color + '15' }]}
+                style={[styles.iconButton, isWide && styles.iconButtonWide, { borderColor: colors.line }, icon === ic && { borderColor: color, backgroundColor: color + '15' }]}
                 onPress={() => setIcon(ic)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Icon ${ic}`}
+                accessibilityState={{ selected: icon === ic }}
               >
-                <FontAwesome name={ic as any} size={18} color={icon === ic ? color : colors.ink3} />
+                <FontAwesome name={ic as any} size={isWide ? 20 : 18} color={icon === ic ? color : colors.ink3} />
               </TouchableOpacity>
             ))}
           </View>
@@ -263,10 +269,14 @@ const styles = StyleSheet.create({
   hint: { fontSize: 13, color: '#94a3b8', fontStyle: 'italic' },
   input: { height: 48, borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 12, backgroundColor: '#fafafa', paddingHorizontal: 16, fontSize: 15, color: '#111' },
   colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  colorGridWide: { gap: 12 },
   colorCircle: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  colorCircleWide: { width: 48, height: 48, borderRadius: 24 },
   colorSelected: { borderWidth: 3, borderColor: 'rgba(255,255,255,0.8)', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4 },
   iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  iconGridWide: { gap: 12 },
   iconButton: { width: 44, height: 44, borderRadius: 12, borderWidth: 1.5, borderColor: '#e5e7eb', justifyContent: 'center', alignItems: 'center' },
+  iconButtonWide: { width: 52, height: 52, borderRadius: 14 },
   button: { flexDirection: 'row', height: 50, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 24, gap: 8 },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },

@@ -10,9 +10,11 @@ import { supabase } from '@/lib/supabase';
 import { signOut } from '@/lib/auth';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 
 export default function ResetPasswordScreen() {
   const colors = useColors();
+  const { width, height, isLandscape, isWide } = useResponsive();
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -72,12 +74,20 @@ export default function ResetPasswordScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { minHeight: height }]}
         keyboardShouldPersistTaps="always"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.inner}>
+        <View
+          style={[
+            styles.inner,
+            {
+              maxWidth: isWide ? Math.min(width - 64, 560) : 440,
+              paddingHorizontal: 24,
+            },
+          ]}
+        >
           <View style={styles.header}>
             <View style={[styles.logoContainer, { backgroundColor: colors.brand }]}>
               <FontAwesome name="lock" size={28} color="#fff" />

@@ -13,7 +13,7 @@ import { TASK_TYPE_LABELS, TASK_TYPES, COLORS, SCREEN_MAX_WIDTH, type TaskType }
 import { DatePicker } from '@/components/DatePicker';
 import { NotFound } from '@/components/NotFound';
 import { useColors } from '@/lib/theme';
-import { useResponsive } from '@/lib/responsive';
+import { useResponsive, gridItemBasis } from '@/lib/responsive';
 import { formatLocalDate } from '@/lib/dates';
 
 export default function TaskDetailScreen() {
@@ -36,7 +36,7 @@ export default function TaskDetailScreen() {
   const [scoreMode, setScoreMode] = useState<'percent' | 'points'>('points');
   const [showScoreInput, setShowScoreInput] = useState(false);
   const colors = useColors();
-  const { contentMaxWidth } = useResponsive();
+  const { contentMaxWidth, isWide, width, columns } = useResponsive();
 
   if (isLoading) {
     return <View style={[styles.loading, { backgroundColor: colors.paper }]}><ActivityIndicator size="large" color={colors.brand} /></View>;
@@ -130,13 +130,28 @@ export default function TaskDetailScreen() {
       );
     } else {
       try {
+        await toggleComplete.mutateAsync({ id: task.id, is_completed: completing });
+        // Haptic AFTER the mutation succeeds — firing it first gives false
+        // success/warning feedback when the toggle actually fails.
         if (Platform.OS === 'ios') {
           Haptics.notificationAsync(completing ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Warning);
         }
-        await toggleComplete.mutateAsync({ id: task.id, is_completed: completing });
       } catch (err: any) {
         Alert.alert('Error', err.message ?? 'Failed to update task.');
       }
+    }
+  };
+
+  const handleToggleLate = async () => {
+    const nextLate = !task.submitted_late;
+    try {
+      // Keeps is_completed:true (and the score) intact — only flips the late flag.
+      await toggleComplete.mutateAsync({ id: task.id, is_completed: true, submitted_late: nextLate });
+      if (Platform.OS === 'ios') {
+        Haptics.notificationAsync(nextLate ? Haptics.NotificationFeedbackType.Warning : Haptics.NotificationFeedbackType.Success);
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err.message ?? 'Failed to update task.');
     }
   };
 
@@ -194,7 +209,7 @@ export default function TaskDetailScreen() {
         {/* Course strip */}
         <View style={[styles.courseStrip, { backgroundColor: courseColor + '15' }]}>
           <View style={[styles.courseDot, { backgroundColor: courseColor }]} />
-          <Text style={[styles.courseName, { color: courseColor }]}>{task.courses.name}</Text>
+          <Text style={[styles.courseName, { color: courseColor }]} numberOfLines={1} ellipsizeMode="tail">{task.courses.name}</Text>
           <View style={styles.badges}>
             <View style={styles.typeBadge}><Text style={[styles.typeText, { color: colors.ink2 }]}>{TASK_TYPE_LABELS[task.type]}</Text></View>
             {task.is_extra_credit && <View style={[styles.ecBadge, { backgroundColor: colors.brand50 }]}><Text style={[styles.ecBadgeText, { color: colors.brand }]}>EC</Text></View>}
@@ -203,16 +218,16 @@ export default function TaskDetailScreen() {
         </View>
 
         {/* Main card */}
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+        <View style={[styles.card, width < 360 && styles.cardNarrow, { backgroundColor: colors.card, borderColor: colors.line }]}>
           {editing ? (
             <>
               <TextInput style={[styles.editInput, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]} value={editTitle} onChangeText={setEditTitle} placeholder="Title" placeholderTextColor={colors.ink3} />
               <TextInput style={[styles.editInput, { height: 80, borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]} value={editDescription} onChangeText={setEditDescription} placeholder="Description" placeholderTextColor={colors.ink3} multiline textAlignVertical="top" />
               <Text style={[styles.editLabel, { color: colors.ink2 }]}>Type</Text>
-              <View style={styles.typeRow}>
+              <View style={[styles.typeRow, isWide && styles.typeRowWide]}>
                 {TASK_TYPES.map((t) => (
-                  <TouchableOpacity key={t} style={[styles.typeChip, editType === t && { backgroundColor: colors.brand }]} onPress={() => setEditType(t)}>
-                    <Text style={[styles.typeChipText, { color: colors.ink2 }, editType === t && { color: '#fff' }]}>{TASK_TYPE_LABELS[t]}</Text>
+                  <TouchableOpacity key={t} style={[styles.typeChip, isWide && styles.typeChipWide, isWide && { flexBasis: gridItemBasis(columns), maxWidth: columns >= 3 ? '32%' : '49%' }, editType === t && { backgroundColor: colors.brand }]} onPress={() => setEditType(t)}>
+                    <Text style={[styles.typeChipText, { color: colors.ink2 }, editType === t && { color: '#fff' }]} numberOfLines={1}>{TASK_TYPE_LABELS[t]}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -233,24 +248,24 @@ export default function TaskDetailScreen() {
             <>
               <Text style={[styles.title, { color: colors.ink }, task.is_completed && styles.titleDone]}>{task.title}</Text>
               {task.description && <Text style={[styles.description, { color: colors.ink2 }]}>{task.description}</Text>}
-              <View style={styles.detailsGrid}>
-                <View style={styles.detailItem}>
+              <View style={[styles.detailsGrid, isWide && styles.detailsGridWide]}>
+                <View style={[styles.detailItem, isWide && styles.detailItemWide]}>
                   <FontAwesome name="calendar" size={13} color="#94a3b8" />
-                  <Text style={[styles.detailText, overdue && { color: '#ef4444', fontWeight: '700' }]}>
+                  <Text style={[styles.detailText, overdue && { color: '#ef4444', fontWeight: '700' }]} numberOfLines={1} ellipsizeMode="tail">
                     {format(dueDate, 'EEEE, MMM d, yyyy')}
                     {overdue && ' (OVERDUE)'}
                   </Text>
                 </View>
                 {task.due_time && (
-                  <View style={styles.detailItem}>
+                  <View style={[styles.detailItem, isWide && styles.detailItemWide]}>
                     <FontAwesome name="clock-o" size={13} color="#94a3b8" />
-                    <Text style={styles.detailText}>{task.due_time.slice(0, 5)}</Text>
+                    <Text style={styles.detailText} numberOfLines={1} ellipsizeMode="tail">{task.due_time.slice(0, 5)}</Text>
                   </View>
                 )}
                 {task.weight != null && (
-                  <View style={styles.detailItem}>
+                  <View style={[styles.detailItem, isWide && styles.detailItemWide]}>
                     <FontAwesome name="balance-scale" size={13} color="#94a3b8" />
-                    <Text style={styles.detailText}>{task.weight}% of grade{task.is_extra_credit ? ' (extra credit)' : ''}</Text>
+                    <Text style={styles.detailText} numberOfLines={1} ellipsizeMode="tail">{task.weight}% of grade{task.is_extra_credit ? ' (extra credit)' : ''}</Text>
                   </View>
                 )}
               </View>
@@ -260,7 +275,7 @@ export default function TaskDetailScreen() {
 
         {/* Score section */}
         {!editing && (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <View style={[styles.card, width < 360 && styles.cardNarrow, { backgroundColor: colors.card, borderColor: colors.line }]}>
             <View style={styles.scoreHeader}>
               <Text style={[styles.scoreLabel, { color: colors.ink3 }]}>GRADE</Text>
               {task.score != null ? (
@@ -376,11 +391,36 @@ export default function TaskDetailScreen() {
           </View>
         )}
 
+        {/* Late status — editable so a mis-tapped "Yes, late" can be undone without losing the score */}
+        {!editing && task.is_completed && (
+          <View style={[styles.card, width < 360 && styles.cardNarrow, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <View style={styles.lateRow}>
+              <View style={styles.lateInfo}>
+                <Text style={[styles.scoreLabel, { color: colors.ink3 }]}>SUBMITTED LATE</Text>
+                <Text style={[styles.lateStatusText, { color: task.submitted_late ? '#ef4444' : colors.ink2 }]}>
+                  {task.submitted_late ? 'Yes, submitted late' : 'No, on time'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.lateChangeBtn, { backgroundColor: colors.brand50 }]}
+                onPress={handleToggleLate}
+                disabled={toggleComplete.isPending}
+                activeOpacity={0.7}
+              >
+                {toggleComplete.isPending
+                  ? <ActivityIndicator color={colors.brand} size="small" />
+                  : <Text style={[styles.lateChangeText, { color: colors.brand }]}>{task.submitted_late ? 'Mark on time' : 'Mark late'}</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Toggle complete */}
         {!editing && (
           <TouchableOpacity
             style={[styles.toggleBtn, task.is_completed && styles.toggleBtnDone]}
             onPress={handleToggle}
+            disabled={toggleComplete.isPending}
             activeOpacity={0.8}
           >
             <FontAwesome name={task.is_completed ? 'undo' : 'check-circle'} size={18} color={task.is_completed ? '#64748b' : '#fff'} />
@@ -421,12 +461,15 @@ const styles = StyleSheet.create({
   lateBadge: { backgroundColor: '#fef2f2', paddingHorizontal: 6, paddingVertical: 4, borderRadius: 6 },
   lateBadgeText: { fontSize: 11, fontWeight: '700', color: '#ef4444' },
   card: { backgroundColor: '#fff', borderRadius: 18, padding: 24, borderWidth: 1, borderColor: '#edf0f7', marginBottom: 14 },
+  cardNarrow: { padding: 16 },
   title: { fontSize: 22, fontWeight: '800', color: '#0f172a' },
   titleDone: { textDecorationLine: 'line-through', color: '#94a3b8' },
   description: { fontSize: 14, color: '#64748b', lineHeight: 20, marginTop: 8 },
   detailsGrid: { marginTop: 16, gap: 10 },
+  detailsGridWide: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
   detailItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  detailText: { fontSize: 14, color: '#475569', fontWeight: '500' },
+  detailItemWide: { width: '48%' },
+  detailText: { fontSize: 14, color: '#475569', fontWeight: '500', flexShrink: 1 },
   scoreHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   scoreLabel: { fontSize: 11, fontWeight: '700', color: '#94a3b8', letterSpacing: 0.5 },
   scoreDisplay: { flexDirection: 'row', alignItems: 'center', gap: 10 },
@@ -451,6 +494,11 @@ const styles = StyleSheet.create({
   scoreSubmit: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, backgroundColor: COLORS.brand },
   scoreSubmitText: { fontSize: 14, fontWeight: '600', color: '#fff' },
   scoreCancelText: { fontSize: 14, color: COLORS.ink3, fontWeight: '600' },
+  lateRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
+  lateInfo: { flex: 1, gap: 4 },
+  lateStatusText: { fontSize: 15, fontWeight: '700' },
+  lateChangeBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, backgroundColor: COLORS.brand50 },
+  lateChangeText: { fontSize: 13, fontWeight: '600', color: COLORS.brand },
   toggleBtn: { height: 52, backgroundColor: '#22c55e', borderRadius: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 14 },
   toggleBtnDone: { backgroundColor: '#f1f5f9' },
   toggleText: { fontSize: 16, fontWeight: '700', color: '#fff' },
@@ -461,7 +509,9 @@ const styles = StyleSheet.create({
   editInput: { height: 48, borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 12, backgroundColor: '#fafafa', paddingHorizontal: 16, fontSize: 15, color: '#111', marginBottom: 12 },
   editLabel: { fontSize: 12, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 8 },
   typeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 },
+  typeRowWide: { gap: 12 },
   typeChip: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#f1f5f9' },
+  typeChipWide: { flexGrow: 1, alignItems: 'center' },
   typeChipActive: { backgroundColor: COLORS.brand },
   typeChipText: { fontSize: 11, fontWeight: '600', color: '#64748b' },
   dateRow: { flexDirection: 'row', gap: 12, marginBottom: 8 },

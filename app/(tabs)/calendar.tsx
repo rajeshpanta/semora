@@ -133,6 +133,8 @@ export default function CalendarScreen() {
               setSelectedDate(format(startOfMonth(d), 'yyyy-MM-dd'));
             }}
             hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Previous month"
           >
             <FontAwesome name="chevron-left" size={13} color={colors.brand} />
           </TouchableOpacity>
@@ -146,6 +148,8 @@ export default function CalendarScreen() {
               setSelectedDate(format(startOfMonth(d), 'yyyy-MM-dd'));
             }}
             hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel="Next month"
           >
             <FontAwesome name="chevron-right" size={13} color={colors.brand} />
           </TouchableOpacity>
@@ -248,6 +252,8 @@ export default function CalendarScreen() {
                       <TouchableOpacity
                         onPress={() => toggleComplete.mutate({ id: task.id, is_completed: !task.is_completed })}
                         hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel={task.is_completed ? `Mark "${task.title}" incomplete` : `Mark "${task.title}" complete`}
                       >
                         <View style={[styles.cbx, { borderColor: colors.ink3 }, task.is_completed && { backgroundColor: colors.teal, borderColor: colors.teal }]}>
                           {task.is_completed && <FontAwesome name="check" size={9} color="#fff" />}
@@ -297,6 +303,8 @@ export default function CalendarScreen() {
                           <TouchableOpacity
                             onPress={() => toggleComplete.mutate({ id: task.id, is_completed: !task.is_completed })}
                             hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={task.is_completed ? `Mark "${task.title}" incomplete` : `Mark "${task.title}" complete`}
                           >
                             <View style={[styles.cbx, { borderColor: colors.ink3 }, task.is_completed && { backgroundColor: colors.teal, borderColor: colors.teal }]}>
                               {task.is_completed && <FontAwesome name="check" size={9} color="#fff" />}

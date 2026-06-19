@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Platform, Keyboard,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
@@ -48,7 +48,9 @@ export default function SyllabusReviewScreen() {
   });
   const [saving, setSaving] = useState(false);
   const colors = useColors();
-  const { contentMaxWidth } = useResponsive();
+  const { contentMaxWidth, isWide, width } = useResponsive();
+  const insets = useSafeAreaInsets();
+  const narrow = width < 360;
   const isPro = useAppStore((s) => s.isPro);
   const ahaPaywallShown = useAppStore((s) => s.ahaPaywallShown);
   const setAhaPaywallShown = useAppStore((s) => s.setAhaPaywallShown);
@@ -151,52 +153,61 @@ export default function SyllabusReviewScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      // Create tasks for each accepted item
-      let savedCount = 0;
-      for (const item of accepted) {
+      // Build every accepted row up front and insert in ONE call. The old
+      // per-row loop did `console.warn; continue` on failure — silently
+      // dropping a student's specific deadlines and then navigating away with
+      // no way to recover them. An all-or-nothing batch insert means we either
+      // save every selected deadline or none, and on failure we keep the user
+      // on this screen (selections intact) to retry.
+      const rows = accepted.map((item) => ({
+        user_id: session.user.id,
+        course_id: params.courseId,
+        title: item.title.trim(),
+        description: item.description,
+        type: item.type,
+        due_date: item.due_date,
         // Validate due_time format before saving (HH:MM in 00:00–23:59 only).
-        const dueTime = item.due_time && /^([01]\d|2[0-3]):[0-5]\d$/.test(item.due_time)
+        due_time: item.due_time && /^([01]\d|2[0-3]):[0-5]\d$/.test(item.due_time)
           ? `${item.due_time}:00`
-          : null;
+          : null,
+        weight: item.weight,
+        source: 'gemini_parsed',
+        parse_run_id: params.parseRunId,
+      }));
 
-        const { data: task, error } = await supabase
-          .from('tasks')
-          .insert({
-            user_id: session.user.id,
-            course_id: params.courseId,
-            title: item.title.trim(),
-            description: item.description,
-            type: item.type,
-            due_date: item.due_date,
-            due_time: dueTime,
-            weight: item.weight,
-            source: 'gemini_parsed',
-            parse_run_id: params.parseRunId,
-          })
-          .select()
-          .single();
+      const { data: tasks, error } = await supabase
+        .from('tasks')
+        .insert(rows)
+        .select();
 
-        if (error) {
-          console.warn('Failed to create task:', error.message);
-          continue;
-        }
+      if (error || !tasks) {
+        // Do NOT navigate away or touch parse_runs/paywall — leave the screen
+        // exactly as it was so the user can retry with their selections intact.
+        if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert(
+          "Couldn't save",
+          'Your deadlines weren’t saved. Check your connection and try again — your selections are still here.',
+          [{ text: 'OK' }],
+        );
+        return;
+      }
 
-        savedCount++;
+      // The batch committed: every accepted row is now a real task.
+      const savedCount = tasks.length;
 
-        // Schedule notifications + mirror to the device calendar. Awaited
-        // (not fire-and-forget) so a 14-task import doesn't fire 14
-        // concurrent schedulers that each prune the iOS 64-notification
-        // cap against a stale snapshot.
-        if (task) {
-          await scheduleTaskReminders(
-            task.id, task.title, params.courseName || 'Course', task.due_date, task.due_time, session.user.id,
-          ).catch(() => {});
-          // Bulk import is the app's main task-creation path — it must
-          // sync like every other create, or "calendar sync" silently
-          // misses the very tasks the scan funnel produces.
-          if (isSyncEnabled()) {
-            await syncTaskToCalendar(task as any, params.courseName || 'Course').catch(() => {});
-          }
+      // Schedule notifications + mirror to the device calendar AFTER the
+      // commit. Awaited (not fire-and-forget) so a 14-task import doesn't
+      // fire 14 concurrent schedulers that each prune the iOS
+      // 64-notification cap against a stale snapshot.
+      for (const task of tasks) {
+        await scheduleTaskReminders(
+          task.id, task.title, params.courseName || 'Course', task.due_date, task.due_time, session.user.id,
+        ).catch(() => {});
+        // Bulk import is the app's main task-creation path — it must
+        // sync like every other create, or "calendar sync" silently
+        // misses the very tasks the scan funnel produces.
+        if (isSyncEnabled()) {
+          await syncTaskToCalendar(task as any, params.courseName || 'Course').catch(() => {});
         }
       }
 
@@ -283,7 +294,13 @@ export default function SyllabusReviewScreen() {
           <View key={index} style={[styles.itemCard, { backgroundColor: colors.card, borderColor: colors.line }, !item.accepted && styles.itemRejected]}>
             <View style={styles.itemTop}>
               {/* Accept toggle */}
-              <TouchableOpacity onPress={() => toggleAccept(index)} hitSlop={8}>
+              <TouchableOpacity
+                onPress={() => toggleAccept(index)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityState={{ checked: item.accepted }}
+                accessibilityLabel={item.accepted ? `Deselect ${item.title}` : `Select ${item.title}`}
+              >
                 <View style={[styles.cbx, { borderColor: colors.ink3 }, item.accepted && { backgroundColor: colors.teal, borderColor: colors.teal }]}>
                   {item.accepted && <FontAwesome name="check" size={10} color="#fff" />}
                 </View>
@@ -323,7 +340,12 @@ export default function SyllabusReviewScreen() {
               </View>
 
               {/* Edit toggle */}
-              <TouchableOpacity onPress={() => toggleEdit(index)} hitSlop={8}>
+              <TouchableOpacity
+                onPress={() => toggleEdit(index)}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel={item.editing ? `Done editing ${item.title}` : `Edit ${item.title}`}
+              >
                 <FontAwesome name={item.editing ? 'check-circle' : 'pencil'} size={16} color={item.editing ? colors.teal : colors.ink3} />
               </TouchableOpacity>
             </View>
@@ -333,24 +355,24 @@ export default function SyllabusReviewScreen() {
               <View style={styles.editFields}>
                 {/* Type selector */}
                 <Text style={[styles.editFieldLabel, { color: colors.ink3 }]}>Type</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                  <View style={styles.typeChipRow}>
-                    {(['assignment', 'quiz', 'exam', 'project', 'reading', 'other'] as const).map((t) => (
-                      <TouchableOpacity
-                        key={t}
-                        style={[styles.typeChip, item.type === t && { backgroundColor: colors.brand }]}
-                        onPress={() => updateItem(index, 'type', t)}
-                      >
-                        <Text style={[styles.typeChipText, { color: colors.ink2 }, item.type === t && styles.typeChipTextActive]}>
-                          {TASK_TYPE_LABELS[t]}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </ScrollView>
+                {/* Wrap chips instead of an iPhone-style horizontal scroll —
+                    wraps on a narrow split view and fills the row on iPad. */}
+                <View style={styles.typeChipRow}>
+                  {(['assignment', 'quiz', 'exam', 'project', 'reading', 'other'] as const).map((t) => (
+                    <TouchableOpacity
+                      key={t}
+                      style={[styles.typeChip, item.type === t && { backgroundColor: colors.brand }]}
+                      onPress={() => updateItem(index, 'type', t)}
+                    >
+                      <Text style={[styles.typeChipText, { color: colors.ink2 }, item.type === t && styles.typeChipTextActive]}>
+                        {TASK_TYPE_LABELS[t]}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
 
-                <View style={styles.editRow}>
-                  <Text style={[styles.editLabel, { color: colors.ink3 }]}>Date:</Text>
+                <View style={[styles.editRow, narrow && styles.editRowColumn]}>
+                  <Text style={[styles.editLabel, narrow ? styles.editLabelColumn : isWide && styles.editLabelWide, { color: colors.ink3 }]}>Date:</Text>
                   <TextInput
                     style={[styles.editSmallInput, { borderColor: colors.line, color: colors.ink }]}
                     value={item.due_date}
@@ -359,8 +381,8 @@ export default function SyllabusReviewScreen() {
                     placeholderTextColor={colors.ink3}
                   />
                 </View>
-                <View style={styles.editRow}>
-                  <Text style={[styles.editLabel, { color: colors.ink3 }]}>Time:</Text>
+                <View style={[styles.editRow, narrow && styles.editRowColumn]}>
+                  <Text style={[styles.editLabel, narrow ? styles.editLabelColumn : isWide && styles.editLabelWide, { color: colors.ink3 }]}>Time:</Text>
                   <TextInput
                     style={[styles.editSmallInput, { borderColor: colors.line, color: colors.ink }]}
                     value={item.due_time || ''}
@@ -369,8 +391,8 @@ export default function SyllabusReviewScreen() {
                     placeholderTextColor={colors.ink3}
                   />
                 </View>
-                <View style={styles.editRow}>
-                  <Text style={[styles.editLabel, { color: colors.ink3 }]}>Weight:</Text>
+                <View style={[styles.editRow, narrow && styles.editRowColumn]}>
+                  <Text style={[styles.editLabel, narrow ? styles.editLabelColumn : isWide && styles.editLabelWide, { color: colors.ink3 }]}>Weight:</Text>
                   <TextInput
                     style={[styles.editSmallInput, { borderColor: colors.line, color: colors.ink }]}
                     value={item.weight != null ? String(item.weight) : ''}
@@ -413,7 +435,7 @@ export default function SyllabusReviewScreen() {
 
       {/* Save button */}
       {items.length > 0 && (
-        <View style={[styles.footer, { backgroundColor: colors.paper, borderTopColor: colors.line }]}>
+        <View style={[styles.footer, { paddingBottom: insets.bottom + 18, backgroundColor: colors.paper, borderTopColor: colors.line }]}>
           <TouchableOpacity
             style={[styles.saveBtn, { backgroundColor: colors.brand }, saving && styles.saveBtnDisabled]}
             onPress={handleSave}
@@ -468,14 +490,17 @@ const styles = StyleSheet.create({
   editInput: { fontSize: 15, fontWeight: '500', color: COLORS.ink, borderBottomWidth: 1, borderBottomColor: COLORS.brand, paddingBottom: 2 },
   editFields: { marginTop: 10, marginLeft: 34, gap: 6 },
   editFieldLabel: { fontSize: 11, fontWeight: '600', color: COLORS.ink3, marginTop: 4, marginBottom: 4 },
-  typeChipRow: { flexDirection: 'row', gap: 6 },
+  typeChipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   typeChip: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 6, backgroundColor: '#f1f5f9' },
   typeChipActive: { backgroundColor: COLORS.brand },
   typeChipText: { fontSize: 11, fontWeight: '600', color: COLORS.ink2 },
   typeChipTextActive: { color: '#fff' },
   editDescInput: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, fontSize: 13, color: COLORS.ink, minHeight: 48, backgroundColor: '#fafafa' },
   editRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  editLabel: { fontSize: 12, color: COLORS.ink3, width: 50 },
+  editRowColumn: { flexDirection: 'column', alignItems: 'stretch', gap: 4 },
+  editLabel: { fontSize: 12, color: COLORS.ink3, minWidth: 45, maxWidth: 50 },
+  editLabelWide: { maxWidth: 60 },
+  editLabelColumn: { maxWidth: undefined },
   editSmallInput: { flex: 1, height: 32, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 6, paddingHorizontal: 8, fontSize: 13, color: COLORS.ink },
   // Empty
   emptyCard: { alignItems: 'center', paddingVertical: 40, gap: 8 },

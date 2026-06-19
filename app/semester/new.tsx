@@ -25,7 +25,7 @@ export default function NewSemesterScreen() {
   const defaultTerm = useAppStore((s) => s.defaultTerm);
   const { data: existingSemesters = [] } = useSemesters();
   const colors = useColors();
-  const { contentMaxWidth } = useResponsive();
+  const { contentMaxWidth, isWide } = useResponsive();
 
   // Pre-fill with the term picked during onboarding, but only for the very
   // first semester — after that it's almost certainly a different term.
@@ -108,7 +108,7 @@ export default function NewSemesterScreen() {
           </View>
 
           <Text style={[styles.label, { color: colors.ink2 }]}>Quick pick</Text>
-          <View style={styles.presetRow}>
+          <View style={[styles.presetRow, isWide && styles.presetRowWide]}>
             {presets.map((p) => {
               // Selected = name string matches; date fields are
               // user-editable so don't gate selection on those.
@@ -118,6 +118,7 @@ export default function NewSemesterScreen() {
                   key={p.name}
                   style={[
                     styles.presetChip,
+                    isWide && styles.presetChipWide,
                     { borderColor: colors.line, backgroundColor: colors.card },
                     selected && { backgroundColor: colors.brand, borderColor: colors.brand },
                   ]}
@@ -182,10 +183,12 @@ const styles = StyleSheet.create({
   iconCircle: { width: 56, height: 56, borderRadius: 16, backgroundColor: '#eef2ff', justifyContent: 'center', alignItems: 'center' },
   label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 16 },
   presetRow: { flexDirection: 'row', gap: 8 },
+  presetRowWide: { flexWrap: 'wrap' },
   presetChip: {
     flex: 1, height: 38, borderRadius: 10, borderWidth: 1.5,
     justifyContent: 'center', alignItems: 'center',
   },
+  presetChipWide: { flex: 0, minWidth: 120, paddingHorizontal: 16 },
   presetChipText: { fontSize: 13, fontWeight: '600' },
   input: { height: 48, borderWidth: 1.5, borderColor: '#e5e7eb', borderRadius: 12, backgroundColor: '#fafafa', paddingHorizontal: 16, fontSize: 15, color: '#111' },
   button: { flexDirection: 'row', height: 50, backgroundColor: COLORS.brand, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 24, gap: 8 },

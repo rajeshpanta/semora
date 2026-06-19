@@ -22,7 +22,7 @@ import { COURSE_COLORS, COURSE_ICONS, COLORS, FONTS, calculateGrade, DEFAULT_GRA
 import type { GradeThreshold } from '@/types/database';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
-import { useResponsive } from '@/lib/responsive';
+import { useResponsive, gridItemBasis } from '@/lib/responsive';
 import { formatMeetings, formatOfficeHours } from '@/lib/schedule';
 
 export default function CourseDetailScreen() {
@@ -42,7 +42,7 @@ export default function CourseDetailScreen() {
   const deleteOfficeHours = useDeleteCourseOfficeHours();
   const isPro = useAppStore((s) => s.isPro);
   const colors = useColors();
-  const { contentMaxWidth } = useResponsive();
+  const { contentMaxWidth, isWide, columns } = useResponsive();
 
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -323,29 +323,39 @@ export default function CourseDetailScreen() {
   const doneCount = tasks.filter((t) => t.is_completed).length;
   const displayColor = editing ? editColor : course.color;
   const displayIcon = editing ? editIcon : course.icon;
+  // Per-item flex-basis for the wide task grid. Computed here (not in the
+  // module-level StyleSheet) because it depends on the runtime `columns`.
+  // Matches the canonical grid math from courses.tsx.
+  const taskItemWideStyle = {
+    flexBasis: gridItemBasis(columns),
+    flexGrow: 1,
+    maxWidth: columns >= 3 ? ('32%' as const) : ('49%' as const),
+  };
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="always">
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: displayColor + '12' }]}>
-          <View style={[styles.headerIcon, { backgroundColor: displayColor + '25' }]}>
+        <View style={[styles.header, isWide && styles.headerWide, { backgroundColor: displayColor + '12' }]}>
+          <View style={[styles.headerIcon, isWide && styles.headerIconWide, { backgroundColor: displayColor + '25' }]}>
             <FontAwesome name={displayIcon as any} size={28} color={displayColor} />
           </View>
-          {editing ? (
-            <>
-              <TextInput style={[styles.editTitle, { color: colors.ink, borderBottomColor: colors.line }]} value={editName} onChangeText={setEditName} placeholder="Course Name" placeholderTextColor={colors.ink3} />
-              <TextInput style={[styles.editSub, { color: colors.ink2, borderBottomColor: colors.line }]} value={editInstructor} onChangeText={setEditInstructor} placeholder="Instructor" placeholderTextColor={colors.ink3} />
-            </>
-          ) : (
-            <>
-              <Text style={[styles.headerTitle, { color: colors.ink }]}>{course.name}</Text>
-              {course.instructor && <Text style={[styles.headerSub, { color: colors.ink2 }]}>{course.instructor}</Text>}
-            </>
-          )}
-          <View style={styles.statsRow}>
-            <View style={styles.statBadge}><Text style={styles.statNum}>{pendingCount}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>pending</Text></View>
-            <View style={styles.statBadge}><Text style={[styles.statNum, { color: '#22c55e' }]}>{doneCount}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>done</Text></View>
+          <View style={isWide ? styles.headerMetaWide : undefined}>
+            {editing ? (
+              <>
+                <TextInput style={[styles.editTitle, isWide && styles.editTitleWide, { color: colors.ink, borderBottomColor: colors.line }]} value={editName} onChangeText={setEditName} placeholder="Course Name" placeholderTextColor={colors.ink3} />
+                <TextInput style={[styles.editSub, isWide && styles.editSubWide, { color: colors.ink2, borderBottomColor: colors.line }]} value={editInstructor} onChangeText={setEditInstructor} placeholder="Instructor" placeholderTextColor={colors.ink3} />
+              </>
+            ) : (
+              <>
+                <Text style={[styles.headerTitle, isWide && styles.headerTitleWide, { color: colors.ink }]}>{course.name}</Text>
+                {course.instructor && <Text style={[styles.headerSub, isWide && styles.headerSubWide, { color: colors.ink2 }]}>{course.instructor}</Text>}
+              </>
+            )}
+            <View style={[styles.statsRow, isWide && styles.statsRowWide]}>
+              <View style={styles.statBadge}><Text style={styles.statNum}>{pendingCount}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>pending</Text></View>
+              <View style={styles.statBadge}><Text style={[styles.statNum, { color: '#22c55e' }]}>{doneCount}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>done</Text></View>
+            </View>
           </View>
         </View>
 
@@ -357,7 +367,7 @@ export default function CourseDetailScreen() {
           const hasAnyOfficeHours = !!officeHoursText;
           return (
             <TouchableOpacity
-              style={[styles.detailsCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+              style={[styles.detailsCard, isWide && styles.cardPadWide, { backgroundColor: colors.card, borderColor: colors.line }]}
               onPress={!hasAnyMeeting && !hasAnyOfficeHours ? startEdit : undefined}
               activeOpacity={0.8}
             >
@@ -412,7 +422,7 @@ export default function CourseDetailScreen() {
         })()}
 
         {/* Grade summary */}
-        <View style={[styles.gradeCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+        <View style={[styles.gradeCard, isWide && styles.cardPadWide, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <GradeCard percentage={percentage} letter={letter} gradedCount={gradedCount} totalCount={tasks.length} weightAttempted={weightAttempted} weightTotal={weightTotal} />
 
           {/* What-if forecast — the "what do I need on the final?" answer,
@@ -461,7 +471,7 @@ export default function CourseDetailScreen() {
                         keyboardType="decimal-pad"
                         placeholder="Min %"
                       />
-                      <TouchableOpacity onPress={() => setScaleRows(scaleRows.filter((_, j) => j !== i))}>
+                      <TouchableOpacity onPress={() => setScaleRows(scaleRows.filter((_, j) => j !== i))} accessibilityRole="button" accessibilityLabel={row.letter ? `Remove grade ${row.letter}` : 'Remove grade row'}>
                         <FontAwesome name="times" size={14} color="#ef4444" />
                       </TouchableOpacity>
                     </View>
@@ -492,7 +502,7 @@ export default function CourseDetailScreen() {
 
         {/* Edit color/icon */}
         {editing && (
-          <View style={[styles.editCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <View style={[styles.editCard, isWide && styles.cardPadWide, { backgroundColor: colors.card, borderColor: colors.line }]}>
             <Text style={[styles.editLabel, { color: colors.ink2, marginTop: 0 }]}>Schedule</Text>
             <ScheduleEditor
               value={editMeetings}
@@ -510,18 +520,18 @@ export default function CourseDetailScreen() {
               hint="Optional. Add the days and times your instructor or TA holds office hours. Use the free-text field above for room or Zoom info."
             />
             <Text style={[styles.editLabel, { color: colors.ink2 }]}>Color</Text>
-            <View style={styles.colorGrid}>
+            <View style={[styles.colorGrid, isWide && styles.colorGridWide]}>
               {COURSE_COLORS.map((c) => (
-                <TouchableOpacity key={c} style={[styles.colorCircle, { backgroundColor: c }, editColor === c && styles.colorSelected]} onPress={() => setEditColor(c)}>
-                  {editColor === c && <FontAwesome name="check" size={11} color="#fff" />}
+                <TouchableOpacity key={c} style={[styles.colorCircle, isWide && styles.colorCircleWide, { backgroundColor: c }, editColor === c && styles.colorSelected]} onPress={() => setEditColor(c)} accessibilityRole="button" accessibilityLabel={`Color ${c}`} accessibilityState={{ selected: editColor === c }}>
+                  {editColor === c && <FontAwesome name="check" size={isWide ? 14 : 11} color="#fff" />}
                 </TouchableOpacity>
               ))}
             </View>
             <Text style={[styles.editLabel, { color: colors.ink2 }]}>Icon</Text>
-            <View style={styles.iconGrid}>
+            <View style={[styles.iconGrid, isWide && styles.iconGridWide]}>
               {COURSE_ICONS.map((ic) => (
-                <TouchableOpacity key={ic} style={[styles.iconBtn, { borderColor: colors.line }, editIcon === ic && { borderColor: editColor, backgroundColor: editColor + '15' }]} onPress={() => setEditIcon(ic)}>
-                  <FontAwesome name={ic as any} size={16} color={editIcon === ic ? editColor : colors.ink3} />
+                <TouchableOpacity key={ic} style={[styles.iconBtn, isWide && styles.iconBtnWide, { borderColor: colors.line }, editIcon === ic && { borderColor: editColor, backgroundColor: editColor + '15' }]} onPress={() => setEditIcon(ic)} accessibilityRole="button" accessibilityLabel={`Icon ${ic}`} accessibilityState={{ selected: editIcon === ic }}>
+                  <FontAwesome name={ic as any} size={isWide ? 20 : 16} color={editIcon === ic ? editColor : colors.ink3} />
                 </TouchableOpacity>
               ))}
             </View>
@@ -555,14 +565,17 @@ export default function CourseDetailScreen() {
         {tasks.length === 0 ? (
           <View style={styles.emptyState}><Text style={[styles.emptyText, { color: colors.ink3 }]}>No tasks yet for this course</Text></View>
         ) : (
-          tasks.map((task) => (
-            <TaskItem
-              key={task.id}
-              task={task}
-              onToggle={(opts) => toggleComplete.mutate({ id: task.id, is_completed: !task.is_completed, submitted_late: opts?.submitted_late })}
-              onPress={() => router.push(`/task/${task.id}` as any)}
-            />
-          ))
+          <View style={[styles.taskList, isWide && styles.taskListWide]}>
+            {tasks.map((task) => (
+              <View key={task.id} style={isWide ? taskItemWideStyle : undefined}>
+                <TaskItem
+                  task={task}
+                  onToggle={(opts) => toggleComplete.mutate({ id: task.id, is_completed: !task.is_completed, submitted_late: opts?.submitted_late })}
+                  onPress={() => router.push(`/task/${task.id}` as any)}
+                />
+              </View>
+            ))}
+          </View>
         )}
       </ScrollView>
     </SafeAreaView>
@@ -574,16 +587,29 @@ const styles = StyleSheet.create({
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { padding: 20, paddingBottom: 100, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   header: { borderRadius: 18, padding: 24, alignItems: 'center', marginBottom: 14 },
+  // On wide screens lay the header out as a row: icon on the left, the
+  // title/instructor/stats stacked to its right, filling the wider form.
+  headerWide: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   headerIcon: { width: 64, height: 64, borderRadius: 18, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
+  headerIconWide: { marginBottom: 0 },
+  headerMetaWide: { flex: 1, alignItems: 'flex-start' },
   headerTitle: { fontFamily: FONTS.display, fontSize: 23, color: '#0f172a' },
+  headerTitleWide: { textAlign: 'left' },
   headerSub: { fontSize: 14, color: '#64748b', marginTop: 2 },
+  headerSubWide: { textAlign: 'left' },
   editTitle: { fontSize: 20, fontWeight: '700', color: '#0f172a', textAlign: 'center', borderBottomWidth: 1, borderBottomColor: '#e5e7eb', paddingBottom: 4, width: '100%' },
+  editTitleWide: { textAlign: 'left' },
   editSub: { fontSize: 14, color: '#64748b', textAlign: 'center', borderBottomWidth: 1, borderBottomColor: '#e5e7eb', paddingBottom: 4, marginTop: 4, width: '100%' },
+  editSubWide: { textAlign: 'left' },
   statsRow: { flexDirection: 'row', gap: 16, marginTop: 12 },
+  statsRowWide: { alignSelf: 'flex-start' },
   statBadge: { alignItems: 'center' },
   statNum: { fontSize: 20, fontWeight: '800', color: '#f59e0b' },
   statLabel: { fontSize: 11, color: '#94a3b8', fontWeight: '600' },
   detailsCard: { backgroundColor: COLORS.card, borderRadius: 18, padding: 16, borderWidth: 0.5, borderColor: COLORS.line, marginBottom: 14, gap: 12 },
+  // Roomier card padding on iPad. Gated on isWide only so iPhone (any width)
+  // keeps each card's original padding exactly.
+  cardPadWide: { padding: 24 },
   detailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   detailLabel: { fontSize: 11, fontWeight: '600', color: COLORS.ink3, letterSpacing: 0.3 },
   detailValue: { fontSize: 13, fontWeight: '500', color: COLORS.ink, marginTop: 1 },
@@ -607,10 +633,16 @@ const styles = StyleSheet.create({
   editCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20, marginBottom: 14, borderWidth: 1, borderColor: '#edf0f7' },
   editLabel: { fontSize: 12, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 12 },
   colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  // On iPad, bigger swatches/buttons + roomier gap so they fill the wider
+  // form instead of clustering tiny on the left.
+  colorGridWide: { gap: 12 },
   colorCircle: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  colorCircleWide: { width: 48, height: 48, borderRadius: 24 },
   colorSelected: { borderWidth: 3, borderColor: 'rgba(255,255,255,0.8)' },
   iconGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  iconGridWide: { gap: 12 },
   iconBtn: { width: 40, height: 40, borderRadius: 10, borderWidth: 1.5, borderColor: '#e5e7eb', justifyContent: 'center', alignItems: 'center' },
+  iconBtnWide: { width: 52, height: 52, borderRadius: 12 },
   editActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
   cancelBtn: { flex: 1, height: 44, borderRadius: 10, borderWidth: 1, borderColor: '#e5e7eb', justifyContent: 'center', alignItems: 'center' },
   cancelText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
@@ -623,6 +655,10 @@ const styles = StyleSheet.create({
   addTaskBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
   addTaskText: { fontSize: 13, fontWeight: '600', color: '#fff' },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 12 },
+  // Tasks render single-column on iPhone (plain wrapper, no row styling).
+  // On wide screens the canonical grid turns them into 2-3 columns.
+  taskList: {},
+  taskListWide: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   emptyState: { alignItems: 'center', paddingVertical: 24 },
   emptyText: { fontSize: 14, color: '#94a3b8' },
   lockedFeature: { alignItems: 'center', paddingVertical: 12 },

@@ -7,7 +7,7 @@ import { Stack, useRouter, useSegments, router as globalRouter } from 'expo-rout
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Platform, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Platform, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { supabase } from '@/lib/supabase';
@@ -51,6 +51,32 @@ export function useSession() {
 function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Re-sync local reminders whenever the app is foregrounded. Students stay
+  // signed in across devices, and reminders are LOCAL notifications — only the
+  // device that ran scheduleTaskReminders has them. So a task created on one
+  // device wouldn't ring on another already-running device. On foreground we
+  // reschedule all incomplete tasks (throttled) so every signed-in device
+  // picks up whatever was added/edited elsewhere. Permission-gated +
+  // concurrency-guarded internally; no-op on web.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    let lastSyncAt = 0;
+    const THROTTLE_MS = 2 * 60 * 1000; // at most once every 2 minutes
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state !== 'active') return;
+      const now = Date.now();
+      if (now - lastSyncAt < THROTTLE_MS) return;
+      lastSyncAt = now;
+      supabase.auth
+        .getSession()
+        .then(({ data: { session } }) => {
+          if (session) rescheduleAllTaskReminders(session.user.id);
+        })
+        .catch(() => {});
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => {
     // refreshProStatus can take seconds (Apple roundtrip). If the user
@@ -168,7 +194,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       // import instead ("Want reminders before these N deadlines?").
       if (session) {
         saveTimezoneIfNeeded(session.user.id);
-        refreshProForSession(session.user.id);
+        // Reschedule on every cold launch (rescheduleAfter=true) so a device
+        // that stays signed in picks up tasks created on OTHER devices since it
+        // was last open — local reminders only live on devices that scheduled
+        // them. (The foreground listener above covers mid-session changes.)
+        refreshProForSession(session.user.id, true);
       }
     }).catch(() => {
       setLoading(false);

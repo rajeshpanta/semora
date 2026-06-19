@@ -186,7 +186,7 @@ export default function CoursesScreen() {
           </View>
 
           <View style={styles.headerActions}>
-            <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.brand }]} onPress={handleAddCourse} activeOpacity={0.8}>
+            <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.brand }]} onPress={handleAddCourse} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Add a course">
               <FontAwesome name="plus" size={14} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -284,7 +284,7 @@ export default function CoursesScreen() {
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.ink }]}>Select Semester</Text>
-              <TouchableOpacity onPress={() => setShowPicker(false)} hitSlop={12}>
+              <TouchableOpacity onPress={() => setShowPicker(false)} hitSlop={12} accessibilityRole="button" accessibilityLabel="Close">
                 <FontAwesome name="times" size={16} color={colors.ink3} />
               </TouchableOpacity>
             </View>
@@ -319,6 +319,7 @@ export default function CoursesScreen() {
                       onPress={() => handleSemesterMenu(s)}
                       activeOpacity={0.6}
                       hitSlop={8}
+                      accessibilityRole="button"
                       accessibilityLabel={`Manage ${s.name}`}
                     >
                       <FontAwesome name="ellipsis-h" size={14} color={colors.ink3} />

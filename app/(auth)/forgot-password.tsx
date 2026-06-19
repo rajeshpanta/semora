@@ -8,9 +8,11 @@ import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 
 export default function ForgotPasswordScreen() {
   const colors = useColors();
+  const { width, height, isLandscape, isWide } = useResponsive();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -78,8 +80,14 @@ export default function ForgotPasswordScreen() {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
         <View style={styles.heroWrap}>
-          <View style={[styles.heroIcon, { backgroundColor: colors.brand50 }]}>
-            <FontAwesome name="envelope" size={40} color={colors.brand} />
+          <View
+            style={[
+              styles.heroIcon,
+              { backgroundColor: colors.brand50 },
+              isLandscape && { width: 72, height: 72, borderRadius: 22, marginBottom: 20 },
+            ]}
+          >
+            <FontAwesome name="envelope" size={isLandscape ? 30 : 40} color={colors.brand} />
           </View>
 
           <Text style={[styles.heroTitle, { color: colors.ink }]}>Check your email</Text>
@@ -93,7 +101,7 @@ export default function ForgotPasswordScreen() {
             The link expires in 1 hour
           </Text>
 
-          <View style={styles.heroActions}>
+          <View style={[styles.heroActions, { maxWidth: Math.min(width - 48, isWide ? 520 : 400) }]}>
             <TouchableOpacity
               style={[styles.primaryBtn, { backgroundColor: colors.brand }]}
               onPress={() => router.replace('/(auth)/sign-in')}
@@ -129,12 +137,20 @@ export default function ForgotPasswordScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
       <ScrollView
-        contentContainerStyle={styles.scroll}
+        contentContainerStyle={[styles.scroll, { minHeight: height }]}
         keyboardShouldPersistTaps="always"
         keyboardDismissMode="on-drag"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.inner}>
+        <View
+          style={[
+            styles.inner,
+            {
+              maxWidth: isWide ? Math.min(width - 64, 560) : 440,
+              paddingHorizontal: 24,
+            },
+          ]}
+        >
           <View style={styles.header}>
             <View style={[styles.logoContainer, { backgroundColor: colors.brand }]}>
               <FontAwesome name="lock" size={28} color="#fff" />

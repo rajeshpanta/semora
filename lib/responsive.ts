@@ -28,6 +28,10 @@ export function useResponsive(): Responsive {
   const { width, height } = useWindowDimensions();
   const isWide = width >= WIDE_BREAKPOINT;
   const isXWide = width >= XWIDE_BREAKPOINT;
+  // Narrow stays at the readable 600; wide widens to a still-readable 800
+  // (longer lines hurt forms/text). List screens use `columns` for grids
+  // instead of one very wide column.
+  const contentMaxWidth = isWide ? Math.min(width - 48, 800) : 600;
   return {
     width,
     height,
@@ -35,9 +39,16 @@ export function useResponsive(): Responsive {
     isWide,
     isXWide,
     columns: isXWide ? 3 : isWide ? 2 : 1,
-    // Narrow stays at the readable 600; wide widens to a still-readable 800
-    // (longer lines hurt forms/text). List screens use `columns` for grids
-    // instead of one very wide column.
-    contentMaxWidth: isWide ? Math.min(width - 48, 800) : 600,
+    contentMaxWidth,
   };
+}
+
+/**
+ * Flex-basis for a grid item given the column count, so every grid uses
+ * identical math. Slightly under 1/N to leave room for the inter-item gap.
+ */
+export function gridItemBasis(columns: number): '100%' | '47%' | '31%' {
+  if (columns >= 3) return '31%';
+  if (columns === 2) return '47%';
+  return '100%';
 }

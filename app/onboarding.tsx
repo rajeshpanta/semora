@@ -38,7 +38,7 @@ type DemoPhase = 'idle' | 'scanning' | 'done';
 
 export default function OnboardingScreen() {
   const colors = useColors();
-  const { contentMaxWidth } = useResponsive();
+  const { contentMaxWidth, isWide, isLandscape } = useResponsive();
   const router = useRouter();
   const setHasOnboarded = useAppStore((s) => s.setHasOnboarded);
   const setUserName = useAppStore((s) => s.setUserName);
@@ -139,12 +139,13 @@ export default function OnboardingScreen() {
           showsVerticalScrollIndicator={false}
         >
           <Animated.View key={step} entering={entering} exiting={exiting}>
-            {step === 0 && <Hook colors={colors} />}
-            {step === 1 && <LiveDemo colors={colors} phase={demoPhase} onDone={() => setDemoPhase('done')} />}
-            {step === 2 && <Outcome colors={colors} />}
+            {step === 0 && <Hook colors={colors} isWide={isWide} />}
+            {step === 1 && <LiveDemo colors={colors} phase={demoPhase} onDone={() => setDemoPhase('done')} isWide={isWide} isLandscape={isLandscape} />}
+            {step === 2 && <Outcome colors={colors} isWide={isWide} />}
             {step === 3 && (
               <Personalize
                 colors={colors}
+                isWide={isWide}
                 name={name} setName={setName}
                 term={term} setTerm={(t) => { setTerm(t); tap(); }}
                 termOptions={termOptions}
@@ -156,13 +157,13 @@ export default function OnboardingScreen() {
       </KeyboardAvoidingView>
 
       {/* Footer */}
-      <View style={[styles.footer, { maxWidth: contentMaxWidth }]}>
+      <View style={[styles.footer, { maxWidth: contentMaxWidth }, isLandscape && { paddingBottom: 8 }]}>
         {step === 0 && (
           <Text style={[styles.reassure, { color: colors.ink3 }]}>Free to try · takes 30 seconds</Text>
         )}
         <Animated.View style={[{ width: '100%' }, ctaStyle]}>
           <TouchableOpacity
-            style={[styles.cta, { backgroundColor: colors.brand }, ctaDisabled && { opacity: 0.55 }]}
+            style={[styles.cta, { backgroundColor: colors.brand }, isLandscape && { height: 44 }, ctaDisabled && { opacity: 0.55 }]}
             onPress={next}
             disabled={ctaDisabled}
             onPressIn={() => { ctaScale.value = withTiming(0.97, { duration: 90 }); }}
@@ -202,7 +203,7 @@ function rowColor(colors: C, k: 'coral' | 'brand' | 'teal' | 'blue') {
 
 /* ------------------------------------------------ step 0: hook */
 
-function Hook({ colors }: { colors: C }) {
+function Hook({ colors, isWide }: { colors: C; isWide: boolean }) {
   return (
     <View style={styles.stepPad}>
       <Animated.Text entering={FadeInDown.duration(420)} style={[styles.kicker, { color: colors.brand }]}>
@@ -211,7 +212,7 @@ function Hook({ colors }: { colors: C }) {
       <Animated.Text entering={FadeInDown.delay(80).duration(420)} style={[styles.display, { color: colors.ink }]}>
         Your semester,{'\n'}organized in{'\n'}one snap.
       </Animated.Text>
-      <Animated.Text entering={FadeInDown.delay(160).duration(420)} style={[styles.lead, { color: colors.ink2 }]}>
+      <Animated.Text entering={FadeInDown.delay(160).duration(420)} style={[styles.lead, { color: colors.ink2 }, isWide && { maxWidth: 700 }]}>
         Turn any syllabus — a photo or a PDF — into a calendar of every deadline. In seconds, without typing a thing.
       </Animated.Text>
       <Animated.View entering={FadeInDown.delay(280).duration(480)} style={styles.heroCardWrap}>
@@ -296,9 +297,12 @@ function DocLine({ colors, line, beam }: { colors: C; line: typeof DOC_LINES[num
   );
 }
 
-function LiveDemo({ colors, phase, onDone }: { colors: C; phase: DemoPhase; onDone: () => void }) {
+function LiveDemo({ colors, phase, onDone, isWide, isLandscape }: { colors: C; phase: DemoPhase; onDone: () => void; isWide: boolean; isLandscape: boolean }) {
   const beam = useSharedValue(0);
   const [count, setCount] = useState(0);
+  // Shorten the scanned-document mockup in landscape (iPhone AND iPad) so the
+  // step doesn't clip vertically behind the pinned footer CTA.
+  const docH = isLandscape ? 240 : DOC_H;
 
   // Run the sweep when the footer CTA flips us to 'scanning'.
   useEffect(() => {
@@ -330,10 +334,10 @@ function LiveDemo({ colors, phase, onDone }: { colors: C; phase: DemoPhase; onDo
   }, [phase]);
 
   const beamStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: beam.value * (DOC_H - 36) }],
+    transform: [{ translateY: beam.value * (docH - 36) }],
     opacity: phase === 'scanning' ? 1 : 0,
   }));
-  const washStyle = useAnimatedStyle(() => ({ height: beam.value * DOC_H }));
+  const washStyle = useAnimatedStyle(() => ({ height: beam.value * docH }));
 
   return (
     <View style={styles.stepPad}>
@@ -342,15 +346,15 @@ function LiveDemo({ colors, phase, onDone }: { colors: C; phase: DemoPhase; onDo
           <Text style={[styles.display2, { color: colors.ink }]}>
             {phase === 'scanning' ? 'Reading it…' : 'A real syllabus.\nWatch this.'}
           </Text>
-          <Text style={[styles.lead, { color: colors.ink2, marginBottom: 18 }]}>
+          <Text style={[styles.lead, { color: colors.ink2, marginBottom: 18 }, isWide && { maxWidth: 700 }]}>
             {phase === 'scanning'
               ? 'Finding every date that matters.'
               : 'This is a page from an intro psych syllabus. Tap the button to scan it.'}
           </Text>
           {/* The sample document */}
           <View style={styles.docWrap}>
-            <View style={[styles.docBack, { backgroundColor: colors.brand50 }]} />
-            <View style={[styles.doc, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <View style={[styles.docBack, { backgroundColor: colors.brand50 }, isLandscape && { height: docH - 6 }]} />
+            <View style={[styles.doc, { backgroundColor: colors.card, borderColor: colors.line }, isLandscape && { height: docH, paddingVertical: 6 }]}>
               {DOC_LINES.map((l, i) => (
                 <DocLine key={i} colors={colors} line={l} beam={beam} />
               ))}
@@ -394,11 +398,11 @@ function LiveDemo({ colors, phase, onDone }: { colors: C; phase: DemoPhase; onDo
 
 /* ------------------------------------------------ step 2: outcome */
 
-function Outcome({ colors }: { colors: C }) {
+function Outcome({ colors, isWide }: { colors: C; isWide: boolean }) {
   return (
     <View style={styles.stepPad}>
       <Text style={[styles.display2, { color: colors.ink }]}>Then it runs{'\n'}your semester</Text>
-      <Text style={[styles.lead, { color: colors.ink2, marginBottom: 22 }]}>
+      <Text style={[styles.lead, { color: colors.ink2, marginBottom: 22 }, isWide && { maxWidth: 700 }]}>
         Reminders before every due date. Deadlines synced to your phone{'’'}s calendar. Your grade in every class — and what you need on the final.
       </Text>
 
@@ -453,16 +457,16 @@ const PAIN_OPTIONS: { key: PainPoint; label: string }[] = [
 ];
 
 function Personalize({
-  colors, name, setName, term, setTerm, termOptions, pain, setPain,
+  colors, isWide, name, setName, term, setTerm, termOptions, pain, setPain,
 }: {
-  colors: C; name: string; setName: (v: string) => void;
+  colors: C; isWide: boolean; name: string; setName: (v: string) => void;
   term: string; setTerm: (v: string) => void; termOptions: string[];
   pain: PainPoint | null; setPain: (v: PainPoint) => void;
 }) {
   return (
     <View style={styles.stepPad}>
       <Text style={[styles.display2, { color: colors.ink }]}>Let{'’'}s make it yours</Text>
-      <Text style={[styles.lead, { color: colors.ink2, marginBottom: 24 }]}>
+      <Text style={[styles.lead, { color: colors.ink2, marginBottom: 24 }, isWide && { maxWidth: 700 }]}>
         Thirty seconds of setup, a whole semester of calm.
       </Text>
 

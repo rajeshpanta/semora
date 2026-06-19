@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { COLORS, FONTS, COURSE_COLORS, COURSE_ICONS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 
 const TYPE_SINGULAR: Record<string, string> = {
   assignment: 'assignment', quiz: 'quiz', exam: 'exam',
@@ -83,6 +84,7 @@ export default function SyllabusUploadScreen() {
   const params = useLocalSearchParams<{ fileUri?: string; fileName?: string; mimeType?: string }>();
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
   const colors = useColors();
+  const { isWide } = useResponsive();
 
   const [processing, setProcessing] = useState(false);
   const [status, setStatus] = useState('');
@@ -300,7 +302,7 @@ export default function SyllabusUploadScreen() {
         </View>
 
         {/* Progress */}
-        <View style={styles.progressContainer}>
+        <View style={[styles.progressContainer, { maxWidth: isWide ? 700 : 500, alignSelf: 'center' }]}>
           {summary ? (
             <>
               <View style={[styles.celebrateIcon, { backgroundColor: colors.teal50 }]}>

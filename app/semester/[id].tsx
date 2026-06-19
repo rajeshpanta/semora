@@ -21,7 +21,7 @@ export default function SemesterDetailScreen() {
   const { data: semesters = [], isLoading } = useSemesters();
   const updateSemester = useUpdateSemester();
   const colors = useColors();
-  const { contentMaxWidth } = useResponsive();
+  const { contentMaxWidth, isWide, width } = useResponsive();
 
   const semester = semesters.find((s) => s.id === id);
 
@@ -71,7 +71,7 @@ export default function SemesterDetailScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="always">
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+        <View style={[styles.card, width < 360 && styles.cardNarrow, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <View style={styles.iconRow}>
             <View style={[styles.iconCircle, { backgroundColor: colors.brand50 }]}>
               <FontAwesome name="graduation-cap" size={22} color={colors.brand} />
@@ -81,11 +81,17 @@ export default function SemesterDetailScreen() {
           <Text style={[styles.label, { color: colors.ink2 }]}>Semester Name *</Text>
           <TextInput style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]} value={name} onChangeText={setName} placeholder="e.g. Fall 2026" placeholderTextColor={colors.ink3} />
 
-          <Text style={[styles.label, { color: colors.ink2 }]}>Start Date</Text>
-          <DatePicker value={startDate} onChange={setStartDate} placeholder="Select start date" />
+          <View style={isWide && styles.dateRowWide}>
+            <View style={isWide && styles.datePickerWide}>
+              <Text style={[styles.label, { color: colors.ink2 }]}>Start Date</Text>
+              <DatePicker value={startDate} onChange={setStartDate} placeholder="Select start date" />
+            </View>
 
-          <Text style={[styles.label, { color: colors.ink2 }]}>End Date</Text>
-          <DatePicker value={endDate} onChange={setEndDate} placeholder="Select end date" />
+            <View style={isWide && styles.datePickerWide}>
+              <Text style={[styles.label, { color: colors.ink2 }]}>End Date</Text>
+              <DatePicker value={endDate} onChange={setEndDate} placeholder="Select end date" />
+            </View>
+          </View>
 
           <TouchableOpacity
             style={[styles.button, { backgroundColor: colors.brand }, updateSemester.isPending && styles.buttonDisabled]}
@@ -113,6 +119,9 @@ const styles = StyleSheet.create({
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   content: { padding: 20, paddingBottom: 40, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   card: { backgroundColor: '#fff', borderRadius: 20, padding: 24, borderWidth: 1, borderColor: '#edf0f7' },
+  cardNarrow: { padding: 16 },
+  dateRowWide: { flexDirection: 'row', gap: 16 },
+  datePickerWide: { flex: 1 },
   iconRow: { alignItems: 'center', marginBottom: 20 },
   iconCircle: { width: 56, height: 56, borderRadius: 16, backgroundColor: '#eef2ff', justifyContent: 'center', alignItems: 'center' },
   label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 16 },
