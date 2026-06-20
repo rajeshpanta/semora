@@ -94,11 +94,27 @@ async function getOrCreateCalendarInner(): Promise<string | null> {
   // "Semora" calendar every time. ADOPT the existing Semora calendar
   // instead of deleting it: with iCloud calendars, deletion would
   // propagate to the user's OTHER devices and destroy data they still
-  // see there. Stale events left from a previous session get pruned by
-  // syncAllTasks' reconciliation pass.
-  const existing = calendars.find((c) => c.title === 'Semora' && c.allowsModifications);
+  // see there.
+  //
+  // But adopting alone leaves the calendar holding events from the prior
+  // session/user that our (now-cleared) event map knows nothing about.
+  // syncAllTasks' prune only iterates the map — it never enumerates the
+  // calendar — so those events would linger and a re-enable would stack
+  // DUPLICATES on top. Reconcile on adopt: enumerate the real calendar
+  // and drop any event our map isn't tracking, then let syncAllTasks
+  // rebuild fresh events for the current user's live tasks.
+  // Prefer a calendar Semora provably created — match the internal
+  // name ('semora', set at creation) as well as the display title — so the
+  // destructive reconcile below can't wipe a user's own calendar that merely
+  // happens to be titled "Semora". On iOS the internal name can come back
+  // null, so fall back to title-only (the original adopt behavior) rather
+  // than regress to creating a duplicate calendar.
+  const existing =
+    calendars.find((c) => c.title === 'Semora' && c.name === 'semora' && c.allowsModifications)
+    ?? calendars.find((c) => c.title === 'Semora' && c.allowsModifications);
   if (existing) {
     SecureStore.setItem(CALENDAR_ID_KEY, existing.id);
+    await reconcileAdoptedCalendar(Calendar, existing.id);
     return existing.id;
   }
 
@@ -127,6 +143,33 @@ async function getDefaultCalendarSource(Calendar: any) {
     (c: any) => c.source?.name === 'iCloud' || c.source?.name === 'Default',
   );
   return defaultCal?.source ?? calendars[0]?.source ?? { name: 'Semora', isLocalAccount: true };
+}
+
+// Drop events the calendar physically holds that our event map isn't
+// tracking. Runs ONCE when we adopt a pre-existing Semora calendar (after a
+// sign-out cleared our local map, or a stale calendar from a prior install).
+// At that point the map is empty, so every leftover event from the previous
+// session/user is removed — preventing duplicates and cross-user leakage when
+// the subsequent syncAllTasks recreates events for the current live tasks. On
+// a normal launch a valid stored CALENDAR_ID_KEY short-circuits before adopt,
+// so this never runs (and never deletes events we still track).
+async function reconcileAdoptedCalendar(Calendar: any, calendarId: string): Promise<void> {
+  try {
+    const tracked = new Set(Object.values(readEventMap()));
+    // Wide window around "now" — academic tasks never fall outside it, and
+    // getEventsAsync requires an explicit range.
+    const now = new Date();
+    const start = new Date(now.getFullYear() - 2, now.getMonth(), now.getDate());
+    const end = new Date(now.getFullYear() + 3, now.getMonth(), now.getDate());
+    const events = await Calendar.getEventsAsync([calendarId], start, end);
+    for (const ev of events) {
+      if (!tracked.has(ev.id)) {
+        try { await Calendar.deleteEventAsync(ev.id); } catch {}
+      }
+    }
+  } catch (e) {
+    console.warn('[CalendarSync] Failed to reconcile adopted calendar:', e);
+  }
 }
 
 // ── Sync logic ─────────────────────────────────────────────

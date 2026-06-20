@@ -70,6 +70,13 @@ export default function TaskDetailScreen() {
       Alert.alert('Required', 'Please enter a task title.');
       return;
     }
+    if (editWeight.trim()) {
+      const w = parseFloat(editWeight);
+      if (isNaN(w) || w < 0 || w > 100) {
+        Alert.alert('Invalid weight', 'Please enter a weight between 0 and 100.');
+        return;
+      }
+    }
     try {
       await updateTask.mutateAsync({
         id: task.id,

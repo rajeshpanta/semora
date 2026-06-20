@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isToday as isDateToday } from 'date-fns';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
@@ -11,6 +12,7 @@ import { useTasks, useSemesters, useCourses, useToggleTaskComplete } from '@/lib
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
+import { track } from '@/lib/analytics';
 import type { TaskWithCourse } from '@/lib/queries';
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
@@ -66,6 +68,31 @@ export default function CalendarScreen() {
   const { data: semesters = [] } = useSemesters();
   const { data: courses = [] } = useCourses(selectedSemesterId);
   const toggleComplete = useToggleTaskComplete();
+
+  // Shared inline-toggle handler so the calendar checkboxes get the same
+  // haptic + error treatment as the Today tab and task-detail screen. The
+  // checkbox state comes from query data (no optimistic update), so a failed
+  // toggle just wouldn't move — this adds the haptic feedback and a visible
+  // error Alert instead of swallowing the failure as a silent no-op.
+  const runToggle = useCallback(
+    async (vars: { id: string; is_completed: boolean; submitted_late?: boolean }) => {
+      try {
+        await toggleComplete.mutateAsync(vars);
+        if (vars.is_completed) track('task_completed', { screen: 'calendar', late: !!vars.submitted_late });
+        if (Platform.OS === 'ios') {
+          const type = vars.is_completed
+            ? (vars.submitted_late
+                ? Haptics.NotificationFeedbackType.Warning
+                : Haptics.NotificationFeedbackType.Success)
+            : Haptics.NotificationFeedbackType.Warning;
+          Haptics.notificationAsync(type);
+        }
+      } catch {
+        Alert.alert('Couldn\'t update', 'Something went wrong — try again.');
+      }
+    },
+    [toggleComplete],
+  );
 
   useEffect(() => {
     if (semesters.length === 0) return;
@@ -250,8 +277,9 @@ export default function CalendarScreen() {
                         <Text style={[styles.agendaTaskCourse, { color: colors.ink3 }]}>{task.courses.name}</Text>
                       </View>
                       <TouchableOpacity
-                        onPress={() => toggleComplete.mutate({ id: task.id, is_completed: !task.is_completed })}
+                        onPress={() => runToggle({ id: task.id, is_completed: !task.is_completed })}
                         hitSlop={8}
+                        disabled={toggleComplete.isPending}
                         accessibilityRole="button"
                         accessibilityLabel={task.is_completed ? `Mark "${task.title}" incomplete` : `Mark "${task.title}" complete`}
                       >
@@ -301,8 +329,9 @@ export default function CalendarScreen() {
                             <Text style={[styles.agendaTaskCourse, { color: colors.ink3 }]}>{task.courses.name}</Text>
                           </View>
                           <TouchableOpacity
-                            onPress={() => toggleComplete.mutate({ id: task.id, is_completed: !task.is_completed })}
+                            onPress={() => runToggle({ id: task.id, is_completed: !task.is_completed })}
                             hitSlop={8}
+                            disabled={toggleComplete.isPending}
                             accessibilityRole="button"
                             accessibilityLabel={task.is_completed ? `Mark "${task.title}" incomplete` : `Mark "${task.title}" complete`}
                           >

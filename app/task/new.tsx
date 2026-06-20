@@ -52,6 +52,13 @@ export default function NewTaskScreen() {
       Alert.alert('Required', 'Please select a due date.');
       return;
     }
+    if (weight.trim()) {
+      const w = parseFloat(weight);
+      if (isNaN(w) || w < 0 || w > 100) {
+        Alert.alert('Invalid weight', 'Please enter a weight between 0 and 100.');
+        return;
+      }
+    }
 
     try {
       await createTask.mutateAsync({
