@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { supabase } from '@/lib/supabase';
 import type { GradeThreshold, CourseMeetingKind } from '@/types/database';
 
@@ -48,7 +49,31 @@ export async function extractFromFile(
   mimeType: string,
   signal?: AbortSignal,
 ): Promise<SyllabusExtraction> {
-  const base64 = await FileSystem.readAsStringAsync(fileUri, {
+  // Compress + normalize image inputs before upload. Camera/library photos
+  // come through ImagePicker already (JPEG @0.8), but a high-res original from
+  // the Files/iCloud picker — including HEIC/HEIF — can exceed the edge fn's
+  // size cap or be a format Gemini rejects. Resizing to ~2000px @ JPEG 0.7
+  // keeps it well under the cap, normalizes HEIC/HEIF/PNG/WebP -> JPEG (always
+  // accepted by Gemini), and keeps the text legible. PDFs can't be transcoded
+  // client-side, so they're read and sent as-is.
+  let uploadUri = fileUri;
+  let uploadMime = mimeType;
+  if (mimeType.startsWith('image/')) {
+    try {
+      const out = await manipulateAsync(
+        fileUri,
+        [{ resize: { width: 2000 } }],
+        { compress: 0.7, format: SaveFormat.JPEG },
+      );
+      uploadUri = out.uri;
+      uploadMime = 'image/jpeg';
+    } catch {
+      // Manipulation failed — fall back to the original file/mime so the scan
+      // still attempts rather than hard-failing before it even uploads.
+    }
+  }
+
+  const base64 = await FileSystem.readAsStringAsync(uploadUri, {
     encoding: 'base64',
   });
 
@@ -68,7 +93,7 @@ export async function extractFromFile(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`,
     },
-    body: JSON.stringify({ base64, mimeType }),
+    body: JSON.stringify({ base64, mimeType: uploadMime }),
     signal,
   });
 

@@ -120,7 +120,7 @@ serve(async (req) => {
     //      b) Reject when the declared length exceeds the cap.
     //    Legitimate clients (supabase-js, native fetch with a JSON body)
     //    always set Content-Length, so this is safe to require.
-    const MAX_BODY_BYTES = 11 * 1024 * 1024;
+    const MAX_BODY_BYTES = 16 * 1024 * 1024;
     const contentLengthRaw = req.headers.get('content-length');
     if (!contentLengthRaw) {
       return jsonResponse({ error: 'Content-Length required' }, 411);
@@ -130,7 +130,7 @@ serve(async (req) => {
       return jsonResponse({ error: 'Invalid Content-Length' }, 400);
     }
     if (contentLength > MAX_BODY_BYTES) {
-      return jsonResponse({ error: 'File too large. Maximum size is approximately 7.5 MB.' }, 413);
+      return jsonResponse({ error: 'File too large. Maximum size is approximately 11 MB.' }, 413);
     }
 
     // 1. Validate JWT against Supabase auth
@@ -229,8 +229,8 @@ serve(async (req) => {
     if (typeof base64 !== 'string') {
       return jsonResponse({ error: 'base64 must be a string' }, 400);
     }
-    if (base64.length > 10_000_000) {
-      return jsonResponse({ error: 'File too large. Maximum size is approximately 7.5 MB.' }, 413);
+    if (base64.length > 15_000_000) {
+      return jsonResponse({ error: 'File too large. Maximum size is approximately 11 MB.' }, 413);
     }
     if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
       return jsonResponse({ error: `Unsupported file type: ${mimeType}` }, 400);
@@ -248,7 +248,11 @@ serve(async (req) => {
       ],
       generationConfig: {
         temperature: 0.1,
-        maxOutputTokens: 8192,
+        // 8192 truncated dense syllabi mid-JSON -> JSON.parse failed and the
+        // call was logged as a confusing 'parse_error'. gemini-2.5-flash
+        // supports up to 65536; 24576 comfortably fits a full multi-course
+        // syllabus's structured JSON.
+        maxOutputTokens: 24576,
       },
     };
 
@@ -283,6 +287,19 @@ serve(async (req) => {
 
     const data = await geminiResponse.json();
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    // Truncated output: even with the raised token budget, a very dense
+    // syllabus can still hit the cap, leaving the JSON cut off mid-stream.
+    // Detect it explicitly so the user gets an actionable message instead of
+    // an opaque parse_error, and so it's diagnosable separately in the logs.
+    if (data.candidates?.[0]?.finishReason === 'MAX_TOKENS') {
+      console.error('[parse-syllabus] Gemini hit MAX_TOKENS — output truncated');
+      await logCall(adminClient, userId, 'failed', Date.now() - startTime, 'max_tokens');
+      return jsonResponse(
+        { error: 'This syllabus is very dense and the response was cut off. Try scanning one course (or fewer pages) at a time.' },
+        502,
+      );
+    }
 
     if (!text) {
       console.error('[parse-syllabus] Gemini empty response:', JSON.stringify(data).slice(0, 500));
