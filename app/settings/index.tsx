@@ -1,11 +1,15 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import * as Haptics from 'expo-haptics';
 import { useSession } from '@/app/_layout';
 import { useAppStore } from '@/store/appStore';
 import { supabase } from '@/lib/supabase';
+import { restorePurchases } from '@/lib/purchases';
+import { rescheduleAllTaskReminders } from '@/lib/notifications';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
@@ -20,9 +24,58 @@ export default function SettingsScreen() {
   const name = displayName(session?.user, 'User');
   const showChangePassword = hasEmailPassword(session?.user);
   const isPro = useAppStore((s) => s.isPro);
+  const setIsPro = useAppStore((s) => s.setIsPro);
+  const setSubscriptionPlan = useAppStore((s) => s.setSubscriptionPlan);
   const themeMode = useAppStore((s) => s.themeMode);
   const themeModeLabel = themeMode === 'system' ? 'System' : themeMode === 'light' ? 'Light' : 'Dark';
   const router = useRouter();
+  const [restoring, setRestoring] = useState(false);
+
+  // Always-reachable Restore (mirrors the paywall's handler). The paywall is
+  // only reachable while !isPro, so without this a user whose subscription
+  // lapsed but whose cached isPro is still true had no way to re-validate
+  // until the next launch. Same race-guard + transient handling as the paywall.
+  const handleRestore = async () => {
+    if (restoring) return;
+    setRestoring(true);
+    try {
+      const { data: { session: startSession } } = await supabase.auth.getSession();
+      const expectedUserId = startSession?.user.id;
+      const entitlement = await restorePurchases();
+      const { data: { session: endSession } } = await supabase.auth.getSession();
+      if (endSession?.user.id !== expectedUserId) return;
+      // Transient network/server failure — don't write it or claim "no subscription".
+      if (entitlement.transient && !entitlement.is_pro) {
+        Alert.alert('Connection Issue', 'We couldn\'t reach the server to check your subscription. Please try again in a moment.');
+        return;
+      }
+      setIsPro(entitlement.is_pro);
+      setSubscriptionPlan(entitlement.plan);
+      if (entitlement.is_pro) {
+        if (expectedUserId) rescheduleAllTaskReminders(expectedUserId);
+        if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert('Restored', 'Your Pro subscription has been restored.');
+      } else if (entitlement.restoreError === 'linked_other_account') {
+        Alert.alert(
+          'Subscription Linked Elsewhere',
+          'This subscription is linked to a different Semora account. To use it on this device, sign in to the account that originally purchased it. If that account no longer exists, please contact support.',
+        );
+      } else {
+        Alert.alert('No Subscription Found', 'We couldn\'t find an active subscription for this account.');
+      }
+    } catch (err: any) {
+      Alert.alert('Restore Failed', err.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      setRestoring(false);
+    }
+  };
+
+  // Deep-link to Apple's subscription management (cancel / change plan).
+  const handleManageSubscription = () => {
+    Linking.openURL('https://apps.apple.com/account/subscriptions').catch(() => {
+      Alert.alert('Couldn\'t open', 'Open the App Store, tap your account, then Subscriptions to manage your plan.');
+    });
+  };
 
   // Reflect the user's *actual* enabled reminders on the settings row,
   // not just what's available on their tier. Filter Pro-only flags out
@@ -104,6 +157,27 @@ export default function SettingsScreen() {
             onPress={() => router.push('/settings/widgets')}
             last
           />
+        </View>
+
+        {/* Subscription — Restore is always reachable (the paywall is not, once
+            isPro is cached true); Manage opens Apple's subscription settings. */}
+        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Subscription</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <SettingsRow
+            icon="refresh"
+            label="Restore Purchases"
+            value={restoring ? 'Restoring…' : undefined}
+            onPress={handleRestore}
+            last={!isPro}
+          />
+          {isPro && (
+            <SettingsRow
+              icon="credit-card"
+              label="Manage Subscription"
+              onPress={handleManageSubscription}
+              last
+            />
+          )}
         </View>
 
         {/* Legal — Apple requires Terms + Privacy to be reachable outside the paywall. */}
