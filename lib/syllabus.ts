@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { extractFromFile, type SyllabusExtraction, type ExtractedItem } from '@/lib/gemini';
+import { extractFromFile, type SyllabusExtraction } from '@/lib/gemini';
 import * as FileSystem from 'expo-file-system/legacy';
 import { COURSE_COLORS, COURSE_ICONS, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';

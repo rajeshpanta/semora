@@ -728,7 +728,9 @@ export default function TodayScreen() {
               <Text style={[styles.emptySub, { color: colors.ink3 }]}>
                 Next exam: {nextExam.courses.name} · {nextExam.title} — {format(new Date(nextExam.due_date + 'T00:00:00'), 'EEE, MMM d')} ({nextExamDays === 0 ? 'today' : `${nextExamDays} day${nextExamDays > 1 ? 's' : ''}`}). A good time to start preparing.
               </Text>
-            ) : nextTask ? (
+            ) : !nextUp && nextTask ? (
+              // Only when the hero "Next Up" card isn't already showing this
+              // exact task (nextUp === upcomingTasks[0] whenever it exists).
               <Text style={[styles.emptySub, { color: colors.ink3 }]}>
                 Next up: {nextTask.title} ({nextTask.courses.name}) — due {format(new Date(nextTask.due_date + 'T00:00:00'), 'EEE, MMM d')}
               </Text>

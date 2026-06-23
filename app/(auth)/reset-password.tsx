@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator, ScrollView,
+  ActivityIndicator, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -14,7 +14,7 @@ import { useResponsive } from '@/lib/responsive';
 
 export default function ResetPasswordScreen() {
   const colors = useColors();
-  const { width, height, isLandscape, isWide } = useResponsive();
+  const { width, height, isWide } = useResponsive();
   const router = useRouter();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

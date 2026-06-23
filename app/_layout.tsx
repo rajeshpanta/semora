@@ -13,7 +13,6 @@ import 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import * as Localization from 'expo-localization';
-import { COLORS } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
 import { ThemeColorsProvider, useResolvedScheme, useColors } from '@/lib/theme';
 import { setQueryClient } from '@/lib/auth';

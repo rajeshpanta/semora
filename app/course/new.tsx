@@ -9,7 +9,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { useCreateCourse, useCreateCourseMeeting, useSemesters, useCourses } from '@/lib/queries';
 import { useAppStore } from '@/store/appStore';
-import { COURSE_COLORS, COURSE_ICONS, COLORS, SCREEN_MAX_WIDTH, type CourseIcon } from '@/lib/constants';
+import { COURSE_COLORS, COURSE_ICONS, COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { SemesterPicker } from '@/components/SemesterPicker';
 import { ScheduleEditor, type ScheduleBlock } from '@/components/ScheduleEditor';
 import { FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
