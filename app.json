@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rajeshpanta.syllabussnap",
-      "buildNumber": "15",
+      "buildNumber": "16",
       "appleTeamId": "7T9897GFKH",
       "usesAppleSignIn": true,
       "entitlements": {
@@ -57,8 +57,7 @@
       [
         "expo-calendar",
         {
-          "calendarPermission": "Semora needs calendar access to sync your task due dates.",
-          "remindersPermission": false
+          "calendarPermission": "Semora needs calendar access to sync your task due dates."
         }
       ],
       [
