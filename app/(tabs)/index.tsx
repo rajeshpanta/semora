@@ -112,6 +112,27 @@ export default function TodayScreen() {
       : { semesterId: null }
   );
 
+  // Forward-looking, exam-first signals so the Today tab is actionable even
+  // when nothing's due now: the next exam to prep for, the next thing due, and
+  // the rest of this week's roadmap. useTasks sorts by due_date then due_time,
+  // so upcomingTasks[0] is the soonest and overdueTasks[0] is the most overdue.
+  const todayKey = format(today, 'yyyy-MM-dd');
+  const weekEndKey = format(weekEnd, 'yyyy-MM-dd');
+  const { data: upcomingTasks = [] } = useTasks(
+    selectedSemesterId
+      ? { semesterId: selectedSemesterId, dueDateFrom: todayKey, isCompleted: false }
+      : { semesterId: null }
+  );
+  const nextExam = upcomingTasks.find((t) => t.type === 'exam') || null;
+  const nextTask = upcomingTasks[0] || null;
+  const nextExamDays = nextExam
+    ? Math.max(0, differenceInDays(new Date(nextExam.due_date + 'T00:00:00'), todayStart))
+    : null;
+  // Incomplete tasks due through the end of this week (today -> Sunday), in due order.
+  const thisWeekTasks = upcomingTasks.filter((t) => t.due_date <= weekEndKey);
+  // Most-overdue first (oldest due date) — the one to finish first.
+  const oldestOverdue = overdueTasks[0] || null;
+
   useEffect(() => {
     if (semesters.length === 0) return;
     if (!selectedSemesterId || !semesters.some((s) => s.id === selectedSemesterId)) {
@@ -320,19 +341,16 @@ export default function TodayScreen() {
     return d >= todayStr ? weekTasks.filter((t) => t.due_date === d && !t.is_completed).length : 0;
   });
 
-  // "This week" highlight — single actionable callout. Priority: next
-  // upcoming exam this week > heaviest day with 2+ tasks. Replaces the
-  // prior bar chart, which looked nice but didn't drive any decision.
-  const nextWeekExam = weekTasks
-    .filter((t) => t.type === 'exam' && !t.is_completed && t.due_date >= todayStr)
-    .sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
+  // "This week" highlight — single actionable callout. Priority: the next
+  // upcoming exam within ~2 weeks (this week OR next) so students start
+  // preparing early > heaviest day with 2+ tasks.
   let weekHighlight: { icon: string; tone: 'coral' | 'ink2'; text: string } | null = null;
-  if (nextWeekExam) {
-    const examDate = format(new Date(nextWeekExam.due_date + 'T00:00:00'), 'EEE MMM d');
+  if (nextExam && nextExamDays !== null && nextExamDays <= 14) {
+    const examDate = format(new Date(nextExam.due_date + 'T00:00:00'), 'EEE MMM d');
     weekHighlight = {
       icon: 'flag',
       tone: 'coral',
-      text: `Next exam: ${nextWeekExam.courses.name} · ${nextWeekExam.title} — ${examDate}`,
+      text: `Next exam: ${nextExam.courses.name} · ${nextExam.title} — ${examDate} (${nextExamDays === 0 ? 'today' : `${nextExamDays}d`}) · start preparing`,
     };
   } else {
     const heaviestIdx = dayBuckets.indexOf(Math.max(...dayBuckets));
@@ -696,11 +714,23 @@ export default function TodayScreen() {
           </View>
         ) : (
           <View style={[styles.emptyCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
-            <FontAwesome name="check-circle" size={24} color={colors.teal} />
-            <Text style={[styles.emptyText, { color: colors.ink3 }]}>You're free today!</Text>
-            {dueSoonTasks.length > 0 ? (
+            <FontAwesome name={oldestOverdue ? 'exclamation-circle' : 'check-circle'} size={24} color={oldestOverdue ? colors.coral : colors.teal} />
+            <Text style={[styles.emptyText, { color: oldestOverdue ? colors.ink : colors.ink3 }]}>
+              {oldestOverdue ? 'Nothing new due today' : "You're free today!"}
+            </Text>
+            {oldestOverdue ? (
+              // Not "free" if there's overdue work — point at the oldest first.
+              <Text style={[styles.emptySub, { color: colors.coral }]}>
+                You have {overdueTasks.length} overdue. Knock out the oldest first: {oldestOverdue.title} ({oldestOverdue.courses.name}) — {differenceInDays(todayStart, new Date(oldestOverdue.due_date + 'T00:00:00'))}d late.
+              </Text>
+            ) : nextExam && nextExamDays !== null && nextExamDays <= 14 ? (
+              // No overdue, free today — point at the next exam to prep for.
               <Text style={[styles.emptySub, { color: colors.ink3 }]}>
-                Next up: {dueSoonTasks[0].title} ({dueSoonTasks[0].courses.name}) — due {format(new Date(dueSoonTasks[0].due_date + 'T00:00:00'), 'EEE, MMM d')}
+                Next exam: {nextExam.courses.name} · {nextExam.title} — {format(new Date(nextExam.due_date + 'T00:00:00'), 'EEE, MMM d')} ({nextExamDays === 0 ? 'today' : `${nextExamDays} day${nextExamDays > 1 ? 's' : ''}`}). A good time to start preparing.
+              </Text>
+            ) : nextTask ? (
+              <Text style={[styles.emptySub, { color: colors.ink3 }]}>
+                Next up: {nextTask.title} ({nextTask.courses.name}) — due {format(new Date(nextTask.due_date + 'T00:00:00'), 'EEE, MMM d')}
               </Text>
             ) : stats && stats.pending === 0 && stats.completed > 0 ? (
               // Truly caught up: tasks have been done, nothing pending. Reward
@@ -872,6 +902,34 @@ export default function TodayScreen() {
               </Text>
             </View>
           )}
+
+          {/* The week's actual tasks in due order — the roadmap, not just
+              counts. Exams flagged; each row taps through to the task. */}
+          {thisWeekTasks.length > 0 && (
+            <View style={[styles.weekList, { borderTopColor: colors.line }]}>
+              {thisWeekTasks.map((task) => {
+                const td = new Date(task.due_date + 'T00:00:00');
+                const dayLabel = isDateToday(td) ? 'Today' : format(td, 'EEE');
+                return (
+                  <TouchableOpacity
+                    key={task.id}
+                    style={styles.weekListRow}
+                    onPress={() => router.push(`/task/${task.id}` as any)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.weekListDay, { color: task.type === 'exam' ? colors.coral : colors.ink3 }]}>{dayLabel}</Text>
+                    <View style={[styles.dot, { backgroundColor: task.courses.color }]} />
+                    <Text style={[styles.weekListTitle, { color: colors.ink }]} numberOfLines={1}>{task.title}</Text>
+                    {task.type === 'exam' && (
+                      <View style={[styles.weekExamBadge, { backgroundColor: colors.coral50 }]}>
+                        <Text style={[styles.weekExamBadgeText, { color: colors.coral }]}>EXAM</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         <View style={{ height: 40 }} />
@@ -978,6 +1036,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 0.5, borderTopColor: COLORS.line,
   },
   weekHighlightText: { flex: 1, fontSize: 13, fontWeight: '500' },
+  // This week's task list
+  weekList: { borderTopWidth: 0.5, borderTopColor: COLORS.line, marginTop: 4, paddingTop: 4 },
+  weekListRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
+  weekListDay: { width: 38, fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
+  weekListTitle: { flex: 1, fontSize: 14, fontWeight: '500', color: COLORS.ink },
+  weekExamBadge: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6 },
+  weekExamBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
   // Floating action button (Quick-add task)
   fab: {
     position: 'absolute',
