@@ -7,7 +7,7 @@ import type {
 } from '@/types/database';
 import { format, addDays } from 'date-fns';
 import { scheduleTaskReminders, cancelTaskReminders } from '@/lib/notifications';
-import { syncTaskToCalendar, removeTaskFromCalendar, isSyncEnabled } from '@/lib/calendarSync';
+import { syncTaskToCalendar, removeTaskFromCalendar, isSyncEnabled, isSyncTrackingActive } from '@/lib/calendarSync';
 
 // ── Query Keys ──────────────────────────────────────────────
 
@@ -314,7 +314,7 @@ export function useDeleteSemester() {
         .select('id, courses!inner(semester_id)')
         .eq('courses.semester_id', id);
       if (tasks?.length) {
-        const syncOn = isSyncEnabled();
+        const syncOn = isSyncTrackingActive();
         for (const t of tasks) {
           cancelTaskReminders(t.id).catch(() => {});
           if (syncOn) removeTaskFromCalendar(t.id).catch(() => {});
@@ -386,7 +386,7 @@ export function useDeleteCourse() {
         .select('id')
         .eq('course_id', id);
       if (tasks?.length) {
-        const syncOn = isSyncEnabled();
+        const syncOn = isSyncTrackingActive();
         for (const t of tasks) {
           cancelTaskReminders(t.id).catch(() => {});
           if (syncOn) removeTaskFromCalendar(t.id).catch(() => {});
@@ -612,7 +612,7 @@ export function useDeleteTask() {
     mutationFn: async (id: string) => {
       cancelTaskReminders(id).catch(() => {});
 
-      if (isSyncEnabled()) {
+      if (isSyncTrackingActive()) {
         removeTaskFromCalendar(id).catch(() => {});
       }
 
@@ -649,7 +649,7 @@ export function useToggleTaskComplete() {
       const courseName = (data as any).courses?.name || 'Course';
       if (is_completed) {
         cancelTaskReminders(id).catch(() => {});
-        if (isSyncEnabled()) {
+        if (isSyncTrackingActive()) {
           removeTaskFromCalendar(id).catch(() => {});
         }
       } else {

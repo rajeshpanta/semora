@@ -24,10 +24,11 @@ const ALLOWED_MIME_TYPES = [
   'image/webp',
 ];
 
-const EXTRACTION_PROMPT = `You are analyzing a course syllabus document. Extract the course information AND all deadlines.
+const EXTRACTION_PROMPT = `You are analyzing a document that is supposed to be an academic course syllabus. FIRST classify whether it actually is one, THEN extract the course information AND all deadlines.
 
 Return a single JSON object with this structure:
 {
+  "is_syllabus": true (boolean — true ONLY if this is an academic course syllabus, course outline, or class schedule that contains course info and/or graded deadlines. Set false for a receipt, invoice, article, form, random screenshot, menu, ID card, or any non-syllabus document. When false, set every other field to null or [] and do NOT invent any course data.),
   "course_name": "Introduction to Computer Science" (the full course name),
   "course_code": "CS 101" (short code if visible, or null),
   "instructor": "Prof. Smith" (instructor name if visible, or null),
@@ -67,6 +68,7 @@ Return a single JSON object with this structure:
 
 Extract ALL assignments, exams, quizzes, projects, readings, and deadlines you can find.
 For course_name, use the course code + full name if both are available (e.g., "CS 101 - Intro to Computer Science").
+If the document is NOT a course syllabus, return {"is_syllabus": false} with all other fields null/empty — never guess a course name, semester, or deadlines for a non-syllabus document.
 Return ONLY valid JSON. No markdown, no explanation.`;
 
 const corsHeaders = {
@@ -355,6 +357,26 @@ serve(async (req) => {
       return jsonResponse(
         { error: 'Failed to parse AI response. Please try again with a clearer document.' },
         502,
+      );
+    }
+
+    // 4b. Document-type gate. A receipt / random paper must NOT create a
+    // phantom course + semester (or burn a free scan). Every DB write happens
+    // later in processSyllabus, so returning HERE creates ZERO rows. Trip on
+    // an explicit is_syllabus===false (an older model that omits the field is
+    // unaffected) OR a totally empty extraction (no course name, no items, no
+    // meetings — nothing usable, almost certainly not a syllabus). 422 (not
+    // 402/403/P0001) so the client's isFreeLimitError never reads it as an upsell.
+    const nothingExtracted =
+      !result.course_name &&
+      (!Array.isArray(result.items) || result.items.length === 0) &&
+      (!Array.isArray(result.meetings) || result.meetings.length === 0);
+    if (result.is_syllabus === false || nothingExtracted) {
+      console.warn(`[parse-syllabus] Rejected non-syllabus (is_syllabus=${result.is_syllabus}, empty=${nothingExtracted})`);
+      await logCall(adminClient, userId, 'failed', Date.now() - startTime, result.is_syllabus === false ? 'not_syllabus' : 'empty_extraction');
+      return jsonResponse(
+        { error: "This doesn't look like a course syllabus. Try scanning your syllabus, course outline, or class schedule.", code: 'NOT_SYLLABUS' },
+        422,
       );
     }
 

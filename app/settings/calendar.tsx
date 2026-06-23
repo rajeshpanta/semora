@@ -197,7 +197,7 @@ export default function CalendarSyncSettings() {
         <View style={[styles.infoBox, { marginTop: 20, backgroundColor: colors.blue50 }]}>
           <FontAwesome name="info-circle" size={14} color={colors.blue} />
           <Text style={[styles.infoText, { color: colors.blue }]}>
-            New tasks you create will automatically appear in your calendar when sync is enabled. Deleting a task removes it from the calendar too.
+            New tasks you create will automatically appear in your calendar when sync is enabled. Deleting a task removes it from the calendar too. Changes you make directly in Apple Calendar won't sync back to Semora.
           </Text>
         </View>
       </View>

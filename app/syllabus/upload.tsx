@@ -269,6 +269,21 @@ export default function SyllabusUploadScreen() {
         );
         return;
       }
+      // Not a syllabus (receipt / random paper). The server classified it and
+      // created NOTHING (no course/semester, no scan burned) — show calm,
+      // distinct guidance instead of a scary "Scan Failed".
+      if (typeof error?.message === 'string' && error.message.includes("doesn't look like a course syllabus")) {
+        track('scan_not_syllabus', { screen: 'scan' });
+        Alert.alert(
+          'Not a syllabus',
+          error.message,
+          [
+            { text: 'Pick Another', onPress: () => router.back() },
+            { text: 'Try Again', onPress: () => handleProcess(), style: 'cancel' },
+          ],
+        );
+        return;
+      }
       // A real failure (network, Gemini, parse, timeout) — capture why.
       track('scan_failed', { screen: 'scan', reason: String(error?.message ?? error).slice(0, 200) });
       Alert.alert(

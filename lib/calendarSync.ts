@@ -375,6 +375,23 @@ export function isSyncEnabled(): boolean {
 }
 
 /**
+ * Whether calendar-sync TRACKING is on, independent of Pro. Cleanup — removing
+ * events for completed/deleted tasks — must keep working even after a Pro
+ * subscription lapses, otherwise a cancelled subscriber's iPhone calendar
+ * accumulates orphaned Semora events forever. Creating NEW events stays gated
+ * on isSyncEnabled() (Pro), since adding to the calendar is the paid feature;
+ * removing stale events is just hygiene.
+ */
+export function isSyncTrackingActive(): boolean {
+  if (Platform.OS === 'web') return false;
+  try {
+    return SecureStore.getItem(SYNCED_ENABLED_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Clear local calendar-sync references on sign-out so the next user
  * to sign in on the same device does NOT inherit the previous user's
  * calendar mapping. Doesn't delete the calendar itself — that belongs
