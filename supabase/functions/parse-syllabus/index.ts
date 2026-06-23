@@ -256,33 +256,70 @@ serve(async (req) => {
       },
     };
 
-    let geminiResponse: Response;
-    try {
-      geminiResponse = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(geminiBody),
-      });
-    } catch (err) {
-      console.error('[parse-syllabus] Gemini fetch failed:', err);
-      await logCall(adminClient, userId, 'failed', Date.now() - startTime, 'fetch_error');
-      return jsonResponse({ error: 'AI service unreachable. Please try again.' }, 502);
+    // Gemini intermittently returns 503 (model overloaded) and occasionally
+    // 429/5xx. A single no-retry call surfaced those to the user as a hard
+    // "AI processing failed (status 503)". Retry with backoff, and fall back
+    // to a secondary model if the primary stays overloaded, so a capacity
+    // blip self-heals instead of failing the scan. Non-retryable statuses
+    // (400/403 — bad request / auth) stop immediately; a fallback can't help.
+    const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+    const RETRYABLE = new Set([408, 429, 500, 502, 503, 504]);
+    const MAX_ATTEMPTS = 3;
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    let geminiResponse: Response | null = null;
+    let lastStatus = 0;
+    let networkError = false;
+
+    modelLoop:
+    for (const model of MODELS) {
+      // gemini-2.0-flash caps output at 8192 tokens; only 2.5+ supports the
+      // larger budget. Sending too-large a value to 2.0 risks a 400.
+      const reqBody = {
+        ...geminiBody,
+        generationConfig: {
+          ...geminiBody.generationConfig,
+          maxOutputTokens: model.startsWith('gemini-2.5') ? 24576 : 8192,
+        },
+      };
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        let resp: Response;
+        try {
+          resp = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(reqBody),
+          });
+        } catch (err) {
+          networkError = true;
+          console.warn(`[parse-syllabus] ${model} network error (attempt ${attempt}/${MAX_ATTEMPTS}):`, err);
+          if (attempt < MAX_ATTEMPTS) { await sleep(600 * attempt); continue; }
+          break; // exhausted this model -> try fallback
+        }
+        networkError = false;
+        if (resp.ok) { geminiResponse = resp; break modelLoop; }
+        lastStatus = resp.status;
+        const errBody = await resp.text().catch(() => '');
+        console.warn(`[parse-syllabus] ${model} HTTP ${resp.status} (attempt ${attempt}/${MAX_ATTEMPTS}):`, errBody.slice(0, 200));
+        if (RETRYABLE.has(resp.status)) {
+          if (attempt < MAX_ATTEMPTS) { await sleep(600 * attempt); continue; }
+          break; // retries exhausted on this model -> try fallback model
+        }
+        break modelLoop; // non-retryable (bad request / auth) — stop
+      }
     }
 
-    if (!geminiResponse.ok) {
-      const errorText = await geminiResponse.text().catch(() => '');
-      console.error(`[parse-syllabus] Gemini ${geminiResponse.status}:`, errorText);
-      await logCall(
-        adminClient,
-        userId,
-        'failed',
-        Date.now() - startTime,
-        `http_${geminiResponse.status}`,
-      );
-      return jsonResponse(
-        { error: `AI processing failed (status ${geminiResponse.status}). Please try again.` },
-        502,
-      );
+    if (!geminiResponse) {
+      const code = networkError ? 'fetch_error' : `http_${lastStatus || 0}`;
+      console.error(`[parse-syllabus] Gemini failed after retries+fallback: ${code}`);
+      await logCall(adminClient, userId, 'failed', Date.now() - startTime, code);
+      const msg = networkError
+        ? 'AI service unreachable. Please try again.'
+        : (lastStatus === 503 || lastStatus === 429)
+          ? 'The AI is busy right now — please try again in a minute.'
+          : `AI processing failed (status ${lastStatus}). Please try again.`;
+      return jsonResponse({ error: msg }, 502);
     }
 
     const data = await geminiResponse.json();
