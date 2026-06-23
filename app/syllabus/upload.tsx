@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { processSyllabus, type ProcessResult, FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
@@ -46,7 +47,7 @@ async function createDuplicateCourse(result: ProcessResult, userId: string): Pro
       .eq('user_id', userId)
       .eq('semester_id', result.semesterId);
     if ((count ?? 0) >= FREE_COURSE_LIMIT) {
-      throw new Error(`Free accounts support up to ${FREE_COURSE_LIMIT} courses per semester. Upgrade to Pro for unlimited courses.`);
+      throw new Error(`Free accounts support up to ${FREE_COURSE_LIMIT} courses per semester (this is separate from your scans). Upgrade to Pro for unlimited courses, or re-scan a course you already have.`);
     }
   }
 
@@ -86,6 +87,7 @@ export default function SyllabusUploadScreen() {
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
   const colors = useColors();
   const { isWide } = useResponsive();
+  const qc = useQueryClient();
 
   const [processing, setProcessing] = useState(false);
   const [status, setStatus] = useState('');
@@ -173,6 +175,10 @@ export default function SyllabusUploadScreen() {
 
       stopRotation();
       track('scan_completed', { screen: 'scan', count: result.extraction.items.length });
+      // processSyllabus just inserted the syllabus_uploads row, so the
+      // free-scan count changed. Refresh it now so the scan tab shows the new
+      // usage immediately instead of a stale "N free scans left".
+      qc.invalidateQueries({ queryKey: ['scanCount'] });
       setStep(3);
       setStatus('Found deadlines!');
 

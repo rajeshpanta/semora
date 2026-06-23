@@ -12,7 +12,8 @@ import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
-import { useSemesters, useScanCount, FREE_SCAN_LIMIT } from '@/lib/queries';
+import { useSemesters, useCourses, useScanCount, FREE_SCAN_LIMIT } from '@/lib/queries';
+import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
 
 export default function ScanScreen() {
   const colors = useColors();
@@ -23,7 +24,14 @@ export default function ScanScreen() {
   const isPro = useAppStore((s) => s.isPro);
   const qc = useQueryClient();
   const { data: semesters = [] } = useSemesters();
+  const { data: courses = [] } = useCourses(selectedSemesterId);
   const { data: scanCount = 0, isLoading: scanCountLoading } = useScanCount();
+
+  // The free tier has TWO separate caps — scans AND courses-per-semester — and
+  // a scan that extracts a NEW course trips the course cap even with scans
+  // left. Surfacing the course usage here stops that from reading as a
+  // contradictory "you have scans but it says upgrade" once the gate fires.
+  const atCourseLimit = !isPro && courses.length >= FREE_COURSE_LIMIT;
 
   // After a scan completes, syllabus_uploads is inserted by processSyllabus
   // and the server count goes up. Re-entering the scan tab without
@@ -254,6 +262,19 @@ export default function ScanScreen() {
           </View>
         ) : null}
 
+        {/* Course-cap heads-up — a DISTINCT limit from the scan count. Without
+            this, a free user at their course limit sees "free scans left" yet
+            gets an upgrade prompt when a new-course scan trips the course cap,
+            which reads as contradictory. */}
+        {atCourseLimit && (
+          <View style={[styles.courseCapNote, { backgroundColor: colors.amber50, borderColor: colors.amber }]}>
+            <FontAwesome name="info-circle" size={13} color={colors.amber} style={{ marginTop: 1 }} />
+            <Text style={[styles.courseCapText, { color: colors.ink2 }]}>
+              You're at the free limit of {FREE_COURSE_LIMIT} courses this semester. Scanning a <Text style={{ fontWeight: '700' }}>new</Text> course needs Pro — you can still re-scan a course you already have.
+            </Text>
+          </View>
+        )}
+
         {/* Scan frame */}
         <View style={[styles.scanFrame, { backgroundColor: colors.brand }]}>
           <View style={styles.frameCorners}>
@@ -365,6 +386,8 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, color: COLORS.ink2, marginTop: 4, lineHeight: 19 },
   scanCountPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, marginTop: 12 },
   scanCountText: { fontSize: 13, fontWeight: '600' },
+  courseCapNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 10, padding: 10, borderRadius: 12, borderWidth: 1 },
+  courseCapText: { flex: 1, fontSize: 12, lineHeight: 17 },
   scanFrame: { backgroundColor: COLORS.brand, borderRadius: 22, padding: 22, marginVertical: 18, alignItems: 'center' },
   frameCorners: { width: '100%', height: 128, justifyContent: 'center', alignItems: 'center', position: 'relative' },
   corner: { position: 'absolute', width: 24, height: 24, borderColor: '#fff', borderWidth: 2.5 },

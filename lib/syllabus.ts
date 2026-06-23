@@ -337,7 +337,7 @@ async function findOrCreateCourse(
       .eq('user_id', userId)
       .eq('semester_id', semesterId);
     if ((count ?? 0) >= FREE_COURSE_LIMIT) {
-      throw new Error(`Free accounts support up to ${FREE_COURSE_LIMIT} courses per semester. Upgrade to Pro for unlimited courses.`);
+      throw new Error(`Free accounts support up to ${FREE_COURSE_LIMIT} courses per semester (this is separate from your scans). Upgrade to Pro for unlimited courses, or re-scan a course you already have.`);
     }
   }
 

@@ -205,6 +205,11 @@ export const FREE_SCAN_LIMIT = 2;
 export function useScanCount() {
   return useQuery({
     queryKey: ['scanCount'],
+    // Always treat as stale so the count is re-fetched whenever the scan tab
+    // mounts/focuses (and on explicit invalidation after a scan completes).
+    // A 60s-cached count let the pill claim "free scans left" right after the
+    // user burned one — the server gate then disagreed, which read as a bug.
+    staleTime: 0,
     queryFn: async () => {
       const userId = await getUserId();
       const { count, error } = await supabase
