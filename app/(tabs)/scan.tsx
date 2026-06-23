@@ -270,7 +270,9 @@ export default function ScanScreen() {
           <View style={[styles.courseCapNote, { backgroundColor: colors.amber50, borderColor: colors.amber }]}>
             <FontAwesome name="info-circle" size={13} color={colors.amber} style={{ marginTop: 1 }} />
             <Text style={[styles.courseCapText, { color: colors.ink2 }]}>
-              You're at the free limit of {FREE_COURSE_LIMIT} courses this semester. Scanning a <Text style={{ fontWeight: '700' }}>new</Text> course needs Pro — you can still re-scan a course you already have.
+              {remainingScans > 0
+                ? `You have ${remainingScans} free scan${remainingScans === 1 ? '' : 's'} left, but you're at the free limit of ${FREE_COURSE_LIMIT} courses this semester. Re-scan a course you already have, or upgrade to Pro to add a new one.`
+                : `You've used your free scans and reached the ${FREE_COURSE_LIMIT}-course limit. Upgrade to Pro for unlimited scans and courses.`}
             </Text>
           </View>
         )}
