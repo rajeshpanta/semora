@@ -1,0 +1,216 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:'Fr7';src:url('file:///Users/smile/Desktop/semora/node_modules/@expo-google-fonts/fraunces/700Bold/Fraunces_700Bold.ttf');}
+@font-face{font-family:'Fr6';src:url('file:///Users/smile/Desktop/semora/node_modules/@expo-google-fonts/fraunces/600SemiBold/Fraunces_600SemiBold.ttf');}
+@font-face{font-family:'fa';src:url('file:///Users/smile/Desktop/semora/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome.ttf');}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:1024px;height:1366px;overflow:hidden;}
+.fa{font-family:'fa';font-style:normal;font-weight:normal;line-height:1;-webkit-font-smoothing:antialiased;}
+.stage{width:1024px;height:1366px;position:relative;overflow:hidden;background:#6845BD;}
+.glow{position:absolute;width:760px;height:760px;border-radius:50%;right:-240px;top:-220px;background:radial-gradient(circle,rgba(255,255,255,0.13),rgba(255,255,255,0) 70%);}
+.glow2{position:absolute;width:520px;height:520px;border-radius:50%;left:-200px;bottom:-180px;background:radial-gradient(circle,rgba(255,255,255,0.08),rgba(255,255,255,0) 70%);}
+.cap{position:relative;text-align:center;padding:48px 60px 0;}
+.capL1{font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:-1px;line-height:0.98;text-shadow:0 3px 18px rgba(40,16,90,0.28);}
+.capL2{font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;font-weight:800;color:#fff;text-transform:uppercase;letter-spacing:0px;line-height:1.0;margin-top:6px;text-shadow:0 3px 18px rgba(40,16,90,0.28);}
+.device{width:866px;margin:20px auto 0;background:#100F15;border-radius:46px;padding:15px;position:relative;box-shadow:0 46px 90px rgba(20,8,46,0.5),0 12px 30px rgba(20,8,46,0.32);}
+.device::after{content:'';position:absolute;left:50%;top:7px;transform:translateX(-50%);width:7px;height:7px;border-radius:50%;background:#2b2a33;}
+.screen{width:836px;height:1112px;overflow:hidden;border-radius:32px;background:#FAF9F5;position:relative;border:1px solid #000;}
+.app{width:414px;height:551px;transform:scale(2.0193);transform-origin:top left;position:relative;background:#FAF9F5;font-family:-apple-system,'Helvetica Neue',sans-serif;}
+.appbody{height:100%;}
+.rowborder{border-top:.5px solid rgba(28,27,31,0.08);}
+.chev{color:#8C8B94;font-size:12px;}
+/* status bar */
+.sbar{height:42px;display:flex;align-items:center;justify-content:space-between;padding:0 22px 0 24px;}
+.sbar .t{font:600 15px -apple-system;color:#1C1B1F;letter-spacing:.3px;}
+.sbar .r{display:flex;align-items:center;gap:7px;}
+/* generic */
+.h1{font-family:'Fr6';font-size:27px;color:#1C1B1F;letter-spacing:-.5px;}
+.sub2{font:400 14px -apple-system;color:#55555C;margin-top:4px;line-height:1.36;}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;margin-top:12px;font:600 13px -apple-system;}
+.pill-brand{background:#EEEDFE;color:#6B46C1;}
+.pill .fa{font-size:12px;}
+.scanframe{background:#6B46C1;border-radius:22px;padding:22px;margin:16px 0;text-align:center;}
+.corners{position:relative;height:104px;display:flex;align-items:center;justify-content:center;}
+.cn{position:absolute;width:24px;height:24px;border:2.5px solid #fff;}
+.tl{top:0;left:16px;border-right:0;border-bottom:0;border-top-left-radius:4px;}
+.tr{top:0;right:16px;border-left:0;border-bottom:0;border-top-right-radius:4px;}
+.bl{bottom:0;left:16px;border-right:0;border-top:0;border-bottom-left-radius:4px;}
+.br{bottom:0;right:16px;border-left:0;border-top:0;border-bottom-right-radius:4px;}
+.docmock{background:rgba(255,255,255,0.16);border-radius:6px;padding:12px;width:120px;display:flex;flex-direction:column;gap:5px;}
+.ml{height:3px;border-radius:1.5px;background:rgba(255,255,255,0.5);}
+.scanline{position:absolute;left:26px;right:26px;top:50%;height:2px;background:#FAC775;border-radius:1px;box-shadow:0 0 8px #FAC775;}
+.framelabel{font:600 14px -apple-system;color:rgba(255,255,255,0.72);letter-spacing:.5px;margin-top:8px;}
+.actions{display:flex;flex-direction:column;gap:8px;}
+.actionCard{display:flex;align-items:center;gap:14px;background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:14px;}
+.actionIcon{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.ic-brand{background:#EEEDFE;color:#6B46C1;}.ic-coral{background:#FAECE7;color:#D85A30;}.ic-teal{background:#E1F5EE;color:#0F6E56;}.ic-blue{background:#E6F1FB;color:#185FA5;}
+.actionTitle{font:500 14px -apple-system;color:#1C1B1F;}
+.actionSub{font:400 14px -apple-system;color:#8C8B94;margin-top:2px;}
+/* tab bar */
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:60px;display:flex;align-items:flex-start;justify-content:space-around;padding-top:7px;background:rgba(250,249,245,0.97);border-top:.5px solid rgba(28,27,31,0.08);}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;width:60px;}
+.tab .iw{width:36px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;color:#8C8B94;}
+.tab.active .iw{background:#EEEDFE;color:#6B46C1;}
+.tab .lbl{font:500 10px -apple-system;color:#8C8B94;}
+.tab.active .lbl{color:#6B46C1;}
+.fab{width:44px;height:44px;border-radius:14px;background:#6B46C1;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;margin-top:-6px;box-shadow:0 6px 14px rgba(107,70,193,0.4);}
+.tab.scan .lbl{margin-top:4px;}
+/* today */
+.eyelabel{font:600 12px -apple-system;color:#8C8B94;letter-spacing:1px;}
+.greeting{font-family:'Fr7';font-size:25px;color:#1C1B1F;margin-top:3px;letter-spacing:-.5px;}
+.semlabel{font:400 13px -apple-system;color:#8C8B94;margin-top:2px;}
+.secrow{margin:15px 0 8px;}
+.sectitle{font:600 13px -apple-system;color:#55555C;letter-spacing:.5px;}
+.sectitle.coral{color:#D85A30;}
+.overdueCard{background:#FAECE7;border:1px solid #D85A30;border-radius:18px;padding:0 14px;}
+.overdueRow{display:flex;align-items:center;gap:12px;padding:12px 0;}
+.cbx{width:20px;height:20px;border-radius:7px;border:1.5px solid #8C8B94;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.cbx-coral{border-color:#D85A30;}
+.cbx-done{background:#0F6E56;border-color:#0F6E56;color:#fff;font-size:9px;}
+.taskTitle{font:500 14px -apple-system;color:#1C1B1F;}
+.taskTitle.done{text-decoration:line-through;color:#8C8B94;}
+.taskmeta{display:flex;align-items:center;gap:6px;margin-top:3px;}
+.dot{width:7px;height:7px;border-radius:4px;}
+.taskcourse{font:400 13px -apple-system;color:#8C8B94;}
+.taskcourse.coral{color:#D85A30;}
+.odbadge{background:#fff;border-radius:8px;padding:3px 8px;font:600 12px -apple-system;color:#D85A30;}
+.hero{background:#6B46C1;border-radius:20px;padding:18px;margin-top:14px;overflow:hidden;position:relative;}
+.herotop{display:flex;justify-content:space-between;align-items:center;}
+.heroeye{font:800 12px -apple-system;color:rgba(255,255,255,0.88);letter-spacing:1.5px;}
+.herobadge{background:rgba(255,255,255,0.22);border-radius:999px;padding:3px 11px;font:700 11px -apple-system;color:#fff;letter-spacing:.5px;}
+.herotitle{font-family:'Fr7';font-size:21px;color:#fff;margin-top:10px;line-height:1.15;}
+.herosub{font:400 14px -apple-system;color:rgba(255,255,255,0.8);margin-top:6px;}
+.progressTrack{height:6px;border-radius:3px;background:rgba(28,27,31,0.08);margin-bottom:10px;overflow:hidden;}
+.progressFill{height:100%;border-radius:3px;background:#6B46C1;}
+.card{background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:0 14px;}
+.taskRow{display:flex;align-items:center;gap:12px;padding:12px 0;}
+.weekHi{display:flex;align-items:center;gap:10px;margin-top:14px;padding:13px 14px;background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:14px;}
+.weekHi .fa{color:#D85A30;font-size:14px;flex-shrink:0;}
+.weekHi span{font:500 13px -apple-system;color:#55555C;line-height:1.3;}
+/* course */
+.navbar{display:flex;align-items:center;justify-content:space-between;padding:2px 16px 8px;}
+.navback{font:400 15px -apple-system;color:#6B46C1;}
+.navtitle{font:600 16px -apple-system;color:#1C1B1F;}
+.courseHead{display:flex;flex-direction:row;align-items:center;gap:14px;background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:16px;margin-top:4px;}
+.courseIcon{width:48px;height:48px;border-radius:14px;background:#EEEDFE;color:#6B46C1;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.courseName{font-family:'Fr7';font-size:21px;color:#1C1B1F;letter-spacing:-.5px;}
+.courseInstr{font:400 13px -apple-system;color:#8C8B94;margin-top:1px;}
+.courseCounts{display:flex;align-items:center;gap:6px;font:400 12px -apple-system;flex-shrink:0;}
+.cdotsep{color:#C9C8CE;}
+.metaCard{background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:0 14px;margin-top:12px;}
+.metaRow{display:flex;align-items:center;gap:12px;padding:12px 0;}
+.metaIc{color:#8C8B94;font-size:15px;width:18px;text-align:center;}
+.metaT{font:600 13px -apple-system;color:#1C1B1F;}
+.metaS{font:400 13px -apple-system;color:#8C8B94;margin-top:1px;}
+.gradeCard{background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:16px;margin-top:12px;}
+.gradeTop{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+.gradeLbl{font:700 14px -apple-system;color:#8C8B94;letter-spacing:.5px;}
+.gradePct{font-family:'Fr7';font-size:30px;color:#1C1B1F;margin-top:2px;}
+.gradeBadge{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;display:flex;align-items:center;justify-content:center;font:800 24px -apple-system;}
+.gradeBarBg{height:8px;background:rgba(28,27,31,0.08);border-radius:4px;overflow:hidden;}
+.gradeBarFill{height:8px;border-radius:4px;background:linear-gradient(90deg,#3b82f6,#2563eb);}
+.gradeMeta{display:flex;justify-content:space-between;margin-top:6px;font:500 14px -apple-system;color:#8C8B94;}
+.gradeMetaR{color:#55555C;}
+.gradeCtx{background:#EEEDFE;border-radius:8px;padding:9px 10px;margin-top:8px;font:500 13px -apple-system;color:#6B46C1;line-height:1.35;}
+.whatif{border-top:.5px solid rgba(28,27,31,0.08);margin-top:14px;padding-top:12px;}
+.whatifHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.whatifTitle{font-family:'Fr6';font-size:16px;color:#1C1B1F;}
+.proPill{background:#6B46C1;color:#fff;border-radius:5px;padding:3px 7px;font:800 9px -apple-system;letter-spacing:.6px;}
+.whatifSub{font:400 13px -apple-system;color:#8C8B94;line-height:1.4;}
+.courseBar{position:absolute;left:0;right:0;bottom:0;height:54px;display:flex;align-items:center;justify-content:space-around;background:rgba(250,249,245,0.97);border-top:.5px solid rgba(28,27,31,0.08);}
+.cbItem{font:500 14px -apple-system;color:#55555C;display:flex;align-items:center;gap:6px;}
+.cbItem .fa{font-size:13px;}
+.cbAdd{font:600 14px -apple-system;color:#fff;background:#6B46C1;border-radius:10px;padding:8px 14px;display:flex;align-items:center;gap:6px;}
+.cbAdd .fa{font-size:12px;}
+/* calendar */
+.calheader{display:flex;justify-content:space-between;align-items:flex-end;}
+.caltitle{font-family:'Fr6';font-size:27px;color:#1C1B1F;letter-spacing:-.5px;}
+.monthrow{display:flex;align-items:center;gap:5px;margin-top:3px;}
+.monthsub{font:500 14px -apple-system;color:#55555C;}
+.modeToggle{display:flex;background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:9px;padding:3px;}
+.modeBtn{padding:5px 11px;border-radius:6px;font:500 13px -apple-system;color:#8C8B94;}
+.modeBtn.active{background:#1C1B1F;color:#fff;}
+.navrow{display:flex;justify-content:space-between;align-items:center;margin:14px 6px 12px;}
+.navrow .ar{color:#6B46C1;font-size:14px;}
+.todaylink{font:600 14px -apple-system;color:#6B46C1;}
+.daylabels{display:flex;margin-bottom:6px;}
+.daylabels span{flex:1;text-align:center;font:600 13px -apple-system;color:#8C8B94;letter-spacing:.6px;}
+.grid{display:flex;flex-wrap:wrap;}
+.cell{width:14.28%;display:flex;flex-direction:column;align-items:center;padding:3px 0;}
+.dayInner{width:34px;height:34px;border-radius:17px;display:flex;align-items:center;justify-content:center;font:400 14px -apple-system;color:#1C1B1F;}
+.dayInner.out{color:#C9C8CE;}.dayInner.wknd{color:#8C8B94;}
+.dayInner.today{background:#6B46C1;color:#fff;font-weight:600;}
+.dayInner.exam{background:#EEEDFE;color:#6B46C1;font-weight:600;}
+.cdots{display:flex;gap:2px;height:6px;margin-top:2px;justify-content:center;}
+.cdot{width:4px;height:4px;border-radius:2px;}
+.legend{display:flex;justify-content:center;gap:14px;margin:12px 0 14px;}
+.legItem{display:flex;align-items:center;gap:5px;}
+.legDot{width:7px;height:7px;border-radius:4px;}
+.legText{font:400 12px -apple-system;color:#8C8B94;}
+.agTitle{font:600 14px -apple-system;color:#55555C;margin-bottom:8px;}
+.agCard{background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:0 14px;}
+.agRow{display:flex;align-items:center;gap:12px;padding:11px 0;}
+.agTime{width:42px;text-align:center;}
+.agTimeT{font:600 14px -apple-system;color:#D85A30;}
+.agTimeD{font:400 11px -apple-system;color:#D85A30;}
+.agBar{width:3px;align-self:stretch;border-radius:2px;min-height:30px;}
+.agTaskT{font:500 14px -apple-system;color:#1C1B1F;}
+.agTaskC{font:400 13px -apple-system;color:#8C8B94;margin-top:2px;}
+/* me */
+.profileRow{display:flex;align-items:center;gap:14px;padding:6px 0;margin-bottom:18px;}
+.avatar{width:58px;height:58px;border-radius:29px;background:#6B46C1;color:#fff;display:flex;align-items:center;justify-content:center;font:600 22px -apple-system;}
+.profileName{font-family:'Fr6';font-size:20px;color:#1C1B1F;}
+.profileSub{font:400 14px -apple-system;color:#8C8B94;margin-top:2px;}
+.proCard{background:#1C1B1F;border-radius:22px;padding:22px;margin-bottom:18px;overflow:hidden;position:relative;}
+.proGlow{position:absolute;right:-30px;top:-30px;width:140px;height:140px;border-radius:70px;background:#6B46C1;opacity:.4;}
+.proLabel{display:flex;align-items:center;gap:6px;margin-bottom:8px;}
+.proLabel .fa{color:#CECBF6;font-size:11px;}
+.proLabel span{font:800 12px -apple-system;color:#CECBF6;letter-spacing:1.5px;}
+.proTitle{font-family:'Fr7';font-size:22px;color:#fff;line-height:1.27;max-width:250px;}
+.proPriceRow{display:flex;align-items:baseline;gap:8px;margin-top:16px;}
+.proPriceAmt{font:800 28px -apple-system;color:#fff;}
+.proPricePer{font:400 14px -apple-system;color:rgba(255,255,255,0.6);}
+.proBtn{background:#fff;color:#1C1B1F;border-radius:14px;padding:13px;text-align:center;font:700 15px -apple-system;margin-top:14px;}
+.proAlt{font:400 13px -apple-system;color:rgba(255,255,255,0.5);text-align:center;margin-top:10px;}
+.statsGrid{display:flex;gap:8px;margin-bottom:18px;}
+.statCard{flex:1;background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:12px;text-align:center;}
+.statNum{font:600 22px -apple-system;}
+.statLabel{font:500 14px -apple-system;color:#8C8B94;letter-spacing:.5px;margin-top:2px;}
+.settingsCard{background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:0 14px;}
+.settingsRow{display:flex;align-items:center;gap:12px;padding:13px 0;}
+.setIc{color:#55555C;font-size:16px;width:18px;text-align:center;}
+.setLbl{flex:1;font:400 14px -apple-system;color:#1C1B1F;}
+</style></head><body>
+<div class="stage"><div class="glow"></div><div class="glow2"></div>
+<div class="cap"><div class="capL1" style="font-size:90px">Plan</div><div class="capL2" style="font-size:48px">your semester</div></div>
+<div class="device"><div class="screen"><div class="app"><div class="sbar"><span class="t">9:41</span><span class="r">
+<svg width="17" height="11" viewBox="0 0 17 11"><rect x="0" y="7" width="3" height="4" rx="1" fill="#1C1B1F"/><rect x="4.5" y="5" width="3" height="6" rx="1" fill="#1C1B1F"/><rect x="9" y="2.5" width="3" height="8.5" rx="1" fill="#1C1B1F"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#1C1B1F"/></svg>
+<svg width="16" height="11" viewBox="0 0 16 12"><path fill="#1C1B1F" d="M8 2.6c2.5 0 4.8 1 6.5 2.6l-1.4 1.5C11.8 5.4 10 4.6 8 4.6S4.2 5.4 2.9 6.7L1.5 5.2C3.2 3.6 5.5 2.6 8 2.6zM8 6.4c1.4 0 2.7.6 3.7 1.5l-1.5 1.6C9.6 9 8.8 8.6 8 8.6s-1.6.4-2.2 .9L4.3 7.9C5.3 7 6.6 6.4 8 6.4zM8 9.9l1.6 1.7c-.4 .4-1 .4-1.3 0L8 9.9z"/></svg>
+<svg width="25" height="12" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3" fill="none" stroke="#1C1B1F" stroke-opacity="0.4"/><rect x="2" y="2" width="17" height="8" rx="1.5" fill="#1C1B1F"/><rect x="22.5" y="3.5" width="1.8" height="5" rx="0.9" fill="#1C1B1F" fill-opacity="0.5"/></svg>
+</span></div>
+  <div class="appbody" style="padding:14px 18px 0">
+    <div class="calheader">
+      <div><div class="caltitle">Calendar</div><div class="monthrow"><span class="monthsub">June 2026</span><i class="fa" style="color:#8C8B94;font-size:12px">&#xf0d7;</i></div></div>
+      <div class="modeToggle"><span class="modeBtn active">Month</span><span class="modeBtn">List</span></div>
+    </div>
+    <div class="navrow"><i class="fa ar">&#xf053;</i><span class="todaylink">Today</span><i class="fa ar">&#xf054;</i></div>
+    <div class="daylabels"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>
+    <div class="grid"><div class="cell"><div class="dayInner out">31</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">1</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">2</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">3</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">4</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">5</div><div class="cdots"></div></div><div class="cell"><div class="dayInner wknd">6</div><div class="cdots"><span class="cdot" style="background:#10b981"></span></div></div><div class="cell"><div class="dayInner wknd">7</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">8</div><div class="cdots"></div></div><div class="cell"><div class="dayInner today">9</div><div class="cdots"><span class="cdot" style="background:#fff"></span></div></div><div class="cell"><div class="dayInner">10</div><div class="cdots"><span class="cdot" style="background:#6366f1"></span></div></div><div class="cell"><div class="dayInner">11</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">12</div><div class="cdots"></div></div><div class="cell"><div class="dayInner wknd exam">13</div><div class="cdots"><span class="cdot" style="background:#10b981"></span></div></div><div class="cell"><div class="dayInner wknd">14</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">15</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">16</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">17</div><div class="cdots"><span class="cdot" style="background:#6366f1"></span><span class="cdot" style="background:#f59e0b"></span></div></div><div class="cell"><div class="dayInner">18</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">19</div><div class="cdots"></div></div><div class="cell"><div class="dayInner wknd">20</div><div class="cdots"><span class="cdot" style="background:#10b981"></span></div></div><div class="cell"><div class="dayInner wknd">21</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">22</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">23</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">24</div><div class="cdots"><span class="cdot" style="background:#6366f1"></span></div></div><div class="cell"><div class="dayInner">25</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">26</div><div class="cdots"></div></div><div class="cell"><div class="dayInner wknd">27</div><div class="cdots"></div></div><div class="cell"><div class="dayInner wknd">28</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">29</div><div class="cdots"></div></div><div class="cell"><div class="dayInner">30</div><div class="cdots"></div></div><div class="cell"><div class="dayInner out">1</div><div class="cdots"></div></div><div class="cell"><div class="dayInner out">2</div><div class="cdots"></div></div><div class="cell"><div class="dayInner out">3</div><div class="cdots"></div></div><div class="cell"><div class="dayInner out">4</div><div class="cdots"></div></div></div>
+    <div class="legend">
+      <div class="legItem"><span class="legDot" style="background:#10b981"></span><span class="legText">Biology 101</span></div>
+      <div class="legItem"><span class="legDot" style="background:#6366f1"></span><span class="legText">Calc II</span></div>
+      <div class="legItem"><span class="legDot" style="background:#f59e0b"></span><span class="legText">History 210</span></div>
+    </div>
+    <div class="agTitle">Today · 2 items</div>
+    <div class="agCard">
+      <div class="agRow rowborder"><div class="agTime"><div class="agTimeT">17:00</div><div class="agTimeD">DUE</div></div>
+        <div class="agBar" style="background:#f59e0b"></div><div style="flex:1"><div class="agTaskT">Essay Outline</div><div class="agTaskC">History 210</div></div><span class="cbx"></span></div>
+      <div class="agRow"><div class="agTime"><div class="agTimeT">23:59</div><div class="agTimeD">DUE</div></div>
+        <div class="agBar" style="background:#6366f1"></div><div style="flex:1"><div class="agTaskT">Problem Set 7</div><div class="agTaskC">Calc II</div></div><span class="cbx"></span></div>
+    </div>
+  </div>
+  <div class="tabbar">
+    <div class="tab "><div class="iw"><i class="fa">&#xf185;</i></div><div class="lbl">Today</div></div><div class="tab "><div class="iw"><i class="fa">&#xf02d;</i></div><div class="lbl">Courses</div></div>
+    <div class="tab scan"><div class="fab"><i class="fa">&#xf030;</i></div><div class="lbl">Scan</div></div>
+    <div class="tab active"><div class="iw"><i class="fa">&#xf073;</i></div><div class="lbl">Calendar</div></div><div class="tab "><div class="iw"><i class="fa">&#xf007;</i></div><div class="lbl">Me</div></div>
+  </div></div></div></div>
+</div></body></html>
