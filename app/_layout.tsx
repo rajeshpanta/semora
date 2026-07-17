@@ -21,6 +21,8 @@ import { rescheduleAllTaskReminders, cancelAllRemindersOnSignOut } from '@/lib/n
 import { registerForPushNotificationsAsync } from '@/lib/push';
 import { track } from '@/lib/analytics';
 import { clearLocalSyncState } from '@/lib/calendarSync';
+import { applyPendingReferral, hasActivePromoGrant } from '@/lib/referral';
+import { readPendingShareToken } from '@/lib/shareCourse';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -97,11 +99,21 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       // Transient = network/server hiccup, not a real answer. Writing it
       // would downgrade a paying user's Pro state until the next refresh.
       if (entitlement.transient) return;
+      // A referral promo grant makes a user Pro with NO entitlements row and no
+      // subscription — getServerEntitlement/refreshProStatus read only the
+      // entitlements table and therefore return is_pro:false for them. The
+      // server-side is_pro() already ORs promo_grants; mirror that here so a
+      // launch/refresh never strips a referred user's free month. Only check
+      // when the entitlement itself says not-Pro (a real subscription wins).
+      let isPro = entitlement.is_pro;
+      if (!isPro) {
+        try { if (await hasActivePromoGrant()) isPro = true; } catch {}
+      }
       const { data: { session: current } } = await supabase.auth.getSession();
       if (current?.user.id !== expectedUserId) return;
       const store = useAppStore.getState();
       const wasPro = store.isPro;
-      store.setIsPro(entitlement.is_pro);
+      store.setIsPro(isPro);
       store.setSubscriptionPlan(entitlement.plan);
       // Reschedule whenever Pro status CHANGES — scheduleTaskReminders reads isPro
       // at schedule time, so existing tasks' reminders go stale on a change:
@@ -115,7 +127,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       // paying user is never falsely stripped mid-renewal. Permission-gated +
       // concurrency-guarded internally; isPro is already written above, so the
       // reschedule reads the new status.
-      if (wasPro !== entitlement.is_pro) {
+      if (wasPro !== isPro) {
         rescheduleAllTaskReminders(expectedUserId);
       }
     };
@@ -474,7 +486,21 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         router.replace('/(auth)/sign-in');
       }
     } else if (session && (inAuthGroup || onOnboarding)) {
-      router.replace('/(tabs)');
+      // Freshly authenticated. Two deep-link flows may have parked intent while
+      // the user was signed out — resume them now instead of dropping the user
+      // on the tabs with nothing happening:
+      //   • A stashed invite code -> redeem the free Pro month (fire-and-forget;
+      //     the Me tab also calls this, and it's idempotent).
+      //   • A stashed share token -> reopen /join to finish importing the
+      //     classmate's course (the growth loop). This is the ONLY resume path,
+      //     so without it a signed-out friend's import silently dead-ends.
+      applyPendingReferral().catch(() => {});
+      const pendingShare = readPendingShareToken();
+      if (pendingShare) {
+        router.replace({ pathname: '/join', params: { token: pendingShare } } as any);
+      } else {
+        router.replace('/(tabs)');
+      }
     }
   }, [session, loading, segments, inPasswordReset, hasOnboarded]);
 

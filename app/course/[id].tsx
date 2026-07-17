@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, Alert, Platform, Keyboard, Linking,
+  ScrollView, ActivityIndicator, Alert, Platform, Keyboard, Linking, Share,
 } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +25,8 @@ import { MAX_SCAN_PAGES } from '@/lib/gemini';
 import { useColors } from '@/lib/theme';
 import { useResponsive, gridItemBasis } from '@/lib/responsive';
 import { formatMeetings, formatOfficeHours } from '@/lib/schedule';
+import { createShareLink } from '@/lib/shareCourse';
+import { track } from '@/lib/analytics';
 
 // One tappable row in the Study Tools card. Shows a PRO pill when locked so
 // the gating is legible before the tap routes to the paywall.
@@ -100,6 +102,9 @@ export default function CourseDetailScreen() {
   const [byAppointmentIds, setByAppointmentIds] = useState<Set<string>>(new Set());
   const [editingScale, setEditingScale] = useState(false);
   const [scaleRows, setScaleRows] = useState<GradeThreshold[]>([]);
+  // "Share this course" (Pro): create a copy-on-join link and hand it to the
+  // native Share sheet. Guarded so a double-tap doesn't mint two links.
+  const [sharing, setSharing] = useState(false);
 
   if (isLoading) {
     return <View style={[styles.loading, { backgroundColor: colors.paper }]}><ActivityIndicator size="large" color={colors.brand} /></View>;
@@ -415,6 +420,36 @@ export default function CourseDetailScreen() {
     }
   };
 
+  // Create a copy-on-join share link and open the native Share sheet. Pro
+  // only — the row routes free users to the paywall before we get here, but
+  // the server re-checks Pro (the createShareLink fn returns PRO_REQUIRED),
+  // so a stale-isPro client still can't send.
+  const handleShareCourse = async () => {
+    if (sharing) return;
+    setSharing(true);
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
+    try {
+      const { url } = await createShareLink(course.id);
+      track('share_course_created', { screen: 'course_detail', tasks: tasks.length });
+      await Share.share({
+        url,
+        message: `I set up ${course.name} in Semora — tap to add all its deadlines to your semester: ${url}`,
+      });
+    } catch (err: any) {
+      // Server rejected a free/stale-Pro caller — route to the paywall instead
+      // of a dead-end error, matching the app's gating pattern.
+      if (err?.code === 'PRO_REQUIRED') {
+        router.push({ pathname: '/paywall', params: { context: 'share_course' } } as any);
+        return;
+      }
+      Alert.alert('Couldn\'t create link', err?.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      setSharing(false);
+    }
+  };
+
   const pendingCount = tasks.filter((t) => !t.is_completed).length;
   const doneCount = tasks.filter((t) => t.is_completed).length;
   const displayColor = editing ? editColor : course.color;
@@ -629,6 +664,24 @@ export default function CourseDetailScreen() {
                   router.push({ pathname: '/tutor', params: { courseId: course.id } } as any);
                 } else {
                   router.push({ pathname: '/paywall', params: { context: 'tutor' } } as any);
+                }
+              }}
+            />
+            <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
+            {/* Share this course — copy-on-join. SENDING is Pro (free users get
+                the locked teaser → paywall); the recipient imports for free. */}
+            <StudyToolRow
+              icon="share-alt"
+              label="Share this course"
+              sub={sharing ? 'Creating link…' : "Send a classmate all its deadlines"}
+              accent={course.color}
+              locked={!isPro}
+              onPress={() => {
+                if (Platform.OS === 'ios') Haptics.selectionAsync();
+                if (isPro) {
+                  handleShareCourse();
+                } else {
+                  router.push({ pathname: '/paywall', params: { context: 'share_course' } } as any);
                 }
               }}
             />

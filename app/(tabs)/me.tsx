@@ -1,7 +1,8 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useSession } from '@/app/_layout';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTaskStats } from '@/lib/queries';
@@ -14,6 +15,8 @@ import { useEffect, useState } from 'react';
 import Constants from 'expo-constants';
 import { getProducts } from '@/lib/purchases';
 import { isEligibleForIntroOfferIOS } from 'react-native-iap';
+import { getMyCode, getRedemptionCount, inviteLink, applyPendingReferral, syncPromoPro } from '@/lib/referral';
+import { track } from '@/lib/analytics';
 
 export default function MeScreen() {
   const colors = useColors();
@@ -98,6 +101,59 @@ export default function MeScreen() {
     }
   };
 
+  // ── Invite friends (referral) ────────────────────────────────
+  // The Me tab is the canonical place to apply a code stashed pre-signup
+  // (a friend who tapped an invite link before creating an account) — it's
+  // hit on every account after onboarding, and applyPendingReferral is
+  // idempotent, so this needs no _layout wiring. Also reflect any active
+  // promo grant locally in case the launch entitlement read (entitlements
+  // table only) missed a referral month.
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [referralCount, setReferralCount] = useState(0);
+  const [sharingInvite, setSharingInvite] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Apply a stashed code first (may grant Pro), then load the code + count
+    // so "N friends joined" reflects a just-applied redemption too.
+    applyPendingReferral()
+      .catch(() => {})
+      .finally(() => {
+        syncPromoPro().catch(() => {});
+        getMyCode().then((c) => { if (!cancelled) setReferralCode(c); }).catch(() => {});
+        getRedemptionCount().then((n) => { if (!cancelled) setReferralCount(n); }).catch(() => {});
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleShareInvite = async () => {
+    if (sharingInvite) return;
+    // Lazily create the code if it wasn't loaded yet, so the button always works.
+    const code = referralCode ?? (await getMyCode());
+    if (!code) {
+      Alert.alert('Try again', 'We couldn\'t prepare your invite link. Please check your connection and try again.');
+      return;
+    }
+    if (!referralCode) setReferralCode(code);
+    setSharingInvite(true);
+    if (Platform.OS === 'ios') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    }
+    try {
+      const link = inviteLink(code);
+      await Share.share({
+        message: `Join me on Semora — the AI syllabus scanner that puts your whole semester on autopilot. Use my link and we both get a free month of Pro: ${link}`,
+      });
+      track('referral_shared', { screen: 'me' });
+    } catch (err: any) {
+      // Share.share rejects only if the sheet fails to present (user-dismiss
+      // doesn't reject on iOS), so anything here is a real failure.
+      Alert.alert('Couldn\'t share', err?.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      setSharingInvite(false);
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
@@ -163,6 +219,39 @@ export default function MeScreen() {
           </View>
           <FontAwesome name="chevron-right" size={12} color={colors.brand} />
         </TouchableOpacity>
+
+        {/* Invite friends — referral growth engine. Both sides get a free
+            month of Pro. Matches the shareCard styling; the Share button opens
+            the native sheet with semora://invite?code=... */}
+        <View style={[styles.inviteCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <View style={styles.inviteHeader}>
+            <View style={[styles.inviteIcon, { backgroundColor: colors.brand50 }]}>
+              <FontAwesome name="gift" size={16} color={colors.brand} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.inviteTitle, { color: colors.ink }]}>Invite friends</Text>
+              <Text style={[styles.inviteSub, { color: colors.ink3 }]}>
+                You both get a free month of Pro
+              </Text>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.inviteBtn, { backgroundColor: colors.brand }, sharingInvite && { opacity: 0.6 }]}
+            activeOpacity={0.85}
+            onPress={handleShareInvite}
+            disabled={sharingInvite}
+          >
+            <FontAwesome name="share" size={13} color="#fff" />
+            <Text style={styles.inviteBtnText}>Share invite link</Text>
+          </TouchableOpacity>
+
+          <Text style={[styles.inviteCount, { color: colors.ink3 }]}>
+            {referralCount === 0
+              ? 'No friends yet — share your link to get started'
+              : `${referralCount} friend${referralCount !== 1 ? 's' : ''} joined`}
+          </Text>
+        </View>
 
         {/* Stats */}
         <View style={styles.statsGrid}>
@@ -252,6 +341,15 @@ const styles = StyleSheet.create({
   shareIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
   shareTitle: { fontSize: 15, fontWeight: '700', color: COLORS.ink },
   shareSub: { fontSize: 12.5, color: COLORS.ink3, marginTop: 1 },
+  // Invite friends (referral)
+  inviteCard: { backgroundColor: COLORS.card, borderRadius: 18, padding: 14, marginBottom: 20, borderWidth: 0.5, borderColor: COLORS.line },
+  inviteHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
+  inviteIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: COLORS.brand50, alignItems: 'center', justifyContent: 'center' },
+  inviteTitle: { fontSize: 15, fontWeight: '700', color: COLORS.ink },
+  inviteSub: { fontSize: 12.5, color: COLORS.ink3, marginTop: 1 },
+  inviteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 44, borderRadius: 12, backgroundColor: COLORS.brand },
+  inviteBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  inviteCount: { fontSize: 12.5, color: COLORS.ink3, textAlign: 'center', marginTop: 10 },
   // Stats
   statsGrid: { flexDirection: 'row', gap: 8, marginBottom: 20 },
   statCard: { flex: 1, backgroundColor: COLORS.card, borderRadius: 18, padding: 12, alignItems: 'center', borderWidth: 0.5, borderColor: COLORS.line },

@@ -19,6 +19,13 @@ import {
   isMeetingSyncTrackingActive,
 } from '@/lib/calendarSync';
 import { exportSemesterIcs } from '@/lib/ics';
+import {
+  GOOGLE_CAL_ENABLED,
+  connectGoogleCalendar,
+  disconnectGoogleCalendar,
+  useGoogleCalStatus,
+  useInvalidateGoogleCalStatus,
+} from '@/lib/googleCalendar';
 
 export default function CalendarSyncSettings() {
   const colors = useColors();
@@ -31,6 +38,12 @@ export default function CalendarSyncSettings() {
   const [classSync, setClassSync] = useState(false);
   const [classSyncing, setClassSyncing] = useState(false);
   const [exporting, setExporting] = useState(false);
+  // Google Calendar sync (Pro) — one-way push to the user's Google account.
+  // Whole section hides behind GOOGLE_CAL_ENABLED (dark-launch) because the
+  // sensitive calendar scope needs Google OAuth-consent verification first.
+  const gcalStatus = useGoogleCalStatus();
+  const invalidateGcal = useInvalidateGoogleCalStatus();
+  const [gcalBusy, setGcalBusy] = useState(false);
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const isPro = useAppStore((s) => s.isPro);
   // Sync was enabled while Pro but the subscription has since lapsed — auto-sync
@@ -235,6 +248,79 @@ export default function CalendarSyncSettings() {
     }
   };
 
+  const gcalConnected = gcalStatus.data?.connected ?? false;
+
+  const handleGoogleToggle = async () => {
+    // Pro gate (teaser → paywall). Server also enforces PRO_REQUIRED, but gate
+    // here so free users see the upsell instead of a failed connect.
+    if (!isPro) {
+      Alert.alert('Pro Feature', 'Google Calendar sync is available with Semora Pro.', [
+        { text: 'Upgrade', onPress: () => router.push({ pathname: '/paywall', params: { context: 'google_calendar' } } as any) },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      return;
+    }
+    if (Platform.OS === 'web') {
+      Alert.alert('Not Available', 'Google Calendar sync is only available on iOS and Android.');
+      return;
+    }
+
+    if (gcalConnected) {
+      Alert.alert(
+        'Disconnect Google Calendar',
+        'Semora will stop syncing to your Google Calendar. Events already added stay in your Google account (you can delete them there).',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Disconnect',
+            style: 'destructive',
+            onPress: async () => {
+              setGcalBusy(true);
+              try {
+                await disconnectGoogleCalendar();
+                invalidateGcal();
+                track('google_cal_connected', { on: false, screen: 'settings_calendar' });
+              } catch (err: any) {
+                Alert.alert('Error', err?.message ?? 'Failed to disconnect Google Calendar.');
+              } finally {
+                setGcalBusy(false);
+              }
+            },
+          },
+        ],
+      );
+      return;
+    }
+
+    if (!selectedSemesterId) {
+      Alert.alert('No Semester', 'Please select a semester first before connecting Google Calendar.');
+      return;
+    }
+
+    setGcalBusy(true);
+    try {
+      const { taskCount } = await connectGoogleCalendar({
+        semesterId: selectedSemesterId,
+        includeMeetings: false,
+      });
+      invalidateGcal();
+      track('google_cal_connected', { on: true, screen: 'settings_calendar' });
+      track('google_cal_synced', { tasks: taskCount, screen: 'settings_calendar' });
+      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert('Connected', `${taskCount} task${taskCount !== 1 ? 's' : ''} synced to your Google Calendar.`);
+    } catch (err: any) {
+      // Silently ignore user-cancel (dismissing the Google sheet).
+      if (err?.code === 'SIGN_IN_CANCELLED') return;
+      if (err?.code === 'PRO_REQUIRED') {
+        router.push({ pathname: '/paywall', params: { context: 'google_calendar' } } as any);
+        return;
+      }
+      Alert.alert('Connection Failed', err?.message ?? 'Could not connect Google Calendar. Please try again.');
+    } finally {
+      setGcalBusy(false);
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]}>
@@ -329,6 +415,49 @@ export default function CalendarSyncSettings() {
             New tasks you create will automatically appear in your calendar when sync is enabled. Deleting a task removes it from the calendar too. Changes you make directly in Apple Calendar won't sync back to Semora.
           </Text>
         </View>
+
+        {GOOGLE_CAL_ENABLED && (
+          <>
+            <Text style={[styles.sectionTitle, { color: colors.ink2, marginTop: 24 }]}>Google Calendar</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+              <View style={styles.row}>
+                <FontAwesome name="google" size={18} color={colors.brand} style={{ width: 26 }} />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={[styles.rowLabel, { color: colors.ink }]}>Sync to Google Calendar</Text>
+                  <Text style={[styles.rowSub, { color: colors.ink3 }]}>
+                    {gcalConnected
+                      ? 'Tasks are pushed to your "Semora" Google calendar'
+                      : 'Push tasks to your Google account'}
+                  </Text>
+                </View>
+                {gcalBusy || gcalStatus.isLoading ? (
+                  <ActivityIndicator size="small" color={colors.brand} />
+                ) : !isPro ? (
+                  <TouchableOpacity onPress={handleGoogleToggle} activeOpacity={0.7}>
+                    <View style={[styles.proBadge, { backgroundColor: colors.brand }]}>
+                      <FontAwesome name="star" size={9} color="#fff" />
+                      <Text style={styles.proBadgeText}>PRO</Text>
+                    </View>
+                  </TouchableOpacity>
+                ) : (
+                  <Switch
+                    value={gcalConnected}
+                    onValueChange={handleGoogleToggle}
+                    trackColor={{ false: colors.line, true: colors.brand }}
+                    thumbColor="#fff"
+                  />
+                )}
+              </View>
+            </View>
+
+            <View style={[styles.infoBox, { backgroundColor: colors.blue50 }]}>
+              <FontAwesome name="info-circle" size={14} color={colors.blue} />
+              <Text style={[styles.infoText, { color: colors.blue }]}>
+                Semora creates a "Semora" calendar in your Google account and adds your incomplete tasks as events. Disconnecting stops syncing but keeps events already added.
+              </Text>
+            </View>
+          </>
+        )}
 
         <Text style={[styles.sectionTitle, { color: colors.ink2, marginTop: 24 }]}>Export</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
