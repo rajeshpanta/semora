@@ -26,6 +26,40 @@ import { useColors } from '@/lib/theme';
 import { useResponsive, gridItemBasis } from '@/lib/responsive';
 import { formatMeetings, formatOfficeHours } from '@/lib/schedule';
 
+// One tappable row in the Study Tools card. Shows a PRO pill when locked so
+// the gating is legible before the tap routes to the paywall.
+function StudyToolRow({
+  icon, label, sub, accent, locked, onPress,
+}: {
+  icon: string;
+  label: string;
+  sub: string;
+  accent: string;
+  locked: boolean;
+  onPress: () => void;
+}) {
+  const colors = useColors();
+  return (
+    <TouchableOpacity style={styles.studyToolRow} onPress={onPress} activeOpacity={0.7}>
+      <View style={[styles.studyToolIcon, { backgroundColor: accent + '18' }]}>
+        <FontAwesome name={icon as any} size={15} color={accent} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.detailValue, { color: colors.ink, fontWeight: '600' }]}>{label}</Text>
+        <Text style={[styles.detailEmpty, { color: colors.ink3, fontStyle: 'normal' }]}>{sub}</Text>
+      </View>
+      {locked ? (
+        <View style={[styles.lockedBadge, { backgroundColor: colors.brand, marginTop: 0 }]}>
+          <FontAwesome name="star" size={9} color="#fff" />
+          <Text style={styles.lockedBadgeText}>PRO</Text>
+        </View>
+      ) : (
+        <FontAwesome name="chevron-right" size={13} color={colors.ink3} />
+      )}
+    </TouchableOpacity>
+  );
+}
+
 export default function CourseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -562,6 +596,45 @@ export default function CourseDetailScreen() {
           )}
         </View>
 
+        {/* Study tools — Flashcards + AI Tutor. Both Pro; free users get a
+            locked row that routes to the paywall (consistent with the
+            grade-scale/what-if gate above). */}
+        {!editing && (
+          <View style={[styles.detailsCard, isWide && styles.cardPadWide, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <StudyToolRow
+              icon="clone"
+              label="Flashcards"
+              sub="Study with spaced repetition"
+              accent={course.color}
+              locked={!isPro}
+              onPress={() => {
+                if (Platform.OS === 'ios') Haptics.selectionAsync();
+                if (isPro) {
+                  router.push({ pathname: '/flashcards', params: { courseId: course.id } } as any);
+                } else {
+                  router.push({ pathname: '/paywall', params: { context: 'flashcards' } } as any);
+                }
+              }}
+            />
+            <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
+            <StudyToolRow
+              icon="magic"
+              label="Ask AI Tutor"
+              sub="Get help on this course"
+              accent={course.color}
+              locked={!isPro}
+              onPress={() => {
+                if (Platform.OS === 'ios') Haptics.selectionAsync();
+                if (isPro) {
+                  router.push({ pathname: '/tutor', params: { courseId: course.id } } as any);
+                } else {
+                  router.push({ pathname: '/paywall', params: { context: 'tutor' } } as any);
+                }
+              }}
+            />
+          </View>
+        )}
+
         {/* Edit color/icon */}
         {editing && (
           <View style={[styles.editCard, isWide && styles.cardPadWide, { backgroundColor: colors.card, borderColor: colors.line }]}>
@@ -673,6 +746,8 @@ const styles = StyleSheet.create({
   // keeps each card's original padding exactly.
   cardPadWide: { padding: 24 },
   detailRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  studyToolRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  studyToolIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   detailLabel: { fontSize: 11, fontWeight: '600', color: COLORS.ink3, letterSpacing: 0.3 },
   detailValue: { fontSize: 13, fontWeight: '500', color: COLORS.ink, marginTop: 1 },
   detailEmpty: { fontSize: 12, color: COLORS.ink3, fontStyle: 'italic', marginTop: 1 },

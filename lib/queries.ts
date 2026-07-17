@@ -87,6 +87,11 @@ export function useCourse(id: string) {
       if (error) throw error;
       return data as Course;
     },
+    // Guard against an empty id (e.g. the AI tutor in general, no-course mode):
+    // .eq('id','').single() throws on the uuid column and retries a doomed
+    // request. Every real caller passes a route-provided id, so this is a no-op
+    // for them.
+    enabled: !!id,
   });
 }
 

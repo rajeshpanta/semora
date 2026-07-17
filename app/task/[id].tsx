@@ -15,6 +15,7 @@ import { NotFound } from '@/components/NotFound';
 import { useColors } from '@/lib/theme';
 import { useResponsive, gridItemBasis } from '@/lib/responsive';
 import { formatLocalDate } from '@/lib/dates';
+import { track } from '@/lib/analytics';
 
 export default function TaskDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -437,6 +438,25 @@ export default function TaskDetailScreen() {
           </TouchableOpacity>
         )}
 
+        {/* Focus session — start a Pomodoro linked to this task. The
+            /pomodoro screen is Pro-gated (it shows the paywall teaser to free
+            users), so we route unconditionally and let it decide. Hidden for
+            completed tasks — there's nothing left to focus on. */}
+        {!editing && !task.is_completed && (
+          <TouchableOpacity
+            style={[styles.focusBtn, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]}
+            activeOpacity={0.8}
+            onPress={() => {
+              if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              track('pomodoro_entry_tapped', { screen: 'task_detail' });
+              router.push({ pathname: '/pomodoro', params: { taskId: task.id, title: task.title } } as any);
+            }}
+          >
+            <FontAwesome name="clock-o" size={16} color={colors.brand} />
+            <Text style={[styles.focusBtnText, { color: colors.brand }]}>Start focus session</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Actions */}
         {!editing && (
           <View style={styles.actionRow}>
@@ -508,6 +528,8 @@ const styles = StyleSheet.create({
   lateChangeText: { fontSize: 13, fontWeight: '600', color: COLORS.brand },
   toggleBtn: { height: 52, backgroundColor: '#22c55e', borderRadius: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 14 },
   toggleBtnDone: { backgroundColor: '#f1f5f9' },
+  focusBtn: { height: 50, borderRadius: 14, borderWidth: 1.5, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, marginBottom: 14 },
+  focusBtnText: { fontSize: 15, fontWeight: '700', color: COLORS.brand },
   toggleText: { fontSize: 16, fontWeight: '700', color: '#fff' },
   toggleTextDone: { color: '#64748b' },
   actionRow: { flexDirection: 'row', gap: 10 },
