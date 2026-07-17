@@ -42,10 +42,38 @@ enum DueLabel {
   }
 }
 
+// A single "due this week" row for the second widget. Kept minimal +
+// glanceable: title, a written-at-sync fallback label, the raw date for
+// render-time recomputation, and the course color.
+struct DueThisWeekItem: Codable, Identifiable {
+  // No stable id in the payload, so synthesize one from the content —
+  // Identifiable needs it for ForEach and duplicates are harmless here.
+  var id: String { "\(dueDate ?? "")-\(title)" }
+  var title: String
+  var dueLabel: String
+  var colorHex: String
+  var dueDate: String?
+}
+
+extension DueThisWeekItem {
+  // Reuse the Up Next label logic by projecting onto a WidgetTask.
+  func computedLabel(now: Date) -> String {
+    DueLabel.compute(
+      WidgetTask(id: id, title: title, course: "", colorHex: colorHex, dueLabel: dueLabel, dueDate: dueDate),
+      now: now
+    )
+  }
+}
+
 struct WidgetPayload: Codable {
   var updatedAt: String
   var dueTodayCount: Int
   var items: [WidgetTask]
+  // ── Additive fields (Wave 2) ──────────────────────────────────
+  // Optional so a payload written by an OLDER app version (no streak /
+  // dueThisWeek keys) still decodes cleanly into this newer struct.
+  var streak: Int?
+  var dueThisWeek: [DueThisWeekItem]?
 }
 
 enum SharedData {
@@ -75,6 +103,9 @@ func colorFromHex(_ hex: String) -> Color {
 
 extension Color {
   static let brand = Color(red: 107.0 / 255.0, green: 70.0 / 255.0, blue: 193.0 / 255.0)
+  // Matches COLORS.coral (#D85A30) — the Due-This-Week widget's accent,
+  // consistent with the coral "This week" tone used in-app.
+  static let coral = Color(red: 216.0 / 255.0, green: 90.0 / 255.0, blue: 48.0 / 255.0)
 }
 
 // ── Timeline ────────────────────────────────────────────────────
@@ -95,6 +126,13 @@ struct Provider: TimelineProvider {
           WidgetTask(id: "1", title: "Problem Set 3", course: "PSYCH 201", colorHex: "#6B46C1", dueLabel: "Today", dueDate: nil),
           WidgetTask(id: "2", title: "Midterm Exam", course: "CS 101", colorHex: "#D85A30", dueLabel: "Tomorrow", dueDate: nil),
           WidgetTask(id: "3", title: "Lab Report", course: "CHEM 110", colorHex: "#0F6E56", dueLabel: "In 3 days", dueDate: nil),
+        ],
+        streak: 4,
+        dueThisWeek: [
+          DueThisWeekItem(title: "Problem Set 3", dueLabel: "Today", colorHex: "#6B46C1", dueDate: nil),
+          DueThisWeekItem(title: "Midterm Exam", dueLabel: "Tomorrow", colorHex: "#D85A30", dueDate: nil),
+          DueThisWeekItem(title: "Reading Response", dueLabel: "In 3 days", colorHex: "#0F6E56", dueDate: nil),
+          DueThisWeekItem(title: "Lab Report", dueLabel: "In 4 days", colorHex: "#185FA5", dueDate: nil),
         ]
       )
     )
@@ -230,6 +268,164 @@ struct MediumView: View {
   }
 }
 
+// ── Due This Week views ─────────────────────────────────────────
+// Second widget: a grouped "due this week" list plus the current streak.
+// Reads the SAME App Group payload — the streak + dueThisWeek fields the
+// app writes alongside the Up Next items.
+
+struct StreakBadge: View {
+  let streak: Int
+  var body: some View {
+    // Only meaningful when > 0; callers guard, but be defensive.
+    HStack(spacing: 3) {
+      Text("🔥")
+        .font(.system(size: 10))
+      Text("\(streak)")
+        .font(.system(size: 10, weight: .heavy))
+        .foregroundStyle(Color.brand)
+    }
+    .padding(.horizontal, 6)
+    .padding(.vertical, 2)
+    .background(Color.brand.opacity(0.12))
+    .clipShape(Capsule())
+  }
+}
+
+struct DueRow: View {
+  let item: DueThisWeekItem
+  let now: Date
+  var body: some View {
+    HStack(spacing: 7) {
+      RoundedRectangle(cornerRadius: 2)
+        .fill(colorFromHex(item.colorHex))
+        .frame(width: 3, height: 22)
+      Text(item.title)
+        .font(.system(size: 12, weight: .semibold))
+        .lineLimit(1)
+      Spacer(minLength: 4)
+      let label = item.computedLabel(now: now)
+      Text(label)
+        .font(.system(size: 10, weight: .bold))
+        .foregroundStyle(label == "Today" || label == "Overdue" ? Color.coral : Color.secondary)
+    }
+  }
+}
+
+// Group the flat dueThisWeek list into ordered day sections using the
+// render-time label ("Today", "Tomorrow", "In N days", "Overdue"), so a
+// week with several deadlines reads as a plan, not a flat pile.
+struct GroupedDueList: View {
+  let items: [DueThisWeekItem]
+  let now: Date
+  let maxRows: Int
+
+  private var groups: [(label: String, rows: [DueThisWeekItem])] {
+    var order: [String] = []
+    var map: [String: [DueThisWeekItem]] = [:]
+    for it in items.prefix(maxRows) {
+      let label = it.computedLabel(now: now)
+      if map[label] == nil { order.append(label) }
+      map[label, default: []].append(it)
+    }
+    return order.map { ($0, map[$0] ?? []) }
+  }
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      ForEach(groups, id: \.label) { group in
+        Text(group.label.uppercased())
+          .font(.system(size: 8, weight: .heavy))
+          .foregroundStyle(.secondary)
+          .kerning(0.6)
+        ForEach(group.rows) { row in
+          DueRow(item: row, now: now)
+        }
+      }
+    }
+  }
+}
+
+struct DueEmptyStateView: View {
+  let streak: Int
+  var body: some View {
+    VStack(spacing: 4) {
+      Image(systemName: "calendar.badge.checkmark")
+        .font(.system(size: 22))
+        .foregroundStyle(Color.coral)
+      Text("Week's clear")
+        .font(.system(size: 12, weight: .semibold))
+      if streak > 0 {
+        StreakBadge(streak: streak)
+      } else {
+        Text("Nothing due in the next 7 days")
+          .font(.system(size: 9))
+          .foregroundStyle(.secondary)
+          .multilineTextAlignment(.center)
+      }
+    }
+  }
+}
+
+struct DueSmallView: View {
+  let payload: WidgetPayload?
+  let now: Date
+  var body: some View {
+    let items = payload?.dueThisWeek ?? []
+    let streak = payload?.streak ?? 0
+    if !items.isEmpty {
+      VStack(alignment: .leading, spacing: 5) {
+        HStack {
+          Text("THIS WEEK")
+            .font(.system(size: 9, weight: .heavy))
+            .foregroundStyle(Color.coral)
+            .kerning(1)
+          Spacer()
+          if streak > 0 { StreakBadge(streak: streak) }
+        }
+        Spacer(minLength: 0)
+        // Small: a compact count + the two soonest rows.
+        GroupedDueList(items: items, now: now, maxRows: 3)
+        Spacer(minLength: 0)
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    } else {
+      DueEmptyStateView(streak: streak)
+    }
+  }
+}
+
+struct DueMediumView: View {
+  let payload: WidgetPayload?
+  let now: Date
+  var body: some View {
+    let items = payload?.dueThisWeek ?? []
+    let streak = payload?.streak ?? 0
+    if !items.isEmpty {
+      VStack(alignment: .leading, spacing: 6) {
+        HStack {
+          Text("DUE THIS WEEK")
+            .font(.system(size: 9, weight: .heavy))
+            .foregroundStyle(Color.coral)
+            .kerning(1)
+          Spacer()
+          if streak > 0 {
+            StreakBadge(streak: streak)
+          } else {
+            Text("\(items.count) due")
+              .font(.system(size: 9, weight: .bold))
+              .foregroundStyle(.secondary)
+          }
+        }
+        GroupedDueList(items: items, now: now, maxRows: 6)
+        Spacer(minLength: 0)
+      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    } else {
+      DueEmptyStateView(streak: streak)
+    }
+  }
+}
+
 // ── Widget definition ───────────────────────────────────────────
 
 struct SemoraTodayWidget: Widget {
@@ -262,9 +458,42 @@ struct SemoraWidgetEntryView: View {
   }
 }
 
+struct SemoraDueThisWeekWidget: Widget {
+  let kind: String = "SemoraDueThisWeekWidget"
+
+  var body: some WidgetConfiguration {
+    // Reuses the same Provider (same App Group payload) as the Up Next
+    // widget — one write in the app feeds both widgets.
+    StaticConfiguration(kind: kind, provider: Provider()) { entry in
+      SemoraDueThisWeekEntryView(entry: entry)
+        .containerBackground(for: .widget) {
+          Color("$widgetBackground")
+        }
+    }
+    .configurationDisplayName("Due This Week")
+    .description("Everything due in the next 7 days, plus your streak.")
+    .supportedFamilies([.systemSmall, .systemMedium])
+  }
+}
+
+struct SemoraDueThisWeekEntryView: View {
+  @Environment(\.widgetFamily) var family
+  var entry: Provider.Entry
+
+  var body: some View {
+    switch family {
+    case .systemMedium:
+      DueMediumView(payload: entry.payload, now: entry.date)
+    default:
+      DueSmallView(payload: entry.payload, now: entry.date)
+    }
+  }
+}
+
 @main
 struct SemoraWidgetBundle: WidgetBundle {
   var body: some Widget {
     SemoraTodayWidget()
+    SemoraDueThisWeekWidget()
   }
 }

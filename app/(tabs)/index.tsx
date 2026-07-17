@@ -22,9 +22,11 @@ import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { displayName } from '@/lib/user';
 import { formatTimeOfDay, classTimeStatus } from '@/lib/schedule';
-import { updateTodayWidget } from '@/lib/widgetBridge';
+import { updateTodayWidget, type DueThisWeekItem } from '@/lib/widgetBridge';
 import { rescheduleAllTaskReminders, requestNotificationPermission } from '@/lib/notifications';
 import { track } from '@/lib/analytics';
+import { computeStreak } from '@/lib/streaks';
+import StudySuggestionsCard from '@/components/StudySuggestionsCard';
 
 // Max overdue rows shown before collapsing into a "Show N more" expander.
 // 5 covers the typical case (0–3) without truncating; only kicks in when
@@ -89,6 +91,9 @@ export default function TodayScreen() {
 
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
+  // New Today-tab features (streak chip) are Pro per the owner directive:
+  // free users see a locked teaser routing to /paywall.
+  const isPro = useAppStore((s) => s.isPro);
   const ahaPaywallShown = useAppStore((s) => s.ahaPaywallShown);
   const reviewRequested = useAppStore((s) => s.reviewRequested);
   const setReviewRequested = useAppStore((s) => s.setReviewRequested);
@@ -138,6 +143,40 @@ export default function TodayScreen() {
   const thisWeekTasks = upcomingTasks.filter((t) => t.due_date <= weekEndKey);
   // Most-overdue first (oldest due date) — the one to finish first.
   const oldestOverdue = overdueTasks[0] || null;
+
+  // All tasks in the semester (completed + incomplete) — the streak engine
+  // needs completed_at across past due dates, which the forward-looking
+  // queries above deliberately exclude. Same shape/key the Courses tab
+  // uses, so it shares cache and adds no extra network cost there.
+  const { data: allSemesterTasks = [], isSuccess: allTasksLoaded } = useTasks(
+    selectedSemesterId ? { semesterId: selectedSemesterId } : { semesterId: null },
+  );
+  // Habit signal. Pure + tz-safe; `today` is passed so it re-derives on the
+  // per-minute tick (cheap — small in-memory scan). Value is also fed to
+  // the home-screen widget below.
+  const streak = computeStreak(allSemesterTasks, today);
+
+  // "Due this week" list for the second home-screen widget: incomplete
+  // tasks due today → +7 days, soonest-first, capped for the widget. Built
+  // from upcomingTasks (already today-or-later, incomplete, due-ordered).
+  const dueThisWeekWidgetItems: DueThisWeekItem[] = (() => {
+    const cutoff = format(addDays(today, 7), 'yyyy-MM-dd');
+    return upcomingTasks
+      .filter((t) => t.due_date <= cutoff)
+      .slice(0, 8)
+      .map((t) => ({
+        title: t.title,
+        // Short glanceable label; the widget recomputes from dueDate at
+        // render time, so this is just the sync-time fallback.
+        dueLabel: t.due_date <= todayKey
+          ? 'Today'
+          : t.due_date === format(addDays(today, 1), 'yyyy-MM-dd')
+            ? 'Tomorrow'
+            : format(new Date(t.due_date + 'T00:00:00'), 'EEE'),
+        colorHex: t.courses?.color ?? '#6B46C1',
+        dueDate: t.due_date,
+      }));
+  })();
 
   useEffect(() => {
     if (semesters.length === 0) return;
@@ -299,8 +338,27 @@ export default function TodayScreen() {
     if (!dueSoonLoaded) return;
     const ts = format(new Date(), 'yyyy-MM-dd');
     const tm = format(addDays(new Date(), 1), 'yyyy-MM-dd');
-    updateTodayWidget(dueSoonTasks, ts, tm);
-  }, [dueSoonTasks, dueSoonLoaded]);
+    // Only feed the new streak/week fields once their source query has
+    // actually loaded — the [] default during loading must not overwrite a
+    // valid stored payload with an empty week or a zeroed streak.
+    // Streak + Due-This-Week are Pro-only surfaces. Feed them ONLY for Pro
+    // users — otherwise a free user who adds the Due-This-Week widget would
+    // see paid content the in-app chip gates away. Passing `{}` writes
+    // streak:0/dueThisWeek:[] (see widgetBridge), which also actively CLEARS
+    // those fields the moment a subscription lapses, rather than leaving stale
+    // Pro data on the home screen.
+    updateTodayWidget(
+      dueSoonTasks,
+      ts,
+      tm,
+      isPro && allTasksLoaded
+        ? { streak: streak.current, dueThisWeek: dueThisWeekWidgetItems }
+        : {},
+    );
+    // streak.current + the serialized week list are the meaningful deps;
+    // the arrays are re-derived each render but only change on data change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dueSoonTasks, dueSoonLoaded, allTasksLoaded, isPro, streak.current, JSON.stringify(dueThisWeekWidgetItems)]);
 
   // Ask for an App Store rating at a genuine happy moment — shared by two
   // triggers ('aha' below, 'task_milestone' further down) that both honor
@@ -430,6 +488,54 @@ export default function TodayScreen() {
   const showTomorrow =
     today.getHours() >= 17 && (tomorrowsClasses.length > 0 || tomorrowsTasks.length > 0);
 
+
+  // Streak chip for the progress area. Pro-gated per the owner directive:
+  //   - Free users: a compact locked teaser that sells the streak and
+  //     routes to /paywall (context 'streak').
+  //   - Pro, current > 0: "N-day streak 🔥".
+  //   - Pro, current === 0: a calm empty state (no shame for a light week).
+  // Returns null only when there's genuinely nothing to show yet (no task
+  // history at all) so the row doesn't render an orphan chip on a fresh
+  // account.
+  const renderStreakChip = () => {
+    if (!isPro) {
+      return (
+        <TouchableOpacity
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => {});
+            track('paywall_open', { screen: 'today', context: 'streak' });
+            router.push({ pathname: '/paywall', params: { context: 'streak' } } as any);
+          }}
+          activeOpacity={0.75}
+          style={[styles.streakChip, { backgroundColor: colors.brand50 }]}
+          accessibilityRole="button"
+          accessibilityLabel="Unlock study streaks with Pro"
+        >
+          <FontAwesome name="lock" size={10} color={colors.brand} />
+          <Text style={[styles.streakChipText, { color: colors.brand }]}>Streaks</Text>
+        </TouchableOpacity>
+      );
+    }
+    if (streak.current > 0) {
+      return (
+        <View style={[styles.streakChip, { backgroundColor: colors.brand50 }]}>
+          <Text style={[styles.streakChipText, { color: colors.brand }]}>
+            {streak.current}-day streak 🔥
+          </Text>
+        </View>
+      );
+    }
+    // Pro, no active streak — calm, non-judgmental nudge. Uses the card
+    // surface + a hairline border so it stays legible on the paper page
+    // background in both light and dark mode (paper-on-paper would vanish).
+    return (
+      <View style={[styles.streakChip, { backgroundColor: colors.card, borderWidth: 0.5, borderColor: colors.line }]}>
+        <Text style={[styles.streakChipText, { color: colors.ink3 }]}>
+          Start a streak
+        </Text>
+      </View>
+    );
+  };
 
   // Show loading spinner on initial data fetch (not on pull-to-refresh)
   if (semestersLoading && semesters.length === 0) {
@@ -656,6 +762,12 @@ export default function TodayScreen() {
           </View>
         )}
 
+        {/* Study suggestions — self-gating, self-fetching intelligence card
+            (built by another agent). Placed high, just below the Next Up
+            hero, so the "what should I work on" nudge sits above the fuller
+            week roadmap. Renders nothing when it has nothing to suggest. */}
+        <StudySuggestionsCard limit={3} />
+
         {/* Today's tasks — header shows progress when there's anything to do.
             The horizontal bar gives the momentum signal (vs SVG ring,
             which would require a native rebuild). Color jumps to teal
@@ -678,9 +790,16 @@ export default function TodayScreen() {
                     ? `Today · ${completedToday} of ${totalToday} done`
                     : 'Today'}
                 </Text>
-                {allDone && (
-                  <Text style={[styles.sectionTitle, { color: colors.teal }]}>✓ All done</Text>
-                )}
+                <View style={styles.sectionRowRight}>
+                  {allDone && (
+                    <Text style={[styles.sectionTitle, { color: colors.teal }]}>✓ All done</Text>
+                  )}
+                  {/* Habit streak chip. Hidden until there's task history so
+                      a brand-new account doesn't see an empty "Start a
+                      streak" pill before it can possibly have one — the
+                      locked teaser still shows for free users with history. */}
+                  {(allSemesterTasks.length > 0 || !isPro) && renderStreakChip()}
+                </View>
               </View>
               {totalToday > 0 && (
                 <View style={[styles.progressTrack, { backgroundColor: colors.line }]}>
@@ -911,8 +1030,27 @@ export default function TodayScreen() {
           </>
         )}
 
-        {/* This Week */}
-        <Text style={[styles.sectionTitle, { marginTop: 20, marginBottom: 10, color: colors.ink2 }]}>This week</Text>
+        {/* This Week — the header taps through to the fuller workload
+            dashboard. Kept as a header affordance (not the whole card) so
+            the inner task rows still tap through to their own tasks. Free
+            users navigate too; the dashboard renders its own paywall teaser. */}
+        <TouchableOpacity
+          style={[styles.sectionRow, { marginTop: 20, marginBottom: 10 }]}
+          onPress={() => {
+            Haptics.selectionAsync().catch(() => {});
+            track('dashboard_open', { screen: 'today', source: 'this_week' });
+            router.push('/dashboard' as any);
+          }}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="View your full workload dashboard"
+        >
+          <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>This week</Text>
+          <View style={styles.sectionRowRight}>
+            <Text style={[styles.weekViewLink, { color: colors.brand }]}>View workload</Text>
+            <FontAwesome name="chevron-right" size={11} color={colors.brand} />
+          </View>
+        </TouchableOpacity>
         <View style={[styles.weekCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <View style={styles.weekStats}>
             <View style={styles.weekStat}>
@@ -1025,7 +1163,16 @@ const styles = StyleSheet.create({
   heroSub: { fontSize: 14, color: 'rgba(255,255,255,0.82)', marginTop: 2 },
   // Section
   sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  sectionRowRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   sectionTitle: { fontSize: 14, fontWeight: '600', color: COLORS.ink2 },
+  // Streak chip (habit signal in the Today progress area)
+  streakChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 9, paddingVertical: 4, borderRadius: 12,
+  },
+  streakChipText: { fontSize: 12, fontWeight: '700', letterSpacing: 0.2 },
+  // "View workload" affordance on the This-week header
+  weekViewLink: { fontSize: 13, fontWeight: '600' },
   // Today's classes
   classCard: { backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 14, borderWidth: 0.5, borderColor: COLORS.line, marginBottom: 18 },
   classRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },

@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { differenceInDays } from 'date-fns';
 import { useAppStore } from '@/store/appStore';
+import { registerForPushNotificationsAsync } from '@/lib/push';
 
 // iOS silently drops new notifications once a single app has 64 pending.
 // Stay a few under to leave headroom for re-schedules that race with prune.
@@ -65,7 +66,17 @@ export async function requestNotificationPermission(): Promise<boolean> {
   const { status: existing } = await Notifications.getPermissionsAsync();
   if (existing === 'granted') return true;
   const { status } = await Notifications.requestPermissionsAsync();
-  return status === 'granted';
+  const granted = status === 'granted';
+  if (granted) {
+    // Permission JUST transitioned to granted (e.g. the priming prompt on the
+    // review screen after the first import). Enroll this device for server
+    // push now so a newly-onboarded user is reachable immediately, instead of
+    // only after the next cold launch / sign-in. Fires only on the transition
+    // (the already-granted case returns above), so it never spams. No-op
+    // unless a user is signed in; fire-and-forget.
+    registerForPushNotificationsAsync().catch(() => {});
+  }
+  return granted;
 }
 
 function getDueLabel(daysUntilDue: number): string {

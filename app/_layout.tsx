@@ -18,6 +18,7 @@ import { ThemeColorsProvider, useResolvedScheme, useColors } from '@/lib/theme';
 import { setQueryClient } from '@/lib/auth';
 import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateAfterPurchase, setupPurchaseListeners } from '@/lib/purchases';
 import { rescheduleAllTaskReminders, cancelAllRemindersOnSignOut } from '@/lib/notifications';
+import { registerForPushNotificationsAsync } from '@/lib/push';
 import { track } from '@/lib/analytics';
 import { clearLocalSyncState } from '@/lib/calendarSync';
 
@@ -79,6 +80,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // Tracks the currently-signed-in user id so SIGNED_OUT (where Supabase
+    // delivers session=null) can still delete THIS device's push token row
+    // for the user who just left. Updated whenever a session is present.
+    let lastSignedInUserId: string | null = null;
+
     // refreshProStatus can take seconds (Apple roundtrip). If the user
     // signs out / switches accounts mid-flight, the resolved entitlement
     // belongs to the *previous* user — writing it to the store would
@@ -194,12 +200,17 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       // converts at ~40-50%; the review screen primes it after the first
       // import instead ("Want reminders before these N deadlines?").
       if (session) {
+        lastSignedInUserId = session.user.id;
         saveTimezoneIfNeeded(session.user.id);
         // Reschedule on every cold launch (rescheduleAfter=true) so a device
         // that stays signed in picks up tasks created on OTHER devices since it
         // was last open — local reminders only live on devices that scheduled
         // them. (The foreground listener above covers mid-session changes.)
         refreshProForSession(session.user.id, true);
+        // Register this device for server-side re-engagement push (no-op unless
+        // notification permission is already granted; never prompts). Fire-and-
+        // forget — push infra must never gate launch.
+        registerForPushNotificationsAsync().catch(() => {});
       }
     }).catch(() => {
       setLoading(false);
@@ -235,10 +246,19 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           // re-create user A's reminders for user B after the cancel.
           cancelAllRemindersOnSignOut();
           clearLocalSyncState().catch(() => {});
+          // NOTE: the server push-token delete is NOT attempted here. By the
+          // time SIGNED_OUT fires the JWT is already gone, so an RLS-scoped
+          // delete would run anon and match zero rows. Deliberate sign-outs
+          // drop the token in lib/auth.ts:signOut() while still authed.
+          // Involuntary paths (token-refresh failure, server revocation) leave
+          // the row until the next sign-in on this device, whose upsert rebinds
+          // the same token to the new user — so it never pushes to a stranger.
         }
+        lastSignedInUserId = null;
       }
 
       if (session) {
+        lastSignedInUserId = session.user.id;
         saveTimezoneIfNeeded(session.user.id);
 
         if (_event === 'SIGNED_IN') {
@@ -248,6 +268,10 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           refreshProForSession(session.user.id, true);
           queryClient.removeQueries();
           track('signed_in', { screen: 'auth' });
+          // Bind this device's push token to the freshly signed-in user for
+          // server-side re-engagement. No-op unless permission is already
+          // granted (never prompts); fire-and-forget.
+          registerForPushNotificationsAsync().catch(() => {});
 
           // Persist the onboarding name to the account, but ONLY when the
           // account has no real name of its own (email users, Apple
@@ -561,6 +585,8 @@ function RootLayoutNav() {
               <Stack.Screen name="settings/help" options={{ title: 'Help & FAQ' }} />
               <Stack.Screen name="settings/calendar" options={{ title: 'Calendar Sync' }} />
               <Stack.Screen name="settings/widgets" options={{ title: 'Widgets' }} />
+              <Stack.Screen name="dashboard" options={{ title: 'Workload' }} />
+              <Stack.Screen name="share-semester" options={{ presentation: 'modal', headerShown: false }} />
               <Stack.Screen name="paywall" options={{ presentation: 'fullScreenModal', headerShown: false }} />
             </Stack>
           </AuthGate>

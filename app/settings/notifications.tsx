@@ -183,6 +183,12 @@ export default function NotificationSettings() {
         <Text style={[styles.hint, { color: colors.ink3 }]}>
           Reminders are scheduled when tasks are created or updated. Changes here apply to all your tasks.
         </Text>
+
+        <Text style={[styles.hint, { color: colors.ink3 }]}>
+          When notifications are on, Semora may also send occasional nudges — a heads-up about a busy
+          week of deadlines, or a reminder to set up your courses when a new semester begins. These are
+          infrequent and only sent while notifications are enabled above.
+        </Text>
       </View>
     </SafeAreaView>
   );

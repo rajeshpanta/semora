@@ -7,6 +7,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { endIAP } from '@/lib/purchases';
 import { clearLocalSyncState } from '@/lib/calendarSync';
 import { cancelAllRemindersOnSignOut } from '@/lib/notifications';
+import { unregisterPushToken } from '@/lib/push';
 
 /**
  * Web Client ID from Google Cloud Console (Authentication → Credentials).
@@ -153,6 +154,20 @@ export async function isAppleSignInAvailable(): Promise<boolean> {
 
 export async function signOut() {
   try {
+    // Drop THIS device's server push token BEFORE clearing the session. The
+    // delete is RLS-scoped to auth.uid(), which supabase.auth.signOut() below
+    // invalidates — so it must run while the JWT is still valid, else it hits
+    // as an anon request, matches zero rows, and the departed user keeps
+    // getting re-engagement pushes. getSession is a local read (no round-trip).
+    if (Platform.OS !== 'web') {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) await unregisterPushToken(session.user.id);
+      } catch {
+        // Best-effort — never block sign-out on token cleanup.
+      }
+    }
+
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   } finally {

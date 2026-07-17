@@ -135,12 +135,14 @@ const WIDGETS = [
     live: true,
   },
   {
+    // Shipped as the "Due This Week" WidgetKit widget (targets/widget) \u2014
+    // a grouped 7-day deadline list plus the current study streak.
     name: 'Due This Week',
-    subtitle: 'Plan your week ahead',
-    sizes: 'Medium \u00b7 Large',
+    subtitle: 'Everything due in the next 7 days, plus your streak',
+    sizes: 'Small \u00b7 Medium',
     gradient: ['#D85A30', '#F6A06B'] as [string, string],
     Preview: WeekWidgetPreview,
-    live: false,
+    live: true,
   },
   {
     name: 'Grade Summary',
@@ -182,10 +184,10 @@ export default function WidgetsSettings() {
             <Text style={styles.heroTitle}>Home Screen Widgets</Text>
             <View style={styles.comingSoonBadge}>
               <FontAwesome name="check-circle" size={11} color="#fff" />
-              <Text style={styles.comingSoonText}>Up Next is live</Text>
+              <Text style={styles.comingSoonText}>2 widgets live</Text>
             </View>
             <Text style={styles.heroSub}>
-              Long-press your Home Screen → tap + → search "Semora" to add the Up Next widget. More widgets are on the way.
+              Long-press your Home Screen → tap + → search "Semora" to add the Up Next or Due This Week widget. More widgets are on the way.
             </Text>
           </LinearGradient>
         </View>
@@ -219,7 +221,7 @@ export default function WidgetsSettings() {
         <View style={styles.footerInfo}>
           <View style={styles.footerRow}>
             <FontAwesome name="star" size={11} color={colors.brand} />
-            <Text style={[styles.footerText, { color: colors.ink3 }]}>Up Next (small & medium) is available now — more widget types coming</Text>
+            <Text style={[styles.footerText, { color: colors.ink3 }]}>Up Next and Due This Week (small & medium) are available now — more widget types coming</Text>
           </View>
           <View style={styles.footerRow}>
             <FontAwesome name="wifi" size={11} color={colors.ink3} />

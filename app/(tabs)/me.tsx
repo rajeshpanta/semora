@@ -146,6 +146,24 @@ export default function MeScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Share my semester — the organic-growth entry point. A tasteful
+            card under the Pro card; the screen itself gates Pro + shows the
+            locked teaser, so this is always tappable. */}
+        <TouchableOpacity
+          style={[styles.shareCard, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]}
+          activeOpacity={0.85}
+          onPress={() => router.push('/share-semester' as any)}
+        >
+          <View style={[styles.shareIcon, { backgroundColor: colors.brand }]}>
+            <FontAwesome name="share-square-o" size={16} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.shareTitle, { color: colors.ink }]}>Share my semester</Text>
+            <Text style={[styles.shareSub, { color: colors.ink3 }]}>A beautiful card of your whole term</Text>
+          </View>
+          <FontAwesome name="chevron-right" size={12} color={colors.brand} />
+        </TouchableOpacity>
+
         {/* Stats */}
         <View style={styles.statsGrid}>
           <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
@@ -229,6 +247,11 @@ const styles = StyleSheet.create({
   proAlt: { fontSize: 13, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 10 },
   proActiveBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
   proActiveText: { fontSize: 15, fontWeight: '700', color: COLORS.teal },
+  // Share my semester entry
+  shareCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.brand50, borderRadius: 18, padding: 14, marginBottom: 20, borderWidth: 0.5, borderColor: COLORS.brand100 },
+  shareIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
+  shareTitle: { fontSize: 15, fontWeight: '700', color: COLORS.ink },
+  shareSub: { fontSize: 12.5, color: COLORS.ink3, marginTop: 1 },
   // Stats
   statsGrid: { flexDirection: 'row', gap: 8, marginBottom: 20 },
   statCard: { flex: 1, backgroundColor: COLORS.card, borderRadius: 18, padding: 12, alignItems: 'center', borderWidth: 0.5, borderColor: COLORS.line },
