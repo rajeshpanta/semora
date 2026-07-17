@@ -1,0 +1,5 @@
+# Real syllabi may contain student/instructor PII — keep them out of the repo
+# by convention (see README.md §5). The three synthetic fixtures ARE committed.
+fixtures/real-*
+# Machine-readable run output (--json)
+*.results.json

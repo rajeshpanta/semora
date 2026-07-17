@@ -18,6 +18,11 @@ const RESET_KEY = 'semora_reset_in_progress';
 const ONBOARDED_KEY = 'semora_onboarded';
 const AHA_PAYWALL_KEY = 'semora_aha_paywall';
 const REVIEW_REQUESTED_KEY = 'semora_review_requested';
+// Lifetime count of task completions on this device — the fallback trigger
+// for the review prompt (10th completion). Device-level like the flags
+// above: the rating prompt is once-per-device regardless of account, so
+// the counter that feeds it must survive sign-out too.
+const TASKS_COMPLETED_KEY = 'semora_tasks_completed';
 // Captured during onboarding (before sign-in). userName personalizes the
 // greeting; defaultTerm pre-fills the first semester's name. Unlike the
 // one-time flags above these are USER personalization, not device state —
@@ -63,6 +68,12 @@ const initialInPasswordReset = getItem(RESET_KEY) === 'true';
 const initialOnboarded = getItem(ONBOARDED_KEY) === 'true';
 const initialAhaPaywallShown = getItem(AHA_PAYWALL_KEY) === 'true';
 const initialReviewRequested = getItem(REVIEW_REQUESTED_KEY) === 'true';
+const initialTasksCompleted = (() => {
+  const n = parseInt(getItem(TASKS_COMPLETED_KEY) ?? '', 10);
+  // Corrupt/missing value degrades to 0 — worst case the milestone prompt
+  // just needs a few more completions; never NaN-poisons the comparison.
+  return Number.isFinite(n) && n > 0 ? n : 0;
+})();
 const initialUserName = getItem(USER_NAME_KEY);
 const initialDefaultTerm = getItem(DEFAULT_TERM_KEY);
 const initialPainPoint = getItem(PAIN_POINT_KEY) as PainPoint | null;
@@ -88,6 +99,17 @@ interface AppState {
   setAhaPaywallShown: (v: boolean) => void;
   reviewRequested: boolean;
   setReviewRequested: (v: boolean) => void;
+  /**
+   * Lifetime task completions on this device (see TASKS_COMPLETED_KEY).
+   * Counts completion ACTIONS across ALL screens — incremented centrally in
+   * useToggleTaskComplete's success path (lib/queries.ts), which Today,
+   * Calendar, course detail, and task detail all share. Un-completing
+   * doesn't decrement, because it's an engagement signal for the review
+   * prompt, not a task tally.
+   * Device-level: intentionally NOT cleared by resetUserState.
+   */
+  tasksCompletedCount: number;
+  incrementTasksCompleted: () => void;
   userName: string | null;
   setUserName: (v: string | null) => void;
   defaultTerm: string | null;
@@ -156,6 +178,12 @@ export const useAppStore = create<AppState>((set) => ({
     set({ reviewRequested: v });
     if (v) { setItem(REVIEW_REQUESTED_KEY, 'true'); } else { deleteItem(REVIEW_REQUESTED_KEY); }
   },
+  tasksCompletedCount: initialTasksCompleted,
+  incrementTasksCompleted: () => set((s) => {
+    const next = s.tasksCompletedCount + 1;
+    setItem(TASKS_COMPLETED_KEY, String(next));
+    return { tasksCompletedCount: next };
+  }),
   userName: initialUserName,
   setUserName: (v) => {
     set({ userName: v });

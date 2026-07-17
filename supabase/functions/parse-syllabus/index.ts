@@ -6,14 +6,25 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
-
 const DAILY_CAP = 20;
+
+// Global 24h ceiling on Gemini calls across ALL users — a circuit breaker
+// that bounds worst-case API spend if the endpoint is abused at scale (many
+// accounts, each under their per-user cap). Overridable via env without a
+// redeploy of the constant.
+const GLOBAL_DAILY_CAP = (() => {
+  const raw = parseInt(Deno.env.get('GLOBAL_DAILY_CAP') ?? '', 10);
+  return Number.isFinite(raw) && raw > 0 ? raw : 1500;
+})();
 
 // Free tier: 2 successful extractions, lifetime (matches lib/queries
 // FREE_SCAN_LIMIT). Enforced server-side below so it can't be bypassed.
 const FREE_SCAN_LIMIT = 2;
+
+// Multi-page photo scans: each page is one inline_data part. 5 pages of
+// phone photos (~2-4MB base64 each) stays comfortably under the body cap
+// while covering effectively every paper syllabus.
+const MAX_PAGES = 5;
 
 const ALLOWED_MIME_TYPES = [
   'application/pdf',
@@ -23,6 +34,10 @@ const ALLOWED_MIME_TYPES = [
   'image/heif',
   'image/webp',
 ];
+
+// The multi-page `pages` shape is images-only: PDFs are inherently
+// multi-page already, so the client keeps them single-file.
+const ALLOWED_PAGE_MIME_TYPES = ALLOWED_MIME_TYPES.filter((t) => t !== 'application/pdf');
 
 const EXTRACTION_PROMPT = `You are analyzing a document that is supposed to be an academic course syllabus. FIRST classify whether it actually is one, THEN extract the course information AND all deadlines.
 
@@ -155,10 +170,47 @@ serve(async (req) => {
       return jsonResponse({ error: 'Gemini API key not configured on server' }, 500);
     }
 
-    // 2. Per-user rolling 24h rate limit (service role bypasses RLS)
+    // 2. Rate limits (service role bypasses RLS)
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
+    // 2a-pre. Global circuit breaker: total Gemini API attempts across ALL
+    // users in the last 24h. The per-user cap bounds one abusive account; this
+    // bounds the aggregate (many accounts each under their own cap) so
+    // worst-case daily Gemini spend has a hard ceiling. 503 (transient) —
+    // legit users retry later without burning anything.
+    //
+    // Only rows that represent an actual Gemini call count toward the cap.
+    // 'rate_limited' rows are written when the per-user cap rejects a request
+    // BEFORE any Gemini call (the only pre-call status we log) — counting
+    // them would let an attacker trip the app-wide breaker with cost-free
+    // rejected retries. Mirrors the per-user filter below.
+    //
+    // Known check-then-act race, accepted: rows only land AFTER the 10-60s
+    // Gemini round trip, so a coordinated parallel burst can overshoot the
+    // cap by at most the number of concurrently in-flight requests before any
+    // rows exist. Per-user caps and OAuth-only signup keep realistic overshoot
+    // small, and this is a coarse spend circuit breaker, not an exact quota —
+    // deliberately not worth in-flight accounting.
+    const { count: globalCount, error: globalErr } = await adminClient
+      .from('gemini_call_log')
+      .select('id', { count: 'exact', head: true })
+      .neq('status', 'rate_limited')
+      .gte('created_at', oneDayAgo);
+
+    if (globalErr) {
+      console.error('[parse-syllabus] Global cap check failed:', globalErr);
+      return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
+    }
+    if ((globalCount ?? 0) >= GLOBAL_DAILY_CAP) {
+      console.error(`[parse-syllabus] GLOBAL_DAILY_CAP hit: ${globalCount}/${GLOBAL_DAILY_CAP}`);
+      return jsonResponse(
+        { error: "We're seeing unusually high demand right now — please try again shortly." },
+        503,
+      );
+    }
+
+    // 2a. Per-user rolling 24h rate limit
     const { count: recentCount, error: countError } = await adminClient
       .from('gemini_call_log')
       .select('id', { count: 'exact', head: true })
@@ -195,20 +247,34 @@ serve(async (req) => {
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
     if (proResult !== true) {
-      // Count syllabus_uploads — the SAME source the client gate
-      // (lib/syllabus.ts) and the enforce_free_scan_limit DB trigger use. A
-      // divergent counter (e.g. gemini_call_log, which logs every round-trip
-      // even when extraction is abandoned / client-aborted) would 402 a
-      // legitimate user for a scan they never received.
-      const { count: scanCount, error: scanErr } = await adminClient
-        .from('syllabus_uploads')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId);
-      if (scanErr) {
-        console.error('[parse-syllabus] scan count failed:', scanErr);
+      // Effective scan count = max(server-side successes, client-inserted
+      // uploads). gemini_call_log 'success' rows are written by THIS function
+      // (step 6) only after a real syllabus was extracted and returned —
+      // NOT_SYLLABUS rejections and failures log status='failed' and never
+      // count. Counting only syllabus_uploads (as before) let a scripted
+      // client that skips the post-extraction insert take unlimited free
+      // extractions; counting only gemini_call_log would miss legacy scans
+      // made before this deploy. max() closes the bypass while legacy data
+      // still counts. Trade-off, accepted: an extraction the client abandons
+      // after the server returned it still counts — the paid Gemini work was
+      // done and delivered.
+      const [successRes, uploadRes] = await Promise.all([
+        adminClient
+          .from('gemini_call_log')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('status', 'success'),
+        adminClient
+          .from('syllabus_uploads')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId),
+      ]);
+      if (successRes.error || uploadRes.error) {
+        console.error('[parse-syllabus] scan count failed:', successRes.error ?? uploadRes.error);
         return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
       }
-      if ((scanCount ?? 0) >= FREE_SCAN_LIMIT) {
+      const scanCount = Math.max(successRes.count ?? 0, uploadRes.count ?? 0);
+      if (scanCount >= FREE_SCAN_LIMIT) {
         return jsonResponse(
           { error: `You've used your ${FREE_SCAN_LIMIT} free scans. Upgrade to Pro for unlimited syllabus scanning.` },
           402,
@@ -216,35 +282,82 @@ serve(async (req) => {
       }
     }
 
-    // 3. Parse and validate request body
-    let body: { base64?: string; mimeType?: string };
+    // 3. Parse and validate request body. Two accepted shapes:
+    //    legacy (1.2/1.3 clients + PDFs):  { base64, mimeType }
+    //    multi-page photo scans:           { pages: [{ base64, mimeType }, ...] }
+    //    Both shapes cost the user exactly one scan — the success log and the
+    //    client's upload row are per-request, not per-page.
+    //    Either shape may additionally carry apiVersion (new clients send 2)
+    //    to opt in to response features that shipped clients can't render.
+    let body: {
+      base64?: unknown;
+      mimeType?: unknown;
+      pages?: { base64?: unknown; mimeType?: unknown }[];
+      apiVersion?: unknown;
+    };
     try {
       body = await req.json();
     } catch {
       return jsonResponse({ error: 'Invalid request body' }, 400);
     }
 
-    const { base64, mimeType } = body;
-    if (!base64 || !mimeType) {
-      return jsonResponse({ error: 'Missing base64 or mimeType in request body' }, 400);
-    }
-    if (typeof base64 !== 'string') {
-      return jsonResponse({ error: 'base64 must be a string' }, 400);
-    }
-    if (base64.length > 15_000_000) {
-      return jsonResponse({ error: 'File too large. Maximum size is approximately 11 MB.' }, 413);
-    }
-    if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
-      return jsonResponse({ error: `Unsupported file type: ${mimeType}` }, 400);
+    // Dateless items (due_date: null) are a v2 response feature: shipped
+    // 1.2/1.3 review screens default-accept every item and then hard-block
+    // the save with a confusing "Check dates" alert on a null date. Only
+    // clients that declare apiVersion >= 2 (and render the "Needs a date"
+    // section) receive them; legacy requests get the old behavior — dateless
+    // items silently dropped below.
+    const clientAcceptsDatelessItems =
+      typeof body.apiVersion === 'number' && body.apiVersion >= 2;
+
+    let pages: { base64: string; mimeType: string }[];
+    if (Array.isArray(body.pages) && body.pages.length > 0) {
+      if (body.pages.length > MAX_PAGES) {
+        return jsonResponse({ error: `Too many pages. Maximum is ${MAX_PAGES} per scan.` }, 400);
+      }
+      for (const page of body.pages) {
+        if (!page || typeof page.base64 !== 'string' || !page.base64) {
+          return jsonResponse({ error: 'Each page needs a base64 string' }, 400);
+        }
+        if (typeof page.mimeType !== 'string' || !ALLOWED_PAGE_MIME_TYPES.includes(page.mimeType)) {
+          return jsonResponse({ error: `Unsupported page type: ${page.mimeType}. Pages must be images; send PDFs as a single file.` }, 400);
+        }
+      }
+      pages = body.pages as { base64: string; mimeType: string }[];
+    } else {
+      const { base64, mimeType } = body;
+      if (!base64 || !mimeType) {
+        return jsonResponse({ error: 'Missing base64 or mimeType in request body' }, 400);
+      }
+      if (typeof base64 !== 'string') {
+        return jsonResponse({ error: 'base64 must be a string' }, 400);
+      }
+      if (typeof mimeType !== 'string' || !ALLOWED_MIME_TYPES.includes(mimeType)) {
+        return jsonResponse({ error: `Unsupported file type: ${mimeType}` }, 400);
+      }
+      pages = [{ base64, mimeType }];
     }
 
-    // 4. Call Gemini
+    // Same total-payload ceiling regardless of shape — 5 pages share the
+    // budget one PDF used to have, so multi-page can't inflate Gemini cost
+    // or edge-function memory beyond the existing cap.
+    const totalBase64Chars = pages.reduce((sum, p) => sum + p.base64.length, 0);
+    if (totalBase64Chars > 15_000_000) {
+      return jsonResponse({ error: 'File too large. Maximum size is approximately 11 MB.' }, 413);
+    }
+
+    // 4. Call Gemini — one inline_data part per page, prompt first. For
+    //    multi-page scans, tell the model the images are one document so it
+    //    doesn't treat each photo as a separate syllabus.
+    const promptText = pages.length > 1
+      ? `${EXTRACTION_PROMPT}\n\nThe ${pages.length} images that follow are sequential pages of the SAME syllabus document. Read them together as one document and return ONE combined JSON object.`
+      : EXTRACTION_PROMPT;
     const geminiBody = {
       contents: [
         {
           parts: [
-            { text: EXTRACTION_PROMPT },
-            { inline_data: { mime_type: mimeType, data: base64 } },
+            { text: promptText },
+            ...pages.map((p) => ({ inline_data: { mime_type: p.mimeType, data: p.base64 } })),
           ],
         },
       ],
@@ -270,6 +383,9 @@ serve(async (req) => {
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
     let geminiResponse: Response | null = null;
+    // Which model actually answered — returned to the client so parse_runs
+    // records the real model (fallback included) instead of a hardcoded name.
+    let servedModel = '';
     let lastStatus = 0;
     let networkError = false;
 
@@ -300,7 +416,7 @@ serve(async (req) => {
           break; // exhausted this model -> try fallback
         }
         networkError = false;
-        if (resp.ok) { geminiResponse = resp; break modelLoop; }
+        if (resp.ok) { geminiResponse = resp; servedModel = model; break modelLoop; }
         lastStatus = resp.status;
         const errBody = await resp.text().catch(() => '');
         console.warn(`[parse-syllabus] ${model} HTTP ${resp.status} (attempt ${attempt}/${MAX_ATTEMPTS}):`, errBody.slice(0, 200));
@@ -396,22 +512,61 @@ serve(async (req) => {
       );
     };
 
+    // Semester dates are validated here (before the items pass) because the
+    // plausibility window below prefers them when present.
+    const semesterStart = isValidDate(result.semester_start) ? result.semester_start : null;
+    const semesterEnd = isValidDate(result.semester_end) ? result.semester_end : null;
+
+    // Date-plausibility window. Professors recycle last year's PDFs — a
+    // prior-year date passes format validation but is almost certainly wrong
+    // for THIS import. Items outside the window are flagged (date_suspect),
+    // never dropped: the review screen warns and the user decides. YYYY-MM-DD
+    // strings compare correctly lexicographically, so the window bounds stay
+    // strings; UTC date math avoids the edge runtime's timezone shifting a day.
+    const addDaysIso = (iso: string, days: number): string => {
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+    };
+    const todayIso = new Date().toISOString().slice(0, 10);
+    // With both semester dates: the term itself ±45d (early postings, finals
+    // week spillover). Without: a generous window around today that admits a
+    // full upcoming term but flags clearly-stale years.
+    const windowStart = semesterStart && semesterEnd ? addDaysIso(semesterStart, -45) : addDaysIso(todayIso, -120);
+    const windowEnd = semesterStart && semesterEnd ? addDaysIso(semesterEnd, 45) : addDaysIso(todayIso, 300);
+
+    // For apiVersion >= 2 clients, items keep flowing through even without a
+    // parseable date — "Final Exam — date TBA" used to vanish here silently.
+    // due_date: null tells the new review screen to park it in the "Needs a
+    // date" section. Legacy clients still get dateless items filtered out
+    // (see clientAcceptsDatelessItems above). date_suspect stays
+    // unconditional — old clients ignore unknown fields harmlessly.
     const items = (result.items || [])
-      .filter((item: any) => item.title && isValidDate(item.due_date))
-      .map((item: any) => ({
-        title: item.title,
-        type: ['assignment', 'quiz', 'exam', 'project', 'reading', 'other'].includes(item.type)
-          ? item.type
-          : 'other',
-        due_date: item.due_date,
-        due_time: item.due_time && /^([01]\d|2[0-3]):[0-5]\d$/.test(item.due_time) ? item.due_time : null,
-        weight: typeof item.weight === 'number' ? item.weight : null,
-        description: item.description || null,
-        confidence:
-          typeof item.confidence === 'number'
-            ? Math.min(Math.max(item.confidence, 0), 1)
-            : 0.5,
-      }));
+      .filter((item: any) => item.title)
+      .map((item: any) => {
+        const dueDate = isValidDate(item.due_date) ? item.due_date : null;
+        return {
+          title: item.title,
+          type: ['assignment', 'quiz', 'exam', 'project', 'reading', 'other'].includes(item.type)
+            ? item.type
+            : 'other',
+          due_date: dueDate,
+          due_time: item.due_time && /^([01]\d|2[0-3]):[0-5]\d$/.test(item.due_time) ? item.due_time : null,
+          weight: typeof item.weight === 'number' ? item.weight : null,
+          description: item.description || null,
+          confidence:
+            typeof item.confidence === 'number'
+              ? Math.min(Math.max(item.confidence, 0), 1)
+              : 0.5,
+          // Optional flag — omitted when in-window so legacy clients (which
+          // ignore unknown fields anyway) see the smallest possible delta.
+          ...(dueDate && (dueDate < windowStart || dueDate > windowEnd)
+            ? { date_suspect: true }
+            : {}),
+        };
+      })
+      // Legacy-shape requests (no apiVersion marker) drop dateless items,
+      // exactly matching the pre-v2 behavior those clients were built against.
+      .filter((item: any) => clientAcceptsDatelessItems || item.due_date !== null);
 
     // Strict per-row validation for the structured schedule blocks. Bad
     // rows are dropped; partial extraction is preferred over rejecting
@@ -456,12 +611,12 @@ serve(async (req) => {
       meetings,
       office_hours_blocks,
       semester_name: result.semester_name || null,
-      // Validate before persisting — these go straight to a Postgres
-      // `date` column and a bad string (e.g. "Fall 2026") would 22007 on
-      // insert. The isValidDate check also catches Gemini-mangled values
+      // Validated above (semesterStart/semesterEnd) — these go straight to a
+      // Postgres `date` column and a bad string (e.g. "Fall 2026") would
+      // 22007 on insert. isValidDate also catches Gemini-mangled values
       // like 2026-02-30. Null is fine for both fields.
-      semester_start: isValidDate(result.semester_start) ? result.semester_start : null,
-      semester_end: isValidDate(result.semester_end) ? result.semester_end : null,
+      semester_start: semesterStart,
+      semester_end: semesterEnd,
       grade_scale:
         Array.isArray(result.grade_scale) && result.grade_scale.length > 0
           ? result.grade_scale
@@ -469,6 +624,9 @@ serve(async (req) => {
               .sort((a: any, b: any) => b.min - a.min)
           : null,
       items,
+      // Telemetry: the model that actually answered (primary or fallback).
+      // The client writes this to parse_runs.gemini_model.
+      gemini_model: servedModel || null,
     };
 
     // 6. Log success and return

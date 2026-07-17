@@ -16,12 +16,60 @@ import {
   type EventSubscription,
 } from 'react-native-iap';
 import { supabase } from '@/lib/supabase';
+import { track } from '@/lib/analytics';
 
 // Product IDs — must match App Store Connect
 export const PRODUCT_IDS = {
   monthly: 'semora_pro_monthly',
   annual: 'semora_pro_annual',
 };
+
+// ── Conversion analytics (purchase_success / trial_started) ─────────
+// Every UI that grants Pro funnels through validateAfterPurchase, so the
+// success event fires THERE (single choke point) instead of per-screen.
+// Two wrinkles that live here:
+//  - The paywall AND the global _layout listener both receive the same
+//    StoreKit purchase event and both call validateAfterPurchase — a
+//    per-transaction dedupe set stops double-counting.
+//  - The choke point can't see paywall state (context param, trial
+//    eligibility), so the paywall registers it just before requesting
+//    the purchase and the winner of the validation race reads it.
+let purchaseAnalyticsContext: { context: string; trial: boolean } | null = null;
+const trackedPurchaseIds = new Set<string>();
+
+/**
+ * Called by the paywall right before requestPurchase so purchase_success
+ * can carry {context, trial}. Pass null to clear (cancel / failure).
+ * Background-delivered purchases (Ask to Buy approvals, redelivered
+ * transactions on launch) have no registered context and are tagged
+ * context:'background', trial:false.
+ */
+export function setPurchaseAnalyticsContext(
+  ctx: { context: string; trial: boolean } | null,
+): void {
+  purchaseAnalyticsContext = ctx;
+}
+
+/** Fire purchase_success (+ trial_started) exactly once per transaction. */
+function trackPurchaseSuccess(purchase: Purchase): void {
+  try {
+    const txId = purchase.id || (purchase as any)?.transactionId || '';
+    if (txId && trackedPurchaseIds.has(txId)) return;
+    if (txId) trackedPurchaseIds.add(txId);
+    const plan: 'monthly' | 'annual' =
+      purchase.productId === PRODUCT_IDS.annual ? 'annual' : 'monthly';
+    const ctx = purchaseAnalyticsContext;
+    purchaseAnalyticsContext = null; // consumed — don't leak onto a later transaction
+    const context = ctx?.context ?? 'background';
+    // Only the monthly plan carries the 7-day intro trial, and only when
+    // the paywall confirmed eligibility via isEligibleForIntroOfferIOS.
+    const trial = plan === 'monthly' && ctx?.trial === true;
+    track('purchase_success', { plan, context, trial });
+    if (trial) track('trial_started', { plan, context });
+  } catch {
+    // analytics must never affect the purchase flow
+  }
+}
 
 const ALL_SKUS = [PRODUCT_IDS.monthly, PRODUCT_IDS.annual];
 
@@ -386,7 +434,14 @@ export async function refreshProStatus(): Promise<ProEntitlement> {
  * expected Restore UX).
  */
 export async function restorePurchases(): Promise<ProEntitlement> {
-  return await validateAfterPurchase();
+  const entitlement = await validateAfterPurchase();
+  // A transient negative means we never got a real answer (network blip,
+  // server 5xx) — the restore didn't COMPLETE, so logging found:false
+  // would pollute the funnel with connectivity noise.
+  if (!(entitlement.transient && !entitlement.is_pro)) {
+    track('restore_completed', { found: entitlement.is_pro });
+  }
+  return entitlement;
 }
 
 /**
@@ -423,6 +478,13 @@ export async function validateAfterPurchase(
     // Keep the event JWS — it's the strongest credential; forceRefresh
     // adds a freshly-synced receipt alongside it for old-server compat.
     e = await validateProEntitlement({ interactiveRefresh: true, forceRefresh: true, jws });
+  }
+  // Conversion analytics: only when an actual purchase EVENT was validated
+  // (restore taps call this with no purchase and must not count as a sale),
+  // and only when the server really confirmed Pro off a credential — a
+  // bare DB-row fallback isn't proof this transaction validated.
+  if (purchase && e.is_pro && e.usedCredential) {
+    trackPurchaseSuccess(purchase);
   }
   return e;
 }

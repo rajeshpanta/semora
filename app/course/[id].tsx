@@ -21,6 +21,7 @@ import { NotFound } from '@/components/NotFound';
 import { COURSE_COLORS, COURSE_ICONS, COLORS, FONTS, calculateGrade, DEFAULT_GRADE_SCALE, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import type { GradeThreshold } from '@/types/database';
 import { useAppStore } from '@/store/appStore';
+import { MAX_SCAN_PAGES } from '@/lib/gemini';
 import { useColors } from '@/lib/theme';
 import { useResponsive, gridItemBasis } from '@/lib/responsive';
 import { formatMeetings, formatOfficeHours } from '@/lib/schedule';
@@ -296,15 +297,76 @@ export default function CourseDetailScreen() {
     ]);
   };
 
+  // Multi-page photo scans store pages 2..N alongside page 1 under
+  // deterministic `_pN` suffixes before the extension (see processSyllabus
+  // step 5). Build every candidate path for one batch signed-URL probe —
+  // pages that were never uploaded come back with a per-path error and
+  // get filtered out by the caller.
+  const syllabusPagePaths = (basePath: string): string[] => {
+    const dot = basePath.lastIndexOf('.');
+    const hasExt = dot > basePath.lastIndexOf('/');
+    const stem = hasExt ? basePath.slice(0, dot) : basePath;
+    const ext = hasExt ? basePath.slice(dot) : '';
+    const paths = [basePath];
+    for (let p = 2; p <= MAX_SCAN_PAGES; p++) paths.push(`${stem}_p${p}${ext}`);
+    return paths;
+  };
+
   // Open the most recent uploaded syllabus in the system viewer.
   // Storage URLs are signed on demand (60s) so the bucket can stay
   // private. If the row exists but the file was never uploaded
   // successfully (Phase-6 catch path treats storage upload as
   // non-critical), the signed URL still resolves but yields a 404 —
   // surface that as a clear message rather than a silent failure.
+  // Multi-page photo scans get a page chooser; single files and PDFs
+  // open directly like they always did.
   const handleViewSyllabus = async () => {
     if (!syllabus) return;
     try {
+      // Probe the `_pN` sibling paths in one batch-sign call. PDFs are
+      // always single files — skip the probe so their flow is untouched.
+      let pages: { page: number; url: string }[] = [];
+      if (!/\.pdf$/i.test(syllabus.storage_path)) {
+        try {
+          const candidates = syllabusPagePaths(syllabus.storage_path);
+          const { data: signed } = await supabase.storage
+            .from('syllabi')
+            .createSignedUrls(candidates, 60);
+          pages = candidates.flatMap((path, i) => {
+            const match = (signed ?? []).find((s) => s.path === path);
+            return match && !match.error && match.signedUrl
+              ? [{ page: i + 1, url: match.signedUrl }]
+              : [];
+          });
+        } catch {
+          // Probe failing is never fatal — fall through to the original
+          // single-file path below.
+        }
+      }
+
+      if (pages.length > 1) {
+        // Page numbers come from the storage suffix, so a page whose upload
+        // failed (storage is non-critical per page) is skipped, not
+        // renumbered. Alert-with-buttons matches the app's chooser pattern.
+        Alert.alert(
+          'View Syllabus',
+          `This scan has ${pages.length} pages.`,
+          [
+            ...pages.map((p) => ({
+              text: `Page ${p.page}`,
+              onPress: () => { Linking.openURL(p.url).catch(() => {}); },
+            })),
+            { text: 'Cancel', style: 'cancel' as const },
+          ],
+        );
+        return;
+      }
+      if (pages.length === 1) {
+        // Single-page photo scan — already signed above, open it directly.
+        await Linking.openURL(pages[0].url);
+        return;
+      }
+
       const { data, error } = await supabase.storage
         .from('syllabi')
         .createSignedUrl(syllabus.storage_path, 60);

@@ -1,0 +1,27 @@
+{
+  "course_name": "BIO 201 - Cell Biology",
+  "course_code": "BIO 201",
+  "instructor": "Dr. Sofia Reyes",
+  "semester_name": "Fall 2025",
+  "semester_start": "2025-08-25",
+  "semester_end": "2025-12-12",
+  "meetings": [
+    { "days_of_week": [1, 3, 5], "start_time": "09:00", "end_time": "09:50", "kind": "lecture" },
+    { "days_of_week": [3], "start_time": "14:00", "end_time": "16:50", "kind": "lab" }
+  ],
+  "office_hours_blocks": [
+    { "days_of_week": [1], "start_time": "10:00", "end_time": "11:30" }
+  ],
+  "items": [
+    { "title": "Lab Report 1", "type": "assignment", "due_date": "2025-09-19", "weight": 5, "date_suspect": true },
+    { "title": "Problem Set 1", "type": "assignment", "due_date": "2025-09-29", "weight": 5, "date_suspect": true },
+    { "title": "Lab Report 2", "type": "assignment", "due_date": "2025-10-10", "weight": 5, "date_suspect": true },
+    { "title": "Exam I", "type": "exam", "due_date": "2025-10-15", "weight": 15, "date_suspect": true },
+    { "title": "Lab Report 3", "type": "assignment", "due_date": "2025-11-07", "weight": 5, "date_suspect": true },
+    { "title": "Exam II", "type": "exam", "due_date": "2025-11-21", "weight": 15, "date_suspect": true },
+    { "title": "Problem Set 2", "type": "assignment", "due_date": "2025-11-24", "weight": 5, "date_suspect": true },
+    { "title": "Lab Report 4", "type": "assignment", "due_date": "2025-12-05", "weight": 5, "date_suspect": true },
+    { "title": "Term Paper", "type": ["assignment", "project"], "due_date": "2025-12-05", "weight": 15, "date_suspect": true },
+    { "title": "Final Exam", "type": "exam", "due_date": "2025-12-08", "due_time": "09:00", "weight": 25, "date_suspect": true }
+  ]
+}

@@ -13,5 +13,18 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
+  ],
+  // Overriding "exclude" replaces the expo/tsconfig.base list, so the base
+  // entries are replicated here. supabase/functions is added because edge
+  // functions run on Deno (Deno globals, https:/npm: imports) and are
+  // typechecked/deployed by the Supabase CLI, not by this app's tsc.
+  "exclude": [
+    "node_modules",
+    "babel.config.js",
+    "metro.config.js",
+    "jest.config.js",
+    "android",
+    "ios",
+    "supabase/functions"
   ]
 }

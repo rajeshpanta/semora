@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase';
-import { extractFromFile, type SyllabusExtraction } from '@/lib/gemini';
+import { extractFromPages, type SyllabusExtraction, type SyllabusPage } from '@/lib/gemini';
 import * as FileSystem from 'expo-file-system/legacy';
+import { isMeetingSyncEnabled, syncMeetingToCalendar } from '@/lib/calendarSync';
+import type { CourseMeeting } from '@/types/database';
 import { COURSE_COLORS, COURSE_ICONS, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
 import { suggestCurrentSemesterName } from '@/lib/semesters';
@@ -36,6 +38,11 @@ export async function processSyllabus(
   mimeType: string,
   userId: string,
   signal?: AbortSignal,
+  // Multi-page photo scans: every captured page, in order. When omitted (or
+  // a single entry), the legacy single-file path is used — fileUri/mimeType
+  // must always describe the FIRST page so storage upload and the upload row
+  // keep working unchanged. One submission = one scan regardless of pages.
+  pages?: SyllabusPage[],
 ): Promise<ProcessResult> {
   const startTime = Date.now();
 
@@ -56,7 +63,8 @@ export async function processSyllabus(
   }
 
   // 1. Extract with Gemini (abortable — the caller's timeout aborts the fetch)
-  const extraction = await extractFromFile(fileUri, mimeType, signal);
+  const pageList: SyllabusPage[] = pages && pages.length > 0 ? pages : [{ uri: fileUri, mimeType }];
+  const extraction = await extractFromPages(pageList, signal);
 
   // Bail BEFORE any DB writes if the caller aborted (e.g. the 120s timeout):
   // otherwise we create an orphan semester/course/upload the user never sees
@@ -114,7 +122,7 @@ export async function processSyllabus(
   // saved are more valuable than the schedule rows.
   if (!isExisting) {
     if (extraction.meetings.length > 0) {
-      const { error: meetingErr } = await supabase
+      const { data: insertedMeetings, error: meetingErr } = await supabase
         .from('course_meetings')
         .insert(
           extraction.meetings.map((m) => ({
@@ -126,9 +134,19 @@ export async function processSyllabus(
             kind: m.kind,
             location: m.location,
           })),
-        );
+        )
+        .select();
       if (meetingErr) {
         console.warn('[processSyllabus] course_meetings insert failed:', meetingErr.message);
+      } else if (isMeetingSyncEnabled()) {
+        // Mirror the create-meeting mutation's side effect (lib/queries.ts):
+        // when class-schedule sync is on, a scan that creates the schedule
+        // must reach the device calendar too — otherwise the user has to
+        // re-toggle sync before these meetings show up. Fire-and-forget;
+        // calendar failures must never fail the scan.
+        for (const m of insertedMeetings ?? []) {
+          syncMeetingToCalendar(m as CourseMeeting).catch(() => {});
+        }
       }
     }
     if (extraction.office_hours_blocks.length > 0) {
@@ -170,15 +188,30 @@ export async function processSyllabus(
 
   if (uploadError) throw new Error(`Failed to create upload: ${uploadError.message}`);
 
-  // 5. Upload file to storage (non-critical)
-  try {
-    const base64 = await FileSystem.readAsStringAsync(fileUri, { encoding: 'base64' });
-    await supabase.storage.from('syllabi').upload(storagePath, decode(base64), {
-      contentType: mimeType,
-      upsert: true,
-    });
-  } catch (e) {
-    console.warn('Storage upload failed (non-critical):', e);
+  // 5. Upload file(s) to storage (non-critical, per page). Page 1 keeps the
+  //    exact storage_path recorded on the syllabus_uploads row (backward
+  //    compatible with old rows and single-file uploads); pages 2..N of a
+  //    multi-page photo scan land alongside it with a deterministic `_pN`
+  //    suffix before the extension (e.g. `..._scan.jpg` → `..._scan_p2.jpg`)
+  //    so the course screen can probe for them without a schema change.
+  //    Each page fails independently — a dropped page never fails the scan.
+  const dot = storagePath.lastIndexOf('.');
+  const hasExt = dot > storagePath.lastIndexOf('/');
+  const pathStem = hasExt ? storagePath.slice(0, dot) : storagePath;
+  const pathExt = hasExt ? storagePath.slice(dot) : '';
+  for (let p = 0; p < pageList.length; p++) {
+    // pageList[0].uri === fileUri by the pages[] contract above, so the
+    // single-page path uploads exactly what it always did.
+    const pagePath = p === 0 ? storagePath : `${pathStem}_p${p + 1}${pathExt}`;
+    try {
+      const base64 = await FileSystem.readAsStringAsync(pageList[p].uri, { encoding: 'base64' });
+      await supabase.storage.from('syllabi').upload(pagePath, decode(base64), {
+        contentType: pageList[p].mimeType,
+        upsert: true,
+      });
+    } catch (e) {
+      console.warn(`Storage upload failed for page ${p + 1} (non-critical):`, e);
+    }
   }
 
   // 6. Create parse run
@@ -190,7 +223,10 @@ export async function processSyllabus(
       upload_id: upload.id,
       course_id: courseId,
       method: 'rule_plus_gemini',
-      gemini_model: 'gemini-2.5-flash',
+      // The server reports which model actually answered (it falls back to a
+      // secondary model under load). Older Edge Function deployments omit the
+      // field — assume the historical primary rather than writing null.
+      gemini_model: extraction.gemini_model || 'gemini-2.5-flash',
       parse_confidence: extraction.items.length > 0
         ? extraction.items.reduce((sum, i) => sum + i.confidence, 0) / extraction.items.length
         : null,

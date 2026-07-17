@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { processSyllabus, type ProcessResult, FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
+import { MAX_SCAN_PAGES, type SyllabusPage } from '@/lib/gemini';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { track } from '@/lib/analytics';
@@ -83,11 +84,30 @@ async function createDuplicateCourse(result: ProcessResult, userId: string): Pro
 
 export default function SyllabusUploadScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ fileUri?: string; fileName?: string; mimeType?: string }>();
+  const params = useLocalSearchParams<{ fileUri?: string; fileName?: string; mimeType?: string; pages?: string }>();
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
   const colors = useColors();
   const { isWide } = useResponsive();
   const qc = useQueryClient();
+
+  // Multi-page photo scan: scan.tsx JSON-encodes the ordered page list into
+  // the `pages` param (fileUri/fileName/mimeType still describe page 1 for
+  // the chip + storage upload). Defensive parse — a malformed param falls
+  // back to the single-file path rather than crashing the modal. Capped to
+  // MAX_SCAN_PAGES so a bad param can never oversend to the server.
+  const scanPages: SyllabusPage[] | null = (() => {
+    if (!params.pages) return null;
+    try {
+      const parsed = JSON.parse(params.pages);
+      if (!Array.isArray(parsed) || parsed.length === 0) return null;
+      const valid = parsed.filter(
+        (p: any): p is SyllabusPage => typeof p?.uri === 'string' && typeof p?.mimeType === 'string',
+      );
+      return valid.length > 0 ? valid.slice(0, MAX_SCAN_PAGES) : null;
+    } catch {
+      return null;
+    }
+  })();
 
   const [processing, setProcessing] = useState(false);
   const [status, setStatus] = useState('');
@@ -168,13 +188,14 @@ export default function SyllabusUploadScreen() {
         params.mimeType || 'application/pdf',
         session.user.id,
         controller.signal,
+        scanPages ?? undefined,
       ).catch((err) => {
         if (timedOut) throw new Error('This is taking longer than expected. Please try again.');
         throw err;
       }).finally(() => clearTimeout(timeout));
 
       stopRotation();
-      track('scan_completed', { screen: 'scan', count: result.extraction.items.length });
+      track('scan_completed', { screen: 'scan', count: result.extraction.items.length, pages: scanPages?.length ?? 1 });
       // processSyllabus just inserted the syllabus_uploads row, so the
       // free-scan count changed. Refresh it now so the scan tab shows the new
       // usage immediately instead of a stale "N free scans left".
@@ -325,7 +346,11 @@ export default function SyllabusUploadScreen() {
             size={14}
             color={colors.brand}
           />
-          <Text style={[styles.fileName, { color: colors.brand }]} numberOfLines={1}>{params.fileName || 'Document'}</Text>
+          <Text style={[styles.fileName, { color: colors.brand }]} numberOfLines={1}>
+            {scanPages && scanPages.length > 1
+              ? `${scanPages.length} pages`
+              : params.fileName || 'Document'}
+          </Text>
         </View>
 
         {/* Progress */}

@@ -2,17 +2,23 @@ import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert, ActivityIndica
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
+import { track } from '@/lib/analytics';
 import {
   requestCalendarPermission,
   syncAllTasks,
+  syncAllMeetings,
   unsyncAll,
+  unsyncAllMeetings,
   isSynced,
+  isMeetingSyncTrackingActive,
 } from '@/lib/calendarSync';
+import { exportSemesterIcs } from '@/lib/ics';
 
 export default function CalendarSyncSettings() {
   const colors = useColors();
@@ -20,6 +26,11 @@ export default function CalendarSyncSettings() {
   const [synced, setSynced] = useState(false);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
+  // Class-schedule sync rides inside the main sync (same calendar, same Pro
+  // gate) but keeps its own toggle + busy state.
+  const [classSync, setClassSync] = useState(false);
+  const [classSyncing, setClassSyncing] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const isPro = useAppStore((s) => s.isPro);
   // Sync was enabled while Pro but the subscription has since lapsed — auto-sync
@@ -31,6 +42,8 @@ export default function CalendarSyncSettings() {
   useEffect(() => {
     isSynced().then((v) => {
       setSynced(v);
+      // Sync flag read, no native calls — safe alongside the async check.
+      setClassSync(isMeetingSyncTrackingActive());
       setLoading(false);
     });
   }, []);
@@ -51,6 +64,10 @@ export default function CalendarSyncSettings() {
               try {
                 await unsyncAll();
                 setSynced(false);
+                // Class-schedule events lived in the deleted calendar and
+                // unsyncAll cleared their local state too.
+                setClassSync(false);
+                track('calendar_sync_enabled', { on: false, screen: 'settings_calendar' });
               } catch (err: any) {
                 Alert.alert('Error', err.message ?? 'Failed to remove calendar sync.');
               } finally {
@@ -67,7 +84,7 @@ export default function CalendarSyncSettings() {
           'Pro Feature',
           'Calendar sync is available with Semora Pro.',
           [
-            { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+            { text: 'Upgrade', onPress: () => router.push({ pathname: '/paywall', params: { context: 'calendarSync' } } as any) },
             { text: 'Cancel', style: 'cancel' },
           ],
         );
@@ -97,11 +114,60 @@ export default function CalendarSyncSettings() {
       try {
         const count = await syncAllTasks(selectedSemesterId);
         setSynced(true);
+        track('calendar_sync_enabled', { on: true, screen: 'settings_calendar' });
+        if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Synced!', `${count} task${count !== 1 ? 's' : ''} added to your calendar.`);
       } catch (err: any) {
         Alert.alert('Sync Failed', err.message ?? 'Could not sync tasks. Check calendar permissions and try again.');
       } finally {
         setSyncing(false);
+      }
+    }
+  };
+
+  const handleClassToggle = async () => {
+    // Defense in depth — the row only renders when synced && isPro, but never
+    // let class-schedule sync run without an active subscription (same
+    // reasoning as handleResync).
+    if (!isPro) {
+      Alert.alert('Pro Feature', 'Calendar sync is available with Semora Pro.', [
+        { text: 'Upgrade', onPress: () => router.push({ pathname: '/paywall', params: { context: 'calendarSync' } } as any) },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      return;
+    }
+    if (classSync) {
+      setClassSyncing(true);
+      try {
+        await unsyncAllMeetings();
+        setClassSync(false);
+        track('class_schedule_sync_enabled', { on: false, screen: 'settings_calendar' });
+      } catch (err: any) {
+        Alert.alert('Error', err.message ?? 'Failed to remove class schedule events.');
+      } finally {
+        setClassSyncing(false);
+      }
+    } else {
+      if (!selectedSemesterId) {
+        Alert.alert('No Semester', 'Please select a semester first.');
+        return;
+      }
+      setClassSyncing(true);
+      try {
+        const count = await syncAllMeetings(selectedSemesterId);
+        setClassSync(true);
+        track('class_schedule_sync_enabled', { on: true, screen: 'settings_calendar' });
+        if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(
+          'Class Schedule Synced',
+          count > 0
+            ? `${count} class meeting${count !== 1 ? 's' : ''} added as repeating events until the semester ends.`
+            : 'No class meetings with a scheduled time yet — add times to your courses and they\'ll sync automatically.',
+        );
+      } catch (err: any) {
+        Alert.alert('Sync Failed', err.message ?? 'Could not sync your class schedule. Check calendar permissions and try again.');
+      } finally {
+        setClassSyncing(false);
       }
     }
   };
@@ -112,7 +178,7 @@ export default function CalendarSyncSettings() {
     // gated by isSyncEnabled the way auto-sync is).
     if (!isPro) {
       Alert.alert('Pro Feature', 'Calendar sync is available with Semora Pro.', [
-        { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+        { text: 'Upgrade', onPress: () => router.push({ pathname: '/paywall', params: { context: 'calendarSync' } } as any) },
         { text: 'Cancel', style: 'cancel' },
       ]);
       return;
@@ -120,11 +186,52 @@ export default function CalendarSyncSettings() {
     setSyncing(true);
     try {
       const count = await syncAllTasks(selectedSemesterId);
-      Alert.alert('Re-synced', `${count} task${count !== 1 ? 's' : ''} synced to calendar.`);
+      // Rebuild class-schedule series too (covers meeting edits that
+      // happened while this device was offline or the app was closed).
+      let meetingCount = 0;
+      if (classSync) {
+        try { meetingCount = await syncAllMeetings(selectedSemesterId); } catch {}
+      }
+      Alert.alert(
+        'Re-synced',
+        `${count} task${count !== 1 ? 's' : ''}${classSync ? ` and ${meetingCount} class meeting${meetingCount !== 1 ? 's' : ''}` : ''} synced to calendar.`,
+      );
     } catch (err: any) {
       Alert.alert('Sync Failed', err.message ?? 'Could not sync tasks. Check calendar permissions and try again.');
     } finally {
       setSyncing(false);
+    }
+  };
+
+  const handleExport = async () => {
+    if (!isPro) {
+      Alert.alert(
+        'Pro Feature',
+        'Exporting your semester as a calendar file is available with Semora Pro.',
+        [
+          { text: 'Upgrade', onPress: () => router.push({ pathname: '/paywall', params: { context: 'icsExport' } } as any) },
+          { text: 'Cancel', style: 'cancel' },
+        ],
+      );
+      return;
+    }
+    if (Platform.OS === 'web') {
+      Alert.alert('Not Available', 'Calendar export is only available on iOS and Android.');
+      return;
+    }
+    if (!selectedSemesterId) {
+      Alert.alert('No Semester', 'Please select a semester first before exporting.');
+      return;
+    }
+    setExporting(true);
+    try {
+      const { tasks, meetings } = await exportSemesterIcs(selectedSemesterId);
+      track('ics_exported', { tasks, meetings, screen: 'settings_calendar' });
+      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (err: any) {
+      Alert.alert('Export Failed', err.message ?? 'Could not create the calendar file. Please try again.');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -181,6 +288,28 @@ export default function CalendarSyncSettings() {
         {synced && isPro && (
           <>
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+              <View style={styles.row}>
+                <FontAwesome name="graduation-cap" size={16} color={colors.brand} style={{ width: 26 }} />
+                <View style={{ flex: 1, marginLeft: 8 }}>
+                  <Text style={[styles.rowLabel, { color: colors.ink }]}>Include class schedule</Text>
+                  <Text style={[styles.rowSub, { color: colors.ink3 }]}>
+                    Weekly repeating events for your class meetings
+                  </Text>
+                </View>
+                {classSyncing ? (
+                  <ActivityIndicator size="small" color={colors.brand} />
+                ) : (
+                  <Switch
+                    value={classSync}
+                    onValueChange={handleClassToggle}
+                    trackColor={{ false: colors.line, true: colors.brand }}
+                    thumbColor="#fff"
+                  />
+                )}
+              </View>
+            </View>
+
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
               <TouchableOpacity style={styles.actionRow} activeOpacity={0.7} onPress={handleResync} disabled={syncing}>
                 <FontAwesome name="refresh" size={16} color={colors.brand} style={{ width: 26 }} />
                 <Text style={[styles.rowLabel, { marginLeft: 8, color: colors.ink }]}>Re-sync all tasks</Text>
@@ -200,6 +329,29 @@ export default function CalendarSyncSettings() {
             New tasks you create will automatically appear in your calendar when sync is enabled. Deleting a task removes it from the calendar too. Changes you make directly in Apple Calendar won't sync back to Semora.
           </Text>
         </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.ink2, marginTop: 24 }]}>Export</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <TouchableOpacity style={styles.actionRow} activeOpacity={0.7} onPress={handleExport} disabled={exporting}>
+            <FontAwesome name="share-square-o" size={16} color={colors.brand} style={{ width: 26 }} />
+            <View style={{ flex: 1, marginLeft: 8 }}>
+              <Text style={[styles.rowLabel, { color: colors.ink }]}>Export calendar file (.ics)</Text>
+              <Text style={[styles.rowSub, { color: colors.ink3 }]}>
+                Works with Google Calendar, Outlook, and any calendar app
+              </Text>
+            </View>
+            {exporting ? (
+              <ActivityIndicator size="small" color={colors.brand} />
+            ) : !isPro ? (
+              <View style={[styles.proBadge, { backgroundColor: colors.brand }]}>
+                <FontAwesome name="star" size={9} color="#fff" />
+                <Text style={styles.proBadgeText}>PRO</Text>
+              </View>
+            ) : (
+              <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -217,4 +369,8 @@ const styles = StyleSheet.create({
   hint: { fontSize: 13, color: COLORS.ink3, lineHeight: 18, paddingHorizontal: 4 },
   infoBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: COLORS.blue50, borderRadius: 14, padding: 14 },
   infoText: { flex: 1, fontSize: 13, color: COLORS.blue, lineHeight: 18 },
+  // Matches the PRO badge treatment on the course grade-scale teaser
+  // (app/course/[id].tsx lockedBadge), minus the top margin.
+  proBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.brand, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  proBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
 });

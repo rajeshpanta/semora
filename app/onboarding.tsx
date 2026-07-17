@@ -17,6 +17,7 @@ import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useAppStore, type PainPoint } from '@/store/appStore';
+import { track } from '@/lib/analytics';
 
 const STEP_COUNT = 4; // hook · live demo · outcome · personalize
 
@@ -56,18 +57,35 @@ export default function OnboardingScreen() {
 
   const tap = () => { if (Platform.OS === 'ios') Haptics.selectionAsync(); };
 
+  // Funnel entry point — without a step-0 event the per-step drop-off has
+  // no denominator. Fired once per mount, not per revisit of step 0.
+  useEffect(() => {
+    track('onboarding_step', { screen: 'onboarding', step: 0, via: 'start' });
+  }, []);
+
   const finish = () => {
     setUserName(name.trim() || null);
     setDefaultTerm(term || null);
     setPainPoint(pain);
     setHasOnboarded(true);
+    // Completion event carries the pain-point choice (already captured
+    // above) so paywall/auth copy experiments can segment on it. The typed
+    // name is PII-adjacent — intentionally not sent.
+    track('onboarding_step', {
+      screen: 'onboarding',
+      step: 'complete',
+      ...(pain ? { choice: pain } : {}),
+    });
     router.replace('/(auth)/sign-in');
   };
 
-  const goTo = (target: number, dir: 'fwd' | 'back') => {
+  // Single choke point for step changes — every transition (next/back/skip)
+  // logs one onboarding_step event with the step being ENTERED.
+  const goTo = (target: number, dir: 'fwd' | 'back', via: 'next' | 'back' | 'skip' = dir === 'fwd' ? 'next' : 'back') => {
     dirRef.current = dir;
     if (target === 1) setDemoPhase('idle'); // re-arm the demo when revisited
     setStep(target);
+    track('onboarding_step', { screen: 'onboarding', step: target, via });
   };
 
   const next = () => {
@@ -87,7 +105,7 @@ export default function OnboardingScreen() {
   // Skip never bypasses the whole flow — it fast-forwards to the
   // personalize step so even skippers make one small commitment before
   // the account wall. Hidden on the hook and final steps.
-  const skip = () => { tap(); goTo(STEP_COUNT - 1, 'fwd'); };
+  const skip = () => { tap(); goTo(STEP_COUNT - 1, 'fwd', 'skip'); };
 
   const CTA_LABELS: Record<number, string> = {
     0: 'Try it on a real syllabus',

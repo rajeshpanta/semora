@@ -1,0 +1,22 @@
+{
+  "course_name": "HIST 214 - The Atlantic World, 1450-1850",
+  "course_code": "HIST 214",
+  "instructor": "Prof. Daniel Okafor",
+  "semester_name": "Fall 2026",
+  "semester_start": "2026-08-25",
+  "semester_end": "2026-12-10",
+  "meetings": [
+    { "days_of_week": [2, 4], "start_time": "13:00", "end_time": "14:15", "kind": "lecture" }
+  ],
+  "office_hours_blocks": [
+    { "days_of_week": [3], "start_time": "14:00", "end_time": "16:00" }
+  ],
+  "items": [
+    { "title": "Response Paper 1", "type": "assignment", "due_date": "2026-09-18", "weight": 10 },
+    { "title": "Response Paper 2", "type": "assignment", "due_date": "2026-10-09", "weight": 10 },
+    { "title": "Midterm Essay", "type": ["assignment", "exam"], "due_date": "2026-10-22", "weight": 20 },
+    { "title": "Response Paper 3", "type": "assignment", "due_date": "2026-11-13", "weight": 10 },
+    { "title": "Class Presentation", "type": ["other", "project"], "due_date": "2026-12-01", "weight": 10 },
+    { "title": "Final Essay", "type": "assignment", "due_date": null, "weight": 30 }
+  ]
+}

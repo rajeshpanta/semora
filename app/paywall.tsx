@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   ActivityIndicator, Alert, Platform, Linking,
@@ -13,7 +13,7 @@ import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
-import { getProducts, purchaseProduct, restorePurchases, validateAfterPurchase, PRODUCT_IDS, setupPurchaseListeners } from '@/lib/purchases';
+import { getProducts, purchaseProduct, restorePurchases, validateAfterPurchase, PRODUCT_IDS, setupPurchaseListeners, setPurchaseAnalyticsContext } from '@/lib/purchases';
 import { rescheduleAllTaskReminders } from '@/lib/notifications';
 import { track } from '@/lib/analytics';
 import { isEligibleForIntroOfferIOS } from 'react-native-iap';
@@ -69,6 +69,16 @@ export default function PaywallScreen() {
   // trial the payment sheet won't honor is a bait-and-switch / App Review
   // risk. Flipped true only once isEligibleForIntroOfferIOS confirms it.
   const [trialEligible, setTrialEligible] = useState(false);
+
+  // A sheet dismissal can surface BOTH as a requestPurchase rejection
+  // (handled in handlePurchase) and via the error listener — dedupe so one
+  // cancel never logs purchase_cancelled twice.
+  const lastCancelTrackedAt = useRef(0);
+  const trackCancelledOnce = () => {
+    if (Date.now() - lastCancelTrackedAt.current < 3000) return;
+    lastCancelTrackedAt.current = Date.now();
+    track('purchase_cancelled', { screen: 'paywall', context: params.context ?? 'direct' });
+  };
 
   useEffect(() => {
     getProducts().then((products) => {
@@ -147,8 +157,15 @@ export default function PaywallScreen() {
         // Subscribe button look dead. Surface everything except the user
         // closing the payment sheet themselves.
         setLoading(false);
+        // The user didn't buy — clear the registered analytics context so a
+        // later background-delivered transaction can't inherit it.
+        setPurchaseAnalyticsContext(null);
         const code = err?.code;
-        if (code === 'user-cancelled' || code === 'E_USER_CANCELLED') return;
+        if (code === 'user-cancelled' || code === 'E_USER_CANCELLED') {
+          // Cancellation is a distinct funnel outcome, never a "failure".
+          trackCancelledOnce();
+          return;
+        }
         // Ask to Buy: a kid's purchase is awaiting parental approval.
         // StoreKit reports this via 'deferred-payment' — it is NOT a
         // failure; the transaction arrives automatically once approved.
@@ -163,6 +180,10 @@ export default function PaywallScreen() {
         // server validation succeeds). Re-buying is blocked by StoreKit —
         // the way out is validating the existing transaction via Restore.
         if (code === 'duplicate-purchase' || code === 'already-owned' || code === 'pending') {
+          // Recoverable, but still a failed ATTEMPT — track it with its code
+          // so the funnel shows how often users hit the stuck-transaction
+          // path (vs. silently losing them to the Later button).
+          track('purchase_failed', { screen: 'paywall', reason: String(code) });
           Alert.alert(
             'Almost There',
             'Your earlier purchase is still being finalized. Tap Complete Purchase to finish activating Pro.',
@@ -173,6 +194,12 @@ export default function PaywallScreen() {
           );
           return;
         }
+        // Real failure. Prefer the machine code; fall back to a truncated
+        // message. No receipts/identifiers — reasons stay small and non-PII.
+        track('purchase_failed', {
+          screen: 'paywall',
+          reason: String(code ?? err?.message ?? 'unknown').slice(0, 100),
+        });
         Alert.alert('Purchase Failed', err?.message ?? 'Something went wrong. Please try again.');
       },
     );
@@ -182,6 +209,41 @@ export default function PaywallScreen() {
 
   const annualPrice = annualSub?.displayPrice ?? '$19.99';
   const monthlyPrice = monthlySub?.displayPrice ?? '$3.99';
+
+  // Derived value claims ("Just X/month", "SAVE N%") computed from the
+  // STOREFRONT products — hardcoded USD math was wrong in every other
+  // region and went stale on any price change (App Review risk). When live
+  // product data is unavailable (the hardcoded-fallback path above), these
+  // resolve null and the claims are HIDDEN entirely: a missing sub-line
+  // beats a confidently wrong number. `price` is the numeric amount and
+  // `currency` the ISO code on react-native-iap v15's ProductCommon.
+  const { annualPerMonth, savingsPct } = useMemo(() => {
+    const annual = typeof annualSub?.price === 'number' ? annualSub.price : null;
+    const monthly = typeof monthlySub?.price === 'number' ? monthlySub.price : null;
+    let perMonth: string | null = null;
+    if (annual !== null && annual > 0 && annualSub?.currency) {
+      try {
+        // Device locale + the PRODUCT's currency, so "€1.67" in Berlin and
+        // "₹99" in Mumbai. Hermes ships full Intl on iOS in SDK 54; the
+        // try/catch hides the claim if a storefront currency ever fails.
+        perMonth = new Intl.NumberFormat(undefined, {
+          style: 'currency',
+          currency: annualSub.currency,
+        }).format(annual / 12);
+      } catch {
+        perMonth = null;
+      }
+    }
+    let pct: number | null = null;
+    if (annual !== null && annual > 0 && monthly !== null && monthly > 0) {
+      const computed = Math.round((1 - annual / 12 / monthly) * 100);
+      // Only a sane, positive saving is worth advertising — if pricing ever
+      // makes annual NOT cheaper, showing "SAVE 0%" (or negative) is worse
+      // than no badge.
+      pct = computed >= 1 && computed < 100 ? computed : null;
+    }
+    return { annualPerMonth: perMonth, savingsPct: pct };
+  }, [annualSub, monthlySub]);
 
   const handleClose = () => {
     // From the post-scan reverse trial, "back" would land on the review
@@ -205,11 +267,32 @@ export default function PaywallScreen() {
   const handlePurchase = async () => {
     const productId = selectedPlan === 'annual' ? PRODUCT_IDS.annual : PRODUCT_IDS.monthly;
     setLoading(true);
+    // Register funnel context BEFORE the request: purchase_success fires at
+    // the validation choke point in lib/purchases.ts (which the paywall
+    // listener AND the global _layout listener both funnel through), where
+    // the paywall's context param and trial eligibility aren't reachable.
+    setPurchaseAnalyticsContext({
+      context: params.context ?? 'direct',
+      trial: selectedPlan === 'monthly' && trialEligible,
+    });
     try {
       const didPurchase = await purchaseProduct(productId);
-      if (!didPurchase) setLoading(false);
+      if (!didPurchase) {
+        // requestPurchase rejected with user-cancelled (the v15 promise-side
+        // cancellation path — see purchaseProduct).
+        setLoading(false);
+        setPurchaseAnalyticsContext(null);
+        trackCancelledOnce();
+      }
     } catch (err: any) {
       setLoading(false);
+      setPurchaseAnalyticsContext(null);
+      // Pre-flight failures (store unreachable, product cache empty) never
+      // reach the error listener — track them here.
+      track('purchase_failed', {
+        screen: 'paywall',
+        reason: String(err?.code ?? err?.message ?? 'unknown').slice(0, 100),
+      });
       Alert.alert('Purchase Failed', err.message ?? 'Something went wrong. Please try again.');
     }
   };
@@ -329,11 +412,15 @@ export default function PaywallScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.planName, { color: colors.ink }]}>Annual</Text>
               <Text style={[styles.planPrice, { color: colors.ink }]}>{annualPrice}<Text style={[styles.planPeriod, { color: colors.ink2 }]}>/year</Text></Text>
-              <Text style={[styles.planSub, { color: colors.ink3 }]}>Just $1.67/month</Text>
+              {/* Rendered empty (not removed) when live prices are missing so
+                  the card keeps its height (planSub has minHeight). */}
+              <Text style={[styles.planSub, { color: colors.ink3 }]}>{annualPerMonth ? `Just ${annualPerMonth}/month` : ''}</Text>
             </View>
-            <View style={[styles.saveBadge, { backgroundColor: colors.teal }]}>
-              <Text style={styles.saveBadgeText}>SAVE 58%</Text>
-            </View>
+            {savingsPct !== null && (
+              <View style={[styles.saveBadge, { backgroundColor: colors.teal }]}>
+                <Text style={styles.saveBadgeText}>SAVE {savingsPct}%</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           {/* Monthly */}

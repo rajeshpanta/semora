@@ -31,6 +31,12 @@ import { track } from '@/lib/analytics';
 // the user has accumulated a backlog.
 const VISIBLE_OVERDUE = 5;
 
+// Review-prompt fallback threshold: the aha-flag path (below) only fires
+// for users who scanned a syllabus AND relaunched later — rare enough that
+// ratings stayed at zero. 10 lifetime completions is a strong "this app is
+// working for me" signal that doesn't depend on the scan flow at all.
+const REVIEW_TASK_MILESTONE = 10;
+
 // Display labels for course_meetings.kind. Lecture is the default and
 // rendered without a prefix; the others get "Lab · 2:00 PM" style.
 const KIND_LABEL: Record<'lecture' | 'lab' | 'discussion' | 'other', string> = {
@@ -261,7 +267,12 @@ export default function TodayScreen() {
     async (vars: { id: string; is_completed: boolean; submitted_late?: boolean }) => {
       try {
         await toggleComplete.mutateAsync(vars);
-        if (vars.is_completed) track('task_completed', { screen: 'today', late: !!vars.submitted_late });
+        if (vars.is_completed) {
+          track('task_completed', { screen: 'today', late: !!vars.submitted_late });
+          // The review-prompt milestone increment happens inside
+          // useToggleTaskComplete's onSuccess so every screen's completions
+          // count — no per-screen call needed here.
+        }
         if (Platform.OS === 'ios') {
           // Completing (incl. late) = Success/Warning, un-completing = Warning,
           // matching task/[id].tsx's feedback mapping.
@@ -291,26 +302,62 @@ export default function TodayScreen() {
     updateTodayWidget(dueSoonTasks, ts, tm);
   }, [dueSoonTasks, dueSoonLoaded]);
 
-  // Ask for an App Store rating at a genuine happy moment. `ahaPaywallShown`
-  // is only set after a successful first import, so reaching here means the
-  // user has already felt the value. Running on mount (not focus) defers the
-  // prompt to a *later* app launch — never in the same session as the
-  // post-scan paywall, so the two never stack. Fires once, ever.
+  // Ask for an App Store rating at a genuine happy moment — shared by two
+  // triggers ('aha' below, 'task_milestone' further down) that both honor
+  // the same once-ever `reviewRequested` flag. The in-flight ref plus a
+  // getState() re-read of the flag stop the triggers double-prompting when
+  // both qualify in the same session (each trigger fires on its own timer).
+  const reviewPromptInFlight = useRef(false);
+  const maybeRequestReview = useCallback(async (trigger: 'aha' | 'task_milestone') => {
+    if (reviewPromptInFlight.current || useAppStore.getState().reviewRequested) return;
+    reviewPromptInFlight.current = true;
+    try {
+      const StoreReview = await import('expo-store-review');
+      if (await StoreReview.isAvailableAsync()) {
+        track('review_prompt_shown', { screen: 'today', trigger });
+        await StoreReview.requestReview();
+        setReviewRequested(true);
+      }
+    } catch {
+      // Non-critical — try again next launch/visit.
+    } finally {
+      reviewPromptInFlight.current = false;
+    }
+  }, [setReviewRequested]);
+
+  // Trigger 1 ('aha'): `ahaPaywallShown` is only set after a successful
+  // first import, so reaching here means the user has already felt the
+  // value. Running on mount (not focus) defers the prompt to a *later* app
+  // launch — never in the same session as the post-scan paywall, so the
+  // two never stack. Fires once, ever.
   useEffect(() => {
     if (!ahaPaywallShown || reviewRequested || Platform.OS === 'web') return;
-    const t = setTimeout(async () => {
-      try {
-        const StoreReview = await import('expo-store-review');
-        if (await StoreReview.isAvailableAsync()) {
-          await StoreReview.requestReview();
-          setReviewRequested(true);
-        }
-      } catch {
-        // Non-critical — try again next launch.
-      }
-    }, 1800);
+    const t = setTimeout(() => { maybeRequestReview('aha'); }, 1800);
     return () => clearTimeout(t);
   }, []);
+
+  // Trigger 2 ('task_milestone'): fallback for users the aha path misses.
+  // After the 10th lifetime completion, ask on the NEXT Today-tab visit —
+  // the focus effect reads fresh store state each focus, so the visit
+  // during which the 10th completion happened never prompts mid-scroll
+  // (its focus callback already ran with the pre-milestone count).
+  //
+  // Same never-stack-with-the-paywall rule as the aha path: if the flag was
+  // false at mount, the post-scan paywall can only have appeared THIS
+  // session — snapshot it so the milestone prompt waits for a later one.
+  const ahaPaywallShownAtMount = useRef(ahaPaywallShown);
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS === 'web') return;
+      const s = useAppStore.getState();
+      if (s.reviewRequested || s.tasksCompletedCount < REVIEW_TASK_MILESTONE) return;
+      if (s.ahaPaywallShown && !ahaPaywallShownAtMount.current) return;
+      // Small delay so the tab settles before iOS's sheet slides up —
+      // cleared on blur so navigating away cancels the pending prompt.
+      const t = setTimeout(() => { maybeRequestReview('task_milestone'); }, 1200);
+      return () => clearTimeout(t);
+    }, [maybeRequestReview]),
+  );
 
   // Today's classes — flatMap over course_meetings so a course with a
   // lecture *and* a lab meeting today shows up as two rows (one per

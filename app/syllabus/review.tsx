@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Platform, Keyboard,
@@ -23,6 +23,11 @@ import type { ExtractedItem } from '@/lib/gemini';
 interface ReviewItem extends ExtractedItem {
   accepted: boolean;
   editing: boolean;
+  // Set once at parse time when the server returned due_date: null ("Final
+  // Exam — date TBA"). Immutable section marker: grouping by the CURRENT
+  // due_date would make the card jump between sections on every keystroke
+  // of the date field.
+  needsDate: boolean;
 }
 
 // The date TextInput updates due_date on every keystroke, so this renders
@@ -34,6 +39,17 @@ function formatDateSafe(d: string): string {
   return isNaN(dt.getTime()) ? d : format(dt, 'MMM d, yyyy');
 }
 
+// Shared by save validation, the accept gate, and select-all. Round-trip
+// check catches impossible calendar dates (2026-02-30 parses but rolls to
+// Mar 2). null — the server found no date — fails by design: tasks.due_date
+// is NOT NULL in the DB, so a dateless item can never reach the insert.
+function isRealDate(s: string | null): s is string {
+  if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const [y, m, d] = s.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
+}
+
 export default function SyllabusReviewScreen() {
   const router = useRouter();
   const qc = useQueryClient();
@@ -42,10 +58,29 @@ export default function SyllabusReviewScreen() {
   const [items, setItems] = useState<ReviewItem[]>(() => {
     try {
       const parsed: ExtractedItem[] = JSON.parse(params.items || '[]');
-      return parsed.map((item) => ({ ...item, accepted: true, editing: false }));
+      return parsed.map((item) => ({
+        ...item,
+        // Dateless items ("Final Exam — date TBA") start deselected: they
+        // can't be saved (tasks.due_date is NOT NULL) until the user sets a
+        // date via the edit UI.
+        accepted: item.due_date != null,
+        editing: false,
+        needsDate: item.due_date == null,
+      }));
     } catch {
       return [];
     }
+  });
+  // "Old syllabus" banner: when MOST dated items are already in the past,
+  // the document is probably last year's recycled PDF. Computed once from
+  // the initial extraction (not live — the user fixing dates shouldn't
+  // resurrect it) and dismissible; >=2 dated items so a single stray
+  // past date doesn't cry wolf.
+  const [showPastTermBanner, setShowPastTermBanner] = useState<boolean>(() => {
+    const todayIso = format(new Date(), 'yyyy-MM-dd');
+    const dated = items.filter((i) => isRealDate(i.due_date));
+    const past = dated.filter((i) => (i.due_date as string) < todayIso);
+    return dated.length >= 2 && past.length * 2 > dated.length;
   });
   const [saving, setSaving] = useState(false);
   const colors = useColors();
@@ -58,7 +93,31 @@ export default function SyllabusReviewScreen() {
 
   const acceptedCount = items.filter((i) => i.accepted).length;
 
+  // Extraction-quality telemetry, once per review session. Fire-and-forget.
+  useEffect(() => {
+    if (showPastTermBanner) track('scan_past_term_banner_shown', { screen: 'review' });
+    const dateless = items.filter((i) => i.needsDate).length;
+    if (dateless > 0) track('scan_dateless_items', { screen: 'review', count: dateless });
+    const suspect = items.filter((i) => i.date_suspect).length;
+    if (suspect > 0) track('scan_suspect_dates', { screen: 'review', count: suspect });
+    // Mount-only: these describe the initial extraction, not later edits.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const toggleAccept = (index: number) => {
+    const item = items[index];
+    // Gate: a dateless item can't join the save set until it has a real
+    // date — tasks.due_date is NOT NULL, so letting it through would only
+    // fail with a more confusing message at save time. Pop the editor open
+    // so the fix is one tap away.
+    if (!item.accepted && !isRealDate(item.due_date)) {
+      Alert.alert(
+        'Needs a date',
+        `"${item.title}" doesn't have a due date yet. Set one to include it, or leave it deselected.`,
+      );
+      setItems((prev) => prev.map((it, i) => (i === index ? { ...it, editing: true } : it)));
+      return;
+    }
     setItems((prev) => prev.map((item, i) =>
       i === index ? { ...item, accepted: !item.accepted } : item
     ));
@@ -73,7 +132,12 @@ export default function SyllabusReviewScreen() {
 
   const updateItem = (index: number, field: keyof ExtractedItem, value: any) => {
     setItems((prev) => prev.map((item, i) =>
-      i === index ? { ...item, [field]: value } : item
+      i === index
+        // Editing the date counts as verifying it — clear the server's
+        // "outside this term" flag instead of warning about a value the
+        // user has already looked at.
+        ? { ...item, [field]: value, ...(field === 'due_date' ? { date_suspect: false } : {}) }
+        : item
     ));
   };
 
@@ -86,20 +150,15 @@ export default function SyllabusReviewScreen() {
     }
 
     // Inline-edited dates are free text — catch malformed ones up front
-    // instead of silently dropping rows mid-save. Round-trip check catches
-    // impossible calendar dates (2026-02-30 parses but rolls to Mar 2).
-    const isRealDate = (s: string) => {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
-      const [y, m, d] = s.split('-').map(Number);
-      const dt = new Date(y, m - 1, d);
-      return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
-    };
+    // instead of silently dropping rows mid-save. isRealDate (module scope)
+    // also rejects null, so a dateless item that somehow got accepted can
+    // never reach the NOT NULL due_date column.
     const badDates = accepted.filter((i) => !isRealDate(i.due_date));
     if (badDates.length > 0) {
       const names = badDates.slice(0, 3).map((b) => `"${b.title}"`).join(', ');
       Alert.alert(
         'Check dates',
-        `${names}${badDates.length > 3 ? ` and ${badDates.length - 3} more` : ''} ${badDates.length === 1 ? 'has' : 'have'} an invalid date. Use YYYY-MM-DD.`,
+        `${names}${badDates.length > 3 ? ` and ${badDates.length - 3} more` : ''} ${badDates.length === 1 ? 'has' : 'have'} a missing or invalid date. Use YYYY-MM-DD.`,
       );
       return;
     }
@@ -258,9 +317,43 @@ export default function SyllabusReviewScreen() {
     }
   };
 
+  // Dateless items render in their own "Needs a date" section, keyed by the
+  // ORIGINAL index so toggles/edits hit the right row in `items`. needsDate
+  // is frozen at parse time, so a card doesn't jump sections while the user
+  // types a date into it.
+  const indexed = items.map((item, index) => ({ item, index }));
+  const datedEntries = indexed.filter((e) => !e.item.needsDate);
+  const datelessEntries = indexed.filter((e) => e.item.needsDate);
+  // Select-all only covers items that can actually be saved (real date) —
+  // it must never sweep a dateless item into the save set.
+  const selectableItems = items.filter((i) => isRealDate(i.due_date));
+  const allSelected = selectableItems.length > 0 && selectableItems.every((i) => i.accepted);
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="always">
+        {/* Old-syllabus warning — most extracted dates are already in the
+            past, which almost always means a recycled prior-term PDF. */}
+        {showPastTermBanner && (
+          <View style={[styles.pastTermBanner, { backgroundColor: colors.coral50, borderColor: colors.coral }]}>
+            <FontAwesome name="exclamation-triangle" size={16} color={colors.coral} style={{ marginTop: 2 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.pastTermTitle, { color: colors.coral }]}>These dates look like a previous term</Text>
+              <Text style={[styles.pastTermText, { color: colors.ink2 }]}>
+                Most of these deadlines are already in the past — this may be an old syllabus. Double-check the dates before saving.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setShowPastTermBanner(false)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss previous-term warning"
+            >
+              <FontAwesome name="times" size={14} color={colors.ink3} />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Header */}
         {/* Course info banner */}
         {params.courseName && (
@@ -281,19 +374,40 @@ export default function SyllabusReviewScreen() {
           </View>
           <TouchableOpacity
             onPress={() => {
-              const allAccepted = items.every((i) => i.accepted);
-              setItems((prev) => prev.map((i) => ({ ...i, accepted: !allAccepted })));
+              // Every item is dateless: "Select all" has nothing it can
+              // legally select (tasks.due_date is NOT NULL). Give the same
+              // guidance the per-item tap gives instead of a dead tap.
+              if (selectableItems.length === 0) {
+                Alert.alert(
+                  'Needs a date',
+                  "These items don't have due dates yet. Tap the pencil to set a date on each one you want to save, or leave them deselected.",
+                );
+                return;
+              }
+              setItems((prev) => prev.map((i) => (isRealDate(i.due_date) ? { ...i, accepted: !allSelected } : i)));
             }}
           >
             <Text style={[styles.toggleAllText, { color: colors.brand }]}>
-              {items.every((i) => i.accepted) ? 'Deselect all' : 'Select all'}
+              {allSelected ? 'Deselect all' : 'Select all'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Items */}
-        {items.map((item, index) => (
-          <View key={index} style={[styles.itemCard, { backgroundColor: colors.card, borderColor: colors.line }, !item.accepted && styles.itemRejected]}>
+        {/* Items — dated first, then a "Needs a date" parking lot for items
+            the parser returned without a due date. One combined map so the
+            card JSX isn't duplicated per section; entries carry their
+            ORIGINAL index so edits/toggles hit the right row in `items`. */}
+        {[...datedEntries, ...datelessEntries].map(({ item, index }, pos) => (
+          <Fragment key={index}>
+          {datelessEntries.length > 0 && pos === datedEntries.length && (
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.ink }]}>Needs a date</Text>
+              <Text style={[styles.sectionSub, { color: colors.ink3 }]}>
+                Found in the syllabus without a due date (e.g. "TBA"). Tap the pencil to set one — an item can't be saved without a date.
+              </Text>
+            </View>
+          )}
+          <View style={[styles.itemCard, { backgroundColor: colors.card, borderColor: colors.line }, !item.accepted && styles.itemRejected]}>
             <View style={styles.itemTop}>
               {/* Accept toggle */}
               <TouchableOpacity
@@ -325,8 +439,8 @@ export default function SyllabusReviewScreen() {
                   <View style={[styles.typeBadge, { backgroundColor: colors.brand50 }]}>
                     <Text style={[styles.typeText, { color: colors.brand }]}>{TASK_TYPE_LABELS[item.type] || item.type}</Text>
                   </View>
-                  <Text style={[styles.itemDate, { color: colors.ink2 }]}>
-                    {item.due_date ? formatDateSafe(item.due_date) : 'No date'}
+                  <Text style={[styles.itemDate, { color: item.due_date ? colors.ink2 : colors.amber }]}>
+                    {item.due_date ? formatDateSafe(item.due_date) : 'No date yet'}
                   </Text>
                   {item.due_time && <Text style={[styles.itemTime, { color: colors.ink3 }]}>{item.due_time}</Text>}
                   {item.weight != null && <Text style={[styles.itemWeight, { color: colors.ink3 }]}>{item.weight}%</Text>}
@@ -337,6 +451,17 @@ export default function SyllabusReviewScreen() {
                   <View style={[styles.lowConfidence, { backgroundColor: colors.amber50 }]}>
                     <FontAwesome name="exclamation-triangle" size={10} color={colors.amber} />
                     <Text style={[styles.lowConfidenceText, { color: colors.amber }]}>Low confidence — please verify</Text>
+                  </View>
+                )}
+
+                {/* Server-side plausibility flag: the date parses but falls
+                    outside the expected window for this term (often a
+                    recycled prior-year PDF). Cleared when the user edits
+                    the date — see updateItem. */}
+                {item.date_suspect && (
+                  <View style={[styles.lowConfidence, { backgroundColor: colors.coral50 }]}>
+                    <FontAwesome name="calendar-times-o" size={10} color={colors.coral} />
+                    <Text style={[styles.lowConfidenceText, { color: colors.coral }]}>Date looks outside this term — double-check</Text>
                   </View>
                 )}
               </View>
@@ -377,8 +502,10 @@ export default function SyllabusReviewScreen() {
                   <Text style={[styles.editLabel, narrow ? styles.editLabelColumn : isWide && styles.editLabelWide, { color: colors.ink3 }]}>Date:</Text>
                   <TextInput
                     style={[styles.editSmallInput, { borderColor: colors.line, color: colors.ink }]}
-                    value={item.due_date}
-                    onChangeText={(t) => updateItem(index, 'due_date', t)}
+                    value={item.due_date ?? ''}
+                    // Empty string normalizes back to null so "cleared the
+                    // field" and "never had a date" stay the same state.
+                    onChangeText={(t) => updateItem(index, 'due_date', t || null)}
                     placeholder="YYYY-MM-DD"
                     placeholderTextColor={colors.ink3}
                   />
@@ -424,6 +551,7 @@ export default function SyllabusReviewScreen() {
               <Text style={[styles.itemDesc, { color: colors.ink3 }]}>{item.description}</Text>
             )}
           </View>
+          </Fragment>
         ))}
 
         {items.length === 0 && (
@@ -438,6 +566,14 @@ export default function SyllabusReviewScreen() {
       {/* Save button */}
       {items.length > 0 && (
         <View style={[styles.footer, { paddingBottom: insets.bottom + 18, backgroundColor: colors.paper, borderTopColor: colors.line }]}>
+          {/* Every extracted item is dateless — the save button below is
+              permanently disabled at "Save 0 tasks" until a date exists,
+              so say why instead of leaving a mystery dead button. */}
+          {selectableItems.length === 0 && (
+            <Text style={[styles.footerHint, { color: colors.ink3 }]}>
+              Add dates to include these tasks
+            </Text>
+          )}
           <TouchableOpacity
             style={[styles.saveBtn, { backgroundColor: colors.brand }, saving && styles.saveBtnDisabled]}
             onPress={handleSave}
@@ -467,6 +603,14 @@ const styles = StyleSheet.create({
   courseBannerSem: { fontSize: 11, color: COLORS.ink3, marginTop: 1 },
   autoCreatedBadge: { backgroundColor: COLORS.teal50, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 4 },
   autoCreatedText: { fontSize: 9, fontWeight: '700', color: COLORS.teal },
+  // Old-syllabus warning banner
+  pastTermBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 12, borderRadius: 12, borderWidth: 1, marginBottom: 12 },
+  pastTermTitle: { fontSize: 14, fontWeight: '700' },
+  pastTermText: { fontSize: 12, lineHeight: 17, marginTop: 2 },
+  // "Needs a date" section
+  sectionHeader: { marginTop: 18, marginBottom: 10 },
+  sectionTitle: { fontFamily: FONTS.displaySemibold, fontSize: 17, color: COLORS.ink },
+  sectionSub: { fontSize: 12, lineHeight: 17, color: COLORS.ink3, marginTop: 2 },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 },
   title: { fontFamily: FONTS.displaySemibold, fontSize: 23, color: COLORS.ink },
   subtitle: { fontSize: 13, color: COLORS.ink3, marginTop: 2 },
@@ -510,6 +654,7 @@ const styles = StyleSheet.create({
   emptySub: { fontSize: 13, color: COLORS.ink3 },
   // Footer
   footer: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: 18, paddingBottom: 34, backgroundColor: COLORS.paper, borderTopWidth: 0.5, borderTopColor: COLORS.line },
+  footerHint: { fontSize: 12, color: COLORS.ink3, textAlign: 'center', marginBottom: 8 },
   saveBtn: { height: 52, backgroundColor: COLORS.brand, borderRadius: 14, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 8, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   saveBtnDisabled: { opacity: 0.5 },
   saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },

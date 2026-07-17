@@ -6,6 +6,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
 import { Platform } from 'react-native';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
@@ -14,6 +15,20 @@ import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useScanCount, FREE_SCAN_LIMIT } from '@/lib/queries';
 import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
+import { MAX_SCAN_PAGES, MAX_SCAN_RAW_BYTES, scanTooLargeMessage, type SyllabusPage } from '@/lib/gemini';
+
+// Best-effort raw file size for the multi-page upload budget. Returns 0 when
+// the size can't be read (rare — picker URIs are local files), so the budget
+// check fails open; the pre-flight in extractFromPages is the final gate for
+// anything that slips through.
+const getFileSize = async (uri: string): Promise<number> => {
+  try {
+    const info = await FileSystem.getInfoAsync(uri);
+    return info.exists && typeof info.size === 'number' ? info.size : 0;
+  } catch {
+    return 0;
+  }
+};
 
 export default function ScanScreen() {
   const colors = useColors();
@@ -93,6 +108,27 @@ export default function ScanScreen() {
     } as any);
   };
 
+  // Multi-page photo scans: fileUri/fileName/mimeType still describe the
+  // FIRST page (legacy param shape — upload.tsx's display chip, storage
+  // upload, and the upload row all key off it), with the full ordered page
+  // list JSON-encoded alongside. One submission = one scan server-side.
+  const navigateToUploadPages = (pages: SyllabusPage[]) => {
+    if (pages.length === 0) return;
+    if (pages.length === 1) {
+      navigateToUpload(pages[0].uri, 'syllabus_photo.jpg', pages[0].mimeType);
+      return;
+    }
+    router.push({
+      pathname: '/syllabus/upload',
+      params: {
+        fileUri: pages[0].uri,
+        fileName: `syllabus_scan_${pages.length}_pages.jpg`,
+        mimeType: pages[0].mimeType,
+        pages: JSON.stringify(pages),
+      },
+    } as any);
+  };
+
   // Remaining free scans for FREE users — clamped to 0 so the copy never
   // reads "-1 left" if the server count ever overshoots the limit.
   const remainingScans = Math.max(FREE_SCAN_LIMIT - scanCount, 0);
@@ -114,19 +150,95 @@ export default function ScanScreen() {
       return;
     }
 
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      quality: 0.8,
-    });
+    // Camera loop: after each shot, offer "Add another page" so a stapled
+    // multi-page syllabus can be captured as ONE scan (up to MAX_SCAN_PAGES)
+    // instead of the first page only.
+    const pages: SyllabusPage[] = [];
+    // Running raw-byte total for the pages captured so far — enforced
+    // against MAX_SCAN_RAW_BYTES as each page is ADDED, so the user learns
+    // about the size ceiling one page too early instead of capturing all
+    // five and then watching the whole scan fail with "File too large".
+    let totalBytes = 0;
+    while (pages.length < MAX_SCAN_PAGES) {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        // First page keeps 0.8 for maximum OCR fidelity on single-page
+        // scans. Once the user opts into multi-page, later shots drop to
+        // 0.5: several 0.8-quality iPhone photos easily blow the ~10MB
+        // upload budget, we can't recompress already-captured pages
+        // (expo-image-manipulator broke the EAS build and was reverted in
+        // ab79b84), and 0.5 JPEG is still ample for printed syllabus text.
+        quality: pages.length === 0 ? 0.8 : 0.5,
+      });
 
-    if (!result.canceled && result.assets[0]) {
+      if (result.canceled || !result.assets[0]) {
+        // Backed out of the camera. Nothing captured yet -> plain cancel;
+        // pages already captured -> ask rather than silently discarding them.
+        if (pages.length === 0) return;
+        const keep = await new Promise<boolean>((resolve) => {
+          Alert.alert(
+            'Keep captured pages?',
+            `You've captured ${pages.length} page${pages.length === 1 ? '' : 's'}. Scan ${pages.length === 1 ? 'it' : 'them'} now, or discard?`,
+            [
+              { text: 'Discard', style: 'destructive', onPress: () => resolve(false) },
+              { text: `Scan ${pages.length} page${pages.length === 1 ? '' : 's'}`, onPress: () => resolve(true) },
+            ],
+            { cancelable: true, onDismiss: () => resolve(false) },
+          );
+        });
+        if (!keep) return;
+        break;
+      }
+
       const asset = result.assets[0];
-      navigateToUpload(
-        asset.uri,
-        asset.fileName || 'syllabus_photo.jpg',
-        asset.mimeType || 'image/jpeg',
-      );
+      const size = await getFileSize(asset.uri);
+      // Size budget at add time (never applied to the FIRST page — a lone
+      // photo is always attemptable, and the extractFromPages pre-flight
+      // backstops pathological cases). If this page would push the total
+      // past the budget, drop it and scan the pages already captured.
+      if (pages.length > 0 && totalBytes + size > MAX_SCAN_RAW_BYTES) {
+        await new Promise<void>((resolve) => {
+          Alert.alert(
+            'Photos too large',
+            scanTooLargeMessage(pages.length),
+            [{ text: `Scan ${pages.length} page${pages.length === 1 ? '' : 's'}`, onPress: () => resolve() }],
+            { cancelable: true, onDismiss: () => resolve() },
+          );
+        });
+        break;
+      }
+      totalBytes += size;
+      pages.push({ uri: asset.uri, mimeType: asset.mimeType || 'image/jpeg' });
+      if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      if (pages.length >= MAX_SCAN_PAGES) {
+        // Cap with clear messaging instead of a silently disabled option.
+        await new Promise<void>((resolve) => {
+          Alert.alert(
+            'Page limit reached',
+            `Photo scans support up to ${MAX_SCAN_PAGES} pages. Scanning what you've captured — for longer syllabi, upload a PDF.`,
+            [{ text: 'OK', onPress: () => resolve() }],
+            { cancelable: true, onDismiss: () => resolve() },
+          );
+        });
+        break;
+      }
+
+      const addAnother = await new Promise<boolean>((resolve) => {
+        Alert.alert(
+          `Page ${pages.length} captured`,
+          `Add another page, or scan the ${pages.length} you have? (Up to ${MAX_SCAN_PAGES} pages per scan.)`,
+          [
+            { text: 'Add another page', onPress: () => resolve(true) },
+            { text: `Scan ${pages.length} page${pages.length === 1 ? '' : 's'}`, onPress: () => resolve(false) },
+          ],
+          { cancelable: true, onDismiss: () => resolve(false) },
+        );
+      });
+      if (!addAnother) break;
     }
+
+    navigateToUploadPages(pages);
   };
 
   const handleUploadPDF = async () => {
@@ -167,21 +279,60 @@ export default function ScanScreen() {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      quality: 0.8,
-      // Single-select until the pipeline supports multi-page: with
-      // multi-select on, every page after the first was silently dropped
-      // — the UI must not promise what the scan can't do.
-      allowsMultipleSelection: false,
-      selectionLimit: 1,
+      // 0.5 rather than the single-file 0.8: quality is fixed BEFORE we know
+      // how many photos the user picks, and a multi-select of up to
+      // MAX_SCAN_PAGES full-res photos at 0.8 easily exceeds the ~10MB
+      // upload budget. We can't recompress after selection
+      // (expo-image-manipulator broke the EAS build and was reverted in
+      // ab79b84), and 0.5 JPEG is still ample for printed syllabus text.
+      quality: 0.5,
+      // Multi-select: the pipeline now sends every page to the parser as one
+      // scan. orderedSelection so page order follows the user's tap order,
+      // not library order.
+      allowsMultipleSelection: true,
+      orderedSelection: true,
+      selectionLimit: MAX_SCAN_PAGES,
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      const asset = result.assets[0];
-      navigateToUpload(
-        asset.uri,
-        asset.fileName || 'syllabus_photo.jpg',
-        asset.mimeType || 'image/jpeg',
-      );
+      // selectionLimit caps the native picker, but guard anyway (Android and
+      // older iOS builds don't always honor it) — with clear messaging
+      // instead of silently dropping extras.
+      let assets = result.assets;
+      if (assets.length > MAX_SCAN_PAGES) {
+        assets = assets.slice(0, MAX_SCAN_PAGES);
+        Alert.alert(
+          'Page limit',
+          `Photo scans support up to ${MAX_SCAN_PAGES} pages — scanning the first ${MAX_SCAN_PAGES} you selected. For longer syllabi, upload a PDF.`,
+        );
+      }
+      // Same raw-byte budget as the camera loop, applied at add time: keep
+      // the leading pages that fit under MAX_SCAN_RAW_BYTES (leading, so
+      // page order is preserved), drop the rest with a specific alert
+      // instead of sending everything and failing the whole scan with the
+      // server's "File too large" 413. The first page is always kept — a
+      // lone photo is always attemptable, and the extractFromPages
+      // pre-flight backstops pathological cases.
+      const fitted: SyllabusPage[] = [];
+      let totalBytes = 0;
+      for (const a of assets) {
+        const size = await getFileSize(a.uri);
+        if (fitted.length > 0 && totalBytes + size > MAX_SCAN_RAW_BYTES) break;
+        totalBytes += size;
+        fitted.push({ uri: a.uri, mimeType: a.mimeType || 'image/jpeg' });
+      }
+      if (fitted.length < assets.length) {
+        // Await the alert so it isn't racing the navigation push.
+        await new Promise<void>((resolve) => {
+          Alert.alert(
+            'Photos too large',
+            scanTooLargeMessage(fitted.length),
+            [{ text: `Scan ${fitted.length} page${fitted.length === 1 ? '' : 's'}`, onPress: () => resolve() }],
+            { cancelable: true, onDismiss: () => resolve() },
+          );
+        });
+      }
+      navigateToUploadPages(fitted);
     }
   };
 
@@ -367,13 +518,13 @@ export default function ScanScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Photo/camera scans capture a single page; PDFs are read in full.
-            Non-blocking heads-up so a multi-page paper syllabus isn't
-            silently truncated to its first page. */}
+        {/* Photo/camera scans support multiple pages per scan; PDFs are read
+            in full. Heads-up so users know a stapled syllabus doesn't need
+            to be converted to a PDF first. */}
         <View style={styles.multiPageNote}>
           <FontAwesome name="info-circle" size={13} color={colors.ink3} style={styles.multiPageNoteIcon} />
           <Text style={[styles.multiPageNoteText, { color: colors.ink3 }]}>
-            Photo scans capture one page. For a multi-page syllabus, upload a PDF or scan the pages into a single PDF.
+            Photo scans support up to {MAX_SCAN_PAGES} pages per scan — snap page after page, or multi-select from your library. Longer syllabus? Upload a PDF.
           </Text>
         </View>
       </ScrollView>

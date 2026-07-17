@@ -6,8 +6,12 @@ import type {
   CourseOfficeHours, NewCourseOfficeHours,
 } from '@/types/database';
 import { format, addDays } from 'date-fns';
+import { useAppStore } from '@/store/appStore';
 import { scheduleTaskReminders, cancelTaskReminders } from '@/lib/notifications';
-import { syncTaskToCalendar, removeTaskFromCalendar, isSyncEnabled, isSyncTrackingActive } from '@/lib/calendarSync';
+import {
+  syncTaskToCalendar, removeTaskFromCalendar, isSyncEnabled, isSyncTrackingActive,
+  syncMeetingToCalendar, removeMeetingFromCalendar, isMeetingSyncEnabled, isMeetingSyncTrackingActive,
+} from '@/lib/calendarSync';
 
 // ── Query Keys ──────────────────────────────────────────────
 
@@ -212,12 +216,32 @@ export function useScanCount() {
     staleTime: 0,
     queryFn: async () => {
       const userId = await getUserId();
-      const { count, error } = await supabase
-        .from('syllabus_uploads')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId);
-      if (error) throw error;
-      return count ?? 0;
+      // Mirror the server's free-scan gate EXACTLY (parse-syllabus step 2b):
+      // effective scans = max(gemini_call_log 'success' rows, syllabus_uploads
+      // rows). Counting uploads alone let the pill promise a free scan the
+      // server then 402'd — a client that abandoned an extraction (or an old
+      // build that failed the post-extraction insert) has a success-log row
+      // but no upload row. The call-log read needs migration 022's
+      // SELECT-own-rows policy.
+      const [uploadsRes, callLogRes] = await Promise.all([
+        supabase
+          .from('syllabus_uploads')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId),
+        supabase
+          .from('gemini_call_log')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .eq('status', 'success'),
+      ]);
+      if (uploadsRes.error) throw uploadsRes.error;
+      const uploads = uploadsRes.count ?? 0;
+      // Degrade gracefully, in this order: if the call-log read fails (e.g.
+      // migration 022 not yet applied in prod), fall back to uploads-only
+      // counting — a slightly optimistic pill beats a broken scan tab, and
+      // the server gate still has the final say at scan time.
+      if (callLogRes.error) return uploads;
+      return Math.max(uploads, callLogRes.count ?? 0);
     },
   });
 }
@@ -321,6 +345,18 @@ export function useDeleteSemester() {
         }
       }
 
+      // Class-schedule events are keyed by meeting id — collect them before
+      // the cascade removes the rows they belong to.
+      if (isMeetingSyncTrackingActive()) {
+        const { data: meetings } = await supabase
+          .from('course_meetings')
+          .select('id, courses!inner(semester_id)')
+          .eq('courses.semester_id', id);
+        for (const m of meetings ?? []) {
+          removeMeetingFromCalendar(m.id).catch(() => {});
+        }
+      }
+
       const { error } = await supabase.from('semesters').delete().eq('id', id);
       if (error) throw error;
     },
@@ -393,6 +429,17 @@ export function useDeleteCourse() {
         }
       }
 
+      // Same for the course's class-schedule events (keyed by meeting id).
+      if (isMeetingSyncTrackingActive()) {
+        const { data: meetings } = await supabase
+          .from('course_meetings')
+          .select('id')
+          .eq('course_id', id);
+        for (const m of meetings ?? []) {
+          removeMeetingFromCalendar(m.id).catch(() => {});
+        }
+      }
+
       const { error } = await supabase.from('courses').delete().eq('id', id);
       if (error) throw error;
     },
@@ -419,6 +466,13 @@ export function useCreateCourseMeeting() {
         .select()
         .single();
       if (error) throw error;
+
+      // Push the new block to the device calendar when class-schedule sync
+      // is on — same fire-and-forget pattern as the task mutations.
+      if (isMeetingSyncEnabled()) {
+        syncMeetingToCalendar(result as CourseMeeting).catch(() => {});
+      }
+
       return result as CourseMeeting;
     },
     onSuccess: (result) => {
@@ -439,6 +493,13 @@ export function useUpdateCourseMeeting() {
         .select()
         .single();
       if (error) throw error;
+
+      // Re-sync the meeting's recurring events (handles day/time/kind
+      // changes by replacing the series — see applyMeetingEvents).
+      if (isMeetingSyncEnabled()) {
+        syncMeetingToCalendar(result as CourseMeeting).catch(() => {});
+      }
+
       return result as CourseMeeting;
     },
     onSuccess: (result) => {
@@ -454,6 +515,12 @@ export function useDeleteCourseMeeting() {
     // Pass courseId alongside id so onSuccess can scope invalidation
     // without re-fetching the row that was just deleted.
     mutationFn: async ({ id }: { id: string; courseId: string }) => {
+      // Tracking (not Pro) gate, matching task deletes: removing stale
+      // events must keep working after a subscription lapses.
+      if (isMeetingSyncTrackingActive()) {
+        removeMeetingFromCalendar(id).catch(() => {});
+      }
+
       const { error } = await supabase.from('course_meetings').delete().eq('id', id);
       if (error) throw error;
     },
@@ -661,7 +728,17 @@ export function useToggleTaskComplete() {
 
       return data as Task;
     },
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
+      // Feeds the review-prompt milestone (10th lifetime completion). Lives
+      // here — not in per-screen handlers — because Today, Calendar, course
+      // detail, and task detail all complete tasks through this mutation;
+      // counting only one screen made the milestone unreachable for users
+      // who complete elsewhere. Completion ACTIONS only: un-completing
+      // never decrements (see tasksCompletedCount in store/appStore.ts).
+      // getState() keeps this hook-free — zustand supports module-scope use.
+      if (vars.is_completed) {
+        useAppStore.getState().incrementTasksCompleted();
+      }
       qc.invalidateQueries({ queryKey: ['tasks'] });
       qc.invalidateQueries({ queryKey: ['taskStats'] });
       // ['tasks'] does NOT prefix-match the single-task key ['task', id] —
