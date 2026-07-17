@@ -15,7 +15,13 @@ object belongs to the app you're working on.
 ### 🟦 SEMORA (this app) — safe to manage from this repo
 `tasks`, `courses`, `semesters`, `course_meetings`, `course_office_hours`,
 `profiles`, `syllabus_uploads`, `parse_runs`, `gemini_call_log`, `entitlements`,
-`consumed_transactions`, `receipt_validation_log`
+`consumed_transactions`, `receipt_validation_log`,
+`push_tokens` (023),
+`decks`, `cards` (024, flashcards),
+`tutor_conversations`, `tutor_messages`, `course_notes`, `tutor_usage` (025, AI tutor),
+`course_shares` (026, share-a-course),
+`google_calendar_tokens`, `google_calendar_event_map` (027, Google Calendar sync),
+`referral_codes`, `referral_redemptions`, `promo_grants` (028, referrals)
 
 ### 🟩 CITIZEN (other app) — DO NOT TOUCH from Semora
 `whisper_usage` — whisper/voice usage + rate-limit log (`client_id`-based, anonymous,
@@ -29,14 +35,19 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
 - Indexes: `idx_analytics_events_app_name (app_name, created_at desc)`, `idx_analytics_events_name_created (event_name, created_at desc)`.
 
 ## Functions / triggers
-- **Semora:** `is_pro`, `current_user_is_pro`, `delete_user_account`, `handle_new_user`,
+- **Semora:** `is_pro` (redefined in 028 to also honor `promo_grants`), `current_user_is_pro`, `delete_user_account`, `handle_new_user`,
   `enforce_free_scan_limit`, `enforce_free_course_limit`, `enforce_free_semester_limit`,
-  `*_assert_parent_owner` (tasks/courses/course_meetings/course_office_hours/parse_runs/syllabus_uploads),
-  `parent_row_user_id`
+  `*_assert_parent_owner` (tasks/courses/course_meetings/course_office_hours/parse_runs/syllabus_uploads/decks/cards/tutor_*/course_notes/course_shares),
+  `parent_row_user_id`, `resolve_course_share` (026), `try_consume_tutor_usage` (025), `try_redeem_referral` (028)
 - **Citizen:** `whisper_rate_limit_ok` ← DO NOT modify from Semora
+
+## Edge functions
+- **Semora:** `parse-syllabus`, `validate-receipt`, `send-push` (deploy `--no-verify-jwt`),
+  `tutor-chat`, `share-course`, `google-cal-sync`, `redeem-referral`
 
 ## Storage buckets
 - `syllabi` (private) — **SEMORA only**, per-user RLS policies. Citizen has no bucket.
+- `course-notes` (private, 025) — **SEMORA only**, per-user RLS. AI-tutor uploaded notes.
 
 ## Rules to avoid cross-app accidents
 1. Only `DROP`/`ALTER`/`TRUNCATE` a table whose comment names **your** app (or that's listed above under your app).

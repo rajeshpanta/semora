@@ -26,14 +26,29 @@ const FEATURES = [
     desc: 'Scan unlimited syllabi and add as many courses as you need.',
   },
   {
+    icon: 'bar-chart' as const,
+    title: 'Workload Dashboard & Study Plan',
+    desc: 'See your whole semester at a glance, spot crunch weeks, and get smart “start this now” suggestions.',
+  },
+  {
+    icon: 'graduation-cap' as const,
+    title: 'Flashcards, Focus Timer & AI Tutor',
+    desc: 'Study with spaced-repetition flashcards, a Pomodoro timer, and an AI tutor that knows your syllabus.',
+  },
+  {
     icon: 'line-chart' as const,
     title: 'Grade Scale & Forecasting',
     desc: 'Customize grading scales and forecast your final GPA.',
   },
   {
     icon: 'bell' as const,
-    title: 'Advance Reminders & Sync',
-    desc: 'Get 1-day and 3-day advance reminders. Sync to calendar.',
+    title: 'Advance Reminders & Calendar Sync',
+    desc: '1- and 3-day advance reminders, class-schedule sync, and export to Apple or Google Calendar.',
+  },
+  {
+    icon: 'users' as const,
+    title: 'Share & Streaks',
+    desc: 'Share a course with classmates, post your semester, and keep your study streak going.',
   },
 ];
 
