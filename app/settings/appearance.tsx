@@ -7,7 +7,7 @@ import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 
-const OPTIONS: { mode: ThemeMode; label: string; icon: string; description: string; disabled?: boolean }[] = [
+const OPTIONS: { mode: ThemeMode; label: string; icon: string; description: string }[] = [
   { mode: 'system', label: 'System', icon: 'mobile-phone', description: 'Match your device setting' },
   { mode: 'light', label: 'Light', icon: 'sun-o', description: 'Always use light theme' },
   { mode: 'dark', label: 'Dark', icon: 'moon-o', description: 'Always use dark theme' },
@@ -29,16 +29,16 @@ export default function AppearanceSettings() {
           {OPTIONS.map((opt, i) => (
             <TouchableOpacity
               key={opt.mode}
-              style={[styles.row, i < OPTIONS.length - 1 && styles.rowBorder, i < OPTIONS.length - 1 && { borderBottomColor: colors.line }, opt.disabled && styles.rowDisabled]}
-              activeOpacity={opt.disabled ? 1 : 0.7}
-              onPress={() => !opt.disabled && setThemeMode(opt.mode)}
+              style={[styles.row, i < OPTIONS.length - 1 && styles.rowBorder, i < OPTIONS.length - 1 && { borderBottomColor: colors.line }]}
+              activeOpacity={0.7}
+              onPress={() => setThemeMode(opt.mode)}
             >
-              <FontAwesome name={opt.icon as any} size={18} color={opt.disabled ? colors.ink3 : colors.ink2} style={{ width: 24 }} />
+              <FontAwesome name={opt.icon as any} size={18} color={colors.ink2} style={{ width: 24 }} />
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={[styles.rowLabel, { color: colors.ink }, opt.disabled && { color: colors.ink3 }]}>{opt.label}</Text>
+                <Text style={[styles.rowLabel, { color: colors.ink }]}>{opt.label}</Text>
                 <Text style={[styles.rowSub, { color: colors.ink3 }]}>{opt.description}</Text>
               </View>
-              {!opt.disabled && themeMode === opt.mode && (
+              {themeMode === opt.mode && (
                 <FontAwesome name="check" size={16} color={colors.brand} />
               )}
             </TouchableOpacity>
@@ -56,8 +56,6 @@ const styles = StyleSheet.create({
   card: { backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 16, borderWidth: 0.5, borderColor: COLORS.line },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
   rowBorder: { borderBottomWidth: 0.5, borderBottomColor: COLORS.line },
-  rowDisabled: { opacity: 0.5 },
   rowLabel: { fontSize: 15, fontWeight: '500', color: COLORS.ink },
-  rowLabelDisabled: { color: COLORS.ink3 },
   rowSub: { fontSize: 13, color: COLORS.ink3, marginTop: 2 },
 });

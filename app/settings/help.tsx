@@ -18,7 +18,11 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'How do reminders work?',
-    a: 'Go to Me > Settings > Notifications to choose when you want reminders — same day, 1 day before, or 3 days before a due date. Reminders are scheduled when tasks are created.',
+    a: 'Go to Me > Settings > Notifications to choose when you want reminders. Same-day reminders are free; 1-day and 3-day advance reminders are a Pro feature. Reminders are scheduled when tasks are created.',
+  },
+  {
+    q: 'What are the free plan limits?',
+    a: 'On the free plan you get 5 syllabus scans per month (the count resets at the start of each month) and up to 4 courses per semester. Tasks are unlimited. Upgrade to Pro to lift these limits.',
   },
   {
     q: 'How is my grade calculated?',

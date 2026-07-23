@@ -4,7 +4,8 @@ import {
   TouchableOpacity, View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useGpaScale, useUpdateGpaScale } from '@/lib/queries';
 import { DEFAULT_GPA_SCALE } from '@/lib/grades';
@@ -12,10 +13,16 @@ import type { GpaScaleEntry } from '@/types/database';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
+import { useAppStore } from '@/store/appStore';
+import { track } from '@/lib/analytics';
 
 export default function GpaScaleScreen() {
   const colors = useColors();
   const { contentMaxWidth } = useResponsive();
+  const router = useRouter();
+  // Custom scale EDITOR is Pro (paywall advertises "Grade Scale"). Free users
+  // can still SEE the scale, but the inputs/save are locked → paywall.
+  const isPro = useAppStore((s) => s.isPro);
   const { data, isLoading } = useGpaScale();
   const update = useUpdateGpaScale();
   const [rows, setRows] = useState<GpaScaleEntry[]>(DEFAULT_GPA_SCALE);
@@ -24,7 +31,20 @@ export default function GpaScaleScreen() {
     if (data?.length) setRows(data);
   }, [data]);
 
+  const openPaywall = () => {
+    Haptics.selectionAsync().catch(() => {});
+    track('paywall_open', { screen: 'gpa_scale', context: 'gpa_scale' });
+    router.push({ pathname: '/paywall', params: { context: 'gpa_scale' } } as any);
+  };
+
   const save = async () => {
+    // Client gate — the editor is locked for free users, but never run the save
+    // mutation without Pro (no marginal server cost, matching other client-only
+    // Pro gates like what-if forecasting).
+    if (!isPro) {
+      openPaywall();
+      return;
+    }
     const clean = rows
       .map((row) => ({ letter: row.letter.trim().toUpperCase(), points: Number(row.points) }))
       .filter((row) => row.letter);
@@ -57,6 +77,27 @@ export default function GpaScaleScreen() {
           Set the exact points your school awards for each letter. This changes GPA estimates, not course percentage cutoffs.
         </Text>
 
+        {/* Pro teaser — free users see the scale below but can't edit it.
+            Tapping routes to the paywall (context 'gpa_scale'). */}
+        {!isPro && (
+          <TouchableOpacity
+            style={[styles.lockBanner, { backgroundColor: colors.brand50 }]}
+            onPress={openPaywall}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel="Upgrade to Pro to customize your GPA scale"
+          >
+            <FontAwesome name="lock" size={14} color={colors.brand} />
+            <Text style={[styles.lockBannerText, { color: colors.brand }]}>
+              Customizing your grade scale is a Pro feature. Upgrade to edit the points your school awards.
+            </Text>
+            <View style={[styles.proBadge, { backgroundColor: colors.brand }]}>
+              <FontAwesome name="star" size={9} color="#fff" />
+              <Text style={styles.proBadgeText}>PRO</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           {rows.map((row, index) => (
             <View key={index} style={[styles.row, index < rows.length - 1 && { borderBottomWidth: 0.5, borderBottomColor: colors.line }]}>
@@ -67,6 +108,7 @@ export default function GpaScaleScreen() {
                 placeholderTextColor={colors.ink3}
                 autoCapitalize="characters"
                 maxLength={3}
+                editable={isPro}
                 onChangeText={(letter) => setRows((current) => current.map((item, i) => i === index ? { ...item, letter } : item))}
               />
               <Text style={[styles.equals, { color: colors.ink3 }]}>=</Text>
@@ -76,26 +118,39 @@ export default function GpaScaleScreen() {
                 placeholder="4.0"
                 placeholderTextColor={colors.ink3}
                 keyboardType="decimal-pad"
+                editable={isPro}
                 onChangeText={(value) => setRows((current) => current.map((item, i) => i === index ? { ...item, points: Number(value) || 0 } : item))}
               />
               <Text style={[styles.pointsLabel, { color: colors.ink3 }]}>points</Text>
-              <TouchableOpacity onPress={() => setRows((current) => current.filter((_, i) => i !== index))} hitSlop={8}>
-                <FontAwesome name="times" size={14} color={colors.coral} />
-              </TouchableOpacity>
+              {isPro && (
+                <TouchableOpacity onPress={() => setRows((current) => current.filter((_, i) => i !== index))} hitSlop={8}>
+                  <FontAwesome name="times" size={14} color={colors.coral} />
+                </TouchableOpacity>
+              )}
             </View>
           ))}
-          <TouchableOpacity style={styles.addRow} onPress={() => setRows((current) => [...current, { letter: '', points: 0 }])}>
-            <FontAwesome name="plus" size={11} color={colors.brand} />
-            <Text style={[styles.addText, { color: colors.brand }]}>Add grade</Text>
-          </TouchableOpacity>
+          {isPro && (
+            <TouchableOpacity style={styles.addRow} onPress={() => setRows((current) => [...current, { letter: '', points: 0 }])}>
+              <FontAwesome name="plus" size={11} color={colors.brand} />
+              <Text style={[styles.addText, { color: colors.brand }]}>Add grade</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        <TouchableOpacity style={[styles.secondary, { borderColor: colors.line }]} onPress={() => setRows(DEFAULT_GPA_SCALE)}>
-          <Text style={[styles.secondaryText, { color: colors.ink2 }]}>Restore standard 4.0 scale</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={[styles.save, { backgroundColor: colors.brand }]} onPress={save} disabled={update.isPending}>
-          {update.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Save GPA scale</Text>}
-        </TouchableOpacity>
+        {isPro ? (
+          <>
+            <TouchableOpacity style={[styles.secondary, { borderColor: colors.line }]} onPress={() => setRows(DEFAULT_GPA_SCALE)}>
+              <Text style={[styles.secondaryText, { color: colors.ink2 }]}>Restore standard 4.0 scale</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.save, { backgroundColor: colors.brand }]} onPress={save} disabled={update.isPending}>
+              {update.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveText}>Save GPA scale</Text>}
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity style={[styles.save, { backgroundColor: colors.brand }]} onPress={openPaywall} activeOpacity={0.85}>
+            <Text style={styles.saveText}>Upgrade to Pro to edit</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -119,4 +174,10 @@ const styles = StyleSheet.create({
   secondaryText: { fontSize: 13.5, fontWeight: '700' },
   save: { height: 50, borderRadius: 13, alignItems: 'center', justifyContent: 'center', marginTop: 10 },
   saveText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  // Pro teaser banner shown above the (read-only) scale for free users.
+  lockBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 14, padding: 14, marginBottom: 16 },
+  lockBannerText: { flex: 1, fontSize: 13, lineHeight: 18, fontWeight: '600' },
+  // Matches the PRO badge treatment used on other Pro teasers.
+  proBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  proBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
 });

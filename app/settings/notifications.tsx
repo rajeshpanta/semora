@@ -15,6 +15,7 @@ import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
+import { track } from '@/lib/analytics';
 import { DatePicker } from '@/components/DatePicker';
 
 interface ReminderPrefs {
@@ -113,7 +114,21 @@ export default function NotificationSettings() {
     }
   };
 
+  // Quiet hours is a Pro feature (owner decision: control = Pro), gated the
+  // same way as the 1-/3-day advance reminders above: free taps route to the
+  // paywall instead of writing. Server-side the scheduler also forces quiet
+  // hours off for non-Pro, so a patched client that saves the flag still gets
+  // no quiet-hours behavior.
+  const openQuietHoursPaywall = () => {
+    track('paywall_open', { screen: 'settings_notifications', context: 'quiet_hours' });
+    router.push({ pathname: '/paywall', params: { context: 'quiet_hours' } } as any);
+  };
+
   const updateQuietHours = async (patch: Partial<ReminderPrefs>) => {
+    if (!isPro) {
+      openQuietHoursPaywall();
+      return;
+    }
     const previous = prefs;
     const updated = { ...prefs, ...patch };
     setPrefs(updated);
@@ -237,12 +252,15 @@ export default function NotificationSettings() {
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <ToggleRow
             label="Pause reminder delivery"
-            subtitle="Reminders that land inside this window move to the end of quiet hours."
-            value={prefs.quiet_hours_enabled}
+            subtitle={isPro
+              ? 'Reminders that land inside this window move to the end of quiet hours.'
+              : 'Pro feature'}
+            value={isPro ? prefs.quiet_hours_enabled : false}
             onToggle={() => updateQuietHours({ quiet_hours_enabled: !prefs.quiet_hours_enabled })}
             last
+            pro={!isPro}
           />
-          {prefs.quiet_hours_enabled && (
+          {isPro && prefs.quiet_hours_enabled && (
             <View style={[styles.quietTimes, { borderTopColor: colors.line }]}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.timeLabel, { color: colors.ink3 }]}>START</Text>

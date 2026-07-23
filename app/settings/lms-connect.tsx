@@ -1,6 +1,6 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -26,6 +26,7 @@ import {
   syncLmsConnection,
   type LmsCredential,
 } from '@/lib/lms';
+import { track } from '@/lib/analytics';
 import { useSemesters } from '@/lib/queries';
 import { useResponsive } from '@/lib/responsive';
 import { useColors } from '@/lib/theme';
@@ -64,7 +65,24 @@ export default function LmsConnectScreen() {
     : 'canvas') as LmsProvider;
   const reconnecting = !!params.connectionId;
   const { data: semesters = [] } = useSemesters();
+  const isPro = useAppStore((state) => state.isPro);
   const selectedSemesterId = useAppStore((state) => state.selectedSemesterId);
+
+  // Route to the paywall (teaser → upsell). The lms-sync edge function enforces
+  // PRO_REQUIRED server-side; this is the client teaser so free users see the
+  // upsell instead of a failed connect. Matches the calendar.tsx pattern.
+  const openPaywall = useCallback(() => {
+    track('paywall_open', { screen: 'settings_lms_connect', context: 'lms' });
+    router.replace({ pathname: '/paywall', params: { context: 'lms' } } as any);
+  }, []);
+
+  // Defense in depth: the LMS list screen already gates entry behind Pro, but
+  // this screen is directly routable (deep link / reconnect). Bounce a non-Pro
+  // user straight to the paywall rather than let them start a connect flow the
+  // server will reject anyway.
+  useEffect(() => {
+    if (!isPro) openPaywall();
+  }, [isPro, openPaywall]);
   const [semesterId, setSemesterId] = useState(selectedSemesterId ?? '');
   const [displayName, setDisplayName] = useState(LMS_PROVIDER_LABELS[provider]);
   const [baseUrl, setBaseUrl] = useState(params.baseUrl ?? '');
@@ -123,7 +141,15 @@ export default function LmsConnectScreen() {
       if (!found.length) Alert.alert('No active courses found', 'This account returned no courses Semora can import.');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'The learning platform could not be connected.';
-      if (!/cancel/i.test(message)) Alert.alert('Couldn’t connect', message);
+      // Pro lapsed mid-session (or a patched client hit the server gate): the
+      // lms-sync function replies with the PRO_REQUIRED copy. Route to the
+      // paywall instead of showing it as a raw connect error. invokeLms surfaces
+      // the server's `error` string, so match on that phrasing.
+      if (/pro feature/i.test(message)) {
+        openPaywall();
+      } else if (!/cancel/i.test(message)) {
+        Alert.alert('Couldn’t connect', message);
+      }
     } finally {
       setWorking(false);
     }
@@ -171,6 +197,12 @@ export default function LmsConnectScreen() {
       return next;
     });
   };
+
+  // Non-Pro: the effect above is routing to the paywall. Render an empty paper
+  // screen (no connect form flash) until the replace lands.
+  if (!isPro) {
+    return <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']} />;
+  }
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>

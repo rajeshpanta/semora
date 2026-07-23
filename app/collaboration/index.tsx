@@ -4,6 +4,7 @@ import { Stack, router } from 'expo-router';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSession } from '@/app/_layout';
+import { track } from '@/lib/analytics';
 import { createCourseCollaboration, listCollaborations } from '@/lib/collaboration';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useCourses } from '@/lib/queries';
@@ -16,6 +17,10 @@ export default function CollaborationHubScreen() {
   const { contentMaxWidth } = useResponsive();
   const { session } = useSession();
   const semesterId = useAppStore((state) => state.selectedSemesterId);
+  // Creating a space is Pro (it stands up a backend-hosted, realtime shared
+  // space); JOINING one stays free so a classmate without Pro can still accept
+  // an invite (the classroom growth loop). The server backstops this too.
+  const isPro = useAppStore((state) => state.isPro);
   const { data: courses = [] } = useCourses(semesterId);
   const queryClient = useQueryClient();
   const { data: collaborations = [], isLoading } = useQuery({
@@ -29,8 +34,28 @@ export default function CollaborationHubScreen() {
       queryClient.invalidateQueries({ queryKey: ['collaborations'] });
       router.push(`/collaboration/${collaboration.id}` as any);
     },
-    onError: (error: Error) => Alert.alert('Couldn’t create course space', error.message),
+    onError: (error: any) => {
+      // A lapsed-Pro user (client cache still true) passes the client gate but
+      // the server RPC (migration 045) raises P0001 — route to the paywall
+      // rather than showing the raw Pro-required text as an error.
+      if (error?.code === 'P0001' || /pro feature/i.test(error?.message ?? '')) {
+        track('paywall_open', { screen: 'collaboration', context: 'collaboration' });
+        router.push({ pathname: '/paywall', params: { context: 'collaboration' } } as any);
+        return;
+      }
+      Alert.alert('Couldn’t create course space', error.message);
+    },
   });
+  // Free users tapping a "Start a course space" row are sent to the paywall
+  // instead of creating (matches the calendar/streak Pro-gate pattern).
+  const handleStartSpace = (courseId: string) => {
+    if (!isPro) {
+      track('paywall_open', { screen: 'collaboration', context: 'collaboration' });
+      router.push({ pathname: '/paywall', params: { context: 'collaboration' } } as any);
+      return;
+    }
+    create.mutate(courseId);
+  };
   const sharedCourseIds = new Set(
     collaborations
       .filter((row) => row.owner_user_id === session?.user.id)
@@ -81,17 +106,30 @@ export default function CollaborationHubScreen() {
           </TouchableOpacity>
         ))}
 
-        <Text style={[styles.sectionTitle, { color: colors.ink, marginTop: 10 }]}>Start a course space</Text>
+        <View style={styles.sectionHeadRow}>
+          <Text style={[styles.sectionTitle, { color: colors.ink, marginTop: 10 }]}>Start a course space</Text>
+          {!isPro && (
+            <View style={[styles.proBadge, { backgroundColor: colors.brand }]}>
+              <FontAwesome name="star" size={9} color="#fff" />
+              <Text style={styles.proBadgeText}>PRO</Text>
+            </View>
+          )}
+        </View>
+        {!isPro && courses.length > 0 && (
+          <Text style={[styles.emptyText, { color: colors.ink3, marginTop: -2 }]}>
+            Hosting a shared space is a Pro feature. Joining a classmate’s space is always free.
+          </Text>
+        )}
         {courses.filter((course) => !sharedCourseIds.has(course.id)).map((course) => (
           <TouchableOpacity
             key={course.id}
             disabled={create.isPending}
-            onPress={() => create.mutate(course.id)}
+            onPress={() => handleStartSpace(course.id)}
             style={[styles.row, { backgroundColor: colors.card, borderColor: colors.line }]}
           >
             <View style={[styles.colorDot, { backgroundColor: course.color }]} />
             <Text style={[styles.rowTitle, { flex: 1, color: colors.ink }]}>{course.name}</Text>
-            <FontAwesome name="plus-circle" size={18} color={colors.brand} />
+            <FontAwesome name={isPro ? 'plus-circle' : 'lock'} size={18} color={colors.brand} />
           </TouchableOpacity>
         ))}
         {courses.length === 0 && (
@@ -112,6 +150,10 @@ const styles = StyleSheet.create({
   heroTitle: { fontSize: 17, fontWeight: '800' },
   heroText: { fontSize: 13, lineHeight: 19, marginTop: 4 },
   sectionTitle: { fontSize: 19, fontFamily: 'Fraunces_700Bold', marginTop: 4, marginBottom: 2 },
+  sectionHeadRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
+  // Matches the PRO badge treatment on app/settings/calendar.tsx.
+  proBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  proBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
   row: { minHeight: 66, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12 },
   courseIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   colorDot: { width: 11, height: 11, borderRadius: 6 },

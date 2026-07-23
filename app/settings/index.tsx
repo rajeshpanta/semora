@@ -15,6 +15,8 @@ import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { displayName, hasEmailPassword } from '@/lib/user';
 import { useOfflineSyncStatus } from '@/components/OfflineSyncBridge';
+import { track } from '@/lib/analytics';
+import Constants from 'expo-constants';
 
 export default function SettingsScreen() {
   const colors = useColors();
@@ -145,12 +147,16 @@ export default function SettingsScreen() {
           <SettingsRow
             icon="calendar"
             label="Calendar Sync"
+            pro
+            isPro={isPro}
             onPress={() => router.push('/settings/calendar')}
           />
           <SettingsRow
             icon="university"
             label="Learning Platforms"
             value="LMS import"
+            pro
+            isPro={isPro}
             onPress={() => router.push('/settings/lms' as any)}
           />
           <SettingsRow
@@ -169,6 +175,8 @@ export default function SettingsScreen() {
             icon="graduation-cap"
             label="GPA Scale"
             value="School rules"
+            pro
+            isPro={isPro}
             onPress={() => router.push('/settings/gpa-scale' as any)}
           />
           <SettingsRow
@@ -185,27 +193,26 @@ export default function SettingsScreen() {
           />
         </View>
 
-        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Academic Tools</Text>
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <SettingsRow
-            icon="line-chart"
-            label="Progress Insights"
-            value="Semester report"
-            onPress={() => router.push('/insights' as any)}
-          />
-          <SettingsRow
-            icon="users"
-            label="Class Collaboration"
-            value="Shared courses"
-            onPress={() => router.push('/collaboration' as any)}
-            last
-          />
-        </View>
-
         {/* Subscription — Restore is always reachable (the paywall is not, once
             isPro is cached true); Manage opens Apple's subscription settings. */}
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Subscription</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          {/* Free users otherwise see only Restore here — a conversion dead end.
+              Give them a first-class way into the paywall from Settings. */}
+          {!isPro && (
+            <TouchableOpacity
+              style={[styles.row, styles.rowBorder, { borderBottomColor: colors.line }]}
+              activeOpacity={0.7}
+              onPress={() => {
+                track('paywall_open', { screen: 'settings', context: 'settings' });
+                router.push({ pathname: '/paywall', params: { context: 'settings' } } as any);
+              }}
+            >
+              <FontAwesome name="star" size={16} color={colors.brand} style={styles.icon} />
+              <Text style={[styles.rowLabel, { flex: 1, color: colors.brand, fontWeight: '700' }]}>Upgrade to Pro</Text>
+              <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
+            </TouchableOpacity>
+          )}
           <SettingsRow
             icon="refresh"
             label="Restore Purchases"
@@ -221,6 +228,17 @@ export default function SettingsScreen() {
               last
             />
           )}
+        </View>
+
+        {/* Support — Help & FAQ screen exists but was orphaned; link it here. */}
+        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Support</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <SettingsRow
+            icon="question-circle-o"
+            label="Help & FAQ"
+            onPress={() => router.push('/settings/help' as any)}
+            last
+          />
         </View>
 
         {/* Legal — Apple requires Terms + Privacy to be reachable outside the paywall. */}
@@ -252,18 +270,35 @@ export default function SettingsScreen() {
         <Text style={[styles.hint, { color: colors.ink3 }]}>
           Deleting your account removes all data permanently and cannot be undone.
         </Text>
+
+        <Text style={[styles.version, { color: colors.ink3 }]}>
+          Semora {Constants.expoConfig?.version ?? '1.2'}
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function SettingsRow({ icon, label, value, last, onPress }: { icon: string; label: string; value?: string; last?: boolean; onPress?: () => void }) {
+// `pro` marks a row whose destination is a Pro feature. For free users we show
+// the same PRO badge treatment used on the calendar/LMS/GPA screens themselves,
+// so Settings reads honestly at a glance. The destination screen still owns the
+// real gate (teaser → paywall), so tapping keeps navigating there; the badge is
+// hidden for Pro users so it never clutters a paid account.
+function SettingsRow({ icon, label, value, last, onPress, pro, isPro }: { icon: string; label: string; value?: string; last?: boolean; onPress?: () => void; pro?: boolean; isPro?: boolean }) {
   const colors = useColors();
+  const showBadge = pro && !isPro;
   return (
     <TouchableOpacity style={[styles.row, !last && styles.rowBorder, !last && { borderBottomColor: colors.line }]} activeOpacity={0.7} onPress={onPress}>
       <FontAwesome name={icon as any} size={16} color={colors.ink2} style={styles.icon} />
       <Text style={[styles.rowLabel, { flex: 1, color: colors.ink }]}>{label}</Text>
-      {value && <Text style={[styles.rowValue, { color: colors.ink3 }]}>{value}</Text>}
+      {showBadge ? (
+        <View style={[styles.proBadge, { backgroundColor: colors.brand }]}>
+          <FontAwesome name="lock" size={9} color="#fff" />
+          <Text style={styles.proBadgeText}>PRO</Text>
+        </View>
+      ) : (
+        value && <Text style={[styles.rowValue, { color: colors.ink3 }]}>{value}</Text>
+      )}
       <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
     </TouchableOpacity>
   );
@@ -281,4 +316,8 @@ const styles = StyleSheet.create({
   rowSub: { fontSize: 13, color: COLORS.ink3, marginTop: 2 },
   rowValue: { fontSize: 14, color: COLORS.ink3, marginRight: 8 },
   hint: { fontSize: 13, color: COLORS.ink3, lineHeight: 18, paddingHorizontal: 4 },
+  // Matches the PRO badge on the calendar/course grade-scale teasers.
+  proBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.brand, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, marginRight: 8 },
+  proBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
+  version: { textAlign: 'center', fontSize: 14, color: COLORS.ink3, marginTop: 24 },
 });

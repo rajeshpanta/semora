@@ -3,6 +3,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const MAX_BODY_BYTES = 64 * 1024;
 const MAX_PAGES = 12;
 
@@ -511,6 +512,28 @@ serve(async (req) => {
     });
     const { data: userData, error: userError } = await userClient.auth.getUser();
     if (userError || !userData.user) return json({ error: 'Invalid or expired session' }, 401);
+
+    // Pro gate (server-side, the backstop the client can't bypass). LMS import
+    // is a Pro feature: both actions (discover + assignments) hit the school's
+    // provider API, so a patched free client could otherwise sync unlimited and
+    // run up our egress. Check BEFORE any provider fetch. is_pro() is SECURITY
+    // DEFINER and granted to service_role, so the admin client can call it. Same
+    // is_pro RPC + fail-closed-transient (503) policy as parse-syllabus, so an
+    // RPC blip never falsely demotes a paying user.
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: proResult, error: proErr } = await adminClient.rpc('is_pro', { uid: userData.user.id });
+    if (proErr) {
+      console.error('[lms-sync] is_pro check failed:', proErr);
+      return json({ error: 'Service temporarily unavailable' }, 503);
+    }
+    if (proResult !== true) {
+      // 402 + code so the client routes to the paywall rather than showing a
+      // generic error (mirrors share-course / google-cal-sync PRO_REQUIRED).
+      return json(
+        { error: 'Connecting a learning platform is a Pro feature. Upgrade to import your courses and assignments.', code: 'PRO_REQUIRED' },
+        402,
+      );
+    }
 
     const body = await req.json();
     const provider = body?.provider as Provider;

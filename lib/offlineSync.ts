@@ -299,7 +299,14 @@ export function flushOfflineQueue(
   queryClient: QueryClient,
   options?: { force?: boolean },
 ): Promise<void> {
-  if (activeFlush) return activeFlush;
+  if (activeFlush) {
+    // A forced "Try sync now" tap must not be coalesced into an in-flight
+    // (possibly non-forced) auto-flush — that would drop force:true and leave
+    // parked/backoff items un-retried. Run a forced pass after the current one
+    // settles instead.
+    if (options?.force !== true) return activeFlush;
+    return activeFlush.catch(() => {}).then(() => flushOfflineQueue(userId, queryClient, { force: true }));
+  }
   if (!snapshot.isOnline) return Promise.resolve();
   const force = options?.force === true;
 

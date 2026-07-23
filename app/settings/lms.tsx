@@ -9,9 +9,11 @@ import {
   LMS_PROVIDER_LABELS,
   syncLmsConnection,
 } from '@/lib/lms';
+import { track } from '@/lib/analytics';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useResponsive } from '@/lib/responsive';
 import { useColors } from '@/lib/theme';
+import { useAppStore } from '@/store/appStore';
 import type { LmsProvider } from '@/types/database';
 
 const PROVIDERS: Array<{ id: LmsProvider; icon: string; detail: string }> = [
@@ -24,7 +26,17 @@ const PROVIDERS: Array<{ id: LmsProvider; icon: string; detail: string }> = [
 export default function LmsSettingsScreen() {
   const colors = useColors();
   const { contentMaxWidth } = useResponsive();
+  const isPro = useAppStore((s) => s.isPro);
   const queryClient = useQueryClient();
+
+  // Pro gate (teaser → paywall). The lms-sync edge function also enforces
+  // PRO_REQUIRED server-side (the real, unbypassable gate), but gate here too so
+  // free users see the upsell instead of a failed connect/sync. Matches the
+  // calendar.tsx PRO-badge pattern.
+  const openPaywall = () => {
+    track('paywall_open', { screen: 'settings_lms', context: 'lms' });
+    router.push({ pathname: '/paywall', params: { context: 'lms' } } as any);
+  };
   const query = useQuery({
     queryKey: ['lmsConnections'],
     queryFn: listLmsConnections,
@@ -39,6 +51,14 @@ export default function LmsSettingsScreen() {
     },
     onError: (error: Error, connectionId) => {
       query.refetch();
+      // Lapsed-Pro (stale client cache): the lms-sync function returns
+      // PRO_REQUIRED. Route to the paywall like the connect flow does, not a
+      // raw "sync needs attention" alert.
+      if (/pro feature/i.test(error.message)) {
+        track('paywall_open', { screen: 'settings_lms', context: 'lms' });
+        router.push({ pathname: '/paywall', params: { context: 'lms' } } as any);
+        return;
+      }
       const connection = query.data?.find((row) => row.id === connectionId);
       Alert.alert(
         'Sync needs attention',
@@ -121,10 +141,13 @@ export default function LmsSettingsScreen() {
                   <View style={[styles.connectionActions, { borderTopColor: colors.line }]}>
                     <TouchableOpacity
                       disabled={sync.isPending}
-                      onPress={() => sync.mutate(connection.id)}
+                      // Existing connections stay visible for a lapsed user, but
+                      // a new sync is Pro — route to the paywall instead of
+                      // firing a sync the server will reject with PRO_REQUIRED.
+                      onPress={() => (isPro ? sync.mutate(connection.id) : openPaywall())}
                       style={styles.textButton}
                     >
-                      <FontAwesome name="refresh" size={13} color={colors.brand} />
+                      <FontAwesome name={isPro ? 'refresh' : 'lock'} size={13} color={colors.brand} />
                       <Text style={[styles.textButtonLabel, { color: colors.brand }]}>
                         {sync.isPending && sync.variables === connection.id ? 'Syncing…' : 'Sync now'}
                       </Text>
@@ -144,7 +167,11 @@ export default function LmsSettingsScreen() {
         {PROVIDERS.map((provider) => (
           <TouchableOpacity
             key={provider.id}
-            onPress={() => router.push({ pathname: '/settings/lms-connect', params: { provider: provider.id } } as any)}
+            // Connecting a platform is Pro. Free users get the locked teaser →
+            // paywall instead of opening the connect flow.
+            onPress={() => (isPro
+              ? router.push({ pathname: '/settings/lms-connect', params: { provider: provider.id } } as any)
+              : openPaywall())}
             style={[styles.providerRow, { backgroundColor: colors.card, borderColor: colors.line }]}
           >
             <View style={[styles.providerIcon, { backgroundColor: colors.brand50 }]}>
@@ -154,7 +181,14 @@ export default function LmsSettingsScreen() {
               <Text style={[styles.providerName, { color: colors.ink }]}>{LMS_PROVIDER_LABELS[provider.id]}</Text>
               <Text style={[styles.meta, { color: colors.ink3 }]}>{provider.detail}</Text>
             </View>
-            <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
+            {isPro ? (
+              <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
+            ) : (
+              <View style={[styles.proBadge, { backgroundColor: colors.brand }]}>
+                <FontAwesome name="star" size={9} color="#fff" />
+                <Text style={styles.proBadgeText}>PRO</Text>
+              </View>
+            )}
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -180,4 +214,7 @@ const styles = StyleSheet.create({
   textButton: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 30 },
   textButtonLabel: { fontSize: 12, fontWeight: '800' },
   providerRow: { minHeight: 66, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  // Matches the PRO badge treatment on the calendar-sync teaser (calendar.tsx).
+  proBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  proBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
 });

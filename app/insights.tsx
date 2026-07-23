@@ -29,6 +29,7 @@ import { useAppStore } from '@/store/appStore';
 export default function InsightsScreen() {
   const colors = useColors();
   const { contentMaxWidth } = useResponsive();
+  const isPro = useAppStore((state) => state.isPro);
   const semesterId = useAppStore((state) => state.selectedSemesterId);
   const { data: semesters = [] } = useSemesters();
   const { data: courses = [] } = useCourses(semesterId);
@@ -36,14 +37,33 @@ export default function InsightsScreen() {
     semesterId ? { semesterId } : { semesterId: null },
   );
   const { data: categories = [] } = useSemesterGradeCategories(semesterId);
+  // Whole screen is Pro (owner directive). Don't crunch the real trends/report
+  // for free users — the locked teaser below never reads `insights`. Pass empty
+  // inputs so buildProgressInsights stays a cheap no-op until they upgrade.
   const insights = useMemo(
-    () => buildProgressInsights(courses, tasks, categories),
-    [courses, tasks, categories],
+    () => buildProgressInsights(
+      isPro ? courses : [],
+      isPro ? tasks : [],
+      isPro ? categories : [],
+    ),
+    [isPro, courses, tasks, categories],
   );
   const semester = semesters.find((row) => row.id === semesterId);
   const maxWeekly = Math.max(1, ...insights.weekly.map((row) => row.completed));
 
+  const openPaywall = () => {
+    Haptics.selectionAsync().catch(() => {});
+    track('paywall_open', { screen: 'insights', context: 'insights' });
+    router.push({ pathname: '/paywall', params: { context: 'insights' } } as any);
+  };
+
   const shareReport = async () => {
+    // Defense in depth: the share button only renders for Pro, but never run
+    // the CSV export (the paid deliverable) without an active subscription.
+    if (!isPro) {
+      openPaywall();
+      return;
+    }
     try {
       // Real file export (CSV written to cache + native share sheet), not a
       // one-line-per-course text blurb. Mirrors the .ics export pattern.
@@ -58,6 +78,56 @@ export default function InsightsScreen() {
       Alert.alert('Couldn\'t export', err?.message ?? 'Something went wrong. Please try again.');
     }
   };
+
+  // Pro gate — the entire screen is a Pro feature. Free users get a locked
+  // teaser that sells the report and routes to /paywall (context 'insights');
+  // none of the real trends/report/export are computed or shown above.
+  if (!isPro) {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
+        <Stack.Screen options={{ title: 'Progress Insights' }} />
+        <ScrollView
+          contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.heroRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.eyebrow, { color: colors.brand }]}>SEMESTER REPORT</Text>
+              <Text style={[styles.title, { color: colors.ink }]}>Progress Insights</Text>
+              <Text style={[styles.subtitle, { color: colors.ink3 }]}>
+                See completion trends, on-time rates, per-class grade patterns, and export a semester report.
+              </Text>
+            </View>
+          </View>
+
+          <View style={[styles.lockCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <View style={[styles.lockIcon, { backgroundColor: colors.brand50 }]}>
+              <FontAwesome name="lock" size={22} color={colors.brand} />
+            </View>
+            <View style={styles.lockBadgeRow}>
+              <View style={[styles.proBadge, { backgroundColor: colors.brand }]}>
+                <FontAwesome name="star" size={9} color="#fff" />
+                <Text style={styles.proBadgeText}>PRO</Text>
+              </View>
+            </View>
+            <Text style={[styles.lockTitle, { color: colors.ink }]}>Unlock Progress Insights</Text>
+            <Text style={[styles.lockText, { color: colors.ink3 }]}>
+              Track completion rhythm, on-time and missing work, and per-class grade trends — then export a full semester report.
+            </Text>
+            <TouchableOpacity
+              style={[styles.upgradeButton, { backgroundColor: colors.brand }]}
+              onPress={openPaywall}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Upgrade to Pro to unlock Progress Insights"
+            >
+              <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
@@ -235,4 +305,15 @@ const styles = StyleSheet.create({
   courseStat: { fontSize: 12 },
   dot: { marginHorizontal: 5 },
   trend: { fontSize: 12, fontWeight: '700', marginTop: 6 },
+  // Locked teaser for free users (whole-screen Pro gate). Mirrors the
+  // lock/PRO-badge + "Upgrade to Pro" treatment used elsewhere.
+  lockCard: { borderRadius: 19, borderWidth: StyleSheet.hairlineWidth, padding: 22, alignItems: 'center', gap: 12 },
+  lockIcon: { width: 56, height: 56, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  lockBadgeRow: { flexDirection: 'row' },
+  proBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  proBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
+  lockTitle: { fontSize: 19, fontWeight: '800', textAlign: 'center' },
+  lockText: { fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  upgradeButton: { height: 50, borderRadius: 13, alignItems: 'center', justifyContent: 'center', alignSelf: 'stretch', marginTop: 4 },
+  upgradeButtonText: { color: '#fff', fontSize: 15, fontWeight: '800' },
 });

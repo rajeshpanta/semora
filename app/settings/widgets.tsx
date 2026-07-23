@@ -78,52 +78,11 @@ function WeekWidgetPreview() {
   );
 }
 
-function GradeWidgetPreview() {
-  const colors = useColors();
-  const grades = [
-    { course: 'ENG 201', pct: 94, letter: 'A', color: '#6366f1' },
-    { course: 'MATH 301', pct: 87, letter: 'B+', color: '#ef4444' },
-    { course: 'BIO 150', pct: 91, letter: 'A-', color: '#10b981' },
-  ];
-  return (
-    <View style={wp.container}>
-      <View style={wp.glass}>
-        <View style={wp.header}>
-          <FontAwesome name="bar-chart" size={12} color={colors.teal} />
-          <Text style={[wp.headerTitle, { color: colors.ink }]}>Grades</Text>
-        </View>
-        {grades.map((g, i) => (
-          <View key={i} style={[wp.gradeRow, i < grades.length - 1 && wp.taskBorder]}>
-            <View style={[wp.gradeDot, { backgroundColor: g.color }]} />
-            <Text style={[wp.gradeCourse, { color: colors.ink }]}>{g.course}</Text>
-            <View style={wp.gradeBarTrack}>
-              <View style={[wp.gradeBarFill, { width: `${g.pct}%`, backgroundColor: g.color }]} />
-            </View>
-            <Text style={[wp.gradeLetter, { color: colors.ink }]}>{g.letter}</Text>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function QuickAddWidgetPreview() {
-  const colors = useColors();
-  return (
-    <View style={[wp.container, { alignSelf: 'flex-start', width: (WIDGET_W - 12) / 2 }]}>
-      <View style={[wp.glass, { alignItems: 'center', paddingVertical: 20 }]}>
-        <View style={[wp.quickAddCircle, { backgroundColor: colors.brand, shadowColor: colors.brand }]}>
-          <FontAwesome name="plus" size={22} color="#fff" />
-        </View>
-        <Text style={[wp.headerTitle, { marginTop: 8, color: colors.ink }]}>Quick Add</Text>
-        <Text style={[wp.taskCourse, { textAlign: 'center', color: colors.ink3 }]}>Tap to add a task</Text>
-      </View>
-    </View>
-  );
-}
-
 // ── Widget Showcase Cards ──────────────────────────────────
 
+// Only widgets that actually ship as WidgetKit targets (targets/widget) are
+// showcased with a live preview. Anything still on the roadmap is summarized in
+// the "more coming soon" line below instead of faking a full preview.
 const WIDGETS = [
   {
     // Shipped as the "Up Next" WidgetKit widget (targets/widget).
@@ -143,22 +102,6 @@ const WIDGETS = [
     gradient: ['#D85A30', '#F6A06B'] as [string, string],
     Preview: WeekWidgetPreview,
     live: true,
-  },
-  {
-    name: 'Grade Summary',
-    subtitle: 'Track your performance',
-    sizes: 'Small \u00b7 Medium',
-    gradient: ['#0F6E56', '#34D399'] as [string, string],
-    Preview: GradeWidgetPreview,
-    live: false,
-  },
-  {
-    name: 'Quick Add',
-    subtitle: 'One tap to create',
-    sizes: 'Small',
-    gradient: ['#185FA5', '#60A5FA'] as [string, string],
-    Preview: QuickAddWidgetPreview,
-    live: false,
   },
 ];
 
@@ -204,7 +147,7 @@ export default function WidgetsSettings() {
             >
               <Text style={styles.showcaseName}>{w.name}</Text>
               <View style={styles.sizeBadge}>
-                <Text style={styles.sizeText}>{w.live ? w.sizes : 'Coming soon'}</Text>
+                <Text style={styles.sizeText}>{w.sizes}</Text>
               </View>
             </LinearGradient>
 
@@ -216,6 +159,12 @@ export default function WidgetsSettings() {
             </View>
           </View>
         ))}
+
+        {/* Honest placeholder for roadmap widgets — no faked preview until they ship. */}
+        <View style={styles.comingSoonRow}>
+          <FontAwesome name="ellipsis-h" size={13} color={colors.ink3} />
+          <Text style={[styles.comingSoonRowText, { color: colors.ink3 }]}>More widgets coming soon</Text>
+        </View>
 
         {/* Footer info */}
         <View style={styles.footerInfo}>
@@ -267,27 +216,6 @@ const wp = StyleSheet.create({
   dayBar: { gap: 3, width: '100%' },
   dayChip: { borderRadius: 6, paddingVertical: 4, paddingHorizontal: 5 },
   dayChipText: { fontSize: 9, fontWeight: '600', color: '#fff', textAlign: 'center' },
-  // Grade rows
-  gradeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7 },
-  gradeDot: { width: 6, height: 6, borderRadius: 3 },
-  gradeCourse: { fontSize: 12, fontWeight: '500', color: COLORS.ink, width: 68 },
-  gradeBarTrack: { flex: 1, height: 6, borderRadius: 3, backgroundColor: 'rgba(0,0,0,0.04)' },
-  gradeBarFill: { height: 6, borderRadius: 3 },
-  gradeLetter: { fontSize: 13, fontWeight: '700', color: COLORS.ink, width: 24, textAlign: 'right' },
-  // Quick add
-  quickAddCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.brand,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: COLORS.brand,
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
-  },
 });
 
 // ── Screen Styles ──────────────────────────────────────────
@@ -330,6 +258,9 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     backgroundColor: 'rgba(0,0,0,0.02)',
   },
+  // Roadmap placeholder
+  comingSoonRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: 20, marginTop: 4, marginBottom: 20 },
+  comingSoonRowText: { fontSize: 13, fontWeight: '600', color: COLORS.ink3 },
   // Footer
   footerInfo: { marginHorizontal: 20, gap: 10, paddingVertical: 8, marginBottom: 20 },
   footerRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },

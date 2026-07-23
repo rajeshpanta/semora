@@ -28,7 +28,9 @@ export default function SyncSettingsScreen() {
   });
   const retry = () => {
     if (!session) return;
-    flushOfflineQueue(session.user.id, queryClient)
+    // force:true so a manual "Try sync now" re-attempts the parked/backoff items
+    // this button exists to recover — the auto-flush deliberately skips those.
+    flushOfflineQueue(session.user.id, queryClient, { force: true })
       .then(() => conflicts.refetch())
       .catch((error) => Alert.alert('Sync failed', error.message));
   };
@@ -37,7 +39,14 @@ export default function SyncSettingsScreen() {
       .then(() => conflicts.refetch())
       .catch((error) => Alert.alert('Couldn’t resolve conflict', error.message));
   };
-  const healthy = status.isOnline && status.pendingCount === 0 && status.conflictCount === 0;
+  const healthy =
+    status.isOnline &&
+    status.pendingCount === 0 &&
+    status.conflictCount === 0 &&
+    status.failedCount === 0;
+  // Parked (permanently-failed) or still-pending changes both mean a manual retry
+  // can still recover something — surface the button whenever either is nonzero.
+  const canRetry = status.pendingCount > 0 || status.failedCount > 0;
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
@@ -66,10 +75,11 @@ export default function SyncSettingsScreen() {
 
         <View style={styles.metrics}>
           <SmallMetric label="Waiting" value={status.pendingCount} />
+          <SmallMetric label="Failed" value={status.failedCount} warning={status.failedCount > 0} />
           <SmallMetric label="Conflicts" value={status.conflictCount} warning={status.conflictCount > 0} />
         </View>
 
-        {status.pendingCount > 0 && (
+        {canRetry && (
           <TouchableOpacity
             onPress={retry}
             disabled={!status.isOnline || status.isSyncing}

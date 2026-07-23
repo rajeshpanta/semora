@@ -273,6 +273,15 @@ export default function MeScreen() {
           </View>
         </View>
 
+        {/* Academic tools — relocated from Settings (these are feature screens,
+            not settings). The destination screens own their own Pro gating, so
+            these are always tappable. */}
+        <Text style={[styles.toolsTitle, { color: colors.ink2 }]}>Academic tools</Text>
+        <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <SettingsRow icon="line-chart" label="Progress Insights" onPress={() => router.push('/insights' as any)} colors={colors} />
+          <SettingsRow icon="users" label="Class Collaboration" last onPress={() => router.push('/collaboration' as any)} colors={colors} />
+        </View>
+
         {/* Settings & Support */}
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <SettingsRow icon="cog" label="Settings" onPress={() => router.push('/settings')} colors={colors} />
@@ -358,6 +367,7 @@ const styles = StyleSheet.create({
   statNum: { fontSize: 22, fontWeight: '600', color: COLORS.ink },
   statLabel: { fontSize: 14, color: COLORS.ink3, fontWeight: '500', letterSpacing: 0.5, marginTop: 2 },
   // Settings
+  toolsTitle: { fontSize: 13, fontWeight: '600', color: COLORS.ink2, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 },
   settingsCard: { backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 14, marginBottom: 20, borderWidth: 0.5, borderColor: COLORS.line },
   settingsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
   settingsRowBorder: { borderBottomWidth: 0.5, borderBottomColor: COLORS.line },

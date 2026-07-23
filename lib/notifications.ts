@@ -287,6 +287,12 @@ export async function scheduleTaskReminders(
       .maybeSingle();
     if (quietProfile) quiet = quietProfile as QuietHoursPreferences;
   }
+  // Quiet hours is a Pro feature (same as the 1-/3-day advance reminders
+  // forced off below). Force it off for free users even if a stale profile
+  // row still has quiet_hours_enabled=true from a lapsed subscription, so a
+  // downgraded user's reminders aren't silently shifted out of their window.
+  // proForReminders was resolved from prefetched.isPro / the store above.
+  if (!proForReminders) quiet.quiet_hours_enabled = false;
 
   // A task-level selection replaces the profile defaults. This includes an
   // empty array, which deliberately means "do not remind me for this task."
