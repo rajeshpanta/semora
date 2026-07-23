@@ -6,9 +6,9 @@ import type { CourseMeeting } from '@/types/database';
 import { COURSE_COLORS, COURSE_ICONS, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
 import { suggestCurrentSemesterName } from '@/lib/semesters';
-import { FREE_SCAN_LIMIT } from '@/lib/queries';
+import { FREE_SCAN_LIMIT, freeScanWindowStartIso } from '@/lib/queries';
 
-export const FREE_COURSE_LIMIT = 2;
+export const FREE_COURSE_LIMIT = 4;
 export const FREE_SEMESTER_LIMIT = 1;
 
 // Detect a free-tier limit error raised by one of the DB triggers
@@ -50,15 +50,18 @@ export async function processSyllabus(
   //    syllabus_uploads fires at step 4 — by then the semester, course,
   //    meetings, and grade scale have already been created, leaving
   //    orphan rows when the limit trips (and burning Gemini compute).
-  //    Message wording must satisfy isFreeLimitError's "2 free scans"
-  //    pattern so callers surface the Upgrade prompt.
+  //    Message wording must keep the "N free scans" pattern so
+  //    isFreeLimitError still surfaces the Upgrade prompt.
+  //    Counting window = current calendar month (UTC), matching useScanCount,
+  //    the edge function, and the enforce_free_scan_limit trigger exactly.
   if (!useAppStore.getState().isPro) {
     const { count } = await supabase
       .from('syllabus_uploads')
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId);
+      .eq('user_id', userId)
+      .gte('created_at', freeScanWindowStartIso());
     if ((count ?? 0) >= FREE_SCAN_LIMIT) {
-      throw new Error(`You've used your ${FREE_SCAN_LIMIT} free scans. Upgrade to Pro for unlimited syllabus scanning.`);
+      throw new Error(`You've used your ${FREE_SCAN_LIMIT} free scans this month. Upgrade to Pro for unlimited syllabus scanning.`);
     }
   }
 

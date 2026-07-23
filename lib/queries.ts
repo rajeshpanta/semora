@@ -331,7 +331,24 @@ export function useHasPendingTasks() {
   });
 }
 
-export const FREE_SCAN_LIMIT = 2;
+// Free users get FREE_SCAN_LIMIT syllabus scans per CALENDAR MONTH (not
+// lifetime). The window resets at the start of each month, UTC. Everything
+// that counts scans — this hook, the processSyllabus pre-check, the
+// parse-syllabus edge function, and the enforce_free_scan_limit DB trigger —
+// MUST use this same UTC month boundary and the same limit, or the three
+// layers disagree and the user is either blocked early or bypasses the cap.
+export const FREE_SCAN_LIMIT = 5;
+
+/**
+ * Start of the current calendar month, in UTC, as an ISO string — the lower
+ * bound of the free-scan counting window. Anchored to UTC (Date.UTC) so it
+ * exactly matches the DB trigger's `date_trunc('month', now() AT TIME ZONE
+ * 'UTC') AT TIME ZONE 'UTC'` and the edge function's identical computation.
+ */
+export function freeScanWindowStartIso(): string {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+}
 
 export function useScanCount() {
   return useQuery({
@@ -344,22 +361,25 @@ export function useScanCount() {
     queryFn: async () => {
       const userId = await getUserId();
       // Mirror the server's free-scan gate EXACTLY (parse-syllabus step 2b):
-      // effective scans = max(gemini_call_log 'success' rows, syllabus_uploads
-      // rows). Counting uploads alone let the pill promise a free scan the
-      // server then 402'd — a client that abandoned an extraction (or an old
-      // build that failed the post-extraction insert) has a success-log row
-      // but no upload row. The call-log read needs migration 022's
-      // SELECT-own-rows policy.
+      // effective scans this month = max(gemini_call_log 'success' rows,
+      // syllabus_uploads rows) since the start of the UTC month. Counting
+      // uploads alone let the pill promise a free scan the server then 402'd —
+      // a client that abandoned an extraction (or an old build that failed the
+      // post-extraction insert) has a success-log row but no upload row. The
+      // call-log read needs migration 022's SELECT-own-rows policy.
+      const monthStart = freeScanWindowStartIso();
       const [uploadsRes, callLogRes] = await Promise.all([
         supabase
           .from('syllabus_uploads')
           .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId),
+          .eq('user_id', userId)
+          .gte('created_at', monthStart),
         supabase
           .from('gemini_call_log')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', userId)
-          .eq('status', 'success'),
+          .eq('status', 'success')
+          .gte('created_at', monthStart),
       ]);
       if (uploadsRes.error) throw uploadsRes.error;
       const uploads = uploadsRes.count ?? 0;

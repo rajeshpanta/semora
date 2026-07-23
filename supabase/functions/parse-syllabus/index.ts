@@ -17,9 +17,10 @@ const GLOBAL_DAILY_CAP = (() => {
   return Number.isFinite(raw) && raw > 0 ? raw : 1500;
 })();
 
-// Free tier: 2 successful extractions, lifetime (matches lib/queries
-// FREE_SCAN_LIMIT). Enforced server-side below so it can't be bypassed.
-const FREE_SCAN_LIMIT = 2;
+// Free tier: 5 successful extractions per CALENDAR MONTH (UTC), matching
+// lib/queries FREE_SCAN_LIMIT and the enforce_free_scan_limit trigger.
+// Enforced server-side below so it can't be bypassed.
+const FREE_SCAN_LIMIT = 5;
 
 // Multi-page photo scans: each page is one inline_data part. 5 pages of
 // phone photos (~2-4MB base64 each) stays comfortably under the body cap
@@ -258,16 +259,24 @@ serve(async (req) => {
       // still counts. Trade-off, accepted: an extraction the client abandons
       // after the server returned it still counts — the paid Gemini work was
       // done and delivered.
+      // Free scans are per CALENDAR MONTH (UTC), not lifetime. This window
+      // boundary MUST match the client (freeScanWindowStartIso in queries.ts)
+      // and the enforce_free_scan_limit DB trigger exactly, or the layers
+      // disagree. Anchored to UTC month start.
+      const now = new Date();
+      const monthStartIso = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
       const [successRes, uploadRes] = await Promise.all([
         adminClient
           .from('gemini_call_log')
           .select('id', { count: 'exact', head: true })
           .eq('user_id', userId)
-          .eq('status', 'success'),
+          .eq('status', 'success')
+          .gte('created_at', monthStartIso),
         adminClient
           .from('syllabus_uploads')
           .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId),
+          .eq('user_id', userId)
+          .gte('created_at', monthStartIso),
       ]);
       if (successRes.error || uploadRes.error) {
         console.error('[parse-syllabus] scan count failed:', successRes.error ?? uploadRes.error);
@@ -276,7 +285,7 @@ serve(async (req) => {
       const scanCount = Math.max(successRes.count ?? 0, uploadRes.count ?? 0);
       if (scanCount >= FREE_SCAN_LIMIT) {
         return jsonResponse(
-          { error: `You've used your ${FREE_SCAN_LIMIT} free scans. Upgrade to Pro for unlimited syllabus scanning.` },
+          { error: `You've used your ${FREE_SCAN_LIMIT} free scans this month. Upgrade to Pro for unlimited syllabus scanning.` },
           402,
         );
       }

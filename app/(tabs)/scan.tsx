@@ -70,7 +70,7 @@ export default function ScanScreen() {
     if (scanCount >= FREE_SCAN_LIMIT) {
       Alert.alert(
         'Scan Limit Reached',
-        `You've used your ${FREE_SCAN_LIMIT} free scans. Upgrade to Pro for unlimited syllabus scanning.`,
+        `You've used your ${FREE_SCAN_LIMIT} free scans this month. They reset on the 1st — or upgrade to Pro for unlimited syllabus scanning.`,
         [
           { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
           { text: 'Cancel', style: 'cancel' },
@@ -84,7 +84,7 @@ export default function ScanScreen() {
       return new Promise((resolve) => {
         Alert.alert(
           'Last Free Scan',
-          `This will use your last of ${FREE_SCAN_LIMIT} free scans. After this you'll need Pro for more.`,
+          `This will use your last of ${FREE_SCAN_LIMIT} free scans this month. After this you'll need Pro (or wait for the monthly reset) for more.`,
           [
             { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
             { text: 'Upgrade', onPress: () => { router.push('/paywall' as any); resolve(false); } },
@@ -411,8 +411,8 @@ export default function ScanScreen() {
             />
             <Text style={[styles.scanCountText, { color: remainingScans === 0 ? colors.coral : colors.brand }]}>
               {remainingScans === 0
-                ? `No free scans left of ${FREE_SCAN_LIMIT}`
-                : `${remainingScans} of ${FREE_SCAN_LIMIT} free scan${remainingScans === 1 ? '' : 's'} left`}
+                ? `No free scans left this month`
+                : `${remainingScans} of ${FREE_SCAN_LIMIT} free scans left this month`}
             </Text>
           </View>
         ) : null}
