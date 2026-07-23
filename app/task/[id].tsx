@@ -331,8 +331,14 @@ export default function TaskDetailScreen() {
                 <View style={{ flex: 1 }}><Text style={[styles.editLabel, { color: colors.ink2 }]}>Due Date</Text><DatePicker value={editDueDate} onChange={setEditDueDate} mode="date" /></View>
                 <View style={{ flex: 1 }}><Text style={[styles.editLabel, { color: colors.ink2 }]}>Time</Text><DatePicker value={editDueTime} onChange={setEditDueTime} onClear={() => setEditDueTime(null)} mode="time" placeholder="Optional" /></View>
               </View>
-              <Text style={[styles.editLabel, { color: colors.ink2 }]}>Weight (%)</Text>
-              <TextInput style={[styles.editInput, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]} value={editWeight} onChangeText={setEditWeight} keyboardType="decimal-pad" placeholder="Optional" placeholderTextColor={colors.ink3} />
+              {/* For extra credit this weight is the BONUS point value the grade
+                  math scales by score — used even in a categorized course — so we
+                  relabel it rather than implying the category overrides it. */}
+              <Text style={[styles.editLabel, { color: colors.ink2 }]}>{task.is_extra_credit ? 'Extra credit worth (% points)' : 'Weight (%)'}</Text>
+              <TextInput style={[styles.editInput, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]} value={editWeight} onChangeText={setEditWeight} keyboardType="decimal-pad" placeholder={task.is_extra_credit ? 'e.g. 5' : 'Optional'} placeholderTextColor={colors.ink3} />
+              {task.is_extra_credit && (
+                <Text style={[styles.editLabel, { color: colors.ink3, marginTop: 4, fontWeight: '500' }]}>Bonus points added on top of your course grade, scaled by your score.</Text>
+              )}
               {gradeCategories.length > 0 && (
                 <>
                   <Text style={[styles.editLabel, { color: colors.ink2 }]}>Grade category</Text>
@@ -457,7 +463,10 @@ export default function TaskDetailScreen() {
           )}
         </View>
 
-        {!editing && (task.is_completed || task.score != null) && (
+        {/* Subtasks are part of doing the work, so they must be visible/editable
+            while a task is still incomplete — not gated behind completion or a
+            score like the grade card below. */}
+        {!editing && (
           <View style={[styles.card, width < 360 && styles.cardNarrow, { backgroundColor: colors.card, borderColor: colors.line }]}>
             <View style={styles.subtaskHeader}>
               <Text style={[styles.scoreLabel, { color: colors.ink3 }]}>SUBTASKS</Text>

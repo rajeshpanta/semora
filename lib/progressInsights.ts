@@ -7,6 +7,8 @@ import {
   startOfWeek,
   subWeeks,
 } from 'date-fns';
+import { Platform, Share } from 'react-native';
+import * as FileSystem from 'expo-file-system/legacy';
 import { calculateCourseGrade } from '@/lib/grades';
 import type { Course, GradeCategory, Task } from '@/types/database';
 
@@ -187,4 +189,90 @@ export function buildProgressInsights(
     courseInsights,
     weekly,
   };
+}
+
+// ── Semester report export ─────────────────────────────────
+// A real, shareable FILE (not an OS text blurb): the same escape hatch as the
+// .ics export (lib/ics.ts) — pure string generation, written to the cache via
+// expo-file-system's legacy API, handed to React Native's built-in share sheet.
+// No new dependency.
+
+/** RFC 4180 field quoting: wrap in double quotes and double any embedded
+ *  quotes when a value contains a comma, quote, or newline. */
+function csvCell(value: string | number | null): string {
+  const str = value == null ? '' : String(value);
+  return /[",\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+}
+
+function csvRow(cells: (string | number | null)[]): string {
+  return cells.map(csvCell).join(',');
+}
+
+/**
+ * Pure CSV builder (exported separately from the share wrapper so it stays
+ * unit-testable). One header row, one row per course, then a semester totals
+ * row so the file is self-contained.
+ */
+export function generateSemesterReportCsv(
+  semesterName: string,
+  insights: ProgressInsights,
+): string {
+  const rows: string[] = [
+    csvRow([`Semora semester report — ${semesterName}`]),
+    '',
+    csvRow(['Course', 'Current grade', 'Letter', 'Completion %', 'On-time %', 'Missing', 'Graded']),
+  ];
+  for (const course of insights.courseInsights) {
+    rows.push(
+      csvRow([
+        course.name,
+        course.grade == null ? '' : course.grade,
+        course.letter ?? '',
+        course.completionRate,
+        course.onTimeRate == null ? '' : course.onTimeRate,
+        course.missingCount,
+        course.gradedCount,
+      ]),
+    );
+  }
+  rows.push(
+    csvRow([
+      'All courses',
+      '',
+      '',
+      insights.completionRate,
+      insights.onTimeRate == null ? '' : insights.onTimeRate,
+      insights.missingCount,
+      insights.gradedTasks,
+    ]),
+  );
+  // Excel/Numbers split rows on CRLF; a trailing newline keeps the last row clean.
+  return rows.join('\r\n') + '\r\n';
+}
+
+/**
+ * Build the semester report CSV, write it to the cache directory, and open the
+ * iOS share sheet. Returns the exported course count for analytics. Throws
+ * user-presentable Errors on failure (same convention as exportSemesterIcs).
+ */
+export async function exportSemesterReport(
+  semesterName: string,
+  insights: ProgressInsights,
+): Promise<{ courses: number }> {
+  if (Platform.OS === 'web') {
+    throw new Error('Report export is only available on iOS and Android.');
+  }
+  if (insights.courseInsights.length === 0) {
+    throw new Error('Nothing to export yet — add classes and assignments first.');
+  }
+
+  const csv = generateSemesterReportCsv(semesterName, insights);
+  const uri = `${FileSystem.cacheDirectory}semora-semester-report.csv`;
+  await FileSystem.writeAsStringAsync(uri, csv);
+
+  // RN's built-in share sheet accepts a file:// URL directly on iOS — no
+  // expo-sharing dependency. Resolves when the sheet is dismissed.
+  await Share.share({ url: uri });
+
+  return { courses: insights.courseInsights.length };
 }

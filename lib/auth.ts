@@ -189,6 +189,34 @@ export async function getGoogleClassroomAccessToken(): Promise<{
 }
 
 /**
+ * Refreshes an already-authorized Classroom token without opening account or
+ * consent UI. This keeps foreground sync working after Google's short-lived
+ * access token expires, while refusing to silently switch a connection to a
+ * different Google account.
+ */
+export async function refreshGoogleClassroomAccessToken(
+  expectedAccountLabel?: string | null,
+): Promise<{ accessToken: string; accountLabel: string | null }> {
+  if (Platform.OS === 'web') {
+    throw new Error('Google Classroom connection is currently available in the iPhone app.');
+  }
+  configureGoogleOnce();
+  const current: any = GoogleSignin.getCurrentUser();
+  const currentEmail = current?.user?.email ?? null;
+  if (!current) throw new Error('Reconnect Google Classroom on this device.');
+  if (
+    expectedAccountLabel &&
+    currentEmail &&
+    expectedAccountLabel.toLowerCase() !== currentEmail.toLowerCase()
+  ) {
+    throw new Error(`Reconnect the Google Classroom account ${expectedAccountLabel}.`);
+  }
+  const tokens = await GoogleSignin.getTokens();
+  if (!tokens.accessToken) throw new Error('Reconnect Google Classroom on this device.');
+  return { accessToken: tokens.accessToken, accountLabel: currentEmail };
+}
+
+/**
  * True iff this device can offer Sign in with Apple. iOS only, and
  * even on iOS this returns false on simulators without an Apple ID
  * configured.

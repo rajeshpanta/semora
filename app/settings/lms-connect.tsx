@@ -54,7 +54,11 @@ export default function LmsConnectScreen() {
   const colors = useColors();
   const { contentMaxWidth } = useResponsive();
   const { session } = useSession();
-  const params = useLocalSearchParams<{ provider?: string; connectionId?: string }>();
+  const params = useLocalSearchParams<{
+    provider?: string;
+    connectionId?: string;
+    baseUrl?: string;
+  }>();
   const provider = (Object.keys(LMS_PROVIDER_LABELS).includes(params.provider ?? '')
     ? params.provider
     : 'canvas') as LmsProvider;
@@ -63,7 +67,7 @@ export default function LmsConnectScreen() {
   const selectedSemesterId = useAppStore((state) => state.selectedSemesterId);
   const [semesterId, setSemesterId] = useState(selectedSemesterId ?? '');
   const [displayName, setDisplayName] = useState(LMS_PROVIDER_LABELS[provider]);
-  const [baseUrl, setBaseUrl] = useState('');
+  const [baseUrl, setBaseUrl] = useState(params.baseUrl ?? '');
   const [token, setToken] = useState('');
   const [credential, setCredential] = useState<LmsCredential | null>(null);
   const [courses, setCourses] = useState<DiscoveredLmsCourse[]>([]);
@@ -98,7 +102,11 @@ export default function LmsConnectScreen() {
     try {
       const nextCredential = await obtainCredential();
       if (reconnecting) {
-        await reconnectLmsConnection(params.connectionId!, nextCredential);
+        await reconnectLmsConnection(
+          params.connectionId!,
+          nextCredential,
+          provider === 'google_classroom' ? null : normalizedBase,
+        );
         const result = await syncLmsConnection(params.connectionId!);
         Alert.alert('Reconnected', `${result.processed} assignments updated.`);
         router.back();

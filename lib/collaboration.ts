@@ -198,9 +198,108 @@ export async function setGroupAssignmentCompleted(
   return data as GroupAssignment;
 }
 
-export function subscribeToCollaboration(id: string, onChange: () => void) {
+// ─── Membership & space lifecycle (migration 042 RPCs) ─────
+
+export interface OutstandingInvite {
+  id: string;
+  token: string;
+  expires_at: string;
+  max_uses: number;
+  use_count: number;
+  created_at: string;
+}
+
+// The caller removes themselves. Blocked server-side if they are the sole owner.
+export async function leaveCollaboration(collaborationId: string): Promise<void> {
+  const { error } = await supabase.rpc('leave_group', { p_collaboration_id: collaborationId });
+  if (error) throw error;
+}
+
+// Owner only. Cannot remove another owner if they would be the last owner.
+export async function removeCollaborationMember(
+  collaborationId: string,
+  memberUserId: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('remove_member', {
+    p_collaboration_id: collaborationId,
+    p_member_user_id: memberUserId,
+  });
+  if (error) throw error;
+}
+
+// Owner only. Roles are owner/editor/viewer; a viewer cannot edit shared work.
+export async function setCollaborationMemberRole(
+  collaborationId: string,
+  memberUserId: string,
+  role: 'owner' | 'editor' | 'viewer',
+): Promise<void> {
+  const { error } = await supabase.rpc('set_member_role', {
+    p_collaboration_id: collaborationId,
+    p_member_user_id: memberUserId,
+    p_role: role,
+  });
+  if (error) throw error;
+}
+
+// Owner only. Soft-delete: removes the space from every member's hub but leaves
+// already-synced planner tasks intact (their collaboration FKs go null).
+export async function archiveCollaboration(collaborationId: string): Promise<void> {
+  const { error } = await supabase.rpc('archive_group', { p_collaboration_id: collaborationId });
+  if (error) throw error;
+}
+
+// Owner only. Hard-delete cascades members/invites/deadlines/group assignments.
+export async function deleteCollaboration(collaborationId: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_group', { p_collaboration_id: collaborationId });
+  if (error) throw error;
+}
+
+// Owner only. Invalidate a single outstanding invite, or all when no id given.
+export async function revokeCollaborationInvite(
+  collaborationId: string,
+  inviteId?: string | null,
+): Promise<number> {
+  const { data, error } = await supabase.rpc('revoke_invite', {
+    p_collaboration_id: collaborationId,
+    p_invite_id: inviteId ?? null,
+  });
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
+// Outstanding invites the caller created for this space (RLS: invite_creators_read).
+export async function listOutstandingInvites(collaborationId: string): Promise<OutstandingInvite[]> {
+  const { data, error } = await supabase
+    .from('course_collaboration_invites')
+    .select('id, token, expires_at, max_uses, use_count, created_at')
+    .eq('collaboration_id', collaborationId)
+    .eq('revoked', false)
+    .gt('expires_at', new Date().toISOString())
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return ((data ?? []) as OutstandingInvite[]).filter((invite) => invite.use_count < invite.max_uses);
+}
+
+// Points the caller's membership at one of their own local courses so synced
+// deadlines/group work land in the course they already track (migration 037 RPC).
+export async function setCollaborationLocalCourse(
+  collaborationId: string,
+  courseId: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('set_collaboration_local_course', {
+    p_collaboration_id: collaborationId,
+    p_course_id: courseId,
+  });
+  if (error) throw error;
+}
+
+export function subscribeToCollaboration(
+  id: string,
+  onChange: () => void,
+  scope = 'detail',
+) {
   const channel = supabase
-    .channel(`collaboration:${id}`)
+    .channel(`collaboration:${scope}:${id}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'course_collaboration_members', filter: `collaboration_id=eq.${id}` },

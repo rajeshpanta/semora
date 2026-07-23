@@ -230,7 +230,9 @@ export default function NewTaskScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
-              <Text style={[styles.hint, { color: colors.ink3, marginTop: 5 }]}>Category rules override the individual weight for regular grade calculations.</Text>
+              {!isExtraCredit && (
+                <Text style={[styles.hint, { color: colors.ink3, marginTop: 5 }]}>Category rules override the individual weight for regular grade calculations.</Text>
+              )}
             </>
           )}
 
@@ -281,16 +283,21 @@ export default function NewTaskScreen() {
             </View>
           </View>
 
-          {/* Weight */}
-          <Text style={[styles.label, { color: colors.ink2 }]}>Weight (%)</Text>
+          {/* Weight. For extra credit this is the BONUS point value, which even
+              a categorized 'bonus' course needs — the grade math scales it by
+              the score. So we relabel instead of hiding it behind categories. */}
+          <Text style={[styles.label, { color: colors.ink2 }]}>{isExtraCredit ? 'Extra credit worth (% points)' : 'Weight (%)'}</Text>
           <TextInput
             style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
-            placeholder="e.g. 10"
+            placeholder={isExtraCredit ? 'e.g. 5' : 'e.g. 10'}
             placeholderTextColor={colors.ink3}
             value={weight}
             onChangeText={setWeight}
             keyboardType="decimal-pad"
           />
+          {isExtraCredit && (
+            <Text style={[styles.hint, { color: colors.ink3, marginTop: 5 }]}>Bonus points added on top of your course grade, scaled by your score.</Text>
+          )}
 
           {/* Extra Credit */}
           <TouchableOpacity

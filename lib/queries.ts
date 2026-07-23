@@ -828,41 +828,45 @@ export function useUpdateTask() {
         patchCachedTask(qc, id, optimistic as unknown as Record<string, unknown>);
         return optimistic;
       };
-      if (!isDeviceOnline()) return queueOffline();
-
       let result: Task;
       let affected: Task[];
 
-      try {
-        if (_seriesScope === 'occurrence') {
-          const { data: updated, error } = await supabase
-            .from('tasks')
-            .update(data)
-            .eq('id', id)
-            .select()
-            .single();
-          if (error) throw error;
-          result = updated as Task;
+      if (!isDeviceOnline()) {
+        result = await queueOffline();
+        affected = [result];
+      } else {
+        try {
+          if (_seriesScope === 'occurrence') {
+            const { data: updated, error } = await supabase
+              .from('tasks')
+              .update(data)
+              .eq('id', id)
+              .select()
+              .single();
+            if (error) throw error;
+            result = updated as Task;
+            affected = [result];
+          } else {
+            const { data: updated, error } = await supabase.rpc('update_recurring_task_series', {
+              p_task_id: id,
+              p_scope: _seriesScope,
+              p_patch: data,
+            });
+            if (error) throw error;
+            affected = (updated || []) as Task[];
+            result = affected.find((task) => task.id === id) || affected[0];
+            if (!result) throw new Error('No recurring tasks were updated.');
+          }
+        } catch (error) {
+          if (!isNetworkFailure(error)) throw error;
+          result = await queueOffline();
           affected = [result];
-        } else {
-          const { data: updated, error } = await supabase.rpc('update_recurring_task_series', {
-            p_task_id: id,
-            p_scope: _seriesScope,
-            p_patch: data,
-          });
-          if (error) throw error;
-          affected = (updated || []) as Task[];
-          result = affected.find((task) => task.id === id) || affected[0];
-          if (!result) throw new Error('No recurring tasks were updated.');
         }
-      } catch (error) {
-        if (isNetworkFailure(error)) return queueOffline();
-        throw error;
       }
 
       // Resolve course name once for calendar and notifications
-      let courseName = _courseName || '';
-      if (!courseName) {
+      let courseName = _courseName || (cached as TaskWithCourse | null)?.courses?.name || '';
+      if (!courseName && isDeviceOnline()) {
         const { data: course } = await supabase
           .from('courses')
           .select('name')
@@ -1015,7 +1019,12 @@ export function useToggleTaskComplete() {
 
       // The database creates the next occurrence atomically on completion.
       // Schedule its local reminder/calendar event as soon as it exists.
-      if (is_completed && data.recurrence_frequency && data.recurrence_series_id) {
+      if (
+        is_completed &&
+        data.recurrence_frequency &&
+        data.recurrence_series_id &&
+        isDeviceOnline()
+      ) {
         const { data: next } = await supabase
           .from('tasks')
           .select('*, courses(name)')

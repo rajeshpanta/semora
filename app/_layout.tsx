@@ -40,6 +40,7 @@ import {
   savePendingCollaborationToken,
 } from '@/lib/collaboration';
 import { LmsSyncBridge } from '@/components/LmsSyncBridge';
+import { CollaborationSyncBridge } from '@/components/CollaborationSyncBridge';
 import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
 
 export { ErrorBoundary } from 'expo-router';
@@ -731,6 +732,7 @@ function RootLayoutNav() {
             <NotificationActionBridge />
             <OfflineSyncRuntime />
             <LmsSyncRuntime />
+            <CollaborationSyncRuntime />
             <AuthGate>
               <Stack
               screenOptions={{
@@ -792,4 +794,15 @@ function OfflineSyncRuntime() {
 function LmsSyncRuntime() {
   const { session } = useSession();
   return <LmsSyncBridge userId={session?.user.id ?? null} />;
+}
+
+function CollaborationSyncRuntime() {
+  const { session } = useSession();
+  const semesterId = useAppStore((state) => state.selectedSemesterId);
+  return (
+    <CollaborationSyncBridge
+      userId={session?.user.id ?? null}
+      semesterId={semesterId}
+    />
+  );
 }

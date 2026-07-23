@@ -1,5 +1,8 @@
 import { supabase } from '@/lib/supabase';
-import { getGoogleClassroomAccessToken } from '@/lib/auth';
+import {
+  getGoogleClassroomAccessToken,
+  refreshGoogleClassroomAccessToken,
+} from '@/lib/auth';
 import { rescheduleAllTaskReminders } from '@/lib/notifications';
 import {
   readLmsCredential,
@@ -189,7 +192,16 @@ export async function syncLmsConnection(
     .eq('id', connectionId);
 
   try {
-    const credential = await getLmsCredential(connectionId);
+    let credential = await getLmsCredential(connectionId);
+    if (connection.provider === 'google_classroom') {
+      try {
+        credential = await refreshGoogleClassroomAccessToken(connection.account_label);
+        await storeLmsCredential(connectionId, credential);
+      } catch {
+        // The locally stored token may still be valid. If it is not, the
+        // provider request below records credentials_required for the user.
+      }
+    }
     if (!credential) {
       await supabase
         .from('lms_connections')
@@ -261,11 +273,13 @@ export async function syncLmsConnection(
 export async function reconnectLmsConnection(
   connectionId: string,
   credential: LmsCredential,
+  baseUrl?: string | null,
 ): Promise<void> {
   await storeLmsCredential(connectionId, credential);
   await supabase
     .from('lms_connections')
     .update({
+      ...(baseUrl !== undefined ? { base_url: baseUrl?.trim() || null } : {}),
       account_label: credential.accountLabel ?? null,
       last_sync_status: 'never',
       last_error: null,

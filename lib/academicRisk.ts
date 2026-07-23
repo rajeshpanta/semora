@@ -36,6 +36,19 @@ export interface AcademicRiskReport {
   highCount: number;
 }
 
+// Mirror lib/grades.ts taskPercent so a task graded only via points_earned/
+// points_possible (score still null) still counts toward the trend windows.
+function riskTaskPercent(task: RiskTask): number | null {
+  if (task.score != null && Number.isFinite(task.score)) return task.score;
+  if (
+    task.points_earned != null && task.points_possible != null &&
+    task.points_possible > 0
+  ) {
+    return (task.points_earned / task.points_possible) * 100;
+  }
+  return null;
+}
+
 function gradeTask(task: RiskTask) {
   return {
     id: task.id,
@@ -87,9 +100,12 @@ export function buildAcademicRiskReport(
 
   for (const course of courses) {
     const courseTasks = tasks.filter((task) => task.course_id === course.id);
+    // Order by due_date (fallback completed_at) so the trend windows are
+    // chronological by WHEN the work was due, not when the grade happened to
+    // be entered. Include point-scored tasks (score null) via riskTaskPercent.
     const graded = courseTasks
-      .filter((task) => task.score != null && !task.is_extra_credit)
-      .sort((a, b) => (a.completed_at || a.updated_at).localeCompare(b.completed_at || b.updated_at));
+      .filter((task) => riskTaskPercent(task) != null && !task.is_extra_credit)
+      .sort((a, b) => (a.due_date || a.completed_at || '').localeCompare(b.due_date || b.completed_at || ''));
     if (graded.length < 2) continue;
 
     const grade = calculateCourseGrade(
@@ -100,9 +116,9 @@ export function buildAcademicRiskReport(
     );
     const recent = graded.slice(-3);
     const earlier = graded.slice(Math.max(0, graded.length - 6), Math.max(0, graded.length - 3));
-    const recentAverage = recent.reduce((sum, task) => sum + (task.score ?? 0), 0) / recent.length;
+    const recentAverage = recent.reduce((sum, task) => sum + (riskTaskPercent(task) ?? 0), 0) / recent.length;
     const earlierAverage = earlier.length
-      ? earlier.reduce((sum, task) => sum + (task.score ?? 0), 0) / earlier.length
+      ? earlier.reduce((sum, task) => sum + (riskTaskPercent(task) ?? 0), 0) / earlier.length
       : null;
     const drop = earlierAverage == null ? 0 : earlierAverage - recentAverage;
     const isFalling = drop >= 7 || (grade.percentage != null && grade.percentage < 70);

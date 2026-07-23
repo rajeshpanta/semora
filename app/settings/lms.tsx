@@ -49,7 +49,11 @@ export default function LmsSettingsScreen() {
             text: 'Reconnect',
             onPress: () => router.push({
               pathname: '/settings/lms-connect',
-              params: { provider: connection?.provider, connectionId },
+              params: {
+                provider: connection?.provider,
+                connectionId,
+                baseUrl: connection?.base_url ?? '',
+              },
             } as any),
           },
         ],

@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import { onlineManager, type QueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { rescheduleAllTaskReminders } from '@/lib/notifications';
 
 const QUEUE_KEY = 'semora.offline.queue.v1';
 const CONFLICTS_KEY = 'semora.offline.conflicts.v1';
@@ -9,6 +10,14 @@ const META_KEY = 'semora.offline.meta.v1';
 
 export type OfflineEntity = 'tasks' | 'task_subtasks';
 export type OfflineOperation = 'update';
+
+// A queued mutation that fails transiently (offline/timeout/5xx) is retried with
+// exponential backoff up to MAX_RETRY_ATTEMPTS. After that — or on a permanent
+// failure (RLS/constraint/validation) — it is parked in a `failed` state that the
+// auto-flush effect deliberately skips, so a poison-pill edit can never hammer
+// Supabase in a tight loop.
+const MAX_RETRY_ATTEMPTS = 6;
+const BASE_BACKOFF_MS = 5_000; // 5s, 10s, 20s, 40s, 80s, 160s
 
 export interface OfflineMutation {
   id: string;
@@ -19,6 +28,11 @@ export interface OfflineMutation {
   payload: Record<string, unknown>;
   baseUpdatedAt: string | null;
   createdAt: string;
+  // Retry bookkeeping. Absent on freshly-enqueued items (treated as 0 / null).
+  attempts?: number;
+  nextRetryAt?: string | null; // ISO; transient backoff gate, don't flush before this
+  failedPermanently?: boolean; // parked: never auto-flushed, needs manual retry
+  lastError?: string | null;
 }
 
 export interface SyncConflict extends OfflineMutation {
@@ -29,10 +43,14 @@ export interface SyncConflict extends OfflineMutation {
 export interface OfflineSyncSnapshot {
   isOnline: boolean;
   isSyncing: boolean;
-  pendingCount: number;
+  pendingCount: number; // items still eligible to sync (excludes permanently-failed)
   conflictCount: number;
+  failedCount: number; // parked items that will not auto-retry
   lastSyncedAt: string | null;
   lastError: string | null;
+  // Earliest ISO time an eligible item may retry, if all remaining items are in
+  // backoff. Lets the auto-flush effect schedule a single wake-up instead of spinning.
+  nextRetryAt: string | null;
 }
 
 const listeners = new Set<() => void>();
@@ -41,8 +59,10 @@ let snapshot: OfflineSyncSnapshot = {
   isSyncing: false,
   pendingCount: 0,
   conflictCount: 0,
+  failedCount: 0,
   lastSyncedAt: null,
   lastError: null,
+  nextRetryAt: null,
 };
 let initialized = false;
 let activeFlush: Promise<void> | null = null;
@@ -66,6 +86,36 @@ async function writeArray<T>(key: string, rows: T[]) {
   await AsyncStorage.setItem(key, JSON.stringify(rows));
 }
 
+// Derive the counts the UI cares about from the raw queue: pending = eligible to
+// sync (not permanently parked), failed = parked, nextRetryAt = soonest a pending
+// item may retry when every pending item is currently in backoff.
+function deriveQueueCounts(queue: OfflineMutation[]) {
+  let pendingCount = 0;
+  let failedCount = 0;
+  let soonestBackoff: number | null = null;
+  let anyReadyNow = false;
+  const now = Date.now();
+  for (const item of queue) {
+    if (item.failedPermanently) {
+      failedCount++;
+      continue;
+    }
+    pendingCount++;
+    const gate = item.nextRetryAt ? Date.parse(item.nextRetryAt) : 0;
+    if (gate > now) {
+      if (soonestBackoff === null || gate < soonestBackoff) soonestBackoff = gate;
+    } else {
+      anyReadyNow = true;
+    }
+  }
+  return {
+    pendingCount,
+    failedCount,
+    // Only surface a wake-up time when nothing is ready this instant.
+    nextRetryAt: !anyReadyNow && soonestBackoff !== null ? new Date(soonestBackoff).toISOString() : null,
+  };
+}
+
 async function loadCounts() {
   const [queue, conflicts] = await Promise.all([
     readArray<OfflineMutation>(QUEUE_KEY),
@@ -76,9 +126,12 @@ async function loadCounts() {
     const raw = await AsyncStorage.getItem(META_KEY);
     meta = raw ? JSON.parse(raw) : null;
   } catch {}
+  const counts = deriveQueueCounts(queue);
   emit({
-    pendingCount: queue.length,
+    pendingCount: counts.pendingCount,
+    failedCount: counts.failedCount,
     conflictCount: conflicts.length,
+    nextRetryAt: counts.nextRetryAt,
     lastSyncedAt: typeof meta?.lastSyncedAt === 'string' ? meta.lastSyncedAt : null,
   });
 }
@@ -116,6 +169,25 @@ export function isNetworkFailure(error: unknown): boolean {
   return /network request failed|failed to fetch|internet connection|offline|load failed|timed? ?out/i.test(message);
 }
 
+// A permanent failure will never succeed by retrying the same payload: RLS denial,
+// constraint/validation/type errors, or a 4xx from PostgREST. These get parked
+// instead of retried so they can't become a poison pill. Anything else (5xx,
+// unknown) is treated as transient and retried with backoff.
+export function isPermanentFailure(error: unknown): boolean {
+  const err = error as { code?: unknown; status?: unknown; message?: unknown } | null;
+  const code = typeof err?.code === 'string' ? err.code : '';
+  // PostgREST/Postgres SQLSTATE classes that a retry can't fix:
+  //  42501 = RLS/insufficient privilege · 23xxx = integrity constraint violations
+  //  22xxx = data exceptions (invalid text/number/date) · 428C9/2BP01 = generated/dependent
+  //  P0001 = raise_exception from a trigger (e.g. free-tier limits)
+  if (/^(42501|23\d{3}|22\d{3}|428C9|2BP01|P0001)$/.test(code)) return true;
+  // PostgREST maps a bad request to HTTP 400/401/403/404/409/422 with a numeric-string code.
+  const status = typeof err?.status === 'number' ? err.status : Number(code);
+  if (Number.isFinite(status) && status >= 400 && status < 500 && status !== 408 && status !== 429) return true;
+  const message = typeof err?.message === 'string' ? err.message : '';
+  return /violates|constraint|permission denied|not-null|invalid input|row-level security/i.test(message);
+}
+
 export async function enqueueOfflineMutation(
   input: Omit<OfflineMutation, 'id' | 'createdAt'>,
 ): Promise<OfflineMutation> {
@@ -142,12 +214,19 @@ export async function enqueueOfflineMutation(
       ...existing,
       payload: { ...existing.payload, ...item.payload },
       createdAt: item.createdAt,
+      // A fresh user edit supersedes the old payload, so give it a clean slate:
+      // clear any prior failure/backoff so it is retried immediately.
+      attempts: 0,
+      nextRetryAt: null,
+      failedPermanently: false,
+      lastError: null,
     };
   } else {
     queue.push(item);
   }
   await writeArray(QUEUE_KEY, queue);
-  emit({ pendingCount: queue.length, lastError: null });
+  const counts = deriveQueueCounts(queue);
+  emit({ pendingCount: counts.pendingCount, failedCount: counts.failedCount, nextRetryAt: counts.nextRetryAt, lastError: null });
   return item;
 }
 
@@ -213,9 +292,16 @@ async function performMutation(item: OfflineMutation): Promise<'synced' | SyncCo
   return 'synced';
 }
 
-export function flushOfflineQueue(userId: string, queryClient: QueryClient): Promise<void> {
+// `force` (from an explicit "Try sync now" tap) re-attempts items that are in
+// backoff or permanently parked; the automatic flush leaves those alone.
+export function flushOfflineQueue(
+  userId: string,
+  queryClient: QueryClient,
+  options?: { force?: boolean },
+): Promise<void> {
   if (activeFlush) return activeFlush;
   if (!snapshot.isOnline) return Promise.resolve();
+  const force = options?.force === true;
 
   activeFlush = (async () => {
     emit({ isSyncing: true, lastError: null });
@@ -223,11 +309,26 @@ export function flushOfflineQueue(userId: string, queryClient: QueryClient): Pro
     const remaining: OfflineMutation[] = [];
     const conflicts = await readArray<SyncConflict>(CONFLICTS_KEY);
     let stoppedByNetwork = false;
+    let syncedTaskChanges = 0;
+    let permanentError: string | null = null;
+    const now = Date.now();
 
     for (const item of queue) {
       if (item.userId !== userId) {
         remaining.push(item);
         continue;
+      }
+      // Automatic flushes skip parked (permanently-failed) items and anything
+      // still inside its backoff window; a forced flush ignores both gates.
+      if (!force) {
+        if (item.failedPermanently) {
+          remaining.push(item);
+          continue;
+        }
+        if (item.nextRetryAt && Date.parse(item.nextRetryAt) > now) {
+          remaining.push(item);
+          continue;
+        }
       }
       if (stoppedByNetwork) {
         remaining.push(item);
@@ -236,13 +337,30 @@ export function flushOfflineQueue(userId: string, queryClient: QueryClient): Pro
       try {
         const result = await performMutation(item);
         if (result !== 'synced') conflicts.push(result);
+        else if (item.entity === 'tasks') syncedTaskChanges++;
       } catch (error) {
-        remaining.push(item);
+        const message = error instanceof Error ? error.message : 'An offline edit could not sync.';
         if (isNetworkFailure(error)) {
+          // Network dropped mid-flush: leave the item untouched (no attempt
+          // counted) and stop; the rest will retry when we're back online.
+          remaining.push(item);
           stoppedByNetwork = true;
           emit({ isOnline: false });
+        } else if (isPermanentFailure(error)) {
+          // A retry can't fix this — park it so it never auto-flushes again.
+          remaining.push({ ...item, failedPermanently: true, nextRetryAt: null, lastError: message });
+          permanentError = message;
         } else {
-          emit({ lastError: error instanceof Error ? error.message : 'An offline edit could not sync.' });
+          // Transient (5xx/unknown): count the attempt and back off exponentially.
+          const attempts = (item.attempts ?? 0) + 1;
+          if (attempts >= MAX_RETRY_ATTEMPTS) {
+            // Exhausted retries — treat like a permanent failure from here on.
+            remaining.push({ ...item, attempts, failedPermanently: true, nextRetryAt: null, lastError: message });
+            permanentError = message;
+          } else {
+            const delay = BASE_BACKOFF_MS * 2 ** (attempts - 1);
+            remaining.push({ ...item, attempts, nextRetryAt: new Date(now + delay).toISOString(), lastError: message });
+          }
         }
       }
     }
@@ -253,14 +371,25 @@ export function flushOfflineQueue(userId: string, queryClient: QueryClient): Pro
     ]);
     const lastSyncedAt = stoppedByNetwork ? snapshot.lastSyncedAt : new Date().toISOString();
     await saveMeta(lastSyncedAt);
+    const counts = deriveQueueCounts(remaining);
     emit({
-      pendingCount: remaining.length,
+      pendingCount: counts.pendingCount,
+      failedCount: counts.failedCount,
       conflictCount: conflicts.length,
+      nextRetryAt: counts.nextRetryAt,
       lastSyncedAt,
+      // Surface a permanent failure once so the user/sync-status knows, rather
+      // than looping silently. Transient backoff is reflected via nextRetryAt.
+      lastError: permanentError,
     });
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
     queryClient.invalidateQueries({ queryKey: ['task'] });
     queryClient.invalidateQueries({ queryKey: ['taskSubtasks'] });
+    if (syncedTaskChanges > 0) {
+      // Rebuild local delivery state after queued edits. This also discovers
+      // the next occurrence created by the recurring-task database trigger.
+      rescheduleAllTaskReminders(userId).catch(() => {});
+    }
   })()
     .finally(() => {
       activeFlush = null;
@@ -294,6 +423,9 @@ export async function resolveSyncConflict(
   queryClient.invalidateQueries({ queryKey: ['tasks'] });
   queryClient.invalidateQueries({ queryKey: ['task'] });
   queryClient.invalidateQueries({ queryKey: ['taskSubtasks'] });
+  if (conflict.entity === 'tasks') {
+    rescheduleAllTaskReminders(conflict.userId).catch(() => {});
+  }
 }
 
 export async function clearOfflineUserState(userId?: string | null) {
@@ -303,7 +435,7 @@ export async function clearOfflineUserState(userId?: string | null) {
       AsyncStorage.removeItem(CONFLICTS_KEY),
       AsyncStorage.removeItem(META_KEY),
     ]);
-    emit({ pendingCount: 0, conflictCount: 0, lastSyncedAt: null, lastError: null });
+    emit({ pendingCount: 0, conflictCount: 0, failedCount: 0, nextRetryAt: null, lastSyncedAt: null, lastError: null });
     return;
   }
   const [queue, conflicts] = await Promise.all([
@@ -316,5 +448,11 @@ export async function clearOfflineUserState(userId?: string | null) {
     writeArray(QUEUE_KEY, remainingQueue),
     writeArray(CONFLICTS_KEY, remainingConflicts),
   ]);
-  emit({ pendingCount: remainingQueue.length, conflictCount: remainingConflicts.length });
+  const counts = deriveQueueCounts(remainingQueue);
+  emit({
+    pendingCount: counts.pendingCount,
+    failedCount: counts.failedCount,
+    nextRetryAt: counts.nextRetryAt,
+    conflictCount: remainingConflicts.length,
+  });
 }

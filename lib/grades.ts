@@ -153,13 +153,27 @@ export function calculateCourseGrade(
     };
   }
 
+  // Base course % from the categorized (non-EC) work graded so far.
+  const basePercentage = earnedPoints / attemptedWeight * 100;
+
+  // 'bonus' extra credit adds FLAT percentage points on TOP of the base %,
+  // NOT into the weighted numerator — folding EC into earnedPoints and
+  // dividing by attemptedWeight wildly inflates early-semester grades (one
+  // 10% category graded + a 5%/90 EC task would read as base + ~45 points).
+  // Each EC task's bonus is its own `weight` (the point value the student
+  // sets in the editor) scaled by how well they did: weight × score/100.
+  //
+  // Example: 10% category graded at 80 (base 80.0), plus a 5-point EC task
+  // scored 90 → bonus = 5 × 90/100 = 4.5 → final = min(100, 80.0 + 4.5) = 84.5.
+  // An EC task with weight null contributes 0 (the editor now lets them set it).
+  let bonus = 0;
   if (extraCreditPolicy === 'bonus') {
-    earnedPoints += tasks
+    bonus = tasks
       .filter((task) => task.is_extra_credit && taskPercent(task) != null && task.weight != null)
       .reduce((sum, task) => sum + (task.weight ?? 0) * (taskPercent(task) ?? 0) / 100, 0);
   }
 
-  const percentage = Math.min(100, earnedPoints / attemptedWeight * 100);
+  const percentage = Math.min(100, basePercentage + bonus);
   return {
     percentage: round(percentage),
     letter: letterFor(percentage, scale),

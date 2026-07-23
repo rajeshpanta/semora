@@ -1,8 +1,9 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { format } from 'date-fns';
 import { useEffect, useState } from 'react';
+import * as Haptics from 'expo-haptics';
 import {
   ActivityIndicator,
   Alert,
@@ -20,19 +21,29 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSession } from '@/app/_layout';
 import { DatePicker } from '@/components/DatePicker';
 import {
+  archiveCollaboration,
   createGroupAssignment,
+  deleteCollaboration,
   getCollaborationDetail,
   inviteClassmates,
+  leaveCollaboration,
+  listOutstandingInvites,
   publishCourseDeadlines,
+  removeCollaborationMember,
+  revokeCollaborationInvite,
+  setCollaborationLocalCourse,
+  setCollaborationMemberRole,
   setGroupAssignmentCompleted,
   subscribeToCollaboration,
   syncCollaborationToPlanner,
 } from '@/lib/collaboration';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { formatLocalDate } from '@/lib/dates';
+import { useCourses } from '@/lib/queries';
 import { useResponsive } from '@/lib/responsive';
 import { useColors } from '@/lib/theme';
 import { useAppStore } from '@/store/appStore';
+import type { CourseCollaborationMember } from '@/types/database';
 
 export default function CollaborationDetailScreen() {
   const { id = '' } = useLocalSearchParams<{ id: string }>();
@@ -42,6 +53,7 @@ export default function CollaborationDetailScreen() {
   const semesterId = useAppStore((state) => state.selectedSemesterId);
   const queryClient = useQueryClient();
   const [showNew, setShowNew] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const query = useQuery({
     queryKey: ['collaboration', id],
     queryFn: () => getCollaborationDetail(id),
@@ -49,7 +61,13 @@ export default function CollaborationDetailScreen() {
   });
   const detail = query.data;
   const me = detail?.members.find((member) => member.user_id === session?.user.id);
+  const isOwner = me?.role === 'owner';
   const canEdit = me?.role === 'owner' || me?.role === 'editor';
+
+  const invalidateAfterMembership = () => {
+    queryClient.invalidateQueries({ queryKey: ['collaboration', id] });
+    queryClient.invalidateQueries({ queryKey: ['collaborations'] });
+  };
 
   useEffect(() => {
     if (!id) return;
@@ -102,6 +120,70 @@ export default function CollaborationDetailScreen() {
     onError: (error: Error) => Alert.alert('Couldn’t update group task', error.message),
   });
 
+  const removeMember = useMutation({
+    mutationFn: (memberUserId: string) => removeCollaborationMember(id, memberUserId),
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      invalidateAfterMembership();
+    },
+    onError: (error: Error) => Alert.alert('Couldn’t remove member', error.message),
+  });
+  const changeRole = useMutation({
+    mutationFn: ({ memberUserId, role }: { memberUserId: string; role: 'owner' | 'editor' | 'viewer' }) =>
+      setCollaborationMemberRole(id, memberUserId, role),
+    onSuccess: () => {
+      Haptics.selectionAsync().catch(() => {});
+      invalidateAfterMembership();
+    },
+    onError: (error: Error) => Alert.alert('Couldn’t change role', error.message),
+  });
+  const leave = useMutation({
+    mutationFn: () => leaveCollaboration(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collaborations'] });
+      if (router.canGoBack()) router.back();
+      else router.replace('/collaboration' as any);
+    },
+    onError: (error: Error) => Alert.alert('Couldn’t leave space', error.message),
+  });
+
+  const confirmRemove = (member: CourseCollaborationMember) => {
+    Alert.alert(
+      'Remove member',
+      `Remove ${member.display_name} from this space? Their synced planner keeps what it already has.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: () => removeMember.mutate(member.user_id) },
+      ],
+    );
+  };
+  const confirmLeave = () => {
+    Alert.alert(
+      'Leave space',
+      'You’ll stop seeing new shared deadlines and group work. Your own planner stays as it is.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Leave', style: 'destructive', onPress: () => leave.mutate() },
+      ],
+    );
+  };
+  // Promoting to owner is how a SOLE owner hands off a space so they can then
+  // leave (the server blocks the last owner from leaving/being demoted). It
+  // grants full control, so confirm first.
+  const confirmMakeOwner = (member: CourseCollaborationMember) => {
+    Alert.alert(
+      'Make owner',
+      `Give ${member.display_name} owner control of this space? They’ll be able to manage members, publish deadlines, and delete the space. You’ll stay an owner too — after this you can leave if you want.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Make owner',
+          onPress: () => changeRole.mutate({ memberUserId: member.user_id, role: 'owner' }),
+        },
+      ],
+    );
+  };
+
   if (query.isLoading || !detail) {
     return (
       <SafeAreaView style={[styles.loading, { backgroundColor: colors.paper }]}>
@@ -143,10 +225,15 @@ export default function CollaborationDetailScreen() {
                 .catch((error) => Alert.alert('Couldn’t invite', error.message))
             } />
           )}
-          {me?.role === 'owner' && (
+          {isOwner && (
             <ActionButton icon="upload" label="Publish" busy={publish.isPending} onPress={() => publish.mutate()} />
           )}
           <ActionButton icon="refresh" label="My planner" busy={sync.isPending} onPress={() => sync.mutate()} />
+          {isOwner ? (
+            <ActionButton icon="cog" label="Settings" onPress={() => setShowSettings(true)} />
+          ) : (
+            <ActionButton icon="sign-out" label="Leave" busy={leave.isPending} onPress={confirmLeave} />
+          )}
         </View>
 
         <View style={styles.sectionHead}>
@@ -197,6 +284,63 @@ export default function CollaborationDetailScreen() {
             </View>
           </View>
         ))}
+
+        <Text style={[styles.sectionTitle, { color: colors.ink, marginTop: 10 }]}>Members</Text>
+        {detail.members.map((member) => {
+          const isSelf = member.user_id === session?.user.id;
+          return (
+            <View key={member.user_id} style={[styles.item, { backgroundColor: colors.card, borderColor: colors.line }]}>
+              <View style={[styles.memberAvatar, { backgroundColor: detail.collaboration.course_color }]}>
+                <Text style={styles.avatarText}>{member.display_name.slice(0, 1).toUpperCase()}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.itemTitle, { color: colors.ink }]}>
+                  {member.display_name}{isSelf ? ' (You)' : ''}
+                </Text>
+                <Text style={[styles.itemMeta, { color: colors.ink3, textTransform: 'capitalize' }]}>{member.role}</Text>
+              </View>
+              {/* Owners manage everyone but themselves; the last-owner guards live server-side. */}
+              {isOwner && !isSelf && (
+                <View style={styles.memberActions}>
+                  {member.role !== 'owner' && (
+                    <>
+                      <TouchableOpacity
+                        disabled={changeRole.isPending}
+                        onPress={() =>
+                          changeRole.mutate({
+                            memberUserId: member.user_id,
+                            role: member.role === 'viewer' ? 'editor' : 'viewer',
+                          })
+                        }
+                        style={[styles.rolePill, { borderColor: colors.line, backgroundColor: colors.brand50 }]}
+                      >
+                        <FontAwesome name={member.role === 'viewer' ? 'pencil' : 'eye'} size={11} color={colors.brand} />
+                        <Text style={[styles.rolePillText, { color: colors.brand }]}>
+                          {member.role === 'viewer' ? 'Editor' : 'Viewer'}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        disabled={changeRole.isPending}
+                        onPress={() => confirmMakeOwner(member)}
+                        style={[styles.rolePill, { borderColor: colors.line, backgroundColor: colors.brand50 }]}
+                      >
+                        <FontAwesome name="star" size={11} color={colors.brand} />
+                        <Text style={[styles.rolePillText, { color: colors.brand }]}>Owner</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                  <TouchableOpacity
+                    disabled={removeMember.isPending}
+                    onPress={() => confirmRemove(member)}
+                    style={[styles.removeButton, { borderColor: colors.line }]}
+                  >
+                    <FontAwesome name="user-times" size={13} color={colors.coral} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          );
+        })}
       </ScrollView>
 
       <NewGroupAssignmentModal
@@ -210,6 +354,16 @@ export default function CollaborationDetailScreen() {
           query.refetch();
         }}
       />
+
+      {isOwner && (
+        <SettingsModal
+          visible={showSettings}
+          onClose={() => setShowSettings(false)}
+          collaborationId={id}
+          courseName={detail.collaboration.course_name}
+          myLocalCourseId={me?.local_course_id ?? null}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -340,6 +494,158 @@ function MemberChip({ label, selected, onPress }: { label: string; selected: boo
   );
 }
 
+function SettingsModal({
+  visible,
+  onClose,
+  collaborationId,
+  courseName,
+  myLocalCourseId,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  collaborationId: string;
+  courseName: string;
+  myLocalCourseId: string | null;
+}) {
+  const colors = useColors();
+  const queryClient = useQueryClient();
+  const semesterId = useAppStore((state) => state.selectedSemesterId);
+  const { data: courses = [] } = useCourses(semesterId);
+
+  // Only the owner opens this, and only owner-created invites are readable (RLS).
+  const invites = useQuery({
+    queryKey: ['collaboration-invites', collaborationId],
+    queryFn: () => listOutstandingInvites(collaborationId),
+    enabled: visible,
+  });
+
+  const revoke = useMutation({
+    mutationFn: () => revokeCollaborationInvite(collaborationId),
+    onSuccess: (count) => {
+      invites.refetch();
+      Alert.alert('Invites revoked', count === 1 ? 'The outstanding invite link no longer works.' : `${count} invite links no longer work.`);
+    },
+    onError: (error: Error) => Alert.alert('Couldn’t revoke invites', error.message),
+  });
+  const linkCourse = useMutation({
+    mutationFn: (courseId: string) => setCollaborationLocalCourse(collaborationId, courseId),
+    onSuccess: () => {
+      Haptics.selectionAsync().catch(() => {});
+      queryClient.invalidateQueries({ queryKey: ['collaboration', collaborationId] });
+      // Re-sync so shared work lands in the newly linked course.
+      if (semesterId) {
+        syncCollaborationToPlanner(collaborationId, semesterId)
+          .then(() => queryClient.invalidateQueries({ queryKey: ['tasks'] }))
+          .catch(() => {});
+      }
+    },
+    onError: (error: Error) => Alert.alert('Couldn’t link course', error.message),
+  });
+  const archive = useMutation({
+    mutationFn: () => archiveCollaboration(collaborationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collaborations'] });
+      onClose();
+      if (router.canGoBack()) router.back();
+      else router.replace('/collaboration' as any);
+    },
+    onError: (error: Error) => Alert.alert('Couldn’t archive space', error.message),
+  });
+  const remove = useMutation({
+    mutationFn: () => deleteCollaboration(collaborationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['collaborations'] });
+      onClose();
+      if (router.canGoBack()) router.back();
+      else router.replace('/collaboration' as any);
+    },
+    onError: (error: Error) => Alert.alert('Couldn’t delete space', error.message),
+  });
+
+  const outstanding = invites.data ?? [];
+  const confirmArchive = () =>
+    Alert.alert(
+      'Archive space',
+      `Archive ${courseName}? It disappears for everyone and outstanding invites stop working. Already-synced planner items stay put.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Archive', style: 'destructive', onPress: () => archive.mutate() },
+      ],
+    );
+  const confirmDelete = () =>
+    Alert.alert(
+      'Delete space',
+      `Permanently delete ${courseName} and all its shared deadlines and group work for everyone? This can’t be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => remove.mutate() },
+      ],
+    );
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <View style={[styles.sheet, { backgroundColor: colors.card }]}>
+          <View style={styles.sheetHead}>
+            <Text style={[styles.sheetTitle, { color: colors.ink }]}>Space settings</Text>
+            <TouchableOpacity onPress={onClose}><FontAwesome name="times" size={18} color={colors.ink3} /></TouchableOpacity>
+          </View>
+
+          <Text style={[styles.fieldLabel, { color: colors.ink2 }]}>Link to my course</Text>
+          <Text style={[styles.settingHint, { color: colors.ink3 }]}>
+            Point synced deadlines and group work at a course you already track.
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.memberChips}>
+            {courses.length === 0 ? (
+              <Text style={[styles.settingHint, { color: colors.ink3 }]}>No courses this semester yet.</Text>
+            ) : courses.map((course) => (
+              <MemberChip
+                key={course.id}
+                label={course.name}
+                selected={myLocalCourseId === course.id}
+                onPress={() => linkCourse.mutate(course.id)}
+              />
+            ))}
+          </ScrollView>
+
+          <Text style={[styles.fieldLabel, { color: colors.ink2, marginTop: 6 }]}>Invites</Text>
+          <TouchableOpacity
+            disabled={revoke.isPending || outstanding.length === 0}
+            onPress={() => revoke.mutate()}
+            style={[styles.settingRow, { borderColor: colors.line, opacity: outstanding.length === 0 ? 0.5 : 1 }]}
+          >
+            <FontAwesome name="ban" size={15} color={colors.ink2} />
+            <Text style={[styles.settingText, { color: colors.ink }]}>
+              {outstanding.length === 0
+                ? 'No outstanding invite links'
+                : `Revoke ${outstanding.length} outstanding invite${outstanding.length === 1 ? '' : 's'}`}
+            </Text>
+            {revoke.isPending && <ActivityIndicator size="small" color={colors.brand} />}
+          </TouchableOpacity>
+
+          <Text style={[styles.fieldLabel, { color: colors.ink2, marginTop: 6 }]}>Danger zone</Text>
+          <TouchableOpacity
+            disabled={archive.isPending}
+            onPress={confirmArchive}
+            style={[styles.settingRow, { borderColor: colors.line }]}
+          >
+            <FontAwesome name="archive" size={15} color={colors.coral} />
+            <Text style={[styles.settingText, { color: colors.coral }]}>Archive space</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            disabled={remove.isPending}
+            onPress={confirmDelete}
+            style={[styles.settingRow, { borderColor: colors.line }]}
+          >
+            <FontAwesome name="trash" size={15} color={colors.coral} />
+            <Text style={[styles.settingText, { color: colors.coral }]}>Delete space permanently</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -378,4 +684,12 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 12, fontWeight: '700' },
   saveButton: { minHeight: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 3 },
   saveText: { color: '#fff', fontSize: 15, fontWeight: '800' },
+  memberAvatar: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  memberActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  rolePill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, height: 32, borderRadius: 10, borderWidth: StyleSheet.hairlineWidth },
+  rolePillText: { fontSize: 11, fontWeight: '800' },
+  removeButton: { width: 34, height: 32, borderRadius: 10, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
+  settingHint: { fontSize: 12, lineHeight: 17 },
+  settingRow: { minHeight: 50, borderRadius: 13, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  settingText: { flex: 1, fontSize: 14, fontWeight: '700' },
 });

@@ -1,9 +1,11 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import * as Haptics from 'expo-haptics';
 import { Stack, router } from 'expo-router';
 import { useMemo } from 'react';
 import {
+  Alert,
+  Platform,
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -11,8 +13,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SyncStatusPill } from '@/components/OfflineSyncBridge';
+import { track } from '@/lib/analytics';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
-import { buildProgressInsights } from '@/lib/progressInsights';
+import { buildProgressInsights, exportSemesterReport } from '@/lib/progressInsights';
 import {
   useCourses,
   useSemesterGradeCategories,
@@ -40,20 +43,20 @@ export default function InsightsScreen() {
   const semester = semesters.find((row) => row.id === semesterId);
   const maxWeekly = Math.max(1, ...insights.weekly.map((row) => row.completed));
 
-  const shareReport = () => {
-    const courseLines = insights.courseInsights.map((course) =>
-      `${course.name}: ${course.grade == null ? 'grade pending' : `${course.grade}% (${course.letter})`}, ` +
-      `${course.completionRate}% complete, ${course.onTimeRate == null ? 'no timing data' : `${course.onTimeRate}% on time`}`,
-    );
-    Share.share({
-      title: `${semester?.name ?? 'Semester'} progress report`,
-      message: [
-        `Semora progress report — ${semester?.name ?? 'Current semester'}`,
-        `${insights.completionRate}% complete · ${insights.onTimeRate ?? '—'}% on time · ${insights.missingCount} missing`,
-        '',
-        ...courseLines,
-      ].join('\n'),
-    }).catch(() => {});
+  const shareReport = async () => {
+    try {
+      // Real file export (CSV written to cache + native share sheet), not a
+      // one-line-per-course text blurb. Mirrors the .ics export pattern.
+      await exportSemesterReport(semester?.name ?? 'Current semester', insights);
+      track('insights_exported', { screen: 'insights', format: 'csv' });
+      if (Platform.OS === 'ios') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      }
+    } catch (err: any) {
+      // Share.share doesn't reject on user-dismiss (iOS), so anything here is a
+      // real failure (nothing to export, write error, unsupported platform).
+      Alert.alert('Couldn\'t export', err?.message ?? 'Something went wrong. Please try again.');
+    }
   };
 
   return (
