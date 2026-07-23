@@ -11,6 +11,7 @@ import * as SecureStore from 'expo-secure-store';
 const MAX_SCHEDULED_NOTIFICATIONS = 60;
 export const TASK_NOTIFICATION_CATEGORY = 'semora-task-reminder';
 export const COMPLETE_TASK_ACTION = 'complete-task';
+export const REVIEW_TASK_ACTION = 'review-task';
 export const SNOOZE_TASK_ACTION = 'snooze-task';
 const NOTIFICATION_HEALTH_KEY = 'semora.notification-health.v2';
 
@@ -39,25 +40,31 @@ Notifications.setNotificationHandler({
 
 export async function registerTaskNotificationActions(isPro: boolean = false) {
   if (Platform.OS === 'web') return;
-  // The inline quick-actions (Mark Complete / Snooze) are a Pro convenience.
-  // Free users get a plain reminder they tap to open — registering the category
-  // with NO buttons avoids showing controls that would otherwise need a paywall
-  // detour. Re-registered whenever Pro status changes (NotificationActionBridge)
-  // so an upgrade adds the buttons and a lapse removes them from new alerts.
-  const actions = isPro
-    ? [
-        {
-          identifier: COMPLETE_TASK_ACTION,
-          buttonTitle: 'Mark Complete',
-          options: { opensAppToForeground: false },
-        },
-        {
+  // Everyone can act on a reminder from the notification: "Mark Complete" checks
+  // it off in place, and "Review" opens the task so the user can look before
+  // marking (avoids accidental completion). "Snooze" — rescheduling the reminder
+  // — is the Pro convenience, so it's added only for Pro. Re-registered whenever
+  // Pro status flips (NotificationActionBridge) so Snooze appears on upgrade and
+  // disappears on lapse.
+  const actions = [
+    {
+      identifier: COMPLETE_TASK_ACTION,
+      buttonTitle: 'Mark Complete',
+      options: { opensAppToForeground: false },
+    },
+    {
+      identifier: REVIEW_TASK_ACTION,
+      buttonTitle: 'Review',
+      options: { opensAppToForeground: true },
+    },
+    ...(isPro
+      ? [{
           identifier: SNOOZE_TASK_ACTION,
           buttonTitle: 'Snooze 1 Hour',
           options: { opensAppToForeground: false },
-        },
-      ]
-    : [];
+        }]
+      : []),
+  ];
   await Notifications.setNotificationCategoryAsync(TASK_NOTIFICATION_CATEGORY, actions);
 }
 
