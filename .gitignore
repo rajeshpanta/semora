@@ -42,3 +42,6 @@ yarn-error.*
 
 # supabase cli cache
 supabase/.temp/
+
+# Local-only infra/account notes — never commit (account emails are phishing targets)
+*.local.md
