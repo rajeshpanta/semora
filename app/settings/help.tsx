@@ -22,7 +22,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'How is my grade calculated?',
-    a: 'Grades are based on weighted scores you enter for each task. The percentage shown is your current average across all graded work.',
+    a: 'Semora uses assignment weights when you add them. If a course has no weights, it uses a simple average of posted grades. Your semester GPA estimate converts each course grade to grade points and weights it by that course\'s credit hours.',
   },
   {
     q: 'Can I have multiple semesters?',

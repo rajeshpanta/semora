@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { COLORS, FONTS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { calculateCourseGrade, type GradeTask } from '@/lib/grades';
+import type { ExtraCreditPolicy, GradeCategory, GradeThreshold } from '@/types/database';
 
 interface GradeCardProps {
   percentage: number | null;
@@ -12,6 +14,7 @@ interface GradeCardProps {
   totalCount: number;
   weightAttempted: number;
   weightTotal: number;
+  categoryMode?: boolean;
 }
 
 function getGradeColor(letter: string | null): [string, string] {
@@ -23,7 +26,7 @@ function getGradeColor(letter: string | null): [string, string] {
   return ['#ef4444', '#dc2626'];
 }
 
-export function GradeCard({ percentage, letter, gradedCount, totalCount, weightAttempted, weightTotal }: GradeCardProps) {
+export function GradeCard({ percentage, letter, gradedCount, totalCount, weightAttempted, weightTotal, categoryMode = false }: GradeCardProps) {
   const colors = useColors();
   const [color1, color2] = getGradeColor(letter);
   const barWidth = percentage != null ? Math.min(percentage, 100) : 0;
@@ -64,13 +67,15 @@ export function GradeCard({ percentage, letter, gradedCount, totalCount, weightA
         </Text>
         {hasGrades && weightTotal > 0 && (
           <Text style={[styles.metaRight, { color: colors.ink2 }]}>
-            {weightAttempted}% of {weightTotal}% attempted
+            {categoryMode
+              ? `${weightAttempted}% of category mix reporting`
+              : `${weightAttempted}% of ${weightTotal}% attempted`}
           </Text>
         )}
       </View>
 
       {/* Helpful context when early in semester */}
-      {hasGrades && weightAttempted < weightTotal && weightAttempted > 0 && (
+      {hasGrades && !categoryMode && weightAttempted < weightTotal && weightAttempted > 0 && (
         <View style={[styles.contextBox, { backgroundColor: colors.brand50 }]}>
           <Text style={[styles.contextText, { color: colors.brand }]}>
             Based on {weightAttempted}% of coursework completed.{' '}
@@ -193,6 +198,91 @@ export function WhatIfCard({
   );
 }
 
+export function FinalExamWhatIfCard({
+  tasks, categories, scale, extraCreditPolicy, isPro, onUpgrade,
+}: {
+  tasks: Array<GradeTask & { id: string; title: string; type?: string }>;
+  categories: GradeCategory[];
+  scale: GradeThreshold[];
+  extraCreditPolicy: ExtraCreditPolicy;
+  isPro: boolean;
+  onUpgrade: () => void;
+}) {
+  const colors = useColors();
+  const candidates = useMemo(() => {
+    const ungraded = tasks.filter((task) => task.score == null && !task.is_extra_credit);
+    const finals = ungraded.filter((task) =>
+      task.type === 'exam' || /\b(final|midterm|exam)\b/i.test(task.title),
+    );
+    return (finals.length ? finals : ungraded)
+      .filter((task) => task.weight != null || task.grade_category_id != null)
+      .slice(0, 6);
+  }, [tasks]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [score, setScore] = useState(85);
+  const selected = candidates.find((task) => task.id === selectedId) || candidates[0];
+
+  if (!selected) return null;
+  if (!isPro) {
+    return (
+      <TouchableOpacity style={[wiStyles.wrap, { borderTopColor: colors.line }]} onPress={onUpgrade}>
+        <View style={wiStyles.headRow}>
+          <Text style={[wiStyles.title, { color: colors.ink }]}>Final exam what-if</Text>
+          <View style={[wiStyles.proPill, { backgroundColor: colors.brand }]}><Text style={wiStyles.proPillText}>PRO</Text></View>
+        </View>
+        <Text style={[wiStyles.teaser, { color: colors.ink3 }]}>Try possible exam scores and see the projected course grade instantly.</Text>
+      </TouchableOpacity>
+    );
+  }
+
+  const projectedTasks = tasks.map((task) => task.id === selected.id ? { ...task, score } : task);
+  const projected = calculateCourseGrade(projectedTasks, categories, scale, extraCreditPolicy);
+
+  return (
+    <View style={[wiStyles.wrap, { borderTopColor: colors.line }]}>
+      <View style={wiStyles.headRow}>
+        <Text style={[wiStyles.title, { color: colors.ink }]}>Final exam what-if</Text>
+        <Text style={[wiStyles.remainingNote, { color: colors.ink3 }]}>Projected, not saved</Text>
+      </View>
+      {candidates.length > 1 && (
+        <View style={wiStyles.taskChips}>
+          {candidates.map((task) => (
+            <TouchableOpacity
+              key={task.id}
+              style={[
+                wiStyles.taskChip,
+                { borderColor: colors.line },
+                selected.id === task.id && { backgroundColor: colors.brand50, borderColor: colors.brand },
+              ]}
+              onPress={() => setSelectedId(task.id)}
+            >
+              <Text style={[wiStyles.taskChipText, { color: selected.id === task.id ? colors.brand : colors.ink2 }]} numberOfLines={1}>{task.title}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+      <Text style={[wiStyles.examTitle, { color: colors.ink2 }]} numberOfLines={1}>If you earn {score}% on {selected.title}</Text>
+      <View style={wiStyles.scoreRow}>
+        {[70, 80, 85, 90, 100].map((value) => (
+          <TouchableOpacity
+            key={value}
+            style={[wiStyles.scoreChip, { borderColor: colors.line }, score === value && { backgroundColor: colors.brand, borderColor: colors.brand }]}
+            onPress={() => setScore(value)}
+          >
+            <Text style={[wiStyles.scoreChipText, { color: score === value ? '#fff' : colors.ink2 }]}>{value}%</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+      <View style={[wiStyles.projection, { backgroundColor: colors.brand50 }]}>
+        <Text style={[wiStyles.projectionLabel, { color: colors.brand }]}>PROJECTED COURSE GRADE</Text>
+        <Text style={[wiStyles.projectionValue, { color: colors.brand }]}>
+          {projected.percentage != null ? `${projected.percentage.toFixed(2)}% · ${projected.letter}` : 'Not enough grading data'}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 const wiStyles = StyleSheet.create({
   wrap: { borderTopWidth: 0.5, marginTop: 14, paddingTop: 12 },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
@@ -205,6 +295,16 @@ const wiStyles = StyleSheet.create({
   rowLetter: { fontSize: 14.5, fontWeight: '800', width: 30 },
   rowMin: { fontSize: 12, fontWeight: '500' },
   rowReq: { fontSize: 13.5, fontWeight: '700' },
+  taskChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginVertical: 7 },
+  taskChip: { maxWidth: '48%', borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6 },
+  taskChipText: { fontSize: 11.5, fontWeight: '700' },
+  examTitle: { fontSize: 12.5, fontWeight: '600', marginTop: 6 },
+  scoreRow: { flexDirection: 'row', gap: 6, marginTop: 8 },
+  scoreChip: { flex: 1, height: 34, borderWidth: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  scoreChipText: { fontSize: 11.5, fontWeight: '800' },
+  projection: { borderRadius: 10, padding: 10, marginTop: 9 },
+  projectionLabel: { fontSize: 9.5, fontWeight: '800', letterSpacing: 0.6 },
+  projectionValue: { fontSize: 16, fontWeight: '800', marginTop: 2 },
 });
 
 const styles = StyleSheet.create({

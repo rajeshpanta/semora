@@ -1,10 +1,13 @@
-import { View, Text, StyleSheet, Switch, ActivityIndicator, Alert, TouchableOpacity, Linking, Platform, AppState } from 'react-native';
+import { View, Text, StyleSheet, Switch, ActivityIndicator, Alert, TouchableOpacity, Linking, Platform, AppState, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import * as Notifications from 'expo-notifications';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { requestNotificationPermission, rescheduleAllTaskReminders } from '@/lib/notifications';
+import {
+  getNotificationDeliveryHealth, requestNotificationPermission,
+  rescheduleAllTaskReminders, type NotificationDeliveryHealth,
+} from '@/lib/notifications';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/app/_layout';
@@ -12,18 +15,36 @@ import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
+import { DatePicker } from '@/components/DatePicker';
 
 interface ReminderPrefs {
   reminder_same_day: boolean;
   reminder_1day: boolean;
   reminder_3day: boolean;
+  quiet_hours_enabled: boolean;
+  quiet_hours_start: string;
+  quiet_hours_end: string;
 }
 
 const DEFAULT_PREFS: ReminderPrefs = {
   reminder_same_day: true,
   reminder_1day: true,
   reminder_3day: true,
+  quiet_hours_enabled: false,
+  quiet_hours_start: '22:00:00',
+  quiet_hours_end: '08:00:00',
 };
+
+function timeToDate(value: string) {
+  const [hours, minutes] = value.split(':').map(Number);
+  const date = new Date();
+  date.setHours(hours || 0, minutes || 0, 0, 0);
+  return date;
+}
+
+function dateToTime(value: Date) {
+  return `${String(value.getHours()).padStart(2, '0')}:${String(value.getMinutes()).padStart(2, '0')}:00`;
+}
 
 export default function NotificationSettings() {
   const colors = useColors();
@@ -39,6 +60,8 @@ export default function NotificationSettings() {
   // while every reminder is silently dead (scheduling no-ops when the
   // user denied or never granted notifications).
   const [osPermission, setOsPermission] = useState<'granted' | 'denied' | 'undetermined'>('granted');
+  const [health, setHealth] = useState<NotificationDeliveryHealth | null>(null);
+  const [checkingHealth, setCheckingHealth] = useState(false);
 
   const refreshOsPermission = () => {
     if (Platform.OS === 'web') return;
@@ -63,7 +86,7 @@ export default function NotificationSettings() {
       try {
         const { data } = await supabase
           .from('profiles')
-          .select('reminder_same_day, reminder_1day, reminder_3day')
+          .select('reminder_same_day, reminder_1day, reminder_3day, quiet_hours_enabled, quiet_hours_start, quiet_hours_end')
           .eq('id', userId)
           .maybeSingle();
         if (data) setPrefs(data);
@@ -73,6 +96,7 @@ export default function NotificationSettings() {
         setLoading(false);
       }
     })();
+    getNotificationDeliveryHealth().then(setHealth).catch(() => {});
   }, [userId]);
 
   const handleEnableNotifications = async () => {
@@ -86,6 +110,31 @@ export default function NotificationSettings() {
     } else {
       // Denied — only iOS Settings can flip it now.
       Linking.openSettings().catch(() => {});
+    }
+  };
+
+  const updateQuietHours = async (patch: Partial<ReminderPrefs>) => {
+    const previous = prefs;
+    const updated = { ...prefs, ...patch };
+    setPrefs(updated);
+    if (!userId) return;
+    const { error } = await supabase.from('profiles').update(patch).eq('id', userId);
+    if (error) {
+      setPrefs(previous);
+      Alert.alert('Couldn’t save', 'Quiet hours were not updated.');
+      return;
+    }
+    await rescheduleAllTaskReminders(userId);
+    setHealth(await getNotificationDeliveryHealth());
+  };
+
+  const runDeliveryCheck = async () => {
+    setCheckingHealth(true);
+    try {
+      if (userId) await rescheduleAllTaskReminders(userId);
+      setHealth(await getNotificationDeliveryHealth());
+    } finally {
+      setCheckingHealth(false);
     }
   };
 
@@ -135,7 +184,7 @@ export default function NotificationSettings() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Notifications' }} />
 
-      <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         {osPermission !== 'granted' && (
           <TouchableOpacity
             style={[styles.permBanner, { backgroundColor: colors.amber50, borderColor: colors.amber }]}
@@ -184,12 +233,72 @@ export default function NotificationSettings() {
           Reminders are scheduled when tasks are created or updated. Changes here apply to all your tasks.
         </Text>
 
+        <Text style={[styles.sectionTitle, { color: colors.ink2, marginTop: 24 }]}>Quiet hours</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <ToggleRow
+            label="Pause reminder delivery"
+            subtitle="Reminders that land inside this window move to the end of quiet hours."
+            value={prefs.quiet_hours_enabled}
+            onToggle={() => updateQuietHours({ quiet_hours_enabled: !prefs.quiet_hours_enabled })}
+            last
+          />
+          {prefs.quiet_hours_enabled && (
+            <View style={[styles.quietTimes, { borderTopColor: colors.line }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.timeLabel, { color: colors.ink3 }]}>START</Text>
+                <DatePicker
+                  value={timeToDate(prefs.quiet_hours_start)}
+                  onChange={(date) => updateQuietHours({ quiet_hours_start: dateToTime(date) })}
+                  mode="time"
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.timeLabel, { color: colors.ink3 }]}>END</Text>
+                <DatePicker
+                  value={timeToDate(prefs.quiet_hours_end)}
+                  onChange={(date) => updateQuietHours({ quiet_hours_end: dateToTime(date) })}
+                  mode="time"
+                />
+              </View>
+            </View>
+          )}
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.ink2, marginTop: 24 }]}>Delivery health</Text>
+        <View style={[styles.healthCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <View style={[styles.healthIcon, { backgroundColor: health?.permission === 'granted' && !health?.lastError ? colors.teal50 : colors.amber50 }]}>
+            <FontAwesome
+              name={health?.permission === 'granted' && !health?.lastError ? 'check-circle' : 'exclamation-triangle'}
+              size={17}
+              color={health?.permission === 'granted' && !health?.lastError ? colors.teal : colors.amber}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.healthTitle, { color: colors.ink }]}>
+              {health?.permission === 'granted' && !health?.lastError ? 'Reminder delivery is healthy' : 'Reminder delivery needs attention'}
+            </Text>
+            <Text style={[styles.healthSub, { color: colors.ink3 }]}>
+              {health
+                ? `${health.pendingCount} pending · ${health.lastScheduledAt ? `checked ${new Date(health.lastScheduledAt).toLocaleString()}` : 'not scheduled yet'}`
+                : 'Checking permission and pending reminders…'}
+            </Text>
+            {health?.lastError && <Text style={[styles.healthError, { color: colors.coral }]}>{health.lastError}</Text>}
+          </View>
+          <TouchableOpacity onPress={runDeliveryCheck} disabled={checkingHealth} style={[styles.checkButton, { backgroundColor: colors.brand50 }]}>
+            {checkingHealth ? <ActivityIndicator size="small" color={colors.brand} /> : <FontAwesome name="refresh" size={13} color={colors.brand} />}
+          </TouchableOpacity>
+        </View>
+
+        <Text style={[styles.hint, { color: colors.ink3 }]}>
+          Task reminders include Snooze and Mark Complete actions, so students can act without opening the full app.
+        </Text>
+
         <Text style={[styles.hint, { color: colors.ink3 }]}>
           When notifications are on, Semora may also send occasional nudges — a heads-up about a busy
           week of deadlines, or a reminder to set up your courses when a new semester begins. These are
           infrequent and only sent while notifications are enabled above.
         </Text>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -251,4 +360,12 @@ const styles = StyleSheet.create({
   },
   permBannerTitle: { fontSize: 14, fontWeight: '700' },
   permBannerSub: { fontSize: 12.5, marginTop: 1, lineHeight: 17 },
+  quietTimes: { flexDirection: 'row', gap: 12, borderTopWidth: 0.5, paddingVertical: 14 },
+  timeLabel: { fontSize: 10, fontWeight: '800', letterSpacing: 0.6, marginBottom: 6 },
+  healthCard: { borderWidth: 0.5, borderRadius: 18, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  healthIcon: { width: 38, height: 38, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  healthTitle: { fontSize: 13.5, fontWeight: '700' },
+  healthSub: { fontSize: 11, lineHeight: 15, marginTop: 2 },
+  healthError: { fontSize: 10.5, marginTop: 3 },
+  checkButton: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
 });

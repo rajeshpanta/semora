@@ -1,15 +1,16 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { format, isPast, isToday, isTomorrow, differenceInDays, differenceInCalendarDays, differenceInHours, differenceInMinutes } from 'date-fns';
 import { TASK_TYPE_LABELS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import type { TaskWithCourse } from '@/lib/queries';
+import { useTaskCompletionFlow } from '@/components/TaskCompletionFlow';
 
 interface TaskItemProps {
   task: TaskWithCourse;
-  onToggle: (opts?: { submitted_late?: boolean }) => void;
+  onToggle: (opts?: { submitted_late?: boolean; late_penalty_percent?: number | null }) => void;
   onPress: () => void;
 }
 
@@ -57,6 +58,7 @@ function getDueLabel(dueDate: Date, dueTime: string | null): string {
 
 export function TaskItem({ task, onToggle, onPress }: TaskItemProps) {
   const colors = useColors();
+  const { confirmCompletion } = useTaskCompletionFlow();
   // Schema requires due_date but a malformed row would render
   // "Invalid Date" without this guard. Skip the date calculations and
   // show "No due date" — the rest of the row is still useful.
@@ -72,32 +74,14 @@ export function TaskItem({ task, onToggle, onPress }: TaskItemProps) {
       : getDueLabel(dueDate, task.due_time);
   const isUrgent = dueLabel.includes('left') || dueLabel === 'Due today' || dueLabel === 'Tomorrow';
 
-  const handleToggle = () => {
+  const handleToggle = async () => {
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
 
-    // If completing a past-due task, ask about late submission
-    if (!task.is_completed && overdue) {
-      Alert.alert(
-        'Past Due Date',
-        `This assignment was due ${dueLabel.replace('late', 'ago')}. Was it submitted late?`,
-        [
-          {
-            text: 'Yes, late',
-            onPress: () => onToggle({ submitted_late: true }),
-          },
-          {
-            text: 'No, on time',
-            onPress: () => onToggle({ submitted_late: false }),
-          },
-          { text: 'Cancel', style: 'cancel' },
-        ],
-      );
-      return;
-    }
-
-    onToggle();
+    if (task.is_completed) return onToggle();
+    const decision = await confirmCompletion(task);
+    if (decision) onToggle(decision);
   };
 
   return (
@@ -126,6 +110,13 @@ export function TaskItem({ task, onToggle, onPress }: TaskItemProps) {
           <View style={[styles.typeBadge, { backgroundColor: colors.line }]}>
             <Text style={[styles.typeText, { color: colors.ink2 }]}>{TASK_TYPE_LABELS[task.type]}</Text>
           </View>
+          {task.priority === 'high' && (
+            <View style={[styles.priorityBadge, { backgroundColor: colors.coral50 }]}>
+              <FontAwesome name="flag" size={9} color={colors.coral} />
+              <Text style={[styles.priorityText, { color: colors.coral }]}>High</Text>
+            </View>
+          )}
+          {task.recurrence_frequency && <FontAwesome name="repeat" size={11} color={colors.ink3} />}
         </View>
       </View>
 
@@ -189,6 +180,8 @@ const styles = StyleSheet.create({
   courseName: { fontSize: 14, color: '#64748b', fontWeight: '500', maxWidth: 120 },
   typeBadge: { backgroundColor: '#f1f5f9', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   typeText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
+  priorityBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4 },
+  priorityText: { fontSize: 10, fontWeight: '700' },
   dateCol: { alignItems: 'flex-end' },
   dateText: { fontSize: 14, fontWeight: '600', color: '#64748b' },
   dateOverdue: { color: '#ef4444' },

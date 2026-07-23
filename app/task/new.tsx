@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator, Alert, Platform, Keyboard,
@@ -7,13 +7,15 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
-import { useCreateTask, useCourses } from '@/lib/queries';
+import { useCreateTask, useCourses, useGradeCategories } from '@/lib/queries';
 import { useAppStore } from '@/store/appStore';
 import { TASK_TYPES, TASK_TYPE_LABELS, COLORS, SCREEN_MAX_WIDTH, type TaskType } from '@/lib/constants';
 import { DatePicker } from '@/components/DatePicker';
+import { TaskPlanningFields } from '@/components/TaskPlanningFields';
 import { useColors } from '@/lib/theme';
 import { useResponsive, gridItemBasis } from '@/lib/responsive';
 import { formatLocalDate } from '@/lib/dates';
+import type { RecurrenceFrequency, TaskPriority } from '@/types/database';
 
 export default function NewTaskScreen() {
   const router = useRouter();
@@ -33,11 +35,34 @@ export default function NewTaskScreen() {
   );
   const [dueTime, setDueTime] = useState<Date | null>(null);
   const [weight, setWeight] = useState('');
+  const [gradeCategoryId, setGradeCategoryId] = useState<string | null>(null);
   const [isExtraCredit, setIsExtraCredit] = useState(false);
+  const [priority, setPriority] = useState<TaskPriority>('normal');
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState<Date | null>(null);
+  const [recurrence, setRecurrence] = useState<RecurrenceFrequency | null>(null);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<Date | null>(null);
+  const [reminderOffsets, setReminderOffsets] = useState<number[] | null>(null);
+  const [subtaskInput, setSubtaskInput] = useState('');
+  const [subtasks, setSubtasks] = useState<string[]>([]);
 
   const selectedCourse = courses.find((c) => c.id === courseId);
+  const { data: gradeCategories = [] } = useGradeCategories(courseId);
   const colors = useColors();
   const { contentMaxWidth, isWide, columns, width } = useResponsive();
+
+  // A one-course semester has no meaningful choice to make. Preselect it so
+  // quick-add never lets the student fill the entire form only to hit a
+  // "Please select a course" alert at the end.
+  useEffect(() => {
+    if (!courseId && courses.length === 1) setCourseId(courses[0].id);
+  }, [courseId, courses]);
+
+  useEffect(() => {
+    if (gradeCategoryId && !gradeCategories.some((category) => category.id === gradeCategoryId)) {
+      setGradeCategoryId(null);
+    }
+  }, [gradeCategoryId, gradeCategories]);
 
   const handleSubmit = async () => {
     if (!courseId) {
@@ -59,6 +84,21 @@ export default function NewTaskScreen() {
         return;
       }
     }
+    if (startDate && formatLocalDate(startDate) > formatLocalDate(dueDate)) {
+      Alert.alert('Invalid start date', 'The start date must be on or before the due date.');
+      return;
+    }
+    if (recurrence && recurrenceEndDate && formatLocalDate(recurrenceEndDate) < formatLocalDate(dueDate)) {
+      Alert.alert('Invalid repeat date', 'The repeat end date must be on or after the due date.');
+      return;
+    }
+
+    // Treat text still sitting in the subtask box as an intended final step.
+    // Requiring a separate tap on + before Add Task made that draft vanish.
+    const submittedSubtasks = [
+      ...subtasks,
+      ...(subtaskInput.trim() ? [subtaskInput.trim()] : []),
+    ];
 
     try {
       await createTask.mutateAsync({
@@ -71,7 +111,15 @@ export default function NewTaskScreen() {
           ? `${String(dueTime.getHours()).padStart(2, '0')}:${String(dueTime.getMinutes()).padStart(2, '0')}:00`
           : null,
         weight: weight.trim() ? parseFloat(weight) : null,
+        grade_category_id: gradeCategoryId,
         is_extra_credit: isExtraCredit,
+        priority,
+        estimated_minutes: estimatedMinutes,
+        start_date: startDate ? formatLocalDate(startDate) : null,
+        recurrence_frequency: recurrence,
+        recurrence_end_date: recurrence && recurrenceEndDate ? formatLocalDate(recurrenceEndDate) : null,
+        reminder_offsets_minutes: reminderOffsets,
+        _subtasks: submittedSubtasks,
         _courseName: selectedCourse?.name,
       } as any);
       if (Platform.OS === 'ios') {
@@ -166,6 +214,26 @@ export default function NewTaskScreen() {
             onChangeText={setTitle}
           />
 
+          {gradeCategories.length > 0 && (
+            <>
+              <Text style={[styles.label, { color: colors.ink2 }]}>Grade category</Text>
+              <View style={styles.typeRow}>
+                {gradeCategories.map((category) => (
+                  <TouchableOpacity
+                    key={category.id}
+                    style={[styles.typeChip, gradeCategoryId === category.id && { backgroundColor: colors.brand }]}
+                    onPress={() => setGradeCategoryId(gradeCategoryId === category.id ? null : category.id)}
+                  >
+                    <Text style={[styles.typeChipText, { color: colors.ink2 }, gradeCategoryId === category.id && styles.typeChipTextActive]}>
+                      {category.name} · {category.weight_percent}%
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <Text style={[styles.hint, { color: colors.ink3, marginTop: 5 }]}>Category rules override the individual weight for regular grade calculations.</Text>
+            </>
+          )}
+
           {/* Description */}
           <Text style={[styles.label, { color: colors.ink2 }]}>Description</Text>
           <TextInput
@@ -209,7 +277,7 @@ export default function NewTaskScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.label, { color: colors.ink2 }]}>Time</Text>
-              <DatePicker value={dueTime} onChange={setDueTime} mode="time" placeholder="Optional" />
+              <DatePicker value={dueTime} onChange={setDueTime} onClear={() => setDueTime(null)} mode="time" placeholder="Optional" />
             </View>
           </View>
 
@@ -236,6 +304,65 @@ export default function NewTaskScreen() {
             <Text style={[styles.ecLabel, { color: colors.ink }]}>Extra Credit</Text>
             <Text style={[styles.ecHint, { color: colors.ink3 }]}>Won't count against total weight</Text>
           </TouchableOpacity>
+
+          <TaskPlanningFields
+            priority={priority}
+            onPriorityChange={setPriority}
+            estimatedMinutes={estimatedMinutes}
+            onEstimatedMinutesChange={setEstimatedMinutes}
+            startDate={startDate}
+            onStartDateChange={setStartDate}
+            recurrence={recurrence}
+            onRecurrenceChange={(value) => {
+              setRecurrence(value);
+              if (!value) setRecurrenceEndDate(null);
+            }}
+            recurrenceEndDate={recurrenceEndDate}
+            onRecurrenceEndDateChange={setRecurrenceEndDate}
+            dueDate={dueDate}
+            dueTime={dueTime}
+            reminderOffsets={reminderOffsets}
+            onReminderOffsetsChange={setReminderOffsets}
+          />
+
+          <Text style={[styles.label, { color: colors.ink2 }]}>Subtasks</Text>
+          <Text style={[styles.hint, { color: colors.ink3 }]}>Break the work into small, checkable steps.</Text>
+          {subtasks.map((subtask, index) => (
+            <View key={`${subtask}-${index}`} style={[styles.subtaskRow, { borderColor: colors.line }]}>
+              <FontAwesome name="circle-o" size={12} color={colors.ink3} />
+              <Text style={[styles.subtaskText, { color: colors.ink }]}>{subtask}</Text>
+              <TouchableOpacity onPress={() => setSubtasks((items) => items.filter((_, i) => i !== index))} hitSlop={8}>
+                <FontAwesome name="times" size={14} color={colors.ink3} />
+              </TouchableOpacity>
+            </View>
+          ))}
+          <View style={styles.subtaskInputRow}>
+            <TextInput
+              style={[styles.input, { flex: 1, borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
+              placeholder="Add a step"
+              placeholderTextColor={colors.ink3}
+              value={subtaskInput}
+              onChangeText={setSubtaskInput}
+              maxLength={240}
+              onSubmitEditing={() => {
+                if (subtaskInput.trim()) {
+                  setSubtasks((items) => [...items, subtaskInput.trim()]);
+                  setSubtaskInput('');
+                }
+              }}
+            />
+            <TouchableOpacity
+              style={[styles.subtaskAdd, { backgroundColor: colors.brand }]}
+              onPress={() => {
+                if (subtaskInput.trim()) {
+                  setSubtasks((items) => [...items, subtaskInput.trim()]);
+                  setSubtaskInput('');
+                }
+              }}
+            >
+              <FontAwesome name="plus" size={14} color="#fff" />
+            </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             style={[
@@ -291,4 +418,8 @@ const styles = StyleSheet.create({
   button: { flexDirection: 'row', height: 50, backgroundColor: COLORS.brand, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 24, gap: 8 },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  subtaskRow: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 9, borderBottomWidth: 1 },
+  subtaskText: { flex: 1, fontSize: 14 },
+  subtaskInputRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
+  subtaskAdd: { width: 44, height: 44, borderRadius: 11, justifyContent: 'center', alignItems: 'center' },
 });

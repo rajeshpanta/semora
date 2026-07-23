@@ -11,11 +11,12 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 interface DatePickerProps {
   value: Date | null;
   onChange: (date: Date) => void;
+  onClear?: () => void;
   mode?: 'date' | 'time';
   placeholder?: string;
 }
 
-export function DatePicker({ value, onChange, mode = 'date', placeholder }: DatePickerProps) {
+export function DatePicker({ value, onChange, onClear, mode = 'date', placeholder }: DatePickerProps) {
   const colors = useColors();
   const [show, setShow] = useState(false);
   const [tempValue, setTempValue] = useState<Date>(value || new Date());
@@ -34,7 +35,10 @@ export function DatePicker({ value, onChange, mode = 'date', placeholder }: Date
           }
           onChange={(e: any) => {
             const val = e.target.value;
-            if (!val) return;
+            if (!val) {
+              onClear?.();
+              return;
+            }
             if (mode === 'date') {
               onChange(new Date(val + 'T00:00:00'));
             } else {
@@ -93,6 +97,19 @@ export function DatePicker({ value, onChange, mode = 'date', placeholder }: Date
         <Text style={[styles.buttonText, { color: colors.ink }, !value && { color: colors.ink3 }]}>
           {displayText}
         </Text>
+        {value && onClear && (
+          <TouchableOpacity
+            onPress={(event) => {
+              event.stopPropagation();
+              onClear();
+            }}
+            hitSlop={10}
+            accessibilityRole="button"
+            accessibilityLabel={`Clear ${mode}`}
+          >
+            <FontAwesome name="times-circle" size={15} color={colors.ink3} />
+          </TouchableOpacity>
+        )}
       </TouchableOpacity>
 
       <Modal
@@ -152,7 +169,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  buttonText: { fontSize: 15, color: COLORS.ink },
+  buttonText: { flex: 1, fontSize: 15, color: COLORS.ink },
   placeholder: { color: COLORS.ink3 },
   // Modal
   overlay: {

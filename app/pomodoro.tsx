@@ -15,29 +15,48 @@ import {
   usePomodoro, formatCountdown, FOCUS_OPTIONS, BREAK_OPTIONS,
   type PomodoroPhase,
 } from '@/lib/pomodoro';
+import { useToggleStudyBlock } from '@/lib/queries';
 
 export default function PomodoroScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ taskId?: string; title?: string }>();
+  const params = useLocalSearchParams<{ taskId?: string; title?: string; minutes?: string; blockId?: string }>();
   const isPro = useAppStore((s) => s.isPro);
   const colors = useColors();
   const { contentMaxWidth } = useResponsive();
 
   const taskId = params.taskId ?? null;
   const taskTitle = params.title ?? null;
+  const requestedMinutes = params.minutes ? Number(params.minutes) : null;
+  const studyBlockId = params.blockId ?? null;
+  const toggleStudyBlock = useToggleStudyBlock();
 
   // Fire the completion analytics + haptic when a phase's countdown hits zero
   // in-app. Only a completed FOCUS block counts as a "pomodoro_completed".
-  const onPhaseComplete = useCallback((phase: PomodoroPhase, minutes: number) => {
+  const onPhaseComplete = useCallback((
+    phase: PomodoroPhase,
+    minutes: number,
+    _completedTaskId: string | null,
+    completedBlockId: string | null,
+  ) => {
     if (Platform.OS === 'ios') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     if (phase === 'focus') {
       track('pomodoro_completed', { minutes, screen: 'pomodoro' });
+      if (completedBlockId) {
+        toggleStudyBlock.mutate({ id: completedBlockId, is_completed: true });
+        track('study_block_completed', { source: 'focus_timer', minutes });
+      }
     }
-  }, []);
+  }, [toggleStudyBlock]);
 
-  const [state, controls] = usePomodoro(taskId, taskTitle, onPhaseComplete);
+  const [state, controls] = usePomodoro(
+    taskId,
+    taskTitle,
+    requestedMinutes,
+    studyBlockId,
+    onPhaseComplete,
+  );
 
   const handleStart = useCallback(async () => {
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -104,6 +123,10 @@ export default function PomodoroScreen() {
     !state.running &&
     state.remainingSeconds <
       (isFocus ? state.focusMinutes : state.breakMinutes) * 60;
+  const usesPlannedFocusLength = !(FOCUS_OPTIONS as readonly number[]).includes(state.focusMinutes);
+  const focusOptions: readonly number[] = usesPlannedFocusLength
+    ? [state.focusMinutes, ...FOCUS_OPTIONS]
+    : FOCUS_OPTIONS;
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
@@ -183,7 +206,7 @@ export default function PomodoroScreen() {
           <View style={[styles.pickerCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
             <Text style={[styles.pickerLabel, { color: colors.ink2 }]}>Focus length</Text>
             <View style={styles.chipRow}>
-              {FOCUS_OPTIONS.map((m) => {
+              {focusOptions.map((m) => {
                 const active = state.focusMinutes === m;
                 return (
                   <TouchableOpacity
@@ -195,7 +218,9 @@ export default function PomodoroScreen() {
                     }}
                     activeOpacity={0.8}
                   >
-                    <Text style={[styles.chipText, { color: colors.ink2 }, active && styles.chipTextActive]}>{m}m</Text>
+                    <Text style={[styles.chipText, { color: colors.ink2 }, active && styles.chipTextActive]}>
+                      {m}m{active && usesPlannedFocusLength ? ' plan' : ''}
+                    </Text>
                   </TouchableOpacity>
                 );
               })}

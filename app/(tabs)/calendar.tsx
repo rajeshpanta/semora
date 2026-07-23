@@ -14,6 +14,8 @@ import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { track } from '@/lib/analytics';
 import type { TaskWithCourse } from '@/lib/queries';
+import { GlobalSearchButton } from '@/components/GlobalSearchButton';
+import { useTaskCompletionFlow } from '@/components/TaskCompletionFlow';
 
 const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -68,6 +70,7 @@ export default function CalendarScreen() {
   const { data: semesters = [] } = useSemesters();
   const { data: courses = [] } = useCourses(selectedSemesterId);
   const toggleComplete = useToggleTaskComplete();
+  const { confirmCompletion } = useTaskCompletionFlow();
 
   // Shared inline-toggle handler so the calendar checkboxes get the same
   // haptic + error treatment as the Today tab and task-detail screen. The
@@ -75,7 +78,7 @@ export default function CalendarScreen() {
   // toggle just wouldn't move — this adds the haptic feedback and a visible
   // error Alert instead of swallowing the failure as a silent no-op.
   const runToggle = useCallback(
-    async (vars: { id: string; is_completed: boolean; submitted_late?: boolean }) => {
+    async (vars: { id: string; is_completed: boolean; submitted_late?: boolean; late_penalty_percent?: number | null }) => {
       try {
         await toggleComplete.mutateAsync(vars);
         if (vars.is_completed) track('task_completed', { screen: 'calendar', late: !!vars.submitted_late });
@@ -93,6 +96,16 @@ export default function CalendarScreen() {
     },
     [toggleComplete],
   );
+
+  const toggleTaskFromCalendar = useCallback(async (task: TaskWithCourse) => {
+    if (task.is_completed) {
+      await runToggle({ id: task.id, is_completed: false });
+      return;
+    }
+    const decision = await confirmCompletion(task);
+    if (!decision) return;
+    await runToggle({ id: task.id, is_completed: true, ...decision });
+  }, [confirmCompletion, runToggle]);
 
   useEffect(() => {
     if (semesters.length === 0) return;
@@ -137,13 +150,16 @@ export default function CalendarScreen() {
               <FontAwesome name="caret-down" size={12} color={colors.ink3} />
             </View>
           </View>
-          <View style={[styles.modeToggle, { backgroundColor: colors.card, borderColor: colors.line }]}>
-            <TouchableOpacity style={[styles.modeBtn, viewMode === 'month' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('month')}>
-              <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'month' && styles.modeBtnTextActive]}>Month</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.modeBtn, viewMode === 'list' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('list')}>
-              <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'list' && styles.modeBtnTextActive]}>List</Text>
-            </TouchableOpacity>
+          <View style={styles.headerTools}>
+            <GlobalSearchButton />
+            <View style={[styles.modeToggle, { backgroundColor: colors.card, borderColor: colors.line }]}>
+              <TouchableOpacity style={[styles.modeBtn, viewMode === 'month' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('month')}>
+                <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'month' && styles.modeBtnTextActive]}>Month</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modeBtn, viewMode === 'list' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('list')}>
+                <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'list' && styles.modeBtnTextActive]}>List</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -277,7 +293,7 @@ export default function CalendarScreen() {
                         <Text style={[styles.agendaTaskCourse, { color: colors.ink3 }]}>{task.courses.name}</Text>
                       </View>
                       <TouchableOpacity
-                        onPress={() => runToggle({ id: task.id, is_completed: !task.is_completed })}
+                        onPress={() => toggleTaskFromCalendar(task)}
                         hitSlop={8}
                         disabled={toggleComplete.isPending}
                         accessibilityRole="button"
@@ -329,7 +345,7 @@ export default function CalendarScreen() {
                             <Text style={[styles.agendaTaskCourse, { color: colors.ink3 }]}>{task.courses.name}</Text>
                           </View>
                           <TouchableOpacity
-                            onPress={() => runToggle({ id: task.id, is_completed: !task.is_completed })}
+                            onPress={() => toggleTaskFromCalendar(task)}
                             hitSlop={8}
                             disabled={toggleComplete.isPending}
                             accessibilityRole="button"
@@ -364,6 +380,7 @@ const styles = StyleSheet.create({
   content: { padding: 18, paddingBottom: 120, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   // Header
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  headerTools: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { fontFamily: FONTS.displaySemibold, fontSize: 27, color: COLORS.ink, letterSpacing: -0.5 },
   monthPickerRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 },
   monthSubtitle: { fontSize: 14, color: COLORS.ink2, fontWeight: '500' },

@@ -10,12 +10,13 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
-import { format, startOfWeek, addDays, differenceInDays, isToday as isDateToday, isPast, startOfDay } from 'date-fns';
+import { format, startOfWeek, addDays, differenceInDays, isToday as isDateToday, startOfDay } from 'date-fns';
 import { useSession } from '@/app/_layout';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import {
   useSemesters, useCourses, useTodayTasks, useDueSoonTasks,
   useTaskStats, useToggleTaskComplete, useTasks, useHasPendingTasks,
+  useSemesterGradeCategories, type TaskWithCourse,
 } from '@/lib/queries';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
@@ -27,6 +28,11 @@ import { rescheduleAllTaskReminders, requestNotificationPermission } from '@/lib
 import { track } from '@/lib/analytics';
 import { computeStreak } from '@/lib/streaks';
 import StudySuggestionsCard from '@/components/StudySuggestionsCard';
+import { GlobalSearchButton } from '@/components/GlobalSearchButton';
+import { useTaskCompletionFlow } from '@/components/TaskCompletionFlow';
+import { buildAcademicRiskReport } from '@/lib/academicRisk';
+import { AcademicRiskCard } from '@/components/AcademicRiskCard';
+import { SyncStatusPill } from '@/components/OfflineSyncBridge';
 
 // Max overdue rows shown before collapsing into a "Show N more" expander.
 // 5 covers the typical case (0–3) without truncating; only kicks in when
@@ -99,10 +105,12 @@ export default function TodayScreen() {
   const setReviewRequested = useAppStore((s) => s.setReviewRequested);
   const { data: semesters = [], isLoading: semestersLoading } = useSemesters();
   const { data: courses = [] } = useCourses(selectedSemesterId);
+  const { data: gradeCategories = [] } = useSemesterGradeCategories(selectedSemesterId);
   const { data: todayTasks = [] } = useTodayTasks(selectedSemesterId);
   const { data: dueSoonTasks = [], isSuccess: dueSoonLoaded } = useDueSoonTasks(selectedSemesterId);
   const { data: stats } = useTaskStats(selectedSemesterId);
   const toggleComplete = useToggleTaskComplete();
+  const { confirmCompletion } = useTaskCompletionFlow();
 
   const activeSemester = semesters.find((s) => s.id === selectedSemesterId);
 
@@ -128,7 +136,6 @@ export default function TodayScreen() {
   // the rest of this week's roadmap. useTasks sorts by due_date then due_time,
   // so upcomingTasks[0] is the soonest and overdueTasks[0] is the most overdue.
   const todayKey = format(today, 'yyyy-MM-dd');
-  const weekEndKey = format(weekEnd, 'yyyy-MM-dd');
   const { data: upcomingTasks = [] } = useTasks(
     selectedSemesterId
       ? { semesterId: selectedSemesterId, dueDateFrom: todayKey, isCompleted: false }
@@ -139,8 +146,23 @@ export default function TodayScreen() {
   const nextExamDays = nextExam
     ? Math.max(0, differenceInDays(new Date(nextExam.due_date + 'T00:00:00'), todayStart))
     : null;
-  // Incomplete tasks due through the end of this week (today -> Sunday), in due order.
-  const thisWeekTasks = upcomingTasks.filter((t) => t.due_date <= weekEndKey);
+  // Keep the current week's work visible after completion so the list behaves
+  // like a live roadmap rather than making a row disappear when checked.
+  const thisWeekTasks = weekTasks.filter(
+    (task) => task.due_date >= todayKey || task.is_completed,
+  );
+  // Tasks whose chosen start date has arrived become an explicit, free
+  // "Ready to start" queue. This makes start_date operational even for users
+  // who do not have the Pro Study Plan card unlocked.
+  const readyToStartTasks = upcomingTasks
+    .filter((task) => task.start_date && task.start_date <= todayKey && task.due_date > todayKey)
+    .sort((a, b) => {
+      const priorityRank = { high: 0, normal: 1, low: 2 } as const;
+      return priorityRank[a.priority || 'normal'] - priorityRank[b.priority || 'normal']
+        || (a.start_date || '').localeCompare(b.start_date || '')
+        || a.due_date.localeCompare(b.due_date);
+    })
+    .slice(0, 4);
   // Most-overdue first (oldest due date) — the one to finish first.
   const oldestOverdue = overdueTasks[0] || null;
 
@@ -151,10 +173,16 @@ export default function TodayScreen() {
   const { data: allSemesterTasks = [], isSuccess: allTasksLoaded } = useTasks(
     selectedSemesterId ? { semesterId: selectedSemesterId } : { semesterId: null },
   );
+  const completedWork = [...allSemesterTasks]
+    .filter((task) => task.is_completed)
+    .sort((a, b) => (b.completed_at || b.updated_at).localeCompare(a.completed_at || a.updated_at));
+  const completedWaitingForGrade = completedWork.filter((task) => task.score == null);
+  const completedWorkPreview = (completedWaitingForGrade.length > 0 ? completedWaitingForGrade : completedWork).slice(0, 3);
   // Habit signal. Pure + tz-safe; `today` is passed so it re-derives on the
   // per-minute tick (cheap — small in-memory scan). Value is also fed to
   // the home-screen widget below.
   const streak = computeStreak(allSemesterTasks, today);
+  const academicRisk = buildAcademicRiskReport(allSemesterTasks, courses, gradeCategories, today);
 
   // "Due this week" list for the second home-screen widget: incomplete
   // tasks due today → +7 days, soonest-first, capped for the widget. Built
@@ -303,7 +331,7 @@ export default function TodayScreen() {
   // screen. A failed toggle would otherwise silently revert on the next
   // refetch, leaving the user thinking a task was completed when it wasn't.
   const runToggle = useCallback(
-    async (vars: { id: string; is_completed: boolean; submitted_late?: boolean }) => {
+    async (vars: { id: string; is_completed: boolean; submitted_late?: boolean; late_penalty_percent?: number | null }) => {
       try {
         await toggleComplete.mutateAsync(vars);
         if (vars.is_completed) {
@@ -328,6 +356,16 @@ export default function TodayScreen() {
     },
     [toggleComplete],
   );
+
+  const toggleTaskFromList = useCallback(async (task: TaskWithCourse) => {
+    if (task.is_completed) {
+      await runToggle({ id: task.id, is_completed: false });
+      return;
+    }
+    const decision = await confirmCompletion(task);
+    if (!decision) return;
+    await runToggle({ id: task.id, is_completed: true, ...decision });
+  }, [confirmCompletion, runToggle]);
 
   // Keep the home-screen widget in sync with "what's next". Fires on every
   // app open and whenever the due-soon window changes (import, complete,
@@ -556,13 +594,19 @@ export default function TodayScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />}
       >
         {/* Header */}
-        <Text style={[styles.eyeLabel, { color: colors.ink3 }]}>{dateLabel}</Text>
-        <Text style={[styles.greeting, { color: colors.ink }]}>
-          {userName ? `${greeting}, ${userName}` : greeting}
-        </Text>
-        {activeSemester && (
-          <Text style={[styles.semesterLabel, { color: colors.ink3 }]}>{activeSemester.name}</Text>
-        )}
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.eyeLabel, { color: colors.ink3 }]}>{dateLabel}</Text>
+            <Text style={[styles.greeting, { color: colors.ink }]}>
+              {userName ? `${greeting}, ${userName}` : greeting}
+            </Text>
+            {activeSemester && (
+              <Text style={[styles.semesterLabel, { color: colors.ink3 }]}>{activeSemester.name}</Text>
+            )}
+          </View>
+          <GlobalSearchButton />
+        </View>
+        <SyncStatusPill compact />
 
         {/* Notification permission nudge. Surfaces ONLY when the OS prompt
             was explicitly denied (never-asked users get the primed ask in
@@ -601,6 +645,13 @@ export default function TodayScreen() {
             <FontAwesome name="chevron-right" size={11} color={colors.amber} />
           </TouchableOpacity>
         )}
+
+        <AcademicRiskCard
+          report={academicRisk}
+          onOpenTask={(taskId) => router.push(`/task/${taskId}` as any)}
+          onOpenCourse={(courseId) => router.push(`/course/${courseId}` as any)}
+          onOpenPlanner={() => router.push('/planner' as any)}
+        />
 
         {/* Today's classes — only renders when a course meets today. Hidden
             entirely when no schedule data exists, so users with no times set
@@ -693,13 +744,7 @@ export default function TodayScreen() {
                     activeOpacity={0.7}
                   >
                     <TouchableOpacity
-                      onPress={() => {
-                        Alert.alert('Past Due Date', 'Was this submitted late?', [
-                          { text: 'Yes, late', onPress: () => runToggle({ id: task.id, is_completed: true, submitted_late: true }) },
-                          { text: 'No, on time', onPress: () => runToggle({ id: task.id, is_completed: true, submitted_late: false }) },
-                          { text: 'Cancel', style: 'cancel' },
-                        ]);
-                      }}
+                      onPress={() => toggleTaskFromList(task)}
                       hitSlop={8}
                       disabled={toggleComplete.isPending}
                       accessibilityRole="button"
@@ -773,9 +818,8 @@ export default function TodayScreen() {
             which would require a native rebuild). Color jumps to teal
             at 100% to reward completion.
 
-            We derive counts from weekTasks (no isCompleted filter) rather
-            than todayTasks (which is incomplete-only via useTodayTasks).
-            Otherwise completedToday is always 0 and the bar never moves. */}
+            We derive counts from weekTasks so the progress calculation and
+            visible list share the same completed + incomplete task set. */}
         {(() => {
           const todayStr = format(today, 'yyyy-MM-dd');
           const allTodayTasks = weekTasks.filter((t) => t.due_date === todayStr);
@@ -831,19 +875,7 @@ export default function TodayScreen() {
                   activeOpacity={0.7}
                 >
                   <TouchableOpacity
-                    onPress={() => {
-                      const dueD = new Date(task.due_date + 'T00:00:00');
-                      const isOverdue = !task.is_completed && isPast(dueD) && !isDateToday(dueD);
-                      if (!task.is_completed && isOverdue) {
-                        Alert.alert('Past Due Date', 'Was this submitted late?', [
-                          { text: 'Yes, late', onPress: () => runToggle({ id: task.id, is_completed: true, submitted_late: true }) },
-                          { text: 'No, on time', onPress: () => runToggle({ id: task.id, is_completed: true, submitted_late: false }) },
-                          { text: 'Cancel', style: 'cancel' },
-                        ]);
-                      } else {
-                        runToggle({ id: task.id, is_completed: !task.is_completed });
-                      }
-                    }}
+                    onPress={() => toggleTaskFromList(task)}
                     hitSlop={8}
                     disabled={toggleComplete.isPending}
                     accessibilityRole="button"
@@ -961,6 +993,95 @@ export default function TodayScreen() {
               </>
             )}
           </View>
+        )}
+
+        {completedWork.length > 0 && (
+          <>
+            <TouchableOpacity
+              style={[styles.sectionRow, { marginTop: 20 }]}
+              onPress={() => router.push('/completed-work' as any)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Open completed work and grades"
+            >
+              <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Completed work</Text>
+              <View style={styles.sectionRowRight}>
+                {completedWaitingForGrade.length > 0 && (
+                  <View style={[styles.gradeWaitingBadge, { backgroundColor: colors.amber50 }]}>
+                    <Text style={[styles.gradeWaitingText, { color: colors.amber }]}>{completedWaitingForGrade.length} need grade</Text>
+                  </View>
+                )}
+                <Text style={[styles.weekViewLink, { color: colors.brand }]}>View all</Text>
+                <FontAwesome name="chevron-right" size={10} color={colors.brand} />
+              </View>
+            </TouchableOpacity>
+            <View style={[styles.completedCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+              {completedWorkPreview.map((task, index) => (
+                <TouchableOpacity
+                  key={`completed-${task.id}`}
+                  style={[styles.completedRow, index < completedWorkPreview.length - 1 && { borderBottomWidth: 0.5, borderBottomColor: colors.line }]}
+                  onPress={() => task.score == null
+                    ? router.push({ pathname: '/task/[id]', params: { id: task.id, grade: '1' } } as any)
+                    : router.push(`/task/${task.id}` as any)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.completedCheck, { backgroundColor: colors.teal50 }]}>
+                    <FontAwesome name="check" size={10} color={colors.teal} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.completedTitle, { color: colors.ink }]} numberOfLines={1}>{task.title}</Text>
+                    <Text style={[styles.completedMeta, { color: colors.ink3 }]} numberOfLines={1}>
+                      {task.courses.name}{task.submitted_late ? ' · late' : ' · on time'}
+                    </Text>
+                  </View>
+                  {task.score == null ? (
+                    <View style={[styles.quickGrade, { backgroundColor: colors.brand50 }]}>
+                      <Text style={[styles.quickGradeText, { color: colors.brand }]}>Add grade</Text>
+                    </View>
+                  ) : (
+                    <Text style={[styles.completedScore, { color: colors.teal }]}>{task.score}%</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+
+        {readyToStartTasks.length > 0 && (
+          <>
+            <View style={[styles.sectionRow, { marginTop: 20 }]}>
+              <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Ready to start</Text>
+              <Text style={[styles.readyCount, { color: colors.brand }]}>{readyToStartTasks.length}</Text>
+            </View>
+            <View style={[styles.taskCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+              {readyToStartTasks.map((task, index) => (
+                <TouchableOpacity
+                  key={`ready-${task.id}`}
+                  style={[
+                    styles.taskRow,
+                    index < readyToStartTasks.length - 1 && [styles.taskRowBorder, { borderBottomColor: colors.line }],
+                  ]}
+                  onPress={() => router.push(`/task/${task.id}` as any)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.readyIcon, { backgroundColor: colors.brand50 }]}>
+                    <FontAwesome name="play" size={9} color={colors.brand} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.taskTitle, { color: colors.ink }]} numberOfLines={1}>{task.title}</Text>
+                    <Text style={[styles.taskCourse, { color: colors.ink3 }]} numberOfLines={1}>
+                      {task.courses.name} · due {format(new Date(task.due_date + 'T00:00:00'), 'EEE, MMM d')}
+                    </Text>
+                  </View>
+                  {task.priority === 'high' && (
+                    <View style={[styles.readyPriority, { backgroundColor: colors.coral50 }]}>
+                      <Text style={[styles.readyPriorityText, { color: colors.coral }]}>HIGH</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
         )}
 
         {/* Tomorrow preview — late-evening peek so a Sunday-9pm user doesn't
@@ -1105,8 +1226,29 @@ export default function TodayScreen() {
                     activeOpacity={0.7}
                   >
                     <Text style={[styles.weekListDay, { color: task.type === 'exam' ? colors.coral : colors.ink3 }]}>{dayLabel}</Text>
+                    <TouchableOpacity
+                      onPress={() => toggleTaskFromList(task)}
+                      hitSlop={8}
+                      disabled={toggleComplete.isPending}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Mark ${task.title} ${task.is_completed ? 'incomplete' : 'complete'}`}
+                    >
+                      <View style={[
+                        styles.weekCbx,
+                        { borderColor: task.courses.color },
+                        task.is_completed && { backgroundColor: colors.teal, borderColor: colors.teal },
+                      ]}>
+                        {task.is_completed && <FontAwesome name="check" size={8} color="#fff" />}
+                      </View>
+                    </TouchableOpacity>
                     <View style={[styles.dot, { backgroundColor: task.courses.color }]} />
-                    <Text style={[styles.weekListTitle, { color: colors.ink }]} numberOfLines={1}>{task.title}</Text>
+                    <Text style={[styles.weekListTitle, { color: colors.ink }, task.is_completed && [styles.taskDone, { color: colors.ink3 }]]} numberOfLines={1}>{task.title}</Text>
+                    {task.score != null && (
+                      <Text style={[styles.weekScore, { color: colors.teal }]}>{task.score}%</Text>
+                    )}
+                    {task.submitted_late && task.score == null && (
+                      <Text style={[styles.weekLate, { color: colors.coral }]}>LATE</Text>
+                    )}
                     {task.type === 'exam' && (
                       <View style={[styles.weekExamBadge, { backgroundColor: colors.coral50 }]}>
                         <Text style={[styles.weekExamBadgeText, { color: colors.coral }]}>EXAM</Text>
@@ -1146,6 +1288,7 @@ const styles = StyleSheet.create({
   eyeLabel: { fontSize: 14, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.ink3 },
   greeting: { fontFamily: FONTS.displaySemibold, fontSize: 27, color: COLORS.ink, letterSpacing: -0.5, marginTop: 4, marginBottom: 2 },
   semesterLabel: { fontSize: 14, color: COLORS.ink3, fontWeight: '500', marginBottom: 16 },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   notifBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: 12, paddingVertical: 10,
@@ -1164,6 +1307,10 @@ const styles = StyleSheet.create({
   // Section
   sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   sectionRowRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  readyCount: { fontSize: 12, fontWeight: '800' },
+  readyIcon: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  readyPriority: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 6 },
+  readyPriorityText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.4 },
   sectionTitle: { fontSize: 14, fontWeight: '600', color: COLORS.ink2 },
   // Streak chip (habit signal in the Today progress area)
   streakChip: {
@@ -1196,6 +1343,16 @@ const styles = StyleSheet.create({
   dot: { width: 6, height: 6, borderRadius: 3 },
   taskCourse: { fontSize: 14, color: COLORS.ink3 },
   taskTime: { fontSize: 14, color: COLORS.ink3 },
+  gradeWaitingBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 7 },
+  gradeWaitingText: { fontSize: 10, fontWeight: '800' },
+  completedCard: { borderRadius: 18, borderWidth: 0.5, paddingHorizontal: 14 },
+  completedRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11 },
+  completedCheck: { width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  completedTitle: { fontSize: 13.5, fontWeight: '700' },
+  completedMeta: { fontSize: 11.5, fontWeight: '500', marginTop: 2 },
+  quickGrade: { paddingHorizontal: 9, paddingVertical: 6, borderRadius: 8 },
+  quickGradeText: { fontSize: 10.5, fontWeight: '800' },
+  completedScore: { fontSize: 14, fontWeight: '900' },
   // Overdue (background + borders themed via inline style for dark mode)
   overdueCard: { borderRadius: 18, paddingHorizontal: 14, borderWidth: 0.5, marginBottom: 16 },
   overdueRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
@@ -1236,7 +1393,10 @@ const styles = StyleSheet.create({
   weekList: { borderTopWidth: 0.5, borderTopColor: COLORS.line, marginTop: 4, paddingTop: 4 },
   weekListRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9 },
   weekListDay: { width: 38, fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
+  weekCbx: { width: 18, height: 18, borderRadius: 6, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   weekListTitle: { flex: 1, fontSize: 14, fontWeight: '500', color: COLORS.ink },
+  weekScore: { fontSize: 11.5, fontWeight: '800' },
+  weekLate: { fontSize: 9.5, fontWeight: '800', letterSpacing: 0.5 },
   weekExamBadge: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6 },
   weekExamBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
   // Floating action button (Quick-add task)

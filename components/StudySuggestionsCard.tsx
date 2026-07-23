@@ -61,7 +61,7 @@ export default function StudySuggestionsCard({ limit }: { limit?: number }) {
         accessibilityLabel="Unlock Study Plan, a Pro feature"
       >
         <View style={styles.headRow}>
-          <Text style={[styles.title, { color: colors.ink }]}>Study Plan</Text>
+          <Text style={[styles.title, { color: colors.ink }]}>Smart Plan</Text>
           <View style={[styles.proPill, { backgroundColor: colors.brand }]}>
             <Text style={styles.proPillText}>PRO</Text>
           </View>
@@ -69,7 +69,7 @@ export default function StudySuggestionsCard({ limit }: { limit?: number }) {
         <View style={styles.lockedRow}>
           <FontAwesome name="lock" size={12} color={colors.brand} />
           <Text style={[styles.lockedLine, { color: colors.ink3 }]} numberOfLines={1}>
-            See what to start on next, ranked by weight and deadline.
+            Turn deadlines into timed focus sessions that replan themselves.
           </Text>
         </View>
       </TouchableOpacity>
@@ -82,7 +82,11 @@ export default function StudySuggestionsCard({ limit }: { limit?: number }) {
     return (
       <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
         <View style={styles.headRow}>
-          <Text style={[styles.title, { color: colors.ink }]}>Study Plan</Text>
+          <Text style={[styles.title, { color: colors.ink }]}>Smart Plan</Text>
+          <TouchableOpacity style={styles.openLink} onPress={() => router.push('/planner' as any)}>
+            <Text style={[styles.openLinkText, { color: colors.brand }]}>Open plan</Text>
+            <FontAwesome name="chevron-right" size={9} color={colors.brand} />
+          </TouchableOpacity>
         </View>
         <Text style={[styles.emptyLine, { color: colors.ink3 }]}>
           Nothing pressing — you{'’'}re all caught up. Nice.
@@ -100,8 +104,11 @@ export default function StudySuggestionsCard({ limit }: { limit?: number }) {
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
       <View style={styles.headRow}>
-        <Text style={[styles.title, { color: colors.ink }]}>Study Plan</Text>
-        <Text style={[styles.subtle, { color: colors.ink3 }]}>What to start next</Text>
+        <Text style={[styles.title, { color: colors.ink }]}>Smart Plan</Text>
+        <TouchableOpacity style={styles.openLink} onPress={() => router.push('/planner' as any)}>
+          <Text style={[styles.openLinkText, { color: colors.brand }]}>Open plan</Text>
+          <FontAwesome name="chevron-right" size={9} color={colors.brand} />
+        </TouchableOpacity>
       </View>
       {suggestions.map((s) => {
         const meta = TIER_META[s.tier];
@@ -146,6 +153,8 @@ const styles = StyleSheet.create({
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   title: { fontFamily: FONTS.displaySemibold, fontSize: 16, color: COLORS.ink },
   subtle: { fontSize: 11.5, fontWeight: '600' },
+  openLink: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4 },
+  openLinkText: { fontSize: 11.5, fontWeight: '700' },
   proPill: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5 },
   proPillText: { fontSize: 9, fontWeight: '800', color: '#fff', letterSpacing: 0.6 },
   lockedRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },

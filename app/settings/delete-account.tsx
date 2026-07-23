@@ -10,12 +10,14 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { supabase } from '@/lib/supabase';
 import { signOut, signInWithApple, signInWithGoogle } from '@/lib/auth';
 import { unsyncAll } from '@/lib/calendarSync';
+import { deleteAccountStorage } from '@/lib/accountDeletion';
 import { useSession } from '@/app/_layout';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { hasEmailPassword, primaryProvider } from '@/lib/user';
 import { useAppStore } from '@/store/appStore';
+import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
 
 const OAUTH_CANCEL_CODES = new Set([
   'ERR_REQUEST_CANCELED', 'ERR_CANCELED',
@@ -176,8 +178,21 @@ export default function DeleteAccountScreen() {
         return;
       }
 
+      // Supabase Storage objects must be deleted through the Storage API;
+      // direct SQL deletes are intentionally rejected. Do this while the
+      // user's authenticated RLS still grants access to their private folder.
+      await deleteAccountStorage(targetUserId);
+
+      // Credentials are device-only, so the database cascade cannot remove
+      // them. Capture their ids before deleting the account rows.
+      const { data: lmsConnections } = await supabase
+        .from('lms_connections')
+        .select('id')
+        .eq('user_id', targetUserId);
+
       const { error: rpcError } = await supabase.rpc('delete_user_account');
       if (rpcError) throw rpcError;
+      await removeLmsCredentials((lmsConnections ?? []).map((row) => row.id));
 
       // Permanent deletion is the one case where the on-device "Semora"
       // calendar + its synced events must also go — signOut's
@@ -204,7 +219,7 @@ export default function DeleteAccountScreen() {
           <View style={styles.warningTextWrap}>
             <Text style={[styles.warningTitle, { color: colors.coral }]}>This is permanent</Text>
             <Text style={[styles.warningText, { color: colors.ink2 }]}>
-              All your semesters, courses, tasks, grades, and uploaded syllabi will be deleted. This cannot be undone.
+              All your semesters, courses, tasks, grades, uploaded syllabi, and course notes will be deleted. This cannot be undone.
               {isPro
                 ? '\n\nDeleting your account does NOT cancel your Pro subscription — Apple keeps billing until you cancel it in Settings → Apple Account → Subscriptions.'
                 : ''}

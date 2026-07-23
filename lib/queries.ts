@@ -4,6 +4,8 @@ import type {
   Semester, Course, Task, NewSemester, NewCourse, NewTask,
   CourseMeeting, NewCourseMeeting,
   CourseOfficeHours, NewCourseOfficeHours,
+  TaskSubtask, NewTaskSubtask, StudyBlock, StudyPlannerSettings,
+  GradeCategory, NewGradeCategory, GpaScaleEntry,
 } from '@/types/database';
 import { format, addDays } from 'date-fns';
 import { useAppStore } from '@/store/appStore';
@@ -12,6 +14,13 @@ import {
   syncTaskToCalendar, removeTaskFromCalendar, isSyncEnabled, isSyncTrackingActive,
   syncMeetingToCalendar, removeMeetingFromCalendar, isMeetingSyncEnabled, isMeetingSyncTrackingActive,
 } from '@/lib/calendarSync';
+import { showTaskCelebration } from '@/lib/taskCelebration';
+import {
+  enqueueOfflineMutation,
+  isDeviceOnline,
+  isNetworkFailure,
+} from '@/lib/offlineSync';
+import type { QueryClient } from '@tanstack/react-query';
 
 // ── Query Keys ──────────────────────────────────────────────
 
@@ -22,6 +31,12 @@ export const queryKeys = {
   tasks: (filters?: TaskFilters) => ['tasks', filters] as const,
   taskStats: (sid?: string | null) => ['taskStats', sid] as const,
   task: (id: string) => ['task', id] as const,
+  subtasks: (taskId: string) => ['taskSubtasks', taskId] as const,
+  studyBlocks: (semesterId?: string | null) => ['studyBlocks', semesterId] as const,
+  studyPlannerSettings: ['studyPlannerSettings'] as const,
+  gradeCategories: (courseId: string) => ['gradeCategories', courseId] as const,
+  semesterGradeCategories: (semesterId: string) => ['gradeCategories', 'semester', semesterId] as const,
+  gpaScale: ['gpaScale'] as const,
   course: (id: string) => ['course', id] as const,
   // Course meetings live as joined data on the course rows (useCourses/
   // useCourse select with course_meetings(*)). Mutations invalidate the
@@ -40,6 +55,12 @@ export interface TaskFilters {
 
 export type TaskWithCourse = Task & {
   courses: Pick<Course, 'name' | 'color' | 'icon' | 'semester_id'>;
+};
+
+export type StudyBlockWithTask = StudyBlock & {
+  tasks: Pick<Task, 'title' | 'type' | 'due_date' | 'due_time' | 'course_id'> & {
+    courses: Pick<Course, 'name' | 'color' | 'semester_id'>;
+  };
 };
 
 // ── Query Hooks ─────────────────────────────────────────────
@@ -145,11 +166,112 @@ export function useTask(id: string) {
   });
 }
 
+export function useTaskSubtasks(taskId: string) {
+  return useQuery({
+    queryKey: queryKeys.subtasks(taskId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('task_subtasks')
+        .select('*')
+        .eq('task_id', taskId)
+        .order('position')
+        .order('created_at');
+      if (error) throw error;
+      return data as TaskSubtask[];
+    },
+    enabled: !!taskId,
+  });
+}
+
+export function useStudyPlannerSettings() {
+  return useQuery({
+    queryKey: queryKeys.studyPlannerSettings,
+    queryFn: async () => {
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('study_daily_minutes, study_session_minutes, study_weekday_start, study_weekend_start, study_include_weekends, study_auto_reschedule, study_avoid_calendar_conflicts')
+        .eq('id', userId)
+        .single();
+      if (error) throw error;
+      return data as StudyPlannerSettings;
+    },
+  });
+}
+
+export function useGradeCategories(courseId?: string | null) {
+  return useQuery({
+    queryKey: queryKeys.gradeCategories(courseId || ''),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('grade_categories')
+        .select('*')
+        .eq('course_id', courseId!)
+        .order('position')
+        .order('created_at');
+      if (error) throw error;
+      return (data || []) as GradeCategory[];
+    },
+    enabled: !!courseId,
+  });
+}
+
+export function useSemesterGradeCategories(semesterId?: string | null) {
+  return useQuery({
+    queryKey: queryKeys.semesterGradeCategories(semesterId || ''),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('grade_categories')
+        .select('*, courses!inner(semester_id)')
+        .eq('courses.semester_id', semesterId!)
+        .order('position');
+      if (error) throw error;
+      return (data || []) as unknown as GradeCategory[];
+    },
+    enabled: !!semesterId,
+  });
+}
+
+export function useGpaScale() {
+  return useQuery({
+    queryKey: queryKeys.gpaScale,
+    queryFn: async () => {
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('gpa_scale')
+        .eq('id', userId)
+        .single();
+      if (error) throw error;
+      return (data.gpa_scale || []) as GpaScaleEntry[];
+    },
+  });
+}
+
+export function useStudyBlocks(semesterId?: string | null) {
+  return useQuery({
+    queryKey: queryKeys.studyBlocks(semesterId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('study_blocks')
+        .select('*, tasks!inner(title, type, due_date, due_time, course_id, courses!inner(name, color, semester_id))')
+        .order('scheduled_date')
+        .order('start_time');
+      if (error) throw error;
+      const rows = (data || []) as unknown as StudyBlockWithTask[];
+      return semesterId
+        ? rows.filter((block) => block.tasks.courses.semester_id === semesterId)
+        : rows;
+    },
+    enabled: semesterId !== null,
+  });
+}
+
 export function useTodayTasks(semesterId: string | null) {
   const today = format(new Date(), 'yyyy-MM-dd');
   return useTasks(
     semesterId
-      ? { semesterId, dueDateFrom: today, dueDateTo: today, isCompleted: false }
+      ? { semesterId, dueDateFrom: today, dueDateTo: today }
       : { semesterId: null }
   );
 }
@@ -289,6 +411,27 @@ function useInvalidateAll() {
     qc.invalidateQueries({ queryKey: ['courses'] });
     qc.invalidateQueries({ queryKey: ['semesters'] });
   };
+}
+
+function findCachedTask(qc: QueryClient, id: string): TaskWithCourse | Task | null {
+  const detail = qc.getQueryData<TaskWithCourse>(queryKeys.task(id));
+  if (detail) return detail;
+  for (const [, rows] of qc.getQueriesData<TaskWithCourse[]>({ queryKey: ['tasks'] })) {
+    const match = rows?.find((task) => task.id === id);
+    if (match) return match;
+  }
+  return null;
+}
+
+function patchCachedTask(qc: QueryClient, id: string, patch: Record<string, unknown>) {
+  qc.setQueryData(queryKeys.task(id), (current: any) =>
+    current ? { ...current, ...patch } : current,
+  );
+  qc.setQueriesData({ queryKey: ['tasks'] }, (current: any) =>
+    Array.isArray(current)
+      ? current.map((task) => (task?.id === id ? { ...task, ...patch } : task))
+      : current,
+  );
 }
 
 // Semesters
@@ -598,8 +741,8 @@ export function useDeleteCourseOfficeHours() {
 export function useCreateTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: NewTask & { _courseName?: string }) => {
-      const { _courseName, ...insertData } = data;
+    mutationFn: async (data: NewTask & { _courseName?: string; _subtasks?: string[] }) => {
+      const { _courseName, _subtasks, ...insertData } = data;
       const user_id = await getUserId();
       const { data: result, error } = await supabase
         .from('tasks')
@@ -607,6 +750,20 @@ export function useCreateTask() {
         .select()
         .single();
       if (error) throw error;
+
+      if (_subtasks?.length) {
+        const { error: subtaskError } = await supabase.from('task_subtasks').insert(
+          _subtasks.map((title, position) => ({
+            user_id, task_id: result.id, title: title.trim(), position,
+          })),
+        );
+        if (subtaskError) {
+          // Keep creation all-or-nothing from the student's perspective. A
+          // retry after a partial save would otherwise duplicate the task.
+          await supabase.from('tasks').delete().eq('id', result.id);
+          throw subtaskError;
+        }
+      }
 
       // Schedule local notifications
       scheduleTaskReminders(
@@ -616,6 +773,8 @@ export function useCreateTask() {
         result.due_date,
         result.due_time,
         result.user_id,
+        undefined,
+        result.reminder_offsets_minutes,
       ).catch(() => {}); // Non-critical
 
       // Sync to calendar if enabled
@@ -628,6 +787,7 @@ export function useCreateTask() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       qc.invalidateQueries({ queryKey: ['taskStats'] });
+      qc.invalidateQueries({ queryKey: ['studyBlocks'] });
     },
   });
 }
@@ -635,14 +795,70 @@ export function useCreateTask() {
 export function useUpdateTask() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, _courseName, ...data }: { id: string; _courseName?: string } & Partial<NewTask>) => {
-      const { data: result, error } = await supabase
-        .from('tasks')
-        .update(data)
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw error;
+    mutationFn: async ({
+      id,
+      _courseName,
+      _seriesScope = 'occurrence',
+      ...data
+    }: {
+      id: string;
+      _courseName?: string;
+      _seriesScope?: 'occurrence' | 'future' | 'all';
+    } & Partial<NewTask>) => {
+      const userId = await getUserId();
+      const cached = findCachedTask(qc, id);
+      const queueOffline = async () => {
+        if (_seriesScope !== 'occurrence') {
+          throw new Error('Connect to the internet to edit an entire recurring series.');
+        }
+        if (!cached) throw new Error('Open this task once while online before editing it offline.');
+        await enqueueOfflineMutation({
+          userId,
+          entity: 'tasks',
+          operation: 'update',
+          recordId: id,
+          payload: data as Record<string, unknown>,
+          baseUpdatedAt: cached.updated_at ?? null,
+        });
+        const optimistic = {
+          ...cached,
+          ...data,
+          updated_at: new Date().toISOString(),
+        } as Task;
+        patchCachedTask(qc, id, optimistic as unknown as Record<string, unknown>);
+        return optimistic;
+      };
+      if (!isDeviceOnline()) return queueOffline();
+
+      let result: Task;
+      let affected: Task[];
+
+      try {
+        if (_seriesScope === 'occurrence') {
+          const { data: updated, error } = await supabase
+            .from('tasks')
+            .update(data)
+            .eq('id', id)
+            .select()
+            .single();
+          if (error) throw error;
+          result = updated as Task;
+          affected = [result];
+        } else {
+          const { data: updated, error } = await supabase.rpc('update_recurring_task_series', {
+            p_task_id: id,
+            p_scope: _seriesScope,
+            p_patch: data,
+          });
+          if (error) throw error;
+          affected = (updated || []) as Task[];
+          result = affected.find((task) => task.id === id) || affected[0];
+          if (!result) throw new Error('No recurring tasks were updated.');
+        }
+      } catch (error) {
+        if (isNetworkFailure(error)) return queueOffline();
+        throw error;
+      }
 
       // Resolve course name once for calendar and notifications
       let courseName = _courseName || '';
@@ -655,25 +871,41 @@ export function useUpdateTask() {
         courseName = course?.name || 'Course';
       }
 
-      // Re-sync to calendar if enabled (only for incomplete tasks)
-      if (isSyncEnabled() && !result.is_completed) {
-        syncTaskToCalendar(result as Task, courseName).catch(() => {});
-      }
+      const reminderFieldsChanged = (
+        data.due_date !== undefined || data.due_time !== undefined ||
+        data.title !== undefined || data.reminder_offsets_minutes !== undefined
+      );
 
-      // Reschedule notifications if due_date or due_time changed (only for incomplete tasks)
-      if (!result.is_completed && (data.due_date !== undefined || data.due_time !== undefined)) {
-        await cancelTaskReminders(id).catch(() => {});
-        scheduleTaskReminders(
-          id, result.title, courseName, result.due_date, result.due_time, result.user_id,
-        ).catch(() => {});
+      // Multi-occurrence edits need every future device reminder/calendar row
+      // refreshed, not just the occurrence whose detail screen is open.
+      for (const updatedTask of affected) {
+        if (updatedTask.is_completed) continue;
+        if (isSyncEnabled()) {
+          syncTaskToCalendar(updatedTask, courseName).catch(() => {});
+        }
+        if (reminderFieldsChanged || _seriesScope !== 'occurrence') {
+          await cancelTaskReminders(updatedTask.id).catch(() => {});
+          scheduleTaskReminders(
+            updatedTask.id,
+            updatedTask.title,
+            courseName,
+            updatedTask.due_date,
+            updatedTask.due_time,
+            updatedTask.user_id,
+            undefined,
+            updatedTask.reminder_offsets_minutes,
+          ).catch(() => {});
+        }
       }
 
       return result as Task;
     },
+    networkMode: 'always',
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       qc.invalidateQueries({ queryKey: ['taskStats'] });
       qc.invalidateQueries({ queryKey: queryKeys.task(result.id) });
+      qc.invalidateQueries({ queryKey: ['studyBlocks'] });
     },
   });
 }
@@ -694,6 +926,7 @@ export function useDeleteTask() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       qc.invalidateQueries({ queryKey: ['taskStats'] });
+      qc.invalidateQueries({ queryKey: ['studyBlocks'] });
     },
   });
 }
@@ -701,20 +934,66 @@ export function useDeleteTask() {
 export function useToggleTaskComplete() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, is_completed, submitted_late }: { id: string; is_completed: boolean; submitted_late?: boolean }) => {
+    mutationFn: async ({
+      id, is_completed, submitted_late, late_penalty_percent,
+    }: {
+      id: string;
+      is_completed: boolean;
+      submitted_late?: boolean;
+      late_penalty_percent?: number | null;
+    }) => {
+      const userId = await getUserId();
       const updateData: any = {
         is_completed,
         completed_at: is_completed ? new Date().toISOString() : null,
       };
-      if (submitted_late !== undefined) updateData.submitted_late = submitted_late;
+      if (!is_completed) {
+        updateData.submitted_late = false;
+        updateData.late_penalty_percent = null;
+      } else {
+        if (submitted_late !== undefined) updateData.submitted_late = submitted_late;
+        if (late_penalty_percent !== undefined) updateData.late_penalty_percent = late_penalty_percent;
+        if (submitted_late === false) updateData.late_penalty_percent = null;
+      }
 
-      const { data, error } = await supabase
-        .from('tasks')
-        .update(updateData)
-        .eq('id', id)
-        .select('*, courses(name)')
-        .single();
-      if (error) throw error;
+      const cached = findCachedTask(qc, id);
+      const queueOffline = async () => {
+        if (!cached) throw new Error('Open this task once while online before completing it offline.');
+        await enqueueOfflineMutation({
+          userId,
+          entity: 'tasks',
+          operation: 'update',
+          recordId: id,
+          payload: updateData,
+          baseUpdatedAt: cached.updated_at ?? null,
+        });
+        const optimistic = {
+          ...cached,
+          ...updateData,
+          updated_at: new Date().toISOString(),
+        } as TaskWithCourse;
+        patchCachedTask(qc, id, optimistic as unknown as Record<string, unknown>);
+        return optimistic;
+      };
+
+      let data: any;
+      if (!isDeviceOnline()) {
+        data = await queueOffline();
+      } else {
+        try {
+          const response = await supabase
+            .from('tasks')
+            .update(updateData)
+            .eq('id', id)
+            .select('*, courses(name)')
+            .single();
+          if (response.error) throw response.error;
+          data = response.data;
+        } catch (error) {
+          if (!isNetworkFailure(error)) throw error;
+          data = await queueOffline();
+        }
+      }
 
       // Cancel reminders and remove from calendar when completing,
       // reschedule and re-sync when un-completing
@@ -725,15 +1004,41 @@ export function useToggleTaskComplete() {
           removeTaskFromCalendar(id).catch(() => {});
         }
       } else {
-        scheduleTaskReminders(id, data.title, courseName, data.due_date, data.due_time, data.user_id).catch(() => {});
+        scheduleTaskReminders(
+          id, data.title, courseName, data.due_date, data.due_time, data.user_id,
+          undefined, data.reminder_offsets_minutes,
+        ).catch(() => {});
         if (isSyncEnabled()) {
           syncTaskToCalendar(data as Task, courseName).catch(() => {});
         }
       }
 
+      // The database creates the next occurrence atomically on completion.
+      // Schedule its local reminder/calendar event as soon as it exists.
+      if (is_completed && data.recurrence_frequency && data.recurrence_series_id) {
+        const { data: next } = await supabase
+          .from('tasks')
+          .select('*, courses(name)')
+          .eq('recurrence_series_id', data.recurrence_series_id)
+          .eq('is_completed', false)
+          .gt('due_date', data.due_date)
+          .order('due_date')
+          .limit(1)
+          .maybeSingle();
+        if (next) {
+          const nextCourseName = (next as any).courses?.name || courseName;
+          scheduleTaskReminders(
+            next.id, next.title, nextCourseName, next.due_date, next.due_time, next.user_id,
+            undefined, next.reminder_offsets_minutes,
+          ).catch(() => {});
+          if (isSyncEnabled()) syncTaskToCalendar(next as Task, nextCourseName).catch(() => {});
+        }
+      }
+
       return data as Task;
     },
-    onSuccess: (_data, vars) => {
+    networkMode: 'always',
+    onSuccess: (data, vars) => {
       // Feeds the review-prompt milestone (10th lifetime completion). Lives
       // here — not in per-screen handlers — because Today, Calendar, course
       // detail, and task detail all complete tasks through this mutation;
@@ -743,12 +1048,220 @@ export function useToggleTaskComplete() {
       // getState() keeps this hook-free — zustand supports module-scope use.
       if (vars.is_completed) {
         useAppStore.getState().incrementTasksCompleted();
+        showTaskCelebration(data.title);
       }
       qc.invalidateQueries({ queryKey: ['tasks'] });
       qc.invalidateQueries({ queryKey: ['taskStats'] });
       // ['tasks'] does NOT prefix-match the single-task key ['task', id] —
       // without this, the task detail screen shows a stale completion state.
       qc.invalidateQueries({ queryKey: ['task'] });
+      qc.invalidateQueries({ queryKey: ['studyBlocks'] });
     },
+  });
+}
+
+export function useCreateTaskSubtask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: NewTaskSubtask) => {
+      const user_id = await getUserId();
+      const { data, error } = await supabase
+        .from('task_subtasks')
+        .insert({ ...input, title: input.title.trim(), user_id })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as TaskSubtask;
+    },
+    onSuccess: (result) => qc.invalidateQueries({ queryKey: queryKeys.subtasks(result.task_id) }),
+  });
+}
+
+export function useToggleTaskSubtask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, taskId, is_completed }: { id: string; taskId: string; is_completed: boolean }) => {
+      const userId = await getUserId();
+      const cached = qc.getQueryData<TaskSubtask[]>(queryKeys.subtasks(taskId))?.find((row) => row.id === id);
+      const queueOffline = async () => {
+        if (!cached) throw new Error('Open this task once while online before editing subtasks offline.');
+        await enqueueOfflineMutation({
+          userId,
+          entity: 'task_subtasks',
+          operation: 'update',
+          recordId: id,
+          payload: { is_completed },
+          baseUpdatedAt: cached.updated_at ?? null,
+        });
+        qc.setQueryData<TaskSubtask[]>(queryKeys.subtasks(taskId), (rows) =>
+          rows?.map((row) => row.id === id ? { ...row, is_completed } : row),
+        );
+      };
+      if (!isDeviceOnline()) await queueOffline();
+      else {
+        try {
+          const { error } = await supabase.from('task_subtasks').update({ is_completed }).eq('id', id);
+          if (error) throw error;
+        } catch (error) {
+          if (!isNetworkFailure(error)) throw error;
+          await queueOffline();
+        }
+      }
+      return taskId;
+    },
+    networkMode: 'always',
+    onSuccess: (taskId) => qc.invalidateQueries({ queryKey: queryKeys.subtasks(taskId) }),
+  });
+}
+
+export function useDeleteTaskSubtask() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, taskId }: { id: string; taskId: string }) => {
+      const { error } = await supabase.from('task_subtasks').delete().eq('id', id);
+      if (error) throw error;
+      return taskId;
+    },
+    onSuccess: (taskId) => qc.invalidateQueries({ queryKey: queryKeys.subtasks(taskId) }),
+  });
+}
+
+export function useUpdateStudyPlannerSettings() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (settings: StudyPlannerSettings) => {
+      const userId = await getUserId();
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(settings)
+        .eq('id', userId)
+        .select('study_daily_minutes, study_session_minutes, study_weekday_start, study_weekend_start, study_include_weekends, study_auto_reschedule, study_avoid_calendar_conflicts')
+        .single();
+      if (error) throw error;
+      return data as StudyPlannerSettings;
+    },
+    onSuccess: (settings) => qc.setQueryData(queryKeys.studyPlannerSettings, settings),
+  });
+}
+
+export function useCreateGradeCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: NewGradeCategory) => {
+      const user_id = await getUserId();
+      const { data, error } = await supabase
+        .from('grade_categories')
+        .insert({ ...input, name: input.name.trim(), user_id })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as GradeCategory;
+    },
+    onSuccess: (category) => {
+      qc.invalidateQueries({ queryKey: queryKeys.gradeCategories(category.course_id) });
+      qc.invalidateQueries({ queryKey: ['gradeCategories'] });
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function useUpdateGradeCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...input }: { id: string } & Partial<NewGradeCategory>) => {
+      const { data, error } = await supabase
+        .from('grade_categories')
+        .update(input)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as GradeCategory;
+    },
+    onSuccess: (category) => {
+      qc.invalidateQueries({ queryKey: queryKeys.gradeCategories(category.course_id) });
+      qc.invalidateQueries({ queryKey: ['gradeCategories'] });
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function useDeleteGradeCategory() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, courseId }: { id: string; courseId: string }) => {
+      const { error } = await supabase.from('grade_categories').delete().eq('id', id);
+      if (error) throw error;
+      return courseId;
+    },
+    onSuccess: (courseId) => {
+      qc.invalidateQueries({ queryKey: queryKeys.gradeCategories(courseId) });
+      qc.invalidateQueries({ queryKey: ['gradeCategories'] });
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+    },
+  });
+}
+
+export function useUpdateGpaScale() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (scale: GpaScaleEntry[]) => {
+      const userId = await getUserId();
+      const { error } = await supabase
+        .from('profiles')
+        .update({ gpa_scale: scale })
+        .eq('id', userId);
+      if (error) throw error;
+      return scale;
+    },
+    onSuccess: (scale) => qc.setQueryData(queryKeys.gpaScale, scale),
+  });
+}
+
+export function useReplaceStudyPlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      semesterId,
+      blocks,
+    }: {
+      semesterId: string;
+      blocks: Array<{
+        task_id: string;
+        scheduled_date: string;
+        start_time: string;
+        duration_minutes: number;
+        reschedule_reason?: 'missed' | 'conflict' | 'rebuild' | null;
+        rescheduled_from_date?: string | null;
+      }>;
+    }) => {
+      const { data, error } = await supabase.rpc('replace_study_plan', {
+        p_semester_id: semesterId,
+        p_blocks: blocks,
+      });
+      if (error) throw error;
+      return (data || []) as StudyBlock[];
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: queryKeys.studyBlocks(variables.semesterId) });
+      qc.invalidateQueries({ queryKey: ['studyBlocks'] });
+    },
+  });
+}
+
+export function useToggleStudyBlock() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, is_completed }: { id: string; is_completed: boolean }) => {
+      const { data, error } = await supabase
+        .from('study_blocks')
+        .update({ is_completed })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as StudyBlock;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['studyBlocks'] }),
   });
 }

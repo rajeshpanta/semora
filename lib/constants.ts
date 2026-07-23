@@ -97,6 +97,8 @@ export function calculateGrade(
 ) {
   const allWithWeight = tasks.filter((t) => t.weight != null);
   const graded = allWithWeight.filter((t) => t.score != null);
+  const allGraded = tasks.filter((t) => t.score != null);
+  const sorted = [...scale].sort((a, b) => b.min - a.min);
 
   // Total weight across ALL tasks (graded + ungraded)
   const weightTotal = allWithWeight
@@ -104,6 +106,20 @@ export function calculateGrade(
     .reduce((sum, t) => sum + t.weight!, 0);
 
   if (graded.length === 0) {
+    // Many instructors do not publish category weights. In that case, keep
+    // grade and GPA tracking useful with a straight average of posted grades.
+    if (allGraded.length > 0) {
+      const rawPercentage = allGraded.reduce((sum, task) => sum + task.score!, 0) / allGraded.length;
+      const percentage = Math.min(rawPercentage, 100);
+      const letter = sorted.find((grade) => percentage >= grade.min)?.letter ?? 'F';
+      return {
+        percentage: Math.round(percentage * 100) / 100,
+        letter,
+        weightAttempted: 0,
+        weightTotal,
+        earnedPoints: 0,
+      };
+    }
     return { percentage: null, letter: null, weightAttempted: 0, weightTotal, earnedPoints: 0 };
   }
 
@@ -134,7 +150,6 @@ export function calculateGrade(
   //   raw %           = 4900 / 50 = 98%   (= 88% base + 10% EC bonus)
   const rawPercentage = weightedSum / weightAttempted;
   const percentage = Math.min(rawPercentage, 100);
-  const sorted = [...scale].sort((a, b) => b.min - a.min);
   const letter = sorted.find((g) => percentage >= g.min)?.letter ?? 'F';
 
   // Earned points toward final grade = sum(weight * score / 100)
@@ -146,5 +161,48 @@ export function calculateGrade(
     weightAttempted: Math.round(weightAttempted * 10) / 10,
     weightTotal: Math.round(weightTotal * 10) / 10,
     earnedPoints: Math.round(earnedPoints * 100) / 100,
+  };
+}
+
+const LETTER_GRADE_POINTS: Record<string, number> = {
+  'A+': 4,
+  A: 4,
+  'A-': 3.7,
+  'B+': 3.3,
+  B: 3,
+  'B-': 2.7,
+  'C+': 2.3,
+  C: 2,
+  'C-': 1.7,
+  'D+': 1.3,
+  D: 1,
+  'D-': 0.7,
+  F: 0,
+};
+
+export function gradePointForLetter(letter: string | null): number | null {
+  if (!letter) return null;
+  const normalized = letter.trim().toUpperCase();
+  if (normalized in LETTER_GRADE_POINTS) return LETTER_GRADE_POINTS[normalized];
+  // Custom labels such as "A (Excellent)" still map by their leading grade.
+  const leading = normalized.match(/^[A-F][+-]?/)?.[0];
+  return leading && leading in LETTER_GRADE_POINTS ? LETTER_GRADE_POINTS[leading] : null;
+}
+
+export function calculateSemesterGpa(
+  courseGrades: { letter: string | null; creditHours: number | null | undefined }[],
+) {
+  const reporting = courseGrades
+    .map((course) => ({
+      points: gradePointForLetter(course.letter),
+      credits: Math.max(0.5, course.creditHours ?? 3),
+    }))
+    .filter((course): course is { points: number; credits: number } => course.points != null);
+  const credits = reporting.reduce((sum, course) => sum + course.credits, 0);
+  const qualityPoints = reporting.reduce((sum, course) => sum + course.points * course.credits, 0);
+  return {
+    gpa: credits > 0 ? Math.round((qualityPoints / credits) * 100) / 100 : null,
+    reportingCourses: reporting.length,
+    reportingCredits: Math.round(credits * 10) / 10,
   };
 }

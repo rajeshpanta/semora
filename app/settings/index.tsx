@@ -14,6 +14,7 @@ import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { displayName, hasEmailPassword } from '@/lib/user';
+import { useOfflineSyncStatus } from '@/components/OfflineSyncBridge';
 
 export default function SettingsScreen() {
   const colors = useColors();
@@ -30,6 +31,7 @@ export default function SettingsScreen() {
   const themeModeLabel = themeMode === 'system' ? 'System' : themeMode === 'light' ? 'Light' : 'Dark';
   const router = useRouter();
   const [restoring, setRestoring] = useState(false);
+  const syncStatus = useOfflineSyncStatus();
 
   // Always-reachable Restore (mirrors the paywall's handler). The paywall is
   // only reachable while !isPro, so without this a user whose subscription
@@ -146,6 +148,30 @@ export default function SettingsScreen() {
             onPress={() => router.push('/settings/calendar')}
           />
           <SettingsRow
+            icon="university"
+            label="Learning Platforms"
+            value="LMS import"
+            onPress={() => router.push('/settings/lms' as any)}
+          />
+          <SettingsRow
+            icon="cloud"
+            label="Offline & Sync"
+            value={
+              syncStatus.conflictCount
+                ? `${syncStatus.conflictCount} conflicts`
+                : syncStatus.pendingCount
+                  ? `${syncStatus.pendingCount} waiting`
+                  : syncStatus.isOnline ? 'Up to date' : 'Offline'
+            }
+            onPress={() => router.push('/settings/sync' as any)}
+          />
+          <SettingsRow
+            icon="graduation-cap"
+            label="GPA Scale"
+            value="School rules"
+            onPress={() => router.push('/settings/gpa-scale' as any)}
+          />
+          <SettingsRow
             icon="sun-o"
             label="Appearance"
             value={themeModeLabel}
@@ -155,6 +181,23 @@ export default function SettingsScreen() {
             icon="th-large"
             label="Widgets"
             onPress={() => router.push('/settings/widgets')}
+            last
+          />
+        </View>
+
+        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Academic Tools</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <SettingsRow
+            icon="line-chart"
+            label="Progress Insights"
+            value="Semester report"
+            onPress={() => router.push('/insights' as any)}
+          />
+          <SettingsRow
+            icon="users"
+            label="Class Collaboration"
+            value="Shared courses"
+            onPress={() => router.push('/collaboration' as any)}
             last
           />
         </View>

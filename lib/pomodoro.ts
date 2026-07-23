@@ -38,6 +38,9 @@ interface PersistedSession {
   // Optional task this session is tied to (deep-link).
   taskId: string | null;
   taskTitle: string | null;
+  // Optional Smart Plan block. A completed focus phase marks this exact block
+  // done, even if the app was backgrounded and later reopened.
+  studyBlockId: string | null;
   // Scheduled notification id so we can cancel it on pause/reset.
   notifId: string | null;
 }
@@ -162,6 +165,7 @@ export interface PomodoroState {
   cycle: number;
   taskId: string | null;
   taskTitle: string | null;
+  studyBlockId: string | null;
   lifetimeSessions: number;
 }
 
@@ -183,8 +187,18 @@ export interface PomodoroControls {
 export function usePomodoro(
   initialTaskId: string | null,
   initialTaskTitle: string | null,
-  onPhaseComplete?: (phase: PomodoroPhase, minutes: number) => void,
+  initialFocusMinutes?: number | null,
+  initialStudyBlockId?: string | null,
+  onPhaseComplete?: (
+    phase: PomodoroPhase,
+    minutes: number,
+    taskId: string | null,
+    studyBlockId: string | null,
+  ) => void,
 ): [PomodoroState, PomodoroControls] {
+  const requestedFocusMinutes = initialFocusMinutes && initialFocusMinutes >= 15 && initialFocusMinutes <= 180
+    ? Math.round(initialFocusMinutes)
+    : DEFAULT_FOCUS_MINUTES;
   // Hydrate once from SecureStore. A running session's endAt is honored, so a
   // relaunch mid-focus resumes at the correct remaining time.
   const [session, setSession] = useState<PersistedSession>(() => {
@@ -197,21 +211,38 @@ export function usePomodoro(
       // A running OR paused/in-progress session is always preserved as-is so
       // we never clobber real focus work.
       const neverStarted = !persisted.running && persisted.cycle === 0 && persisted.endAt === 0;
-      if (neverStarted && initialTaskId && initialTaskId !== persisted.taskId) {
-        return { ...persisted, taskId: initialTaskId, taskTitle: initialTaskTitle };
+      if (
+        neverStarted
+        && initialTaskId
+        && (
+          initialTaskId !== persisted.taskId
+          || (initialStudyBlockId ?? null) !== (persisted.studyBlockId ?? null)
+        )
+      ) {
+        return {
+          ...persisted,
+          taskId: initialTaskId,
+          taskTitle: initialTaskTitle,
+          studyBlockId: initialStudyBlockId ?? null,
+          focusMinutes: requestedFocusMinutes,
+          remainingMs: persisted.phase === 'focus'
+            ? requestedFocusMinutes * 60_000
+            : persisted.remainingMs,
+        };
       }
       return persisted;
     }
     return {
       phase: 'focus',
-      focusMinutes: DEFAULT_FOCUS_MINUTES,
+      focusMinutes: requestedFocusMinutes,
       breakMinutes: DEFAULT_BREAK_MINUTES,
       endAt: 0,
-      remainingMs: DEFAULT_FOCUS_MINUTES * 60_000,
+      remainingMs: requestedFocusMinutes * 60_000,
       running: false,
       cycle: 0,
       taskId: initialTaskId,
       taskTitle: initialTaskTitle,
+      studyBlockId: initialStudyBlockId ?? null,
       notifId: null,
     };
   });
@@ -296,7 +327,12 @@ export function usePomodoro(
       remainingMs: nextLenMin * 60_000,
       notifId: null,
     }));
-    onPhaseComplete?.(finishedPhase, finishedMinutes);
+    onPhaseComplete?.(
+      finishedPhase,
+      finishedMinutes,
+      session.taskId,
+      session.studyBlockId ?? null,
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remainingMs, session.running]);
 
@@ -383,6 +419,7 @@ export function usePomodoro(
     cycle: session.cycle,
     taskId: session.taskId,
     taskTitle: session.taskTitle,
+    studyBlockId: session.studyBlockId ?? null,
     lifetimeSessions,
   };
 

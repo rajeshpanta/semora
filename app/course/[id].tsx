@@ -12,13 +12,14 @@ import {
   useCourse, useTasks, useUpdateCourse, useDeleteCourse, useToggleTaskComplete,
   useCreateCourseMeeting, useUpdateCourseMeeting, useDeleteCourseMeeting,
   useCreateCourseOfficeHours, useUpdateCourseOfficeHours, useDeleteCourseOfficeHours,
-  useLatestSyllabus,
+  useLatestSyllabus, useGradeCategories,
 } from '@/lib/queries';
 import { TaskItem } from '@/components/TaskItem';
-import { GradeCard, WhatIfCard } from '@/components/GradeCard';
+import { FinalExamWhatIfCard, GradeCard, WhatIfCard } from '@/components/GradeCard';
 import { ScheduleEditor, type ScheduleBlock, isNewBlock } from '@/components/ScheduleEditor';
 import { NotFound } from '@/components/NotFound';
-import { COURSE_COLORS, COURSE_ICONS, COLORS, FONTS, calculateGrade, DEFAULT_GRADE_SCALE, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import { COURSE_COLORS, COURSE_ICONS, COLORS, FONTS, DEFAULT_GRADE_SCALE, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import { calculateCourseGrade } from '@/lib/grades';
 import type { GradeThreshold } from '@/types/database';
 import { useAppStore } from '@/store/appStore';
 import { MAX_SCAN_PAGES } from '@/lib/gemini';
@@ -67,6 +68,7 @@ export default function CourseDetailScreen() {
   const router = useRouter();
   const { data: course, isLoading, isError } = useCourse(id!);
   const { data: tasks = [] } = useTasks({ courseId: id });
+  const { data: gradeCategories = [] } = useGradeCategories(id);
   const { data: syllabus } = useLatestSyllabus(id);
   const updateCourse = useUpdateCourse();
   const deleteCourse = useDeleteCourse();
@@ -84,6 +86,7 @@ export default function CourseDetailScreen() {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editInstructor, setEditInstructor] = useState('');
+  const [editCreditHours, setEditCreditHours] = useState('3');
   const [editColor, setEditColor] = useState('');
   const [editIcon, setEditIcon] = useState('');
   // Multi-block schedule. Existing rows from the DB carry their real
@@ -115,13 +118,30 @@ export default function CourseDetailScreen() {
 
   // Grade calculation
   const gradeScale = course.grade_scale || DEFAULT_GRADE_SCALE;
-  const gradeTasks = tasks.map((t) => ({ weight: t.weight, score: t.score, is_extra_credit: t.is_extra_credit }));
-  const { percentage, letter, weightAttempted, weightTotal, earnedPoints } = calculateGrade(gradeTasks, gradeScale as GradeThreshold[]);
+  const gradeTasks = tasks.map((t) => ({
+    id: t.id,
+    grade_category_id: t.grade_category_id,
+    weight: t.weight,
+    score: t.score,
+    points_earned: t.points_earned,
+    points_possible: t.points_possible,
+    is_extra_credit: t.is_extra_credit,
+  }));
+  const {
+    percentage, letter, weightAttempted, weightTotal, earnedPoints,
+    categoryBreakdown, droppedTaskIds, usesCategories,
+  } = calculateCourseGrade(
+    gradeTasks,
+    gradeCategories,
+    gradeScale as GradeThreshold[],
+    course.extra_credit_policy || 'bonus',
+  );
   const gradedCount = tasks.filter((t) => t.score != null).length;
 
   const startEdit = () => {
     setEditName(course.name);
     setEditInstructor(course.instructor || '');
+    setEditCreditHours(String(course.credit_hours ?? 3));
     setEditColor(course.color);
     setEditIcon(course.icon);
     setEditMeetings(
@@ -159,6 +179,11 @@ export default function CourseDetailScreen() {
       Alert.alert('Required', 'Please enter a course name.');
       return;
     }
+    const parsedCredits = Number(editCreditHours);
+    if (!Number.isFinite(parsedCredits) || parsedCredits < 0.5 || parsedCredits > 12) {
+      Alert.alert('Invalid credit hours', 'Enter a value from 0.5 to 12.');
+      return;
+    }
     // Per-block sanity check before the DB course_meetings_time_order /
     // course_office_hours_time_order constraints fire. Skip blocks the
     // user added but never filled (no days picked) — those are dropped
@@ -189,6 +214,7 @@ export default function CourseDetailScreen() {
         // Explicit null so clearing the instructor persists (PostgREST strips
         // undefined keys — same null-vs-undefined fix as the task edit).
         instructor: editInstructor.trim() || null,
+        credit_hours: parsedCredits,
         color: editColor,
         icon: editIcon,
       } as any);
@@ -476,6 +502,7 @@ export default function CourseDetailScreen() {
               <>
                 <TextInput style={[styles.editTitle, isWide && styles.editTitleWide, { color: colors.ink, borderBottomColor: colors.line }]} value={editName} onChangeText={setEditName} placeholder="Course Name" placeholderTextColor={colors.ink3} />
                 <TextInput style={[styles.editSub, isWide && styles.editSubWide, { color: colors.ink2, borderBottomColor: colors.line }]} value={editInstructor} onChangeText={setEditInstructor} placeholder="Instructor" placeholderTextColor={colors.ink3} />
+                <TextInput style={[styles.editSub, isWide && styles.editSubWide, { color: colors.ink2, borderBottomColor: colors.line }]} value={editCreditHours} onChangeText={setEditCreditHours} placeholder="Credit hours" placeholderTextColor={colors.ink3} keyboardType="decimal-pad" />
               </>
             ) : (
               <>
@@ -486,6 +513,7 @@ export default function CourseDetailScreen() {
             <View style={[styles.statsRow, isWide && styles.statsRowWide]}>
               <View style={styles.statBadge}><Text style={styles.statNum}>{pendingCount}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>pending</Text></View>
               <View style={styles.statBadge}><Text style={[styles.statNum, { color: '#22c55e' }]}>{doneCount}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>done</Text></View>
+              <View style={styles.statBadge}><Text style={[styles.statNum, { color: displayColor }]}>{editing ? editCreditHours || '—' : course.credit_hours ?? 3}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>credits</Text></View>
             </View>
           </View>
         </View>
@@ -554,23 +582,80 @@ export default function CourseDetailScreen() {
 
         {/* Grade summary */}
         <View style={[styles.gradeCard, isWide && styles.cardPadWide, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <GradeCard percentage={percentage} letter={letter} gradedCount={gradedCount} totalCount={tasks.length} weightAttempted={weightAttempted} weightTotal={weightTotal} />
+          <GradeCard percentage={percentage} letter={letter} gradedCount={gradedCount} totalCount={tasks.length} weightAttempted={weightAttempted} weightTotal={weightTotal} categoryMode={usesCategories} />
+
+          {usesCategories && (
+            <View style={[styles.categorySummary, { borderTopColor: colors.line }]}>
+              {categoryBreakdown.map((category) => (
+                <View key={category.categoryId} style={styles.categorySummaryRow}>
+                  <Text style={[styles.categoryName, { color: colors.ink2 }]}>{category.name} · {category.weight}%</Text>
+                  <Text style={[styles.categoryGrade, { color: category.average == null ? colors.ink3 : colors.ink }]}>
+                    {category.average == null ? 'No grades' : `${category.average.toFixed(1)}%`}
+                  </Text>
+                </View>
+              ))}
+              {droppedTaskIds.length > 0 && (
+                <Text style={[styles.droppedNote, { color: colors.teal }]}>
+                  {droppedTaskIds.length} lowest grade{droppedTaskIds.length === 1 ? '' : 's'} currently dropped
+                </Text>
+              )}
+            </View>
+          )}
 
           {/* What-if forecast — the "what do I need on the final?" answer,
               from the weights the scan already extracted. Pro feature
               (paywall promises "Grade Forecasting"); free users get a
               teaser that routes to the paywall. */}
-          <WhatIfCard
-            earnedPoints={earnedPoints}
-            weightAttempted={weightAttempted}
-            weightTotal={weightTotal}
+          {!usesCategories && (
+            <WhatIfCard
+              earnedPoints={earnedPoints}
+              weightAttempted={weightAttempted}
+              weightTotal={weightTotal}
+              scale={gradeScale as GradeThreshold[]}
+              isPro={isPro}
+              onUpgrade={() => router.push('/paywall' as any)}
+              pendingEcWeight={tasks
+                .filter((t) => t.is_extra_credit && t.score == null && t.weight != null)
+                .reduce((sum, t) => sum + (t.weight ?? 0), 0)}
+            />
+          )}
+
+          <FinalExamWhatIfCard
+            tasks={tasks.map((task) => ({
+              id: task.id,
+              title: task.title,
+              type: task.type,
+              grade_category_id: task.grade_category_id,
+              weight: task.weight,
+              score: task.score,
+              points_earned: task.points_earned,
+              points_possible: task.points_possible,
+              is_extra_credit: task.is_extra_credit,
+            }))}
+            categories={gradeCategories}
             scale={gradeScale as GradeThreshold[]}
+            extraCreditPolicy={course.extra_credit_policy || 'bonus'}
             isPro={isPro}
             onUpgrade={() => router.push('/paywall' as any)}
-            pendingEcWeight={tasks
-              .filter((t) => t.is_extra_credit && t.score == null && t.weight != null)
-              .reduce((sum, t) => sum + (t.weight ?? 0), 0)}
           />
+
+          <TouchableOpacity
+            style={[styles.gradeSetupRow, { borderTopColor: colors.line }]}
+            onPress={() => router.push(`/grading/${course.id}` as any)}
+          >
+            <View style={[styles.gradeSetupIcon, { backgroundColor: colors.brand50 }]}>
+              <FontAwesome name="sliders" size={13} color={colors.brand} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.gradeSetupTitle, { color: colors.ink }]}>Grade categories & rules</Text>
+              <Text style={[styles.gradeSetupSub, { color: colors.ink3 }]}>
+                {gradeCategories.length
+                  ? `${gradeCategories.length} categories · ${course.extra_credit_policy || 'bonus'} extra credit`
+                  : 'Add category weights, dropped grades and extra-credit rules'}
+              </Text>
+            </View>
+            <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
+          </TouchableOpacity>
 
           {/* Grade scale — Pro only */}
           {isPro ? (
@@ -685,6 +770,15 @@ export default function CourseDetailScreen() {
                 }
               }}
             />
+            <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
+            <StudyToolRow
+              icon="users"
+              label="Live course space"
+              sub="Share changing deadlines and group assignments"
+              accent={course.color}
+              locked={false}
+              onPress={() => router.push('/collaboration' as any)}
+            />
           </View>
         )}
 
@@ -758,7 +852,12 @@ export default function CourseDetailScreen() {
               <View key={task.id} style={isWide ? taskItemWideStyle : undefined}>
                 <TaskItem
                   task={task}
-                  onToggle={(opts) => toggleComplete.mutate({ id: task.id, is_completed: !task.is_completed, submitted_late: opts?.submitted_late })}
+                  onToggle={(opts) => toggleComplete.mutate({
+                    id: task.id,
+                    is_completed: !task.is_completed,
+                    submitted_late: opts?.submitted_late,
+                    late_penalty_percent: opts?.late_penalty_percent,
+                  })}
                   onPress={() => router.push(`/task/${task.id}` as any)}
                 />
               </View>
@@ -806,6 +905,15 @@ const styles = StyleSheet.create({
   detailEmpty: { fontSize: 12, color: COLORS.ink3, fontStyle: 'italic', marginTop: 1 },
   detailDivider: { height: 0.5, backgroundColor: COLORS.line, marginVertical: 10 },
   gradeCard: { backgroundColor: '#fff', borderRadius: 18, padding: 20, borderWidth: 1, borderColor: '#edf0f7', marginBottom: 14 },
+  categorySummary: { borderTopWidth: 0.5, paddingTop: 10, marginTop: 10, gap: 5 },
+  categorySummaryRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 10 },
+  categoryName: { fontSize: 12.5, fontWeight: '600' },
+  categoryGrade: { fontSize: 12.5, fontWeight: '800' },
+  droppedNote: { fontSize: 11.5, fontWeight: '700', marginTop: 3 },
+  gradeSetupRow: { borderTopWidth: 0.5, paddingTop: 12, marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  gradeSetupIcon: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  gradeSetupTitle: { fontSize: 13.5, fontWeight: '700' },
+  gradeSetupSub: { fontSize: 11.5, marginTop: 2 },
   scaleToggle: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#f1f5f9' },
   scaleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   scaleItem: { fontSize: 12, color: '#64748b', fontWeight: '500', backgroundColor: '#f1f5f9', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 4 },

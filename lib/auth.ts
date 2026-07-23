@@ -8,6 +8,9 @@ import { endIAP } from '@/lib/purchases';
 import { clearLocalSyncState } from '@/lib/calendarSync';
 import { cancelAllRemindersOnSignOut } from '@/lib/notifications';
 import { unregisterPushToken } from '@/lib/push';
+import { clearPersistedQueryCache } from '@/lib/queryPersistence';
+import { clearOfflineUserState } from '@/lib/offlineSync';
+import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
 
 /**
  * Web Client ID from Google Cloud Console (Authentication → Credentials).
@@ -138,6 +141,53 @@ export async function signInWithGoogle() {
   if (error) throw error;
 }
 
+const GOOGLE_CLASSROOM_SCOPES = [
+  'https://www.googleapis.com/auth/classroom.courses.readonly',
+  'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+  'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
+];
+
+/**
+ * Requests read-only Google Classroom access without changing the active
+ * Supabase account. The short-lived access token is stored in device
+ * SecureStore by the LMS layer and is never persisted in the database.
+ */
+export async function getGoogleClassroomAccessToken(): Promise<{
+  accessToken: string;
+  accountLabel: string | null;
+}> {
+  if (Platform.OS === 'web') {
+    throw new Error('Google Classroom connection is currently available in the iPhone app.');
+  }
+  configureGoogleOnce();
+  await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+
+  let current = GoogleSignin.getCurrentUser();
+  if (!current) {
+    const result: any = await GoogleSignin.signIn();
+    if (result?.type === 'cancelled') {
+      const error: any = new Error('Google connection was cancelled.');
+      error.code = 'SIGN_IN_CANCELLED';
+      throw error;
+    }
+    current = result?.data ?? result;
+  }
+
+  const scoped: any = await GoogleSignin.addScopes({ scopes: GOOGLE_CLASSROOM_SCOPES });
+  if (scoped?.type === 'cancelled') {
+    const error: any = new Error('Google Classroom permission was cancelled.');
+    error.code = 'SIGN_IN_CANCELLED';
+    throw error;
+  }
+  const tokens = await GoogleSignin.getTokens();
+  if (!tokens.accessToken) throw new Error('Google did not return a Classroom access token.');
+  const account: any = scoped?.data ?? current;
+  return {
+    accessToken: tokens.accessToken,
+    accountLabel: account?.user?.email ?? null,
+  };
+}
+
 /**
  * True iff this device can offer Sign in with Apple. iOS only, and
  * even on iOS this returns false on simulators without an Apple ID
@@ -153,7 +203,22 @@ export async function isAppleSignInAvailable(): Promise<boolean> {
 }
 
 export async function signOut() {
+  let signingOutUserId: string | null = null;
   try {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      signingOutUserId = session?.user.id ?? null;
+      if (session?.user) {
+        const { data: connections } = await supabase
+          .from('lms_connections')
+          .select('id')
+          .eq('user_id', session.user.id);
+        await removeLmsCredentials((connections ?? []).map((row) => row.id));
+      }
+    } catch {
+      // Best-effort local credential cleanup; sign-out must still proceed.
+    }
+
     // Drop THIS device's server push token BEFORE clearing the session. The
     // delete is RLS-scoped to auth.uid(), which supabase.auth.signOut() below
     // invalidates — so it must run while the JWT is still valid, else it hits
@@ -162,7 +227,9 @@ export async function signOut() {
     if (Platform.OS !== 'web') {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) await unregisterPushToken(session.user.id);
+        if (session?.user) {
+          await unregisterPushToken(session.user.id);
+        }
       } catch {
         // Best-effort — never block sign-out on token cleanup.
       }
@@ -178,6 +245,8 @@ export async function signOut() {
     // go, otherwise the next person to sign in here inherits it.
     useAppStore.getState().resetUserState();
     _queryClient?.clear();
+    clearPersistedQueryCache().catch(() => {});
+    clearOfflineUserState(signingOutUserId).catch(() => {});
 
     // Cancel pending notifications so user A's reminders don't fire
     // for user B (which would also leak A's task titles via banners).

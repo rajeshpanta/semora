@@ -4,10 +4,28 @@ import { supabase } from '@/lib/supabase';
 import { differenceInDays } from 'date-fns';
 import { useAppStore } from '@/store/appStore';
 import { registerForPushNotificationsAsync } from '@/lib/push';
+import * as SecureStore from 'expo-secure-store';
 
 // iOS silently drops new notifications once a single app has 64 pending.
 // Stay a few under to leave headroom for re-schedules that race with prune.
 const MAX_SCHEDULED_NOTIFICATIONS = 60;
+export const TASK_NOTIFICATION_CATEGORY = 'semora-task-reminder';
+export const COMPLETE_TASK_ACTION = 'complete-task';
+export const SNOOZE_TASK_ACTION = 'snooze-task';
+const NOTIFICATION_HEALTH_KEY = 'semora.notification-health.v2';
+
+export interface QuietHoursPreferences {
+  quiet_hours_enabled: boolean;
+  quiet_hours_start: string;
+  quiet_hours_end: string;
+}
+
+export interface NotificationDeliveryHealth {
+  permission: string;
+  pendingCount: number;
+  lastScheduledAt: string | null;
+  lastError: string | null;
+}
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -18,6 +36,104 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
+
+export async function registerTaskNotificationActions() {
+  if (Platform.OS === 'web') return;
+  await Notifications.setNotificationCategoryAsync(TASK_NOTIFICATION_CATEGORY, [
+    {
+      identifier: COMPLETE_TASK_ACTION,
+      buttonTitle: 'Mark Complete',
+      options: { opensAppToForeground: false },
+    },
+    {
+      identifier: SNOOZE_TASK_ACTION,
+      buttonTitle: 'Snooze 1 Hour',
+      options: { opensAppToForeground: false },
+    },
+  ]);
+}
+
+function readHealthState(): Pick<NotificationDeliveryHealth, 'lastScheduledAt' | 'lastError'> {
+  try {
+    const raw = SecureStore.getItem(NOTIFICATION_HEALTH_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { lastScheduledAt: null, lastError: null };
+}
+
+function writeHealthState(value: Pick<NotificationDeliveryHealth, 'lastScheduledAt' | 'lastError'>) {
+  try { SecureStore.setItem(NOTIFICATION_HEALTH_KEY, JSON.stringify(value)); } catch {}
+}
+
+export async function getNotificationDeliveryHealth(): Promise<NotificationDeliveryHealth> {
+  const stored = readHealthState();
+  if (Platform.OS === 'web') return { permission: 'unsupported', pendingCount: 0, ...stored };
+  try {
+    const [permission, pending] = await Promise.all([
+      Notifications.getPermissionsAsync(),
+      Notifications.getAllScheduledNotificationsAsync(),
+    ]);
+    return { permission: permission.status, pendingCount: pending.length, ...stored };
+  } catch (error: any) {
+    return { permission: 'unknown', pendingCount: 0, ...stored, lastError: error?.message || 'Delivery check failed' };
+  }
+}
+
+function clockMinutes(value: string | null | undefined, fallback: number) {
+  if (!value) return fallback;
+  const [hours, minutes] = value.split(':').map(Number);
+  return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : fallback;
+}
+
+export function moveOutsideQuietHours(date: Date, quiet?: QuietHoursPreferences | null): Date {
+  if (!quiet?.quiet_hours_enabled) return date;
+  const result = new Date(date);
+  const minute = result.getHours() * 60 + result.getMinutes();
+  const start = clockMinutes(quiet.quiet_hours_start, 22 * 60);
+  const end = clockMinutes(quiet.quiet_hours_end, 8 * 60);
+  // Matching endpoints represent an empty window, not a 24-hour mute.
+  // This also keeps an accidental same-time selection from delaying every
+  // reminder by a full day.
+  if (start === end) return result;
+  const inside = start < end
+    ? minute >= start && minute < end
+    : minute >= start || minute < end;
+  if (!inside) return result;
+  if (start < end || minute < end) {
+    result.setHours(Math.floor(end / 60), end % 60, 0, 0);
+  } else {
+    result.setDate(result.getDate() + 1);
+    result.setHours(Math.floor(end / 60), end % 60, 0, 0);
+  }
+  return result;
+}
+
+export async function snoozeNotification(response: Notifications.NotificationResponse, minutes = 60) {
+  const content = response.notification.request.content;
+  const data = content.data || {};
+  const userId = typeof data.userId === 'string' ? data.userId : undefined;
+  let quiet: QuietHoursPreferences | null = null;
+  if (userId) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('quiet_hours_enabled, quiet_hours_start, quiet_hours_end')
+      .eq('id', userId)
+      .maybeSingle();
+    quiet = profile as QuietHoursPreferences | null;
+  }
+  const triggerDate = moveOutsideQuietHours(new Date(Date.now() + minutes * 60_000), quiet);
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: content.title || 'Task reminder',
+      body: content.body || 'This task still needs your attention.',
+      data: { ...data, fireAt: triggerDate.getTime(), snoozed: true },
+      sound: true,
+      categoryIdentifier: TASK_NOTIFICATION_CATEGORY,
+    },
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
+  });
+  writeHealthState({ lastScheduledAt: new Date().toISOString(), lastError: null });
+}
 
 function getTriggerTime(notif: Notifications.NotificationRequest): number {
   // Authoritative source: we stamp the fire time into data at schedule
@@ -87,6 +203,17 @@ function getDueLabel(daysUntilDue: number): string {
   return `overdue by ${Math.abs(daysUntilDue)} days`;
 }
 
+function formatLeadTime(totalMinutes: number): string {
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  const parts: string[] = [];
+  if (days) parts.push(`${days} ${days === 1 ? 'day' : 'days'}`);
+  if (hours) parts.push(`${hours} ${hours === 1 ? 'hour' : 'hours'}`);
+  if (minutes) parts.push(`${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`);
+  return parts.join(' ');
+}
+
 export async function scheduleTaskReminders(
   taskId: string,
   taskTitle: string,
@@ -96,16 +223,74 @@ export async function scheduleTaskReminders(
   userId?: string,
   // Batch path (rescheduleAllTaskReminders) passes prefs + isPro fetched ONCE
   // for the whole run, so we don't repeat an identical profiles read per task.
-  prefetched?: { reminder_same_day: boolean; reminder_1day: boolean; reminder_3day: boolean; isPro: boolean },
+  prefetched?: {
+    reminder_same_day: boolean; reminder_1day: boolean; reminder_3day: boolean; isPro: boolean;
+    quiet_hours_enabled?: boolean; quiet_hours_start?: string; quiet_hours_end?: string;
+  },
+  // null/undefined follows profile defaults; [] explicitly disables reminders.
+  customOffsetsMinutes?: number[] | null,
 ) {
   if (Platform.OS === 'web') return;
   // Schema marks tasks.due_date NOT NULL, but a malformed row coming
   // from direct DB manipulation would crash split('-') below. Bail
   // quietly rather than throw out of the toggle-complete flow.
   if (!dueDate) return;
+  // An explicit empty task-level selection means "never notify" and should
+  // not trigger the OS permission prompt just because the task was saved.
+  if (customOffsetsMinutes?.length === 0) return;
 
   const hasPermission = await requestNotificationPermission();
   if (!hasPermission) return;
+
+  const [year, month, day] = dueDate.split('-').map(Number);
+  let hour = 9, minute = 0;
+  if (dueTime) {
+    const [h, m] = dueTime.split(':').map(Number);
+    hour = h;
+    minute = m;
+  }
+  const now = new Date();
+  let quiet: QuietHoursPreferences = {
+    quiet_hours_enabled: prefetched?.quiet_hours_enabled ?? false,
+    quiet_hours_start: prefetched?.quiet_hours_start ?? '22:00:00',
+    quiet_hours_end: prefetched?.quiet_hours_end ?? '08:00:00',
+  };
+  if (!prefetched && userId) {
+    const { data: quietProfile } = await supabase
+      .from('profiles')
+      .select('quiet_hours_enabled, quiet_hours_start, quiet_hours_end')
+      .eq('id', userId)
+      .maybeSingle();
+    if (quietProfile) quiet = quietProfile as QuietHoursPreferences;
+  }
+
+  // A task-level selection replaces the profile defaults. This includes an
+  // empty array, which deliberately means "do not remind me for this task."
+  if (customOffsetsMinutes != null) {
+    for (const offsetMinutes of [...new Set(customOffsetsMinutes)]) {
+      const triggerDate = moveOutsideQuietHours(
+        new Date(year, month - 1, day, hour, minute - offsetMinutes, 0),
+        quiet,
+      );
+      if (triggerDate <= now) continue;
+      const body = offsetMinutes === 0
+        ? `${taskTitle} is due now`
+        : `${taskTitle} is due in ${formatLeadTime(offsetMinutes)}`;
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `📚 ${courseName}`,
+          body,
+          data: { taskId, taskTitle, courseName, dueDate, dueTime, userId, fireAt: triggerDate.getTime() },
+          sound: true,
+          categoryIdentifier: TASK_NOTIFICATION_CATEGORY,
+        },
+        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
+      });
+    }
+    await pruneToCapIfNeeded();
+    writeHealthState({ lastScheduledAt: new Date().toISOString(), lastError: null });
+    return;
+  }
 
   // Get user preferences and pro status. Use maybeSingle so a brand-new
   // OAuth user whose profile row hasn't propagated yet falls cleanly to
@@ -123,7 +308,7 @@ export async function scheduleTaskReminders(
     if (userId) {
       const { data } = await supabase
         .from('profiles')
-        .select('reminder_same_day, reminder_1day, reminder_3day')
+        .select('reminder_same_day, reminder_1day, reminder_3day, quiet_hours_enabled, quiet_hours_start, quiet_hours_end')
         .eq('id', userId)
         .maybeSingle();
       if (data) preferences = data;
@@ -137,16 +322,7 @@ export async function scheduleTaskReminders(
     preferences.reminder_3day = false;
   }
 
-  const [year, month, day] = dueDate.split('-').map(Number);
-  let hour = 9, minute = 0;
-  if (dueTime) {
-    const [h, m] = dueTime.split(':').map(Number);
-    hour = h;
-    minute = m;
-  }
-
   const dueDateObj = new Date(year, month - 1, day);
-  const now = new Date();
 
   const offsets = [
     { days: 0, enabled: preferences.reminder_same_day },
@@ -157,7 +333,10 @@ export async function scheduleTaskReminders(
   for (const offset of offsets) {
     if (!offset.enabled) continue;
 
-    const triggerDate = new Date(year, month - 1, day - offset.days, hour, minute, 0);
+    const triggerDate = moveOutsideQuietHours(
+      new Date(year, month - 1, day - offset.days, hour, minute, 0),
+      quiet,
+    );
 
     // Don't schedule if in the past
     if (triggerDate <= now) continue;
@@ -170,8 +349,9 @@ export async function scheduleTaskReminders(
       content: {
         title: `📚 ${courseName}`,
         body: `${taskTitle} is ${label}`,
-        data: { taskId, fireAt: triggerDate.getTime() },
+        data: { taskId, taskTitle, courseName, dueDate, dueTime, userId, fireAt: triggerDate.getTime() },
         sound: true,
+        categoryIdentifier: TASK_NOTIFICATION_CATEGORY,
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -188,9 +368,10 @@ export async function scheduleTaskReminders(
   //   - timed tasks:    2 hours before the deadline ("due in 2 hours")
   //   - end-of-day:     7 PM ("due tonight"), complementing the 9 AM one
   if (preferences.reminder_same_day) {
-    const lastCall = dueTime
+    const rawLastCall = dueTime
       ? new Date(year, month - 1, day, hour, minute - 120, 0)
       : new Date(year, month - 1, day, 19, 0, 0);
+    const lastCall = moveOutsideQuietHours(rawLastCall, quiet);
     const lastCallBody = dueTime
       ? `${taskTitle} is due in 2 hours`
       : `${taskTitle} is due tonight`;
@@ -199,8 +380,9 @@ export async function scheduleTaskReminders(
         content: {
           title: `⏰ ${courseName}`,
           body: lastCallBody,
-          data: { taskId, fireAt: lastCall.getTime() },
+          data: { taskId, taskTitle, courseName, dueDate, dueTime, userId, fireAt: lastCall.getTime() },
           sound: true,
+          categoryIdentifier: TASK_NOTIFICATION_CATEGORY,
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
@@ -211,6 +393,7 @@ export async function scheduleTaskReminders(
   }
 
   await pruneToCapIfNeeded();
+  writeHealthState({ lastScheduledAt: new Date().toISOString(), lastError: null });
 }
 
 export async function cancelTaskReminders(taskId: string) {
@@ -277,18 +460,21 @@ export async function rescheduleAllTaskReminders(userId: string): Promise<void> 
     // otherwise issue an identical per-task profiles read for every task.
     const { data: profile } = await supabase
       .from('profiles')
-      .select('reminder_same_day, reminder_1day, reminder_3day')
+      .select('reminder_same_day, reminder_1day, reminder_3day, quiet_hours_enabled, quiet_hours_start, quiet_hours_end')
       .eq('id', userId)
       .maybeSingle();
     const prefetched = {
       reminder_same_day: profile ? profile.reminder_same_day : true,
       reminder_1day: profile ? profile.reminder_1day : true,
       reminder_3day: profile ? profile.reminder_3day : true,
+      quiet_hours_enabled: profile ? profile.quiet_hours_enabled : false,
+      quiet_hours_start: profile ? profile.quiet_hours_start : '22:00:00',
+      quiet_hours_end: profile ? profile.quiet_hours_end : '08:00:00',
       isPro: useAppStore.getState().isPro,
     };
     const { data } = await supabase
       .from('tasks')
-      .select('id, title, due_date, due_time, courses(name)')
+      .select('id, title, due_date, due_time, reminder_offsets_minutes, courses(name)')
       .eq('user_id', userId)
       .eq('is_completed', false);
     if (!data) return;
@@ -302,9 +488,17 @@ export async function rescheduleAllTaskReminders(userId: string): Promise<void> 
       await cancelTaskReminders(t.id);
       // Re-check after the await — the sign-out could have landed in between.
       if (rescheduleGeneration !== gen) return;
-      await scheduleTaskReminders(t.id, t.title, courseName, t.due_date, t.due_time, userId, prefetched);
+      await scheduleTaskReminders(
+        t.id, t.title, courseName, t.due_date, t.due_time, userId,
+        prefetched, t.reminder_offsets_minutes,
+      );
     }
-  } catch {
+    writeHealthState({ lastScheduledAt: new Date().toISOString(), lastError: null });
+  } catch (error: any) {
+    writeHealthState({
+      lastScheduledAt: readHealthState().lastScheduledAt,
+      lastError: error?.message || 'Reminder scheduling failed',
+    });
     // Best-effort — a failed reschedule must never break the purchase flow.
   } finally {
     rescheduleInFlight = false;

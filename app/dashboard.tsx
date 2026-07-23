@@ -296,8 +296,11 @@ export default function DashboardScreen() {
             {topSuggestions.length > 0 && (
               <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
                 <View style={styles.cardHead}>
-                  <Text style={[styles.cardTitle, { color: colors.ink }]}>Study plan</Text>
-                  <Text style={[styles.subtle, { color: colors.ink3 }]}>What to start next</Text>
+                  <Text style={[styles.cardTitle, { color: colors.ink }]}>Smart Plan</Text>
+                  <TouchableOpacity style={styles.plannerLink} onPress={() => router.push('/planner' as any)}>
+                    <Text style={[styles.plannerLinkText, { color: colors.brand }]}>Open timed plan</Text>
+                    <FontAwesome name="chevron-right" size={9} color={colors.brand} />
+                  </TouchableOpacity>
                 </View>
                 {topSuggestions.map((s) => {
                   const meta = TIER_META[s.tier];
@@ -348,6 +351,8 @@ const styles = StyleSheet.create({
   cardHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   cardTitle: { fontFamily: FONTS.displaySemibold, fontSize: 16, color: COLORS.ink },
   subtle: { fontSize: 11.5, fontWeight: '600' },
+  plannerLink: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4 },
+  plannerLinkText: { fontSize: 11.5, fontWeight: '700' },
 
   // Chart legend
   legendRow: { flexDirection: 'row', gap: 12 },

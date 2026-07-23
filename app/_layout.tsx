@@ -1,11 +1,13 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Fraunces_600SemiBold, Fraunces_700Bold, Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces';
 import { DefaultTheme, DarkTheme, ThemeProvider } from '@react-navigation/native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments, router as globalRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
+import * as Notifications from 'expo-notifications';
 import { createContext, useContext, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, AppState, Platform, View } from 'react-native';
 import 'react-native-reanimated';
@@ -17,12 +19,28 @@ import { useAppStore } from '@/store/appStore';
 import { ThemeColorsProvider, useResolvedScheme, useColors } from '@/lib/theme';
 import { setQueryClient } from '@/lib/auth';
 import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateAfterPurchase, setupPurchaseListeners } from '@/lib/purchases';
-import { rescheduleAllTaskReminders, cancelAllRemindersOnSignOut } from '@/lib/notifications';
+import {
+  COMPLETE_TASK_ACTION, SNOOZE_TASK_ACTION, cancelAllRemindersOnSignOut,
+  cancelTaskReminders, registerTaskNotificationActions, rescheduleAllTaskReminders,
+  snoozeNotification,
+} from '@/lib/notifications';
 import { registerForPushNotificationsAsync } from '@/lib/push';
 import { track } from '@/lib/analytics';
 import { clearLocalSyncState } from '@/lib/calendarSync';
 import { applyPendingReferral, hasActivePromoGrant } from '@/lib/referral';
 import { readPendingShareToken } from '@/lib/shareCourse';
+import { TaskCompletionFlowProvider } from '@/components/TaskCompletionFlow';
+import { TaskCompletionCelebration } from '@/components/TaskCompletionCelebration';
+import { showTaskCelebration } from '@/lib/taskCelebration';
+import { queryPersister, clearPersistedQueryCache } from '@/lib/queryPersistence';
+import { clearOfflineUserState } from '@/lib/offlineSync';
+import { OfflineSyncBridge } from '@/components/OfflineSyncBridge';
+import {
+  readPendingCollaborationToken,
+  savePendingCollaborationToken,
+} from '@/lib/collaboration';
+import { LmsSyncBridge } from '@/components/LmsSyncBridge';
+import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -86,6 +104,23 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     // delivers session=null) can still delete THIS device's push token row
     // for the user who just left. Updated whenever a session is present.
     let lastSignedInUserId: string | null = null;
+    let lastLmsConnectionIds: string[] = [];
+    const rememberLmsConnections = (userId: string) => {
+      (async () => {
+        const { data } = await supabase
+          .from('lms_connections')
+          .select('id')
+          .eq('user_id', userId);
+        if (lastSignedInUserId === userId) {
+          lastLmsConnectionIds = (data ?? []).map((row) => row.id);
+        }
+      })()
+        .catch(() => {
+          if (lastSignedInUserId === userId) {
+            lastLmsConnectionIds = [];
+          }
+        });
+    };
 
     // refreshProStatus can take seconds (Apple roundtrip). If the user
     // signs out / switches accounts mid-flight, the resolved entitlement
@@ -213,6 +248,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       // import instead ("Want reminders before these N deadlines?").
       if (session) {
         lastSignedInUserId = session.user.id;
+        rememberLmsConnections(session.user.id);
         saveTimezoneIfNeeded(session.user.id);
         // Reschedule on every cold launch (rescheduleAfter=true) so a device
         // that stays signed in picks up tasks created on OTHER devices since it
@@ -249,6 +285,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       if (_event === 'SIGNED_OUT') {
         useAppStore.getState().resetUserState();
         queryClient.clear();
+        clearPersistedQueryCache().catch(() => {});
+        clearOfflineUserState(lastSignedInUserId).catch(() => {});
+        removeLmsCredentials(lastLmsConnectionIds).catch(() => {});
         // Match lib/auth.ts:signOut()'s device teardown — these paths bypass
         // it, so without this user A's scheduled reminders keep firing and
         // their tasks stay synced in the device calendar under user B.
@@ -267,10 +306,12 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           // the same token to the new user — so it never pushes to a stranger.
         }
         lastSignedInUserId = null;
+        lastLmsConnectionIds = [];
       }
 
       if (session) {
         lastSignedInUserId = session.user.id;
+        rememberLmsConnections(session.user.id);
         saveTimezoneIfNeeded(session.user.id);
 
         if (_event === 'SIGNED_IN') {
@@ -317,6 +358,22 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       const parsed = Linking.parse(url);
       const path = (parsed.path ?? '').replace(/^\//, '');
       const code = typeof parsed.queryParams?.code === 'string' ? parsed.queryParams.code : null;
+
+      const isCollaborationLink =
+        parsed.hostname === 'collaborate' ||
+        (!parsed.hostname && path === 'collaborate');
+      if (isCollaborationLink) {
+        const token = typeof parsed.queryParams?.token === 'string'
+          ? parsed.queryParams.token.trim()
+          : '';
+        if (!token || token.length > 128) return;
+        await savePendingCollaborationToken(token);
+        const { data: { session: current } } = await supabase.auth.getSession();
+        if (current) {
+          globalRouter.push({ pathname: '/collaborate', params: { token } } as any);
+        }
+        return;
+      }
 
       if (parsed.hostname !== 'auth') return;
 
@@ -495,8 +552,14 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       //     classmate's course (the growth loop). This is the ONLY resume path,
       //     so without it a signed-out friend's import silently dead-ends.
       applyPendingReferral().catch(() => {});
+      const pendingCollaboration = readPendingCollaborationToken();
       const pendingShare = readPendingShareToken();
-      if (pendingShare) {
+      if (pendingCollaboration) {
+        router.replace({
+          pathname: '/collaborate',
+          params: { token: pendingCollaboration },
+        } as any);
+      } else if (pendingShare) {
         router.replace({ pathname: '/join', params: { token: pendingShare } } as any);
       } else {
         router.replace('/(tabs)');
@@ -515,6 +578,82 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+function NotificationActionBridge() {
+  const { session } = useSession();
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    registerTaskNotificationActions().catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' || !session) return;
+    let active = true;
+
+    const handle = async (response: Notifications.NotificationResponse) => {
+      if (!active) return;
+      const action = response.actionIdentifier;
+      const taskId = response.notification.request.content.data?.taskId;
+      if (typeof taskId !== 'string') return;
+
+      if (action === SNOOZE_TASK_ACTION) {
+        await snoozeNotification(response).catch(() => {});
+        return;
+      }
+      if (action === COMPLETE_TASK_ACTION) {
+        const { data: task } = await supabase
+          .from('tasks')
+          .select('id, title, due_date, due_time, is_completed')
+          .eq('id', taskId)
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        if (!task || task.is_completed) return;
+        const due = task.due_time
+          ? new Date(`${task.due_date}T${task.due_time}`)
+          : new Date(`${task.due_date}T23:59:59`);
+        const submittedLate = Number.isFinite(due.getTime()) && new Date() > due;
+        const { error } = await supabase
+          .from('tasks')
+          .update({
+            is_completed: true,
+            completed_at: new Date().toISOString(),
+            submitted_late: submittedLate,
+            late_penalty_percent: null,
+          })
+          .eq('id', taskId)
+          .eq('user_id', session.user.id);
+        if (error) return;
+        await cancelTaskReminders(taskId).catch(() => {});
+        useAppStore.getState().incrementTasksCompleted();
+        showTaskCelebration(task.title);
+        queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        queryClient.invalidateQueries({ queryKey: ['taskStats'] });
+        queryClient.invalidateQueries({ queryKey: ['task'] });
+        queryClient.invalidateQueries({ queryKey: ['studyBlocks'] });
+        // Also picks up the next occurrence if completing this task caused the
+        // recurring-task trigger to create one.
+        rescheduleAllTaskReminders(session.user.id);
+        return;
+      }
+      globalRouter.push(`/task/${taskId}` as any);
+    };
+
+    const subscription = Notifications.addNotificationResponseReceivedListener(handle);
+    Notifications.getLastNotificationResponseAsync()
+      .then(async (response) => {
+        if (response) await handle(response);
+        await Notifications.clearLastNotificationResponseAsync();
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+      subscription.remove();
+    };
+  }, [session?.user.id]);
+
+  return null;
 }
 
 export default function RootLayout() {
@@ -578,11 +717,22 @@ function RootLayoutNav() {
       };
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister: queryPersister,
+        maxAge: 1000 * 60 * 60 * 24 * 7,
+        buster: 'semora-cache-v1',
+      }}
+    >
       <ThemeProvider value={navTheme}>
         <AuthProvider>
-          <AuthGate>
-            <Stack
+          <TaskCompletionFlowProvider>
+            <NotificationActionBridge />
+            <OfflineSyncRuntime />
+            <LmsSyncRuntime />
+            <AuthGate>
+              <Stack
               screenOptions={{
                 headerBackTitle: 'Back',
                 headerStyle: { backgroundColor: colors.card },
@@ -593,31 +743,53 @@ function RootLayoutNav() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="onboarding" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen name="(auth)/forgot-password" options={{ headerShown: false }} />
-              <Stack.Screen name="(auth)/reset-password" options={{ headerShown: false }} />
               <Stack.Screen name="semester/new" options={{ presentation: 'modal', title: 'New Semester' }} />
               <Stack.Screen name="semester/[id]" options={{ title: 'Edit Semester' }} />
               <Stack.Screen name="course/new" options={{ presentation: 'modal', title: 'New Course' }} />
               <Stack.Screen name="course/[id]" options={{ title: 'Course' }} />
               <Stack.Screen name="task/new" options={{ presentation: 'modal', title: 'New Task' }} />
               <Stack.Screen name="task/[id]" options={{ title: 'Task' }} />
+              <Stack.Screen name="search" options={{ title: 'Search Tasks' }} />
               <Stack.Screen name="syllabus/upload" options={{ presentation: 'modal', title: 'Upload Syllabus' }} />
               <Stack.Screen name="syllabus/review" options={{ title: 'Review Items' }} />
               <Stack.Screen name="settings/index" options={{ title: 'Settings' }} />
               <Stack.Screen name="settings/password" options={{ title: 'Change Password' }} />
               <Stack.Screen name="settings/delete-account" options={{ title: 'Delete Account' }} />
               <Stack.Screen name="settings/notifications" options={{ title: 'Notifications' }} />
+              <Stack.Screen name="settings/gpa-scale" options={{ title: 'GPA Scale' }} />
               <Stack.Screen name="settings/appearance" options={{ title: 'Appearance' }} />
               <Stack.Screen name="settings/help" options={{ title: 'Help & FAQ' }} />
               <Stack.Screen name="settings/calendar" options={{ title: 'Calendar Sync' }} />
+              <Stack.Screen name="settings/lms" options={{ title: 'Learning Platforms' }} />
+              <Stack.Screen name="settings/lms-connect" options={{ title: 'Connect Learning Platform' }} />
+              <Stack.Screen name="settings/sync" options={{ title: 'Offline & Sync' }} />
               <Stack.Screen name="settings/widgets" options={{ title: 'Widgets' }} />
               <Stack.Screen name="dashboard" options={{ title: 'Workload' }} />
+              <Stack.Screen name="insights" options={{ title: 'Progress Insights' }} />
+              <Stack.Screen name="planner" options={{ title: 'Smart Plan' }} />
+              <Stack.Screen name="completed-work" options={{ title: 'Completed Work' }} />
+              <Stack.Screen name="grading/[id]" options={{ title: 'Grade Setup' }} />
+              <Stack.Screen name="collaboration/index" options={{ title: 'Class Collaboration' }} />
+              <Stack.Screen name="collaboration/[id]" options={{ title: 'Course Space' }} />
+              <Stack.Screen name="collaborate" options={{ title: 'Join Course Space' }} />
               <Stack.Screen name="share-semester" options={{ presentation: 'modal', headerShown: false }} />
               <Stack.Screen name="paywall" options={{ presentation: 'fullScreenModal', headerShown: false }} />
-            </Stack>
-          </AuthGate>
+              </Stack>
+            </AuthGate>
+            <TaskCompletionCelebration />
+          </TaskCompletionFlowProvider>
         </AuthProvider>
       </ThemeProvider>
-    </QueryClientProvider>
+    </PersistQueryClientProvider>
   );
+}
+
+function OfflineSyncRuntime() {
+  const { session } = useSession();
+  return <OfflineSyncBridge userId={session?.user.id ?? null} />;
+}
+
+function LmsSyncRuntime() {
+  const { session } = useSession();
+  return <LmsSyncBridge userId={session?.user.id ?? null} />;
 }

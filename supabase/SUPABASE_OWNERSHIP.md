@@ -21,7 +21,11 @@ object belongs to the app you're working on.
 `tutor_conversations`, `tutor_messages`, `course_notes`, `tutor_usage` (025, AI tutor),
 `course_shares` (026, share-a-course),
 `google_calendar_tokens`, `google_calendar_event_map` (027, Google Calendar sync),
-`referral_codes`, `referral_redemptions`, `promo_grants` (028, referrals)
+`referral_codes`, `referral_redemptions`, `promo_grants` (028, referrals),
+`grade_categories`, `study_blocks` (029–036),
+`lms_connections`, `lms_course_links`, `course_collaborations`,
+`course_collaboration_members`, `course_collaboration_invites`,
+`shared_deadlines`, `group_assignments` (037–039, connected learning platform)
 
 ### 🟩 CITIZEN (other app) — DO NOT TOUCH from Semora
 `whisper_usage` — whisper/voice usage + rate-limit log (`client_id`-based, anonymous,
@@ -38,12 +42,16 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
 - **Semora:** `is_pro` (redefined in 028 to also honor `promo_grants`), `current_user_is_pro`, `delete_user_account`, `handle_new_user`,
   `enforce_free_scan_limit`, `enforce_free_course_limit`, `enforce_free_semester_limit`,
   `*_assert_parent_owner` (tasks/courses/course_meetings/course_office_hours/parse_runs/syllabus_uploads/decks/cards/tutor_*/course_notes/course_shares),
-  `parent_row_user_id`, `resolve_course_share` (026), `try_consume_tutor_usage` (025), `try_redeem_referral` (028)
+  `parent_row_user_id`, `resolve_course_share` (026), `try_consume_tutor_usage` (025), `try_redeem_referral` (028),
+  `apply_lms_assignment_sync`, `semora_collaboration_role`, `create_course_collaboration`,
+  `create_course_collaboration_invite`, `join_course_collaboration`,
+  `set_collaboration_local_course`, `sync_collaboration_to_planner`,
+  `publish_course_deadlines` (037)
 - **Citizen:** `whisper_rate_limit_ok` ← DO NOT modify from Semora
 
 ## Edge functions
 - **Semora:** `parse-syllabus`, `validate-receipt`, `send-push` (deploy `--no-verify-jwt`),
-  `tutor-chat`, `share-course`, `google-cal-sync`, `redeem-referral`
+  `tutor-chat`, `share-course`, `google-cal-sync`, `redeem-referral`, `lms-sync`
 
 ## Storage buckets
 - `syllabi` (private) — **SEMORA only**, per-user RLS policies. Citizen has no bucket.

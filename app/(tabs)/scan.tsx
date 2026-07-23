@@ -16,6 +16,7 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useScanCount, FREE_SCAN_LIMIT } from '@/lib/queries';
 import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
 import { MAX_SCAN_PAGES, MAX_SCAN_RAW_BYTES, scanTooLargeMessage, type SyllabusPage } from '@/lib/gemini';
+import { GlobalSearchButton } from '@/components/GlobalSearchButton';
 
 // Best-effort raw file size for the multi-page upload budget. Returns 0 when
 // the size can't be read (rare — picker URIs are local files), so the budget
@@ -385,7 +386,10 @@ export default function ScanScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.title, { color: colors.ink }]}>Scan syllabus</Text>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { color: colors.ink }]}>Scan syllabus</Text>
+          <GlobalSearchButton />
+        </View>
         <Text style={[styles.subtitle, { color: colors.ink2 }]}>
           Snap it, upload it, or drag it in.{'\n'}We'll pull every deadline.
         </Text>
@@ -535,6 +539,7 @@ export default function ScanScreen() {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
   content: { padding: 20, paddingBottom: 120, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontFamily: FONTS.displaySemibold, fontSize: 27, color: COLORS.ink, letterSpacing: -0.5 },
   subtitle: { fontSize: 14, color: COLORS.ink2, marginTop: 4, lineHeight: 19 },
   scanCountPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, marginTop: 12 },

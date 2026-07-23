@@ -41,6 +41,7 @@ export interface WorkloadTask {
   title: string;
   type: TaskType;
   due_date: string;
+  start_date?: string | null;
   weight: number | null;
   is_completed: boolean;
   is_extra_credit?: boolean;

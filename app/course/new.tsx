@@ -28,6 +28,7 @@ export default function NewCourseScreen() {
   const { data: existingCourses = [], isLoading: existingCoursesLoading } = useCourses(semesterId || null);
   const [name, setName] = useState('');
   const [instructor, setInstructor] = useState('');
+  const [creditHours, setCreditHours] = useState('3');
   const [color, setColor] = useState(COURSE_COLORS[0]);
   const [icon, setIcon] = useState<string>(COURSE_ICONS[0]);
   const [meetings, setMeetings] = useState<ScheduleBlock[]>([]);
@@ -41,6 +42,11 @@ export default function NewCourseScreen() {
     }
     if (!name.trim()) {
       Alert.alert('Required', 'Please enter a course name.');
+      return;
+    }
+    const parsedCredits = Number(creditHours);
+    if (!Number.isFinite(parsedCredits) || parsedCredits < 0.5 || parsedCredits > 12) {
+      Alert.alert('Invalid credit hours', 'Enter a value from 0.5 to 12.');
       return;
     }
     // Wait for the count query to finish before applying the free-tier
@@ -80,6 +86,7 @@ export default function NewCourseScreen() {
         semester_id: semesterId,
         name: name.trim(),
         instructor: instructor.trim() || undefined,
+        credit_hours: parsedCredits,
         color,
         icon,
       });
@@ -189,6 +196,17 @@ export default function NewCourseScreen() {
             value={instructor}
             onChangeText={setInstructor}
           />
+
+          <Text style={[styles.label, { color: colors.ink2 }]}>Credit Hours</Text>
+          <TextInput
+            style={[styles.input, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]}
+            placeholder="e.g. 3"
+            placeholderTextColor={colors.ink3}
+            value={creditHours}
+            onChangeText={setCreditHours}
+            keyboardType="decimal-pad"
+          />
+          <Text style={[styles.hint, { color: colors.ink3 }]}>Used to weight this course in your semester GPA estimate.</Text>
 
           {/* Schedule (structured) — multi-block: lecture + lab can each
               be their own meeting on different days/times. Office hours

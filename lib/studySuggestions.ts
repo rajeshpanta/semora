@@ -89,6 +89,12 @@ export function getStudySuggestions(
     // Only future/today work — overdue tasks belong to the Today tab's
     // "overdue" surface, not a "start on this next" planner.
     if (days < 0) continue;
+    // A start date is a real availability boundary, not decorative metadata.
+    // Keep the task out of "what to start next" until that day arrives.
+    if (t.start_date) {
+      const startDays = daysUntil(t.start_date, now);
+      if (!Number.isNaN(startDays) && startDays > 0) continue;
+    }
 
     const courseName = t.courses?.name ?? 'your course';
     // Divide by urgency, flooring at 0.5 so a task due today doesn't explode to

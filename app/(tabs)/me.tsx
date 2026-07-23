@@ -17,6 +17,7 @@ import { getProducts } from '@/lib/purchases';
 import { isEligibleForIntroOfferIOS } from 'react-native-iap';
 import { getMyCode, getRedemptionCount, inviteLink, applyPendingReferral, syncPromoPro } from '@/lib/referral';
 import { track } from '@/lib/analytics';
+import { GlobalSearchButton } from '@/components/GlobalSearchButton';
 
 export default function MeScreen() {
   const colors = useColors();
@@ -164,6 +165,7 @@ export default function MeScreen() {
             <Text style={[styles.profileName, { color: colors.ink }]}>{name}</Text>
             <Text style={[styles.profileSub, { color: colors.ink3 }]}>{activeSemester?.name ?? 'No semester'}</Text>
           </View>
+          <GlobalSearchButton />
         </View>
 
         {/* Premium upsell / Pro active */}

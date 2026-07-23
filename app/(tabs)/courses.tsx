@@ -8,13 +8,15 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
-import { useSemesters, useCourses, useTasks, useDeleteSemester } from '@/lib/queries';
-import { COLORS, FONTS, calculateGrade, DEFAULT_GRADE_SCALE, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import { useSemesters, useCourses, useTasks, useDeleteSemester, useGpaScale, useSemesterGradeCategories } from '@/lib/queries';
+import { COLORS, FONTS, DEFAULT_GRADE_SCALE, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import { calculateCourseGrade, calculateSemesterGpaWithScale, DEFAULT_GPA_SCALE } from '@/lib/grades';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { differenceInCalendarDays, isToday, isPast, format } from 'date-fns';
 import type { GradeThreshold } from '@/types/database';
 import type { TaskWithCourse } from '@/lib/queries';
+import { GlobalSearchButton } from '@/components/GlobalSearchButton';
 
 export default function CoursesScreen() {
   const colors = useColors();
@@ -29,6 +31,8 @@ export default function CoursesScreen() {
   const deleteSemester = useDeleteSemester();
   const { data: courses = [] } = useCourses(selectedSemesterId);
   const { data: tasks = [] } = useTasks(selectedSemesterId ? { semesterId: selectedSemesterId } : { semesterId: null });
+  const { data: gradeCategories = [] } = useSemesterGradeCategories(selectedSemesterId);
+  const { data: gpaScale = DEFAULT_GPA_SCALE } = useGpaScale();
 
   useEffect(() => {
     if (semesters.length === 0) return;
@@ -123,6 +127,27 @@ export default function CoursesScreen() {
     return ct[0] || null;
   };
   const getPendingCount = (courseId: string) => getCourseTasks(courseId).filter((t) => !t.is_completed).length;
+  const courseGradeSummaries = courses.map((course) => {
+    const courseTasks = getCourseTasks(course.id);
+    const scale = (course.grade_scale || DEFAULT_GRADE_SCALE) as GradeThreshold[];
+    const grade = calculateCourseGrade(
+      courseTasks.map((task) => ({
+        id: task.id,
+        grade_category_id: task.grade_category_id,
+        weight: task.weight,
+        score: task.score,
+        points_earned: task.points_earned,
+        points_possible: task.points_possible,
+        is_extra_credit: task.is_extra_credit,
+      })),
+      gradeCategories.filter((category) => category.course_id === course.id),
+      scale,
+      course.extra_credit_policy || 'bonus',
+    );
+    return { courseId: course.id, ...grade, creditHours: course.credit_hours ?? 3 };
+  });
+  const gradeByCourse = new Map(courseGradeSummaries.map((grade) => [grade.courseId, grade]));
+  const semesterGpa = calculateSemesterGpaWithScale(courseGradeSummaries, gpaScale);
 
   function getDueLabel(task: TaskWithCourse): { text: string; urgent: boolean } {
     const due = new Date(task.due_date + 'T00:00:00');
@@ -186,11 +211,33 @@ export default function CoursesScreen() {
           </View>
 
           <View style={styles.headerActions}>
+            <GlobalSearchButton />
             <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.brand }]} onPress={handleAddCourse} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Add a course">
               <FontAwesome name="plus" size={14} color="#fff" />
             </TouchableOpacity>
           </View>
         </View>
+
+        {courses.length > 0 && (
+          <View style={[styles.gpaCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <View style={[styles.gpaIcon, { backgroundColor: colors.brand50 }]}>
+              <FontAwesome name="graduation-cap" size={18} color={colors.brand} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.gpaLabel, { color: colors.ink3 }]}>CURRENT SEMESTER GPA ESTIMATE</Text>
+              {semesterGpa.gpa != null ? (
+                <Text style={[styles.gpaMeta, { color: colors.ink2 }]}>
+                  {semesterGpa.reportingCourses} of {courses.length} courses · {semesterGpa.reportingCredits} graded credits
+                </Text>
+              ) : (
+                <Text style={[styles.gpaMeta, { color: colors.ink2 }]}>Add grades to completed work to begin tracking.</Text>
+              )}
+            </View>
+            <Text style={[styles.gpaValue, { color: semesterGpa.gpa != null ? colors.brand : colors.ink3 }]}>
+              {semesterGpa.gpa != null ? semesterGpa.gpa.toFixed(2) : '—'}
+            </Text>
+          </View>
+        )}
 
         {/* Course cards */}
         {courses.length > 0 ? (
@@ -199,9 +246,7 @@ export default function CoursesScreen() {
               const courseTasks = getCourseTasks(course.id);
               const nextTask = getNextTask(course.id);
               const pendingCount = getPendingCount(course.id);
-              const scale = (course.grade_scale || DEFAULT_GRADE_SCALE) as GradeThreshold[];
-              const gradeTasks = courseTasks.map((t) => ({ weight: t.weight, score: t.score, is_extra_credit: t.is_extra_credit }));
-              const { percentage } = calculateGrade(gradeTasks, scale);
+              const { percentage, letter } = gradeByCourse.get(course.id) || { percentage: null, letter: null };
               const dueInfo = nextTask ? getDueLabel(nextTask) : null;
 
               // A course "needs schedule" when it has no structured
@@ -256,7 +301,7 @@ export default function CoursesScreen() {
                       <View style={[styles.progressBg, { backgroundColor: colors.line }]}>
                         <View style={[styles.progressFill, { width: `${Math.min(percentage, 100)}%`, backgroundColor: course.color }]} />
                       </View>
-                      <Text style={[styles.progressText, { color: colors.ink3 }]}>{percentage}%</Text>
+                      <Text style={[styles.progressText, { color: colors.ink3 }]}>{letter ? `${letter} · ` : ''}{percentage}%</Text>
                     </View>
                   )}
                 </TouchableOpacity>
@@ -354,6 +399,11 @@ const styles = StyleSheet.create({
   courseCountText: { fontSize: 12, fontWeight: '700', color: COLORS.brand },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 6 },
   addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.brand, justifyContent: 'center', alignItems: 'center' },
+  gpaCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, borderWidth: 0.5, padding: 14, marginBottom: 14 },
+  gpaIcon: { width: 42, height: 42, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  gpaLabel: { fontSize: 9.5, fontWeight: '800', letterSpacing: 0.7 },
+  gpaMeta: { fontSize: 11.5, lineHeight: 16, marginTop: 3 },
+  gpaValue: { fontFamily: FONTS.display, fontSize: 27 },
 
   // Course cards
   courseList: { gap: 10 },
