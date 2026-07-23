@@ -6,17 +6,53 @@ import { FONTS } from '@/lib/constants';
 
 export function AcademicRiskCard({
   report,
+  isPro,
+  onUpgrade,
   onOpenTask,
   onOpenCourse,
   onOpenPlanner,
 }: {
   report: AcademicRiskReport;
+  isPro: boolean;
+  onUpgrade: () => void;
   onOpenTask: (id: string) => void;
   onOpenCourse: (id: string) => void;
   onOpenPlanner: () => void;
 }) {
   const colors = useColors();
   if (!report.risks.length) return null;
+
+  // Academic Risk Alerts are a Pro feature. Free users who actually have risk
+  // signals see a locked teaser (the count, not the specifics) that routes to
+  // the paywall — showing the value without giving away the detail or the
+  // recovery plan. No risks → nothing shown (the null above), so we never tease
+  // a healthy semester.
+  if (!isPro) {
+    const signalWord = report.risks.length === 1 ? 'signal' : 'signals';
+    return (
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}
+        onPress={onUpgrade}
+        activeOpacity={0.85}
+      >
+        <View style={styles.head}>
+          <View style={[styles.icon, { backgroundColor: report.highCount ? colors.coral50 : colors.amber50 }]}>
+            <FontAwesome name="life-ring" size={15} color={report.highCount ? colors.coral : colors.amber} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.title, { color: colors.ink }]}>Academic check-in</Text>
+            <Text style={[styles.sub, { color: colors.ink3 }]}>
+              {report.risks.length} {signalWord} worth attention — see them with Pro
+            </Text>
+          </View>
+          <View style={[styles.lockPill, { backgroundColor: colors.brand50 }]}>
+            <FontAwesome name="lock" size={10} color={colors.brand} />
+            <Text style={[styles.lockText, { color: colors.brand }]}>PRO</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  }
 
   const run = (step: RecoveryStep) => {
     if (step.action === 'task' && step.targetId) onOpenTask(step.targetId);
@@ -79,6 +115,8 @@ const styles = StyleSheet.create({
   icon: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   title: { fontFamily: FONTS.displaySemibold, fontSize: 17 },
   sub: { fontSize: 11.5, marginTop: 1 },
+  lockPill: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 7 },
+  lockText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
   riskRow: { minHeight: 58, borderTopWidth: 0.5, marginTop: 10, paddingTop: 10, flexDirection: 'row', alignItems: 'center', gap: 9 },
   dot: { width: 7, height: 7, borderRadius: 4 },
   riskTitle: { fontSize: 13, fontWeight: '700' },

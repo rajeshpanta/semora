@@ -648,6 +648,11 @@ export default function TodayScreen() {
 
         <AcademicRiskCard
           report={academicRisk}
+          isPro={isPro}
+          onUpgrade={() => {
+            track('paywall_open', { screen: 'today', context: 'academic_risk' });
+            router.push({ pathname: '/paywall', params: { context: 'academic_risk' } } as any);
+          }}
           onOpenTask={(taskId) => router.push(`/task/${taskId}` as any)}
           onOpenCourse={(courseId) => router.push(`/course/${courseId}` as any)}
           onOpenPlanner={() => router.push('/planner' as any)}

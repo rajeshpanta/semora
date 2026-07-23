@@ -23,7 +23,7 @@ const FEATURES = [
   {
     icon: 'camera' as const,
     title: 'Unlimited Scans & Courses',
-    desc: 'Scan unlimited syllabi and add as many courses as you need.',
+    desc: 'Unlimited syllabus scans and courses — free includes 5 scans a month and 4 courses.',
   },
   {
     icon: 'bar-chart' as const,
@@ -42,8 +42,13 @@ const FEATURES = [
   },
   {
     icon: 'bell' as const,
-    title: 'Advance Reminders & Calendar Sync',
-    desc: '1- and 3-day advance reminders, class-schedule sync, and export to Apple or Google Calendar.',
+    title: 'Custom Reminders & Calendar Sync',
+    desc: 'Set your own reminder times, get 1- and 3-day advance nudges, and sync to Apple or Google Calendar.',
+  },
+  {
+    icon: 'life-ring' as const,
+    title: 'Academic Risk Alerts',
+    desc: 'Catch falling grades, missing work, and overloaded weeks early — with a recovery plan.',
   },
   {
     icon: 'users' as const,

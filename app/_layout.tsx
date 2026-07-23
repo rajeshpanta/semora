@@ -583,11 +583,14 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
 function NotificationActionBridge() {
   const { session } = useSession();
+  // Quick-action buttons on task reminders are Pro-only. Re-register whenever
+  // Pro status flips so the buttons appear on upgrade and disappear on lapse.
+  const isPro = useAppStore((s) => s.isPro);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    registerTaskNotificationActions().catch(() => {});
-  }, []);
+    registerTaskNotificationActions(isPro).catch(() => {});
+  }, [isPro]);
 
   useEffect(() => {
     if (Platform.OS === 'web' || !session) return;

@@ -37,20 +37,28 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export async function registerTaskNotificationActions() {
+export async function registerTaskNotificationActions(isPro: boolean = false) {
   if (Platform.OS === 'web') return;
-  await Notifications.setNotificationCategoryAsync(TASK_NOTIFICATION_CATEGORY, [
-    {
-      identifier: COMPLETE_TASK_ACTION,
-      buttonTitle: 'Mark Complete',
-      options: { opensAppToForeground: false },
-    },
-    {
-      identifier: SNOOZE_TASK_ACTION,
-      buttonTitle: 'Snooze 1 Hour',
-      options: { opensAppToForeground: false },
-    },
-  ]);
+  // The inline quick-actions (Mark Complete / Snooze) are a Pro convenience.
+  // Free users get a plain reminder they tap to open — registering the category
+  // with NO buttons avoids showing controls that would otherwise need a paywall
+  // detour. Re-registered whenever Pro status changes (NotificationActionBridge)
+  // so an upgrade adds the buttons and a lapse removes them from new alerts.
+  const actions = isPro
+    ? [
+        {
+          identifier: COMPLETE_TASK_ACTION,
+          buttonTitle: 'Mark Complete',
+          options: { opensAppToForeground: false },
+        },
+        {
+          identifier: SNOOZE_TASK_ACTION,
+          buttonTitle: 'Snooze 1 Hour',
+          options: { opensAppToForeground: false },
+        },
+      ]
+    : [];
+  await Notifications.setNotificationCategoryAsync(TASK_NOTIFICATION_CATEGORY, actions);
 }
 
 function readHealthState(): Pick<NotificationDeliveryHealth, 'lastScheduledAt' | 'lastError'> {
@@ -235,9 +243,18 @@ export async function scheduleTaskReminders(
   // from direct DB manipulation would crash split('-') below. Bail
   // quietly rather than throw out of the toggle-complete flow.
   if (!dueDate) return;
+
+  // Custom reminders (None / presets / exact times) are a Pro feature. For free
+  // users, ignore any task-level custom selection and fall back to the default
+  // reminder scheme below — mirroring the UI gate in TaskPlanningFields, so a
+  // patched client that saved custom offsets still gets only defaults. isPro
+  // comes from prefetched (batch reschedule) or the store (single task).
+  const proForReminders = prefetched ? prefetched.isPro : useAppStore.getState().isPro;
+  const effectiveOffsets = proForReminders ? customOffsetsMinutes : null;
+
   // An explicit empty task-level selection means "never notify" and should
   // not trigger the OS permission prompt just because the task was saved.
-  if (customOffsetsMinutes?.length === 0) return;
+  if (effectiveOffsets?.length === 0) return;
 
   const hasPermission = await requestNotificationPermission();
   if (!hasPermission) return;
@@ -266,8 +283,8 @@ export async function scheduleTaskReminders(
 
   // A task-level selection replaces the profile defaults. This includes an
   // empty array, which deliberately means "do not remind me for this task."
-  if (customOffsetsMinutes != null) {
-    for (const offsetMinutes of [...new Set(customOffsetsMinutes)]) {
+  if (effectiveOffsets != null) {
+    for (const offsetMinutes of [...new Set(effectiveOffsets)]) {
       const triggerDate = moveOutsideQuietHours(
         new Date(year, month - 1, day, hour, minute - offsetMinutes, 0),
         quiet,

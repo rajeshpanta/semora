@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Alert, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useRouter } from 'expo-router';
 import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
+import { useAppStore } from '@/store/appStore';
 import {
   PRIORITY_OPTIONS, RECURRENCE_OPTIONS, REMINDER_OPTIONS,
   customReminderLabel, effectiveDueDate, reminderOptionLabel,
@@ -28,11 +30,25 @@ type Props = {
 
 export function TaskPlanningFields(props: Props) {
   const colors = useColors();
+  const router = useRouter();
+  const isPro = useAppStore((s) => s.isPro);
   const [showCustomReminder, setShowCustomReminder] = useState(false);
   const [customDate, setCustomDate] = useState<Date | null>(null);
   const [customTime, setCustomTime] = useState<Date | null>(null);
 
+  // Custom reminders (None, presets, and exact date/time) are a Pro feature —
+  // free users keep the default reminder scheme. Tapping any customization
+  // control routes a free user to the paywall instead of changing the value.
+  // The scheduler (lib/notifications.ts) enforces the same gate, so a bypassed
+  // client still only gets defaults.
+  const requireProReminders = (): boolean => {
+    if (isPro) return true;
+    router.push({ pathname: '/paywall', params: { context: 'custom_reminders' } } as any);
+    return false;
+  };
+
   const toggleReminder = (offset: number) => {
+    if (!requireProReminders()) return;
     const current = props.reminderOffsets || [];
     const next = current.includes(offset)
       ? current.filter((value) => value !== offset)
@@ -41,6 +57,7 @@ export function TaskPlanningFields(props: Props) {
   };
 
   const openCustomReminder = () => {
+    if (!requireProReminders()) return;
     const due = effectiveDueDate(props.dueDate, props.dueTime);
     if (!due) {
       Alert.alert('Choose a due date', 'Set the task due date before adding a custom reminder.');
@@ -154,11 +171,21 @@ export function TaskPlanningFields(props: Props) {
         </>
       )}
 
-      <Text style={[styles.label, { color: colors.ink2 }]}>Reminders</Text>
+      <View style={styles.labelRow}>
+        <Text style={[styles.label, { color: colors.ink2, marginTop: 0, marginBottom: 0 }]}>Reminders</Text>
+        {!isPro && (
+          <View style={[styles.proBadge, { backgroundColor: colors.brand50 }]}>
+            <FontAwesome name="lock" size={9} color={colors.brand} />
+            <Text style={[styles.proBadgeText, { color: colors.brand }]}>PRO</Text>
+          </View>
+        )}
+      </View>
       <Text style={[styles.help, { color: colors.ink3 }]}>
-        {props.dueTime
-          ? 'Choose presets or add an exact reminder date and time.'
-          : 'No due time set — due-date reminders use 9:00 AM.'}
+        {isPro
+          ? (props.dueTime
+              ? 'Choose presets or add an exact reminder date and time.'
+              : 'No due time set — due-date reminders use 9:00 AM.')
+          : 'Free tasks use the default reminder. Upgrade to Pro to turn reminders off or set your own custom times.'}
       </Text>
       <View style={styles.wrap}>
         <TouchableOpacity
@@ -169,7 +196,7 @@ export function TaskPlanningFields(props: Props) {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.chip, { borderColor: colors.line }, props.reminderOffsets?.length === 0 && { backgroundColor: colors.brand, borderColor: colors.brand }]}
-          onPress={() => props.onReminderOffsetsChange([])}
+          onPress={() => { if (requireProReminders()) props.onReminderOffsetsChange([]); }}
         >
           <Text style={[styles.chipText, { color: props.reminderOffsets?.length === 0 ? '#fff' : colors.ink2 }]}>None</Text>
         </TouchableOpacity>
@@ -244,6 +271,9 @@ export function TaskPlanningFields(props: Props) {
 
 const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '600', marginTop: 20, marginBottom: 8 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20, marginBottom: 8 },
+  proBadge: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
+  proBadgeText: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5 },
   help: { fontSize: 12, marginTop: -3, marginBottom: 8 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
