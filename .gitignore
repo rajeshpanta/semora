@@ -45,3 +45,8 @@ supabase/.temp/
 
 # Local-only infra/account notes — never commit (account emails are phishing targets)
 *.local.md
+
+# Downloaded OAuth/client secret files — never commit
+client_secret*.json
+*.local.json
+secrets.local/
