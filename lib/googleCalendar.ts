@@ -25,7 +25,7 @@ import { useAppStore } from '@/store/appStore';
 // the OAuth client secret is provisioned on the edge function, this stays
 // false so the UI never appears. Flip to true (and see the follow-ups) once
 // verification lands.
-export const GOOGLE_CAL_ENABLED = true;
+export const GOOGLE_CAL_ENABLED = false;
 
 // The sensitive Google Calendar scope we request incrementally (on top of the
 // email/profile scopes the sign-in already granted). Read/write to events on
