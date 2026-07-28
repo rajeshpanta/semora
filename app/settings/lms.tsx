@@ -16,9 +16,13 @@ import { useColors } from '@/lib/theme';
 import { useAppStore } from '@/store/appStore';
 import type { LmsProvider } from '@/types/database';
 
+// Google Classroom is temporarily NOT offered here: it needs the Google OAuth
+// client verified for its sensitive classroom.* scopes (same Google verification
+// as Google Calendar), otherwise a user/reviewer hits Google's "app not verified"
+// block — a dead-end. Re-add this entry once that verification is complete:
+//   { id: 'google_classroom', icon: 'google', detail: 'Classwork, submissions and posted grades' },
 const PROVIDERS: Array<{ id: LmsProvider; icon: string; detail: string }> = [
   { id: 'canvas', icon: 'circle-o-notch', detail: 'Courses, assignments, due dates and points' },
-  { id: 'google_classroom', icon: 'google', detail: 'Classwork, submissions and posted grades' },
   { id: 'blackboard', icon: 'black-tie', detail: 'Courses and gradebook assignments' },
   { id: 'moodle', icon: 'graduation-cap', detail: 'Enrolled courses and assignments' },
 ];
