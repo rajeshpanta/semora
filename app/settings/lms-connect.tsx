@@ -37,7 +37,14 @@ const HELP: Record<Exclude<LmsProvider, 'google_classroom'>, { url: string; toke
   canvas: {
     url: 'https://school.instructure.com',
     token: 'Canvas access token',
-    note: 'In Canvas, open Account → Settings → Approved Integrations → New Access Token.',
+    note:
+      'Get your token from Canvas on the web (not the mobile app):\n' +
+      '1. Sign in to Canvas in a browser.\n' +
+      '2. Open Account → Settings.\n' +
+      '3. Under “Approved Integrations,” tap “+ New Access Token.”\n' +
+      '4. Name it “Semora,” leave the expiry blank, then Generate Token.\n' +
+      '5. Copy the token and paste it above.\n' +
+      'For the URL, use your school’s Canvas web address — often yourschool.instructure.com.',
   },
   blackboard: {
     url: 'https://learn.school.edu',
