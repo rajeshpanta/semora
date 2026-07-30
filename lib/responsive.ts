@@ -1,4 +1,4 @@
-import { useWindowDimensions } from 'react-native';
+import { Platform, useWindowDimensions } from 'react-native';
 
 // Adaptive-layout breakpoints. Driven by useWindowDimensions so layouts
 // reflow LIVE on rotation AND on iPad Split View resize — the window can be
@@ -10,6 +10,8 @@ import { useWindowDimensions } from 'react-native';
 export const WIDE_BREAKPOINT = 720;
 // Big iPad landscape — room for three columns / very wide content.
 export const XWIDE_BREAKPOINT = 1080;
+export const DESKTOP_SHELL_BREAKPOINT = 980;
+export const WEB_SIDEBAR_WIDTH = 256;
 
 export interface Responsive {
   width: number;
@@ -18,6 +20,8 @@ export interface Responsive {
   /** width >= WIDE_BREAKPOINT — switch single columns to grids. */
   isWide: boolean;
   isXWide: boolean;
+  /** Desktop browser layout with persistent left navigation. */
+  isDesktop: boolean;
   /** Suggested column count for card grids. */
   columns: number;
   /** Max width for a centered content column (wider when there's room). */
@@ -26,18 +30,24 @@ export interface Responsive {
 
 export function useResponsive(): Responsive {
   const { width, height } = useWindowDimensions();
-  const isWide = width >= WIDE_BREAKPOINT;
-  const isXWide = width >= XWIDE_BREAKPOINT;
-  // Narrow stays at the readable 600; wide widens to a still-readable 800
-  // (longer lines hurt forms/text). List screens use `columns` for grids
-  // instead of one very wide column.
-  const contentMaxWidth = isWide ? Math.min(width - 48, 800) : 600;
+  const isDesktop = Platform.OS === 'web' && width >= DESKTOP_SHELL_BREAKPOINT;
+  const availableWidth = isDesktop ? width - WEB_SIDEBAR_WIDTH : width;
+  const isWide = availableWidth >= WIDE_BREAKPOINT;
+  const isXWide = availableWidth >= XWIDE_BREAKPOINT;
+  // Data-heavy browser screens can use a wider canvas, while phone/tablet
+  // layouts and forms retain their established readable measure.
+  const contentMaxWidth = isXWide
+    ? Math.min(availableWidth - 64, 1120)
+    : isWide
+      ? Math.min(availableWidth - 48, 900)
+      : Math.min(availableWidth, 600);
   return {
     width,
     height,
     isLandscape: width > height,
     isWide,
     isXWide,
+    isDesktop,
     columns: isXWide ? 3 : isWide ? 2 : 1,
     contentMaxWidth,
   };

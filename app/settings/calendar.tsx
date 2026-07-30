@@ -228,10 +228,6 @@ export default function CalendarSyncSettings() {
       );
       return;
     }
-    if (Platform.OS === 'web') {
-      Alert.alert('Not Available', 'Calendar export is only available on iOS and Android.');
-      return;
-    }
     if (!selectedSemesterId) {
       Alert.alert('No Semester', 'Please select a semester first before exporting.');
       return;

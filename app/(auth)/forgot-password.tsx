@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, ScrollView, Alert,
+  ActivityIndicator, ScrollView, Alert, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -32,7 +32,10 @@ export default function ForgotPasswordScreen() {
 
   const sendResetEmail = async (target: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(target, {
-      redirectTo: 'semora://auth/reset',
+      redirectTo:
+        Platform.OS === 'web' && typeof window !== 'undefined'
+          ? `${window.location.origin}/reset-password`
+          : 'semora://auth/reset',
     });
     if (error) throw error;
   };

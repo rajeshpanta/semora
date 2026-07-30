@@ -42,6 +42,8 @@ import {
 import { LmsSyncBridge } from '@/components/LmsSyncBridge';
 import { CollaborationSyncBridge } from '@/components/CollaborationSyncBridge';
 import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
+import { WebAppFrame } from '@/components/WebAppFrame';
+import { WebAlertHost } from '@/components/WebAlertHost';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -359,6 +361,12 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       const parsed = Linking.parse(url);
       const path = (parsed.path ?? '').replace(/^\//, '');
       const code = typeof parsed.queryParams?.code === 'string' ? parsed.queryParams.code : null;
+      // Browser OAuth returns to the site's root (`https://host/?code=...`).
+      // Unlike semora:// links, the hostname is the deployment host rather
+      // than "auth", so recognize the root callback explicitly.
+      const isWebOAuthCallback = Platform.OS === 'web' && path === '' && !!code;
+      const isWebPasswordReset =
+        Platform.OS === 'web' && path === 'reset-password' && !!code;
 
       const isCollaborationLink =
         parsed.hostname === 'collaborate' ||
@@ -376,9 +384,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (parsed.hostname !== 'auth') return;
+      if (parsed.hostname !== 'auth' && !isWebOAuthCallback && !isWebPasswordReset) return;
 
-      if (path === 'reset') {
+      if (path === 'reset' || isWebPasswordReset) {
         // Sanity bound — Supabase auth codes are short (~32 chars).
         // Block obviously-malformed payloads before we hand them to
         // exchangeCodeForSession.
@@ -420,7 +428,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (path === 'callback') {
+      if (path === 'callback' || isWebOAuthCallback) {
         // Same sanity bound as the reset path — Supabase auth codes are
         // ~32 chars; a 10MB `?code=` would otherwise be passed straight
         // to exchangeCodeForSession.
@@ -440,6 +448,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           );
           globalRouter.replace('/(auth)/sign-in');
           return;
+        }
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.history.replaceState({}, document.title, window.location.pathname);
         }
         // Success — AuthGate sees the new session and routes to (tabs).
       }
@@ -737,6 +748,7 @@ function RootLayoutNav() {
             <LmsSyncRuntime />
             <CollaborationSyncRuntime />
             <AuthGate>
+              <NavigationFrame>
               <Stack
               screenOptions={{
                 headerBackTitle: 'Back',
@@ -780,13 +792,20 @@ function RootLayoutNav() {
               <Stack.Screen name="share-semester" options={{ presentation: 'modal', headerShown: false }} />
               <Stack.Screen name="paywall" options={{ presentation: 'fullScreenModal', headerShown: false }} />
               </Stack>
+              </NavigationFrame>
             </AuthGate>
             <TaskCompletionCelebration />
+            <WebAlertHost />
           </TaskCompletionFlowProvider>
         </AuthProvider>
       </ThemeProvider>
     </PersistQueryClientProvider>
   );
+}
+
+function NavigationFrame({ children }: { children: React.ReactNode }) {
+  const { session } = useSession();
+  return <WebAppFrame session={session}>{children}</WebAppFrame>;
 }
 
 function OfflineSyncRuntime() {

@@ -39,8 +39,11 @@
     },
     "web": {
       "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "output": "single",
+      "favicon": "./assets/images/favicon.png",
+      "lang": "en",
+      "themeColor": "#6B46C1",
+      "description": "Turn syllabi into an organized semester with deadlines, grades, study plans, flashcards, and focus tools."
     },
     "plugins": [
       "@bacons/apple-targets",

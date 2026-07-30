@@ -13,8 +13,7 @@ import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useEffect, useState } from 'react';
 import Constants from 'expo-constants';
-import { getProducts } from '@/lib/purchases';
-import { isEligibleForIntroOfferIOS } from 'react-native-iap';
+import { getProducts, isEligibleForIntroOffer } from '@/lib/purchases';
 import { getMyCode, getRedemptionCount, inviteLink, applyPendingReferral, syncPromoPro } from '@/lib/referral';
 import { track } from '@/lib/analytics';
 import { GlobalSearchButton } from '@/components/GlobalSearchButton';
@@ -40,7 +39,7 @@ export default function MeScreen() {
       if (p?.monthly?.displayPrice) setMonthlyPrice(p.monthly.displayPrice);
       const groupId = (p?.monthly as any)?.subscriptionInfoIOS?.subscriptionGroupId;
       if (groupId) {
-        isEligibleForIntroOfferIOS(groupId)
+        isEligibleForIntroOffer(groupId)
           .then((ok: boolean) => setTrialEligible(ok === true))
           .catch(() => {});
       }

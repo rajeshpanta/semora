@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import * as Localization from 'expo-localization';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GoogleSignin } from '@/lib/googleSignin';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';

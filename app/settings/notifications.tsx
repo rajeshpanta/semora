@@ -195,6 +195,32 @@ export default function NotificationSettings() {
     );
   }
 
+  if (Platform.OS === 'web') {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
+        <Stack.Screen options={{ title: 'Notifications' }} />
+        <ScrollView
+          contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={[styles.healthCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <View style={[styles.healthIcon, { backgroundColor: colors.brand50 }]}>
+              <FontAwesome name="mobile" size={18} color={colors.brand} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.healthTitle, { color: colors.ink }]}>
+                Deadline reminders live on your iPhone
+              </Text>
+              <Text style={[styles.healthSub, { color: colors.ink3 }]}>
+                The browser app keeps your tasks and preferences in sync, while notification delivery and quiet hours are managed in the Semora iPhone app.
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Notifications' }} />

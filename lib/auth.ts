@@ -1,5 +1,5 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GoogleSignin } from '@/lib/googleSignin';
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
@@ -109,6 +109,25 @@ export async function signInWithApple() {
  * ignore SIGN_IN_CANCELLED.
  */
 export async function signInWithGoogle() {
+  if (Platform.OS === 'web') {
+    const redirectTo =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/`
+        : undefined;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'select_account',
+        },
+      },
+    });
+    if (error) throw error;
+    return;
+  }
+
   configureGoogleOnce();
 
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });

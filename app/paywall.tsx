@@ -13,10 +13,9 @@ import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
-import { getProducts, purchaseProduct, restorePurchases, validateAfterPurchase, PRODUCT_IDS, setupPurchaseListeners, setPurchaseAnalyticsContext } from '@/lib/purchases';
+import { getProducts, purchaseProduct, restorePurchases, validateAfterPurchase, PRODUCT_IDS, setupPurchaseListeners, setPurchaseAnalyticsContext, isEligibleForIntroOffer } from '@/lib/purchases';
 import { rescheduleAllTaskReminders } from '@/lib/notifications';
 import { track } from '@/lib/analytics';
-import { isEligibleForIntroOfferIOS } from 'react-native-iap';
 import { supabase } from '@/lib/supabase';
 
 const FEATURES = [
@@ -65,6 +64,7 @@ export default function PaywallScreen() {
   const colors = useColors();
   const { contentMaxWidth, isXWide } = useResponsive();
   const insets = useSafeAreaInsets();
+  const isWeb = Platform.OS === 'web';
 
   // Reverse-trial entry: opened automatically right after the first scan's
   // "aha". Lead with the free trial (momentum, not a block) and dismiss to
@@ -107,7 +107,7 @@ export default function PaywallScreen() {
         setAnnualSub(products.annual);
         const groupId = (products.monthly as any)?.subscriptionInfoIOS?.subscriptionGroupId;
         if (groupId) {
-          isEligibleForIntroOfferIOS(groupId)
+          isEligibleForIntroOffer(groupId)
             .then((ok: boolean) => setTrialEligible(ok === true))
             .catch(() => {});
         }
@@ -411,6 +411,40 @@ export default function PaywallScreen() {
             ))}
           </View>
 
+          {isWeb ? (
+            <>
+              <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>PRO ON THE WEB</Text>
+              <View style={[styles.webBillingCard, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]}>
+                <View style={[styles.webBillingIcon, { backgroundColor: colors.brand }]}>
+                  <FontAwesome name="mobile" size={20} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.webBillingTitle, { color: colors.ink }]}>
+                    Subscribe in the Semora iPhone app
+                  </Text>
+                  <Text style={[styles.webBillingText, { color: colors.ink2 }]}>
+                    Your Pro access follows your account automatically. If you already subscribed on iPhone, refresh your access here.
+                  </Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={handleRestore}
+                disabled={restoring}
+                activeOpacity={0.85}
+                style={[styles.webRefreshButton, { backgroundColor: colors.brand }]}
+              >
+                {restoring ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <FontAwesome name="refresh" size={13} color="#fff" />
+                    <Text style={styles.webRefreshText}>Refresh Pro access</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
           {/* Plan Selection */}
           <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>CHOOSE YOUR PLAN</Text>
 
@@ -492,6 +526,8 @@ export default function PaywallScreen() {
                 : `${monthlyPrice}/month. Cancel anytime.`
               : `${annualPrice} billed annually. Cancel anytime.`}
           </Text>
+            </>
+          )}
 
           {/* Footer */}
           <View style={styles.footer}>
@@ -649,6 +685,44 @@ const styles = StyleSheet.create({
   finePrint: {
     fontSize: 12, color: COLORS.ink3, textAlign: 'center',
     marginTop: 10, lineHeight: 16,
+  },
+  webBillingCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 18,
+  },
+  webBillingIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webBillingTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  webBillingText: {
+    marginTop: 4,
+    fontSize: 13.5,
+    lineHeight: 20,
+  },
+  webRefreshButton: {
+    minHeight: 48,
+    borderRadius: 14,
+    marginTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  webRefreshText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
 
   // Footer
