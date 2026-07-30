@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link } from 'expo-router';
@@ -238,17 +239,37 @@ export default function SignInScreen() {
                 sign-in-only, for accounts that already exist. */}
             <View style={styles.oauthGroup}>
               {appleAvailable ? (
-                <AppleAuthentication.AppleAuthenticationButton
-                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-                  buttonStyle={
-                    colors.paper === '#FAF9F5' || colors.paper === '#fff'
-                      ? AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-                      : AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-                  }
-                  cornerRadius={18}
-                  style={styles.appleButton}
-                  onPress={handleApple}
-                />
+                Platform.OS === 'web' ? (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="Continue with Apple"
+                    style={[styles.appleWebButton, oauthLoading === 'apple' && styles.buttonDisabled]}
+                    onPress={handleApple}
+                    disabled={oauthLoading !== null}
+                    activeOpacity={0.82}
+                  >
+                    {oauthLoading === 'apple' ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <>
+                        <FontAwesome name="apple" size={20} color="#fff" />
+                        <Text style={styles.appleWebButtonText}>Continue with Apple</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                ) : (
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                    buttonStyle={
+                      colors.paper === '#FAF9F5' || colors.paper === '#fff'
+                        ? AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                        : AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                    }
+                    cornerRadius={18}
+                    style={styles.appleButton}
+                    onPress={handleApple}
+                  />
+                )
               ) : null}
 
               <TouchableOpacity
@@ -621,6 +642,21 @@ const styles = StyleSheet.create({
   appleButton: {
     height: 56,
     width: '100%',
+  },
+  appleWebButton: {
+    flexDirection: 'row',
+    height: 56,
+    width: '100%',
+    backgroundColor: '#000',
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+  appleWebButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
   googleButton: {
     flexDirection: 'row',
