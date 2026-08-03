@@ -4,6 +4,8 @@ import { Faq } from '@/components/Faq';
 import { JsonLd } from '@/components/JsonLd';
 import { faqPageSchema } from '@/lib/schema';
 import { SUPPORT_EMAIL } from '@/lib/semora-facts';
+import { PageSections } from '@/components/PageSections';
+import { getPageContent } from '@/lib/page-content';
 
 export const metadata: Metadata = {
   title: 'Support',
@@ -49,16 +51,22 @@ const SUPPORT_FAQ = [
   },
 ];
 
+
+// The long-form body adds more questions; merge them so the page renders one
+// list and emits a single FAQPage block rather than two.
+const SUPPORT_FAQ_ALL = [...SUPPORT_FAQ, ...(getPageContent('support')?.faq ?? [])];
+
 export default function SupportPage() {
   return (
     <article className={styles.prose}>
-      <JsonLd data={faqPageSchema(SUPPORT_FAQ)} />
+      <JsonLd data={faqPageSchema(SUPPORT_FAQ_ALL)} />
       <h1>Support</h1>
       <p className={styles.subtitle}>We&apos;re here to help you get the most out of Semora.</p>
 
       <h2>Frequently Asked Questions</h2>
-      <Faq items={SUPPORT_FAQ} />
+      <Faq items={SUPPORT_FAQ_ALL} />
 
+      <PageSections content={getPageContent('support')} emitFaq={false} />
       <div className={styles.contactBox}>
         <h2>Still need help?</h2>
         <p>Reach out and we&apos;ll get back to you as soon as possible.</p>

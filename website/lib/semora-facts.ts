@@ -63,9 +63,15 @@ export const PRO_ANNUAL_SAVINGS_PCT = Math.round(
   (1 - PRICING.pro.annual.price / 12 / PRICING.pro.monthly.price) * 100
 );
 
+// The one-semester cap is NOT cosmetic: FREE_SEMESTER_LIMIT = 1 in
+// lib/syllabus.ts is enforced client-side AND by the
+// enforce_free_semester_limit_trigger BEFORE INSERT trigger on
+// public.semesters (migration 010). A free account cannot start a second
+// term at all, so "4 courses per semester" alone reads as if terms roll
+// over — they do not. Do not drop this line.
 export const FREE_FEATURES = [
   '5 syllabus scans per calendar month',
-  'Up to 4 courses per semester',
+  'Up to 4 courses, in one semester',
   'Full deadline and task tracking',
   'Grade tracking with weighted averages',
   'Same-day reminders',
@@ -76,7 +82,7 @@ export const FREE_FEATURES = [
 // app (app/settings/calendar.tsx gates handleExport behind isPro) — do not
 // move it back to FREE_FEATURES without re-checking the app first.
 export const PRO_FEATURES = [
-  'Unlimited syllabus scans and courses',
+  'Unlimited courses and semesters, with no monthly scan cap',
   'Canvas, Blackboard, and Moodle assignment import',
   'Course Spaces — host your own shared course and invite classmates',
   'Smart Plan — an AI-generated study schedule that adapts to your deadlines',

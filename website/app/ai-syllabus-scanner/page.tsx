@@ -7,6 +7,8 @@ import { JsonLd } from '@/components/JsonLd';
 import { ArticleShell } from '@/components/ArticleShell';
 import { faqPageSchema } from '@/lib/schema';
 import { PRO_LABEL } from '@/lib/semora-facts';
+import { PageSections } from '@/components/PageSections';
+import { getPageContent } from '@/lib/page-content';
 
 export const metadata: Metadata = {
   title: 'AI Syllabus Scanner: Turn a Syllabus Photo into a Semester Calendar',
@@ -24,7 +26,7 @@ const FAQ = [
   {
     question: 'How many syllabi can I scan for free?',
     answer:
-      'The free tier includes 5 syllabus scans per calendar month and supports up to 4 courses per semester, with full task tracking and grade tracking included. Calendar sync (device + .ics export) is a Pro feature.',
+      'The free tier includes 5 syllabus scans per calendar month and supports up to 4 courses in one semester, with full task tracking and grade tracking included. Calendar sync (device + .ics export) is a Pro feature.',
   },
   {
     question: 'Does Semora sync with Canvas?',
@@ -56,6 +58,11 @@ const TABLE_ROWS = [
   { feature: 'Share & Streaks', free: '—', pro: 'Included', proOnly: true },
 ];
 
+
+// The long-form body adds more questions; merge them so the page renders one
+// list and emits a single FAQPage block rather than two.
+const FAQ_ALL = [...FAQ, ...(getPageContent('ai-syllabus-scanner')?.faq ?? [])];
+
 export default function AiSyllabusScannerPage() {
   return (
     <ArticleShell
@@ -63,7 +70,7 @@ export default function AiSyllabusScannerPage() {
       ctaSubheading="Photo, PDF, or pasted text — see your semester organized in one snap."
     >
     <article className={styles.prose}>
-      <JsonLd data={faqPageSchema(FAQ)} />
+      <JsonLd data={faqPageSchema(FAQ_ALL)} />
 
       <h1>AI Syllabus Scanner: Turn a Syllabus Photo into a Full Semester Calendar</h1>
       <p className={styles.lede}>
@@ -168,8 +175,9 @@ export default function AiSyllabusScannerPage() {
       </ul>
 
       <h2>Frequently Asked Questions</h2>
-      <Faq items={FAQ} />
+      <Faq items={FAQ_ALL} />
 
+      <PageSections content={getPageContent('ai-syllabus-scanner')} emitFaq={false} />
       <Cta
         heading="Scan your first syllabus and see your semester organized in one snap"
       />

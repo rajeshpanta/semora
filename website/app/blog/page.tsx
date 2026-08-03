@@ -3,6 +3,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import styles from './blog.module.css';
 import { BLOG_POSTS, formatBlogDate } from '@/lib/blog';
+import { PageSections } from '@/components/PageSections';
+import { getPageContent } from '@/lib/page-content';
 
 export const metadata: Metadata = {
   title: 'Blog',
@@ -32,6 +34,7 @@ export default function BlogIndexPage() {
           </Link>
         ))}
       </div>
+      <PageSections content={getPageContent('blog')} />
     </div>
   );
 }

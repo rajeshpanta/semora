@@ -6,14 +6,15 @@ Semora is available on iPhone, iPad, and the web, with your account syncing acro
 
 ## Core features (free)
 
-- AI syllabus scanner: photo or PDF to calendar, 5 scans/month free, unlimited on Pro
-- Grade tracking with weighted averages
+- AI syllabus scanner: photo or PDF to calendar, 5 scans/month free
+- Up to 4 courses, in ONE semester (a free account cannot start a second term; Pro removes both caps)
+- Grade tracking with weighted averages, and semester GPA
 - Same-day reminders
 - Course Spaces: join a shared course a classmate invites you to (hosting your own is Pro)
 
 ## Pro features ($3.99/month or $19.99/year, purchased in the app, applies account-wide including web)
 
-- Unlimited syllabus scans and courses
+- Unlimited courses and semesters, with no monthly scan cap (a fair-use daily ceiling applies)
 - Canvas, Blackboard and Moodle assignment import via a personal access token you generate yourself — no OAuth app review required
 - Course Spaces hosting: share a course with classmates via invite link, deadlines and group assignments sync in real time
 - Smart Plan: AI-generated study schedule that adapts to deadlines

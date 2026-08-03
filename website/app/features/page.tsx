@@ -6,6 +6,8 @@ import styles from './features.module.css';
 import { Reveal } from '@/components/Reveal';
 import { FlashcardIcon, TimerIcon, ChatIcon, PeopleIcon, SparkleIcon } from '@/components/FeatureIcons';
 import { FEATURES, APP_URL, PRICING, getFeature } from '@/lib/semora-facts';
+import { PageSections } from '@/components/PageSections';
+import { getPageContent } from '@/lib/page-content';
 
 export const metadata: Metadata = {
   title: 'Features',
@@ -220,6 +222,7 @@ export default function FeaturesPage() {
           </div>
         </div>
       </div>
+      <PageSections content={getPageContent('features')} />
     </>
   );
 }

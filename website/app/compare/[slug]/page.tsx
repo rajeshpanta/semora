@@ -8,6 +8,7 @@ import { ArticleShell } from '@/components/ArticleShell';
 import { JsonLd } from '@/components/JsonLd';
 import { faqPageSchema, breadcrumbListSchema } from '@/lib/schema';
 import { COMPETITORS, getCompetitor } from '@/lib/competitors';
+import { getCompareExtra } from '@/lib/compare-content';
 
 export function generateStaticParams() {
   return COMPETITORS.map((c) => ({ slug: c.slug }));
@@ -37,13 +38,19 @@ export default async function ComparePage({
   const competitor = getCompetitor(slug);
   if (!competitor) notFound();
 
+  // Extra Semora-side depth for the shorter comparison pages, kept out of
+  // competitors.ts so the fact-checked competitor record there stays intact.
+  const extra = getCompareExtra(slug);
+  const extraSections = [...(competitor.extraSections ?? []), ...(extra?.extraSections ?? [])];
+  const faq = [...competitor.faq, ...(extra?.faq ?? [])];
+
   return (
     <ArticleShell
       ctaHeading="Try it on your own syllabus"
       ctaSubheading={`See how Semora handles your actual courses — free, no credit card.`}
     >
       <article className={styles.wrap}>
-      <JsonLd data={faqPageSchema(competitor.faq)} />
+      <JsonLd data={faqPageSchema(faq)} />
       <JsonLd
         data={breadcrumbListSchema([
           { name: 'Compare', path: '/compare' },
@@ -79,7 +86,7 @@ export default async function ComparePage({
         </p>
       )}
 
-      {competitor.extraSections?.map((section) => (
+      {extraSections.map((section) => (
         <div key={section.heading}>
           <h3>{section.heading}</h3>
           {section.body.map((paragraph, i) => (
@@ -132,7 +139,7 @@ export default async function ComparePage({
       {competitor.extraNote && <p className={styles.note}>{competitor.extraNote}</p>}
 
       <h2>Frequently asked questions</h2>
-      <Faq items={competitor.faq} />
+      <Faq items={faq} />
 
       <Cta
         heading="See your own syllabus turned into a semester plan"

@@ -7,6 +7,8 @@ import { JsonLd } from '@/components/JsonLd';
 import { ArticleShell } from '@/components/ArticleShell';
 import { faqPageSchema } from '@/lib/schema';
 import { PRO_LABEL } from '@/lib/semora-facts';
+import { PageSections } from '@/components/PageSections';
+import { getPageContent } from '@/lib/page-content';
 
 export const metadata: Metadata = {
   title: 'AI Study Planner for College Students',
@@ -29,7 +31,7 @@ const FAQ = [
   {
     question: "Is Semora free, and what's included in Pro?",
     answer:
-      "Semora's free tier includes 5 syllabus scans per calendar month, up to 4 courses per semester, full deadline and grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited scans and courses, Smart Plan, the Workload dashboard, Grade Scale & Forecasting, calendar sync with .ics export, Flashcards, a Focus timer, an AI tutor, Academic Risk alerts, Progress Insights, and Share & Streaks.",
+      "Semora's free tier includes 5 syllabus scans per calendar month, up to 4 courses in one semester, full deadline and grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no monthly scan cap,, Smart Plan, the Workload dashboard, Grade Scale & Forecasting, calendar sync with .ics export, Flashcards, a Focus timer, an AI tutor, Academic Risk alerts, Progress Insights, and Share & Streaks.",
   },
   {
     question: 'Does Semora sync with Canvas or other tools?',
@@ -80,6 +82,11 @@ const TABLE_ROWS = [
   { feature: 'Share & Streaks', free: '—', pro: 'Share a course, referral rewards', proOnly: true },
 ];
 
+
+// The long-form body adds more questions; merge them so the page renders one
+// list and emits a single FAQPage block rather than two.
+const FAQ_ALL = [...FAQ, ...(getPageContent('ai-study-planner-for-college')?.faq ?? [])];
+
 export default function AiStudyPlannerPage() {
   return (
     <ArticleShell
@@ -87,7 +94,7 @@ export default function AiStudyPlannerPage() {
       ctaSubheading="Scan a syllabus and let Smart Plan map out your semester."
     >
     <article className={styles.prose}>
-      <JsonLd data={faqPageSchema(FAQ)} />
+      <JsonLd data={faqPageSchema(FAQ_ALL)} />
       <p className={styles.eyebrow}>Semora</p>
 
       <h1>An AI Study Planner for College Students, Built From Your Syllabus</h1>
@@ -196,8 +203,9 @@ export default function AiStudyPlannerPage() {
       </ul>
 
       <h2>Frequently asked questions</h2>
-      <Faq items={FAQ} />
+      <Faq items={FAQ_ALL} />
 
+      <PageSections content={getPageContent('ai-study-planner-for-college')} emitFaq={false} />
       <Cta
         heading="Get your semester organized in one snap"
         subheading="Scan a syllabus and see your deadlines, grades, and schedule laid out automatically."

@@ -7,6 +7,8 @@ import { JsonLd } from '@/components/JsonLd';
 import { ArticleShell } from '@/components/ArticleShell';
 import { faqPageSchema } from '@/lib/schema';
 import { PRO_LABEL } from '@/lib/semora-facts';
+import { PageSections } from '@/components/PageSections';
+import { getPageContent } from '@/lib/page-content';
 
 export const metadata: Metadata = {
   title: 'Canvas Deadline Tracker App — Grades, Reminders & Study Planning',
@@ -29,7 +31,7 @@ const FAQ = [
   {
     question: 'Is Semora free to use alongside Canvas?',
     answer:
-      'Partly. Importing assignments from Canvas is a Pro feature, but the free tier covers the syllabus side of the same job — and you can paste Canvas assignment text straight into the scanner. The free tier includes 5 syllabus scans per calendar month, up to 4 courses per semester, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited scans and courses plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
+      'Partly. Importing assignments from Canvas is a Pro feature, but the free tier covers the syllabus side of the same job — and you can paste Canvas assignment text straight into the scanner. The free tier includes 5 syllabus scans per calendar month, up to 4 courses in one semester, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no monthly scan cap, plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
   },
   {
     question: 'Does Semora work on iPhone, iPad, and web?',
@@ -65,6 +67,11 @@ const TABLE_ROWS = [
   { feature: 'Share & Streaks', free: '—', pro: 'Included', proOnly: true },
 ];
 
+
+// The long-form body adds more questions; merge them so the page renders one
+// list and emits a single FAQPage block rather than two.
+const FAQ_ALL = [...FAQ, ...(getPageContent('canvas-deadline-tracker')?.faq ?? [])];
+
 export default function CanvasDeadlineTrackerPage() {
   return (
     <ArticleShell
@@ -72,7 +79,7 @@ export default function CanvasDeadlineTrackerPage() {
       ctaSubheading="No OAuth wait — just a personal access token you generate yourself."
     >
     <article className={styles.prose}>
-      <JsonLd data={faqPageSchema(FAQ)} />
+      <JsonLd data={faqPageSchema(FAQ_ALL)} />
       <p className={styles.eyebrow}>Canvas + Semora</p>
 
       <h1>A Canvas Deadline Tracker App That Adds Grades, Reminders, and an Actual Study Plan</h1>
@@ -195,8 +202,9 @@ export default function CanvasDeadlineTrackerPage() {
       </p>
 
       <h2>FAQ</h2>
-      <Faq items={FAQ} />
+      <Faq items={FAQ_ALL} />
 
+      <PageSections content={getPageContent('canvas-deadline-tracker')} emitFaq={false} />
       <Cta
         heading="Bring your Canvas assignments into one organized view"
         subheading="Deadlines, grades, and reminders together."

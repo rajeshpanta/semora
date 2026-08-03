@@ -5,6 +5,8 @@ import { Reveal } from '@/components/Reveal';
 import { Cta } from '@/components/Cta';
 import { COMPETITORS } from '@/lib/competitors';
 import { APP_URL } from '@/lib/semora-facts';
+import { PageSections } from '@/components/PageSections';
+import { getPageContent } from '@/lib/page-content';
 
 export const metadata: Metadata = {
   title: 'Compare Semora',
@@ -56,6 +58,7 @@ export default function CompareIndexPage() {
           subheading="Scan a syllabus and get your deadlines, grades, and schedule organized in one snap — free to start."
         />
       </section>
+      <PageSections content={getPageContent('compare')} />
     </>
   );
 }

@@ -5,6 +5,8 @@ import { Cta } from '@/components/Cta';
 import { JsonLd } from '@/components/JsonLd';
 import { PricingCards } from '@/components/PricingCards';
 import { softwareApplicationSchema, faqPageSchema } from '@/lib/schema';
+import { PageSections } from '@/components/PageSections';
+import { getPageContent } from '@/lib/page-content';
 
 export const metadata: Metadata = {
   title: 'Pricing',
@@ -16,7 +18,7 @@ const PRICING_FAQ = [
   {
     question: 'Is Semora free?',
     answer:
-      'Yes. The free tier includes 5 syllabus scans per calendar month, up to 4 courses per semester, full deadline and grade tracking, and same-day reminders — no credit card required. Calendar sync (device + .ics export) is a Pro feature.',
+      'Yes. The free tier includes 5 syllabus scans per calendar month, up to 4 courses in one semester, full deadline and grade tracking, and same-day reminders — no credit card required. Calendar sync (device + .ics export) is a Pro feature.',
   },
   {
     question: 'How do I upgrade to Pro?',
@@ -35,11 +37,16 @@ const PRICING_FAQ = [
   },
 ];
 
+
+// The long-form body adds more questions; merge them so the page renders one
+// list and emits a single FAQPage block rather than two.
+const PRICING_FAQ_ALL = [...PRICING_FAQ, ...(getPageContent('pricing')?.faq ?? [])];
+
 export default function PricingPage() {
   return (
     <div className={styles.wrap}>
       <JsonLd data={softwareApplicationSchema()} />
-      <JsonLd data={faqPageSchema(PRICING_FAQ)} />
+      <JsonLd data={faqPageSchema(PRICING_FAQ_ALL)} />
 
       <header className={styles.head}>
         <h1>Simple pricing</h1>
@@ -50,9 +57,10 @@ export default function PricingPage() {
 
       <div style={{ maxWidth: 720, margin: '64px auto' }}>
         <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Pricing questions</h2>
-        <Faq items={PRICING_FAQ} />
+        <Faq items={PRICING_FAQ_ALL} />
       </div>
 
+      <PageSections content={getPageContent('pricing')} emitFaq={false} />
       <Cta
         heading="Start free today"
         subheading="Scan your first syllabus in under a minute — free, no credit card."

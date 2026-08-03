@@ -173,7 +173,7 @@ const HOME_FAQ = [
   {
     question: 'Is Semora actually free?',
     answer:
-      'Yes, and there is no credit card. The free tier gives you five syllabus scans per calendar month, up to four courses per semester, full deadline and task tracking, grade tracking with weighted averages, same-day reminders, and free access to any Course Space a classmate invites you into. If you are taking four classes, that is a whole semester covered.',
+      'Yes, and there is no credit card. The free tier gives you five syllabus scans per calendar month, up to four courses in one semester, full deadline and task tracking, grade tracking with weighted averages, same-day reminders, and free access to any Course Space a classmate invites you into. If you are taking four classes, that is a whole semester covered.',
   },
   {
     question: 'What does Pro cost, and where do I buy it?',
