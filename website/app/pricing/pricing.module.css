@@ -1,0 +1,21 @@
+.wrap {
+  max-width: var(--max-width-wide);
+  margin: 0 auto;
+  padding: 56px 20px 96px;
+}
+
+.head {
+  max-width: 620px;
+  margin: 0 auto 48px;
+  text-align: center;
+}
+
+.head h1 {
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  margin-bottom: 12px;
+}
+
+.head p {
+  color: var(--ink2);
+  margin: 0;
+}

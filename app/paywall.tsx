@@ -535,11 +535,11 @@ export default function PaywallScreen() {
               <Text style={[styles.footerLink, { color: colors.ink3 }]}>{restoring ? 'Restoring...' : 'Restore'}</Text>
             </TouchableOpacity>
             <Text style={[styles.footerDot, { color: colors.ink3 }]}> · </Text>
-            <TouchableOpacity onPress={() => Linking.openURL('https://rajeshpanta.github.io/semora/terms.html')}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://semoraai.com/terms')}>
               <Text style={[styles.footerLink, { color: colors.ink3 }]}>Terms</Text>
             </TouchableOpacity>
             <Text style={[styles.footerDot, { color: colors.ink3 }]}> · </Text>
-            <TouchableOpacity onPress={() => Linking.openURL('https://rajeshpanta.github.io/semora/privacy.html')}>
+            <TouchableOpacity onPress={() => Linking.openURL('https://semoraai.com/privacy')}>
               <Text style={[styles.footerLink, { color: colors.ink3 }]}>Privacy</Text>
             </TouchableOpacity>
           </View>

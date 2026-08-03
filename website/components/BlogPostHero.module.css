@@ -1,0 +1,79 @@
+.band {
+  background: var(--ink-deep);
+  color: #fff;
+  border-radius: 24px;
+  padding: 40px 32px;
+  margin-bottom: 40px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.band::before {
+  content: '';
+  position: absolute;
+  inset: -40% -20% auto auto;
+  width: 320px;
+  height: 320px;
+  background: radial-gradient(circle, var(--glow-mid) 0%, transparent 70%);
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+@media (min-width: 600px) {
+  .band {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 48px;
+  }
+}
+
+.text {
+  position: relative;
+  max-width: 480px;
+}
+
+.eyebrow {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--glow-light);
+  background: rgba(155, 122, 232, 0.16);
+  border: 1px solid rgba(201, 184, 255, 0.3);
+  padding: 5px 12px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+}
+
+.title {
+  color: #fff;
+  font-size: clamp(1.6rem, 4vw, 2.1rem);
+  margin: 0 0 12px;
+  line-height: 1.2;
+}
+
+.date {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  margin: 0;
+}
+
+.imageWrap {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.imageWrap img {
+  border-radius: 24px;
+  box-shadow: 0 20px 40px -14px rgba(0, 0, 0, 0.45);
+  width: 100%;
+  max-width: 168px;
+  height: auto;
+}

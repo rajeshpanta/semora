@@ -1,0 +1,101 @@
+.shell {
+  display: grid;
+  grid-template-columns: minmax(0, var(--max-width)) 300px;
+  justify-content: center;
+  gap: 56px;
+  max-width: calc(var(--max-width) + 356px);
+  margin: 0 auto;
+  padding: 0 20px 96px;
+  align-items: start;
+}
+
+/* The nested <article className={prose}> keeps its own typography, but the
+   shell now owns the outer width/centering — neutralize those so the article
+   fills its grid column instead of re-centering inside it. */
+.shell > .main :global(.prose),
+.shell > .main :global(.wrap) {
+  max-width: none;
+  margin: 0;
+  padding: 56px 0 0;
+}
+
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 56px;
+  position: sticky;
+  top: 32px;
+}
+
+.railCta {
+  background: linear-gradient(155deg, var(--ink-deep) 0%, #3a2a5c 100%);
+  border-radius: 16px;
+  padding: 22px;
+  position: relative;
+  overflow: hidden;
+}
+
+.railCta::before {
+  content: '';
+  position: absolute;
+  inset: -30% -30% auto auto;
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(circle, var(--glow-mid) 0%, transparent 70%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.railCtaHeading {
+  color: #fff;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0 0 8px;
+  position: relative;
+}
+
+.railCtaSub {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13.5px;
+  line-height: 1.5;
+  margin: 0 0 16px;
+  position: relative;
+}
+
+.railCtaBtn {
+  display: block;
+  text-align: center;
+  background: #fff;
+  color: var(--ink-deep);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  position: relative;
+  transition: background 0.15s ease;
+}
+
+.railCtaBtn:hover {
+  background: var(--glow-light);
+}
+
+@media (max-width: 959px) {
+  .shell {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .shell > .main :global(.prose),
+  .shell > .main :global(.wrap) {
+    padding-top: 40px;
+  }
+
+  .rail {
+    position: static;
+    padding-top: 0;
+    margin: 32px 0 40px;
+  }
+}

@@ -247,12 +247,12 @@ export default function SettingsScreen() {
           <SettingsRow
             icon="file-text-o"
             label="Terms of Service"
-            onPress={() => Linking.openURL('https://rajeshpanta.github.io/semora/terms.html')}
+            onPress={() => Linking.openURL('https://semoraai.com/terms')}
           />
           <SettingsRow
             icon="shield"
             label="Privacy Policy"
-            onPress={() => Linking.openURL('https://rajeshpanta.github.io/semora/privacy.html')}
+            onPress={() => Linking.openURL('https://semoraai.com/privacy')}
             last
           />
         </View>
