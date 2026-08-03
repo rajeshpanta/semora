@@ -55,7 +55,7 @@ const STEPS = [
   {
     n: '03',
     title: 'Plan around it',
-    body: 'Confirmed deadlines become tracked tasks with same-day reminders, and grades roll up into a weighted average using the scale read off your syllabus. Share the course with classmates through an invite link, or on Pro connect Canvas with a token you generate yourself. Everything syncs to iPad and the web too.',
+    body: 'Confirmed deadlines become tracked tasks with same-day reminders, and grades roll up into a weighted average using the scale read off your syllabus. On Pro you can host a shared Course Space for classmates or connect Canvas with a token you generate yourself. Everything syncs to iPad and the web too.',
   },
 ];
 
@@ -151,11 +151,11 @@ const PILLARS = [
   },
   {
     title: 'Course Spaces',
-    body: 'Share a course with your classmates through an invite link. Shared deadlines and group assignments sync in real time for everyone in the space, so when one person catches the due date the professor only said out loud in lecture, everyone else has it too. No one is retyping a group spreadsheet at midnight.',
+    body: 'Share a course with your classmates through an invite link (hosting is part of Pro; joining is free for everyone you invite). Shared deadlines and group assignments sync in real time for everyone in the space, so when one person catches the due date the professor only said out loud in lecture, everyone else has it too. No one is retyping a group spreadsheet at midnight.',
     points: [
       'Invite classmates with a single link',
       'Shared deadlines and group assignments update for the whole space',
-      'Free for you and for everyone you invite',
+      'Hosting a space is Pro — joining one you are invited to is always free',
     ],
   },
   {
@@ -173,7 +173,7 @@ const HOME_FAQ = [
   {
     question: 'Is Semora actually free?',
     answer:
-      'Yes, and there is no credit card. The free tier gives you five syllabus scans per calendar month, up to four courses per semester, full deadline and task tracking, grade tracking with weighted averages, same-day reminders, and Course Spaces for sharing a course with classmates. If you are taking four classes, that is a whole semester covered.',
+      'Yes, and there is no credit card. The free tier gives you five syllabus scans per calendar month, up to four courses per semester, full deadline and task tracking, grade tracking with weighted averages, same-day reminders, and free access to any Course Space a classmate invites you into. If you are taking four classes, that is a whole semester covered.',
   },
   {
     question: 'What does Pro cost, and where do I buy it?',
@@ -208,7 +208,7 @@ const HOME_FAQ = [
   {
     question: 'Can I share a course with classmates?',
     answer:
-      'Yes, on the free tier. Course Spaces let you share a course through an invite link. Shared deadlines and group assignments sync in real time for everyone in the space — so when the group project date moves, it moves for all of you, not just whoever caught the announcement in class.',
+      'Yes. Course Spaces let you share a course through an invite link, and shared deadlines and group assignments sync in real time for everyone in the space — so when the group project date moves, it moves for all of you. Hosting a space is part of Pro; joining one a classmate invites you into is free, with no time limit.',
   },
   {
     question: 'What can the AI Tutor actually see?',

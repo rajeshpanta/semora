@@ -69,7 +69,7 @@ export const FREE_FEATURES = [
   'Full deadline and task tracking',
   'Grade tracking with weighted averages',
   'Same-day reminders',
-  'Course Spaces — share a course with classmates via an invite link',
+  'Course Spaces — join a course a classmate shares with you',
 ] as const;
 
 // Calendar sync (device calendar + .ics export) is Pro-only in the shipping
@@ -78,6 +78,7 @@ export const FREE_FEATURES = [
 export const PRO_FEATURES = [
   'Unlimited syllabus scans and courses',
   'Canvas, Blackboard, and Moodle assignment import',
+  'Course Spaces — host your own shared course and invite classmates',
   'Smart Plan — an AI-generated study schedule that adapts to your deadlines',
   'Workload dashboard — see crunch weeks and exam-dense stretches coming',
   'AI-generated flashcards from your syllabus and notes, with spaced repetition',
@@ -165,10 +166,15 @@ export const FEATURES: FeatureFact[] = [
     slug: 'collaboration',
     name: 'Course Spaces',
     shortDescription:
-      'Share a course with classmates via an invite link, with deadlines and group assignments syncing in real time.',
-    tier: 'free',
+      'Host a shared course and invite classmates — deadlines and group assignments sync in real time. Joining is free.',
+    // Pro covers HOSTING. Joining a space someone invites you to is free and
+    // always will be — migration 045_gate_collaboration_create.sql gates only
+    // create_course_collaboration behind is_pro(), and share-course returns
+    // 402 PRO_REQUIRED for sending. Do not mark this 'free': a free user who
+    // installs expecting to share a course hits a paywall.
+    tier: 'pro',
     description:
-      'Course Spaces let you share a course with classmates through an invite link. Deadlines and group assignments sync in real time, so everyone in the space sees the same up-to-date calendar.',
+      'Course Spaces let you share a course with classmates through an invite link, with deadlines and group assignments syncing in real time so everyone sees the same up-to-date calendar. Hosting a space is part of Pro; joining one a classmate invites you to is free, with no time limit and no Pro required.',
   },
   {
     slug: 'canvas-sync',
