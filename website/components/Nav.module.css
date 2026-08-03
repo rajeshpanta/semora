@@ -7,92 +7,6 @@
   border-bottom: 1px solid var(--border);
 }
 
-.menuButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
-  flex-shrink: 0;
-}
-
-@media (min-width: 720px) {
-  .menuButton {
-    display: none;
-  }
-}
-
-.menuIcon {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.bar {
-  display: block;
-  width: 20px;
-  height: 2px;
-  background: var(--ink);
-  border-radius: 2px;
-  transition: transform 0.25s ease, opacity 0.25s ease;
-}
-
-.menuIcon[data-open='true'] .bar:nth-child(1) {
-  transform: translateY(7px) rotate(45deg);
-}
-
-.menuIcon[data-open='true'] .bar:nth-child(2) {
-  opacity: 0;
-}
-
-.menuIcon[data-open='true'] .bar:nth-child(3) {
-  transform: translateY(-7px) rotate(-45deg);
-}
-
-.mobilePanel {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-  padding: 8px 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  box-shadow: 0 16px 32px -12px rgba(28, 27, 31, 0.18);
-}
-
-@media (min-width: 720px) {
-  .mobilePanel {
-    display: none;
-  }
-}
-
-.mobileLink {
-  color: var(--ink);
-  text-decoration: none;
-  font-size: 16px;
-  font-weight: 500;
-  padding: 14px 4px;
-  border-bottom: 1px solid var(--border);
-}
-
-.mobileCta {
-  margin-top: 16px;
-  background: var(--ink);
-  color: #fff;
-  text-decoration: none;
-  font-weight: 600;
-  text-align: center;
-  padding: 13px;
-  border-radius: 999px;
-}
-
 .inner {
   max-width: var(--max-width-wide);
   margin: 0 auto;
@@ -111,6 +25,8 @@
   margin-right: auto;
 }
 
+/* Holds "Get the app" only. It collapses on phones, where the hero's own
+   App Store button is already the first thing on screen. */
 .links {
   display: none;
   gap: 24px;

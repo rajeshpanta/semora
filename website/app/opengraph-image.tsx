@@ -1,8 +1,17 @@
 import { ImageResponse } from 'next/og';
+import { SITE_NAME, TAGLINE } from '@/lib/semora-facts';
 
-export const OG_SIZE = { width: 1200, height: 630 };
+/**
+ * Root-level OG image. Next.js applies this to every route that doesn't
+ * define its own, which covers the whole site — so a link to any page
+ * unfurls with real branding instead of the blank card that a bare
+ * `twitter:card: summary_large_image` produces on its own.
+ */
+export const alt = `${SITE_NAME} — ${TAGLINE}`;
+export const size = { width: 1200, height: 630 };
+export const contentType = 'image/png';
 
-export function generateBlogOgImage(title: string) {
+export default function OpengraphImage() {
   return new ImageResponse(
     (
       <div
@@ -26,25 +35,35 @@ export function generateBlogOgImage(title: string) {
             letterSpacing: 3,
             textTransform: 'uppercase',
             color: '#C9B8FF',
-            marginBottom: 36,
+            marginBottom: 32,
           }}
         >
-          SEMORA BLOG
+          {SITE_NAME}
         </div>
         <div
           style={{
             display: 'flex',
-            fontSize: 58,
+            fontSize: 68,
             fontWeight: 700,
             color: '#FFFFFF',
-            lineHeight: 1.18,
+            lineHeight: 1.15,
             maxWidth: 980,
           }}
         >
-          {title}
+          {TAGLINE}
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            fontSize: 30,
+            color: 'rgba(255,255,255,0.66)',
+            marginTop: 32,
+          }}
+        >
+          AI syllabus scanner for college — iPhone, iPad, and web
         </div>
       </div>
     ),
-    OG_SIZE
+    size
   );
 }

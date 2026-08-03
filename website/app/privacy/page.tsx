@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: 'Privacy Policy',
   description: 'How Semora collects, uses, and safeguards your information.',
   alternates: { canonical: '/privacy' },
+  openGraph: { url: '/privacy' },
 };
 
 export default function PrivacyPage() {

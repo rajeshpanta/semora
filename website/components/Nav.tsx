@@ -1,15 +1,13 @@
 import Link from 'next/link';
 import styles from './Nav.module.css';
-import { MobileNavToggle } from './MobileNavToggle';
-import { SITE_NAME, APP_URL } from '@/lib/semora-facts';
+import { SITE_NAME, APP_SIGNIN_URL, APP_STORE_URL } from '@/lib/semora-facts';
 
-const LINKS = [
-  { href: '/features', label: 'Features' },
-  { href: '/compare', label: 'Compare' },
-  { href: '/pricing', label: 'Pricing' },
-  { href: '/blog', label: 'Blog' },
-];
-
+/**
+ * Single-page site: there are no sections to navigate to, so the nav is just
+ * the wordmark plus the two things we actually want people to do. "Get the
+ * app" collapses on small screens (where the App Store link is one tap away
+ * in the hero anyway); "Try it for free" always stays visible.
+ */
 export function Nav() {
   return (
     <header className={styles.header}>
@@ -18,16 +16,13 @@ export function Nav() {
           {SITE_NAME}
         </Link>
         <nav className={styles.links}>
-          {LINKS.map((link) => (
-            <Link key={link.href} href={link.href} className={styles.link}>
-              {link.label}
-            </Link>
-          ))}
+          <a href={APP_STORE_URL} className={styles.link}>
+            Get the app
+          </a>
         </nav>
-        <Link href={APP_URL} className={styles.cta}>
-          Get started
+        <Link href={APP_SIGNIN_URL} className={styles.cta}>
+          Try it for free
         </Link>
-        <MobileNavToggle links={LINKS} ctaHref={APP_URL} ctaLabel="Get started" />
       </div>
     </header>
   );

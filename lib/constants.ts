@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 // Caps main content width so screens read well on iPad (portrait, full
 // screen) instead of stretching edge-to-edge. Applied to each screen's
 // scroll/content container via `width:'100%', maxWidth, alignSelf:'center'`.
@@ -83,6 +85,16 @@ export const FONTS = {
   displayItalic: 'Fraunces_400Regular_Italic',
 } as const;
 
+// Soft elevation for card surfaces — desktop web only. Native keeps its flat
+// hairline-border look (shadowColor/elevation weren't tuned for these card
+// shapes there); spread into a card's style object, e.g.
+// `{ ...cardStyle, ...WEB_CARD_SHADOW }`. Skip it on any element that also
+// sets `overflow: 'hidden'` — that clips a same-node box-shadow to nothing.
+export const WEB_CARD_SHADOW = Platform.select({
+  web: { boxShadow: '0 1px 2px rgba(17,17,17,0.03), 0 10px 28px rgba(17,17,17,0.05)' },
+  default: {},
+}) as object;
+
 export const DEFAULT_GRADE_SCALE = [
   { letter: 'A', min: 90 },
   { letter: 'B', min: 80 },
@@ -98,7 +110,7 @@ export function calculateGrade(
   const allWithWeight = tasks.filter((t) => t.weight != null);
   const graded = allWithWeight.filter((t) => t.score != null);
   const allGraded = tasks.filter((t) => t.score != null);
-  const sorted = [...scale].sort((a, b) => b.min - a.min);
+  const sorted = [...(scale?.length ? scale : DEFAULT_GRADE_SCALE)].sort((a, b) => b.min - a.min);
 
   // Total weight across ALL tasks (graded + ungraded)
   const weightTotal = allWithWeight

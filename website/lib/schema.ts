@@ -1,6 +1,4 @@
 import type {
-  Article,
-  BreadcrumbList,
   FAQPage,
   Organization,
   SoftwareApplication,
@@ -65,39 +63,3 @@ export function faqPageSchema(items: { question: string; answer: string }[]): Wi
   };
 }
 
-export function articleSchema(post: {
-  title: string;
-  description: string;
-  slug: string;
-  datePublished: string;
-  dateModified?: string;
-}): WithContext<Article> {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Article',
-    headline: post.title,
-    description: post.description,
-    url: `${SITE_URL}/blog/${post.slug}`,
-    datePublished: post.datePublished,
-    dateModified: post.dateModified ?? post.datePublished,
-    author: {
-      '@type': 'Organization',
-      name: SITE_NAME,
-    },
-  };
-}
-
-export function breadcrumbListSchema(
-  items: { name: string; path: string }[]
-): WithContext<BreadcrumbList> {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: items.map((item, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      name: item.name,
-      item: `${SITE_URL}${item.path}`,
-    })),
-  };
-}

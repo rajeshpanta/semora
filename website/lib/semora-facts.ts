@@ -24,6 +24,10 @@ export const APP_STORE_URL = 'https://apps.apple.com/us/app/semora-ai-syllabus-s
 // single edit fixes every "Get started" button at once.
 export const APP_URL = 'https://app.semoraai.com';
 
+// "Try it for free" sends people straight to the sign-in screen rather than
+// APP_URL's /welcome splash — one less tap between the homepage and an account.
+export const APP_SIGNIN_URL = `${APP_URL}/sign-in`;
+
 // Matches docs/support.html's existing contact-box mailto — semora.app
 // belongs to an unrelated company, so there is no @semora.app inbox.
 export const SUPPORT_EMAIL = 'rajesh.panta08@gmail.com';
@@ -45,11 +49,6 @@ export const PRICING = {
       'Pro is purchased in the app and applies to your whole account, including web.',
   },
 } as const;
-
-// "Pro ($3.99/month or $19.99/year)" — used anywhere a table/header needs
-// the full price inline instead of just the tier name, so monthly AND
-// annual both stay visible without retyping the figures.
-export const PRO_LABEL = `Pro (${PRICING.pro.monthly.priceLabel} or ${PRICING.pro.annual.priceLabel})`;
 
 // Derived once here so the pricing toggle (and anywhere else that needs the
 // per-month-when-billed-annually figure or the savings callout) never
@@ -175,7 +174,3 @@ export const FEATURES: FeatureFact[] = [
       "Semora syncs assignments from Canvas using a personal access token you generate yourself in Canvas's own settings, rather than an OAuth connection that depends on your school's IT department approving a third-party app review.",
   },
 ];
-
-export function getFeature(slug: string): FeatureFact | undefined {
-  return FEATURES.find((f) => f.slug === slug);
-}

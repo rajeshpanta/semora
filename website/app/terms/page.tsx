@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: 'Terms of Service',
   description: 'The terms that govern your use of Semora.',
   alternates: { canonical: '/terms' },
+  openGraph: { url: '/terms' },
 };
 
 export default function TermsPage() {

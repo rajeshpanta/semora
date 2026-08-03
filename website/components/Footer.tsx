@@ -1,7 +1,12 @@
 import Link from 'next/link';
 import styles from './Footer.module.css';
-import { SITE_NAME, TAGLINE, SUPPORT_EMAIL } from '@/lib/semora-facts';
-import { COMPETITORS } from '@/lib/competitors';
+import {
+  SITE_NAME,
+  TAGLINE,
+  SUPPORT_EMAIL,
+  APP_SIGNIN_URL,
+  APP_STORE_URL,
+} from '@/lib/semora-facts';
 
 export function Footer() {
   return (
@@ -13,20 +18,14 @@ export function Footer() {
         </div>
         <div className={styles.cols}>
           <div>
-            <p className={styles.heading}>Product</p>
-            <Link href="/features">Features</Link>
-            <Link href="/pricing">Pricing</Link>
-            <Link href="/blog">Blog</Link>
+            <p className={styles.heading}>Get Semora</p>
+            <Link href={APP_SIGNIN_URL}>Try it for free</Link>
+            <a href={APP_STORE_URL}>Download on the App Store</a>
           </div>
           <div>
-            <p className={styles.heading}>Compare</p>
-            {COMPETITORS.map((c) => (
-              <Link key={c.slug} href={`/compare/${c.slug}`}>
-                vs {c.name}
-              </Link>
-            ))}
-          </div>
-          <div>
+            {/* Privacy and Terms are linked from inside the shipping iOS app
+                (app/settings, app/paywall, app/welcome) and are required to be
+                publicly reachable — do not remove these routes. */}
             <p className={styles.heading}>Company</p>
             <Link href="/support">Support</Link>
             <Link href="/privacy">Privacy</Link>

@@ -9,6 +9,7 @@ export const metadata: Metadata = {
   title: 'Support',
   description: "Answers to common questions about using Semora, plus how to reach us directly.",
   alternates: { canonical: '/support' },
+  openGraph: { url: '/support' },
 };
 
 const SUPPORT_FAQ = [

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import styles from './PricingCards.module.css';
 import {
   PRICING,
@@ -11,9 +10,9 @@ import {
   PRO_ANNUAL_SAVINGS_PCT,
 } from '@/lib/semora-facts';
 
-export function PricingCards({ proFeatureLimit }: { proFeatureLimit?: number }) {
+export function PricingCards() {
   const [plan, setPlan] = useState<'monthly' | 'annual'>('annual');
-  const proFeatures = proFeatureLimit ? PRO_FEATURES.slice(0, proFeatureLimit) : PRO_FEATURES;
+  const proFeatures = PRO_FEATURES;
 
   return (
     <div className={styles.wrap}>
@@ -81,12 +80,6 @@ export function PricingCards({ proFeatureLimit }: { proFeatureLimit?: number }) 
       </div>
 
       <p className={styles.purchaseNote}>{PRICING.pro.purchaseNote}</p>
-
-      {proFeatureLimit && (
-        <div className={styles.moreLink}>
-          <Link href="/pricing">See full pricing details</Link>
-        </div>
-      )}
     </div>
   );
 }

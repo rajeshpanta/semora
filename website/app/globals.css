@@ -39,6 +39,10 @@ html,
 body {
   padding: 0;
   margin: 0;
+  /* Last-resort guard so a single mis-sized child can never make the whole
+     page pan sideways on a phone. `clip` (not `hidden`) keeps position:sticky
+     working inside — `hidden` would silently break the sticky FAQ aside. */
+  overflow-x: clip;
   background: var(--bg);
   color: var(--ink);
   font-family:
