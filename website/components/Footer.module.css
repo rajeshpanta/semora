@@ -21,7 +21,7 @@
 }
 
 .tagline {
-  color: var(--ink3);
+  color: var(--ink-muted);
   font-size: 14px;
   max-width: 240px;
   margin: 0;
@@ -50,7 +50,7 @@
 }
 
 .heading {
-  color: var(--ink3);
+  color: var(--ink-muted);
   font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
@@ -61,6 +61,6 @@
 .copyright {
   max-width: var(--max-width-wide);
   margin: 40px auto 0;
-  color: var(--ink3);
+  color: var(--ink-muted);
   font-size: 13px;
 }

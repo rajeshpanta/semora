@@ -66,8 +66,9 @@ type DeepDive = {
   lead: string;
   bullets: string[];
   kicker?: string;
-  image: string;
-  alt: string;
+  /** Omitted when no screenshot honestly represents the section. */
+  image?: string;
+  alt?: string;
   flip?: boolean;
 };
 
@@ -128,8 +129,12 @@ const DEEP_DIVES: DeepDive[] = [
       'The AI Tutor answers from your syllabus, your live deadlines and your notes — and cites what it used.',
       'It pulls dates only from tracked tasks, never invents one, and says plainly when something is outside your material.',
     ],
-    image: '/screenshots/go-pro.png',
-    alt: 'Semora Pro screen showing unlimited scans, smart plans and grade forecasts',
+    // Deliberately no screenshot. The only Pro artwork available
+    // (go-pro.png) advertises "Try 7 days free" unconditionally, but the
+    // intro offer is monthly-plan-only and gated on Apple-ID eligibility
+    // (lib/purchases.ts isEligibleForIntroOffer) — re-subscribers do not
+    // qualify. Showing it here would promise a trial the payment sheet may
+    // refuse to honour.
     flip: true,
   },
 ];
@@ -331,27 +336,37 @@ export default function Home() {
         const body = (
           <div className={styles.inner}>
             <Reveal>
-              <div className={`${styles.split} ${f.flip ? styles.splitFlip : ''}`}>
+              <div
+                className={[
+                  styles.split,
+                  f.flip ? styles.splitFlip : '',
+                  f.image ? '' : styles.splitWide,
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
                 <div className={styles.splitCopy}>
                   <span className={styles.label}>{f.eyebrow}</span>
                   <h2 className={styles.splitHeading}>{f.heading}</h2>
                   <p className={styles.lead}>{f.lead}</p>
-                  <ul className={styles.checks}>
+                  <ul className={`${styles.checks} ${f.image ? '' : styles.checksTwoUp}`}>
                     {f.bullets.map((b) => (
                       <li key={b}>{b}</li>
                     ))}
                   </ul>
                   {f.kicker && <p className={styles.kicker}>{f.kicker}</p>}
                 </div>
-                <div className={styles.splitMedia}>
-                  <Image
-                    src={f.image}
-                    alt={f.alt}
-                    width={296}
-                    height={640}
-                    className={styles.shot}
-                  />
-                </div>
+                {f.image && f.alt && (
+                  <div className={styles.splitMedia}>
+                    <Image
+                      src={f.image}
+                      alt={f.alt}
+                      width={296}
+                      height={640}
+                      className={styles.shot}
+                    />
+                  </div>
+                )}
               </div>
             </Reveal>
           </div>

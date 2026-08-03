@@ -372,6 +372,23 @@
   min-width: 0;
 }
 
+/* A deep-dive with no honest screenshot to show goes full width and runs its
+   bullets in two columns, so losing the media column doesn't leave a hole. */
+@media (min-width: 900px) {
+  .splitWide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .splitWide .lead {
+    max-width: 74ch;
+  }
+
+  .checksTwoUp {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: clamp(28px, 4vw, 56px);
+  }
+}
+
 .splitHeading {
   font-size: clamp(1.6rem, 4.2vw, 2.6rem);
   line-height: 1.14;

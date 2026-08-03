@@ -7,6 +7,10 @@
   --ink: #1c1b1f;
   --ink2: #55555c;
   --ink3: #8c8b94;
+  /* --ink3 measures 3.20:1 on --bg, which fails WCAG AA (4.5:1) for normal
+     text. It stays as-is for brand parity with the app, but any muted *text*
+     uses this darker step instead — 4.77:1 on --bg. */
+  --ink-muted: #6f6e78;
   --border: rgba(28, 27, 31, 0.1);
   --brand: #6b46c1;
   --brand-50: #eeedfe;
