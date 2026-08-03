@@ -1,0 +1,85 @@
+.wrap {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 56px 20px 96px;
+}
+
+.tier {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+}
+
+.free {
+  background: var(--teal-50);
+  color: var(--teal);
+}
+
+.pro {
+  background: var(--brand-50);
+  color: var(--brand);
+}
+
+.wrap h1 {
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  margin-bottom: 16px;
+}
+
+.lede {
+  font-size: 18px;
+  color: var(--ink);
+  background: var(--brand-50);
+  border-left: 3px solid var(--brand);
+  padding: 16px 20px;
+  border-radius: 0 12px 12px 0;
+  margin-bottom: 20px;
+}
+
+.body {
+  font-size: 16px;
+  color: var(--ink2);
+  margin-bottom: 40px;
+}
+
+.related {
+  border-top: 1px solid var(--border);
+  padding-top: 28px;
+  margin-bottom: 40px;
+}
+
+.related h2 {
+  font-size: 15px;
+  color: var(--ink3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.related ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.related a {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 16px;
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.related a:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}

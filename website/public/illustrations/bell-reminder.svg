@@ -1,0 +1,39 @@
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="240" height="240" rx="36" fill="#FAECE7"/>
+  <circle cx="190" cy="182" r="16" fill="#F3D3C4"/>
+  <circle cx="48" cy="56" r="10" fill="#F3D3C4"/>
+
+  <!-- calendar peeking behind -->
+  <g filter="url(#shadow1)">
+    <rect x="132" y="70" width="70" height="78" rx="12" fill="#FFFFFF"/>
+    <rect x="132" y="70" width="70" height="20" rx="12" fill="#D85A30"/>
+    <rect x="132" y="80" width="70" height="10" fill="#D85A30"/>
+    <rect x="144" y="100" width="12" height="12" rx="3" fill="#FBE1D8"/>
+    <rect x="162" y="100" width="12" height="12" rx="3" fill="#D85A30"/>
+    <rect x="180" y="100" width="12" height="12" rx="3" fill="#FBE1D8"/>
+    <rect x="144" y="118" width="12" height="12" rx="3" fill="#FBE1D8"/>
+    <rect x="162" y="118" width="12" height="12" rx="3" fill="#FBE1D8"/>
+  </g>
+
+  <!-- bell -->
+  <g filter="url(#shadow2)">
+    <path d="M100 76 c-24 0 -34 18 -34 40 v14 c0 10 -6 16 -10 20 h88 c-4 -4 -10 -10 -10 -20 v-14 c0 -22 -10 -40 -34 -40 Z" fill="#D85A30"/>
+    <rect x="93" y="66" width="14" height="14" rx="7" fill="#B34321"/>
+    <path d="M84 150 h32 a16 16 0 0 1 -32 0 Z" fill="#B34321"/>
+  </g>
+
+  <!-- notification dot -->
+  <circle cx="132" cy="72" r="12" fill="#FFFFFF"/>
+  <circle cx="132" cy="72" r="7" fill="#D85A30"/>
+
+  <path d="M56 108 L58 114 L64 116 L58 118 L56 124 L54 118 L48 116 L54 114 Z" fill="#F3D3C4"/>
+
+  <defs>
+    <filter id="shadow1" x="122" y="60" width="90" height="98" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#D85A30" flood-opacity="0.15"/>
+    </filter>
+    <filter id="shadow2" x="46" y="60" width="98" height="116" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#B34321" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+</svg>

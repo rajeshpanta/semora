@@ -1,51 +1,102 @@
 .header {
   position: sticky;
   top: 0;
-  z-index: 40;
+  z-index: 60;
   background: rgba(250, 249, 245, 0.86);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
 
 .inner {
+  width: 100%;
   max-width: var(--max-width-wide);
   margin: 0 auto;
-  padding: 16px 20px;
+  padding: 12px clamp(16px, 4vw, 40px);
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
 }
 
 .logo {
   font-family: var(--font-fraunces), Georgia, serif;
-  font-size: 20px;
+  font-size: clamp(18px, 3vw, 21px);
   font-weight: 700;
   color: var(--ink);
   text-decoration: none;
   margin-right: auto;
+  white-space: nowrap;
 }
 
-/* Holds "Get the app" only. It collapses on phones, where the hero's own
-   App Store button is already the first thing on screen. */
-.links {
+/* ── Desktop pill ─────────────────────────────────────────── */
+
+.pill {
   display: none;
-  gap: 24px;
+  align-items: center;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 1px 2px rgba(28, 27, 31, 0.04);
 }
 
-@media (min-width: 720px) {
-  .links {
+.actions {
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+
+@media (min-width: 1000px) {
+  .pill,
+  .actions {
     display: flex;
   }
 }
 
-.link {
+.link,
+.menuTrigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
   color: var(--ink2);
+  font-size: 14.5px;
+  font-weight: 550;
+  font-family: inherit;
   text-decoration: none;
-  font-size: 15px;
-  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-.link:hover {
+.link:hover,
+.menuTrigger:hover,
+.menuTrigger[aria-expanded='true'] {
+  background: var(--brand-50);
+  color: var(--ink);
+}
+
+.caret {
+  transition: transform 0.18s ease;
+}
+
+.caret[data-open='true'] {
+  transform: rotate(180deg);
+}
+
+.ghost {
+  color: var(--ink2);
+  text-decoration: none;
+  font-size: 14.5px;
+  font-weight: 550;
+  padding: 9px 4px;
+  white-space: nowrap;
+}
+
+.ghost:hover {
   color: var(--ink);
 }
 
@@ -53,13 +104,275 @@
   background: var(--ink);
   color: #fff;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 600;
-  padding: 10px 18px;
+  padding: 11px 20px;
   border-radius: 999px;
   white-space: nowrap;
+  transition: background 0.15s ease;
 }
 
 .cta:hover {
   background: var(--brand);
+}
+
+/* ── Features dropdown ────────────────────────────────────── */
+
+.menuWrap {
+  position: relative;
+}
+
+.menuPanel {
+  position: absolute;
+  top: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+  width: min(680px, calc(100vw - 48px));
+  padding: 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgba(28, 27, 31, 0.05),
+    0 28px 60px -24px rgba(28, 27, 31, 0.35);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s;
+}
+
+.menuPanel[data-open='true'] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* A hover bridge across the gap so the panel doesn't close mid-travel. */
+.menuPanel::before {
+  content: '';
+  position: absolute;
+  top: -14px;
+  left: 0;
+  right: 0;
+  height: 14px;
+}
+
+.menuGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+}
+
+.menuItem {
+  min-width: 0;
+  display: block;
+  padding: 12px 14px;
+  border-radius: 13px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: background 0.13s ease;
+}
+
+.menuItem:hover {
+  background: var(--brand-50);
+}
+
+.menuItemTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.menuItemName {
+  font-weight: 650;
+  font-size: 14.5px;
+}
+
+.menuTier {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+
+.menuTierFree {
+  background: var(--teal-50);
+  color: var(--teal);
+}
+
+.menuTierPro {
+  background: var(--brand-50);
+  color: var(--brand);
+}
+
+.menuItemDesc {
+  display: block;
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.menuFooter {
+  display: block;
+  margin-top: 6px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--border);
+  color: var(--brand);
+  font-size: 13.5px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.menuFooter:hover {
+  color: var(--ink);
+}
+
+/* ── Mobile ───────────────────────────────────────────────── */
+
+.burger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+@media (min-width: 1000px) {
+  .burger {
+    display: none;
+  }
+}
+
+.burgerIcon {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bar {
+  display: block;
+  width: 17px;
+  height: 1.8px;
+  border-radius: 2px;
+  background: var(--ink);
+  transition: transform 0.22s ease, opacity 0.22s ease;
+}
+
+.burgerIcon[data-open='true'] .bar:nth-child(1) {
+  transform: translateY(5.8px) rotate(45deg);
+}
+
+.burgerIcon[data-open='true'] .bar:nth-child(2) {
+  opacity: 0;
+}
+
+.burgerIcon[data-open='true'] .bar:nth-child(3) {
+  transform: translateY(-5.8px) rotate(-45deg);
+}
+
+.sheet {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: calc(100svh - 100%);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  padding: 10px clamp(16px, 4vw, 40px) 28px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px -16px rgba(28, 27, 31, 0.22);
+}
+
+@media (min-width: 1000px) {
+  .sheet {
+    display: none;
+  }
+}
+
+.sheetGroup {
+  border-bottom: 1px solid var(--border);
+}
+
+.sheetSummary {
+  list-style: none;
+  cursor: pointer;
+  padding: 15px 2px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.sheetSummary::-webkit-details-marker {
+  display: none;
+}
+
+.sheetSummary::after {
+  content: '+';
+  float: right;
+  color: var(--brand);
+  font-weight: 400;
+}
+
+.sheetGroup[open] .sheetSummary::after {
+  content: '\2212';
+}
+
+.sheetSub {
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 10px 12px;
+  border-left: 2px solid var(--brand-50);
+  margin-left: 2px;
+}
+
+.sheetSubLink {
+  padding: 10px 0;
+  color: var(--ink2);
+  text-decoration: none;
+  font-size: 14.5px;
+}
+
+.sheetLink {
+  padding: 15px 2px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sheetGhost {
+  margin-top: 18px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  text-align: center;
+  color: var(--ink);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.sheetCta {
+  margin-top: 10px;
+  padding: 13px;
+  border-radius: 999px;
+  text-align: center;
+  background: var(--ink);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
 }

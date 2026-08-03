@@ -1,13 +1,16 @@
 import Link from 'next/link';
 import styles from './Nav.module.css';
+import { FeaturesMenu } from './FeaturesMenu';
+import { MobileNav } from './MobileNav';
 import { SITE_NAME, APP_SIGNIN_URL, APP_STORE_URL } from '@/lib/semora-facts';
 
-/**
- * Single-page site: there are no sections to navigate to, so the nav is just
- * the wordmark plus the two things we actually want people to do. "Get the
- * app" collapses on small screens (where the App Store link is one tap away
- * in the hero anyway); "Try it for free" always stays visible.
- */
+export const NAV_LINKS = [
+  { href: '/pricing', label: 'Pricing' },
+  { href: '/compare', label: 'Compare' },
+  { href: '/blog', label: 'Blog' },
+  { href: '/support', label: 'Support' },
+];
+
 export function Nav() {
   return (
     <header className={styles.header}>
@@ -15,14 +18,27 @@ export function Nav() {
         <Link href="/" className={styles.logo}>
           {SITE_NAME}
         </Link>
-        <nav className={styles.links}>
-          <a href={APP_STORE_URL} className={styles.link}>
+
+        {/* Desktop: a single pill holds the whole menu, Laxu-style. */}
+        <nav className={styles.pill} aria-label="Main">
+          <FeaturesMenu />
+          {NAV_LINKS.map((l) => (
+            <Link key={l.href} href={l.href} className={styles.link}>
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className={styles.actions}>
+          <a href={APP_STORE_URL} className={styles.ghost}>
             Get the app
           </a>
-        </nav>
-        <Link href={APP_SIGNIN_URL} className={styles.cta}>
-          Try it for free
-        </Link>
+          <Link href={APP_SIGNIN_URL} className={styles.cta}>
+            Try it for free
+          </Link>
+        </div>
+
+        <MobileNav links={NAV_LINKS} />
       </div>
     </header>
   );

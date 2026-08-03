@@ -1,0 +1,38 @@
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="240" height="240" rx="36" fill="#EEEDFE"/>
+  <circle cx="192" cy="66" r="14" fill="#D9D4FA"/>
+  <circle cx="46" cy="182" r="10" fill="#D9D4FA"/>
+
+  <!-- leaf / stem -->
+  <path d="M120 66 c-14 -10 -30 -8 -34 4 c14 4 22 2 34 -4 Z" fill="#0F6E56"/>
+  <path d="M120 66 c14 -10 30 -8 34 4 c-14 4 -22 2 -34 -4 Z" fill="#14855F"/>
+  <rect x="116" y="60" width="8" height="16" rx="4" fill="#0F6E56"/>
+
+  <!-- tomato body -->
+  <g filter="url(#shadow1)">
+    <circle cx="120" cy="140" r="62" fill="#D85A30"/>
+    <circle cx="98" cy="118" r="14" fill="#EA7A54" fill-opacity="0.55"/>
+  </g>
+
+  <!-- clock face on tomato -->
+  <circle cx="120" cy="140" r="34" fill="#FFF8F0"/>
+  <circle cx="120" cy="140" r="34" fill="none" stroke="#B34321" stroke-width="4"/>
+  <line x1="120" y1="140" x2="120" y2="118" stroke="#B34321" stroke-width="5" stroke-linecap="round"/>
+  <line x1="120" y1="140" x2="136" y2="148" stroke="#B34321" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="120" cy="140" r="4" fill="#B34321"/>
+
+  <!-- cute face -->
+  <circle cx="98" cy="184" r="4" fill="#5A2413"/>
+  <circle cx="142" cy="184" r="4" fill="#5A2413"/>
+  <path d="M104 196 q16 12 32 0" stroke="#5A2413" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <circle cx="92" cy="192" r="6" fill="#F0A98A" fill-opacity="0.7"/>
+  <circle cx="148" cy="192" r="6" fill="#F0A98A" fill-opacity="0.7"/>
+
+  <path d="M60 90 L63 98 L71 101 L63 104 L60 112 L57 104 L49 101 L57 98 Z" fill="#C9B8FF"/>
+
+  <defs>
+    <filter id="shadow1" x="48" y="68" width="144" height="144" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#9B7AE8" flood-opacity="0.28"/>
+    </filter>
+  </defs>
+</svg>

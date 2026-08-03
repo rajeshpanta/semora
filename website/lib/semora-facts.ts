@@ -50,6 +50,11 @@ export const PRICING = {
   },
 } as const;
 
+// "Pro ($3.99/month or $19.99/year)" — used anywhere a table/header needs
+// the full price inline instead of just the tier name, so monthly AND
+// annual both stay visible without retyping the figures.
+export const PRO_LABEL = `Pro (${PRICING.pro.monthly.priceLabel} or ${PRICING.pro.annual.priceLabel})`;
+
 // Derived once here so the pricing toggle (and anywhere else that needs the
 // per-month-when-billed-annually figure or the savings callout) never
 // hand-computes it from the raw numbers above.
@@ -174,3 +179,7 @@ export const FEATURES: FeatureFact[] = [
       "Semora syncs assignments from Canvas using a personal access token you generate yourself in Canvas's own settings, rather than an OAuth connection that depends on your school's IT department approving a third-party app review.",
   },
 ];
+
+export function getFeature(slug: string): FeatureFact | undefined {
+  return FEATURES.find((f) => f.slug === slug);
+}
