@@ -212,8 +212,8 @@ export default function FeaturesPage() {
           </div>
           <div className={styles.bannerImage}>
             <Image
-              src="/screenshots/go-pro.png"
-              alt="Semora Pro upgrade screen showing pricing and included features"
+              src="/screenshots/plan-semester.png"
+              alt="Semora calendar screen showing a month of colour-coded deadlines across three courses"
               width={180}
               height={389}
             />

@@ -77,6 +77,7 @@ export const FREE_FEATURES = [
 // move it back to FREE_FEATURES without re-checking the app first.
 export const PRO_FEATURES = [
   'Unlimited syllabus scans and courses',
+  'Canvas, Blackboard, and Moodle assignment import',
   'Smart Plan — an AI-generated study schedule that adapts to your deadlines',
   'Workload dashboard — see crunch weeks and exam-dense stretches coming',
   'AI-generated flashcards from your syllabus and notes, with spaced repetition',
@@ -173,10 +174,15 @@ export const FEATURES: FeatureFact[] = [
     slug: 'canvas-sync',
     name: 'Canvas Sync',
     shortDescription:
-      'Sync deadlines from Canvas using a personal access token you generate yourself — no OAuth app review required.',
-    tier: 'free',
+      'Import assignments from Canvas, Blackboard, or Moodle with a token you generate yourself — no OAuth app review.',
+    // Pro, NOT free. Gated in three places in the shipping app: a server-side
+    // is_pro() check in supabase/functions/lms-sync (402 PRO_REQUIRED), the
+    // provider list in app/settings/lms.tsx, and a paywall bounce in
+    // app/settings/lms-connect.tsx. Do not flip this back to 'free' — a free
+    // user who installs on that promise hits a paywall at the first tap.
+    tier: 'pro',
     description:
-      "Semora syncs assignments from Canvas using a personal access token you generate yourself in Canvas's own settings, rather than an OAuth connection that depends on your school's IT department approving a third-party app review.",
+      "Semora imports assignments from Canvas — and from Blackboard or Moodle — using a personal access token you generate yourself in the platform's own settings, rather than an OAuth connection that depends on your school's IT department approving a third-party app review. Connecting a learning platform is part of Pro; on the free tier you can still get Canvas coursework in by pasting the assignment text straight into the syllabus scanner.",
   },
 ];
 

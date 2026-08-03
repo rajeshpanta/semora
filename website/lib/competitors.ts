@@ -63,7 +63,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Canvas / LMS sync',
         semora:
-          'Canvas sync via a personal-access token you generate yourself in Canvas — no OAuth app-review dependency.',
+          'Canvas, Blackboard and Moodle import via a personal-access token you generate yourself — no OAuth app-review dependency. Connecting a platform is a Pro feature.',
         competitor: 'Read-only sync with Canvas, Blackboard, and Moodle, merged into one timeline.',
       },
       {
@@ -97,7 +97,7 @@ export const COMPETITORS: CompetitorFact[] = [
       'You want Progress Insights (trend charts and CSV export) layered on top of your grade tracking.',
       'You want an AI-generated study schedule (Smart Plan) or a workload dashboard that flags crunch weeks and exam-heavy stretches.',
       "You'd use flashcards, a Pomodoro-style focus timer, or an AI tutor chat that already knows your syllabus.",
-      'You want Canvas sync without waiting on an OAuth app-review process — Semora connects with a personal-access token you generate yourself.',
+      'You want Canvas sync without waiting on an OAuth app-review process — Semora connects with a personal-access token you generate yourself (Pro).',
       'You want to share a course with classmates (Course Spaces) with deadlines and group assignments syncing in real time.',
     ],
     whereCompetitorFits: [
@@ -230,7 +230,7 @@ export const COMPETITORS: CompetitorFact[] = [
       'You want a genuine, ongoing free tier (5 scans/month, up to 4 courses) rather than a subscription-gated planner.',
       'You want grade tracking as a first-class feature, not a scheduling tool with no gradebook.',
       'You want to share a course with classmates via Course Spaces, with deadlines and group assignments syncing in real time.',
-      'You want Canvas sync without an OAuth dependency — Semora connects via a personal-access token you generate yourself.',
+      'You want Canvas sync without an OAuth dependency — Semora connects via a personal-access token you generate yourself (Pro).',
     ],
     whereCompetitorFits: [
       'You want time-blocked scheduling — weighing available time against estimated time-per-task — as the core product, not an add-on.',
@@ -499,7 +499,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Canvas LMS sync',
         semora:
-          'Connects to Canvas via a personal-access token you generate yourself inside Canvas — no OAuth app-review dependency.',
+          'Connects to Canvas via a personal-access token you generate yourself inside Canvas — no OAuth app-review dependency. Pro feature.',
         competitor: 'No LMS integrations (Canvas, Blackboard, etc.) evident in its public feature set.',
       },
       {
@@ -595,7 +595,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Canvas sync',
         semora:
-          'Connects via a personal-access token you generate yourself in Canvas — no OAuth app-review dependency.',
+          'Connects via a personal-access token you generate yourself in Canvas — no OAuth app-review dependency. Pro feature.',
         competitor: "Not publicly described. No LMS integration is mentioned in Studley AI's available materials.",
       },
       {
@@ -724,7 +724,7 @@ export const COMPETITORS: CompetitorFact[] = [
     whereSemoraFits: [
       'Want deadlines and grades extracted automatically from a syllabus instead of typing every assignment in by hand',
       'Want grade tracking with a weighted average included free',
-      'Want Canvas sync via a personal access token you generate yourself, with no OAuth wait',
+      'Want Canvas sync via a personal access token you generate yourself, with no OAuth wait (Pro)',
       'Want study tools — Smart Plan, Flashcards, a Focus timer, an AI tutor — built around your own courses',
     ],
     whereCompetitorFits: [

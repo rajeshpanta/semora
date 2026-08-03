@@ -11,7 +11,7 @@ import { PRO_LABEL } from '@/lib/semora-facts';
 export const metadata: Metadata = {
   title: 'Canvas Deadline Tracker App — Grades, Reminders & Study Planning',
   description:
-    'Semora is a Canvas deadline tracker app that syncs your Canvas assignments with grade tracking, reminders, and a real study plan — free to start.',
+    'Semora is a Canvas deadline tracker app. Import Canvas assignments on Pro, or scan your syllabus free — with grade tracking, reminders, and a real study plan.',
   alternates: { canonical: '/canvas-deadline-tracker' },
 };
 
@@ -29,7 +29,7 @@ const FAQ = [
   {
     question: 'Is Semora free to use alongside Canvas?',
     answer:
-      'Yes. The free tier includes 5 syllabus scans per calendar month, up to 4 courses per semester, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited scans and courses plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
+      'Partly. Importing assignments from Canvas is a Pro feature, but the free tier covers the syllabus side of the same job — and you can paste Canvas assignment text straight into the scanner. The free tier includes 5 syllabus scans per calendar month, up to 4 courses per semester, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited scans and courses plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
   },
   {
     question: 'Does Semora work on iPhone, iPad, and web?',
@@ -68,7 +68,7 @@ const TABLE_ROWS = [
 export default function CanvasDeadlineTrackerPage() {
   return (
     <ArticleShell
-      ctaHeading="Connect Canvas free"
+      ctaHeading="Bring Canvas into one view"
       ctaSubheading="No OAuth wait — just a personal access token you generate yourself."
     >
     <article className={styles.prose}>

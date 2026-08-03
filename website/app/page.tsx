@@ -55,7 +55,7 @@ const STEPS = [
   {
     n: '03',
     title: 'Plan around it',
-    body: 'Confirmed deadlines become tracked tasks with same-day reminders, and grades roll up into a weighted average using the scale read off your syllabus. Connect Canvas with a token you generate yourself, or share the course with classmates through an invite link. Everything syncs to iPad and the web too.',
+    body: 'Confirmed deadlines become tracked tasks with same-day reminders, and grades roll up into a weighted average using the scale read off your syllabus. Share the course with classmates through an invite link, or on Pro connect Canvas with a token you generate yourself. Everything syncs to iPad and the web too.',
   },
 ];
 
@@ -142,11 +142,11 @@ const DEEP_DIVES: DeepDive[] = [
 const PILLARS = [
   {
     title: 'Canvas without the IT ticket',
-    body: 'Connect Canvas with a personal access token you generate yourself, inside Canvas’s own settings. That choice is deliberate. An OAuth integration would put you in line behind your school’s IT department and a third-party app review — approval you do not control and cannot hurry. Paste the token instead and Canvas syncs, whether or not anyone at your school has heard of Semora.',
+    body: 'Connect Canvas with a personal access token you generate yourself, inside Canvas’s own settings. That choice is deliberate. An OAuth integration would put you in line behind your school’s IT department and a third-party app review — approval you do not control and cannot hurry. Paste the token instead and Canvas imports, whether or not anyone at your school has heard of Semora.',
     points: [
       'You generate the token inside Canvas — no admin request, no app review',
-      'Blackboard and Moodle can be connected the same way, with a token from your school',
-      'Included free, next to the deadlines Semora read off your syllabus',
+      'Blackboard and Moodle connect the same way, with a token from your school',
+      'Connecting a platform is part of Pro; free accounts can paste assignment text into the scanner',
     ],
   },
   {
@@ -173,7 +173,7 @@ const HOME_FAQ = [
   {
     question: 'Is Semora actually free?',
     answer:
-      'Yes, and there is no credit card. The free tier gives you five syllabus scans per calendar month, up to four courses per semester, full deadline and task tracking, grade tracking with weighted averages, same-day reminders, Course Spaces for sharing a course with classmates, and Canvas sync. If you are taking four classes, that is a whole semester covered.',
+      'Yes, and there is no credit card. The free tier gives you five syllabus scans per calendar month, up to four courses per semester, full deadline and task tracking, grade tracking with weighted averages, same-day reminders, and Course Spaces for sharing a course with classmates. If you are taking four classes, that is a whole semester covered.',
   },
   {
     question: 'What does Pro cost, and where do I buy it?',
@@ -188,7 +188,7 @@ const HOME_FAQ = [
   {
     question: 'Do I need Canvas for this to work?',
     answer:
-      'No. Semora works from the syllabus alone. Canvas sync is there if you want it, on the free tier, and it connects with a personal access token you generate yourself inside Canvas settings. That is deliberate: no OAuth integration, so you are not waiting on your school’s IT department to approve a third-party app.',
+      'No. Semora works from the syllabus alone, on the free tier. Canvas import is there if you want it, as part of Pro, and it connects with a personal access token you generate yourself inside Canvas settings — no OAuth integration, so you are not waiting on your school’s IT department to approve a third-party app. On the free tier you can still paste Canvas assignment text straight into the scanner.',
   },
   {
     question: 'How accurate is the scan, and what if it gets something wrong?',
