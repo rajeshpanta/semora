@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import styles from './feature.module.css';
-import { Cta } from '@/components/Cta';
+import { ArticleShell } from '@/components/ArticleShell';
 import { Faq } from '@/components/Faq';
 import { JsonLd } from '@/components/JsonLd';
 import { breadcrumbListSchema, faqPageSchema } from '@/lib/schema';
@@ -43,7 +43,11 @@ export default async function FeaturePage({
   const related = FEATURES.filter((f) => f.slug !== feature.slug);
 
   return (
-    <article className={styles.wrap}>
+    <ArticleShell
+      ctaHeading="Try it on your own syllabus"
+      ctaSubheading="See how Semora handles your actual courses — free, no credit card."
+    >
+    <article className={`${styles.wrap} article-body`}>
       <JsonLd
         data={breadcrumbListSchema([
           { name: 'Features', path: '/features' },
@@ -103,7 +107,7 @@ export default async function FeaturePage({
       )}
 
       <div className={styles.related}>
-        <h2>More features</h2>
+        <h2 data-toc-skip>More features</h2>
         <ul>
           {related.map((f) => (
             <li key={f.slug}>
@@ -113,14 +117,7 @@ export default async function FeaturePage({
         </ul>
       </div>
 
-      <Cta
-        heading={`Get started with ${feature.name}`}
-        subheading={
-          feature.tier === 'pro'
-            ? "Start on Semora's free tier, then upgrade to Pro for this feature."
-            : "Free on Semora's free tier — no credit card required."
-        }
-      />
     </article>
+    </ArticleShell>
   );
 }

@@ -33,6 +33,10 @@
 
   --max-width: 760px;
   --max-width-wide: 1200px;
+  /* Article pages: a wider measure than the old 760px so long-form pages
+     don't sit in a narrow ribbon with dead margins either side. */
+  --article-measure: 860px;
+  --rail-width: 316px;
 }
 
 * {

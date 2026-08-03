@@ -6,6 +6,16 @@ export interface CompareRow {
   competitor: string;
 }
 
+/**
+ * Three-column feature comparison.
+ *
+ * On phones a three-column table cannot be read — it either overflows the
+ * viewport or crushes every column to a few characters. Below 720px the CSS
+ * re-lays this same markup as one stacked card per row, using `data-label`
+ * to reinstate the column heading that `thead` no longer supplies. The table
+ * semantics (scope="col"/"row", caption) are untouched, so assistive tech and
+ * search engines still see a real table at every width.
+ */
 export function CompareTable({
   competitorName,
   rows,
@@ -29,8 +39,10 @@ export function CompareTable({
           {rows.map((row) => (
             <tr key={row.feature}>
               <th scope="row">{row.feature}</th>
-              <td className={styles.semora}>{row.semora}</td>
-              <td>{row.competitor}</td>
+              <td className={styles.semora} data-label="Semora">
+                {row.semora}
+              </td>
+              <td data-label={competitorName}>{row.competitor}</td>
             </tr>
           ))}
         </tbody>

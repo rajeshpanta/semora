@@ -1,4 +1,7 @@
 .wrap {
+  /* Pairs with .main's min-width:0 — the scroll container must be allowed to
+     shrink below the table's intrinsic width or it just pushes its parent. */
+  min-width: 0;
   overflow-x: auto;
   margin: 24px 0;
   border: 1px solid var(--border);
@@ -48,4 +51,89 @@
 .table tr:last-child th,
 .table tr:last-child td {
   border-bottom: none;
+}
+
+/* ── Phones: one stacked card per row ──────────────────────────
+   A 3-column table at 350px either overflows or crushes each column to a
+   few characters. Below 720px the same markup is re-laid as cards: the row
+   header becomes the card title and each cell carries its column name from
+   data-label. Nothing horizontal is left to scroll. */
+@media (max-width: 719px) {
+  .wrap {
+    overflow-x: visible;
+    border: none;
+    border-radius: 0;
+    margin: 20px 0;
+  }
+
+  .table,
+  .table tbody,
+  .table tr,
+  .table th,
+  .table td {
+    display: block;
+    width: auto;
+  }
+
+  /* Column headings are redundant once each cell is labelled. */
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .table tbody tr {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 4px 0;
+    margin-bottom: 12px;
+    background: var(--card);
+    overflow: hidden;
+  }
+
+  .table tbody th {
+    /* The nowrap that keeps desktop columns tidy is what blows the layout
+       out on a phone — feature names must wrap here. */
+    white-space: normal;
+    font-size: 15px;
+    padding: 14px 16px 6px;
+    border-bottom: none;
+  }
+
+  .table tbody td {
+    position: relative;
+    padding: 8px 16px 14px;
+    border-bottom: none;
+    font-size: 14px;
+    color: var(--ink2);
+  }
+
+  .table tbody td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 4px;
+  }
+
+  .table tbody td.semora {
+    background: var(--brand-50);
+    margin: 0 8px 8px;
+    border-radius: 10px;
+    padding: 10px 12px 12px;
+  }
+
+  .table tbody td.semora::before {
+    color: var(--brand);
+  }
+
+  .table caption {
+    padding: 10px 2px 0;
+  }
 }

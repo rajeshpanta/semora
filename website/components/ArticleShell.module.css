@@ -1,18 +1,28 @@
 .shell {
   display: grid;
-  grid-template-columns: minmax(0, var(--max-width)) 300px;
+  grid-template-columns: minmax(0, var(--article-measure)) var(--rail-width);
   justify-content: center;
-  gap: 56px;
-  max-width: calc(var(--max-width) + 356px);
+  gap: clamp(32px, 4vw, 64px);
+  max-width: calc(var(--article-measure) + var(--rail-width) + 128px);
   margin: 0 auto;
-  padding: 0 20px 96px;
+  padding: 0 clamp(20px, 4vw, 40px) clamp(64px, 8vw, 96px);
   align-items: start;
+}
+
+/* Without this the grid track sizes to the widest child's MIN-CONTENT — and a
+   comparison table's min-content is far wider than a phone. That is what made
+   compare pages render ~500px wide inside a 390px viewport and clip on the
+   right. `min-width: 0` lets the track shrink and hands scrolling to the
+   table's own overflow container instead. */
+.main {
+  min-width: 0;
 }
 
 /* The nested <article className={prose}> keeps its own typography, but the
    shell now owns the outer width/centering — neutralize those so the article
    fills its grid column instead of re-centering inside it. */
 .shell > .main :global(.prose),
+.shell > .main :global(.article-body),
 .shell > .main :global(.wrap) {
   max-width: none;
   margin: 0;
@@ -84,11 +94,12 @@
 
 @media (max-width: 959px) {
   .shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 0;
   }
 
   .shell > .main :global(.prose),
+  .shell > .main :global(.article-body),
   .shell > .main :global(.wrap) {
     padding-top: 40px;
   }
