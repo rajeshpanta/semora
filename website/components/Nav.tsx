@@ -27,12 +27,18 @@ export function Nav() {
               {l.label}
             </Link>
           ))}
-        </nav>
-
-        <div className={styles.actions}>
-          <a href={APP_STORE_URL} className={styles.ghost}>
+          <a href={APP_STORE_URL} className={styles.link}>
             Get the app
           </a>
+        </nav>
+
+        {/* Sign in is deliberately separate from the signup CTA. "Try it for
+            free" reads as "make a new account", so without this a returning
+            user has no obvious way back into the app from the marketing site. */}
+        <div className={styles.actions}>
+          <Link href={APP_SIGNIN_URL} className={styles.ghost}>
+            Sign in
+          </Link>
           <Link href={APP_SIGNIN_URL} className={styles.cta}>
             Try it for free
           </Link>

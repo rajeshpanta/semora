@@ -72,6 +72,10 @@ export function MobileNav({ links }: { links: { href: string; label: string }[] 
             </Link>
           ))}
 
+          <Link href={APP_SIGNIN_URL} className={styles.sheetLink} onClick={close}>
+            Sign in
+          </Link>
+
           <a href={APP_STORE_URL} className={styles.sheetGhost} onClick={close}>
             Get the app
           </a>
