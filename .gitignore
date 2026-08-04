@@ -56,7 +56,3 @@ screenshots/store-screenshots/*.zip
 # Ad-hoc screenshots dropped in the repo root.
 /Screenshot *.png
 
-# eas metadata:pull re-downloads these from App Store Connect on demand, and
-# they duplicate screenshots/store-screenshots/. store.config.json itself IS
-# tracked — it carries the listing metadata (see the URL note in its header).
-/store/

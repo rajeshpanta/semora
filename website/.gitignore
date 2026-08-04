@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# eas metadata:pull re-downloads these from App Store Connect on demand and they
+# duplicate ../screenshots/store-screenshots/. Scoped to this subproject on
+# purpose: at the repo root, store/ is the app's Zustand store.
+/store/
