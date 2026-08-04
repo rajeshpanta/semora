@@ -1,10 +1,10 @@
 import Link from 'next/link';
+import { SignupButton } from './SignupButton';
 import styles from './Footer.module.css';
 import {
   SITE_NAME,
   TAGLINE,
   SUPPORT_EMAIL,
-  APP_SIGNUP_URL,
   APP_STORE_URL,
   FEATURES,
 } from '@/lib/semora-facts';
@@ -54,7 +54,7 @@ export function Footer() {
           </div>
           <div>
             <p className={styles.heading}>Get Semora</p>
-            <Link href={APP_SIGNUP_URL}>Try it for free</Link>
+            <SignupButton>Try it for free</SignupButton>
             <a href={APP_STORE_URL}>Download on the App Store</a>
             <Link href="/pricing">Pricing</Link>
             <Link href="/blog">Blog</Link>

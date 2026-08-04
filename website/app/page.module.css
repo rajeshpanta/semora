@@ -118,16 +118,12 @@
 }
 
 .eyebrow {
-  display: inline-block;
+  display: block;
   font-size: clamp(11px, 2.6vw, 13px);
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--glow-light);
-  background: rgba(155, 122, 232, 0.16);
-  border: 1px solid rgba(201, 184, 255, 0.28);
-  padding: 6px 14px;
-  border-radius: 999px;
   margin-bottom: clamp(18px, 3vw, 26px);
 }
 

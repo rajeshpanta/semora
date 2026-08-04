@@ -17,9 +17,12 @@ import { usePathname } from 'next/navigation';
  */
 export function NavChrome() {
   const pathname = usePathname();
-  // Only the homepage opens on the dark hero today. Add routes here if others
-  // grow one; everything else keeps the solid bar from the first pixel.
-  const overlay = pathname === '/';
+  // The whole site is one dark canvas. It used to be homepage-only, which meant
+  // every inner page opened with a dark hero and then switched to cream a few
+  // hundred pixels down — a colour change mid-scroll that read as two pages
+  // stapled together. One canvas everywhere removes the seam by removing the
+  // second colour.
+  const overlay = true;
 
   useEffect(() => {
     const header = document.querySelector('header[data-nav]') as HTMLElement | null;
@@ -27,10 +30,9 @@ export function NavChrome() {
 
     header.toggleAttribute('data-overlay', overlay);
 
-    // One canvas for the whole homepage — nav, sections and footer. Set on
-    // <html> rather than <main> because the footer is a sibling of <main>, and
-    // a light footer under a dark page recreates exactly the seam this removes.
-    document.documentElement.toggleAttribute('data-dark-page', overlay);
+    // data-dark-page is NOT set here — app/layout.tsx server-renders it, so the
+    // first frame is already dark. Setting it from this effect meant a flash of
+    // the light palette on every cold load.
 
     // Publish the header's REAL height so the hero can sit exactly under it.
     // This was hardcoded at 61px; the bar is actually ~76px on desktop and
@@ -61,7 +63,9 @@ export function NavChrome() {
       window.removeEventListener('scroll', onScroll);
       ro.disconnect();
     };
-  }, [overlay]);
+    // Re-run on navigation: the header persists across routes, but re-measuring
+    // and re-evaluating scroll position after each one is cheap insurance.
+  }, [overlay, pathname]);
 
   return null;
 }

@@ -1,6 +1,6 @@
-import Link from 'next/link';
+import { SignupButton } from './SignupButton';
 import styles from './Cta.module.css';
-import { APP_SIGNUP_URL, APP_STORE_URL } from '@/lib/semora-facts';
+import { APP_STORE_URL } from '@/lib/semora-facts';
 
 /**
  * The site's single conversion band. Two destinations, deliberately:
@@ -22,9 +22,9 @@ export function Cta({
       </h2>
       {subheading && <p className={styles.subheading}>{subheading}</p>}
       <div className={styles.actions}>
-        <Link href={APP_SIGNUP_URL} className={styles.button}>
+        <SignupButton className={styles.button}>
           Try it for free
-        </Link>
+        </SignupButton>
         <a href={APP_STORE_URL} className={styles.buttonGhost}>
           Get the app
         </a>

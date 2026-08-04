@@ -469,3 +469,10 @@
   background: #15102a;
   border-color: rgba(255, 255, 255, 0.10);
 }
+
+/* .sheetCta paints white text on var(--ink), which is a near-white on the dark
+   canvas — the button rendered invisible. Same inversion the header CTA uses. */
+:root[data-dark-page] .sheetCta {
+  background: #fff;
+  color: var(--ink-deep);
+}

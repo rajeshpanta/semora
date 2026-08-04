@@ -25,16 +25,12 @@
 }
 
 .eyebrow {
-  display: inline-block;
+  display: block;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--glow-light);
-  background: rgba(155, 122, 232, 0.16);
-  border: 1px solid rgba(201, 184, 255, 0.3);
-  padding: 6px 14px;
-  border-radius: 999px;
   margin-bottom: 24px;
 }
 
@@ -46,10 +42,10 @@
 }
 
 .gradient {
-  background: linear-gradient(90deg, var(--glow-light), var(--glow-mid));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--glow-light);
+  letter-spacing: -0.02em;
 }
 
 .sub {

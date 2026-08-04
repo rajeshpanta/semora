@@ -1,0 +1,144 @@
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: clamp(44px, 7vw, 76px) clamp(20px, 4vw, 40px) clamp(40px, 6vw, 64px);
+}
+
+/* A single soft light source behind the headline. Anchored well inside the
+   section so `overflow: hidden` never slices it at the edge — that cut is what
+   read as a seam between sections on the homepage. */
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -22%;
+  left: 18%;
+  width: min(760px, 82%);
+  aspect-ratio: 1.4;
+  background: radial-gradient(ellipse at center, rgba(124, 92, 214, 0.3) 0%, transparent 66%);
+  filter: blur(46px);
+  pointer-events: none;
+}
+
+.inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
+  align-items: center;
+  gap: clamp(32px, 5vw, 66px);
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.copy {
+  min-width: 0;
+}
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 20px;
+}
+
+.crumbs a {
+  color: rgba(255, 255, 255, 0.62);
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  color: #fff;
+}
+
+.h1 {
+  margin: 0 0 18px;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: clamp(2.1rem, 4.6vw, 3.3rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+  color: #fff;
+}
+
+.lede {
+  margin: 0 0 30px;
+  max-width: 34em;
+  font-size: clamp(1rem, 1.5vw, 1.14rem);
+  line-height: 1.62;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 26px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.primary {
+  background: #fff;
+  color: #12101a;
+}
+
+.primary:hover {
+  background: var(--glow-light);
+  transform: translateY(-1px);
+}
+
+.secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f5f3fa;
+}
+
+.secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.26);
+  transform: translateY(-1px);
+}
+
+.note {
+  margin: 16px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 38em;
+  /* 0.55 white on #0f0b1a is 7.1:1 — comfortably AA at this size. */
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.visual {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 36px;
+  }
+  /* Copy first: on a phone the visual below the fold still gets seen on scroll,
+     but the headline and CTA must not be pushed off it. */
+  .visual {
+    order: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary:hover,
+  .secondary:hover {
+    transform: none;
+  }
+}

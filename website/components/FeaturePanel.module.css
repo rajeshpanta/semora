@@ -1,0 +1,424 @@
+/* A single dark app window, tinted to sit on the site's one canvas rather than
+   punching a bright rectangle through it. Deliberately quiet: the headline and
+   the CTA are what the visitor is meant to act on. */
+
+.wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.glow {
+  position: absolute;
+  top: -18%;
+  left: 50%;
+  translate: -50% 0;
+  width: min(520px, 108%);
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(155, 122, 232, 0.3) 0%, transparent 68%);
+  filter: blur(30px);
+  pointer-events: none;
+}
+
+.window {
+  position: relative;
+  border-radius: 13px;
+  overflow: hidden;
+  background: #16112a;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 30px 70px -34px rgba(0, 0, 0, 0.85);
+}
+
+.chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 13px;
+  background: rgba(255, 255, 255, 0.035);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.16);
+  flex: none;
+}
+
+.title {
+  margin-left: 8px;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.58);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.body {
+  padding: 14px;
+  /* Enough to keep short panels (the tutor exchange) from looking like a
+     cropped fragment, low enough that they do not trail dead space. */
+  min-height: 212px;
+}
+
+/* ── rows: scanner, canvas sync, course spaces ─────────────── */
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.check {
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  flex: none;
+}
+
+.row[data-tone='exam'] .check {
+  border-color: #a78bfa;
+  background: rgba(167, 139, 250, 0.22);
+}
+.row[data-tone='sync'] .check,
+.row[data-tone='shared'] .check {
+  border-color: #5eead4;
+}
+
+.rowText {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rowTitle {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #f5f3fa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowSub {
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowRight {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
+  flex: none;
+}
+
+.row[data-tone='exam'] .rowRight { color: #c4b5fd; }
+
+/* ── flashcard ─────────────────────────────────────────────── */
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.face {
+  padding: 11px 13px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.face[data-back='true'] {
+  background: rgba(167, 139, 250, 0.1);
+  border-color: rgba(167, 139, 250, 0.2);
+}
+
+.faceLabel {
+  display: block;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+  margin-bottom: 5px;
+}
+
+.faceText {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #f5f3fa;
+}
+
+.face[data-back='true'] .faceText { color: #ddd4fb; }
+
+.grades {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.grade {
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* ── tutor chat ────────────────────────────────────────────── */
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.ask {
+  align-self: flex-end;
+  max-width: 82%;
+  padding: 10px 13px;
+  border-radius: 12px 12px 3px 12px;
+  background: rgba(167, 139, 250, 0.18);
+  border: 1px solid rgba(167, 139, 250, 0.24);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #f0ebff;
+}
+
+.reply {
+  align-self: flex-start;
+  max-width: 92%;
+  padding: 11px 13px;
+  border-radius: 12px 12px 12px 3px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #f5f3fa;
+}
+
+/* The citation line is the whole point of this feature — it says the answer
+   came from the student's own material rather than from thin air. */
+.source {
+  display: block;
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 10.5px;
+  color: #7dd3c0;
+}
+
+/* ── grades ────────────────────────────────────────────────── */
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.overall {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding-bottom: 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.overallNum {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 30px;
+  font-weight: 700;
+  color: #f5f3fa;
+  line-height: 1;
+}
+
+.overallLetter {
+  font-size: 13px;
+  font-weight: 700;
+  color: #c4b5fd;
+}
+
+.part {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 68px;
+  align-items: center;
+  gap: 10px;
+}
+
+.partName {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.partBar {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+
+.partFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #7c5cd6, #a78bfa);
+}
+
+.partScore {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.78);
+  text-align: right;
+}
+
+/* ── smart plan week ───────────────────────────────────────── */
+
+.week {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 7px;
+  align-content: start;
+}
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dayLabel {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.42);
+  text-align: center;
+}
+
+/* The day column blocks are absolutely positioned against this, so a session
+   sits at its own time of day rather than flush against the header. */
+.track {
+  position: relative;
+  display: block;
+  height: 208px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.022);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.block {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  display: flex;
+  align-items: flex-start;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-size: 10px;
+  line-height: 1.22;
+  color: #e9e4fb;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  overflow: hidden;
+}
+
+.block[data-tone='due'] {
+  background: rgba(167, 139, 250, 0.16);
+  border-color: rgba(167, 139, 250, 0.24);
+}
+
+.block[data-tone='exam'] {
+  background: rgba(167, 139, 250, 0.26);
+  border-color: rgba(167, 139, 250, 0.36);
+  color: #fff;
+}
+
+/* ── focus timer ───────────────────────────────────────────── */
+
+.timer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 240px;
+}
+
+.ring {
+  width: 148px;
+  height: 148px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  /* 68% of the way round, then the unfilled remainder. */
+  background:
+    conic-gradient(#a78bfa 0turn 0.68turn, rgba(255, 255, 255, 0.08) 0.68turn 1turn);
+  position: relative;
+}
+
+.ring::after {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: #16112a;
+}
+
+.ringTime {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 30px;
+  font-weight: 700;
+  color: #f5f3fa;
+  letter-spacing: -0.01em;
+}
+
+.phase {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.pips {
+  display: flex;
+  gap: 7px;
+}
+
+.pip {
+  width: 26px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.pip[data-on='true'] { background: #a78bfa; }
+
+@media (max-width: 900px) {
+  .body { min-height: 0; }
+  .timer { min-height: 200px; }
+  .ring { width: 128px; height: 128px; }
+}

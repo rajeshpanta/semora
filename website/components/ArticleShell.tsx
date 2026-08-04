@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react';
-import Link from 'next/link';
+import { SignupButton } from './SignupButton';
 import styles from './ArticleShell.module.css';
 import { TableOfContents } from './TableOfContents';
-import { APP_SIGNUP_URL } from '@/lib/semora-facts';
 
 interface ArticleShellProps {
   children: ReactNode;
@@ -27,9 +26,9 @@ export function ArticleShell({
         <div className={styles.railCta}>
           <p className={styles.railCtaHeading}>{ctaHeading}</p>
           <p className={styles.railCtaSub}>{ctaSubheading}</p>
-          <Link href={APP_SIGNUP_URL} className={styles.railCtaBtn}>
+          <SignupButton className={styles.railCtaBtn}>
             {ctaLabel}
-          </Link>
+          </SignupButton>
         </div>
       </aside>
     </div>

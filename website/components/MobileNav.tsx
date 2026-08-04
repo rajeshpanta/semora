@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { SignupButton } from './SignupButton';
 import Link from 'next/link';
 import styles from './Nav.module.css';
-import { FEATURES, APP_SIGNUP_URL, APP_SIGNIN_URL, APP_STORE_URL } from '@/lib/semora-facts';
+import { FEATURES, APP_STORE_URL } from '@/lib/semora-facts';
 
 /**
  * Phone/tablet navigation. The features list is a native <details> so it
@@ -77,16 +78,16 @@ export function MobileNav({ links }: { links: { href: string; label: string }[] 
             </Link>
           ))}
 
-          <Link href={APP_SIGNIN_URL} className={styles.sheetLink} onClick={close}>
+          <SignupButton mode="signin" className={styles.sheetLink} onClick={close}>
             Sign in
-          </Link>
+          </SignupButton>
 
           <a href={APP_STORE_URL} className={styles.sheetGhost} onClick={close}>
             Get the app
           </a>
-          <Link href={APP_SIGNUP_URL} className={styles.sheetCta} onClick={close}>
+          <SignupButton className={styles.sheetCta} onClick={close}>
             Try it for free
-          </Link>
+          </SignupButton>
       </div>
     </>
   );

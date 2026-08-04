@@ -10,6 +10,7 @@ import { FEATURES, getFeature } from '@/lib/semora-facts';
 import { getFeatureContent } from '@/lib/feature-content';
 import { OG_IMAGE } from '@/lib/og';
 import { RelatedLinks } from '@/components/RelatedLinks';
+import { FeatureHero } from '@/components/FeatureHero';
 import { pageTitle } from '@/lib/title';
 
 export function generateStaticParams() {
@@ -70,6 +71,14 @@ export default async function FeaturePage({
   const deepLinks = DEEP_LINKS[feature.slug] ?? [];
 
   return (
+    <>
+      <FeatureHero
+        slug={feature.slug}
+        name={feature.name}
+        heading={long?.h1 ?? feature.name}
+        lede={long?.lede ?? feature.shortDescription}
+        tier={feature.tier === 'pro' ? 'pro' : 'free'}
+      />
     <ArticleShell
       ctaHeading="Try it on your own syllabus"
       ctaSubheading="See how Semora handles your actual courses. Free, no credit card."
@@ -82,19 +91,6 @@ export default async function FeaturePage({
         ])}
       />
       {long?.faq?.length ? <JsonLd data={faqPageSchema(long.faq)} /> : null}
-
-      <nav className={styles.crumbs} aria-label="Breadcrumb">
-        <Link href="/features">Features</Link>
-        <span aria-hidden="true">/</span>
-        <span>{feature.name}</span>
-      </nav>
-
-      <span className={`${styles.tier} ${feature.tier === 'pro' ? styles.pro : styles.free}`}>
-        {feature.tier === 'pro' ? 'Pro' : 'Free'}
-      </span>
-
-      <h1>{long?.h1 ?? feature.name}</h1>
-      <p className={styles.lede}>{long?.lede ?? feature.shortDescription}</p>
 
       {long ? (
         <>
@@ -148,5 +144,6 @@ export default async function FeaturePage({
 
     </article>
     </ArticleShell>
+    </>
   );
 }

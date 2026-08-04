@@ -70,3 +70,4 @@ secrets/*
 *.p12
 *.mobileprovision
 client_secret*.json
+.vercel

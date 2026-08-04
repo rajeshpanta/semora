@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
+import { SignupButton } from '@/components/SignupButton';
 import Image from 'next/image';
 import styles from './page.module.css';
 import { HeroDemo } from '@/components/HeroDemo';
@@ -9,7 +9,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { Reveal } from '@/components/Reveal';
 import { PricingCards } from '@/components/PricingCards';
 import { softwareApplicationSchema, faqPageSchema } from '@/lib/schema';
-import { APP_SIGNUP_URL, APP_STORE_URL } from '@/lib/semora-facts';
+import { APP_STORE_URL } from '@/lib/semora-facts';
 import { OG_IMAGE } from '@/lib/og';
 
 // The apex and www hostnames both serve this page, so without an explicit
@@ -245,9 +245,9 @@ export default function Home() {
               until you approve it.
             </p>
             <div className={styles.heroActions}>
-              <Link href={APP_SIGNUP_URL} className={styles.primaryBtn}>
+              <SignupButton className={styles.primaryBtn}>
                 Try it for free
-              </Link>
+              </SignupButton>
               <a href={APP_STORE_URL} className={styles.secondaryBtn}>
                 Get the app
               </a>

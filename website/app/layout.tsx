@@ -5,6 +5,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
+import { AuthDialogProvider } from '@/components/AuthDialog';
 import { JsonLd } from '@/components/JsonLd';
 import { organizationSchema, webSiteSchema } from '@/lib/schema';
 import { SITE_NAME, SITE_DESCRIPTION } from '@/lib/semora-facts';
@@ -41,7 +42,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={fraunces.variable}>
+    // data-dark-page is server-rendered rather than set by NavChrome's effect:
+    // the whole site is one dark canvas now, and toggling it after hydration
+    // meant the first painted frame used the light tokens and then flipped.
+    <html lang="en" data-dark-page className={fraunces.variable}>
       <body>
         {/* If JS never runs, Reveal's scroll-triggered content must not stay
             invisible forever — force it visible for the no-JS case. */}
@@ -54,9 +58,13 @@ export default function RootLayout({
             here rather than being repeated per page. */}
         <JsonLd data={webSiteSchema()} />
         <JsonLd data={organizationSchema()} />
-        <Nav />
-        <main>{children}</main>
-        <Footer />
+        {/* Wraps everything so any CTA on any page can open the sign-in dialog
+            without navigating away. */}
+        <AuthDialogProvider>
+          <Nav />
+          <main>{children}</main>
+          <Footer />
+        </AuthDialogProvider>
         <Analytics />
         <SpeedInsights />
       </body>

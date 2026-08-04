@@ -62,7 +62,7 @@
   padding: 3px 10px;
   border-radius: 999px;
   background: #fbfaf7;
-  color: #8c8b94;
+  color: #6f6e78;
   font-size: 10.5px;
   letter-spacing: 0.01em;
   text-align: center;
@@ -129,7 +129,7 @@
   font-size: 8.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: #a3a1aa;
+  color: #64636d;
 }
 
 /* ── Main pane ─────────────────────────────────────────────── */
@@ -269,7 +269,7 @@
   flex: none;
 }
 
-.row[data-tone='late'] .rowDue { color: #d85a30; }
+.row[data-tone='late'] .rowDue { color: #b8461f; }
 .row[data-tone='exam'] .rowDue { color: #6b46c1; }
 
 /* Stage 3: the week that adds up */
@@ -316,7 +316,7 @@
   to { height: calc(var(--h) * 0.42px); }
 }
 
-.dayLabel { font-size: 8px; color: #a3a1aa; }
+.dayLabel { font-size: 8px; color: #6f6e78; }
 
 /* ── Caption ───────────────────────────────────────────────── */
 

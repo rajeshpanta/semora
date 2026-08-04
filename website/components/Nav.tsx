@@ -1,9 +1,10 @@
 import Link from 'next/link';
+import { SignupButton } from './SignupButton';
 import styles from './Nav.module.css';
 import { FeaturesMenu } from './FeaturesMenu';
 import { MobileNav } from './MobileNav';
 import { NavChrome } from './NavChrome';
-import { SITE_NAME, APP_SIGNUP_URL, APP_SIGNIN_URL, APP_STORE_URL } from '@/lib/semora-facts';
+import { SITE_NAME, APP_STORE_URL } from '@/lib/semora-facts';
 
 export const NAV_LINKS = [
   // No '/features' entry: FeaturesMenu already renders a "Features" trigger in
@@ -46,12 +47,10 @@ export function Nav() {
             free" reads as "make a new account", so without this a returning
             user has no obvious way back into the app from the marketing site. */}
         <div className={styles.actions}>
-          <Link href={APP_SIGNIN_URL} className={styles.ghost}>
+          <SignupButton mode="signin" className={styles.ghost}>
             Sign in
-          </Link>
-          <Link href={APP_SIGNUP_URL} className={styles.cta}>
-            Try it for free
-          </Link>
+          </SignupButton>
+          <SignupButton className={styles.cta}>Try it for free</SignupButton>
         </div>
 
         <MobileNav links={NAV_LINKS} />

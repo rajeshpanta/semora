@@ -1,0 +1,168 @@
+/* The dialog element IS the backdrop container; ::backdrop is what dims and
+   blurs the page behind it. */
+
+.dialog {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  max-width: 100vw;
+  max-height: 100dvh;
+  overflow: visible;
+}
+
+.dialog::backdrop {
+  background: rgba(8, 5, 16, 0.66);
+  backdrop-filter: blur(11px);
+  -webkit-backdrop-filter: blur(11px);
+}
+
+.dialog[open] {
+  animation: dialogIn 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes dialogIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+.panel {
+  position: relative;
+  width: min(400px, calc(100vw - 32px));
+  padding: 30px 30px 24px;
+  border-radius: 16px;
+  /* Lifted off the page background so the panel reads as floating rather than
+     as a hole cut in the blur. */
+  background: linear-gradient(180deg, #1d1633, #16112a);
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  box-shadow: 0 34px 80px -28px rgba(0, 0, 0, 0.9);
+  color: #f5f3fa;
+}
+
+.close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: background 0.16s ease, color 0.16s ease;
+}
+
+.close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.title {
+  margin: 0 0 8px;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #fff;
+}
+
+.sub {
+  margin: 0 0 22px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+.apple,
+.google,
+.email {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  padding: 13px 16px;
+  border-radius: 10px;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.14s ease, background 0.16s ease, border-color 0.16s ease;
+}
+
+.apple:hover,
+.google:hover,
+.email:hover {
+  transform: translateY(-1px);
+}
+
+.apple {
+  background: #fff;
+  color: #12101a;
+  margin-bottom: 10px;
+}
+
+.apple:hover { background: #ece9f7; }
+
+.google {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #f5f3fa;
+}
+
+.google:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.or::before,
+.or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.email {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.86);
+}
+
+.email:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.legal {
+  margin: 20px 0 0;
+  text-align: center;
+  font-size: 11.5px;
+  line-height: 1.55;
+  /* 0.58 white on #191233 clears AA for small text; do not dim further. */
+  color: rgba(255, 255, 255, 0.58);
+}
+
+.legal a {
+  color: #c4b5fd;
+  text-decoration: none;
+}
+
+.legal a:hover { text-decoration: underline; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dialog[open] { animation: none; }
+  .apple:hover,
+  .google:hover,
+  .email:hover { transform: none; }
+}
