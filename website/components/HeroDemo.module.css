@@ -71,7 +71,7 @@
 .body {
   display: grid;
   grid-template-columns: 122px minmax(0, 1fr);
-  height: 322px;
+  height: 356px;
 }
 
 /* ── Sidebar — mirrors the app's real navigation ───────────── */
@@ -217,7 +217,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 9px;
+  padding: 6px 9px;
   border-radius: 7px;
   background: #fff;
   border: 1px solid rgba(28, 27, 31, 0.07);
@@ -311,7 +311,9 @@
 }
 
 @keyframes grow {
-  to { height: calc(var(--h) * 1%); }
+  /* px, not %: .day is content-height, so a percentage resolves against auto
+     and every bar computed to zero. */
+  to { height: calc(var(--h) * 0.42px); }
 }
 
 .dayLabel { font-size: 8px; color: #a3a1aa; }
@@ -361,7 +363,7 @@
 /* ── Narrow screens ────────────────────────────────────────── */
 
 @media (max-width: 720px) {
-  .body { grid-template-columns: 84px minmax(0, 1fr); height: 290px; }
+  .body { grid-template-columns: 84px minmax(0, 1fr); height: 330px; }
   .brand { font-size: 11.5px; }
   .navItem { font-size: 9.5px; padding: 4px 5px; }
   .navLabel { font-size: 8px; }
@@ -369,7 +371,7 @@
 
 @media (max-width: 460px) {
   /* Below this the sidebar costs more than it communicates. */
-  .body { grid-template-columns: minmax(0, 1fr); height: 270px; }
+  .body { grid-template-columns: minmax(0, 1fr); height: 310px; }
   .sidebar { display: none; }
 }
 
@@ -380,6 +382,6 @@
     animation: none !important;
   }
   .row { opacity: 1; transform: none; }
-  .bar { height: calc(var(--h) * 1%); }
+  .bar { height: calc(var(--h) * 0.42px); }
   .caption { animation: none; }
 }
