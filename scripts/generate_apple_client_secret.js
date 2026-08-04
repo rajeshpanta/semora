@@ -19,7 +19,9 @@ const path = require('path');
 
 const TEAM_ID = '7T9897GFKH';
 const KEY_ID = 'DQ64DU246B';
-const SERVICE_ID = 'com.rajeshpanta.syllabussnap'; // bundle ID — works for native iOS sign-in
+// The web Services ID must be the JWT subject. Keep the native iOS bundle ID
+// separately in Supabase's Client IDs list so native ID-token sign-in remains valid.
+const SERVICE_ID = 'com.rajeshpanta.syllabussnap.signin';
 const P8_PATH = path.join(__dirname, '..', `AuthKey_${KEY_ID}.p8`);
 
 if (!fs.existsSync(P8_PATH)) {

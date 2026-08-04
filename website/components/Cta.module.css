@@ -1,0 +1,77 @@
+.band {
+  background: var(--ink-deep);
+  color: #fff;
+  border-radius: 24px;
+  padding: clamp(40px, 6vw, 68px) clamp(20px, 4vw, 40px);
+  text-align: center;
+  /* No vertical margin — the wrapping section already supplies the rhythm,
+     and doubling them left a dead band above and below the close. */
+  margin: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.band::before {
+  content: '';
+  position: absolute;
+  inset: -40% -10% auto auto;
+  width: 360px;
+  height: 360px;
+  background: radial-gradient(circle, var(--glow-mid) 0%, transparent 70%);
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.heading {
+  font-size: clamp(1.5rem, 4vw, 2rem);
+  color: #fff;
+  margin: 0 0 12px;
+  position: relative;
+}
+
+.subheading {
+  color: rgba(255, 255, 255, 0.72);
+  max-width: 480px;
+  margin: 0 auto 28px;
+  position: relative;
+}
+
+.actions {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+
+.button {
+  display: inline-block;
+  background: #fff;
+  color: var(--ink-deep);
+  text-decoration: none;
+  font-weight: 600;
+  padding: 14px 28px;
+  border-radius: 999px;
+  position: relative;
+}
+
+.button:hover {
+  background: var(--glow-light);
+}
+
+.buttonGhost {
+  display: inline-block;
+  background: transparent;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+  padding: 14px 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  position: relative;
+}
+
+.buttonGhost:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.6);
+}

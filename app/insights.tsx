@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { SyncStatusPill } from '@/components/OfflineSyncBridge';
 import { track } from '@/lib/analytics';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
-import { buildProgressInsights, exportSemesterReport } from '@/lib/progressInsights';
+import { buildProgressInsights, exportSemesterReport, printSemesterReport } from '@/lib/progressInsights';
 import {
   useCourses,
   useSemesterGradeCategories,
@@ -76,6 +76,22 @@ export default function InsightsScreen() {
       // Share.share doesn't reject on user-dismiss (iOS), so anything here is a
       // real failure (nothing to export, write error, unsupported platform).
       Alert.alert('Couldn\'t export', err?.message ?? 'Something went wrong. Please try again.');
+    }
+  };
+
+  // Printing isn't a phone interaction — genuinely new on web, no native
+  // counterpart. Useful for bringing a clean grade/schedule summary to an
+  // advising or office-hours meeting.
+  const printReport = () => {
+    if (!isPro) {
+      openPaywall();
+      return;
+    }
+    try {
+      printSemesterReport(semester?.name ?? 'Current semester', insights);
+      track('insights_exported', { screen: 'insights', format: 'print' });
+    } catch (err: any) {
+      Alert.alert('Couldn\'t print', err?.message ?? 'Something went wrong. Please try again.');
     }
   };
 
@@ -144,6 +160,16 @@ export default function InsightsScreen() {
               Patterns you can act on, not just another chart.
             </Text>
           </View>
+          {Platform.OS === 'web' && (
+            <TouchableOpacity
+              onPress={printReport}
+              style={[styles.shareButton, { backgroundColor: colors.brand50, marginRight: 8 }]}
+              accessibilityRole="button"
+              accessibilityLabel="Print semester report"
+            >
+              <FontAwesome name="print" size={17} color={colors.brand} />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             onPress={shareReport}
             style={[styles.shareButton, { backgroundColor: colors.brand50 }]}

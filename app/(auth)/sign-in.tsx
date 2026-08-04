@@ -8,9 +8,10 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link } from 'expo-router';
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { signIn, signInWithApple, signInWithGoogle, isAppleSignInAvailable } from '@/lib/auth';
@@ -18,13 +19,16 @@ import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
-import { FONTS } from '@/lib/constants';
+import { FONTS, MARKETING_URL } from '@/lib/constants';
+import { WebAuthBackdrop, webAuthCard } from '@/components/WebAuthChrome';
 
 export default function SignInScreen() {
   // Reactive subscription — re-renders this screen whenever the banner
   // appears (set by reset-password.tsx after a successful password change,
   // so the user sees confirmation when they're bounced back here to sign in).
   const banner = useAppStore((s) => s.postSignupBanner);
+  const router = useRouter();
+  const params = useLocalSearchParams<{ mode?: string }>();
 
   // New installs land here straight from onboarding, so account CREATION
   // is the default framing. By policy, accounts are created ONLY via
@@ -32,8 +36,11 @@ export default function SignInScreen() {
   // email/password form is a sign-in-only path for existing accounts,
   // revealed by the mode toggle. A live banner (email-confirm pending,
   // or password just reset) means the account exists → sign-in mode.
+  // A caller can also request sign-in mode explicitly via ?mode=signin
+  // (the web marketing homepage's "Sign in" link does this, as opposed to
+  // its "Get started" CTA which wants the default signup framing).
   const [mode, setMode] = useState<'signup' | 'signin'>(
-    useAppStore.getState().postSignupBanner ? 'signin' : 'signup',
+    useAppStore.getState().postSignupBanner || params.mode === 'signin' ? 'signin' : 'signup',
   );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -180,7 +187,8 @@ export default function SignInScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
+    <WebAuthBackdrop>
+    <SafeAreaView style={[styles.safe, { backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.paper }]} edges={['top', 'bottom']}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { minHeight: height }]}
         keyboardShouldPersistTaps="always"
@@ -190,6 +198,7 @@ export default function SignInScreen() {
         <View
           style={[
             styles.inner,
+            webAuthCard,
             {
               maxWidth: isWide ? Math.min(width - 64, 560) : 440,
               paddingHorizontal: 24,
@@ -210,10 +219,27 @@ export default function SignInScreen() {
             ]}
           />
           <View style={styles.header}>
-            <View style={styles.brandRow}>
-              <View style={[styles.brandDot, { backgroundColor: colors.brand }]} />
-              <Text style={[styles.brandWord, { color: colors.ink }]}>Semora</Text>
-            </View>
+            {Platform.OS === 'web' ? (
+              <TouchableOpacity
+                style={styles.brandRow}
+                // semoraai.com is the marketing site; app/welcome.tsx was this
+                // app's stand-in before that site existed. Sending "back" to the
+                // duplicate strands anyone who arrived from semoraai.com with no
+                // way back to the page they clicked from.
+                onPress={() => { window.location.href = MARKETING_URL; }}
+                activeOpacity={0.7}
+                accessibilityRole="link"
+                accessibilityLabel="Back to Semora home"
+              >
+                <View style={[styles.brandDot, { backgroundColor: colors.brand }]} />
+                <Text style={[styles.brandWord, { color: colors.ink }]}>Semora</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.brandRow}>
+                <View style={[styles.brandDot, { backgroundColor: colors.brand }]} />
+                <Text style={[styles.brandWord, { color: colors.ink }]}>Semora</Text>
+              </View>
+            )}
             <Text style={[styles.title, { color: colors.ink }]}>
               {mode === 'signup'
                 ? onboardName
@@ -238,17 +264,37 @@ export default function SignInScreen() {
                 sign-in-only, for accounts that already exist. */}
             <View style={styles.oauthGroup}>
               {appleAvailable ? (
-                <AppleAuthentication.AppleAuthenticationButton
-                  buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-                  buttonStyle={
-                    colors.paper === '#FAF9F5' || colors.paper === '#fff'
-                      ? AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
-                      : AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
-                  }
-                  cornerRadius={18}
-                  style={styles.appleButton}
-                  onPress={handleApple}
-                />
+                Platform.OS === 'web' ? (
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="Continue with Apple"
+                    style={[styles.appleWebButton, oauthLoading === 'apple' && styles.buttonDisabled]}
+                    onPress={handleApple}
+                    disabled={oauthLoading !== null}
+                    activeOpacity={0.82}
+                  >
+                    {oauthLoading === 'apple' ? (
+                      <ActivityIndicator color="#fff" size="small" />
+                    ) : (
+                      <>
+                        <FontAwesome name="apple" size={20} color="#fff" />
+                        <Text style={styles.appleWebButtonText}>Continue with Apple</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                ) : (
+                  <AppleAuthentication.AppleAuthenticationButton
+                    buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                    buttonStyle={
+                      colors.paper === '#FAF9F5' || colors.paper === '#fff'
+                        ? AppleAuthentication.AppleAuthenticationButtonStyle.BLACK
+                        : AppleAuthentication.AppleAuthenticationButtonStyle.WHITE
+                    }
+                    cornerRadius={18}
+                    style={styles.appleButton}
+                    onPress={handleApple}
+                  />
+                )
               ) : null}
 
               <TouchableOpacity
@@ -438,6 +484,7 @@ export default function SignInScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </WebAuthBackdrop>
   );
 }
 
@@ -621,6 +668,21 @@ const styles = StyleSheet.create({
   appleButton: {
     height: 56,
     width: '100%',
+  },
+  appleWebButton: {
+    flexDirection: 'row',
+    height: 56,
+    width: '100%',
+    backgroundColor: '#000',
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 10,
+  },
+  appleWebButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
   googleButton: {
     flexDirection: 'row',

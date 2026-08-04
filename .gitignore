@@ -50,3 +50,9 @@ supabase/.temp/
 client_secret*.json
 *.local.json
 secrets.local/
+
+# Regenerable upload bundle — the PNGs it contains are already tracked.
+screenshots/store-screenshots/*.zip
+# Ad-hoc screenshots dropped in the repo root.
+/Screenshot *.png
+

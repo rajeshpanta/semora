@@ -1,0 +1,57 @@
+.prose {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 56px 20px 96px;
+}
+
+.prose h1 {
+  font-size: clamp(1.8rem, 5vw, 2.4rem);
+  margin-bottom: 6px;
+}
+
+.updated {
+  font-size: 14px;
+  color: var(--ink-muted);
+  margin-bottom: 32px;
+}
+
+.subtitle {
+  font-size: 16px;
+  color: var(--ink-muted);
+  margin-bottom: 32px;
+}
+
+.prose h2 {
+  font-size: 19px;
+  margin-top: 32px;
+  margin-bottom: 10px;
+}
+
+.prose p,
+.prose li {
+  font-size: 15.5px;
+  color: var(--ink2);
+  margin-bottom: 12px;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 20px;
+}
+
+.prose strong {
+  color: var(--ink);
+}
+
+.contactBox {
+  background: var(--brand-50);
+  border-radius: 12px;
+  padding: 24px;
+  margin-top: 32px;
+}
+
+.contactBox a {
+  font-weight: 600;
+  font-size: 16px;
+}
+

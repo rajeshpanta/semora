@@ -1,5 +1,5 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GoogleSignin } from '@/lib/googleSignin';
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
@@ -65,8 +65,21 @@ export async function signIn(email: string, password: string) {
  * silently ignore E_CANCELED.
  */
 export async function signInWithApple() {
+  if (Platform.OS === 'web') {
+    const redirectTo =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/`
+        : undefined;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: { redirectTo },
+    });
+    if (error) throw error;
+    return;
+  }
+
   if (Platform.OS !== 'ios') {
-    throw new Error('Sign in with Apple is iOS-only.');
+    throw new Error('Sign in with Apple is unavailable on this device.');
   }
 
   const credential = await AppleAuthentication.signInAsync({
@@ -109,6 +122,25 @@ export async function signInWithApple() {
  * ignore SIGN_IN_CANCELLED.
  */
 export async function signInWithGoogle() {
+  if (Platform.OS === 'web') {
+    const redirectTo =
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/`
+        : undefined;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'select_account',
+        },
+      },
+    });
+    if (error) throw error;
+    return;
+  }
+
   configureGoogleOnce();
 
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
@@ -217,11 +249,11 @@ export async function refreshGoogleClassroomAccessToken(
 }
 
 /**
- * True iff this device can offer Sign in with Apple. iOS only, and
- * even on iOS this returns false on simulators without an Apple ID
- * configured.
+ * True iff this device can offer Sign in with Apple. Browsers use Supabase's
+ * Apple OAuth flow; iOS uses the native authentication sheet.
  */
 export async function isAppleSignInAvailable(): Promise<boolean> {
+  if (Platform.OS === 'web') return true;
   if (Platform.OS !== 'ios') return false;
   try {
     return await AppleAuthentication.isAvailableAsync();

@@ -48,7 +48,7 @@ function round(value: number, digits = 2) {
 
 function letterFor(percentage: number | null, scale: GradeThreshold[]) {
   if (percentage == null) return null;
-  const sorted = [...(scale.length ? scale : DEFAULT_GRADE_SCALE)]
+  const sorted = [...(scale?.length ? scale : DEFAULT_GRADE_SCALE)]
     .sort((a, b) => b.min - a.min);
   return sorted.find((entry) => percentage >= entry.min)?.letter ?? 'F';
 }

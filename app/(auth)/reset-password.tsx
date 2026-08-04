@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, ScrollView,
+  ActivityIndicator, ScrollView, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -11,6 +11,7 @@ import { signOut } from '@/lib/auth';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
+import { WebAuthBackdrop, webAuthCard } from '@/components/WebAuthChrome';
 
 export default function ResetPasswordScreen() {
   const colors = useColors();
@@ -71,7 +72,8 @@ export default function ResetPasswordScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
+    <WebAuthBackdrop>
+    <SafeAreaView style={[styles.safe, { backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.paper }]} edges={['top', 'bottom']}>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         contentContainerStyle={[styles.scroll, { minHeight: height }]}
@@ -82,6 +84,7 @@ export default function ResetPasswordScreen() {
         <View
           style={[
             styles.inner,
+            webAuthCard,
             {
               maxWidth: isWide ? Math.min(width - 64, 560) : 440,
               paddingHorizontal: 24,
@@ -175,6 +178,7 @@ export default function ResetPasswordScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </WebAuthBackdrop>
   );
 }
 

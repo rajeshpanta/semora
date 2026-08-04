@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/lib/constants';
 import { useColors, useResolvedScheme } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 
 function TabIcon({ name, color, focused }: { name: any; color: string; focused: boolean }) {
   const colors = useColors();
@@ -30,6 +31,7 @@ export default function TabLayout() {
   const colors = useColors();
   const scheme = useResolvedScheme();
   const isWeb = Platform.OS === 'web';
+  const { isDesktop } = useResponsive();
   const insets = useSafeAreaInsets();
   const isDark = scheme === 'dark';
   const tabBarBgRgba = isDark ? 'rgba(18,18,20,0.92)' : 'rgba(250,249,245,0.92)';
@@ -47,6 +49,7 @@ export default function TabLayout() {
             <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.paper }]} pointerEvents="none" />
           ),
         tabBarStyle: {
+          display: isDesktop ? 'none' : 'flex',
           position: isWeb ? undefined : ('absolute' as const),
           backgroundColor: isWeb ? colors.paper : tabBarBgRgba,
           borderTopWidth: 0.5,

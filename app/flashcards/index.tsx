@@ -7,14 +7,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import * as DocumentPicker from 'expo-document-picker';
+import { COLORS, FONTS, SCREEN_MAX_WIDTH, TASK_TYPE_LABELS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { track } from '@/lib/analytics';
 import {
-  useDecks, useCreateDeck, useCourseLookup, type DeckWithCounts, type CourseLite,
+  useDecks, useCreateDeck, useCourseLookup, useGenerateFlashcards, useScopeTasks,
+  type DeckWithCounts, type CourseLite,
 } from '@/lib/flashcards';
+import { useCourseNotes, useUploadCourseNote } from '@/lib/tutor';
 
 export default function FlashcardsScreen() {
   const router = useRouter();
@@ -28,9 +31,70 @@ export default function FlashcardsScreen() {
   const { data: decks = [], isLoading } = useDecks();
   const { data: courseMap = {} } = useCourseLookup();
   const createDeck = useCreateDeck();
+  const generateFlashcards = useGenerateFlashcards();
+  const { data: scopeTasks = [] } = useScopeTasks(courseId);
+  const { data: courseNotes = [] } = useCourseNotes(courseId);
+  const uploadNote = useUploadCourseNote(courseId);
 
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState('');
+
+  // Scope picker for the generate flow: 'course' (default) or one specific
+  // task's id (exam/quiz/assignment/reading) — see useScopeTasks. Collapsed
+  // until the student taps "Generate with AI", matching the existing
+  // New-Deck expand pattern below.
+  const [generateOpen, setGenerateOpen] = useState(false);
+  const [scopeTaskId, setScopeTaskId] = useState<string | null>(null);
+
+  const handleAddMaterial = async () => {
+    if (!courseId) return;
+    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ['application/pdf', 'image/*'],
+      copyToCacheDirectory: true,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    try {
+      await uploadNote.mutateAsync({
+        uri: asset.uri,
+        filename: asset.name || 'material',
+        mimeType: asset.mimeType || 'application/pdf',
+      });
+      track('flashcards_material_uploaded', { screen: 'flashcards', courseId });
+      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    } catch (e: any) {
+      Alert.alert('Upload failed', e?.message || 'Please try again.');
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!courseId || generateFlashcards.isPending) return;
+    if (Platform.OS === 'ios') Haptics.selectionAsync();
+    try {
+      const result = await generateFlashcards.mutateAsync({
+        courseId,
+        taskId: scopeTaskId ?? undefined,
+      });
+      track('deck_generated', {
+        screen: 'flashcards', courseId, cardsAdded: result.cardsAdded,
+        scoped: !!scopeTaskId,
+      });
+      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setGenerateOpen(false);
+      setScopeTaskId(null);
+      router.push(`/flashcards/${result.deckId}` as any);
+    } catch (err: any) {
+      // Defense in depth: this screen already gates !isPro above, so this
+      // should rarely fire — but client isPro can be stale, same reasoning
+      // as the AI Tutor screen's identical guard.
+      if (err?.code === 'PRO_REQUIRED') {
+        router.push({ pathname: '/paywall', params: { context: 'flashcards_generate' } } as any);
+        return;
+      }
+      Alert.alert('Could not generate flashcards', err?.message ?? 'Please try again.');
+    }
+  };
 
   // Group decks by course for section rendering: each course that has decks,
   // then an "Uncategorized" bucket. Course order follows the lookup's name.
@@ -115,6 +179,102 @@ export default function FlashcardsScreen() {
         contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
         keyboardShouldPersistTaps="handled"
       >
+        {/* AI-generate affordance — only when opened scoped to a course
+            (the entry row on course detail passes ?courseId=), since
+            generation is grounded in that course's syllabus + notes. Tap to
+            expand a scope picker (whole course, or one specific exam/quiz —
+            sourced from real tasks, not a free-text box like competitors
+            use) plus an optional material upload for something like a
+            teacher's review packet. */}
+        {!!courseId && !generateOpen && (
+          <TouchableOpacity
+            style={[styles.generateBtn, { backgroundColor: colors.ink }]}
+            onPress={() => { if (Platform.OS === 'ios') Haptics.selectionAsync(); setGenerateOpen(true); }}
+            activeOpacity={0.85}
+          >
+            <View style={[styles.generateGlow, { backgroundColor: colors.brand }]} />
+            <FontAwesome name="magic" size={14} color="#fff" style={{ zIndex: 1 }} />
+            <View style={{ flex: 1, zIndex: 1 }}>
+              <Text style={styles.generateTitle}>Generate with AI</Text>
+              <Text style={styles.generateSub}>From this course's syllabus and notes</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {!!courseId && generateOpen && (
+          <View style={[styles.generatePanel, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <View style={styles.generatePanelHeader}>
+              <FontAwesome name="magic" size={13} color={colors.brand} />
+              <Text style={[styles.generatePanelTitle, { color: colors.ink }]}>Generate with AI</Text>
+              <TouchableOpacity onPress={() => { setGenerateOpen(false); setScopeTaskId(null); }} hitSlop={10}>
+                <FontAwesome name="times" size={15} color={colors.ink3} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={[styles.generateSectionLabel, { color: colors.ink3 }]}>Focus on</Text>
+            <View style={styles.scopeRow}>
+              <TouchableOpacity
+                style={[styles.scopeChip, { borderColor: colors.line }, scopeTaskId === null && { backgroundColor: colors.brand, borderColor: colors.brand }]}
+                onPress={() => setScopeTaskId(null)}
+              >
+                <Text style={[styles.scopeChipText, { color: colors.ink2 }, scopeTaskId === null && { color: '#fff' }]}>Whole course</Text>
+              </TouchableOpacity>
+              {scopeTasks.map((a) => (
+                <TouchableOpacity
+                  key={a.id}
+                  style={[styles.scopeChip, { borderColor: colors.line }, scopeTaskId === a.id && { backgroundColor: colors.brand, borderColor: colors.brand }]}
+                  onPress={() => setScopeTaskId(a.id)}
+                >
+                  <Text style={[styles.scopeChipText, { color: colors.ink2 }, scopeTaskId === a.id && { color: '#fff' }]}>
+                    {TASK_TYPE_LABELS[a.type as keyof typeof TASK_TYPE_LABELS] ?? a.type}: {a.title}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {scopeTasks.length === 0 && (
+              <Text style={[styles.generateHint, { color: colors.ink3 }]}>
+                No exams, quizzes, assignments, or readings tracked for this course yet — add one to focus generation on it specifically.
+              </Text>
+            )}
+
+            <Text style={[styles.generateSectionLabel, { color: colors.ink3, marginTop: 16 }]}>Study material</Text>
+            <TouchableOpacity
+              style={[styles.uploadRow, { borderColor: colors.line }]}
+              onPress={handleAddMaterial}
+              disabled={uploadNote.isPending}
+              activeOpacity={0.7}
+            >
+              {uploadNote.isPending ? (
+                <ActivityIndicator size="small" color={colors.brand} />
+              ) : (
+                <FontAwesome name="paperclip" size={13} color={colors.brand} />
+              )}
+              <Text style={[styles.uploadRowText, { color: colors.ink2 }]}>
+                {uploadNote.isPending
+                  ? 'Uploading…'
+                  : courseNotes.length > 0
+                    ? `${courseNotes.length} file${courseNotes.length !== 1 ? 's' : ''} added — add another`
+                    : "Add a PDF or photo (e.g. the teacher's review packet)"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.generateConfirmBtn, { backgroundColor: colors.brand }, generateFlashcards.isPending && { opacity: 0.7 }]}
+              onPress={handleGenerate}
+              disabled={generateFlashcards.isPending}
+              activeOpacity={0.85}
+            >
+              {generateFlashcards.isPending ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={styles.generateConfirmText}>
+                  {scopeTaskId ? `Generate for ${scopeTasks.find((a) => a.id === scopeTaskId)?.title ?? 'this item'}` : 'Generate for whole course'}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Create-deck affordance */}
         {creating ? (
           <View style={[styles.createCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
@@ -216,6 +376,26 @@ const styles = StyleSheet.create({
   teaserDesc: { fontSize: 14, color: COLORS.ink3, textAlign: 'center', lineHeight: 20, maxWidth: 300, marginBottom: 18 },
   upgradeBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
   upgradeText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+
+  // AI generate
+  generateBtn: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 14, marginBottom: 10, overflow: 'hidden', position: 'relative' },
+  generateGlow: { position: 'absolute', right: -20, top: -20, width: 100, height: 100, borderRadius: 50, opacity: 0.35 },
+  generateTitle: { fontSize: 15, fontWeight: '700', color: '#fff', zIndex: 1 },
+  generateSub: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 1, zIndex: 1 },
+
+  // AI generate — expanded scope-picker panel
+  generatePanel: { borderRadius: 16, borderWidth: 0.5, padding: 16, marginBottom: 10 },
+  generatePanelHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  generatePanelTitle: { flex: 1, fontSize: 15, fontWeight: '700' },
+  generateSectionLabel: { fontSize: 11.5, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 8 },
+  generateHint: { fontSize: 12.5, lineHeight: 17 },
+  scopeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  scopeChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1 },
+  scopeChipText: { fontSize: 13, fontWeight: '600' },
+  uploadRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderStyle: 'dashed', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
+  uploadRowText: { flex: 1, fontSize: 13, lineHeight: 18 },
+  generateConfirmBtn: { marginTop: 16, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  generateConfirmText: { fontSize: 14.5, fontWeight: '700', color: '#fff' },
 
   // Create deck
   newDeckBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 13, borderRadius: 12 },

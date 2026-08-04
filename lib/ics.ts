@@ -234,10 +234,6 @@ export function generateIcs(
 export async function exportSemesterIcs(
   semesterId: string,
 ): Promise<{ tasks: number; meetings: number }> {
-  if (Platform.OS === 'web') {
-    throw new Error('Calendar export is only available on iOS and Android.');
-  }
-
   const [semRes, taskRes, meetRes] = await Promise.all([
     supabase.from('semesters').select('end_date').eq('id', semesterId).single(),
     // Incomplete tasks only — mirrors the device sync's scope; completed
@@ -284,6 +280,20 @@ export async function exportSemesterIcs(
   }
 
   const ics = generateIcs(tasks, meetings, semesterEndOrDefault(semRes.data?.end_date));
+
+  if (Platform.OS === 'web') {
+    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'semora-semester.ics';
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return { tasks: tasks.length, meetings: meetings.length };
+  }
 
   const uri = `${FileSystem.cacheDirectory}semora-semester.ics`;
   await FileSystem.writeAsStringAsync(uri, ics);

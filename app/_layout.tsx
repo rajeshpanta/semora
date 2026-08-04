@@ -22,7 +22,7 @@ import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateAfterP
 import {
   COMPLETE_TASK_ACTION, SNOOZE_TASK_ACTION, cancelAllRemindersOnSignOut,
   cancelTaskReminders, registerTaskNotificationActions, rescheduleAllTaskReminders,
-  snoozeNotification,
+  snoozeNotification, startWebDueSoonReminders,
 } from '@/lib/notifications';
 import { registerForPushNotificationsAsync } from '@/lib/push';
 import { track } from '@/lib/analytics';
@@ -41,7 +41,10 @@ import {
 } from '@/lib/collaboration';
 import { LmsSyncBridge } from '@/components/LmsSyncBridge';
 import { CollaborationSyncBridge } from '@/components/CollaborationSyncBridge';
+import { RealtimeSyncBridge } from '@/components/RealtimeSyncBridge';
 import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
+import { WebAppFrame } from '@/components/WebAppFrame';
+import { WebAlertHost } from '@/components/WebAlertHost';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -359,6 +362,12 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       const parsed = Linking.parse(url);
       const path = (parsed.path ?? '').replace(/^\//, '');
       const code = typeof parsed.queryParams?.code === 'string' ? parsed.queryParams.code : null;
+      // Browser OAuth returns to the site's root (`https://host/?code=...`).
+      // Unlike semora:// links, the hostname is the deployment host rather
+      // than "auth", so recognize the root callback explicitly.
+      const isWebOAuthCallback = Platform.OS === 'web' && path === '' && !!code;
+      const isWebPasswordReset =
+        Platform.OS === 'web' && path === 'reset-password' && !!code;
 
       const isCollaborationLink =
         parsed.hostname === 'collaborate' ||
@@ -376,9 +385,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (parsed.hostname !== 'auth') return;
+      if (parsed.hostname !== 'auth' && !isWebOAuthCallback && !isWebPasswordReset) return;
 
-      if (path === 'reset') {
+      if (path === 'reset' || isWebPasswordReset) {
         // Sanity bound — Supabase auth codes are short (~32 chars).
         // Block obviously-malformed payloads before we hand them to
         // exchangeCodeForSession.
@@ -420,7 +429,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      if (path === 'callback') {
+      if (path === 'callback' || isWebOAuthCallback) {
         // Same sanity bound as the reset path — Supabase auth codes are
         // ~32 chars; a 10MB `?code=` would otherwise be passed straight
         // to exchangeCodeForSession.
@@ -440,6 +449,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           );
           globalRouter.replace('/(auth)/sign-in');
           return;
+        }
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          window.history.replaceState({}, document.title, window.location.pathname);
         }
         // Success — AuthGate sees the new session and routes to (tabs).
       }
@@ -510,6 +522,18 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return;
 
+    // Browser OAuth returns to `https://host/?code=...` and handleDeepLink
+    // exchanges that code for a session. Until it does, `session` is still
+    // null — redirecting here would rewrite the URL and throw the code away.
+    if (
+      Platform.OS === 'web' &&
+      !session &&
+      typeof window !== 'undefined' &&
+      new URLSearchParams(window.location.search).has('code')
+    ) {
+      return;
+    }
+
     // Recovery flow handling.
     //
     //   inPasswordReset=true + session=valid:
@@ -534,16 +558,24 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
     const inAuthGroup = segments[0] === '(auth)';
     const onOnboarding = (segments[0] as string) === 'onboarding';
+    const onWelcome = (segments[0] as string) === 'welcome';
 
     if (!session) {
-      // First launch on this device: sell the value before the sign-up
-      // wall. Once onboarded, fall through to the normal sign-in redirect.
-      if (!hasOnboarded) {
+      if (Platform.OS === 'web') {
+        // This domain is the app; semoraai.com is the marketing site. Anyone
+        // arriving signed out clicked "Sign in"/"Try it for free" over there,
+        // so send them straight to the auth screen — its logo links back to
+        // semoraai.com. (app/welcome.tsx was the stand-in marketing page from
+        // before that site existed; it now just bounces to it.)
+        if (!inAuthGroup && !onWelcome) router.replace('/(auth)/sign-in');
+      } else if (!hasOnboarded) {
+        // First launch on this device: sell the value before the sign-up
+        // wall. Once onboarded, fall through to the normal sign-in redirect.
         if (!onOnboarding) router.replace('/onboarding' as any);
       } else if (!inAuthGroup) {
         router.replace('/(auth)/sign-in');
       }
-    } else if (session && (inAuthGroup || onOnboarding)) {
+    } else if (session && (inAuthGroup || onOnboarding || onWelcome)) {
       // Freshly authenticated. Two deep-link flows may have parked intent while
       // the user was signed out — resume them now instead of dropping the user
       // on the tabs with nothing happening:
@@ -592,6 +624,14 @@ function NotificationActionBridge() {
     registerTaskNotificationActions(isPro).catch(() => {});
   }, [isPro]);
 
+  // Web has no OS-level scheduler to hand future reminders off to, so instead
+  // of the native register-actions/response-listener pair below, it gets a
+  // foreground poll for anything due imminently while the tab is open.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !session) return;
+    return startWebDueSoonReminders(session.user.id);
+  }, [session]);
+
   useEffect(() => {
     if (Platform.OS === 'web' || !session) return;
     let active = true;
@@ -599,6 +639,18 @@ function NotificationActionBridge() {
     const handle = async (response: Notifications.NotificationResponse) => {
       if (!active) return;
       const action = response.actionIdentifier;
+
+      // Server-sent pushes (supabase/cron/*) carry a `type` and no taskId, so
+      // they have to be routed BEFORE the taskId guard below — which would
+      // otherwise drop them silently, as it has been doing for the weekly
+      // digest since that job shipped.
+      const pushType = response.notification.request.content.data?.type;
+      if (typeof pushType === 'string') {
+        if (pushType === 'flashcards_due') globalRouter.push('/flashcards' as any);
+        else globalRouter.replace('/(tabs)' as any);
+        return;
+      }
+
       const taskId = response.notification.request.content.data?.taskId;
       if (typeof taskId !== 'string') return;
 
@@ -734,9 +786,11 @@ function RootLayoutNav() {
           <TaskCompletionFlowProvider>
             <NotificationActionBridge />
             <OfflineSyncRuntime />
+            <RealtimeSyncRuntime />
             <LmsSyncRuntime />
             <CollaborationSyncRuntime />
             <AuthGate>
+              <NavigationFrame>
               <Stack
               screenOptions={{
                 headerBackTitle: 'Back',
@@ -747,6 +801,7 @@ function RootLayoutNav() {
             >
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+              <Stack.Screen name="welcome" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
               <Stack.Screen name="semester/new" options={{ presentation: 'modal', title: 'New Semester' }} />
               <Stack.Screen name="semester/[id]" options={{ title: 'Edit Semester' }} />
@@ -755,6 +810,7 @@ function RootLayoutNav() {
               <Stack.Screen name="task/new" options={{ presentation: 'modal', title: 'New Task' }} />
               <Stack.Screen name="task/[id]" options={{ title: 'Task' }} />
               <Stack.Screen name="search" options={{ title: 'Search Tasks' }} />
+              <Stack.Screen name="syllabus/paste" options={{ presentation: 'modal', title: 'Paste Syllabus Text' }} />
               <Stack.Screen name="syllabus/upload" options={{ presentation: 'modal', title: 'Upload Syllabus' }} />
               <Stack.Screen name="syllabus/review" options={{ title: 'Review Items' }} />
               <Stack.Screen name="settings/index" options={{ title: 'Settings' }} />
@@ -780,8 +836,10 @@ function RootLayoutNav() {
               <Stack.Screen name="share-semester" options={{ presentation: 'modal', headerShown: false }} />
               <Stack.Screen name="paywall" options={{ presentation: 'fullScreenModal', headerShown: false }} />
               </Stack>
+              </NavigationFrame>
             </AuthGate>
             <TaskCompletionCelebration />
+            <WebAlertHost />
           </TaskCompletionFlowProvider>
         </AuthProvider>
       </ThemeProvider>
@@ -789,9 +847,19 @@ function RootLayoutNav() {
   );
 }
 
+function NavigationFrame({ children }: { children: React.ReactNode }) {
+  const { session } = useSession();
+  return <WebAppFrame session={session}>{children}</WebAppFrame>;
+}
+
 function OfflineSyncRuntime() {
   const { session } = useSession();
   return <OfflineSyncBridge userId={session?.user.id ?? null} />;
+}
+
+function RealtimeSyncRuntime() {
+  const { session } = useSession();
+  return <RealtimeSyncBridge userId={session?.user.id ?? null} />;
 }
 
 function LmsSyncRuntime() {

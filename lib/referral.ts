@@ -1,11 +1,13 @@
-import * as SecureStore from 'expo-secure-store';
+import { getDeviceItem, setDeviceItem, deleteDeviceItem } from '@/lib/deviceStore';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { refreshProStatus } from '@/lib/purchases';
+import { MARKETING_URL } from '@/lib/constants';
 
 // ── Referral system ─────────────────────────────────────────
 //
-// Free Pro month for BOTH sides. A user shares semora://invite?code=<code>;
+// Free Pro month for BOTH sides. A user shares https://semoraai.com/invite/<code>
+// (a landing page that hands off to semora://invite?code=<code>);
 // a friend opens it, and on redemption the referrer and the friend each get a
 // 30-day promo grant. Server-side (redeem-referral + migration 028) owns all
 // the guards and the grants; this module is the thin client:
@@ -24,7 +26,7 @@ import { refreshProStatus } from '@/lib/purchases';
 // the DB is_pro() already does server-side. This keeps a referral's free month
 // visible in the UI without ever writing a promo to entitlements.
 
-// SecureStore key for a code stashed while the user is signed out (a friend
+// Device-store key for a code stashed while the user is signed out (a friend
 // who tapped an invite link before creating an account). Applied post-signup.
 const PENDING_REFERRAL_KEY = 'semora_pending_referral_code';
 
@@ -99,11 +101,17 @@ export async function getMyCode(): Promise<string | null> {
 }
 
 /**
- * Build the shareable invite link for a code. The 'semora' scheme +
- * expo-router map semora://invite?code=... to app/invite.tsx automatically.
+ * Build the shareable invite link for a code.
+ *
+ * This is an https page on the marketing site rather than a bare
+ * `semora://invite?code=...`. The custom scheme only resolves on a device that
+ * already has Semora installed — i.e. never for the friend an invite is meant
+ * to reach — and pastes into a group chat as dead grey text with no preview.
+ * The landing page explains the offer, previews properly, and hands off to the
+ * scheme (still routed to app/invite.tsx) for recipients who do have the app.
  */
 export function inviteLink(code: string): string {
-  return `semora://invite?code=${encodeURIComponent(code)}`;
+  return `${MARKETING_URL}/invite/${encodeURIComponent(code)}`;
 }
 
 /**
@@ -243,15 +251,13 @@ export async function syncPromoPro(): Promise<void> {
 export async function stashPendingReferral(code: string): Promise<void> {
   const trimmed = (code ?? '').trim();
   if (!trimmed) return;
-  try {
-    await SecureStore.setItemAsync(PENDING_REFERRAL_KEY, trimmed);
-    // A newly-stashed code hasn't been applied yet — clear any stale flag so
-    // applyPendingReferral will actually attempt it after signup.
-    await SecureStore.deleteItemAsync(REFERRAL_APPLIED_KEY).catch(() => {});
-  } catch {
-    // SecureStore unavailable — the code is lost, but that's a soft failure
-    // (the friend can still enter it manually). Never throw into a deep link.
-  }
+  // Web included. SecureStore's web build is a stub, so this used to lose the
+  // code silently for anyone opening an invite in a browser — the exact person
+  // an invite link is for. See lib/deviceStore.ts.
+  setDeviceItem(PENDING_REFERRAL_KEY, trimmed);
+  // A newly-stashed code hasn't been applied yet — clear any stale flag so
+  // applyPendingReferral will actually attempt it after signup.
+  deleteDeviceItem(REFERRAL_APPLIED_KEY);
 }
 
 /**
@@ -269,10 +275,10 @@ export async function applyPendingReferral(): Promise<RedeemStatus | null> {
     if (!userId) return null;
 
     // Already applied on this device — don't re-hit the server every mount.
-    const applied = await SecureStore.getItemAsync(REFERRAL_APPLIED_KEY).catch(() => null);
+    const applied = getDeviceItem(REFERRAL_APPLIED_KEY);
     if (applied === 'true') return null;
 
-    const code = await SecureStore.getItemAsync(PENDING_REFERRAL_KEY).catch(() => null);
+    const code = getDeviceItem(PENDING_REFERRAL_KEY);
     if (!code) return null;
 
     const result = await redeem(code);
@@ -288,8 +294,8 @@ export async function applyPendingReferral(): Promise<RedeemStatus | null> {
       result.status === 'self_referral' ||
       result.status === 'invalid_code';
     if (terminal) {
-      await SecureStore.deleteItemAsync(PENDING_REFERRAL_KEY).catch(() => {});
-      await SecureStore.setItemAsync(REFERRAL_APPLIED_KEY, 'true').catch(() => {});
+      deleteDeviceItem(PENDING_REFERRAL_KEY);
+      setDeviceItem(REFERRAL_APPLIED_KEY, 'true');
       // On success, make sure promo Pro is reflected even if redeem's own
       // sync raced the store init.
       if (result.status === 'ok') {

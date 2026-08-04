@@ -13,8 +13,7 @@ import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useEffect, useState } from 'react';
 import Constants from 'expo-constants';
-import { getProducts } from '@/lib/purchases';
-import { isEligibleForIntroOfferIOS } from 'react-native-iap';
+import { getProducts, isEligibleForIntroOffer } from '@/lib/purchases';
 import { getMyCode, getRedemptionCount, inviteLink, applyPendingReferral, syncPromoPro } from '@/lib/referral';
 import { track } from '@/lib/analytics';
 import { GlobalSearchButton } from '@/components/GlobalSearchButton';
@@ -40,7 +39,7 @@ export default function MeScreen() {
       if (p?.monthly?.displayPrice) setMonthlyPrice(p.monthly.displayPrice);
       const groupId = (p?.monthly as any)?.subscriptionInfoIOS?.subscriptionGroupId;
       if (groupId) {
-        isEligibleForIntroOfferIOS(groupId)
+        isEligibleForIntroOffer(groupId)
           .then((ok: boolean) => setTrialEligible(ok === true))
           .catch(() => {});
       }
@@ -275,10 +274,19 @@ export default function MeScreen() {
 
         {/* Academic tools — relocated from Settings (these are feature screens,
             not settings). The destination screens own their own Pro gating, so
-            these are always tappable. */}
+            these are always tappable. Mirrors WebAppFrame.tsx's TOOL_ITEMS list
+            (icons/labels/routes kept identical) so native and desktop-web give
+            the same set of tools the same visibility — on native this was the
+            only way to reach these mid-2026: no tab-bar presence, only a
+            Today-tab card or drilling into a specific course. */}
         <Text style={[styles.toolsTitle, { color: colors.ink2 }]}>Academic tools</Text>
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <SettingsRow icon="bolt" label="Smart Plan" onPress={() => router.push('/planner' as any)} colors={colors} />
+          <SettingsRow icon="bar-chart" label="Workload" onPress={() => router.push('/dashboard' as any)} colors={colors} />
           <SettingsRow icon="line-chart" label="Progress Insights" onPress={() => router.push('/insights' as any)} colors={colors} />
+          <SettingsRow icon="clone" label="Flashcards" onPress={() => router.push('/flashcards' as any)} colors={colors} />
+          <SettingsRow icon="clock-o" label="Focus Timer" onPress={() => router.push('/pomodoro' as any)} colors={colors} />
+          <SettingsRow icon="comments-o" label="AI Tutor" onPress={() => router.push('/tutor' as any)} colors={colors} />
           <SettingsRow icon="users" label="Class Collaboration" last onPress={() => router.push('/collaboration' as any)} colors={colors} />
         </View>
 

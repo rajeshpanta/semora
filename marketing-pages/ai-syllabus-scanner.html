@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Syllabus Scanner: Turn a Syllabus Photo into a Semester Calendar | Semora</title>
+<meta name="description" content="Semora is an AI syllabus scanner that automatically turns a syllabus photo or PDF into a full calendar of deadlines, grades, and class times.">
+<style>
+  :root {
+    --bg: #FAF9F5;
+    --ink: #1C1B1F;
+    --purple: #6B46C1;
+    --purple-tint: #F1ECFA;
+    --border: #E4E0D8;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    font-size: 17px;
+  }
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 48px 20px 80px;
+  }
+  h1, h2, h3 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--ink);
+  }
+  h1 {
+    font-size: clamp(1.7rem, 5vw, 2.5rem);
+    margin: 0 0 20px;
+  }
+  h2 {
+    font-size: clamp(1.3rem, 4vw, 1.6rem);
+    margin: 48px 0 16px;
+    border-top: 1px solid var(--border);
+    padding-top: 40px;
+  }
+  h2:first-of-type { border-top: none; padding-top: 0; }
+  h3 {
+    font-size: 1.1rem;
+    margin: 28px 0 10px;
+  }
+  p { margin: 0 0 16px; }
+  ul, ol { margin: 0 0 16px; padding-left: 22px; }
+  li { margin-bottom: 8px; }
+  a { color: var(--purple); }
+  .lede {
+    font-size: 1.15rem;
+    padding: 20px 24px;
+    background: var(--purple-tint);
+    border-left: 3px solid var(--purple);
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+  .lede strong { color: var(--purple); }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 24px;
+    font-size: 0.95rem;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #F3F1EA;
+    font-family: Georgia, serif;
+  }
+  tr.pro-row td {
+    background: var(--purple-tint);
+  }
+  .steps {
+    counter-reset: step;
+    list-style: none;
+    padding-left: 0;
+  }
+  .steps li {
+    counter-increment: step;
+    position: relative;
+    padding-left: 44px;
+    margin-bottom: 18px;
+  }
+  .steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: -2px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--purple);
+    color: #fff;
+    font-family: Georgia, serif;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .faq h3 {
+    font-family: Georgia, serif;
+    font-style: italic;
+  }
+  .cta {
+    text-align: center;
+    margin: 56px 0 40px;
+    padding: 36px 24px;
+    background: var(--purple-tint);
+    border-radius: 10px;
+  }
+  .cta p { margin-bottom: 20px; font-size: 1.05rem; }
+  .btn {
+    display: inline-block;
+    background: var(--purple);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 14px 32px;
+    border-radius: 6px;
+    font-size: 1rem;
+  }
+  .btn:hover { opacity: 0.92; }
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 0.9rem;
+    color: #6b6a68;
+    text-align: center;
+  }
+  .note {
+    font-size: 0.85rem;
+    color: #6b6a68;
+    font-style: italic;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1C1B1F; color: #EDE9E3; }
+    .lede { background: #2A2333; border-left-color: #9B7FE0; }
+    .lede strong { color: #B79CF0; }
+    h1, h2, h3 { color: #F5F3EE; }
+    th { background: #26242A; }
+    tr.pro-row td { background: #2A2333; }
+    th, td, h2 { border-color: #3a3843; }
+    .cta { background: #2A2333; }
+    footer { color: #9b9994; border-color: #3a3843; }
+    a { color: #B79CF0; }
+    .btn { background: #8A5CE0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>AI Syllabus Scanner: Turn a Syllabus Photo into a Full Semester Calendar</h1>
+
+  <p class="lede"><strong>Semora is an AI syllabus scanner</strong> — an app for iPhone and web that reads a photo, PDF, or pasted text of your syllabus and automatically builds a calendar of every class meeting, assignment, and exam deadline for the semester.</p>
+
+  <h2>What Is an AI Syllabus Scanner?</h2>
+  <p>An AI syllabus scanner is a tool that reads the unstructured text of a course syllabus — a PDF, a scanned page, a photo — and converts it into structured, usable data: a class schedule, a grading breakdown, and a list of every due date. Instead of manually retyping deadlines from a 10-page syllabus PDF into a planner one by one, the syllabus is scanned once and the important dates come out organized and ready to use.</p>
+  <p>Semora applies this to a student's course syllabus, using Gemini AI to read the document and extract the details that actually affect a student's semester.</p>
+
+  <h2>How Semora Scans a Syllabus</h2>
+  <ol class="steps">
+    <li><strong>Capture the syllabus.</strong> Take a photo with your iPhone camera (multi-page capture supported, up to 5 pages), upload a PDF, drag and drop a file on the web app, or paste raw text copied from a PDF or your school's LMS page.</li>
+    <li><strong>AI reads and extracts.</strong> Semora's AI reads the document and pulls out the course name, instructor, meeting times, office hours, semester start/end dates, the grading scale, and every assignment, exam, quiz, project, and reading with its due date.</li>
+    <li><strong>Your semester is organized automatically.</strong> The extracted schedule and deadlines populate your calendar and task list immediately — no manual data entry required.</li>
+  </ol>
+
+  <h2>What Gets Extracted From Every Syllabus</h2>
+  <p>A single scan is designed to capture everything relevant to planning a semester:</p>
+  <ul>
+    <li>Course name and instructor</li>
+    <li>Class meeting times and office hours</li>
+    <li>Semester start and end dates</li>
+    <li>Grading scale / grade weighting</li>
+    <li>Every assignment, exam, quiz, project, and reading, each with its due date</li>
+  </ul>
+
+  <h2>Free to Start, With a Pro Tier for Heavier Course Loads</h2>
+  <p>Semora's core scanning and organizing features are usable for free. Pro unlocks planning tools built on top of the same scanned data, for students juggling more courses or more deadlines.</p>
+  <table>
+    <thead>
+      <tr><th>Included</th><th>Free</th><th>Pro ($3.99/mo or $19.99/yr)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Syllabus scans</td><td>5 per calendar month</td><td>Unlimited</td></tr>
+      <tr><td>Courses per semester</td><td>Up to 4</td><td>Unlimited</td></tr>
+      <tr><td>Task &amp; deadline tracking</td><td>Full</td><td>Full</td></tr>
+      <tr><td>Grade tracking</td><td>Included</td><td>Included</td></tr>
+      <tr><td>Calendar (device sync + .ics export)</td><td>Included</td><td>Included</td></tr>
+      <tr><td>Reminders</td><td>Same-day</td><td>Custom timing + quiet hours</td></tr>
+      <tr class="pro-row"><td>Smart Plan (AI study schedule)</td><td>—</td><td>Included</td></tr>
+      <tr class="pro-row"><td>Workload dashboard (crunch-week view)</td><td>—</td><td>Included</td></tr>
+      <tr class="pro-row"><td>Flashcards (spaced repetition)</td><td>—</td><td>Included</td></tr>
+      <tr class="pro-row"><td>Focus timer (Pomodoro)</td><td>—</td><td>Included</td></tr>
+      <tr class="pro-row"><td>AI tutor (chats with your syllabus)</td><td>—</td><td>Included</td></tr>
+      <tr class="pro-row"><td>Academic Risk alerts + recovery plan</td><td>—</td><td>Included</td></tr>
+      <tr class="pro-row"><td>Progress Insights (trend charts, CSV export)</td><td>—</td><td>Included</td></tr>
+      <tr class="pro-row"><td>Share &amp; Streaks</td><td>—</td><td>Included</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Pro is a subscription purchased and managed in the iPhone app, and it applies account-wide, including on the web.</p>
+
+  <h2>Beyond the Scan: Canvas Sync and Shared Courses</h2>
+  <h3>Canvas LMS Sync</h3>
+  <p>If your school uses Canvas, you can connect it directly by generating a personal access token yourself inside Canvas — no institutional app approval required.</p>
+  <h3>Course Collaboration ("Course Spaces")</h3>
+  <p>A scanned course can be shared with classmates via an invite link. Shared deadlines and group assignments sync in real time for everyone in the space.</p>
+  <h3>One Account, Every Device</h3>
+  <p>Web and iPhone share a single account and database, so an edit made on one device — checking off a task, adjusting a due date — appears on the other in near real time.</p>
+
+  <h2>How This Compares to Doing It Manually — or With a Generic To-Do App</h2>
+  <p>The alternative to an AI syllabus scanner is retyping a syllabus by hand, or using a general-purpose to-do app that has no idea what a syllabus even is:</p>
+  <ul>
+    <li><strong>Manual entry:</strong> a student opens a 10-page syllabus PDF and copies each due date, one at a time, into a planner or phone calendar — a process that has to be repeated separately for every course, every semester.</li>
+    <li><strong>Generic to-do apps:</strong> tools like a plain reminders or task app can hold dates once you've entered them, but they don't read a syllabus at all — every assignment, exam, and reading still has to be typed in by hand, and there's no syllabus-aware structure like grading weights, office hours, or per-course grouping.</li>
+    <li><strong>Semora:</strong> the syllabus is scanned once, and the course schedule, grading scale, and every deadline are extracted automatically — turning a document that would take real time to transcribe into an organized semester in one snap.</li>
+  </ul>
+
+  <h2>Frequently Asked Questions</h2>
+  <div class="faq">
+    <h3>What file types can Semora's AI syllabus scanner read?</h3>
+    <p>Semora accepts a photo taken with your iPhone camera (up to 5 pages in one scan), an uploaded PDF, a drag-and-dropped file on the web app, or raw text pasted from a PDF or your school's LMS page.</p>
+
+    <h3>How many syllabi can I scan for free?</h3>
+    <p>The free tier includes 5 syllabus scans per calendar month and supports up to 4 courses per semester, with full task tracking, grade tracking, and calendar sync included.</p>
+
+    <h3>Does Semora sync with Canvas?</h3>
+    <p>Yes. You connect Canvas by generating a personal access token yourself inside Canvas — Semora does not require a separate OAuth app approval for this to work.</p>
+
+    <h3>Does scanning a syllabus also track my grades, not just deadlines?</h3>
+    <p>Yes. Along with every assignment and exam due date, Semora extracts the grading scale from the syllabus so grade tracking is available from the same scan, on both the free and Pro tiers.</p>
+  </div>
+
+  <div class="cta">
+    <p>Scan your first syllabus and see your semester organized in one snap.</p>
+    <!-- replace with the real sign-in URL once deployed -->
+    <a class="btn" href="#">Get Started with Semora</a>
+  </div>
+
+  <footer>
+    Semora © 2026
+  </footer>
+
+</div>
+</body>
+</html>

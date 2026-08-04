@@ -36,6 +36,8 @@ import {
   setGroupAssignmentCompleted,
   subscribeToCollaboration,
   syncCollaborationToPlanner,
+  listSharedDecks,
+  syncCollaborationDecks,
 } from '@/lib/collaboration';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { formatLocalDate } from '@/lib/dates';
@@ -63,6 +65,27 @@ export default function CollaborationDetailScreen() {
   const me = detail?.members.find((member) => member.user_id === session?.user.id);
   const isOwner = me?.role === 'owner';
   const canEdit = me?.role === 'owner' || me?.role === 'editor';
+
+  // Shared decks (migration 051). Sync on open is safe to run every time:
+  // a deck whose published content hasn't changed since this member's last
+  // sync is skipped entirely, so review progress is never rebuilt underneath
+  // them — see the content-hash guard in sync_collaboration_decks.
+  const sharedDecks = useQuery({
+    queryKey: ['sharedDecks', id],
+    queryFn: () => listSharedDecks(id),
+    enabled: !!id,
+  });
+
+  useEffect(() => {
+    if (!id) return;
+    syncCollaborationDecks(id)
+      .then((r) => {
+        if (r.decks_synced > 0) {
+          queryClient.invalidateQueries({ queryKey: ['decks'] });
+        }
+      })
+      .catch(() => {});
+  }, [id, queryClient]);
 
   const invalidateAfterMembership = () => {
     queryClient.invalidateQueries({ queryKey: ['collaboration', id] });
@@ -235,6 +258,34 @@ export default function CollaborationDetailScreen() {
             <ActionButton icon="sign-out" label="Leave" busy={leave.isPending} onPress={confirmLeave} />
           )}
         </View>
+
+        {(sharedDecks.data?.length ?? 0) > 0 && (
+          <>
+            <View style={styles.sectionHead}>
+              <Text style={[styles.sectionTitle, { color: colors.ink }]}>Shared decks</Text>
+            </View>
+            <View style={[styles.deckList, { backgroundColor: colors.card, borderColor: colors.line }]}>
+              {sharedDecks.data!.map((sharedDeck, index) => (
+                <TouchableOpacity
+                  key={sharedDeck.id}
+                  style={[styles.deckRow, index > 0 && { borderTopWidth: 0.5, borderTopColor: colors.line }]}
+                  onPress={() => router.push('/flashcards' as any)}
+                  activeOpacity={0.7}
+                >
+                  <FontAwesome name="clone" size={15} color={colors.brand} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.deckTitle, { color: colors.ink }]}>{sharedDeck.title}</Text>
+                    <Text style={[styles.deckMeta, { color: colors.ink3 }]}>
+                      {sharedDeck.card_count} {sharedDeck.card_count === 1 ? 'card' : 'cards'}
+                      {sharedDeck.created_by === session?.user.id ? ' · shared by you' : ' · copied to your decks'}
+                    </Text>
+                  </View>
+                  <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
 
         <View style={styles.sectionHead}>
           <Text style={[styles.sectionTitle, { color: colors.ink }]}>Group assignments</Text>
@@ -660,6 +711,10 @@ const styles = StyleSheet.create({
   action: { flex: 1, minHeight: 58, borderRadius: 15, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center', gap: 5 },
   actionText: { fontSize: 11, fontWeight: '700' },
   sectionHead: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  deckList: { borderWidth: 0.5, borderRadius: 14, overflow: 'hidden' },
+  deckRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13, paddingHorizontal: 14 },
+  deckTitle: { fontSize: 14, fontWeight: '600' },
+  deckMeta: { fontSize: 12, marginTop: 2 },
   sectionTitle: { flex: 1, fontSize: 19, fontFamily: 'Fraunces_700Bold' },
   addButton: { paddingHorizontal: 11, paddingVertical: 7, borderRadius: 10, flexDirection: 'row', gap: 6, alignItems: 'center' },
   addText: { fontSize: 12, fontWeight: '800' },

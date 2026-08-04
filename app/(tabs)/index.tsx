@@ -18,7 +18,7 @@ import {
   useTaskStats, useToggleTaskComplete, useTasks, useHasPendingTasks,
   useSemesterGradeCategories, type TaskWithCourse,
 } from '@/lib/queries';
-import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import { COLORS, FONTS, SCREEN_MAX_WIDTH, WEB_CARD_SHADOW } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { displayName } from '@/lib/user';
@@ -65,7 +65,7 @@ function greetingFor(hour: number): string {
 
 export default function TodayScreen() {
   const colors = useColors();
-  const { contentMaxWidth, width } = useResponsive();
+  const { contentMaxWidth, width, isDesktop } = useResponsive();
   const { session } = useSession();
   const router = useRouter();
   const qc = useQueryClient();
@@ -1271,8 +1271,12 @@ export default function TodayScreen() {
 
       {/* Quick-add FAB. Hidden when the user has no courses, since
           /task/new requires a course selection. Position clears the
-          tab bar (~80px tall on iOS). */}
-      {courses.length > 0 && (
+          tab bar (~80px tall on iOS). Also hidden on the desktop web
+          shell specifically — there's no tab bar there to clear (the
+          sidebar replaces it, with its own "New task" button), so this
+          absolutely-positioned button would otherwise stay pinned
+          mid-scroll and overlap real content on a tall page. */}
+      {courses.length > 0 && !(Platform.OS === 'web' && isDesktop) && (
         <TouchableOpacity
           style={[styles.fab, { right: Math.max(18, (width - contentMaxWidth) / 2 + 18), backgroundColor: colors.brand }]}
           onPress={() => router.push('/task/new?defaultDate=today' as any)}
@@ -1302,7 +1306,10 @@ const styles = StyleSheet.create({
   },
   notifBannerText: { flex: 1, fontSize: 13, fontWeight: '500' },
   // Hero
-  heroCard: { backgroundColor: COLORS.brand, borderRadius: 22, padding: 16, marginBottom: 18 },
+  heroCard: {
+    backgroundColor: COLORS.brand, borderRadius: 22, padding: 16, marginBottom: 18,
+    ...Platform.select({ web: { boxShadow: '0 12px 32px rgba(107, 70, 193, 0.22)' }, default: {} }),
+  },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   heroEye: { fontSize: 14, fontWeight: '600', letterSpacing: 1, color: 'rgba(255,255,255,0.7)' },
   heroBadge: { backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
@@ -1326,7 +1333,7 @@ const styles = StyleSheet.create({
   // "View workload" affordance on the This-week header
   weekViewLink: { fontSize: 13, fontWeight: '600' },
   // Today's classes
-  classCard: { backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 14, borderWidth: 0.5, borderColor: COLORS.line, marginBottom: 18 },
+  classCard: { backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 14, borderWidth: 0.5, borderColor: COLORS.line, marginBottom: 18, ...WEB_CARD_SHADOW },
   classRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   classDot: { width: 8, height: 8, borderRadius: 4 },
   classTitle: { fontSize: 14, fontWeight: '500', color: COLORS.ink },
@@ -1338,7 +1345,7 @@ const styles = StyleSheet.create({
   nowBadgeText: { fontSize: 10, fontWeight: '700', color: '#fff', letterSpacing: 0.4 },
   nowDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: '#fff' },
   // Tasks
-  taskCard: { backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 14, borderWidth: 0.5, borderColor: COLORS.line },
+  taskCard: { backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 14, borderWidth: 0.5, borderColor: COLORS.line, ...WEB_CARD_SHADOW },
   taskRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   taskRowBorder: { borderBottomWidth: 0.5, borderBottomColor: COLORS.line },
   cbx: { width: 20, height: 20, borderRadius: 7, borderWidth: 1.5, borderColor: COLORS.ink3, justifyContent: 'center', alignItems: 'center' },
@@ -1350,7 +1357,7 @@ const styles = StyleSheet.create({
   taskTime: { fontSize: 14, color: COLORS.ink3 },
   gradeWaitingBadge: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 7 },
   gradeWaitingText: { fontSize: 10, fontWeight: '800' },
-  completedCard: { borderRadius: 18, borderWidth: 0.5, paddingHorizontal: 14 },
+  completedCard: { borderRadius: 18, borderWidth: 0.5, paddingHorizontal: 14, ...WEB_CARD_SHADOW },
   completedRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 11 },
   completedCheck: { width: 28, height: 28, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   completedTitle: { fontSize: 13.5, fontWeight: '700' },
@@ -1359,7 +1366,7 @@ const styles = StyleSheet.create({
   quickGradeText: { fontSize: 10.5, fontWeight: '800' },
   completedScore: { fontSize: 14, fontWeight: '900' },
   // Overdue (background + borders themed via inline style for dark mode)
-  overdueCard: { borderRadius: 18, paddingHorizontal: 14, borderWidth: 0.5, marginBottom: 16 },
+  overdueCard: { borderRadius: 18, paddingHorizontal: 14, borderWidth: 0.5, marginBottom: 16, ...WEB_CARD_SHADOW },
   overdueRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
   overdueBadge: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6 },
   overdueBadgeText: { fontSize: 12, fontWeight: '600', color: COLORS.coral },
@@ -1372,7 +1379,7 @@ const styles = StyleSheet.create({
   },
   progressFill: { height: '100%', borderRadius: 2 },
   // Empty
-  emptyCard: { backgroundColor: COLORS.card, borderRadius: 18, padding: 24, alignItems: 'center', borderWidth: 0.5, borderColor: COLORS.line },
+  emptyCard: { backgroundColor: COLORS.card, borderRadius: 18, padding: 24, alignItems: 'center', borderWidth: 0.5, borderColor: COLORS.line, ...WEB_CARD_SHADOW },
   emptyText: { fontSize: 14, fontWeight: '500', color: COLORS.ink3 },
   emptySub: { fontSize: 14, color: COLORS.ink3, marginTop: 4, textAlign: 'center' },
   emptyCta: {
@@ -1383,7 +1390,7 @@ const styles = StyleSheet.create({
   emptyCtaText: { fontSize: 14, fontWeight: '600', color: '#fff' },
   emptySecondary: { fontSize: 13, fontWeight: '500', marginTop: 12, textDecorationLine: 'underline' },
   // Week
-  weekCard: { backgroundColor: COLORS.card, borderRadius: 18, padding: 14, borderWidth: 0.5, borderColor: COLORS.line },
+  weekCard: { backgroundColor: COLORS.card, borderRadius: 18, padding: 14, borderWidth: 0.5, borderColor: COLORS.line, ...WEB_CARD_SHADOW },
   weekStats: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
   weekStat: { alignItems: 'center' },
   weekStatNum: { fontSize: 20, fontWeight: '600', color: COLORS.ink },

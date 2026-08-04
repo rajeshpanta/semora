@@ -16,7 +16,7 @@ import {
 } from '@/lib/queries';
 import {
   DAILY_MINUTE_OPTIONS, DEFAULT_STUDY_PLANNER_SETTINGS, STUDY_SESSION_OPTIONS,
-  STUDY_PLAN_HORIZON_DAYS, formatStudyDuration, generateStudyPlan, type GeneratedStudyPlan,
+  STUDY_PLAN_HORIZON_DAYS, FREE_STUDY_PLAN_HORIZON_DAYS, formatStudyDuration, generateStudyPlan, type GeneratedStudyPlan,
 } from '@/lib/studyPlanner';
 import { getPlannerCalendarConflicts } from '@/lib/plannerCalendar';
 import type { StudyPlannerSettings, StudySessionMinutes } from '@/types/database';
@@ -51,6 +51,10 @@ export default function PlannerScreen() {
   const colors = useColors();
   const { contentMaxWidth } = useResponsive();
   const isPro = useAppStore((state) => state.isPro);
+  // Free users get a working plan over a shorter window rather than a locked
+  // screen — see FREE_STUDY_PLAN_HORIZON_DAYS. The server enforces the same
+  // cap (migration 049), so this is presentation, not the security boundary.
+  const horizonDays = isPro ? STUDY_PLAN_HORIZON_DAYS : FREE_STUDY_PLAN_HORIZON_DAYS;
   const semesterId = useAppStore((state) => state.selectedSemesterId);
   const { data: tasks = [], isLoading: tasksLoading } = useTasks(
     semesterId ? { semesterId } : { semesterId: null },
@@ -101,10 +105,10 @@ export default function PlannerScreen() {
       if (missed && !missedByTask.has(block.task_id)) missedByTask.set(block.task_id, block.scheduled_date);
     }
     const calendar = settings.study_avoid_calendar_conflicts
-      ? await getPlannerCalendarConflicts(now, STUDY_PLAN_HORIZON_DAYS, reason === 'settings')
+      ? await getPlannerCalendarConflicts(now, horizonDays, reason === 'settings')
       : { intervals: [], permission: 'denied' as const };
     const generated = generateStudyPlan(
-      tasks, meetings, blocks, settings, now, STUDY_PLAN_HORIZON_DAYS, calendar.intervals,
+      tasks, meetings, blocks, settings, now, horizonDays, calendar.intervals,
     );
     try {
       await replacePlan.mutateAsync({
@@ -205,35 +209,13 @@ export default function PlannerScreen() {
     }
   };
 
-  if (!isPro) {
-    return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-        <Stack.Screen options={{ title: 'Smart Plan' }} />
-        <View style={[styles.locked, { maxWidth: contentMaxWidth }]}> 
-          <View style={[styles.lockIcon, { backgroundColor: colors.brand50 }]}>
-            <FontAwesome name="magic" size={28} color={colors.brand} />
-          </View>
-          <Text style={[styles.lockTitle, { color: colors.ink }]}>Your week, planned for you</Text>
-          <Text style={[styles.lockText, { color: colors.ink3 }]}>Smart Plan turns deadlines into focus sessions, avoids class times, and rolls unfinished work forward every time you open your plan.</Text>
-          <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: colors.brand }]}
-            onPress={() => router.push({ pathname: '/paywall', params: { context: 'smart_planner' } } as any)}
-          >
-            <FontAwesome name="star" size={13} color="#fff" />
-            <Text style={styles.primaryButtonText}>Unlock Smart Plan</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
       <Stack.Screen options={{ title: 'Smart Plan' }} />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         <View style={styles.heroRow}>
           <View style={{ flex: 1 }}>
-            <Text style={[styles.eyebrow, { color: colors.brand }]}>NEXT 14 DAYS</Text>
+            <Text style={[styles.eyebrow, { color: colors.brand }]}>NEXT {horizonDays} DAYS</Text>
             <Text style={[styles.title, { color: colors.ink }]}>Your study time, already decided.</Text>
             <Text style={[styles.subtitle, { color: colors.ink3 }]}>
               {draftSettings.study_auto_reschedule
@@ -252,6 +234,29 @@ export default function PlannerScreen() {
               : <FontAwesome name="refresh" size={16} color={colors.brand} />}
           </TouchableOpacity>
         </View>
+
+        {/* The upgrade ask sits under a plan the user can already see working,
+            rather than replacing it. Free gets a real week; Pro doubles the
+            window and turns on the automatic roll-forward. */}
+        {!isPro && (
+          <TouchableOpacity
+            style={[styles.upsell, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]}
+            activeOpacity={0.8}
+            onPress={() => router.push({ pathname: '/paywall', params: { context: 'smart_planner' } } as any)}
+          >
+            <FontAwesome name="magic" size={15} color={colors.brand} style={{ marginTop: 1 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.upsellTitle, { color: colors.ink }]}>
+                You're seeing the next {FREE_STUDY_PLAN_HORIZON_DAYS} days
+              </Text>
+              <Text style={[styles.upsellText, { color: colors.ink3 }]}>
+                Pro plans a full {STUDY_PLAN_HORIZON_DAYS} days ahead and rolls missed sessions
+                forward automatically.
+              </Text>
+            </View>
+            <FontAwesome name="chevron-right" size={12} color={colors.brand} style={{ marginTop: 3 }} />
+          </TouchableOpacity>
+        )}
 
         {plannerNote && (
           <View style={[styles.statusCard, { backgroundColor: colors.teal50, borderColor: colors.teal }]}>
@@ -524,10 +529,9 @@ const styles = StyleSheet.create({
   emptyIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { fontSize: 16, fontWeight: '700', marginTop: 12 },
   emptyText: { fontSize: 12.5, lineHeight: 18, textAlign: 'center', marginTop: 5 },
-  locked: { flex: 1, padding: 30, alignItems: 'center', justifyContent: 'center', width: '100%', alignSelf: 'center' },
-  lockIcon: { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: 18 },
-  lockTitle: { fontFamily: FONTS.displaySemibold, fontSize: 23, textAlign: 'center' },
-  lockText: { fontSize: 14, lineHeight: 21, textAlign: 'center', marginTop: 8, marginBottom: 22, maxWidth: 330 },
-  primaryButton: { height: 50, paddingHorizontal: 22, borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  primaryButtonText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  // Free-tier upgrade banner. Replaced the old full-screen lock styles when
+  // Smart Plan stopped being all-or-nothing for free users.
+  upsell: { flexDirection: 'row', alignItems: 'flex-start', gap: 11, borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 18 },
+  upsellTitle: { fontSize: 14, fontWeight: '700' },
+  upsellText: { fontSize: 13, lineHeight: 19, marginTop: 3 },
 });

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Semora vs DormWay: Syllabus Planner Comparison (2026)</title>
+<meta name="description" content="Compare Semora and DormWay on syllabus scanning, Canvas sync, grade tracking, and study planning to find the right college planner for your semester.">
+<style>
+  :root {
+    --bg: #FAF9F5;
+    --ink: #1C1B1F;
+    --purple: #6B46C1;
+    --purple-tint: rgba(107, 70, 193, 0.07);
+    --purple-tint-strong: rgba(107, 70, 193, 0.12);
+    --border: #E4E1D8;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    font-size: 17px;
+  }
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+  }
+  h1, h2, h3 {
+    font-family: Georgia, "Times New Roman", serif;
+    color: var(--ink);
+    line-height: 1.25;
+  }
+  h1 {
+    font-size: clamp(1.75rem, 5vw, 2.5rem);
+    margin: 0 0 1.25rem;
+  }
+  h2 {
+    font-size: clamp(1.35rem, 4vw, 1.7rem);
+    margin: 2.75rem 0 1rem;
+    border-top: 1px solid var(--border);
+    padding-top: 2rem;
+  }
+  h2:first-of-type { border-top: none; padding-top: 0; }
+  h3 {
+    font-size: clamp(1.1rem, 3vw, 1.25rem);
+    margin: 1.75rem 0 0.6rem;
+  }
+  p { margin: 0 0 1rem; }
+  a { color: var(--purple); }
+  .lede {
+    font-size: 1.15rem;
+    font-weight: 500;
+    background: var(--purple-tint);
+    border-left: 3px solid var(--purple);
+    padding: 1rem 1.25rem;
+    border-radius: 4px;
+    margin: 0 0 2rem;
+  }
+  ul, ol { padding-left: 1.4rem; margin: 0 0 1rem; }
+  li { margin-bottom: 0.4rem; }
+  .table-wrap {
+    overflow-x: auto;
+    margin: 1.5rem 0 2rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 560px;
+    font-size: 0.95rem;
+  }
+  caption {
+    text-align: left;
+    font-size: 0.85rem;
+    color: #55524d;
+    padding: 0.6rem 1rem 0;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  thead th {
+    background: #F1EFE7;
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: normal;
+    font-size: 1rem;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.feature-name, th.feature-col {
+    font-weight: 600;
+    width: 26%;
+  }
+  td.semora-col, th.semora-col {
+    background: var(--purple-tint);
+  }
+  thead th.semora-col { background: var(--purple-tint-strong); color: var(--purple); }
+  .note {
+    font-size: 0.9rem;
+    color: #55524d;
+  }
+  .cta-box {
+    margin-top: 3rem;
+    padding: 2rem 1.5rem;
+    background: var(--purple-tint);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-align: center;
+  }
+  .cta-box h2 {
+    border: none;
+    margin: 0 0 0.75rem;
+    padding: 0;
+  }
+  .cta-button {
+    display: inline-block;
+    margin-top: 0.75rem;
+    background: var(--purple);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.85rem 1.75rem;
+    border-radius: 8px;
+  }
+  .cta-button:hover { opacity: 0.92; }
+  footer {
+    margin-top: 3.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
+    color: #6b675f;
+  }
+  .faq h3 { font-family: Georgia, "Times New Roman", serif; }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #17161A;
+      --ink: #ECEAE4;
+      --border: #34323A;
+      --purple-tint: rgba(167, 139, 227, 0.12);
+      --purple-tint-strong: rgba(167, 139, 227, 0.2);
+      --purple: #A78BE3;
+    }
+    body { background: var(--bg); color: var(--ink); }
+    thead th { background: #221F27; }
+    .cta-button { color: #17161A; }
+    .note, footer { color: #B7B3AC; }
+    caption { color: #B7B3AC; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <h1>Semora vs DormWay: which syllabus planner is right for you?</h1>
+
+  <p class="lede">
+    Semora and DormWay both use AI to turn an uploaded syllabus into a semester timeline, but Semora
+    adds Progress Insights, an AI-generated study schedule, and a workload dashboard behind an
+    optional $3.99/month Pro tier, while DormWay pairs syllabus parsing with read-only Canvas,
+    Blackboard, and Moodle sync and is currently free.
+  </p>
+
+  <h2>What each app does</h2>
+  <p>
+    <strong>Semora</strong> turns a course syllabus into an organized semester. You import a syllabus
+    by photo (camera, up to 5 pages), PDF upload, drag-and-drop on the web, or by pasting raw text
+    copied from a PDF or LMS page on the web. Gemini AI then extracts the course name, instructor,
+    meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz,
+    project, and reading with its due date &mdash; building your deadlines, grades, and class schedule
+    automatically. Semora is available on iPhone and web, sharing one account so edits sync in
+    near real time.
+  </p>
+  <p>
+    <strong>DormWay</strong> ingests syllabi (uploaded in-app or emailed to
+    syllabus@dormway.app) and uses AI to extract assignments, exam dates, grading breakdowns, and
+    late-work policies. It pairs that with read-only Canvas, Blackboard, and Moodle sync, merging
+    both sources into one semester timeline and week view. DormWay also includes a GPA/grade
+    calculator, an &ldquo;Ace&rdquo; AI assistant that answers policy questions with citations back
+    to the syllabus, and a per-course &ldquo;Intelligence&rdquo; tab (difficulty rating, weekly hour
+    estimate, grading policy, late-work rules). It's available on web, iPhone, iPad, and Mac.
+  </p>
+
+  <h2>Semora vs DormWay: feature comparison</h2>
+  <div class="table-wrap">
+    <table>
+      <caption>Comparison based on each product's publicly stated features as of 2026. Where DormWay's exact behavior isn't confirmed on its own site, it's marked "not publicly confirmed."</caption>
+      <thead>
+        <tr>
+          <th class="feature-col" scope="col">Category</th>
+          <th class="semora-col" scope="col">Semora</th>
+          <th scope="col">DormWay</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="feature-name">Syllabus &amp; deadline handling</td>
+          <td class="semora-col">Photo (up to 5 pages), PDF upload, drag-and-drop, or pasted text (web). AI extracts course info, meeting times, office hours, grading scale, and every assignment/exam/quiz/project/reading with due dates.</td>
+          <td>Upload in-app or email to syllabus@dormway.app. AI extracts assignments, exam dates, grading breakdowns, and late-work policies.</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Canvas / LMS sync</td>
+          <td class="semora-col">Canvas sync via a personal-access token you generate yourself in Canvas &mdash; no OAuth app-review dependency.</td>
+          <td>Read-only sync with Canvas, Blackboard, and Moodle, merged into one timeline.</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Grade tracking</td>
+          <td class="semora-col">Grade tracking is part of the free tier. Pro adds Progress Insights (trend charts, CSV export, print view on web) and Academic Risk alerts for falling grades or missing work.</td>
+          <td>Includes a GPA/grade calculator that supports weighted categories, letting you adjust weights and test grade scenarios.</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Study planning / workload tools</td>
+          <td class="semora-col">Pro includes Smart Plan (AI-generated study schedule that adapts to deadlines), a Workload dashboard (crunch-week/exam-density view), Flashcards (spaced repetition), a Focus timer, and an AI tutor chat.</td>
+          <td>An &ldquo;Ace&rdquo; AI assistant answers policy questions with citations, plus a per-course &ldquo;Intelligence&rdquo; tab (difficulty rating, weekly hour estimate).</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Pricing</td>
+          <td class="semora-col">Free: 5 scans/month, up to 4 courses, full deadline &amp; grade tracking, calendar sync + .ics export. Pro: $3.99/month or $19.99/year for unlimited scans/courses plus study tools.</td>
+          <td>Currently free with no paid tier &mdash; site and App Store listing state "no paywalls" and "no credit card."</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Platform availability</td>
+          <td class="semora-col">iPhone app and web, same account, near real-time sync. No dedicated iPad or Mac app.</td>
+          <td>Web, iPhone, iPad, and Mac. No Android app &mdash; confirmed on DormWay's own blog.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Where Semora might fit better</h2>
+  <ul>
+    <li>You want Progress Insights (trend charts and CSV export) layered on top of your grade tracking.</li>
+    <li>You want an AI-generated study schedule (Smart Plan) or a workload dashboard that flags crunch weeks and exam-heavy stretches.</li>
+    <li>You'd use flashcards, a Pomodoro-style focus timer, or an AI tutor chat that already knows your syllabus.</li>
+    <li>You want Canvas sync without waiting on an OAuth app-review process &mdash; Semora connects with a personal-access token you generate yourself.</li>
+    <li>You want to share a course with classmates (Course Spaces) with deadlines and group assignments syncing in real time.</li>
+  </ul>
+
+  <h2>Where DormWay might fit better</h2>
+  <ul>
+    <li>Your school uses Blackboard or Moodle rather than Canvas &mdash; DormWay's read-only sync covers all three.</li>
+    <li>You want a fully free product with no subscription tier at all.</li>
+    <li>You use an iPad or Mac app specifically, rather than a mobile-plus-web setup.</li>
+  </ul>
+  <p class="note">
+    DormWay describes itself as built by students, for students, and its marketing highlights use by
+    student-athletes and students with ADHD, along with a list of schools and a claim of 6,134+
+    schools across the U.S. and Canada. Those figures come from DormWay's own site and haven't been
+    independently verified, so treat them as marketing claims rather than confirmed statistics.
+  </p>
+
+  <h2 class="faq-heading">FAQ</h2>
+  <div class="faq">
+    <h3>Does Semora or DormWay sync with Canvas?</h3>
+    <p>
+      Both do. Semora connects via a personal-access token you generate yourself inside Canvas, so
+      there's no OAuth app-review wait. DormWay offers read-only sync with Canvas, Blackboard, and
+      Moodle, merged into one timeline.
+    </p>
+
+    <h3>Is Semora or DormWay free?</h3>
+    <p>
+      Semora's free tier includes 5 syllabus scans per month, up to 4 courses per semester, full
+      task/deadline tracking, grade tracking, calendar sync, and same-day reminders; Pro is
+      $3.99/month or $19.99/year for unlimited scans and courses plus study-planning tools. DormWay
+      is currently free with no paid tier, per its own pricing page and App Store listing.
+    </p>
+
+    <h3>How do Semora and DormWay handle grade tracking?</h3>
+    <p>
+      Semora includes grade tracking in its free tier, with Progress Insights (trend
+      charts, CSV export) and Academic Risk alerts available in Pro. DormWay's GPA/grade
+      calculator also supports weighted categories, letting you adjust weights and test
+      grade scenarios.
+    </p>
+
+    <h3>Does either app work on Android or iPad?</h3>
+    <p>
+      Neither app has an Android version &mdash; DormWay states this explicitly on its own blog, and
+      Semora is built for iPhone and web. DormWay is also available on iPad and Mac; Semora is
+      currently iPhone and web only, with no dedicated iPad or Mac app.
+    </p>
+  </div>
+
+  <div class="cta-box">
+    <h2>See your own syllabus turned into a semester plan</h2>
+    <p>Scan a syllabus and get your deadlines, grades, and schedule organized in one snap.</p>
+    <!-- replace with the real sign-in URL once deployed -->
+    <a class="cta-button" href="#">Try Semora free</a>
+  </div>
+
+  <footer>
+    Semora &copy; 2026
+  </footer>
+
+</main>
+</body>
+</html>

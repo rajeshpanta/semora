@@ -291,17 +291,19 @@ serve(async (req) => {
       }
     }
 
-    // 3. Parse and validate request body. Two accepted shapes:
+    // 3. Parse and validate request body. Three accepted shapes:
     //    legacy (1.2/1.3 clients + PDFs):  { base64, mimeType }
     //    multi-page photo scans:           { pages: [{ base64, mimeType }, ...] }
-    //    Both shapes cost the user exactly one scan — the success log and the
+    //    pasted text (web, no file/photo): { text }
+    //    All shapes cost the user exactly one scan — the success log and the
     //    client's upload row are per-request, not per-page.
-    //    Either shape may additionally carry apiVersion (new clients send 2)
+    //    Any shape may additionally carry apiVersion (new clients send 2)
     //    to opt in to response features that shipped clients can't render.
     let body: {
       base64?: unknown;
       mimeType?: unknown;
       pages?: { base64?: unknown; mimeType?: unknown }[];
+      text?: unknown;
       apiVersion?: unknown;
     };
     try {
@@ -319,8 +321,27 @@ serve(async (req) => {
     const clientAcceptsDatelessItems =
       typeof body.apiVersion === 'number' && body.apiVersion >= 2;
 
-    let pages: { base64: string; mimeType: string }[];
-    if (Array.isArray(body.pages) && body.pages.length > 0) {
+    // A desktop user copy-pasting from a PDF/LMS page — skips the image/OCR
+    // step entirely and feeds the raw text straight to Gemini. Checked first
+    // since it's mutually exclusive with the file-based shapes below.
+    const MIN_TEXT_CHARS = 20;
+    const MAX_TEXT_CHARS = 60_000; // generous for any real syllabus; bounds Gemini cost
+    let pastedText: string | null = null;
+    if (typeof body.text === 'string' && body.text.trim().length > 0) {
+      const trimmed = body.text.trim();
+      if (trimmed.length < MIN_TEXT_CHARS) {
+        return jsonResponse({ error: 'Paste more of the syllabus text — that looks too short to extract anything from.' }, 400);
+      }
+      if (trimmed.length > MAX_TEXT_CHARS) {
+        return jsonResponse({ error: `That's a lot of text — please paste no more than ${MAX_TEXT_CHARS.toLocaleString()} characters at a time.` }, 413);
+      }
+      pastedText = trimmed;
+    }
+
+    let pages: { base64: string; mimeType: string }[] = [];
+    if (pastedText != null) {
+      // No file pages in the text path.
+    } else if (Array.isArray(body.pages) && body.pages.length > 0) {
       if (body.pages.length > MAX_PAGES) {
         return jsonResponse({ error: `Too many pages. Maximum is ${MAX_PAGES} per scan.` }, 400);
       }
@@ -366,7 +387,9 @@ serve(async (req) => {
         {
           parts: [
             { text: promptText },
-            ...pages.map((p) => ({ inline_data: { mime_type: p.mimeType, data: p.base64 } })),
+            ...(pastedText != null
+              ? [{ text: pastedText }]
+              : pages.map((p) => ({ inline_data: { mime_type: p.mimeType, data: p.base64 } }))),
           ],
         },
       ],

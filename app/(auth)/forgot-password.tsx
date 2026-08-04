@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, ScrollView, Alert,
+  ActivityIndicator, ScrollView, Alert, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
+import { WebAuthBackdrop, webAuthCard } from '@/components/WebAuthChrome';
 
 export default function ForgotPasswordScreen() {
   const colors = useColors();
@@ -32,7 +33,10 @@ export default function ForgotPasswordScreen() {
 
   const sendResetEmail = async (target: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(target, {
-      redirectTo: 'semora://auth/reset',
+      redirectTo:
+        Platform.OS === 'web' && typeof window !== 'undefined'
+          ? `${window.location.origin}/reset-password`
+          : 'semora://auth/reset',
     });
     if (error) throw error;
   };
@@ -78,8 +82,9 @@ export default function ForgotPasswordScreen() {
   // ── Hero success state ───────────────────────────────────────
   if (sent) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
-        <View style={styles.heroWrap}>
+      <WebAuthBackdrop>
+      <SafeAreaView style={[styles.safe, { backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.paper }]} edges={['top', 'bottom']}>
+        <View style={[styles.heroWrap, webAuthCard, Platform.OS === 'web' && { margin: 24, maxWidth: 480, alignSelf: 'center', width: '100%' }]}>
           <View
             style={[
               styles.heroIcon,
@@ -130,12 +135,14 @@ export default function ForgotPasswordScreen() {
           </View>
         </View>
       </SafeAreaView>
+      </WebAuthBackdrop>
     );
   }
 
   // ── Form state ───────────────────────────────────────────────
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
+    <WebAuthBackdrop>
+    <SafeAreaView style={[styles.safe, { backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.paper }]} edges={['top', 'bottom']}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { minHeight: height }]}
         keyboardShouldPersistTaps="always"
@@ -145,6 +152,7 @@ export default function ForgotPasswordScreen() {
         <View
           style={[
             styles.inner,
+            webAuthCard,
             {
               maxWidth: isWide ? Math.min(width - 64, 560) : 440,
               paddingHorizontal: 24,
@@ -210,6 +218,7 @@ export default function ForgotPasswordScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </WebAuthBackdrop>
   );
 }
 

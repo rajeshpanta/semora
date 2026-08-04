@@ -1,0 +1,30 @@
+<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="240" height="240" rx="36" fill="#FAEEDA"/>
+  <circle cx="192" cy="60" r="14" fill="#F3DDB0"/>
+  <circle cx="44" cy="176" r="9" fill="#F3DDB0"/>
+
+  <!-- podium -->
+  <rect x="66" y="176" width="42" height="30" rx="6" fill="#E8CE9A"/>
+  <rect x="108" y="160" width="42" height="46" rx="6" fill="#BA7517"/>
+  <rect x="150" y="184" width="42" height="22" rx="6" fill="#E8CE9A"/>
+
+  <!-- trophy -->
+  <g filter="url(#shadow1)">
+    <path d="M112 96 h32 v6 c0 20 -6 30 -16 34 c-10 -4 -16 -14 -16 -34 Z" fill="#BA7517"/>
+    <path d="M112 100 c-14 -2 -20 8 -18 18 c2 9 10 14 20 13" stroke="#BA7517" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M144 100 c14 -2 20 8 18 18 c-2 9 -10 14 -20 13" stroke="#BA7517" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <rect x="121" y="134" width="14" height="14" fill="#BA7517"/>
+    <rect x="112" y="146" width="32" height="10" rx="4" fill="#8A5A0F"/>
+    <circle cx="128" cy="112" r="9" fill="#FFE3A6"/>
+  </g>
+
+  <!-- sparkles -->
+  <path d="M170 84 L173 92 L181 95 L173 98 L170 106 L167 98 L159 95 L167 92 Z" fill="#F3DDB0"/>
+  <path d="M84 128 L86 134 L92 136 L86 138 L84 144 L82 138 L76 136 L82 134 Z" fill="#F3DDB0"/>
+
+  <defs>
+    <filter id="shadow1" x="92" y="86" width="80" height="80" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#8A5A0F" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+</svg>

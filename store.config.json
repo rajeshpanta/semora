@@ -1,0 +1,102 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "version": "1.4",
+    "copyright": "2026 Rajesh Panta",
+    "release": {
+      "automaticRelease": true
+    },
+    "info": {
+      "en-US": {
+        "description": "Now Monitor you class from iPhone, iPad or Mac with Semora: It's the first week of the semester and five syllabi just hit your inbox as PDFs, each one in a different format with due dates scattered across 12 pages. Semora reads them for you.\n  \n  Snap a photo or upload the PDF, and the AI pulls out every assignment, exam, quiz, project, and reading, along with due dates, times, and grade weights, usually in under a minute. You check it over and edit anything before it saves, so nothing lands in your schedule that you didn't approve.\n  \n  Your dashboard\n  Once your courses are in, the dashboard keeps the noise down. A \"Next Up\" card counts down to whatever's most urgent. Anything overdue gets flagged. You see today, this week, and everything after that without scrolling through a wall of tasks.\n  \n  Grades that update as you go\n  Enter a score and your weighted grade recalculates right away. Every course shows a current percentage and letter grade. Pro adds custom grade scales per course and what-if forecasting: tell it the grade you're aiming for and it works out what you need on the rest of your assignments, or projects your final GPA. \n  \n  Your semester on a calendar\n  There's a month view and a list view, color-coded by course, and you can tap any day to see what's due. That part's free. If you want everything pushed to your iPhone's built-in Calendar, that's a Pro feature.\n  \n  The smaller stuff that adds up\n  Each course gets its own color and icon, plus a spot for your instructor, meeting times, and office hours. Run multiple semesters at once. Check your weekly workload, track late submissions and extra credit, and drop the \"Up Next\" widget on your Home Screen (small or medium) so your next deadline is right there. Dark mode's in too.\n  \n  What's free vs. Pro\n  Free covers a lot: 2 syllabus scans, 2 courses, the full calendar, the dashboard, same-day reminders, and real-time grade tracking.\n  \n  Semora Pro adds:\n  - Unlimited scans, courses, and semesters\n  - 1-day and 3-day advance reminders, not just same-day\n  - Native iPhone Calendar sync\n  - Custom grade scales per course\n  - What-if forecasting and final GPA projection\n  \n  Pricing\n  Semora Pro Monthly is $3.99/month with a 7-day free trial for new subscribers. Semora Pro Annual is $19.99/year.\n  \n  Get the semester organized before week two sneaks up on you.\n  \n  Semora Pro is an auto-renewable subscription.\n  \n  - Semora Pro Monthly: $3.99 per month (includes a 7-day free trial for new subscribers)\n  - Semora Pro Annual: $19.99 per year\n  \n  Payment will be charged to your Apple ID account at confirmation of purchase. Your subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Your account will be charged for renewal within 24 hours prior to the end of the current period at the same price. Any unused portion of a free trial is forfeited when you purchase a subscription. You can manage or cancel your subscription by going to your iOS Settings, then Apple ID, then Subscriptions, after purchase.\n  \n  Privacy Policy: https://rajeshpanta.github.io/semora/privacy.html\n  Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/\n  \n  Questions or feedback? Email rajesh.panta08@gmail.com.",
+        "keywords": [
+          "planner",
+          "tracker",
+          "homework",
+          "student",
+          "assignment",
+          "due",
+          "date",
+          "reminder",
+          "exam",
+          "quiz",
+          "schedule",
+          "deadline",
+          "college"
+        ],
+        "releaseNotes": "A major Semora update is here!\n\n• Connect with Canvas to import your classes, semesters, assignments, and tasks\n• Sync important deadlines directly to Apple Calendar\n• New onboarding makes Semora easier to understand and use\n• See what is due today and what is coming up this week\n• Get clear weekly exam reminders so upcoming tests are easier to spot\n• Improved layout, performance, and overall reliability\n• Additional bug fixes and app enhancements\n\nUpdate now and stay on top of your semester with less manual planning.",
+        "marketingUrl": "https://semoraai.com",
+        "supportUrl": "https://semoraai.com/support",
+        "title": "Semora: AI Syllabus Scanner",
+        "subtitle": "Track: Homework-Grade-Deadline",
+        "privacyPolicyUrl": "https://semoraai.com/privacy",
+        "screenshots": {
+          "APP_IPHONE_65": [
+            "store/apple/screenshot/en-US/APP_IPHONE_65/06-pro.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_65/02-today.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_65/05-calendar.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_65/03-grades.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_65/01-scan.png",
+            "store/apple/screenshot/en-US/APP_IPHONE_65/04-canvas.png"
+          ],
+          "APP_IPAD_PRO_3GEN_129": [
+            "store/apple/screenshot/en-US/APP_IPAD_PRO_3GEN_129/01-scan.png",
+            "store/apple/screenshot/en-US/APP_IPAD_PRO_3GEN_129/02-deadline.png",
+            "store/apple/screenshot/en-US/APP_IPAD_PRO_3GEN_129/03-grades.png",
+            "store/apple/screenshot/en-US/APP_IPAD_PRO_3GEN_129/04-semester.png",
+            "store/apple/screenshot/en-US/APP_IPAD_PRO_3GEN_129/05-pro.png"
+          ]
+        },
+        "previews": {
+          "IPHONE_65": {
+            "path": "store/apple/preview/en-US/IPHONE_65/semora-appstore-preview-6.5-captioned-886x1920.mp4",
+            "previewFrameTimeCode": "00:00:05:01"
+          }
+        }
+      }
+    },
+    "categories": [
+      "EDUCATION",
+      "PRODUCTIVITY"
+    ],
+    "advisory": {
+      "ageRatingOverride": "NONE",
+      "alcoholTobaccoOrDrugUseOrReferences": "NONE",
+      "contests": "NONE",
+      "gambling": false,
+      "gamblingSimulated": "NONE",
+      "horrorOrFearThemes": "NONE",
+      "kidsAgeBand": null,
+      "koreaAgeRatingOverride": "NONE",
+      "lootBox": false,
+      "matureOrSuggestiveThemes": "NONE",
+      "medicalOrTreatmentInformation": "NONE",
+      "profanityOrCrudeHumor": "NONE",
+      "sexualContentGraphicAndNudity": "NONE",
+      "sexualContentOrNudity": "NONE",
+      "unrestrictedWebAccess": false,
+      "violenceCartoonOrFantasy": "NONE",
+      "violenceRealistic": "NONE",
+      "violenceRealisticProlongedGraphicOrSadistic": "NONE",
+      "advertising": false,
+      "ageAssurance": false,
+      "ageRatingOverrideV2": "NONE",
+      "developerAgeRatingInfoUrl": null,
+      "gunsOrOtherWeapons": "NONE",
+      "healthOrWellnessTopics": false,
+      "messagingAndChat": false,
+      "parentalControls": false,
+      "userGeneratedContent": false
+    },
+    "review": {
+      "firstName": "Rajesh",
+      "lastName": "Panta",
+      "email": "rajesh.panta08@gmail.com",
+      "phone": "4153684863",
+      "demoUsername": "review@semora.app",
+      "demoPassword": "Review2026!",
+      "demoRequired": true,
+      "notes": "Semora helps students organize their semester by scanning syllabi with AI. To test the scan feature, use any syllabus PDF or photo, the app will extract deadlines and assignments automatically. Free users get 2 scans and 2 courses. The demo account has been set up with sample data for review."
+    }
+  }
+}

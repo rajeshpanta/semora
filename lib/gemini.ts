@@ -180,3 +180,49 @@ export async function extractFromPages(
     office_hours_blocks: raw.office_hours_blocks ?? [],
   } as SyllabusExtraction;
 }
+
+// Web-only path: a desktop user pasting syllabus text copied from a PDF or
+// LMS page, skipping the image/OCR step entirely. Mirrors extractFromPages'
+// auth/transport/error handling exactly; see the {text} branch in the
+// parse-syllabus Edge Function.
+export async function extractFromText(
+  text: string,
+  signal?: AbortSignal,
+): Promise<SyllabusExtraction> {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    throw new Error('Paste your syllabus text first.');
+  }
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    throw new Error('Not authenticated');
+  }
+
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) {
+    throw new Error('Supabase URL not configured');
+  }
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/parse-syllabus`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify({ text: trimmed, apiVersion: 2 }),
+    signal,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: response.statusText }));
+    throw new Error(error.error || `Server error: ${response.status}`);
+  }
+
+  const raw = (await response.json()) as Partial<SyllabusExtraction>;
+  return {
+    ...raw,
+    meetings: raw.meetings ?? [],
+    office_hours_blocks: raw.office_hours_blocks ?? [],
+  } as SyllabusExtraction;
+}

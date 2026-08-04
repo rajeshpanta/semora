@@ -259,14 +259,29 @@ export async function exportSemesterReport(
   semesterName: string,
   insights: ProgressInsights,
 ): Promise<{ courses: number }> {
-  if (Platform.OS === 'web') {
-    throw new Error('Report export is only available on iOS and Android.');
-  }
   if (insights.courseInsights.length === 0) {
     throw new Error('Nothing to export yet — add classes and assignments first.');
   }
 
   const csv = generateSemesterReportCsv(semesterName, insights);
+
+  // Same Blob + anchor-download pattern as exportSemesterIcs (lib/ics.ts) —
+  // no native share sheet exists in a browser, but a plain file download
+  // works everywhere and needs no extra dependency.
+  if (Platform.OS === 'web') {
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'semora-semester-report.csv';
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return { courses: insights.courseInsights.length };
+  }
+
   const uri = `${FileSystem.cacheDirectory}semora-semester-report.csv`;
   await FileSystem.writeAsStringAsync(uri, csv);
 
@@ -275,4 +290,96 @@ export async function exportSemesterReport(
   await Share.share({ url: uri });
 
   return { courses: insights.courseInsights.length };
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/**
+ * Plain, self-contained HTML for the printable semester report — genuinely
+ * new on web (no mobile equivalent: printing isn't a phone interaction),
+ * useful for bringing a clean grade/schedule summary to an advising or
+ * office-hours meeting. Kept as its own exported function (like
+ * generateSemesterReportCsv) so the markup is unit-testable independent of
+ * the print/iframe mechanics below.
+ */
+export function generateSemesterReportHtml(semesterName: string, insights: ProgressInsights): string {
+  const courseRows = insights.courseInsights.map((course) => `
+    <tr>
+      <td>${escapeHtml(course.name)}</td>
+      <td>${course.grade == null ? '—' : `${course.grade}%`}</td>
+      <td>${course.letter ?? '—'}</td>
+      <td>${course.completionRate}%</td>
+      <td>${course.onTimeRate == null ? '—' : `${course.onTimeRate}%`}</td>
+      <td>${course.missingCount}</td>
+    </tr>`).join('');
+
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>${escapeHtml(semesterName)} — Semora</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; color: #1C1B1F; padding: 32px; }
+  h1 { font-size: 22px; margin: 0 0 2px; }
+  .sub { color: #55555C; font-size: 13px; margin-bottom: 22px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #e5e5e5; }
+  th { color: #55555C; font-weight: 600; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.4px; }
+  tfoot td { font-weight: 700; border-top: 2px solid #1C1B1F; border-bottom: none; }
+  @media print { body { padding: 0; } }
+</style>
+</head>
+<body>
+  <h1>${escapeHtml(semesterName)}</h1>
+  <div class="sub">Semora semester report · generated ${new Date().toLocaleDateString()}</div>
+  <table>
+    <thead><tr><th>Course</th><th>Grade</th><th>Letter</th><th>Completion</th><th>On-time</th><th>Missing</th></tr></thead>
+    <tbody>${courseRows}</tbody>
+    <tfoot><tr>
+      <td>All courses</td><td></td><td></td>
+      <td>${insights.completionRate}%</td>
+      <td>${insights.onTimeRate == null ? '—' : `${insights.onTimeRate}%`}</td>
+      <td>${insights.missingCount}</td>
+    </tr></tfoot>
+  </table>
+</body>
+</html>`;
+}
+
+/**
+ * Opens the browser print dialog on a clean, purpose-built report layout —
+ * rendered into a detached iframe rather than the live app UI, so it never
+ * has to fight React Native Web's markup/CSS (sidebar, nav, etc.) with a
+ * print stylesheet. Web-only; there's no print concept on iOS/Android.
+ */
+export function printSemesterReport(semesterName: string, insights: ProgressInsights): void {
+  if (Platform.OS !== 'web') return;
+  if (insights.courseInsights.length === 0) {
+    throw new Error('Nothing to print yet — add classes and assignments first.');
+  }
+  const html = generateSemesterReportHtml(semesterName, insights);
+  const iframe = document.createElement('iframe');
+  Object.assign(iframe.style, { position: 'fixed', right: '0', bottom: '0', width: '0', height: '0', border: '0' });
+  document.body.appendChild(iframe);
+  const doc = iframe.contentWindow?.document;
+  if (!doc) {
+    iframe.remove();
+    return;
+  }
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  const cleanup = () => iframe.remove();
+  iframe.contentWindow?.addEventListener('afterprint', cleanup);
+  window.setTimeout(cleanup, 60_000); // afterprint doesn't fire in every browser
+
+  // Let the iframe finish laying out before invoking print — calling it
+  // synchronously right after document.write can race layout in some browsers.
+  window.setTimeout(() => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+  }, 50);
 }

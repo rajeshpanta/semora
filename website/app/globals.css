@@ -1,0 +1,86 @@
+/* Design tokens — kept identical to the app's own COLORS constant
+   (lib/constants.ts in the main Expo app) so the website, the app's own
+   web build, and this marketing site all read as one brand. */
+:root {
+  --bg: #faf9f5;
+  --card: #ffffff;
+  --ink: #1c1b1f;
+  --ink2: #55555c;
+  --ink3: #8c8b94;
+  /* --ink3 measures 3.20:1 on --bg, which fails WCAG AA (4.5:1) for normal
+     text. It stays as-is for brand parity with the app, but any muted *text*
+     uses this darker step instead — 4.77:1 on --bg. */
+  --ink-muted: #6f6e78;
+  --border: rgba(28, 27, 31, 0.1);
+  --brand: #6b46c1;
+  --brand-50: #eeedfe;
+  --brand-100: #cecbf6;
+  --coral: #d85a30;
+  --coral-50: #faece7;
+  --teal: #0f6e56;
+  --teal-50: #e1f5ee;
+  --blue: #185fa5;
+  --blue-50: #e6f1fb;
+  --amber: #ba7517;
+  --amber-50: #faeeda;
+
+  /* Dark, cinematic backdrop used on the app's own web sign-in/landing
+     screens (components/WebAuthChrome.tsx) — reused for hero/CTA bands so
+     the "premium" treatment matches across surfaces. */
+  --ink-deep: #0f0b1a;
+  --glow-light: #c9b8ff;
+  --glow-mid: #9b7ae8;
+
+  --max-width: 760px;
+  --max-width-wide: 1200px;
+  /* Article pages: a wider measure than the old 760px so long-form pages
+     don't sit in a narrow ribbon with dead margins either side. */
+  --article-measure: 860px;
+  --rail-width: 316px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  /* Last-resort guard so a single mis-sized child can never make the whole
+     page pan sideways on a phone. `clip` (not `hidden`) keeps position:sticky
+     working inside — `hidden` would silently break the sticky FAQ aside. */
+  overflow-x: clip;
+  background: var(--bg);
+  color: var(--ink);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-fraunces), Georgia, 'Times New Roman', serif;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+a {
+  color: var(--brand);
+}
+
+img {
+  max-width: 100%;
+}
+
+::selection {
+  background: rgba(107, 70, 193, 0.24);
+}
+
+*:focus-visible {
+  outline: 3px solid rgba(107, 70, 193, 0.38);
+  outline-offset: 2px;
+}

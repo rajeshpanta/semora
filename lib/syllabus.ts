@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { extractFromPages, type SyllabusExtraction, type SyllabusPage } from '@/lib/gemini';
+import { extractFromPages, extractFromText, type SyllabusExtraction, type SyllabusPage } from '@/lib/gemini';
 import * as FileSystem from 'expo-file-system/legacy';
 import { isMeetingSyncEnabled, syncMeetingToCalendar } from '@/lib/calendarSync';
 import type { CourseMeeting } from '@/types/database';
@@ -43,6 +43,15 @@ export async function processSyllabus(
   // must always describe the FIRST page so storage upload and the upload row
   // keep working unchanged. One submission = one scan regardless of pages.
   pages?: SyllabusPage[],
+  // Web-only: pasted syllabus text instead of a file/photo. When set, this
+  // replaces the extraction source (Gemini gets the raw text, no OCR step)
+  // AND the storage step (the pasted text itself is stored as a .txt file
+  // in place of the uploaded file, so every syllabus_uploads row still
+  // points at something real). fileUri/fileName/mimeType are still required
+  // by the type but their file-reading uses are skipped in this branch —
+  // callers pass a fileName describing the pasted text (e.g. an
+  // auto-generated 'Pasted syllabus text.txt').
+  pastedText?: string,
 ): Promise<ProcessResult> {
   const startTime = Date.now();
 
@@ -67,7 +76,9 @@ export async function processSyllabus(
 
   // 1. Extract with Gemini (abortable — the caller's timeout aborts the fetch)
   const pageList: SyllabusPage[] = pages && pages.length > 0 ? pages : [{ uri: fileUri, mimeType }];
-  const extraction = await extractFromPages(pageList, signal);
+  const extraction = pastedText != null
+    ? await extractFromText(pastedText, signal)
+    : await extractFromPages(pageList, signal);
 
   // Bail BEFORE any DB writes if the caller aborted (e.g. the 120s timeout):
   // otherwise we create an orphan semester/course/upload the user never sees
@@ -171,10 +182,15 @@ export async function processSyllabus(
     }
   }
 
-  // 4. Create upload record
-  const storagePath = `${userId}/${Date.now()}_${fileName}`;
-  const fileInfo = await FileSystem.getInfoAsync(fileUri);
-  const fileSize = (fileInfo as any).size || 0;
+  // 4. Create upload record. A pasted-text scan has no real file — its
+  // "file" is the pasted text itself, stored as a .txt blob below, so every
+  // syllabus_uploads row still points at something real.
+  const storagePath = pastedText != null
+    ? `${userId}/${Date.now()}_pasted-syllabus.txt`
+    : `${userId}/${Date.now()}_${fileName}`;
+  const fileSize = pastedText != null
+    ? new TextEncoder().encode(pastedText).length
+    : ((await FileSystem.getInfoAsync(fileUri)) as any).size || 0;
 
   const { data: upload, error: uploadError } = await supabase
     .from('syllabus_uploads')
@@ -191,18 +207,30 @@ export async function processSyllabus(
 
   if (uploadError) throw new Error(`Failed to create upload: ${uploadError.message}`);
 
-  // 5. Upload file(s) to storage (non-critical, per page). Page 1 keeps the
-  //    exact storage_path recorded on the syllabus_uploads row (backward
-  //    compatible with old rows and single-file uploads); pages 2..N of a
-  //    multi-page photo scan land alongside it with a deterministic `_pN`
-  //    suffix before the extension (e.g. `..._scan.jpg` → `..._scan_p2.jpg`)
-  //    so the course screen can probe for them without a schema change.
-  //    Each page fails independently — a dropped page never fails the scan.
+  // 5. Upload file(s) to storage (non-critical). Pasted text is stored as a
+  //    single .txt blob; otherwise this mirrors the original per-page logic.
+  //    Page 1 keeps the exact storage_path recorded on the syllabus_uploads
+  //    row (backward compatible with old rows and single-file uploads);
+  //    pages 2..N of a multi-page photo scan land alongside it with a
+  //    deterministic `_pN` suffix before the extension (e.g. `..._scan.jpg`
+  //    → `..._scan_p2.jpg`) so the course screen can probe for them without
+  //    a schema change. Each page fails independently — a dropped page never
+  //    fails the scan.
+  if (pastedText != null) {
+    try {
+      await supabase.storage.from('syllabi').upload(storagePath, new TextEncoder().encode(pastedText), {
+        contentType: 'text/plain',
+        upsert: true,
+      });
+    } catch (e) {
+      console.warn('[processSyllabus] Storage upload failed for pasted text (non-critical):', e);
+    }
+  }
   const dot = storagePath.lastIndexOf('.');
   const hasExt = dot > storagePath.lastIndexOf('/');
   const pathStem = hasExt ? storagePath.slice(0, dot) : storagePath;
   const pathExt = hasExt ? storagePath.slice(dot) : '';
-  for (let p = 0; p < pageList.length; p++) {
+  for (let p = 0; pastedText == null && p < pageList.length; p++) {
     // pageList[0].uri === fileUri by the pages[] contract above, so the
     // single-page path uploads exactly what it always did.
     const pagePath = p === 0 ? storagePath : `${pathStem}_p${p + 1}${pathExt}`;
@@ -293,6 +321,27 @@ async function findOrCreateSemester(
     return { semesterId: existing[0].id, semesterName: existing[0].name };
   }
 
+  // Free-tier gate BEFORE the insert. The DB trigger (enforce_free_semester_
+  // limit) still exists as the source of truth, but relying on it alone means
+  // a free user scanning into what turns out to be a genuinely new semester
+  // only finds out AFTER Gemini has already run — the extraction cost is
+  // unavoidable (we need the extracted name to know this isn't an existing
+  // semester), but everything downstream of this function (course, grade
+  // scale, meetings, the syllabus_uploads row itself) is not. Stopping here
+  // matches the free-scan-limit guard above: fail before any writes, not
+  // after several rows are already committed.
+  if (!useAppStore.getState().isPro) {
+    const { count } = await supabase
+      .from('semesters')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+    if ((count ?? 0) >= FREE_SEMESTER_LIMIT) {
+      throw new Error(
+        `Free accounts support up to ${FREE_SEMESTER_LIMIT} semester. Upgrade to Pro for unlimited semesters, or re-scan into your existing one.`,
+      );
+    }
+  }
+
   // Create new semester
   const { data: created, error } = await supabase
     .from('semesters')
@@ -307,7 +356,9 @@ async function findOrCreateSemester(
 
   // Preserve original error so callers can detect P0001 (free-tier
   // semester trigger) and surface a clean Upgrade prompt instead of
-  // the "Failed to create semester: …" wrapper.
+  // the "Failed to create semester: …" wrapper. The client-side check above
+  // covers the common case; this stays as defense-in-depth (e.g. a race
+  // between two scans on different devices).
   if (error) throw error;
   return { semesterId: created.id, semesterName: created.name };
 }

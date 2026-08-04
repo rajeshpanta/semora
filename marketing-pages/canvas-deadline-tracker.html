@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Canvas Deadline Tracker App — Grades, Reminders & Study Planning | Semora</title>
+<meta name="description" content="Semora is a Canvas deadline tracker app that syncs your Canvas assignments with grade tracking, reminders, and a real study plan — free to start.">
+<style>
+  :root {
+    --bg: #FAF9F5;
+    --ink: #1C1B1F;
+    --purple: #6B46C1;
+    --purple-tint: #F1EBFB;
+    --line: #E4E0D8;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    font-size: 17px;
+  }
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+  }
+  h1, h2, h3 {
+    font-family: Georgia, "Times New Roman", serif;
+    color: var(--ink);
+    line-height: 1.25;
+    font-weight: 700;
+  }
+  h1 {
+    font-size: clamp(1.7rem, 5vw, 2.4rem);
+    margin: 0 0 1.1rem;
+  }
+  h2 {
+    font-size: clamp(1.3rem, 3.5vw, 1.6rem);
+    margin: 2.6rem 0 1rem;
+    border-top: 1px solid var(--line);
+    padding-top: 2.2rem;
+  }
+  h3 {
+    font-size: 1.05rem;
+    margin: 1.6rem 0 0.5rem;
+  }
+  p { margin: 0 0 1rem; }
+  a { color: var(--purple); }
+  .kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--purple);
+    margin: 0 0 0.75rem;
+  }
+  .lede {
+    font-size: 1.15rem;
+    background: var(--purple-tint);
+    border-left: 3px solid var(--purple);
+    padding: 1rem 1.25rem;
+    border-radius: 4px;
+    margin: 0 0 1.75rem;
+  }
+  ul, ol {
+    padding-left: 1.3rem;
+    margin: 0 0 1.1rem;
+  }
+  li { margin-bottom: 0.5rem; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0 1.5rem;
+    font-size: 0.95rem;
+  }
+  caption {
+    text-align: left;
+    font-size: 0.85rem;
+    color: #55524d;
+    margin-bottom: 0.5rem;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid var(--line);
+    vertical-align: top;
+  }
+  th {
+    background: #F3F1EA;
+    font-family: Georgia, "Times New Roman", serif;
+  }
+  tbody tr.pro-row td {
+    background: var(--purple-tint);
+  }
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .faq-item {
+    margin-bottom: 1.5rem;
+  }
+  .faq-item h3 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 1.08rem;
+  }
+  .cta-wrap {
+    text-align: center;
+    margin: 3rem 0 1rem;
+    padding: 2rem 1.25rem;
+    background: var(--purple-tint);
+    border-radius: 10px;
+  }
+  .cta-wrap p {
+    margin-bottom: 1.25rem;
+    font-size: 1.05rem;
+  }
+  .cta-button {
+    display: inline-block;
+    background: var(--purple);
+    color: #FFFFFF;
+    text-decoration: none;
+    font-weight: 600;
+    padding: 0.85rem 1.75rem;
+    border-radius: 8px;
+    font-size: 1rem;
+  }
+  .cta-button:hover { opacity: 0.92; }
+  footer {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 1.5rem 1.25rem 3rem;
+    font-size: 0.85rem;
+    color: #6b675f;
+    text-align: center;
+    border-top: 1px solid var(--line);
+  }
+  .price-note {
+    font-size: 0.85rem;
+    color: #55524d;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { background: #16151A; color: #EDEAE3; }
+    .lede { background: #241C36; color: #EDEAE3; }
+    h1, h2, h3 { color: #F5F3EC; }
+    table, th, td { border-color: #3A3730; }
+    th { background: #201F26; }
+    tbody tr.pro-row td { background: #241C36; }
+    .cta-wrap { background: #241C36; }
+    footer { border-color: #3A3730; color: #A29D91; }
+    .price-note { color: #C8C3B8; }
+    caption { color: #C8C3B8; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <p class="kicker">Canvas + Semora</p>
+  <h1>A Canvas Deadline Tracker App That Adds Grades, Reminders, and an Actual Study Plan</h1>
+
+  <p class="lede">Semora is a Canvas deadline tracker app that connects to your Canvas account with a personal access token and layers grade tracking, same-day reminders, and (on Pro) an AI-generated study schedule on top of your existing Canvas assignments — on iPhone and web, kept in sync.</p>
+
+  <p>Canvas is where your instructors post assignments. Semora sits alongside Canvas and adds grade tracking, same-day reminders, and — on Pro — an AI-generated study plan built from your actual syllabus.</p>
+
+  <h2>What Semora adds on top of Canvas</h2>
+  <p>Once your Canvas assignments are in Semora, you get a layer of organization Canvas doesn't provide on its own:</p>
+  <ul>
+    <li><strong>Grade tracking</strong> — see where you stand across your courses, not just a list of due dates.</li>
+    <li><strong>Same-day reminders</strong> — built into every tier, so nothing quietly slips by.</li>
+    <li><strong>Calendar sync</strong> — deadlines sync to your device calendar or export as an .ics file.</li>
+    <li><strong>Cross-device sync</strong> — one account, shared in near real time between the iPhone app and web (via Supabase Realtime), so a deadline you check off on your phone updates on web instantly.</li>
+    <li><strong>Course Spaces</strong> — share a course with classmates through an invite link; shared deadlines and group assignments sync in real time.</li>
+  </ul>
+  <p>On Pro ($3.99/month or $19.99/year, purchased in the iPhone app and applied account-wide including web), Semora goes further:</p>
+  <ul>
+    <li><strong>Smart Plan</strong> — an AI-generated, timed study schedule that adapts as deadlines move.</li>
+    <li><strong>Workload dashboard</strong> — a crunch-week and exam-density view across all your courses at once.</li>
+    <li><strong>Academic Risk alerts</strong> — flags for falling grades, missing work, or overloaded weeks, each with a recovery-step plan.</li>
+    <li><strong>Flashcards</strong> — spaced-repetition cards built from your own course material.</li>
+    <li><strong>Focus timer</strong> — a Pomodoro-style timer for study sessions.</li>
+    <li><strong>AI tutor</strong> — a chat assistant that knows the contents of your syllabus.</li>
+    <li><strong>Custom reminder timing + quiet hours</strong> — control exactly when and how you're notified.</li>
+    <li><strong>Progress Insights</strong> — trend charts, CSV export, and a print view on web.</li>
+  </ul>
+
+  <h2>How Canvas sync works</h2>
+  <p>Semora connects to Canvas using a personal access token that you generate yourself from your Canvas account settings. There's no third-party OAuth approval step to wait on — you paste in your token and your Canvas assignments start flowing into Semora.</p>
+  <p>Canvas sync covers your assignments. Semora adds a syllabus-derived view alongside it — surfacing office hours, the instructor's grading scale, semester start/end dates, and exact meeting times next to your Canvas assignments. For that, Semora reads the syllabus itself — as a photo (camera, multi-page, up to 5 pages), a PDF upload, a drag-and-drop file (web), or pasted raw text copied from a PDF or LMS page (web). Gemini AI extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading with its due date. Used together, Canvas sync and syllabus import give you a fuller picture than either source alone.</p>
+
+  <h2>Free vs. Pro</h2>
+  <div class="table-scroll">
+  <table>
+    <caption>What's included at each tier</caption>
+    <thead>
+      <tr><th scope="col">Feature</th><th scope="col">Free</th><th scope="col">Pro</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Syllabus scans</td><td>5 per calendar month</td><td>Unlimited</td></tr>
+      <tr><td>Courses per semester</td><td>Up to 4</td><td>Unlimited</td></tr>
+      <tr><td>Task &amp; deadline tracking</td><td>Full</td><td>Full</td></tr>
+      <tr><td>Grade tracking</td><td>Included</td><td>Included</td></tr>
+      <tr><td>Calendar sync (device + .ics export)</td><td>Included</td><td>Included</td></tr>
+      <tr><td>Same-day reminders</td><td>Included</td><td>Included</td></tr>
+      <tr class="pro-row"><td>Custom reminder timing + quiet hours</td><td>—</td><td>Included</td></tr>
+      <tr class="pro-row"><td>Smart Plan (AI study schedule)</td><td>—</td><td>Included</td></tr>
+      <tr class="pro-row"><td>Workload dashboard</td><td>—</td><td>Included</td></tr>
+      <tr class="pro-row"><td>Academic Risk alerts</td><td>—</td><td>Included</td></tr>
+      <tr class="pro-row"><td>Flashcards, Focus timer, AI tutor</td><td>—</td><td>Included</td></tr>
+      <tr class="pro-row"><td>Progress Insights (charts, CSV, print)</td><td>—</td><td>Included</td></tr>
+      <tr class="pro-row"><td>Share &amp; Streaks</td><td>—</td><td>Included</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="price-note">Pro is $3.99/month or $19.99/year, purchased in the iPhone app. It applies to your whole account, including web.</p>
+
+  <h2>How this compares to doing it manually or with a generic to-do app</h2>
+  <p>Most students land on one of two workarounds before trying a dedicated tool:</p>
+  <ul>
+    <li><strong>Manually copying Canvas into a calendar or planner.</strong> Each assignment has to be entered by hand, one at a time, and grade weighting, office hours, and exam density across courses aren't captured anywhere.</li>
+    <li><strong>Using a generic to-do app.</strong> A plain to-do list can hold a due date and a checkbox, but it isn't built around a grading scale or a semester structure. Semora adds grading-scale awareness, plus — on Pro — overload detection across your courses and a study plan built directly from your actual syllabus.</li>
+  </ul>
+  <p>Semora is built specifically around a syllabus and a Canvas course, not a generic task list: it imports the whole structure at once — course, instructor, meeting times, grading scale, and every deadline — from either a syllabus or a Canvas token, then tracks grades and workload against that structure automatically.</p>
+
+  <h2>FAQ</h2>
+
+  <div class="faq-item">
+    <h3>Does Semora replace Canvas?</h3>
+    <p>No. Canvas remains where instructors post materials and where you submit work. Semora connects to your Canvas assignments and adds grade tracking, reminders, calendar sync, and (on Pro) planning and study tools on top — it's an organizing layer, not a replacement for the LMS.</p>
+  </div>
+
+  <div class="faq-item">
+    <h3>How do I connect Canvas to Semora?</h3>
+    <p>Generate a personal access token from your own Canvas account settings and enter it into Semora. Because it uses a personal token rather than an OAuth app integration, there's no third-party review process to wait through.</p>
+  </div>
+
+  <div class="faq-item">
+    <h3>Is Semora free to use alongside Canvas?</h3>
+    <p>Yes. The free tier includes 5 syllabus scans per calendar month, up to 4 courses per semester, full task and deadline tracking, grade tracking, calendar sync with .ics export, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited scans and courses plus Smart Plan, the Workload dashboard, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, Progress Insights, and Share & Streaks.</p>
+  </div>
+
+  <div class="faq-item">
+    <h3>Does Semora work on both iPhone and web?</h3>
+    <p>Yes. Semora is available as an iPhone app and on the web, sharing one account and database that sync in near real time. Pro is purchased through the iPhone app and applies account-wide, including on web.</p>
+  </div>
+
+  <div class="cta-wrap">
+    <p>Bring your Canvas assignments into one organized view — deadlines, grades, and reminders together.</p>
+    <!-- replace with the real sign-in URL once deployed -->
+    <a class="cta-button" href="#">Get started with Semora</a>
+  </div>
+
+</main>
+<footer>
+  Semora © 2026
+</footer>
+</body>
+</html>

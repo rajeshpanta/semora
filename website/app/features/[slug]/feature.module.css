@@ -1,0 +1,146 @@
+/* Width, centering and horizontal padding are owned by ArticleShell, which
+   also supplies the sticky "On this page" rail and CTA card. */
+.wrap {
+  min-width: 0;
+}
+
+.crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: var(--ink-muted);
+  margin-bottom: 22px;
+}
+
+.crumbs a {
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  color: var(--brand);
+}
+
+.section {
+  margin-top: clamp(34px, 5vw, 52px);
+}
+
+.section h2 {
+  font-size: clamp(1.28rem, 3.2vw, 1.62rem);
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+  margin: 0 0 14px;
+  overflow-wrap: break-word;
+}
+
+.points {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 11px;
+}
+
+.points li {
+  position: relative;
+  min-width: 0;
+  padding-left: 28px;
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.62;
+  overflow-wrap: break-word;
+}
+
+.points li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.44em;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--brand-100);
+  box-shadow: 0 0 0 4px var(--brand-50);
+}
+
+.tier {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+}
+
+.free {
+  background: var(--teal-50);
+  color: var(--teal);
+}
+
+.pro {
+  background: var(--brand-50);
+  color: var(--brand);
+}
+
+.wrap h1 {
+  font-size: clamp(1.9rem, 5vw, 2.6rem);
+  margin-bottom: 16px;
+}
+
+.lede {
+  font-size: 18px;
+  color: var(--ink);
+  background: var(--brand-50);
+  border-left: 3px solid var(--brand);
+  padding: 16px 20px;
+  border-radius: 0 12px 12px 0;
+  margin-bottom: 20px;
+}
+
+.body {
+  font-size: 16px;
+  color: var(--ink2);
+  margin-bottom: 40px;
+}
+
+.related {
+  border-top: 1px solid var(--border);
+  padding-top: 28px;
+  margin-bottom: 40px;
+}
+
+.related h2 {
+  font-size: 15px;
+  color: var(--ink3);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.related ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.related a {
+  display: inline-block;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 8px 16px;
+  text-decoration: none;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.related a:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
