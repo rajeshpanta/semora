@@ -32,7 +32,10 @@
   overflow: hidden;
   background: var(--ink-deep);
   color: #fff;
-  padding: clamp(56px, 9vw, 104px) clamp(20px, 4vw, 40px) clamp(56px, 8vw, 96px);
+  /* Extra top padding so content clears the transparent header that now
+     overlays this section rather than sitting above it. */
+  padding: clamp(104px, 12vw, 152px) clamp(20px, 4vw, 40px) clamp(56px, 8vw, 96px);
+  margin-top: calc(-1 * var(--nav-height, 61px));
 }
 
 .hero::before,

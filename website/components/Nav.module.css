@@ -5,6 +5,48 @@
   background: rgba(250, 249, 245, 0.86);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+/* On a page that opens with the dark hero, the bar sits ON the hero rather
+   than stacking a cream band above it — that seam was the single thing making
+   the page read as a template. Transparent at the top, solid once scrolled. */
+.header[data-overlay]:not([data-scrolled]) {
+  background: transparent;
+  backdrop-filter: none;
+  border-bottom-color: transparent;
+  color: #fff;
+}
+
+.header[data-overlay]:not([data-scrolled]) .logo,
+.header[data-overlay]:not([data-scrolled]) .link,
+.header[data-overlay]:not([data-scrolled]) .ghost,
+.header[data-overlay]:not([data-scrolled]) .menuTrigger {
+  color: #fff;
+}
+
+.header[data-overlay]:not([data-scrolled]) .pill {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.header[data-overlay]:not([data-scrolled]) .link:hover,
+.header[data-overlay]:not([data-scrolled]) .menuTrigger:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+/* The CTA inverts so it still reads as the primary action on a dark bar. */
+.header[data-overlay]:not([data-scrolled]) .cta {
+  background: #fff;
+  color: var(--ink-deep);
+}
+
+.header[data-overlay]:not([data-scrolled]) .cta:hover {
+  background: var(--glow-light);
+}
+
+.header[data-overlay]:not([data-scrolled]) .burgerIcon .bar {
+  background: #fff;
 }
 
 .inner {

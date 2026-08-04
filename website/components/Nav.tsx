@@ -2,6 +2,7 @@ import Link from 'next/link';
 import styles from './Nav.module.css';
 import { FeaturesMenu } from './FeaturesMenu';
 import { MobileNav } from './MobileNav';
+import { NavChrome } from './NavChrome';
 import { SITE_NAME, APP_SIGNUP_URL, APP_SIGNIN_URL, APP_STORE_URL } from '@/lib/semora-facts';
 
 export const NAV_LINKS = [
@@ -21,7 +22,8 @@ export const NAV_LINKS = [
 
 export function Nav() {
   return (
-    <header className={styles.header}>
+    <header className={styles.header} data-nav>
+      <NavChrome />
       <div className={styles.inner}>
         <Link href="/" className={styles.logo}>
           {SITE_NAME}

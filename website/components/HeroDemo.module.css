@@ -1,0 +1,385 @@
+.wrap {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.glow {
+  position: absolute;
+  top: -12%;
+  left: 50%;
+  translate: -50% 0;
+  width: min(560px, 110%);
+  aspect-ratio: 1;
+  background: radial-gradient(circle, rgba(155, 122, 232, 0.42) 0%, transparent 68%);
+  filter: blur(24px);
+  pointer-events: none;
+}
+
+/* ── The window ────────────────────────────────────────────── */
+
+.window {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fbfaf7;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  /* Two shadows: a tight one for the edge, a long soft one so the panel reads
+     as floating above the hero rather than pasted onto it. */
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.34),
+    0 44px 88px -30px rgba(0, 0, 0, 0.72);
+}
+
+.chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px;
+  background: #efece6;
+  border-bottom: 1px solid rgba(28, 27, 31, 0.08);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #cfc9c0;
+}
+.dot[data-c='r'] { background: #ec6a5e; }
+.dot[data-c='y'] { background: #f4bf4f; }
+.dot[data-c='g'] { background: #61c454; }
+
+.url {
+  flex: 1;
+  margin-left: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: #fbfaf7;
+  color: #8c8b94;
+  font-size: 10.5px;
+  letter-spacing: 0.01em;
+  text-align: center;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 122px minmax(0, 1fr);
+  height: 322px;
+}
+
+/* ── Sidebar — mirrors the app's real navigation ───────────── */
+
+.sidebar {
+  padding: 12px 10px;
+  background: #f4f1ec;
+  border-right: 1px solid rgba(28, 27, 31, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.brand {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-weight: 700;
+  font-size: 13px;
+  color: #1c1b1f;
+  padding: 2px 6px 10px;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 6px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  color: #55555c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navItem[data-active='true'] {
+  background: #ffffff;
+  color: #1c1b1f;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(17, 17, 17, 0.05);
+}
+
+.navDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #cecbf6;
+  flex: none;
+}
+
+.navItem[data-active='true'] .navDot { background: #6b46c1; }
+
+.navLabel {
+  margin: 12px 6px 4px;
+  font-size: 8.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a3a1aa;
+}
+
+/* ── Main pane ─────────────────────────────────────────────── */
+
+.main {
+  position: relative;
+  padding: 14px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Stage 1: the syllabus document */
+
+.doc {
+  position: absolute;
+  inset: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid rgba(28, 27, 31, 0.08);
+  overflow: hidden;
+  opacity: 0;
+  transform: scale(0.97);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.window[data-stage='scan'] .doc { opacity: 1; transform: none; }
+
+.docHead { margin-bottom: 10px; }
+
+.docTitle {
+  font-size: 10px;
+  font-weight: 600;
+  color: #55555c;
+}
+
+.docLine {
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #e8e5e0, #f2efea);
+  margin-bottom: 7px;
+}
+
+/* The scanning sweep. Only runs while stage 1 is showing. */
+.scanline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 42%;
+  background: linear-gradient(180deg, transparent, rgba(107, 70, 193, 0.16), transparent);
+  border-bottom: 1px solid rgba(107, 70, 193, 0.5);
+  opacity: 0;
+}
+
+.window[data-stage='scan'] .scanline {
+  opacity: 1;
+  animation: sweep 1.9s ease-in-out infinite;
+}
+
+@keyframes sweep {
+  0%   { top: -42%; }
+  100% { top: 100%; }
+}
+
+/* Stages 2-3: the extracted deadlines */
+
+.list {
+  position: absolute;
+  inset: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+.window[data-stage='extract'] .list,
+.window[data-stage='organized'] .list { opacity: 1; }
+
+.window[data-stage='organized'] .list { inset: 14px 14px 96px; }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 9px;
+  border-radius: 7px;
+  background: #fff;
+  border: 1px solid rgba(28, 27, 31, 0.07);
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+/* Rows land one after another, so it reads as extraction happening rather
+   than a list that was always there. */
+.window[data-stage='extract'] .row,
+.window[data-stage='organized'] .row {
+  animation: land 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(var(--i) * 90ms);
+}
+
+@keyframes land {
+  to { opacity: 1; transform: none; }
+}
+
+.check {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  border: 1.5px solid #cecbf6;
+  flex: none;
+}
+
+.row[data-tone='done'] .check { background: #0f6e56; border-color: #0f6e56; }
+.row[data-tone='late'] .check { border-color: #d85a30; }
+.row[data-tone='exam'] .check { border-color: #6b46c1; background: #eeedfe; }
+
+.rowText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+
+.rowTitle {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #1c1b1f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowCourse { font-size: 9px; color: #8c8b94; }
+
+.rowDue {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #55555c;
+  flex: none;
+}
+
+.row[data-tone='late'] .rowDue { color: #d85a30; }
+.row[data-tone='exam'] .rowDue { color: #6b46c1; }
+
+/* Stage 3: the week that adds up */
+
+.week {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  height: 74px;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  align-items: end;
+  gap: 6px;
+  padding: 10px 10px 8px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid rgba(28, 27, 31, 0.07);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.window[data-stage='organized'] .week { opacity: 1; transform: none; }
+
+.day { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+
+.bar {
+  width: 100%;
+  max-width: 14px;
+  border-radius: 3px 3px 1px 1px;
+  background: linear-gradient(180deg, #9b7ae8, #6b46c1);
+  height: 0;
+}
+
+.window[data-stage='organized'] .bar {
+  animation: grow 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(var(--i) * 55ms + 120ms);
+}
+
+@keyframes grow {
+  to { height: calc(var(--h) * 1%); }
+}
+
+.dayLabel { font-size: 8px; color: #a3a1aa; }
+
+/* ── Caption ───────────────────────────────────────────────── */
+
+.caption {
+  position: relative;
+  text-align: center;
+  animation: fadeUp 0.45s ease;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.captionLabel {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.captionHint {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.progress {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 11px;
+}
+
+.tick {
+  width: 16px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  transition: background 0.3s ease;
+}
+
+.tick[data-on='true'] { background: var(--glow-light); }
+
+/* ── Narrow screens ────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+  .body { grid-template-columns: 84px minmax(0, 1fr); height: 290px; }
+  .brand { font-size: 11.5px; }
+  .navItem { font-size: 9.5px; padding: 4px 5px; }
+  .navLabel { font-size: 8px; }
+}
+
+@media (max-width: 460px) {
+  /* Below this the sidebar costs more than it communicates. */
+  .body { grid-template-columns: minmax(0, 1fr); height: 270px; }
+  .sidebar { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanline,
+  .row,
+  .bar {
+    animation: none !important;
+  }
+  .row { opacity: 1; transform: none; }
+  .bar { height: calc(var(--h) * 1%); }
+  .caption { animation: none; }
+}

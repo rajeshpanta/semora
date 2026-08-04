@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import styles from './page.module.css';
+import { HeroDemo } from '@/components/HeroDemo';
 import { Faq } from '@/components/Faq';
 import { Cta } from '@/components/Cta';
 import { JsonLd } from '@/components/JsonLd';
@@ -260,15 +261,7 @@ export default function Home() {
             </ul>
           </div>
           <div className={styles.heroVisual}>
-            <div className={styles.heroGlow} aria-hidden="true" />
-            <Image
-              src="/screenshots/never-miss-deadline.png"
-              alt="Semora Today screen showing the next assignment due and this week's workload"
-              width={296}
-              height={640}
-              priority
-              className={styles.heroShot}
-            />
+            <HeroDemo />
           </div>
         </div>
       </section>
