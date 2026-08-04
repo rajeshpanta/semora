@@ -21,7 +21,7 @@ const FAQ = [
   {
     question: 'What does an AI study planner actually do?',
     answer:
-      "An AI study planner reads your source material — in Semora's case, a course syllabus, and automatically builds the deadlines, grade categories, and schedule that you'd otherwise have to enter manually, then can generate a study schedule from that information.",
+      "An AI study planner reads your source material (in Semora's case, a course syllabus) and automatically builds the deadlines, grade categories, and schedule that you'd otherwise have to enter manually, then can generate a study schedule from that information.",
   },
   {
     question: 'How does Semora create my study schedule from a syllabus?',

@@ -138,9 +138,9 @@ export const COMPETITORS: CompetitorFact[] = [
     title: 'Semora vs Shovel: Syllabus Scanning & Canvas Sync',
     metaDescription:
       "Compare Semora and Shovel: syllabus scanning, Canvas sync, grade tracking, study planning, and pricing side by side to find the right app for your semester.",
-    lede: "Semora scans a syllabus into an organized semester — deadlines, grades, and class schedule, with a genuine free tier, while Shovel turns a syllabus or LMS connection into a time-blocked, subscription-based study schedule; the better fit depends on whether you want a lightweight deadline-and-grade tracker or a full automated study-time planner.",
+    lede: "Semora scans a syllabus into an organized semester (deadlines, grades, and class schedule) with a genuine free tier, while Shovel turns a syllabus or LMS connection into a time-blocked, subscription-based study schedule; the better fit depends on whether you want a lightweight deadline-and-grade tracker or a full automated study-time planner.",
     intro:
-      "Both Semora and Shovel start from the same problem — a syllabus PDF nobody wants to manually transcribe, but they solve it differently downstream. Here's a fact-based look at how they compare on syllabus handling, Canvas sync, grade tracking, study planning, pricing, and platform availability.",
+      "Both Semora and Shovel start from the same problem, a syllabus PDF nobody wants to manually transcribe, but they solve it differently downstream. Here's a fact-based look at how they compare on syllabus handling, Canvas sync, grade tracking, study planning, pricing, and platform availability.",
     semoraParagraph:
       'Semora turns a photographed, uploaded, or pasted syllabus into an organized semester. You can import it by camera (multi-page, up to 5 pages), PDF upload, drag-and-drop on web, or by pasting raw text copied from a PDF or LMS page. Gemini AI reads the document and extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading along with its due date. From there, Semora tracks deadlines and grades on the free tier, and — on the Pro tier — adds device calendar sync (with .ics export), an adaptive study schedule, academic-risk alerts, flashcards, a focus timer, and an AI tutor that knows your syllabus.',
     competitorParagraph:
@@ -193,7 +193,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         heading: 'Syllabus import, in detail',
         body: [
-          'Semora accepts four import paths — camera photo (up to 5 pages per scan), PDF upload, drag-and-drop on web, or pasted raw text copied from a PDF or LMS page, and uses Gemini AI to extract structured course data: name, instructor, meeting times, office hours, semester dates, grading scale, and every graded item with its due date. The free tier includes 5 syllabus scans per calendar month across up to 4 courses per semester.',
+          'Semora accepts four import paths (camera photo (up to 5 pages per scan), PDF upload, drag-and-drop on web, or pasted raw text copied from a PDF or LMS page) and uses Gemini AI to extract structured course data: name, instructor, meeting times, office hours, semester dates, grading scale, and every graded item with its due date. The free tier includes 5 syllabus scans per calendar month across up to 4 courses per semester.',
           "Shovel's stated import path is a PDF upload that AI parses, followed by a review/confirmation step before the schedule is built, or connecting an LMS directly so assignments come in via sync rather than a scan.",
         ],
       },
@@ -277,7 +277,7 @@ export const COMPETITORS: CompetitorFact[] = [
     semoraParagraph:
       'Semora (iPhone, iPad, and web) turns a course syllabus into an organized semester. You import a syllabus by camera photo (multi-page, up to 5 pages), PDF upload, drag-and-drop on the web, or by pasting raw text copied from a PDF or LMS page. Gemini AI extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading with its due date, then organizes them into deadlines, a grade tracker, and a class schedule shared across your iPhone, iPad, and the web via one account.',
     competitorParagraph:
-      'StudyFetch (web, iOS, and Android) is an AI study platform built around Spark.E, a tutor that answers questions only from a student\'s own uploaded course material — slides, PDFs, notes, photos, video, or audio, rather than the open internet. Around that core, it auto-generates flashcards, quizzes, practice and full-length exam simulations, essay feedback, AI-narrated "podcast" summaries, and AI-generated explainer videos. A Live Lecture Assistant records class audio into real-time structured notes and a transcript, and Spark.E is also reachable by SMS/iMessage. StudyFetch does include a calendar feature — photograph a syllabus and Spark.E extracts events into a personal calendar with reminders and a spaced-repetition study plan, but it functions as one module inside a materials-centric tool rather than the product\'s organizing principle.',
+      'StudyFetch (web, iOS, and Android) is an AI study platform built around Spark.E, a tutor that answers questions only from a student\'s own uploaded course material (slides, PDFs, notes, photos, video, or audio) rather than the open internet. Around that core, it auto-generates flashcards, quizzes, practice and full-length exam simulations, essay feedback, AI-narrated "podcast" summaries, and AI-generated explainer videos. A Live Lecture Assistant records class audio into real-time structured notes and a transcript, and Spark.E is also reachable by SMS/iMessage. StudyFetch does include a calendar feature, photograph a syllabus and Spark.E extracts events into a personal calendar with reminders and a spaced-repetition study plan, but it functions as one module inside a materials-centric tool rather than the product\'s organizing principle.',
     comparisonCaption:
       "Based on each company's own published product information. Where StudyFetch's own site could not be independently confirmed, that is noted.",
     comparisonRows: [
@@ -328,7 +328,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         heading: 'Collaboration and sharing',
         body: [
-          "Semora has Course Spaces: you can share a course with classmates via an invite link, with shared deadlines and group assignments syncing in real time. It also has Share & Streaks (Pro) — a semester share card plus study-streak tracking, and a separate referral program, open to free and Pro users alike, that gives both you and your friend a free month of Pro when they join. Available research did not surface an equivalent classmate-facing course-sharing feature for StudyFetch.",
+          "Semora has Course Spaces: you can share a course with classmates via an invite link, with shared deadlines and group assignments syncing in real time. It also has Share & Streaks (Pro), a semester share card plus study-streak tracking, and a separate referral program, open to free and Pro users alike, that gives both you and your friend a free month of Pro when they join. Available research did not surface an equivalent classmate-facing course-sharing feature for StudyFetch.",
         ],
       },
       {
@@ -480,11 +480,11 @@ export const COMPETITORS: CompetitorFact[] = [
     title: 'Semora vs Taskade: Syllabus & Deadline Tracking',
     metaDescription:
       'Semora turns a syllabus into deadlines, grades, and a schedule for students. Taskade is a general AI workspace for teams. Compare features and pricing.',
-    lede: 'Semora is a syllabus-first app for iPhone, iPad, and web that turns a course syllabus into an organized semester — deadlines, grades, and a class schedule, while Taskade is a general-purpose AI workspace built around seven interchangeable project views (List, Board, Calendar, Table, Mind Map, Gantt, Org Chart) for teams, freelancers, and businesses, with no student- or course-specific features.',
+    lede: 'Semora is a syllabus-first app for iPhone, iPad, and web that turns a course syllabus into an organized semester (deadlines, grades, and a class schedule) while Taskade is a general-purpose AI workspace built around seven interchangeable project views (List, Board, Calendar, Table, Mind Map, Gantt, Org Chart) for teams, freelancers, and businesses, with no student- or course-specific features.',
     intro:
       "If you're comparing the two, it usually comes down to this: do you want a tool that already knows what a syllabus is, or a flexible blank-canvas workspace you configure yourself? This page walks through what each product actually does, how they price out, and where each one tends to fit best.",
     semoraParagraph:
-      'An iPhone, iPad, and web app that imports a syllabus — by photo (multi-page, up to 5 pages), PDF upload, drag-and-drop on web, or pasted text, and uses Gemini AI to extract the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading with its due date. From there it tracks deadlines and grades, syncs to your device calendar, and (on Pro) builds a study plan around what it found.',
+      'An iPhone, iPad, and web app that imports a syllabus (by photo (multi-page, up to 5 pages), PDF upload, drag-and-drop on web, or pasted text) and uses Gemini AI to extract the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading with its due date. From there it tracks deadlines and grades, syncs to your device calendar, and (on Pro) builds a study plan around what it found.',
     competitorParagraph:
       "An AI-native workspace combining task/project management, docs, and chat-style collaboration. Its signature feature is seven project views that share the same underlying data with no conversion loss, plus the ability to build custom AI agents trained on your uploaded docs or links, deploy multi-agent \"teams,\" and run automations. It's explicitly general-purpose — marketed to businesses, nonprofits, and individuals alike, not students or courses specifically.",
     comparisonCaption: 'Semora vs Taskade across the areas that matter most for course and deadline management.',
