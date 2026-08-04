@@ -87,6 +87,14 @@
   opacity: 0.18;
 }
 
+/* The bottom-left glow is anchored at bottom:-34vmax, so the hero's
+   overflow:hidden slices through its brightest part exactly at the section
+   edge — a soft but real tonal step in what is meant to be one continuous
+   canvas. The top-right glow ends well above the fold and stays. */
+:global(:root[data-dark-page]) .hero::after {
+  display: none;
+}
+
 .heroInner {
   position: relative;
   width: 100%;
