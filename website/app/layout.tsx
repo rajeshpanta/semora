@@ -42,10 +42,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // data-dark-page is server-rendered rather than set by NavChrome's effect:
-    // the whole site is one dark canvas now, and toggling it after hydration
-    // meant the first painted frame used the light tokens and then flipped.
-    <html lang="en" data-dark-page className={fraunces.variable}>
+    // No palette attribute here: the canvas is per-route, and a page opts into
+    // the dark one by rendering <DarkCanvas />. See that component for why the
+    // choice cannot live in this layout.
+    <html lang="en" className={fraunces.variable}>
       <body>
         {/* If JS never runs, Reveal's scroll-triggered content must not stay
             invisible forever — force it visible for the no-JS case. */}

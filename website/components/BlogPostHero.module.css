@@ -53,7 +53,11 @@
   line-height: 1.2;
 }
 
-.date {
+/* Scoped through .band for the same reason as Cta's .subheading: this hero
+   renders inside <article className={prose}>, and `.prose p` (0,1,1) beat a
+   bare `.date` (0,1,0) — taking both the colour (--ink2, dark grey on the
+   near-black band, 2.6:1) and the font-size (15.5px instead of 13px). */
+.band .date {
   color: rgba(255, 255, 255, 0.6);
   font-size: 13px;
   margin: 0;

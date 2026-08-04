@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DarkCanvas } from '@/components/DarkCanvas';
 import { SignupButton } from '@/components/SignupButton';
 import Image from 'next/image';
 import styles from './page.module.css';
@@ -227,6 +228,7 @@ const HOME_FAQ = [
 export default function Home() {
   return (
     <>
+      <DarkCanvas />
       <JsonLd data={softwareApplicationSchema()} />
       <JsonLd data={faqPageSchema(HOME_FAQ)} />
 

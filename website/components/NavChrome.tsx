@@ -17,12 +17,10 @@ import { usePathname } from 'next/navigation';
  */
 export function NavChrome() {
   const pathname = usePathname();
-  // The whole site is one dark canvas. It used to be homepage-only, which meant
-  // every inner page opened with a dark hero and then switched to cream a few
-  // hundred pixels down — a colour change mid-scroll that read as two pages
-  // stapled together. One canvas everywhere removes the seam by removing the
-  // second colour.
-  const overlay = true;
+  // The dark-canvas routes, which are the ones whose hero the bar should sit
+  // ON rather than above. Everything else keeps the solid bar from the first
+  // pixel. This list must stay in step with the pages rendering <DarkCanvas />.
+  const overlay = pathname === '/' || pathname.startsWith('/features');
 
   useEffect(() => {
     const header = document.querySelector('header[data-nav]') as HTMLElement | null;

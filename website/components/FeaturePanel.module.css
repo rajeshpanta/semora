@@ -313,7 +313,8 @@
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.42);
+  /* 0.42 measured 4.07:1 on the panel ground, just under AA for this size. */
+  color: rgba(255, 255, 255, 0.5);
   text-align: center;
 }
 
@@ -332,8 +333,10 @@
   position: absolute;
   left: 3px;
   right: 3px;
-  display: flex;
-  align-items: flex-start;
+  /* Not flex: the label is an anonymous flex item, which will not shrink below
+     its min-content width, so a long word overflowed instead of wrapping no
+     matter what overflow-wrap said. Block layout top-aligns it just the same. */
+  display: block;
   padding: 5px 6px;
   border-radius: 6px;
   font-size: 10px;
@@ -342,6 +345,12 @@
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(255, 255, 255, 0.09);
   overflow: hidden;
+  /* Columns are 1fr of a phone-width panel, so a single long word ("Flashcards")
+     cannot wrap and was being sliced mid-glyph by the overflow clip. Hyphenate
+     at a real break point, with a hard break as the backstop for anything
+     unhyphenatable. */
+  hyphens: auto;
+  overflow-wrap: break-word;
 }
 
 .block[data-tone='due'] {
@@ -421,4 +430,17 @@
   .body { min-height: 0; }
   .timer { min-height: 200px; }
   .ring { width: 128px; height: 128px; }
+}
+
+/* Five day columns inside a phone-width panel leave ~36px of content each,
+   which is narrower than a single word like "Problem" at 10px — so every label
+   broke mid-word. Tightening the type and the gutters buys enough room for all
+   of them to break at spaces instead. */
+@media (max-width: 620px) {
+  .week { gap: 5px; }
+  .block {
+    font-size: 9px;
+    padding: 4px 5px;
+    letter-spacing: -0.01em;
+  }
 }

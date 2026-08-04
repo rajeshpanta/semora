@@ -2,6 +2,11 @@
   position: relative;
   overflow: hidden;
   padding: clamp(44px, 7vw, 76px) clamp(20px, 4vw, 40px) clamp(40px, 6vw, 64px);
+  /* Stated explicitly rather than inherited from the dark canvas. Everything in
+     here is hardcoded white, so if :has() is unsupported and the tokens stay
+     light, an inherited background would leave white text on cream. Identical
+     to the canvas colour when :has() does apply, so it adds no seam. */
+  background: var(--ink-deep);
 }
 
 /* A single soft light source behind the headline. Anchored well inside the

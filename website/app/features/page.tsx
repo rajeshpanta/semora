@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { DarkCanvas } from '@/components/DarkCanvas';
 import type { ComponentType } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -109,6 +110,7 @@ const REMAINING = Object.keys(REMAINING_ICONS)
 export default function FeaturesPage() {
   return (
     <>
+      <DarkCanvas />
       <section className={styles.hero}>
         <div className={styles.heroInner}>
           <span className={styles.eyebrow}>Features</span>

@@ -29,7 +29,7 @@
    down the page, the first landing exactly where the hero ends. The whole
    point of one background is that sections are separated by whitespace, not
    by lines, so the borders and the tint both come off. */
-:global(:root[data-dark-page]) .band {
+:global(:root:has([data-canvas='dark'])) .band {
   background: none;
   border-top: 0;
   border-bottom: 0;
@@ -91,7 +91,7 @@
    overflow:hidden slices through its brightest part exactly at the section
    edge — a soft but real tonal step in what is meant to be one continuous
    canvas. The top-right glow ends well above the fold and stays. */
-:global(:root[data-dark-page]) .hero::after {
+:global(:root:has([data-canvas='dark'])) .hero::after {
   display: none;
 }
 

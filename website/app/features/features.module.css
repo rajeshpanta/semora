@@ -466,11 +466,11 @@
 
 /* Same white-on-white problem as the mobile sheet CTA: var(--ink) is near-white
    on the dark canvas, so this button needs the inverted treatment. */
-:global(:root[data-dark-page]) .bannerLink {
+:global(:root:has([data-canvas='dark'])) .bannerLink {
   background: #fff;
   color: var(--ink-deep);
 }
 
-:global(:root[data-dark-page]) .bannerLink:hover {
+:global(:root:has([data-canvas='dark'])) .bannerLink:hover {
   background: var(--glow-light);
 }

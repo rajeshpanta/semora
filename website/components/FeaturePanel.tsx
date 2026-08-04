@@ -103,7 +103,9 @@ const PANELS: Record<string, Panel> = {
         label: 'Fri',
         blocks: [
           { text: 'Essay outline', start: 0, span: 2 },
-          { text: 'Flashcards', start: 4, span: 2 },
+          // Two short words rather than one long one: at phone widths a single
+          // unbreakable "Flashcards" is wider than the day column.
+          { text: 'Card review', start: 4, span: 2 },
         ],
       },
     ],

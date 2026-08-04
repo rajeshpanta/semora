@@ -96,7 +96,7 @@ img {
    Laxu-style: one background top to bottom, sections separated by whitespace
    and hairline borders rather than by alternating colour. Re-pointing the
    tokens means every component built on them inverts without being touched. */
-:root[data-dark-page] {
+:root:has([data-canvas='dark']) {
   --bg: #0f0b1a;
   --card: rgba(255, 255, 255, 0.035);
   --ink: #f5f3fa;
@@ -110,7 +110,7 @@ img {
   --brand-100: rgba(167, 139, 250, 0.28);
 }
 
-:root[data-dark-page] body {
+:root:has([data-canvas='dark']) body {
   background: var(--bg);
   color: var(--ink);
 }

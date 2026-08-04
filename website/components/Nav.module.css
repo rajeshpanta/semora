@@ -430,49 +430,49 @@
 /* On the single-canvas dark page the bar must stay dark once scrolled too —
    otherwise it flips to cream while its text is still light, which is the one
    state where the nav becomes genuinely unreadable. */
-:root[data-dark-page] .header {
+:root:has([data-canvas='dark']) .header {
   background: rgba(15, 11, 26, 0.82);
   border-bottom-color: rgba(255, 255, 255, 0.08);
   color: #fff;
 }
 
-:root[data-dark-page] .header .logo,
-:root[data-dark-page] .header .link,
-:root[data-dark-page] .header .ghost,
-:root[data-dark-page] .header .menuTrigger {
+:root:has([data-canvas='dark']) .header .logo,
+:root:has([data-canvas='dark']) .header .link,
+:root:has([data-canvas='dark']) .header .ghost,
+:root:has([data-canvas='dark']) .header .menuTrigger {
   color: #fff;
 }
 
-:root[data-dark-page] .header .pill {
+:root:has([data-canvas='dark']) .header .pill {
   background: rgba(255, 255, 255, 0.07);
   border-color: rgba(255, 255, 255, 0.14);
 }
 
-:root[data-dark-page] .header .cta {
+:root:has([data-canvas='dark']) .header .cta {
   background: #fff;
   color: var(--ink-deep);
 }
 
-:root[data-dark-page] .header .cta:hover { background: var(--glow-light); }
+:root:has([data-canvas='dark']) .header .cta:hover { background: var(--glow-light); }
 
-:root[data-dark-page] .header .link:hover,
-:root[data-dark-page] .header .menuTrigger:hover {
+:root:has([data-canvas='dark']) .header .link:hover,
+:root:has([data-canvas='dark']) .header .menuTrigger:hover {
   background: rgba(255, 255, 255, 0.12);
 }
 
-:root[data-dark-page] .burgerIcon .bar { background: #fff; }
+:root:has([data-canvas='dark']) .burgerIcon .bar { background: #fff; }
 
 /* The dropdown panel and mobile sheet are opaque surfaces, so they need the
    dark ground explicitly rather than inheriting a translucent tint. */
-:root[data-dark-page] .menuPanel,
-:root[data-dark-page] .sheet {
+:root:has([data-canvas='dark']) .menuPanel,
+:root:has([data-canvas='dark']) .sheet {
   background: #15102a;
   border-color: rgba(255, 255, 255, 0.10);
 }
 
 /* .sheetCta paints white text on var(--ink), which is a near-white on the dark
    canvas — the button rendered invisible. Same inversion the header CTA uses. */
-:root[data-dark-page] .sheetCta {
+:root:has([data-canvas='dark']) .sheetCta {
   background: #fff;
   color: var(--ink-deep);
 }

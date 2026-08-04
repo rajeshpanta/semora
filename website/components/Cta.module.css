@@ -29,7 +29,11 @@
   position: relative;
 }
 
-.subheading {
+/* Scoped through .band on purpose. This CTA is usually rendered inside a Prose
+   wrapper, whose `.prose p` rule (0,1,1) outranks a bare `.subheading` (0,1,0)
+   and repainted this line in --ink2 — dark grey on the dark band, 2.6:1. The
+   descendant form takes it to (0,2,0) so the band's own colour wins. */
+.band .subheading {
   color: rgba(255, 255, 255, 0.72);
   max-width: 480px;
   margin: 0 auto 28px;
