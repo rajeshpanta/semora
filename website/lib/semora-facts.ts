@@ -19,7 +19,7 @@ export const SITE_DESCRIPTION =
   // snippet and appends a "Read more" expander, which is what the homepage
   // result looked like at 196. The tail it was cutting ("...flashcards, a focus
   // timer, and an AI tutor") was the least load-bearing half of the sentence.
-  'Semora turns a syllabus photo or PDF into a full semester calendar, every deadline, exam, and grading weight, organized automatically.';
+  'Semora turns a syllabus photo or PDF into a full semester calendar, with every deadline, exam and grading weight organized automatically.';
 
 export const APP_STORE_URL = 'https://apps.apple.com/us/app/semora-ai-syllabus-scanner/id6762589321';
 
