@@ -3,13 +3,14 @@ import { notFound } from 'next/navigation';
 import { LongFormPage } from '@/components/LongFormPage';
 import { getNewPage } from '@/lib/new-page-content';
 import { OG_IMAGE } from '@/lib/og';
+import { pageTitle } from '@/lib/title';
 
 const KEY = 'dormway-alternative' as const;
 
 export function generateMetadata(): Metadata {
   const c = getNewPage(KEY);
   return {
-    title: c?.metaTitle,
+    title: c?.metaTitle ? pageTitle(c.metaTitle) : undefined,
     description: c?.metaDescription,
     alternates: { canonical: '/dormway-alternative' },
     openGraph: { url: '/dormway-alternative', ...OG_IMAGE },

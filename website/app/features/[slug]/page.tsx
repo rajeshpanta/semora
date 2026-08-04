@@ -10,6 +10,7 @@ import { FEATURES, getFeature } from '@/lib/semora-facts';
 import { getFeatureContent } from '@/lib/feature-content';
 import { OG_IMAGE } from '@/lib/og';
 import { RelatedLinks } from '@/components/RelatedLinks';
+import { pageTitle } from '@/lib/title';
 
 export function generateStaticParams() {
   return FEATURES.map((f) => ({ slug: f.slug }));
@@ -25,7 +26,7 @@ export async function generateMetadata({
   if (!feature) return {};
   const long = getFeatureContent(slug);
   return {
-    title: long?.metaTitle ?? feature.name,
+    title: pageTitle(long?.metaTitle ?? feature.name),
     description: long?.metaDescription ?? feature.shortDescription,
     alternates: { canonical: `/features/${feature.slug}` },
     openGraph: { url: `/features/${feature.slug}`, ...OG_IMAGE },

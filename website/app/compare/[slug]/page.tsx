@@ -6,9 +6,11 @@ import { Faq } from '@/components/Faq';
 import { Cta } from '@/components/Cta';
 import { ArticleShell } from '@/components/ArticleShell';
 import { JsonLd } from '@/components/JsonLd';
-import { faqPageSchema, breadcrumbListSchema } from '@/lib/schema';
+import { faqPageSchema } from '@/lib/schema';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import { COMPETITORS, getCompetitor } from '@/lib/competitors';
 import { getCompareExtra } from '@/lib/compare-content';
+import { pageTitle } from '@/lib/title';
 
 export function generateStaticParams() {
   return COMPETITORS.map((c) => ({ slug: c.slug }));
@@ -23,7 +25,7 @@ export async function generateMetadata({
   const competitor = getCompetitor(slug);
   if (!competitor) return {};
   return {
-    title: competitor.title,
+    title: pageTitle(competitor.title),
     description: competitor.metaDescription,
     alternates: { canonical: `/compare/${competitor.slug}` },
   };
@@ -51,11 +53,11 @@ export default async function ComparePage({
     >
       <article className={styles.wrap}>
       <JsonLd data={faqPageSchema(faq)} />
-      <JsonLd
-        data={breadcrumbListSchema([
+      <Breadcrumb
+        trail={[
           { name: 'Compare', path: '/compare' },
           { name: `Semora vs ${competitor.name}`, path: `/compare/${competitor.slug}` },
-        ])}
+        ]}
       />
 
       <p className={styles.eyebrow}>Comparison</p>

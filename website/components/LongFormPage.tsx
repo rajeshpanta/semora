@@ -4,7 +4,8 @@ import styles from './LongFormPage.module.css';
 import { Faq } from './Faq';
 import { JsonLd } from './JsonLd';
 import { ArticleShell } from './ArticleShell';
-import { faqPageSchema, breadcrumbListSchema } from '@/lib/schema';
+import { faqPageSchema } from '@/lib/schema';
+import { Breadcrumb } from './Breadcrumb';
 import type { NewPage } from '@/lib/new-page-content';
 
 /**
@@ -34,24 +35,13 @@ export function LongFormPage({
       <article className={`${styles.wrap} article-body`}>
         {content.faq?.length ? <JsonLd data={faqPageSchema(content.faq)} /> : null}
 
-        {/* The visible trail below has been rendering without its markup, so
-            Google had no breadcrumb to substitute for the raw URL under the
-            result title. Emitted only when there is a real trail to describe. */}
         {crumb && (
-          <JsonLd
-            data={breadcrumbListSchema([
+          <Breadcrumb
+            trail={[
               { name: crumb.label, path: crumb.href },
               { name: content.h1, path },
-            ])}
+            ]}
           />
-        )}
-
-        {crumb && (
-          <nav className={styles.crumbs} aria-label="Breadcrumb">
-            <Link href={crumb.href}>{crumb.label}</Link>
-            <span aria-hidden="true">/</span>
-            <span>{content.h1}</span>
-          </nav>
         )}
 
         <h1>{content.h1}</h1>

@@ -4,13 +4,14 @@ import { LongFormPage } from '@/components/LongFormPage';
 import { getNewPage } from '@/lib/new-page-content';
 import { OG_IMAGE } from '@/lib/og';
 import { GpaCalculator } from '@/components/GpaCalculator';
+import { pageTitle } from '@/lib/title';
 
 const KEY = 'gpa-calculator' as const;
 
 export function generateMetadata(): Metadata {
   const c = getNewPage(KEY);
   return {
-    title: c?.metaTitle,
+    title: c?.metaTitle ? pageTitle(c.metaTitle) : undefined,
     description: c?.metaDescription,
     alternates: { canonical: '/gpa-calculator' },
     openGraph: { url: '/gpa-calculator', ...OG_IMAGE },

@@ -7,9 +7,10 @@ import { COMPETITORS } from '@/lib/competitors';
 import { APP_URL } from '@/lib/semora-facts';
 import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
+import { pageTitle } from '@/lib/title';
 
 export const metadata: Metadata = {
-  title: 'Compare Semora',
+  title: pageTitle('Compare Semora'),
   description:
     'Honest, feature-by-feature comparisons of Semora against DormWay, Shovel, StudyFetch, Mindgrasp, Taskade, Studley AI, and myHomework Student Planner.',
   alternates: { canonical: '/compare' },
