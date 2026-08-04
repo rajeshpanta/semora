@@ -53,6 +53,15 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
 - **Semora:** `parse-syllabus`, `validate-receipt`, `send-push` (deploy `--no-verify-jwt`),
   `tutor-chat`, `share-course`, `google-cal-sync`, `redeem-referral`, `lms-sync`
 
+## Shared decks (migration 051) — **SEMORA only**
+- `shared_decks`, `shared_deck_cards` — a flashcard deck published into a course
+  space. Content only; no SM-2 state is ever published.
+- RPCs: `publish_deck_to_collaboration(uuid, uuid)`, `sync_collaboration_decks(uuid)`.
+- Columns added to existing Semora tables: `decks.source_shared_deck_id`,
+  `decks.source_content_hash`, `cards.source_shared_deck_id`.
+- Neither table takes direct client writes — both writers are SECURITY DEFINER
+  RPCs, and the only write policy is a DELETE for the author or space owner.
+
 ## Storage buckets
 - `syllabi` (private) — **SEMORA only**, per-user RLS policies. Citizen has no bucket.
 - `course-notes` (private, 025) — **SEMORA only**, per-user RLS. AI-tutor uploaded notes.

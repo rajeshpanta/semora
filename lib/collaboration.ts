@@ -324,3 +324,65 @@ export function subscribeToCollaboration(
     supabase.removeChannel(channel);
   };
 }
+
+// ─── Shared decks (migration 051) ───────────────────────────
+//
+// Publish-then-copy, the same shape as shared_deadlines: the publisher's deck
+// is snapshotted into shared_decks/shared_deck_cards, and each member syncs a
+// PRIVATE copy into their own decks/cards. Nothing is live-shared, because
+// decks/cards carry per-user SM-2 state (ease/interval/due_at) that is
+// meaningless shared — my "due tomorrow" is not yours.
+
+export interface SharedDeckSummary {
+  id: string;
+  collaboration_id: string;
+  source_deck_id: string | null;
+  created_by: string;
+  title: string;
+  card_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function listSharedDecks(collaborationId: string): Promise<SharedDeckSummary[]> {
+  const { data, error } = await supabase
+    .from('shared_decks')
+    .select('*')
+    .eq('collaboration_id', collaborationId)
+    .order('updated_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as SharedDeckSummary[];
+}
+
+/**
+ * Publish one of your own decks into a course space. Owner/editor only, and
+ * only for a deck you own — the RPC enforces both. Re-publishing the same deck
+ * updates the published copy in place rather than stacking duplicates.
+ */
+export async function publishDeckToCollaboration(
+  deckId: string,
+  collaborationId: string,
+): Promise<{ shared_deck_id: string; cards_published: number }> {
+  const { data, error } = await supabase.rpc('publish_deck_to_collaboration', {
+    p_deck_id: deckId,
+    p_collaboration_id: collaborationId,
+  });
+  if (error) throw error;
+  return data as { shared_deck_id: string; cards_published: number };
+}
+
+/**
+ * Copy every deck published by someone else in this space into the caller's
+ * own decks/cards. Safe to call on every screen open: decks whose published
+ * copy hasn't changed since the last sync are skipped entirely, so a member's
+ * review progress is never rebuilt out from under them.
+ */
+export async function syncCollaborationDecks(
+  collaborationId: string,
+): Promise<{ decks_synced: number; decks_skipped: number; cards_synced: number }> {
+  const { data, error } = await supabase.rpc('sync_collaboration_decks', {
+    p_collaboration_id: collaborationId,
+  });
+  if (error) throw error;
+  return data as { decks_synced: number; decks_skipped: number; cards_synced: number };
+}

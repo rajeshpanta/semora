@@ -5,6 +5,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useSession } from '@/app/_layout';
+import {
+  listCollaborations, publishDeckToCollaboration, type CollaborationSummary,
+} from '@/lib/collaboration';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
@@ -141,6 +146,51 @@ export default function DeckDetailScreen() {
         },
       },
     ]);
+  };
+
+  // ── Publish to a course space (migration 051) ──────────────
+  // Only spaces where this user is owner/editor can accept a deck; the RPC
+  // enforces that too, this just avoids offering a choice that will fail.
+  const { session } = useSession();
+  const { data: spaces = [] } = useQuery({
+    queryKey: ['collaborations', session?.user.id],
+    queryFn: () => listCollaborations(session!.user.id),
+    enabled: !!session?.user.id,
+  });
+  const publishable = (spaces as CollaborationSummary[]).filter(
+    (space) => space.membership.role === 'owner' || space.membership.role === 'editor',
+  );
+
+  const publishDeck = useMutation({
+    mutationFn: (collaborationId: string) => publishDeckToCollaboration(deck.id, collaborationId),
+  });
+
+  const handleShareWithClass = () => {
+    if (publishable.length === 0) {
+      Alert.alert(
+        'No course space yet',
+        'Create a course space from a course first, then you can publish a deck to everyone in it.',
+      );
+      return;
+    }
+    Alert.alert(
+      'Share with class',
+      `Everyone in the space gets their own copy of "${deck.title}" to study. Their review progress stays theirs.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        ...publishable.slice(0, 3).map((space) => ({
+          text: space.course_name,
+          onPress: async () => {
+            try {
+              const r = await publishDeck.mutateAsync(space.id);
+              Alert.alert('Shared', `${r.cards_published} cards published to ${space.course_name}.`);
+            } catch (err: any) {
+              Alert.alert('Could not share', err.message ?? 'Something went wrong.');
+            }
+          },
+        })),
+      ],
+    );
   };
 
   const handleDeleteDeck = () => {
@@ -363,6 +413,18 @@ export default function DeckDetailScreen() {
           ))
         )}
 
+        {/* Publish to a course space */}
+        <TouchableOpacity
+          style={styles.shareDeckBtn}
+          onPress={handleShareWithClass}
+          disabled={publishDeck.isPending}
+        >
+          <FontAwesome name="users" size={13} color={colors.brand} />
+          <Text style={[styles.shareDeckText, { color: colors.brand }]}>
+            {publishDeck.isPending ? 'Sharing…' : 'Share with class'}
+          </Text>
+        </TouchableOpacity>
+
         {/* Delete deck */}
         <TouchableOpacity style={styles.deleteDeckBtn} onPress={handleDeleteDeck}>
           <FontAwesome name="trash-o" size={13} color="#ef4444" />
@@ -405,6 +467,8 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: 24 },
   emptyText: { fontSize: 13.5, textAlign: 'center' },
   deleteDeckBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 12, marginTop: 20 },
+  shareDeckBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, marginTop: 18 },
+  shareDeckText: { fontSize: 14, fontWeight: '700' },
   deleteDeckText: { fontSize: 13.5, fontWeight: '600', color: '#ef4444' },
 
   // Study session
