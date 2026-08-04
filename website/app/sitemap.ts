@@ -5,6 +5,14 @@ import { COMPARE_SLUGS, KEYWORD_PAGE_SLUGS } from '@/lib/routes';
 import { BLOG_POSTS } from '@/lib/blog';
 import { ALTERNATIVE_SLUGS } from '@/lib/new-page-content';
 
+// Every non-blog route is generated from source that changes when the site is
+// rebuilt, so the deploy time is the honest "last modified". Without it 34 of
+// the 40 URLs carried no <lastmod> at all, leaving Google no signal that they
+// had ever changed — one of the inputs into how eagerly it re-crawls.
+// Evaluated once per render so a single sitemap cannot hand out 34 slightly
+// different timestamps.
+const BUILT_AT = new Date();
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: SITE_URL, changeFrequency: 'weekly', priority: 1 },
@@ -41,6 +49,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
+  // Blog posts keep their real publication date — it is the one honest
+  // lastmod on the site and must not be overwritten with the build time.
   const blogRoutes: MetadataRoute.Sitemap = BLOG_POSTS.map((post) => ({
     url: `${SITE_URL}/blog/${post.slug}`,
     lastModified: post.date,
@@ -56,5 +66,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
-  return [...staticRoutes, ...alternativeRoutes, ...featureRoutes, ...keywordRoutes, ...compareRoutes, ...blogRoutes];
+  const routes = [
+    ...staticRoutes,
+    ...alternativeRoutes,
+    ...featureRoutes,
+    ...keywordRoutes,
+    ...compareRoutes,
+  ].map((route) => ({ lastModified: BUILT_AT, ...route }));
+
+  return [...routes, ...blogRoutes];
 }
