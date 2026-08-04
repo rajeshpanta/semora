@@ -56,3 +56,17 @@ screenshots/store-screenshots/*.zip
 # Ad-hoc screenshots dropped in the repo root.
 /Screenshot *.png
 
+# ── secrets/ ────────────────────────────────────────────────
+# This repo is PUBLIC. Everything under secrets/ is ignored by default and only
+# the encrypted bundle is allowed through, so a stray plaintext key dropped in
+# here can never be committed by accident. scripts/secrets-seal.sh uses `git
+# add -f` on exactly the one permitted file.
+secrets/*
+!secrets/README.md
+!secrets/semora-secrets.tar.gz.gpg
+
+# Never, under any circumstances, in a public repo.
+*.p8
+*.p12
+*.mobileprovision
+client_secret*.json
