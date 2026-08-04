@@ -20,7 +20,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
       'A step-by-step guide to converting a course syllabus into a working semester calendar, plus how Semora automates the whole process.',
     date: '2026-07-20',
     image: '/illustrations/syllabus-calendar.svg',
-    imageAlt: 'Illustration of a syllabus page turning into a calendar with a marked deadline',
+    imageAlt: 'Line drawing of a syllabus page beside a month grid with one date marked',
   },
   {
     slug: 'weighted-gpa-calculator',
@@ -29,7 +29,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
       'The formula behind a weighted GPA, worked examples for common grading scales, and how Semora tracks it automatically as grades come in.',
     date: '2026-07-21',
     image: '/illustrations/grade-card.svg',
-    imageAlt: 'Illustration of a report card showing an A- grade with a star badge',
+    imageAlt: 'Line drawing of four columns of increasing height with a trend line above them',
   },
   {
     slug: 'best-college-deadline-tracking-apps-2026',
@@ -38,7 +38,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
       'A practical look at how paper planners, generic to-do apps, and syllabus-aware tools hold up for a full course load.',
     date: '2026-07-22',
     image: '/illustrations/trophy-compare.svg',
-    imageAlt: 'Illustration of a trophy on a podium representing an app comparison',
+    imageAlt: 'Line drawing of three columns of different heights, the middle one filled',
   },
   {
     slug: 'canvas-deadline-reminders',
@@ -47,7 +47,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
       "Why Canvas notifications are easy to miss, and how to layer real advance reminders and grade tracking on top of your existing Canvas assignments.",
     date: '2026-07-23',
     image: '/illustrations/bell-reminder.svg',
-    imageAlt: 'Illustration of a reminder bell in front of a calendar page',
+    imageAlt: 'Line drawing of a clock face with signal arcs to one side',
   },
   {
     slug: 'pomodoro-technique-between-classes',
@@ -56,7 +56,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
       'How to adapt the Pomodoro technique to the actual gaps in a college schedule, instead of the idealized unbroken hours it assumes.',
     date: '2026-07-24',
     image: '/illustrations/tomato-timer.svg',
-    imageAlt: 'Illustration of a cute tomato-shaped kitchen timer, the origin of the Pomodoro technique',
+    imageAlt: 'Line drawing of a kitchen timer dial with part of the interval elapsed',
   },
   {
     slug: 'finals-week-study-plan',
@@ -65,7 +65,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
       'A framework for planning finals week around exam density and weighting, and how Semora surfaces the weeks that need the plan most.',
     date: '2026-07-25',
     image: '/illustrations/book-stack.svg',
-    imageAlt: 'Illustration of a stack of textbooks with a graduation cap on top',
+    imageAlt: 'Line drawing of three stacked book spines under a graduation cap',
   },
 ];
 

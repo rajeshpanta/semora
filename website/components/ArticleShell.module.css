@@ -39,26 +39,16 @@
 }
 
 .railCta {
-  background: linear-gradient(155deg, var(--ink-deep) 0%, #3a2a5c 100%);
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 16px;
   padding: 22px;
   position: relative;
-  overflow: hidden;
 }
 
-.railCta::before {
-  content: '';
-  position: absolute;
-  inset: -30% -30% auto auto;
-  width: 160px;
-  height: 160px;
-  background: radial-gradient(circle, var(--glow-mid) 0%, transparent 70%);
-  opacity: 0.5;
-  pointer-events: none;
-}
 
 .railCtaHeading {
-  color: #fff;
+  color: var(--ink);
   font-family: var(--font-fraunces), Georgia, serif;
   font-size: 17px;
   font-weight: 600;
@@ -67,7 +57,7 @@
 }
 
 .railCtaSub {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--ink2);
   font-size: 13.5px;
   line-height: 1.5;
   margin: 0 0 16px;
@@ -77,8 +67,8 @@
 .railCtaBtn {
   display: block;
   text-align: center;
-  background: #fff;
-  color: var(--ink-deep);
+  background: var(--ink);
+  color: #fff;
   text-decoration: none;
   font-weight: 600;
   font-size: 14px;
@@ -89,7 +79,7 @@
 }
 
 .railCtaBtn:hover {
-  background: var(--glow-light);
+  background: var(--brand);
 }
 
 @media (max-width: 959px) {

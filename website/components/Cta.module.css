@@ -1,7 +1,11 @@
 .band {
-  background: var(--ink-deep);
-  color: #fff;
-  border-radius: 24px;
+  /* Was a near-black slab with a purple glow. On a cream editorial page that
+     read as loud rather than considered — the restraint IS the premium signal.
+     Paper ground, hairline rule, one dark pill carrying the emphasis. */
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 20px;
   padding: clamp(40px, 6vw, 68px) clamp(20px, 4vw, 40px);
   text-align: center;
   /* No vertical margin — the wrapping section already supplies the rhythm,
@@ -11,20 +15,9 @@
   overflow: hidden;
 }
 
-.band::before {
-  content: '';
-  position: absolute;
-  inset: -40% -10% auto auto;
-  width: 360px;
-  height: 360px;
-  background: radial-gradient(circle, var(--glow-mid) 0%, transparent 70%);
-  opacity: 0.35;
-  pointer-events: none;
-}
-
 .heading {
   font-size: clamp(1.5rem, 4vw, 2rem);
-  color: #fff;
+  color: var(--ink);
   margin: 0 0 12px;
   position: relative;
 }
@@ -34,7 +27,7 @@
    and repainted this line in --ink2 — dark grey on the dark band, 2.6:1. The
    descendant form takes it to (0,2,0) so the band's own colour wins. */
 .band .subheading {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--ink2);
   max-width: 480px;
   margin: 0 auto 28px;
   position: relative;
@@ -50,8 +43,8 @@
 
 .button {
   display: inline-block;
-  background: #fff;
-  color: var(--ink-deep);
+  background: var(--ink);
+  color: #fff;
   text-decoration: none;
   font-weight: 600;
   padding: 14px 28px;
@@ -60,22 +53,45 @@
 }
 
 .button:hover {
-  background: var(--glow-light);
+  background: var(--brand);
 }
 
 .buttonGhost {
   display: inline-block;
   background: transparent;
-  color: #fff;
+  color: var(--ink);
   text-decoration: none;
   font-weight: 600;
   padding: 14px 28px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.34);
+  border: 1px solid var(--border);
   position: relative;
 }
 
 .buttonGhost:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.6);
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+/* The landing page is the one route still on the dark canvas, where --ink is a
+   near-white. Without this the pill renders white-on-white — the same trap that
+   caught .sheetCta and .bannerLink. --ink-deep is NOT re-pointed by the dark
+   scope, so it stays a true dark for the label. */
+:root:has([data-canvas='dark']) .button {
+  background: #fff;
+  color: var(--ink-deep);
+}
+
+:root:has([data-canvas='dark']) .button:hover {
+  background: var(--glow-light);
+}
+
+:root:has([data-canvas='dark']) .buttonGhost {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+:root:has([data-canvas='dark']) .buttonGhost:hover {
+  border-color: rgba(255, 255, 255, 0.7);
+  color: #fff;
 }

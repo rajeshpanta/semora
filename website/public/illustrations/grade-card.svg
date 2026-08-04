@@ -1,35 +1,12 @@
-<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="240" height="240" rx="36" fill="#E1F5EE"/>
-  <circle cx="196" cy="180" r="18" fill="#BEE8DA"/>
-  <circle cx="46" cy="58" r="11" fill="#BEE8DA"/>
-
-  <g filter="url(#shadow1)">
-    <rect x="60" y="48" width="120" height="144" rx="16" fill="#FFFFFF"/>
-    <rect x="60" y="48" width="120" height="34" rx="16" fill="#0F6E56"/>
-    <rect x="60" y="68" width="120" height="14" fill="#0F6E56"/>
-    <rect x="78" y="59" width="52" height="10" rx="5" fill="#FFFFFF"/>
-    <circle cx="153" cy="65" r="9" fill="#FFFFFF" fill-opacity="0.35"/>
+<svg width="320" height="200" viewBox="0 0 320 200" fill="none" xmlns="http://www.w3.org/2000/svg" role="img">
+  <rect width="320" height="200" rx="10" fill="#F2EFE9"/>
+  <g stroke="#33303C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <rect x="92" y="120" width="22" height="26" rx="4"/>
+    <rect x="128" y="102" width="22" height="44" rx="4"/>
+    <rect x="164" y="112" width="22" height="34" rx="4"/>
+    <rect x="200" y="84" width="22" height="62" rx="4" fill="#9A8F7D" stroke="none"/>
+    <line x1="80" y1="150" x2="240" y2="150"/>
+    <path d="M92 112 C 128 108, 164 92, 206 74" stroke="#9A8F7D" stroke-dasharray="4 5"/>
+    <circle cx="206" cy="74" r="4.5" fill="#9A8F7D" stroke="none"/>
   </g>
-
-  <!-- big grade letter -->
-  <text x="120" y="150" font-family="Georgia, serif" font-size="64" font-weight="700" fill="#0F6E56" text-anchor="middle">A-</text>
-
-  <!-- progress bar -->
-  <rect x="78" y="164" width="84" height="10" rx="5" fill="#D9F0E7"/>
-  <rect x="78" y="164" width="66" height="10" rx="5" fill="#0F6E56"/>
-
-  <!-- star badge -->
-  <g filter="url(#shadow2)">
-    <circle cx="176" cy="66" r="22" fill="#FFFFFF"/>
-    <path d="M176 54 L180.5 63.3 L190.7 64.8 L183.3 71.9 L185.1 82 L176 77.2 L166.9 82 L168.7 71.9 L161.3 64.8 L171.5 63.3 Z" fill="#BA7517"/>
-  </g>
-
-  <defs>
-    <filter id="shadow1" x="40" y="38" width="160" height="164" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0F6E56" flood-opacity="0.18"/>
-    </filter>
-    <filter id="shadow2" x="144" y="34" width="64" height="64" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#BA7517" flood-opacity="0.25"/>
-    </filter>
-  </defs>
 </svg>

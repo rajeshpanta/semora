@@ -8,7 +8,6 @@ export const metadata = {
 import { JsonLd } from '@/components/JsonLd'
 import { articleSchema } from '@/lib/schema'
 import { BlogPostHero } from '@/components/BlogPostHero'
-import { BlogInlineImage } from '@/components/BlogInlineImage'
 
 <JsonLd data={articleSchema({
   title: metadata.title,
@@ -112,12 +111,6 @@ When that happens:
 ## Doing this without doing the arithmetic yourself
 
 Semora extracts each course's grading scale directly from the syllabus during the scan, then calculates the weighted average automatically as you enter scores — reflecting only the work graded so far, the same logic worked through by hand in the examples above.
-
-<BlogInlineImage
-  src="/screenshots/track-grades.png"
-  alt="Semora course screen showing a current grade of 86.67% calculated from graded coursework"
-  caption="The current grade recalculates automatically each time a new score is entered."
-/>
 
 Grade tracking like this is included on Semora's free tier. Pro ($3.99/month or $19.99/year) adds Progress Insights — trend charts, CSV export, and a print view on web — plus Academic Risk alerts if a grade starts slipping or work goes missing. It's available on iPhone and web, syncing on one account, so a grade entered on one shows up on the other in near real time.
 

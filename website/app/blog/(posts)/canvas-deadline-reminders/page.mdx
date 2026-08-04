@@ -8,7 +8,6 @@ export const metadata = {
 import { JsonLd } from '@/components/JsonLd'
 import { articleSchema } from '@/lib/schema'
 import { BlogPostHero } from '@/components/BlogPostHero'
-import { BlogInlineImage } from '@/components/BlogInlineImage'
 
 <JsonLd data={articleSchema({
   title: metadata.title,
@@ -77,12 +76,6 @@ That's the gap between an assignment feed and an actual workload picture, and it
 The fix isn't to abandon Canvas — it's still where the source-of-truth assignments live — but to add a layer that actually pushes reminders with real advance notice, and ties deadlines to grades.
 
 Semora connects to Canvas using a personal access token you generate yourself in Canvas account settings — there's no third-party OAuth approval step, so it's a five-minute setup rather than a wait on IT. Once connected, every tier gets same-day reminders by default. Pro ($3.99/month or $19.99/year) adds custom reminder timing with quiet hours, so you can set a 1-day or 3-day advance warning instead of a same-day one, and choose when notifications are allowed to reach you.
-
-<BlogInlineImage
-  src="/screenshots/canvas-sync.png"
-  alt="Semora Canvas sync settings screen showing connected courses and auto-sync status"
-  caption="Once a course is connected, Canvas assignments and grade updates sync in automatically."
-/>
 
 On top of the reminder timing, Semora also reads the syllabus itself — as a photo, PDF, drag-and-drop file, or pasted text — to pull in the details Canvas assignments alone don't carry: the instructor's grading scale, semester dates, office hours, and exact meeting times. Used together, Canvas sync and syllabus import give a fuller picture than either source alone: Canvas for the day-to-day assignment feed, the syllabus scan for the structure around it.
 

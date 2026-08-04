@@ -1,34 +1,8 @@
-<svg width="240" height="240" viewBox="0 0 240 240" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="240" height="240" rx="36" fill="#E6F1FB"/>
-  <circle cx="196" cy="70" r="14" fill="#BFE0F7"/>
-  <circle cx="44" cy="176" r="9" fill="#BFE0F7"/>
-
-  <!-- book stack -->
-  <g filter="url(#shadow1)">
-    <rect x="58" y="150" width="126" height="24" rx="6" fill="#185FA5"/>
-    <rect x="66" y="150" width="4" height="24" fill="#124A82"/>
-    <rect x="66" y="128" width="112" height="24" rx="6" fill="#BA7517" transform="rotate(-2 66 128)"/>
-    <rect x="72" y="106" width="100" height="24" rx="6" fill="#0F6E56" transform="rotate(3 72 106)"/>
+<svg width="320" height="200" viewBox="0 0 320 200" fill="none" xmlns="http://www.w3.org/2000/svg" role="img">
+  <rect width="320" height="200" rx="10" fill="#F2EFE9"/>
+  <g stroke="#33303C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <rect x="110" y="122" width="100" height="20" rx="4"/>
+    <rect x="118" y="98" width="84" height="20" rx="4" fill="#9A8F7D" stroke="none"/>
+    <rect x="104" y="74" width="108" height="20" rx="4"/>
   </g>
-
-  <!-- graduation cap -->
-  <g filter="url(#shadow2)">
-    <path d="M120 66 L168 86 L120 106 L72 86 Z" fill="#1C1B1F"/>
-    <rect x="112" y="94" width="16" height="20" fill="#1C1B1F"/>
-    <circle cx="120" cy="114" r="5" fill="#BA7517"/>
-    <line x1="160" y1="90" x2="160" y2="112" stroke="#1C1B1F" stroke-width="3"/>
-    <circle cx="160" cy="116" r="4" fill="#1C1B1F"/>
-  </g>
-
-  <path d="M188 118 L191 126 L199 129 L191 132 L188 140 L185 132 L177 129 L185 126 Z" fill="#9BC4E8"/>
-  <path d="M56 98 L58 104 L64 106 L58 108 L56 114 L54 108 L48 106 L54 104 Z" fill="#9BC4E8"/>
-
-  <defs>
-    <filter id="shadow1" x="38" y="96" width="166" height="98" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#185FA5" flood-opacity="0.2"/>
-    </filter>
-    <filter id="shadow2" x="62" y="56" width="116" height="72" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#1C1B1F" flood-opacity="0.2"/>
-    </filter>
-  </defs>
 </svg>

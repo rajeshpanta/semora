@@ -8,7 +8,6 @@ export const metadata = {
 import { JsonLd } from '@/components/JsonLd'
 import { articleSchema } from '@/lib/schema'
 import { BlogPostHero } from '@/components/BlogPostHero'
-import { BlogInlineImage } from '@/components/BlogInlineImage'
 
 <JsonLd data={articleSchema({
   title: metadata.title,
@@ -60,12 +59,6 @@ A few patterns show up often enough to call out specifically:
 ## Step 4: Put it in a calendar, not just a list
 
 A list of dates is easy to lose track of. Moving everything into an actual calendar — one that shows a week or month at a glance — is what makes it possible to see when three exams are about to land in the same week, before that week arrives. Include class meeting times too, not just deadlines, so free study blocks are visible alongside the graded work competing for them.
-
-<BlogInlineImage
-  src="/screenshots/plan-semester.png"
-  alt="Semora calendar screen showing a month view with deadlines marked across multiple courses"
-  caption="Every class, deadline, and exam in one calendar, once every course has been added."
-/>
 
 ## Step 5: Repeat for every course, then look across all of them together
 

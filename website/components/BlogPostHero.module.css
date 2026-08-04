@@ -1,8 +1,8 @@
 .band {
-  background: var(--ink-deep);
-  color: #fff;
-  border-radius: 24px;
-  padding: 40px 32px;
+  /* An editorial header, not a hero card. The old dark slab with a purple glow
+     fought the article underneath it; a hairline rule and space do the framing. */
+  border-bottom: 1px solid var(--border);
+  padding: 8px 0 36px;
   margin-bottom: 40px;
   position: relative;
   overflow: hidden;
@@ -11,23 +11,11 @@
   gap: 24px;
 }
 
-.band::before {
-  content: '';
-  position: absolute;
-  inset: -40% -20% auto auto;
-  width: 320px;
-  height: 320px;
-  background: radial-gradient(circle, var(--glow-mid) 0%, transparent 70%);
-  opacity: 0.4;
-  pointer-events: none;
-}
-
 @media (min-width: 600px) {
   .band {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: 48px;
   }
 }
 
@@ -42,12 +30,12 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--glow-light);
+  color: var(--brand);
   margin-bottom: 16px;
 }
 
 .title {
-  color: #fff;
+  color: var(--ink);
   font-size: clamp(1.6rem, 4vw, 2.1rem);
   margin: 0 0 12px;
   line-height: 1.2;
@@ -58,7 +46,7 @@
    bare `.date` (0,1,0) — taking both the colour (--ink2, dark grey on the
    near-black band, 2.6:1) and the font-size (15.5px instead of 13px). */
 .band .date {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--ink-muted);
   font-size: 13px;
   margin: 0;
 }
@@ -71,8 +59,7 @@
 }
 
 .imageWrap img {
-  border-radius: 24px;
-  box-shadow: 0 20px 40px -14px rgba(0, 0, 0, 0.45);
+  border-radius: 14px;
   width: 100%;
   max-width: 168px;
   height: auto;

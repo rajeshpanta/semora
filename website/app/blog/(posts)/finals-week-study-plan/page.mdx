@@ -8,7 +8,6 @@ export const metadata = {
 import { JsonLd } from '@/components/JsonLd'
 import { articleSchema } from '@/lib/schema'
 import { BlogPostHero } from '@/components/BlogPostHero'
-import { BlogInlineImage } from '@/components/BlogInlineImage'
 
 <JsonLd data={articleSchema({
   title: metadata.title,
@@ -59,12 +58,6 @@ Here's what steps 1 through 3 look like applied to an actual schedule, rather th
 Step 3 flags the obvious problem right away: Wednesday is a double-final day, and it's a bad day to discover that for the first time. Whatever review is left for either Wednesday exam has to happen before Wednesday, because there's no gap that day to add more study time between them — the night before Calculus is also the morning before History. In practice, that pushes most of the real review work for both Wednesday finals into the weekend and into Monday and Tuesday, on top of whatever Monday's Biology final still needs by then.
 
 That's where steps 1 and 2 reshape the plan further. Suppose Biology, worth 20% of the course grade, currently sits at a comfortable 92 percent — a strong final grade in that course is already close to locked in barring a genuinely bad exam. Calculus, also worth 20%, is a much shakier 78 percent, borderline enough that a mediocre final could pull the course grade down a full letter grade. Even though Biology comes first on the calendar, the hours should skew toward Calculus: chronological order and actual need for study time are not the same thing, and treating "what's first" as "what's most urgent" is exactly the mistake steps 1 and 2 exist to catch.
-
-<BlogInlineImage
-  src="/screenshots/track-grades.png"
-  alt="Semora grade tracking screen showing a running weighted average for a course"
-  caption="Knowing which grade is a comfortable 92 and which is a borderline 78 is what makes step 2 possible."
-/>
 
 Tuesday's open day, in this schedule, is the release valve — the obvious place to put the bulk of the Calculus and History review that can't happen the night before, precisely because Wednesday is already full. Thursday's Spanish final, by contrast, gets to keep a more normal lead-up, since nothing else that week is competing for the days before it.
 
