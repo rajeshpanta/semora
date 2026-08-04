@@ -135,7 +135,7 @@ export const COMPETITORS: CompetitorFact[] = [
     name: 'Shovel',
     oneLiner:
       'A subscription-based time-blocking planner that turns deadlines into a scheduled study calendar.',
-    title: 'Semora vs Shovel: Syllabus Scanning, Canvas Sync & Study Planner Compared',
+    title: 'Semora vs Shovel: Syllabus Scanning & Canvas Sync',
     metaDescription:
       "Compare Semora and Shovel: syllabus scanning, Canvas sync, grade tracking, study planning, and pricing side by side to find the right app for your semester.",
     lede: "Semora scans a syllabus into an organized semester — deadlines, grades, and class schedule — with a genuine free tier, while Shovel turns a syllabus or LMS connection into a time-blocked, subscription-based study schedule; the better fit depends on whether you want a lightweight deadline-and-grade tracker or a full automated study-time planner.",
@@ -268,7 +268,7 @@ export const COMPETITORS: CompetitorFact[] = [
     name: 'StudyFetch',
     oneLiner:
       'A materials-first AI study platform built around the Spark.E tutor, with syllabus scanning as one feature among many.',
-    title: 'Semora vs StudyFetch: Which Syllabus & Study App Is Right for You?',
+    title: 'Semora vs StudyFetch: Which Study App Fits You?',
     metaDescription:
       'Semora vs StudyFetch compared: syllabus-to-calendar automation, Canvas sync, grade tracking, study planning, pricing, and platforms.',
     lede: 'In one sentence: Semora is a syllabus-first app that automatically turns a photographed or uploaded syllabus into a semester-long deadline, grade, and calendar system, while StudyFetch is a broader AI study platform — built around the Spark.E tutor — that also includes syllabus-to-calendar scanning as one feature among many (flashcards, quizzes, exam simulations, and a live lecture recorder).',
@@ -477,7 +477,7 @@ export const COMPETITORS: CompetitorFact[] = [
     name: 'Taskade',
     oneLiner:
       'A general-purpose AI workspace with seven project views, built for teams rather than students.',
-    title: 'Semora vs Taskade: Which Is Right for You? | Syllabus & Deadline Tracking Compared',
+    title: 'Semora vs Taskade: Syllabus & Deadline Tracking',
     metaDescription:
       'Semora turns a syllabus into deadlines, grades, and a schedule for students. Taskade is a general AI workspace for teams. Compare features and pricing.',
     lede: 'Semora is a syllabus-first app for iPhone, iPad, and web that turns a course syllabus into an organized semester — deadlines, grades, and a class schedule — while Taskade is a general-purpose AI workspace built around seven interchangeable project views (List, Board, Calendar, Table, Mind Map, Gantt, Org Chart) for teams, freelancers, and businesses, with no student- or course-specific features.',
@@ -669,7 +669,7 @@ export const COMPETITORS: CompetitorFact[] = [
     name: 'myHomework Student Planner',
     oneLiner:
       'A manually-entered, cross-platform student planner with optional LMS import — no AI syllabus scanning.',
-    title: 'Semora vs myHomework Student Planner: Which Planner Fits You?',
+    title: 'Semora vs myHomework: Which Planner Fits You?',
     metaDescription:
       'Compare Semora and myHomework Student Planner: AI syllabus scanning and grade tracking vs. a manually-entered, cross-platform planner with LMS import.',
     lede: 'Semora scans a syllabus and extracts deadlines and grades automatically, while myHomework Student Planner is a manually-entered planner that can also import assignments from Canvas and other LMS platforms, with broader platform coverage but less automation.',
