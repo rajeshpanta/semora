@@ -5,10 +5,13 @@ import { MobileNav } from './MobileNav';
 import { SITE_NAME, APP_SIGNUP_URL, APP_SIGNIN_URL, APP_STORE_URL } from '@/lib/semora-facts';
 
 export const NAV_LINKS = [
-  // /features had exactly one crawlable anchor sitewide and it lived inside
-  // FeaturesMenu's `visibility: hidden` panel; /about was footer-only. Both are
-  // hub pages, so both need a plain link Google can see and weigh.
-  { href: '/features', label: 'Features' },
+  // No '/features' entry: FeaturesMenu already renders a "Features" trigger in
+  // this same pill, and adding one here printed the word twice. Its trigger is
+  // deliberately a <button> (see the note in FeaturesMenu) so the hub page is
+  // linked from the panel body and from the footer heading instead.
+  //
+  // '/about' was previously footer-only. It is a hub page and the conventional
+  // sitelink slot, so it gets a plain crawlable link here.
   { href: '/pricing', label: 'Pricing' },
   { href: '/compare', label: 'Compare' },
   { href: '/blog', label: 'Blog' },

@@ -21,7 +21,9 @@ export function Footer() {
         </div>
         <div className={styles.cols}>
           <div>
-            <p className={styles.heading}>Features</p>
+            <p className={styles.heading}>
+              <Link href="/features">Features</Link>
+            </p>
             {FEATURES.map((f) => (
               <Link key={f.slug} href={`/features/${f.slug}`}>
                 {f.name}
