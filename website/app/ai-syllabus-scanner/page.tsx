@@ -31,7 +31,7 @@ const FAQ = [
   {
     question: 'Does Semora sync with Canvas?',
     answer:
-      'Yes. You connect Canvas by generating a personal access token yourself inside Canvas — Semora does not require a separate OAuth app approval for this to work.',
+      'Yes. You connect Canvas by generating a personal access token yourself inside Canvas. Semora does not require a separate OAuth app approval for this to work.',
   },
   {
     question: 'Does scanning a syllabus also track my grades, not just deadlines?',
@@ -67,22 +67,22 @@ export default function AiSyllabusScannerPage() {
   return (
     <ArticleShell
       ctaHeading="Scan your first syllabus free"
-      ctaSubheading="Photo, PDF, or pasted text — see your semester organized in one snap."
+      ctaSubheading="Photo, PDF, or pasted text. See your semester organized in one snap."
     >
     <article className={styles.prose}>
       <JsonLd data={faqPageSchema(FAQ_ALL)} />
 
       <h1>AI Syllabus Scanner: Turn a Syllabus Photo into a Full Semester Calendar</h1>
       <p className={styles.lede}>
-        <strong>Semora is an AI syllabus scanner</strong> — an app for iPhone, iPad, and web that reads a
+        <strong>Semora is an AI syllabus scanner</strong>, an app for iPhone, iPad, and web that reads a
         photo, PDF, or pasted text of your syllabus and automatically builds a calendar of every
         class meeting, assignment, and exam deadline for the semester.
       </p>
 
       <h2>What Is an AI Syllabus Scanner?</h2>
       <p>
-        An AI syllabus scanner is a tool that reads the unstructured text of a course syllabus — a
-        PDF, a scanned page, a photo, and converts it into structured, usable data: a class
+        An AI syllabus scanner is a tool that reads the unstructured text of a course syllabus (a
+        PDF, a scanned page, a photo) and converts it into structured, usable data: a class
         schedule, a grading breakdown, and a list of every due date. Instead of manually retyping
         deadlines from a 10-page syllabus PDF into a planner one by one, the syllabus is scanned
         once and the important dates come out organized and ready to use.
@@ -106,7 +106,7 @@ export default function AiSyllabusScannerPage() {
         </li>
         <li>
           <strong>Your semester is organized automatically.</strong> The extracted schedule and
-          deadlines populate your calendar and task list immediately — no manual data entry
+          deadlines populate your calendar and task list immediately, with no manual data entry
           required.
         </li>
       </ol>
@@ -137,7 +137,7 @@ export default function AiSyllabusScannerPage() {
       <h3>Canvas LMS Sync</h3>
       <p>
         If your school uses Canvas, you can connect it directly by generating a personal access
-        token yourself inside Canvas — no institutional app approval required.
+        token yourself inside Canvas. No institutional app approval required.
       </p>
       <h3>Course Collaboration (&quot;Course Spaces&quot;)</h3>
       <p>
@@ -146,8 +146,8 @@ export default function AiSyllabusScannerPage() {
       </p>
       <h3>One Account, Every Device</h3>
       <p>
-        Web, iPhone, and iPad share a single account and database, so an edit made on one device —
-        checking off a task, adjusting a due date — appears on the other in near real time.
+        Web, iPhone, and iPad share a single account and database, so an edit made on one device
+        (checking off a task, adjusting a due date) appears on the other in near real time.
       </p>
 
       <h2>How This Compares to Doing It Manually, or With a Generic To-Do App</h2>
@@ -158,7 +158,7 @@ export default function AiSyllabusScannerPage() {
       <ul>
         <li>
           <strong>Manual entry:</strong> a student opens a 10-page syllabus PDF and copies each due
-          date, one at a time, into a planner or phone calendar — a process that has to be repeated
+          date, one at a time, into a planner or phone calendar, a process that has to be repeated
           separately for every course, every semester.
         </li>
         <li>
@@ -169,7 +169,7 @@ export default function AiSyllabusScannerPage() {
         </li>
         <li>
           <strong>Semora:</strong> the syllabus is scanned once, and the course schedule, grading
-          scale, and every deadline are extracted automatically — turning a document that would
+          scale, and every deadline are extracted automatically, turning a document that would
           take real time to transcribe into an organized semester in one snap.
         </li>
       </ul>

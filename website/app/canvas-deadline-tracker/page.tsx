@@ -11,7 +11,7 @@ import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
 
 export const metadata: Metadata = {
-  title: 'Canvas Deadline Tracker App — Grades, Reminders & Study Planning',
+  title: 'Canvas Deadline Tracker App: Grades, Reminders & Study Planning',
   description:
     'Semora is a Canvas deadline tracker app. Import Canvas assignments on Pro, or scan your syllabus free, with grade tracking, reminders, and a real study plan.',
   alternates: { canonical: '/canvas-deadline-tracker' },
@@ -21,7 +21,7 @@ const FAQ = [
   {
     question: 'Does Semora replace Canvas?',
     answer:
-      "No. Canvas remains where instructors post materials and where you submit work. Semora connects to your Canvas assignments and adds grade tracking, reminders, and (on Pro) calendar sync plus planning and study tools on top — it's an organizing layer, not a replacement for the LMS.",
+      "No. Canvas remains where instructors post materials and where you submit work. Semora connects to your Canvas assignments and adds grade tracking, reminders, and (on Pro) calendar sync plus planning and study tools on top. It's an organizing layer, not a replacement for the LMS.",
   },
   {
     question: 'How do I connect Canvas to Semora?',
@@ -86,13 +86,13 @@ export default function CanvasDeadlineTrackerPage() {
       <p className={styles.lede}>
         Semora is a Canvas deadline tracker app that connects to your Canvas account with a
         personal access token and layers grade tracking, same-day reminders, and (on Pro) an
-        AI-generated study schedule on top of your existing Canvas assignments — on iPhone, iPad,
+        AI-generated study schedule on top of your existing Canvas assignments, on iPhone, iPad,
         and web, kept in sync.
       </p>
 
       <p>
         Canvas is where your instructors post assignments. Semora sits alongside Canvas and adds
-        grade tracking, same-day reminders, and — on Pro — an AI-generated study plan built from
+        grade tracking, same-day reminders, and, on Pro, an AI-generated study plan built from
         your actual syllabus.
       </p>
 
@@ -100,14 +100,14 @@ export default function CanvasDeadlineTrackerPage() {
       <p>Once your Canvas assignments are in Semora, you get a layer of organization Canvas doesn&apos;t provide on its own:</p>
       <ul>
         <li>
-          <strong>Grade tracking</strong> — see where you stand across your courses, not just a
+          <strong>Grade tracking:</strong> see where you stand across your courses, not just a
           list of due dates.
         </li>
         <li>
-          <strong>Same-day reminders</strong> — built into every tier, so nothing quietly slips by.
+          <strong>Same-day reminders:</strong> built into every tier, so nothing quietly slips by.
         </li>
         <li>
-          <strong>Calendar sync (Pro)</strong> — deadlines sync to your device calendar or export
+          <strong>Calendar sync (Pro):</strong> deadlines sync to your device calendar or export
           as an .ics file.
         </li>
         <li>
@@ -116,7 +116,7 @@ export default function CanvasDeadlineTrackerPage() {
           device updates everywhere else instantly.
         </li>
         <li>
-          <strong>Course Spaces</strong> — share a course with classmates through an invite link;
+          <strong>Course Spaces:</strong> share a course with classmates through an invite link;
           shared deadlines and group assignments sync in real time.
         </li>
       </ul>
@@ -126,46 +126,46 @@ export default function CanvasDeadlineTrackerPage() {
       </p>
       <ul>
         <li>
-          <strong>Smart Plan</strong> — an AI-generated, timed study schedule that adapts as
+          <strong>Smart Plan:</strong> an AI-generated, timed study schedule that adapts as
           deadlines move.
         </li>
         <li>
-          <strong>Workload dashboard</strong> — a crunch-week and exam-density view across all your
+          <strong>Workload dashboard:</strong> a crunch-week and exam-density view across all your
           courses at once.
         </li>
         <li>
-          <strong>Academic Risk alerts</strong> — flags for falling grades, missing work, or
+          <strong>Academic Risk alerts:</strong> flags for falling grades, missing work, or
           overloaded weeks, each with a recovery-step plan.
         </li>
         <li>
-          <strong>Flashcards</strong> — spaced-repetition cards built from your own course material.
+          <strong>Flashcards:</strong> spaced-repetition cards built from your own course material.
         </li>
         <li>
-          <strong>Focus timer</strong> — a Pomodoro-style timer for study sessions.
+          <strong>Focus timer:</strong> a Pomodoro-style timer for study sessions.
         </li>
         <li>
-          <strong>AI tutor</strong> — a chat assistant that knows the contents of your syllabus.
+          <strong>AI tutor:</strong> a chat assistant that knows the contents of your syllabus.
         </li>
         <li>
-          <strong>Custom reminder timing + quiet hours</strong> — control exactly when and how
+          <strong>Custom reminder timing + quiet hours:</strong> control exactly when and how
           you&apos;re notified.
         </li>
         <li>
-          <strong>Progress Insights</strong> — trend charts, CSV export, and a print view on web.
+          <strong>Progress Insights:</strong> trend charts, CSV export, and a print view on web.
         </li>
       </ul>
 
       <h2>How Canvas sync works</h2>
       <p>
         Semora connects to Canvas using a personal access token that you generate yourself from
-        your Canvas account settings. There&apos;s no third-party OAuth approval step to wait on —
-        you paste in your token and your Canvas assignments start flowing into Semora.
+        your Canvas account settings. There&apos;s no third-party OAuth approval step to wait on. You
+        paste in your token and your Canvas assignments start flowing into Semora.
       </p>
       <p>
-        Canvas sync covers your assignments. Semora adds a syllabus-derived view alongside it —
+        Canvas sync covers your assignments. Semora adds a syllabus-derived view alongside it,
         surfacing office hours, the instructor&apos;s grading scale, semester start/end dates, and
         exact meeting times next to your Canvas assignments. For that, Semora reads the syllabus
-        itself — as a photo (camera, multi-page, up to 5 pages), a PDF upload, a drag-and-drop file
+        itself: a photo (camera, multi-page, up to 5 pages), a PDF upload, a drag-and-drop file
         (web), or pasted raw text copied from a PDF or LMS page (web). Gemini AI extracts the course
         name, instructor, meeting times, office hours, semester dates, grading scale, and every
         assignment, exam, quiz, project, and reading with its due date. Used together, Canvas sync
@@ -190,14 +190,14 @@ export default function CanvasDeadlineTrackerPage() {
         <li>
           <strong>Using a generic to-do app.</strong> A plain to-do list can hold a due date and a
           checkbox, but it isn&apos;t built around a grading scale or a semester structure. Semora
-          adds grading-scale awareness, plus — on Pro — overload detection across your courses and a
+          adds grading-scale awareness, plus, on Pro, overload detection across your courses and a
           study plan built directly from your actual syllabus.
         </li>
       </ul>
       <p>
         Semora is built specifically around a syllabus and a Canvas course, not a generic task list:
-        it imports the whole structure at once — course, instructor, meeting times, grading scale,
-        and every deadline — from either a syllabus or a Canvas token, then tracks grades and
+        it imports the whole structure at once (course, instructor, meeting times, grading scale,
+        and every deadline) from either a syllabus or a Canvas token, then tracks grades and
         workload against that structure automatically.
       </p>
 

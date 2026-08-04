@@ -155,7 +155,7 @@ export default function AiStudyPlannerPage() {
       <h3>Canvas sync</h3>
       <p>
         If your school uses Canvas, you can connect it using a personal access token you generate
-        yourself inside Canvas — no OAuth app-review process to wait on.
+        yourself inside Canvas. There is no OAuth app-review process to wait on.
       </p>
 
       <h3>Course Spaces (collaboration)</h3>
@@ -191,14 +191,14 @@ export default function AiStudyPlannerPage() {
         </li>
         <li>
           <strong>A generic to-do app</strong> can hold tasks, but it doesn&apos;t know your
-          syllabus — you still type in each assignment individually, and it has no concept of study
+          syllabus. You still type in each assignment individually, and it has no concept of study
           time, workload density across courses, or grading weight.
         </li>
         <li>
           <strong>Semora</strong> reads the syllabus for you, so the task list, calendar, and grade
           tracker start populated on day one. On Pro, Smart Plan turns that task list into scheduled
           study sessions, and the Workload dashboard shows you which weeks across all your courses
-          are getting overloaded — visibility a plain checklist doesn&apos;t give you.
+          are getting overloaded, visibility a plain checklist doesn&apos;t give you.
         </li>
       </ul>
 
