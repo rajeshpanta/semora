@@ -260,12 +260,12 @@
   text-overflow: ellipsis;
 }
 
-.rowCourse { font-size: 9px; color: #8c8b94; }
+.rowCourse { font-size: 9px; color: #6b6975; }
 
 .rowDue {
   font-size: 9.5px;
   font-weight: 600;
-  color: #55555c;
+  color: #46444e;
   flex: none;
 }
 

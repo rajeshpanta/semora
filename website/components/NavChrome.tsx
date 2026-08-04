@@ -27,6 +27,11 @@ export function NavChrome() {
 
     header.toggleAttribute('data-overlay', overlay);
 
+    // One canvas for the whole homepage — nav, sections and footer. Set on
+    // <html> rather than <main> because the footer is a sibling of <main>, and
+    // a light footer under a dark page recreates exactly the seam this removes.
+    document.documentElement.toggleAttribute('data-dark-page', overlay);
+
     // Publish the header's REAL height so the hero can sit exactly under it.
     // This was hardcoded at 61px; the bar is actually ~76px on desktop and
     // ~67px on mobile, and the difference showed as a pale strip above the
