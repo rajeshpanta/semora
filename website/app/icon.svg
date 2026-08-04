@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Semora">
+  <!-- The tab-sized mark. The full app icon (apple-icon.png, icon-512.png) is a
+       detailed checklist illustration that dissolves into an unreadable blob at
+       16px, so this is a deliberately reduced version: one checkmark, one brand
+       field. Keep it this simple — anything more detail loses at tab size. -->
+  <defs>
+    <linearGradient id="semora-mark" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7d5ad9" />
+      <stop offset="1" stop-color="#55309f" />
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="7" fill="url(#semora-mark)" />
+  <path
+    d="M9.5 16.8 L13.8 21 L22.5 11.4"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="4.2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>
