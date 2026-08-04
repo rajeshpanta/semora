@@ -25,6 +25,16 @@
   border-bottom: 1px solid var(--border);
 }
 
+/* On the single dark canvas these rules become visible seams — five of them
+   down the page, the first landing exactly where the hero ends. The whole
+   point of one background is that sections are separated by whitespace, not
+   by lines, so the borders and the tint both come off. */
+:global(:root[data-dark-page]) .band {
+  background: none;
+  border-top: 0;
+  border-bottom: 0;
+}
+
 /* ─────────────────────────────── Hero ─────────────────────── */
 
 @supports not (height: 100svh) {
