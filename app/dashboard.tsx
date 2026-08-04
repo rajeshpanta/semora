@@ -91,6 +91,15 @@ export default function DashboardScreen() {
     [workloadTasks],
   );
 
+  // Free tier sees this week for real; Pro sees the whole semester. The
+  // multi-week chart, crunch-week lookahead, and exam density are all
+  // "shape of the term" analysis — that IS the Pro product here, so they are
+  // what the upgrade buys rather than a dimmed preview of themselves.
+  const visibleWeeks = useMemo(
+    () => (isPro ? weeks : weeks.filter((w) => w.weekStart === currentWeekStart)),
+    [isPro, weeks, currentWeekStart],
+  );
+
   const crunchWeeks = weeks.filter((w) => w.isCrunch);
   const nextCrunch = crunchWeeks.find((w) => w.weekStart >= currentWeekStart) ?? crunchWeeks[0] ?? null;
 
@@ -115,58 +124,8 @@ export default function DashboardScreen() {
     router.push({ pathname: '/paywall', params: { context: 'dashboard' } } as any);
   };
 
-  // ── Free gate: full-screen locked teaser routing to the paywall. ───────
-  if (!isPro) {
-    return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-        <Stack.Screen options={{ title: 'Workload' }} />
-        <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}>
-          <View style={[styles.lockedHero, { backgroundColor: colors.card, borderColor: colors.line }]}>
-            <View style={[styles.lockedIcon, { backgroundColor: colors.brand50 }]}>
-              <FontAwesome name="bar-chart" size={26} color={colors.brand} />
-            </View>
-            <Text style={[styles.lockedTitle, { color: colors.ink }]}>Workload Dashboard</Text>
-            <Text style={[styles.lockedDesc, { color: colors.ink3 }]}>
-              See your whole semester at a glance — which weeks are crunch weeks,
-              where the exams pile up, how much of each course{'’'}s grade is still
-              in play, and exactly what to start on next.
-            </Text>
 
-            {/* Teaser preview: a blurred/dim mini bar chart so the value is
-                visible-but-locked, matching the grade teaser pattern. */}
-            <View style={styles.previewBars} accessible accessibilityLabel="Locked workload preview">
-              {[0.4, 0.7, 0.35, 1, 0.55, 0.85, 0.3].map((h, i) => (
-                <View
-                  key={i}
-                  style={[
-                    styles.previewBar,
-                    {
-                      height: 8 + h * 46,
-                      backgroundColor: i === 3 ? colors.coral : colors.brand,
-                      opacity: 0.28,
-                    },
-                  ]}
-                />
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={[styles.unlockBtn, { backgroundColor: colors.brand }]}
-              onPress={openPaywall}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel="Unlock the Workload Dashboard with Pro"
-            >
-              <FontAwesome name="lock" size={13} color="#fff" />
-              <Text style={styles.unlockBtnText}>Unlock with Pro</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    );
-  }
-
-  // ── Empty state: Pro but no data to analyze yet. ───────────────────────
+  // ── Empty state: no data to analyze yet. ──────────────────────────────
   const hasAnyIncomplete = workloadTasks.some((t) => !t.is_completed);
 
   return (
@@ -201,7 +160,9 @@ export default function DashboardScreen() {
             {/* Weekly workload chart */}
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
               <View style={styles.cardHead}>
-                <Text style={[styles.cardTitle, { color: colors.ink }]}>Weekly workload</Text>
+                <Text style={[styles.cardTitle, { color: colors.ink }]}>
+                  {isPro ? 'Weekly workload' : 'This week'}
+                </Text>
                 <View style={styles.legendRow}>
                   <View style={styles.legendItem}>
                     <View style={[styles.legendDot, { backgroundColor: colors.brand }]} />
@@ -213,11 +174,32 @@ export default function DashboardScreen() {
                   </View>
                 </View>
               </View>
-              <WorkloadChart weeks={weeks} currentWeekStart={currentWeekStart} />
+              <WorkloadChart weeks={visibleWeeks} currentWeekStart={currentWeekStart} />
             </View>
 
+            {/* Sits under a chart that already works, not in place of one. */}
+            {!isPro && (
+              <TouchableOpacity
+                style={[styles.upsell, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]}
+                activeOpacity={0.85}
+                onPress={openPaywall}
+                accessibilityRole="button"
+                accessibilityLabel="See your whole semester with Pro"
+              >
+                <FontAwesome name="bar-chart" size={15} color={colors.brand} style={{ marginTop: 1 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.upsellTitle, { color: colors.ink }]}>See the whole semester</Text>
+                  <Text style={[styles.upsellText, { color: colors.ink3 }]}>
+                    Pro charts every week ahead, flags crunch weeks before they arrive, and shows
+                    where the exams pile up.
+                  </Text>
+                </View>
+                <FontAwesome name="chevron-right" size={12} color={colors.brand} style={{ marginTop: 3 }} />
+              </TouchableOpacity>
+            )}
+
             {/* Crunch-week callout */}
-            {nextCrunch && (
+            {isPro && nextCrunch && (
               <View style={[styles.crunchCard, { backgroundColor: colors.coral50, borderColor: colors.coral + '40' }]}>
                 <FontAwesome name="exclamation-triangle" size={15} color={colors.coral} />
                 <View style={{ flex: 1 }}>
@@ -233,7 +215,7 @@ export default function DashboardScreen() {
             )}
 
             {/* Exam strip */}
-            {examWeeks.length > 0 && (
+            {isPro && examWeeks.length > 0 && (
               <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
                 <Text style={[styles.cardTitle, { color: colors.ink, marginBottom: 10 }]}>Exam density</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -395,12 +377,9 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 13, lineHeight: 18 },
 
   // Locked (free) hero
-  lockedHero: { borderRadius: 20, borderWidth: 0.5, padding: 24, alignItems: 'center' },
-  lockedIcon: { width: 56, height: 56, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  lockedTitle: { fontFamily: FONTS.displaySemibold, fontSize: 20, marginBottom: 8, textAlign: 'center' },
-  lockedDesc: { fontSize: 13.5, lineHeight: 20, textAlign: 'center', maxWidth: 320 },
-  previewBars: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, height: 60, marginTop: 22, marginBottom: 6 },
-  previewBar: { width: 22, borderTopLeftRadius: 4, borderTopRightRadius: 4 },
-  unlockBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 12, marginTop: 18 },
-  unlockBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  // Free-tier upgrade banner. Replaced the full-screen lock styles when the
+  // Workload dashboard stopped being all-or-nothing for free users.
+  upsell: { flexDirection: 'row', alignItems: 'flex-start', gap: 11, borderWidth: 1, borderRadius: 14, padding: 14, marginBottom: 14 },
+  upsellTitle: { fontSize: 14, fontWeight: '700' },
+  upsellText: { fontSize: 13, lineHeight: 19, marginTop: 3 },
 });

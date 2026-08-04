@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import * as SecureStore from 'expo-secure-store';
+import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
 import { supabase } from '@/lib/supabase';
 
 // Events are logged into the SHARED `analytics_events` table (also used by the
@@ -22,14 +22,15 @@ function uuid(): string {
 function getDeviceId(): string {
   if (cachedDeviceId) return cachedDeviceId;
   try {
-    let id = SecureStore.getItem(DEVICE_ID_KEY);
+    let id = getDeviceItem(DEVICE_ID_KEY);
     if (!id) {
       id = uuid();
-      SecureStore.setItem(DEVICE_ID_KEY, id);
+      setDeviceItem(DEVICE_ID_KEY, id);
     }
     cachedDeviceId = id;
   } catch {
-    cachedDeviceId = uuid(); // SecureStore unavailable (e.g. web) — ephemeral id
+    // Storage genuinely unavailable (private browsing) — ephemeral id.
+    cachedDeviceId = uuid();
   }
   return cachedDeviceId;
 }

@@ -193,7 +193,20 @@ async function pruneToCapIfNeeded() {
 }
 
 export async function requestNotificationPermission(): Promise<boolean> {
-  if (Platform.OS === 'web') return false;
+  if (Platform.OS === 'web') {
+    // expo-notifications has no web implementation for permissions (or for
+    // scheduling — see startWebDueSoonReminders below), so this talks to the
+    // plain browser Notification API directly instead of Notifications.*.
+    if (typeof Notification === 'undefined') return false;
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'denied') return false;
+    try {
+      const result = await Notification.requestPermission();
+      return result === 'granted';
+    } catch {
+      return false;
+    }
+  }
   const { status: existing } = await Notifications.getPermissionsAsync();
   if (existing === 'granted') return true;
   const { status } = await Notifications.requestPermissionsAsync();
@@ -533,4 +546,72 @@ export async function rescheduleAllTaskReminders(userId: string): Promise<void> 
   } finally {
     rescheduleInFlight = false;
   }
+}
+
+// ── Web reminders (foreground MVP, not full parity) ────────────────────────
+// Native local-scheduled notifications fire at a future date even if the app
+// is closed — there is no browser equivalent (no web implementation of
+// expo-notifications' NotificationScheduler, and browsers can't schedule a
+// future notification for an arbitrary date even with a service worker). This
+// is the honest substitute: while a student has the Semora tab open (or open
+// in a background tab), poll for anything due imminently and fire a plain
+// browser Notification. It does not cover the closed-tab/closed-browser case
+// native local + push notifications do — see WEB_APP_PLAN.md.
+
+const WEB_DUE_SOON_WINDOW_MS = 5 * 60 * 1000; // fire once due time is within 5 minutes
+const WEB_DUE_SOON_POLL_MS = 60 * 1000;
+// Session-only, per taskId — avoids re-notifying every poll tick once fired.
+// Intentionally not persisted: a fresh page load re-checking once is fine.
+const webNotifiedTaskIds = new Set<string>();
+
+async function checkWebDueSoonReminders(userId: string) {
+  if (
+    Platform.OS !== 'web' ||
+    typeof Notification === 'undefined' ||
+    Notification.permission !== 'granted'
+  ) return;
+  const today = new Date().toISOString().slice(0, 10);
+  const { data } = await supabase
+    .from('tasks')
+    .select('id, title, due_date, due_time, courses(name)')
+    .eq('user_id', userId)
+    .eq('is_completed', false)
+    .eq('due_date', today);
+  if (!data) return;
+  const now = Date.now();
+  for (const t of data as any[]) {
+    // All-day tasks (no due_time) have no specific moment to fire "soon"
+    // against — same-day awareness for those is covered by just having the
+    // tab open on the Today screen, not a push-style nudge.
+    if (webNotifiedTaskIds.has(t.id) || !t.due_time) continue;
+    const [hour, minute] = t.due_time.split(':').map(Number);
+    const dueAt = new Date(`${t.due_date}T00:00:00`);
+    dueAt.setHours(hour, minute, 0, 0);
+    const diff = dueAt.getTime() - now;
+    if (diff > -WEB_DUE_SOON_WINDOW_MS && diff <= WEB_DUE_SOON_WINDOW_MS) {
+      const courseName = (Array.isArray(t.courses) ? t.courses[0]?.name : t.courses?.name) || 'Course';
+      try {
+        new Notification(`📚 ${courseName}`, { body: `${t.title} is due soon`, tag: t.id });
+      } catch {
+        // Some browsers (notably iOS Safari) restrict the Notification
+        // constructor outside a service worker — fail silently rather than
+        // throw inside a background poll.
+      }
+      webNotifiedTaskIds.add(t.id);
+    }
+  }
+}
+
+/**
+ * Starts the web foreground due-soon check (polls every 60s while mounted).
+ * No-op on native, where scheduleTaskReminders/rescheduleAllTaskReminders
+ * already cover this via the OS's own scheduler. Returns a stop function.
+ */
+export function startWebDueSoonReminders(userId: string): () => void {
+  if (Platform.OS !== 'web') return () => {};
+  checkWebDueSoonReminders(userId).catch(() => {});
+  const interval = setInterval(() => {
+    checkWebDueSoonReminders(userId).catch(() => {});
+  }, WEB_DUE_SOON_POLL_MS);
+  return () => clearInterval(interval);
 }

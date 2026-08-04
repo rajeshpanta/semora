@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isToday as isDateToday } from 'date-fns';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useTasks, useSemesters, useCourses, useToggleTaskComplete } from '@/lib/queries';
-import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import { COLORS, FONTS, SCREEN_MAX_WIDTH, WEB_CARD_SHADOW } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { track } from '@/lib/analytics';
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
   legendText: { fontSize: 14, color: COLORS.ink3 },
   // Agenda
   agendaTitle: { fontSize: 14, fontWeight: '600', color: COLORS.ink2, marginBottom: 8 },
-  agendaCard: { backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 14, borderWidth: 0.5, borderColor: COLORS.line },
+  agendaCard: { backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 14, borderWidth: 0.5, borderColor: COLORS.line, ...WEB_CARD_SHADOW },
   agendaRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   agendaRowBorder: { borderBottomWidth: 0.5, borderBottomColor: COLORS.line },
   agendaTimeCol: { width: 42, alignItems: 'center' },
@@ -428,6 +428,6 @@ const styles = StyleSheet.create({
   agendaTaskCourse: { fontSize: 14, color: COLORS.ink3, marginTop: 2 },
   cbx: { width: 20, height: 20, borderRadius: 7, borderWidth: 1.5, borderColor: COLORS.ink3, justifyContent: 'center', alignItems: 'center' },
   listDateLabel: { fontSize: 14, fontWeight: '600', color: COLORS.ink2, marginBottom: 6 },
-  agendaEmpty: { backgroundColor: COLORS.card, borderRadius: 18, padding: 24, alignItems: 'center', borderWidth: 0.5, borderColor: COLORS.line },
+  agendaEmpty: { backgroundColor: COLORS.card, borderRadius: 18, padding: 24, alignItems: 'center', borderWidth: 0.5, borderColor: COLORS.line, ...WEB_CARD_SHADOW },
   agendaEmptyText: { fontSize: 14, color: COLORS.ink3 },
 });

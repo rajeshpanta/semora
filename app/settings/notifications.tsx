@@ -25,6 +25,7 @@ interface ReminderPrefs {
   quiet_hours_enabled: boolean;
   quiet_hours_start: string;
   quiet_hours_end: string;
+  flashcards_due_push_enabled: boolean;
 }
 
 const DEFAULT_PREFS: ReminderPrefs = {
@@ -34,6 +35,7 @@ const DEFAULT_PREFS: ReminderPrefs = {
   quiet_hours_enabled: false,
   quiet_hours_start: '22:00:00',
   quiet_hours_end: '08:00:00',
+  flashcards_due_push_enabled: true,
 };
 
 function timeToDate(value: string) {
@@ -87,7 +89,7 @@ export default function NotificationSettings() {
       try {
         const { data } = await supabase
           .from('profiles')
-          .select('reminder_same_day, reminder_1day, reminder_3day, quiet_hours_enabled, quiet_hours_start, quiet_hours_end')
+          .select('reminder_same_day, reminder_1day, reminder_3day, quiet_hours_enabled, quiet_hours_start, quiet_hours_end, flashcards_due_push_enabled')
           .eq('id', userId)
           .maybeSingle();
         if (data) setPrefs(data);
@@ -177,6 +179,9 @@ export default function NotificationSettings() {
       } else {
         // Keep the Settings index row in sync — it reads the same prefs.
         qc.invalidateQueries({ queryKey: ['reminderPrefs', userId] });
+        // Server-side push preference — it changes nothing about the on-device
+        // task reminders, so skip the (expensive) full reschedule below.
+        if (key === 'flashcards_due_push_enabled') return;
         // Apply the new preference to EXISTING tasks, not just future ones —
         // scheduleTaskReminders reads these prefs fresh, so a full reschedule
         // adds/removes the toggled reminder across the user's current backlog.
@@ -273,6 +278,20 @@ export default function NotificationSettings() {
         <Text style={[styles.hint, { color: colors.ink3 }]}>
           Reminders are scheduled when tasks are created or updated. Changes here apply to all your tasks.
         </Text>
+
+        {/* Sent from the server (supabase/cron/flashcards_due_push.sql), not
+            scheduled on-device like the reminders above — so it sits in its own
+            section rather than under "Remind me before due date". */}
+        <Text style={[styles.sectionTitle, { color: colors.ink2, marginTop: 24 }]}>Flashcards</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <ToggleRow
+            label="Cards due for review"
+            subtitle="A daily nudge when you have cards waiting"
+            value={prefs.flashcards_due_push_enabled}
+            onToggle={() => toggle('flashcards_due_push_enabled')}
+            last
+          />
+        </View>
 
         <Text style={[styles.sectionTitle, { color: colors.ink2, marginTop: 24 }]}>Quiet hours</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>

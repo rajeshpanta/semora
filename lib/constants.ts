@@ -1,3 +1,8 @@
+// The public marketing site. app.semoraai.com is the application only —
+// anything that means "go back to the website" belongs here, not to
+// app/welcome.tsx, which predates semoraai.com and duplicates it.
+export const MARKETING_URL = 'https://semoraai.com';
+
 import { Platform } from 'react-native';
 
 // Caps main content width so screens read well on iPad (portrait, full

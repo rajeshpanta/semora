@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS } from '@/lib/constants';
+import { COLORS, FONTS, WEB_CARD_SHADOW } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useAppStore } from '@/store/appStore';
 import { useTasks } from '@/lib/queries';
@@ -149,6 +149,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 0.5,
     borderColor: COLORS.line,
+    ...WEB_CARD_SHADOW,
   },
   headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
   title: { fontFamily: FONTS.displaySemibold, fontSize: 16, color: COLORS.ink },

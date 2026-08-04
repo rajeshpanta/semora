@@ -72,9 +72,10 @@ function SidebarItem({
       accessibilityRole="link"
       accessibilityState={{ selected: active }}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={({ pressed, hovered }: any) => [
         styles.navItem,
         active && { backgroundColor: colors.brand50 },
+        !active && hovered && { backgroundColor: colors.paper },
         pressed && { opacity: 0.68 },
       ]}
     >
@@ -159,9 +160,10 @@ function DesktopSidebar({ session }: { session: Session }) {
         accessibilityRole="button"
         accessibilityLabel="Create a new task"
         onPress={() => router.push('/task/new' as any)}
-        style={({ pressed }) => [
+        style={({ pressed, hovered }: any) => [
           styles.newTaskButton,
           { backgroundColor: colors.brand, opacity: pressed ? 0.82 : 1 },
+          hovered && !pressed && styles.newTaskButtonHovered,
         ]}
       >
         <FontAwesome name="plus" size={13} color="#fff" />
@@ -172,11 +174,11 @@ function DesktopSidebar({ session }: { session: Session }) {
       <Pressable
         accessibilityRole="search"
         onPress={() => router.push('/search' as any)}
-        style={({ pressed }) => [
+        style={({ pressed, hovered }: any) => [
           styles.searchButton,
           {
             backgroundColor: colors.paper,
-            borderColor: colors.line,
+            borderColor: hovered ? colors.brand100 : colors.line,
             opacity: pressed ? 0.72 : 1,
           },
         ]}
@@ -219,7 +221,11 @@ function DesktopSidebar({ session }: { session: Session }) {
         <Pressable
           accessibilityRole="button"
           onPress={() => router.replace('/me' as any)}
-          style={({ pressed }) => [styles.accountButton, pressed && { opacity: 0.68 }]}
+          style={({ pressed, hovered }: any) => [
+            styles.accountButton,
+            hovered && !pressed && { backgroundColor: colors.paper },
+            pressed && { opacity: 0.68 },
+          ]}
         >
           <View style={[styles.avatar, { backgroundColor: colors.brand50 }]}>
             <Text style={[styles.avatarText, { color: colors.brand }]}>
@@ -282,7 +288,8 @@ const styles = StyleSheet.create({
     paddingTop: 26,
     paddingHorizontal: 16,
     paddingBottom: 16,
-  },
+    boxShadow: '1px 0 0 rgba(0,0,0,0.02), 4px 0 24px rgba(17,17,17,0.03)',
+  } as any,
   brandBlock: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -324,6 +331,13 @@ const styles = StyleSheet.create({
     gap: 9,
     cursor: 'pointer',
     boxShadow: '0 9px 24px rgba(107, 70, 193, 0.18)',
+    transitionProperty: 'box-shadow, transform',
+    transitionDuration: '160ms',
+    transitionTimingFunction: 'ease-out',
+  } as any,
+  newTaskButtonHovered: {
+    transform: [{ translateY: -1 }],
+    boxShadow: '0 12px 28px rgba(107, 70, 193, 0.28)',
   } as any,
   newTaskText: {
     flex: 1,
@@ -346,6 +360,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     cursor: 'pointer',
+    transitionProperty: 'border-color',
+    transitionDuration: '160ms',
   } as any,
   searchText: {
     flex: 1,
@@ -383,6 +399,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     cursor: 'pointer',
+    transitionProperty: 'background-color',
+    transitionDuration: '120ms',
   } as any,
   navIcon: {
     width: 28,
@@ -405,7 +423,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     paddingHorizontal: 5,
+    borderRadius: 11,
     cursor: 'pointer',
+    transitionProperty: 'background-color',
+    transitionDuration: '120ms',
   } as any,
   avatar: {
     width: 36,

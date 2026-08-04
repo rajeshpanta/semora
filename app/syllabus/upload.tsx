@@ -10,6 +10,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { processSyllabus, type ProcessResult, FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
 import { MAX_SCAN_PAGES, type SyllabusPage } from '@/lib/gemini';
+import { takePendingScanText } from '@/lib/pendingScanText';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { track } from '@/lib/analytics';
@@ -109,6 +110,11 @@ export default function SyllabusUploadScreen() {
     }
   })();
 
+  // Consumed exactly once, synchronously, before any other state/effect can
+  // run — the paste-syllabus-text flow (app/syllabus/paste.tsx) sets this
+  // right before navigating here.
+  const [pastedText] = useState(() => takePendingScanText());
+
   const [processing, setProcessing] = useState(false);
   const [status, setStatus] = useState('');
   const [step, setStep] = useState(0); // 0-4 progress steps
@@ -142,13 +148,13 @@ export default function SyllabusUploadScreen() {
 
   // Auto-start processing when screen opens
   useEffect(() => {
-    if (params.fileUri && !processing) {
+    if ((params.fileUri || pastedText) && !processing) {
       handleProcess();
     }
   }, [params.fileUri]);
 
   const handleProcess = async () => {
-    if (!params.fileUri) {
+    if (!params.fileUri && !pastedText) {
       Alert.alert('No File', 'No file was selected.');
       router.back();
       return;
@@ -183,12 +189,13 @@ export default function SyllabusUploadScreen() {
       let timedOut = false;
       const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 120_000);
       const result = await processSyllabus(
-        params.fileUri,
+        params.fileUri ?? '',
         params.fileName || 'syllabus.pdf',
         params.mimeType || 'application/pdf',
         session.user.id,
         controller.signal,
         scanPages ?? undefined,
+        pastedText ?? undefined,
       ).catch((err) => {
         if (timedOut) throw new Error('This is taking longer than expected. Please try again.');
         throw err;
@@ -342,7 +349,11 @@ export default function SyllabusUploadScreen() {
         {/* File info */}
         <View style={[styles.fileChip, { backgroundColor: colors.brand50 }]}>
           <FontAwesome
-            name={params.mimeType?.includes('image') ? 'image' : 'file-pdf-o'}
+            name={
+              params.mimeType === 'text/plain'
+                ? 'align-left'
+                : params.mimeType?.includes('image') ? 'image' : 'file-pdf-o'
+            }
             size={14}
             color={colors.brand}
           />

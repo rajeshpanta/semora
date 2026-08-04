@@ -27,9 +27,13 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-// The app scheme (app.json). A NEW route file app/join.tsx is the deep-link
-// handler, so semora://join?token=... opens the join screen directly.
-const APP_SCHEME = 'semora';
+// Shared links are https pages on the marketing site, not bare `semora://`
+// deep links. A custom scheme opens the app when it is already installed and
+// does nothing otherwise — which is exactly the recipient a share is for. The
+// landing page previews in iMessage/Discord, works on a laptop, and hands off
+// to `semora://join?token=...` (still handled by app/join.tsx) for anyone who
+// does have the app. Links minted before this change keep working.
+const SHARE_LINK_BASE = 'https://semoraai.com/join';
 
 // Cap the task list captured in a snapshot. A real course has well under this;
 // the bound keeps a single snapshot (and the resulting jsonb row) from being
@@ -210,7 +214,7 @@ serve(async (req) => {
       return jsonResponse({ error: 'Could not create share link. Please try again.' }, 500);
     }
 
-    const url = `${APP_SCHEME}://join?token=${token}`;
+    const url = `${SHARE_LINK_BASE}/${encodeURIComponent(token)}`;
     return jsonResponse({ token, url }, 200);
   } catch (err) {
     console.error('[share-course] Unhandled error:', err);

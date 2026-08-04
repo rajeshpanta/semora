@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTasks, useDeleteSemester, useGpaScale, useSemesterGradeCategories } from '@/lib/queries';
-import { COLORS, FONTS, DEFAULT_GRADE_SCALE, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import { COLORS, FONTS, DEFAULT_GRADE_SCALE, SCREEN_MAX_WIDTH, WEB_CARD_SHADOW } from '@/lib/constants';
 import { calculateCourseGrade, calculateSemesterGpaWithScale, DEFAULT_GPA_SCALE } from '@/lib/grades';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
   courseCountText: { fontSize: 12, fontWeight: '700', color: COLORS.brand },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingTop: 6 },
   addBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.brand, justifyContent: 'center', alignItems: 'center' },
-  gpaCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, borderWidth: 0.5, padding: 14, marginBottom: 14 },
+  gpaCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 16, borderWidth: 0.5, padding: 14, marginBottom: 14, ...WEB_CARD_SHADOW },
   gpaIcon: { width: 42, height: 42, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   gpaLabel: { fontSize: 9.5, fontWeight: '800', letterSpacing: 0.7 },
   gpaMeta: { fontSize: 11.5, lineHeight: 16, marginTop: 3 },
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   progressText: { fontSize: 14, color: COLORS.ink3, fontWeight: '500' },
 
   // Empty states
-  emptyCard: { backgroundColor: COLORS.card, borderRadius: 18, padding: 32, alignItems: 'center', gap: 6, borderWidth: 0.5, borderColor: COLORS.line },
+  emptyCard: { backgroundColor: COLORS.card, borderRadius: 18, padding: 32, alignItems: 'center', gap: 6, borderWidth: 0.5, borderColor: COLORS.line, ...WEB_CARD_SHADOW },
   emptyTitle: { fontSize: 16, fontWeight: '600', color: COLORS.ink },
   emptyText: { fontSize: 14, color: COLORS.ink3 },
 

@@ -19,6 +19,13 @@ export const DAILY_MINUTE_OPTIONS = [60, 90, 120, 180] as const;
 export const STUDY_SESSION_OPTIONS: StudySessionMinutes[] = [25, 45, 50];
 export const STUDY_PLAN_HORIZON_DAYS = 14;
 
+// Free tier gets a real, working plan — just a shorter one. A locked teaser
+// teaches people the feature is not for them; one working week teaches the
+// habit, and the second week becomes a concrete reason to upgrade rather than
+// an abstract one. Enforced server-side too (migration 049) so calling the
+// replace_study_plan RPC directly cannot widen it.
+export const FREE_STUDY_PLAN_HORIZON_DAYS = 7;
+
 export interface PlannerTask {
   id: string;
   title: string;

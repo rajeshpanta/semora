@@ -9,6 +9,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
+import { WebAuthBackdrop, webAuthCard } from '@/components/WebAuthChrome';
 
 export default function ForgotPasswordScreen() {
   const colors = useColors();
@@ -81,8 +82,9 @@ export default function ForgotPasswordScreen() {
   // ── Hero success state ───────────────────────────────────────
   if (sent) {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
-        <View style={styles.heroWrap}>
+      <WebAuthBackdrop>
+      <SafeAreaView style={[styles.safe, { backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.paper }]} edges={['top', 'bottom']}>
+        <View style={[styles.heroWrap, webAuthCard, Platform.OS === 'web' && { margin: 24, maxWidth: 480, alignSelf: 'center', width: '100%' }]}>
           <View
             style={[
               styles.heroIcon,
@@ -133,12 +135,14 @@ export default function ForgotPasswordScreen() {
           </View>
         </View>
       </SafeAreaView>
+      </WebAuthBackdrop>
     );
   }
 
   // ── Form state ───────────────────────────────────────────────
   return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top', 'bottom']}>
+    <WebAuthBackdrop>
+    <SafeAreaView style={[styles.safe, { backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.paper }]} edges={['top', 'bottom']}>
       <ScrollView
         contentContainerStyle={[styles.scroll, { minHeight: height }]}
         keyboardShouldPersistTaps="always"
@@ -148,6 +152,7 @@ export default function ForgotPasswordScreen() {
         <View
           style={[
             styles.inner,
+            webAuthCard,
             {
               maxWidth: isWide ? Math.min(width - 64, 560) : 440,
               paddingHorizontal: 24,
@@ -213,6 +218,7 @@ export default function ForgotPasswordScreen() {
         </View>
       </ScrollView>
     </SafeAreaView>
+    </WebAuthBackdrop>
   );
 }
 

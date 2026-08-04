@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import { Platform, Share } from 'react-native';
 import { supabase } from '@/lib/supabase';
+import { MARKETING_URL } from '@/lib/constants';
 import type {
   CourseCollaboration,
   CourseCollaborationMember,
@@ -123,7 +124,10 @@ export async function inviteClassmates(collaborationId: string, courseName: stri
     p_collaboration_id: collaborationId,
   });
   if (error) throw error;
-  const url = `semora://collaborate?token=${encodeURIComponent(String(token))}`;
+  // https landing page rather than a bare `semora://` deep link — see the note
+  // on inviteLink() in lib/referral.ts. Classmates being invited to a course
+  // space are precisely the people who do not have the app yet.
+  const url = `${MARKETING_URL}/collaborate/${encodeURIComponent(String(token))}`;
   await Share.share({
     title: `Join ${courseName} in Semora`,
     message:

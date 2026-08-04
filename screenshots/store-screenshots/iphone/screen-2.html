@@ -1,0 +1,350 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+@font-face{font-family:'Fr7';src:url('file:///Users/smile/Desktop/semora/node_modules/@expo-google-fonts/fraunces/700Bold/Fraunces_700Bold.ttf');}
+@font-face{font-family:'Fr6';src:url('file:///Users/smile/Desktop/semora/node_modules/@expo-google-fonts/fraunces/600SemiBold/Fraunces_600SemiBold.ttf');}
+@font-face{font-family:'fa';src:url('file:///Users/smile/Desktop/semora/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/FontAwesome.ttf');}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:642px;height:1389px;overflow:hidden;}
+.fa{font-family:'fa';font-style:normal;font-weight:normal;line-height:1;-webkit-font-smoothing:antialiased;}
+
+/* ---- warm-light aurora field ---- */
+.stage{width:642px;height:1389px;position:relative;overflow:hidden;
+  background:linear-gradient(178deg,#FBFAFF 0%,#F4EFFF 52%,#EBE1FF 100%);}
+.orb1{position:absolute;width:640px;height:640px;border-radius:50%;right:-200px;top:-180px;z-index:1;mix-blend-mode:multiply;}
+.orb2{position:absolute;width:540px;height:540px;border-radius:50%;left:-220px;top:330px;z-index:1;mix-blend-mode:multiply;
+  background:radial-gradient(circle,rgba(166,107,232,0.24),rgba(166,107,232,0) 68%);}
+.orb3{position:absolute;width:520px;height:520px;border-radius:50%;left:32%;bottom:-250px;z-index:1;
+  background:radial-gradient(circle,rgba(255,208,150,0.34),rgba(255,208,150,0) 70%);}
+.ribbon{position:absolute;width:940px;height:210px;left:-150px;top:660px;transform:rotate(-31deg);z-index:1;
+  background:linear-gradient(90deg,rgba(124,77,224,0),rgba(124,77,224,0.26),rgba(185,140,255,0.26),rgba(185,140,255,0));filter:blur(42px);}
+.sheen{position:absolute;left:0;right:0;top:0;height:400px;z-index:1;background:linear-gradient(180deg,rgba(255,255,255,0.55),rgba(255,255,255,0) 100%);}
+.grain{position:absolute;inset:0;width:100%;height:100%;z-index:2;opacity:0.05;mix-blend-mode:soft-light;pointer-events:none;}
+.vig{position:absolute;inset:0;z-index:3;background:radial-gradient(115% 78% at 50% 40%,rgba(0,0,0,0) 58%,rgba(74,43,149,0.10) 100%);}
+
+/* ---- caption ---- */
+.cap{position:absolute;left:0;right:0;top:0;height:338px;padding:60px 46px 0;text-align:center;z-index:12;}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;padding:9px 17px;border-radius:999px;
+  background:rgba(255,255,255,0.62);border:1px solid rgba(255,255,255,0.9);
+  box-shadow:0 6px 16px rgba(90,50,160,0.10);
+  font:800 14px -apple-system,'Helvetica Neue',sans-serif;color:#7C4DE0;letter-spacing:1.4px;text-transform:uppercase;}
+.eyebrow .fa{font-size:12px;color:#E0952B;}
+.headline{margin-top:18px;font-family:'Fr7';color:#1C1B1F;letter-spacing:-1px;line-height:0.98;}
+.headline .accent{color:#6B46C1;}
+.spark{font-family:'fa';font-style:normal;color:#E8A93B;font-size:0.42em;vertical-align:0.5em;margin-left:.12em;}
+.subhead{margin-top:15px;font:500 20px -apple-system,'Helvetica Neue',sans-serif;color:#55555C;
+  line-height:1.34;letter-spacing:0.1px;max-width:450px;margin-left:auto;margin-right:auto;}
+
+/* ---- device ---- */
+.deviceWrap{position:absolute;left:50%;top:344px;transform:translateX(-50%);z-index:5;}
+.contactGlow{position:absolute;left:50%;top:70px;transform:translateX(-50%);width:600px;height:600px;border-radius:50%;
+  background:radial-gradient(circle,rgba(160,120,245,0.40),rgba(160,120,245,0) 60%);z-index:-1;}
+.device{width:524px;background:linear-gradient(150deg,#1a1820,#0B0A10);border-radius:58px;padding:13px;position:relative;
+  box-shadow:0 50px 100px rgba(80,50,140,0.30),0 18px 40px rgba(80,50,140,0.20),inset 0 0 0 1.5px rgba(255,255,255,0.10);
+  transform-origin:center center;}
+.device::before{content:'';position:absolute;inset:4px;border-radius:54px;border:1px solid rgba(255,255,255,0.08);pointer-events:none;}
+.screen{width:498px;height:1078px;overflow:hidden;border-radius:46px;background:#FAF9F5;position:relative;}
+.island{position:absolute;left:50%;top:15px;transform:translateX(-50%);width:112px;height:33px;border-radius:20px;background:#000;z-index:40;}
+.app{width:414px;height:896px;transform:scale(1.2029);transform-origin:top left;position:relative;background:#FAF9F5;font-family:-apple-system,'Helvetica Neue',sans-serif;}
+.appbody{height:100%;}
+.rowborder{border-top:.5px solid rgba(28,27,31,0.08);}
+.chev{color:#8C8B94;font-size:13px;}
+
+/* ---- floating glass chips ---- */
+.chip{position:absolute;z-index:20;background:rgba(255,255,255,0.96);border-radius:20px;padding:13px 17px;display:flex;align-items:center;gap:13px;
+  border:1px solid rgba(255,255,255,0.9);box-shadow:0 26px 50px rgba(80,40,150,0.24),0 8px 18px rgba(80,40,150,0.14);}
+.chip.ghost{z-index:6;opacity:0.82;box-shadow:0 18px 34px rgba(80,40,150,0.16);}
+.chipIcon{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.chipT{font:800 17px -apple-system;color:#1C1B1F;letter-spacing:-.2px;white-space:nowrap;}
+.chipS{font:500 13px -apple-system;color:#8C8B94;margin-top:2px;white-space:nowrap;}
+.ic-brand{background:#EEEDFE;color:#6B46C1;}.ic-coral{background:#FAECE7;color:#D85A30;}.ic-teal{background:#E1F5EE;color:#0F6E56;}.ic-blue{background:#E6F1FB;color:#185FA5;}.ic-gold{background:#FBEFD6;color:#B47818;}.ic-green{background:#DCF3E9;color:#0F6E56;}
+
+/* canvas flourish */
+.pulse{position:absolute;z-index:19;border-radius:50%;border:2px solid rgba(15,110,86,0.35);}
+.ribbonChip{position:absolute;z-index:20;background:rgba(15,110,86,0.96);color:#fff;border-radius:14px;padding:11px 16px;display:flex;align-items:center;gap:9px;
+  box-shadow:0 20px 40px rgba(15,110,86,0.32);font:800 15px -apple-system;letter-spacing:-.2px;white-space:nowrap;}
+.ribbonChip .fa{font-size:13px;}
+.syncArcs{position:absolute;z-index:18;pointer-events:none;}
+
+/* status bar */
+.sbar{height:52px;display:flex;align-items:center;justify-content:space-between;padding:14px 24px 0 26px;}
+.sbar .t{font:600 16px -apple-system;color:#1C1B1F;letter-spacing:.3px;}
+.sbar .r{display:flex;align-items:center;gap:7px;}
+
+/* SCAN */
+.h1{font-family:'Fr6';font-size:29px;color:#1C1B1F;letter-spacing:-.5px;}
+.sub2{font:400 15px -apple-system;color:#55555C;margin-top:5px;line-height:1.4;}
+.scanframe{background:#6B46C1;border-radius:24px;padding:26px;margin:18px 0;text-align:center;}
+.corners{position:relative;height:150px;display:flex;align-items:center;justify-content:center;}
+.cn{position:absolute;width:28px;height:28px;border:3px solid #fff;}
+.tl{top:0;left:14px;border-right:0;border-bottom:0;border-top-left-radius:5px;}
+.tr{top:0;right:14px;border-left:0;border-bottom:0;border-top-right-radius:5px;}
+.bl{bottom:0;left:14px;border-right:0;border-top:0;border-bottom-left-radius:5px;}
+.br{bottom:0;right:14px;border-left:0;border-top:0;border-bottom-right-radius:5px;}
+.docmock{background:rgba(255,255,255,0.16);border-radius:8px;padding:15px;width:140px;display:flex;flex-direction:column;gap:6px;}
+.ml{height:3.5px;border-radius:2px;background:rgba(255,255,255,0.5);}
+.scanline{position:absolute;left:30px;right:30px;top:50%;height:2.5px;background:#FAC775;border-radius:2px;box-shadow:0 0 10px 1px #FAC775;}
+.framelabel{font:600 15px -apple-system;color:rgba(255,255,255,0.74);letter-spacing:.6px;margin-top:12px;}
+.actions{display:flex;flex-direction:column;gap:10px;}
+.actionCard{display:flex;align-items:center;gap:15px;background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:20px;padding:16px;box-shadow:0 1px 2px rgba(20,8,46,0.03);}
+.actionIcon{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0;}
+.actionTitle{font:600 15px -apple-system;color:#1C1B1F;}
+.actionSub{font:400 14px -apple-system;color:#8C8B94;margin-top:2px;}
+
+/* tab bar */
+.tabbar{position:absolute;left:0;right:0;bottom:0;height:78px;display:flex;align-items:flex-start;justify-content:space-around;padding-top:9px;background:rgba(250,249,245,0.98);border-top:.5px solid rgba(28,27,31,0.08);}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;width:64px;}
+.tab .iw{width:40px;height:28px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:19px;color:#8C8B94;}
+.tab.active .iw{background:#EEEDFE;color:#6B46C1;}
+.tab .lbl{font:500 11px -apple-system;color:#8C8B94;}
+.tab.active .lbl{color:#6B46C1;}
+.fab{width:48px;height:48px;border-radius:15px;background:#6B46C1;display:flex;align-items:center;justify-content:center;color:#fff;font-size:19px;margin-top:-7px;box-shadow:0 7px 16px rgba(107,70,193,0.42);}
+.tab.scan .lbl{margin-top:5px;}
+
+/* TODAY */
+.eyelabel{font:600 13px -apple-system;color:#8C8B94;letter-spacing:1px;}
+.greeting{font-family:'Fr7';font-size:27px;color:#1C1B1F;margin-top:4px;letter-spacing:-.5px;}
+.semlabel{font:400 14px -apple-system;color:#8C8B94;margin-top:2px;}
+.secrow{margin:16px 0 9px;}
+.sectitle{font:600 14px -apple-system;color:#55555C;letter-spacing:.4px;}
+.sectitle.coral{color:#D85A30;}
+.overdueCard{background:#FAECE7;border:1px solid #D85A30;border-radius:18px;padding:0 15px;}
+.overdueRow{display:flex;align-items:center;gap:13px;padding:13px 0;}
+.cbx{width:21px;height:21px;border-radius:7px;border:1.5px solid #8C8B94;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.cbx-coral{border-color:#D85A30;}
+.cbx-done{background:#0F6E56;border-color:#0F6E56;color:#fff;font-size:10px;}
+.taskTitle{font:600 15px -apple-system;color:#1C1B1F;}
+.taskTitle.done{text-decoration:line-through;color:#8C8B94;font-weight:500;}
+.taskmeta{display:flex;align-items:center;gap:6px;margin-top:3px;}
+.dot{width:7px;height:7px;border-radius:4px;}
+.taskcourse{font:400 14px -apple-system;color:#8C8B94;}
+.taskcourse.coral{color:#D85A30;}
+.odbadge{background:#fff;border-radius:8px;padding:4px 9px;font:700 13px -apple-system;color:#D85A30;}
+.hero{background:#6B46C1;border-radius:20px;padding:19px;margin-top:16px;overflow:hidden;position:relative;box-shadow:0 12px 26px rgba(107,70,193,0.28);}
+.herotop{display:flex;justify-content:space-between;align-items:center;}
+.heroeye{font:800 13px -apple-system;color:rgba(255,255,255,0.9);letter-spacing:1.5px;}
+.herobadge{background:rgba(255,255,255,0.22);border-radius:999px;padding:4px 12px;font:700 12px -apple-system;color:#fff;letter-spacing:.5px;}
+.herotitle{font-family:'Fr7';font-size:22px;color:#fff;margin-top:11px;line-height:1.15;}
+.herosub{font:400 15px -apple-system;color:rgba(255,255,255,0.82);margin-top:6px;}
+.progressTrack{height:7px;border-radius:4px;background:rgba(28,27,31,0.08);margin-bottom:11px;overflow:hidden;}
+.progressFill{height:100%;border-radius:4px;background:#6B46C1;}
+.card{background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:0 15px;}
+.taskRow{display:flex;align-items:center;gap:13px;padding:13px 0;}
+.weekCard{background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:20px;padding:16px 16px 14px;}
+.weekStats{display:flex;justify-content:space-between;margin-bottom:6px;}
+.ws{flex:1;text-align:center;}
+.wsNum{font:800 25px -apple-system;color:#1C1B1F;}
+.wsLbl{font:600 11px -apple-system;color:#8C8B94;letter-spacing:.5px;margin-top:2px;}
+.weekBars{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;border-top:.5px solid rgba(28,27,31,0.06);padding-top:12px;margin-top:10px;}
+.wb{flex:1;display:flex;flex-direction:column;align-items:center;gap:7px;}
+.wbTrack{width:100%;height:46px;display:flex;align-items:flex-end;justify-content:center;}
+.wbFill{width:22px;border-radius:6px;background:#DDD4F3;min-height:6px;}
+.wbFill.hot{background:#6B46C1;}
+.wbDay{font:600 12px -apple-system;color:#8C8B94;}
+
+/* COURSE / GRADES */
+.navbar{display:flex;align-items:center;justify-content:space-between;padding:2px 18px 8px;}
+.navback{font:400 16px -apple-system;color:#6B46C1;}
+.navtitle{font:600 17px -apple-system;color:#1C1B1F;}
+.courseHead{display:flex;flex-direction:row;align-items:center;gap:15px;background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:17px;margin-top:6px;}
+.courseIcon{width:50px;height:50px;border-radius:15px;background:#EEEDFE;color:#6B46C1;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0;}
+.courseName{font-family:'Fr7';font-size:22px;color:#1C1B1F;letter-spacing:-.5px;}
+.courseInstr{font:400 14px -apple-system;color:#8C8B94;margin-top:2px;}
+.courseCounts{display:flex;align-items:center;gap:6px;font:400 13px -apple-system;flex-shrink:0;}
+.cdotsep{color:#C9C8CE;}
+.metaCard{background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:0 15px;margin-top:13px;}
+.metaRow{display:flex;align-items:center;gap:13px;padding:14px 0;}
+.metaIc{color:#8C8B94;font-size:16px;width:20px;text-align:center;}
+.metaT{font:600 14px -apple-system;color:#1C1B1F;}
+.metaS{font:400 14px -apple-system;color:#8C8B94;margin-top:2px;}
+.gradeCard{background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:18px;margin-top:13px;}
+.gradeTop{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:13px;}
+.gradeLbl{font:700 14px -apple-system;color:#8C8B94;letter-spacing:.5px;}
+.gradePct{font-family:'Fr7';font-size:33px;color:#1C1B1F;margin-top:3px;}
+.gradeBadge{width:52px;height:52px;border-radius:15px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;display:flex;align-items:center;justify-content:center;font:800 26px -apple-system;}
+.gradeBarBg{height:9px;background:rgba(28,27,31,0.08);border-radius:5px;overflow:hidden;}
+.gradeBarFill{height:9px;border-radius:5px;background:linear-gradient(90deg,#3b82f6,#2563eb);}
+.gradeMeta{display:flex;justify-content:space-between;margin-top:7px;font:500 14px -apple-system;color:#8C8B94;}
+.gradeMetaR{color:#55555C;}
+.gradeCtx{background:#EEEDFE;border-radius:9px;padding:11px 12px;margin-top:10px;font:500 14px -apple-system;color:#6B46C1;line-height:1.35;}
+.whatif{border-top:.5px solid rgba(28,27,31,0.08);margin-top:15px;padding-top:14px;}
+.whatifHead{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.whatifTitle{font-family:'Fr6';font-size:17px;color:#1C1B1F;}
+.proPill{background:#6B46C1;color:#fff;border-radius:6px;padding:3px 8px;font:800 10px -apple-system;letter-spacing:.6px;}
+.whatifSub{font:400 14px -apple-system;color:#8C8B94;line-height:1.4;}
+.scoreTag{font:800 15px -apple-system;color:#0F6E56;}
+.courseBar{position:absolute;left:0;right:0;bottom:0;height:66px;display:flex;align-items:center;justify-content:space-around;background:rgba(250,249,245,0.98);border-top:.5px solid rgba(28,27,31,0.08);}
+.cbItem{font:500 15px -apple-system;color:#55555C;display:flex;align-items:center;gap:7px;}
+.cbItem .fa{font-size:14px;}
+.cbAdd{font:700 15px -apple-system;color:#fff;background:#6B46C1;border-radius:11px;padding:10px 16px;display:flex;align-items:center;gap:7px;}
+.cbAdd .fa{font-size:13px;}
+
+/* CANVAS / LMS */
+.lmsNotice{display:flex;gap:11px;align-items:flex-start;background:#EEEDFE;border-radius:15px;padding:14px;margin-top:6px;}
+.lmsNotice .fa{color:#6B46C1;font-size:15px;margin-top:1px;}
+.lmsNotice span{flex:1;font:400 13px -apple-system;color:#55555C;line-height:1.4;}
+.secTitle{font-family:'Fr6';font-size:19px;color:#1C1B1F;margin:18px 0 10px;}
+.lmsCard{background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:16px;}
+.lmsHead{display:flex;align-items:center;gap:13px;}
+.lmsIcon{width:42px;height:42px;border-radius:13px;background:#EEEDFE;color:#6B46C1;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.lmsName{font:800 16px -apple-system;color:#1C1B1F;}
+.lmsMeta{font:400 13px -apple-system;color:#8C8B94;margin-top:2px;}
+.lmsStatus{font:800 13px -apple-system;color:#0F766E;text-transform:capitalize;}
+.lmsActions{display:flex;gap:24px;border-top:.5px solid rgba(28,27,31,0.08);margin-top:14px;padding-top:13px;}
+.lmsAct{font:700 14px -apple-system;color:#6B46C1;display:flex;align-items:center;gap:7px;}
+.lmsAct .fa{font-size:12px;}
+.lmsAct.dim{color:#8C8B94;}
+.lmsProvider{display:flex;align-items:center;gap:13px;background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:16px;padding:15px;margin-bottom:9px;}
+.lmsPIcon{width:42px;height:42px;border-radius:13px;background:#EEEDFE;color:#6B46C1;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.lmsPName{font:700 15px -apple-system;color:#1C1B1F;}
+.lmsCourses{display:flex;flex-wrap:wrap;gap:7px;border-top:.5px solid rgba(28,27,31,0.08);margin-top:14px;padding-top:14px;}
+.lmsTag{background:#F3F1FB;color:#6B46C1;border-radius:8px;padding:6px 11px;font:600 13px -apple-system;}
+.lmsHealth{display:flex;align-items:center;gap:8px;margin-top:13px;font:600 13px -apple-system;color:#0F6E56;}
+.lmsHealth .fa{font-size:12px;}
+.bokeh{position:absolute;border-radius:50%;filter:blur(7px);z-index:2;pointer-events:none;}
+
+/* CALENDAR */
+.calheader{display:flex;justify-content:space-between;align-items:flex-end;}
+.caltitle{font-family:'Fr6';font-size:29px;color:#1C1B1F;letter-spacing:-.5px;}
+.monthrow{display:flex;align-items:center;gap:5px;margin-top:4px;}
+.monthsub{font:500 15px -apple-system;color:#55555C;}
+.modeToggle{display:flex;background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:10px;padding:3px;}
+.modeBtn{padding:6px 13px;border-radius:7px;font:500 14px -apple-system;color:#8C8B94;}
+.modeBtn.active{background:#1C1B1F;color:#fff;}
+.navrow{display:flex;justify-content:space-between;align-items:center;margin:16px 6px 13px;}
+.navrow .ar{color:#6B46C1;font-size:15px;}
+.todaylink{font:600 15px -apple-system;color:#6B46C1;}
+.daylabels{display:flex;margin-bottom:7px;}
+.daylabels span{flex:1;text-align:center;font:600 14px -apple-system;color:#8C8B94;letter-spacing:.6px;}
+.grid{display:flex;flex-wrap:wrap;}
+.cell{width:14.28%;display:flex;flex-direction:column;align-items:center;padding:4px 0;}
+.dayInner{width:38px;height:38px;border-radius:19px;display:flex;align-items:center;justify-content:center;font:400 15px -apple-system;color:#1C1B1F;}
+.dayInner.out{color:#C9C8CE;}.dayInner.wknd{color:#8C8B94;}
+.dayInner.today{background:#6B46C1;color:#fff;font-weight:600;}
+.dayInner.exam{background:#EEEDFE;color:#6B46C1;font-weight:600;}
+.cdots{display:flex;gap:3px;height:7px;margin-top:3px;justify-content:center;}
+.cdot{width:5px;height:5px;border-radius:3px;}
+.legend{display:flex;justify-content:center;gap:16px;margin:14px 0 16px;}
+.legItem{display:flex;align-items:center;gap:6px;}
+.legDot{width:8px;height:8px;border-radius:4px;}
+.legText{font:400 13px -apple-system;color:#8C8B94;}
+.agTitle{font:600 15px -apple-system;color:#55555C;margin-bottom:9px;}
+.agCard{background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:0 15px;}
+.agRow{display:flex;align-items:center;gap:13px;padding:13px 0;}
+.agTime{width:46px;text-align:center;}
+.agTimeT{font:600 15px -apple-system;color:#D85A30;}
+.agTimeD{font:400 11px -apple-system;color:#D85A30;}
+.agBar{width:3.5px;align-self:stretch;border-radius:2px;min-height:34px;}
+.agTaskT{font:600 15px -apple-system;color:#1C1B1F;}
+.agTaskC{font:400 14px -apple-system;color:#8C8B94;margin-top:2px;}
+
+/* ME / PRO */
+.profileRow{display:flex;align-items:center;gap:15px;padding:6px 0;margin-bottom:18px;}
+.avatar{width:62px;height:62px;border-radius:31px;background:#6B46C1;color:#fff;display:flex;align-items:center;justify-content:center;font:600 24px -apple-system;}
+.profileName{font-family:'Fr6';font-size:21px;color:#1C1B1F;}
+.profileSub{font:400 15px -apple-system;color:#8C8B94;margin-top:2px;}
+.proCard{background:#1C1B1F;border-radius:24px;padding:24px;margin-bottom:18px;overflow:hidden;position:relative;box-shadow:0 20px 44px rgba(20,8,46,0.28);}
+.proGlow{position:absolute;right:-30px;top:-30px;width:150px;height:150px;border-radius:75px;background:#6B46C1;opacity:.45;}
+.proLabel{display:flex;align-items:center;gap:7px;margin-bottom:9px;}
+.proLabel .fa{color:#CECBF6;font-size:12px;}
+.proLabel span{font:800 13px -apple-system;color:#CECBF6;letter-spacing:1.5px;}
+.proTitle{font-family:'Fr7';font-size:23px;color:#fff;line-height:1.25;max-width:270px;}
+.proFeat{display:flex;align-items:center;gap:9px;margin-top:11px;font:500 15px -apple-system;color:rgba(255,255,255,0.9);}
+.proFeat .fa{color:#8FE3C0;font-size:13px;}
+.proPriceRow{display:flex;align-items:baseline;gap:8px;margin-top:18px;}
+.proPriceAmt{font:800 29px -apple-system;color:#fff;}
+.proPricePer{font:400 15px -apple-system;color:rgba(255,255,255,0.6);}
+.proBtn{background:#fff;color:#1C1B1F;border-radius:15px;padding:14px;text-align:center;font:700 16px -apple-system;margin-top:15px;}
+.proAlt{font:400 14px -apple-system;color:rgba(255,255,255,0.5);text-align:center;margin-top:11px;}
+.statsGrid{display:flex;gap:9px;margin-bottom:18px;}
+.statCard{flex:1;background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:14px;text-align:center;}
+.statNum{font:700 24px -apple-system;}
+.statLabel{font:600 12px -apple-system;color:#8C8B94;letter-spacing:.5px;margin-top:3px;}
+.settingsCard{background:#fff;border:.5px solid rgba(28,27,31,0.08);border-radius:18px;padding:0 15px;}
+.settingsRow{display:flex;align-items:center;gap:13px;padding:15px 0;}
+.setIc{color:#55555C;font-size:17px;width:20px;text-align:center;}
+.setLbl{flex:1;font:400 15px -apple-system;color:#1C1B1F;}
+</style></head>
+<body>
+<div class="stage">
+  <div class="orb1" style="background:radial-gradient(circle,rgba(240,149,94,0.40) ,rgba(255,255,255,0) 66%)"></div>
+  <div class="orb2"></div><div class="orb3"></div>
+  <div class="ribbon"></div>
+  <div class="sheen"></div>
+  <svg class="grain" xmlns="http://www.w3.org/2000/svg"><defs><filter id="gf"><feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="2" stitchTiles="stitch"/></filter></defs><rect width="100%" height="100%" filter="url(#gf)"/></svg>
+  
+  <div class="bokeh" style="width:78px;height:78px;right:2px;top:970px;background:rgba(166,107,232,0.22)"></div>
+  <div class="bokeh" style="width:60px;height:60px;left:8px;top:1050px;background:rgba(138,92,240,0.28)"></div>
+  <div class="bokeh" style="width:40px;height:40px;right:24px;top:1190px;background:rgba(244,208,106,0.34)"></div>
+  
+  <div class="cap">
+    <div class="eyebrow"><i class="fa">&#xf185;</i>Stay on track</div>
+    <div class="headline" style="font-size:55px">Your day,<br>already <span class="accent">sorted</span></div>
+    <div class="subhead">What’s next, what’s due, what’s running late — the moment you open the app.</div>
+  </div>
+  <div class="deviceWrap">
+    <div class="contactGlow"></div>
+    <div class="device" style="transform:perspective(1900px) rotateY(-4deg) rotateZ(1.5deg)"><div class="screen"><div class="island"></div><div class="app"><div class="sbar"><span class="t">9:41</span><span class="r">
+<svg width="18" height="12" viewBox="0 0 17 11"><rect x="0" y="7" width="3" height="4" rx="1" fill="#1C1B1F"/><rect x="4.5" y="5" width="3" height="6" rx="1" fill="#1C1B1F"/><rect x="9" y="2.5" width="3" height="8.5" rx="1" fill="#1C1B1F"/><rect x="13.5" y="0" width="3" height="11" rx="1" fill="#1C1B1F"/></svg>
+<svg width="17" height="12" viewBox="0 0 16 12"><path fill="#1C1B1F" d="M8 2.6c2.5 0 4.8 1 6.5 2.6l-1.4 1.5C11.8 5.4 10 4.6 8 4.6S4.2 5.4 2.9 6.7L1.5 5.2C3.2 3.6 5.5 2.6 8 2.6zM8 6.4c1.4 0 2.7.6 3.7 1.5l-1.5 1.6C9.6 9 8.8 8.6 8 8.6s-1.6.4-2.2 .9L4.3 7.9C5.3 7 6.6 6.4 8 6.4zM8 9.9l1.6 1.7c-.4 .4-1 .4-1.3 0L8 9.9z"/></svg>
+<svg width="26" height="13" viewBox="0 0 25 12"><rect x="0.5" y="0.5" width="21" height="11" rx="3" fill="none" stroke="#1C1B1F" stroke-opacity="0.4"/><rect x="2" y="2" width="17" height="8" rx="1.5" fill="#1C1B1F"/><rect x="22.5" y="3.5" width="1.8" height="5" rx="0.9" fill="#1C1B1F" fill-opacity="0.5"/></svg>
+</span></div>
+  <div class="appbody" style="padding:18px 22px 0">
+    <div class="eyelabel">WEDNESDAY · SEPTEMBER 9</div>
+    <div class="greeting">Hey, Rajesh</div>
+    <div class="semlabel">Fall 2026</div>
+    <div class="hero">
+      <div class="herotop"><span class="heroeye">NEXT UP</span><span class="herobadge">TODAY</span></div>
+      <div class="herotitle">Calc II · Problem Set 7</div>
+      <div class="herosub">Today · 23:59</div>
+    </div>
+    <div class="secrow"><span class="sectitle coral">Overdue · 1</span></div>
+    <div class="overdueCard">
+      <div class="overdueRow"><span class="cbx cbx-coral"></span>
+        <div style="flex:1"><div class="taskTitle">Lab Report 3</div>
+          <div class="taskmeta"><span class="dot" style="background:#10b981"></span><span class="taskcourse coral">Biology 101 · Sep 7</span></div></div>
+        <span class="odbadge">2d late</span></div>
+    </div>
+    <div class="secrow"><span class="sectitle">Today · 1 of 2 done</span></div>
+    <div class="progressTrack"><div class="progressFill" style="width:50%"></div></div>
+    <div class="card">
+      <div class="taskRow"><span class="cbx cbx-done"><i class="fa">&#xf00c;</i></span>
+        <div style="flex:1"><div class="taskTitle done">Reading: Chapter 5</div>
+          <div class="taskmeta"><span class="dot" style="background:#f59e0b"></span><span class="taskcourse">History 210</span></div></div></div>
+      <div class="taskRow rowborder"><span class="cbx" style="border-color:#D85A30"></span>
+        <div style="flex:1"><div class="taskTitle">Essay Outline</div>
+          <div class="taskmeta"><span class="dot" style="background:#f59e0b"></span><span class="taskcourse coral">History 210 · due 17:00</span></div></div></div>
+    </div>
+    <div class="secrow"><span class="sectitle">This week</span></div>
+    <div class="weekCard">
+      <div class="weekStats">
+        <div class="ws"><div class="wsNum" style="color:#6B46C1">6</div><div class="wsLbl">TASKS</div></div>
+        <div class="ws"><div class="wsNum">1</div><div class="wsLbl">EXAMS</div></div>
+        <div class="ws"><div class="wsNum" style="color:#D85A30">1</div><div class="wsLbl">OVERDUE</div></div>
+        <div class="ws"><div class="wsNum">4</div><div class="wsLbl">COURSES</div></div>
+      </div>
+      <div class="weekBars">
+        <div class="wb"><div class="wbTrack"><div class="wbFill" style="height:20%"></div></div><div class="wbDay">M</div></div>
+        <div class="wb"><div class="wbTrack"><div class="wbFill" style="height:42%"></div></div><div class="wbDay">T</div></div>
+        <div class="wb"><div class="wbTrack"><div class="wbFill" style="height:14%"></div></div><div class="wbDay">W</div></div>
+        <div class="wb"><div class="wbTrack"><div class="wbFill" style="height:56%"></div></div><div class="wbDay">T</div></div>
+        <div class="wb"><div class="wbTrack"><div class="wbFill" style="height:82%"></div></div><div class="wbDay">F</div></div>
+        <div class="wb"><div class="wbTrack"><div class="wbFill" style="height:30%"></div></div><div class="wbDay">S</div></div>
+        <div class="wb"><div class="wbTrack"><div class="wbFill hot" style="height:66%"></div></div><div class="wbDay">S</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="tabbar">
+    <div class="tab active"><div class="iw"><i class="fa">&#xf185;</i></div><div class="lbl">Today</div></div><div class="tab "><div class="iw"><i class="fa">&#xf02d;</i></div><div class="lbl">Courses</div></div>
+    <div class="tab scan"><div class="fab"><i class="fa">&#xf030;</i></div><div class="lbl">Scan</div></div>
+    <div class="tab "><div class="iw"><i class="fa">&#xf073;</i></div><div class="lbl">Calendar</div></div><div class="tab "><div class="iw"><i class="fa">&#xf007;</i></div><div class="lbl">Me</div></div>
+  </div></div></div></div>
+  </div>
+  <div class="chip " style="top:380px;right:32px;transform:rotate(-4deg)">
+     <div class="chipIcon ic-coral"><i class="fa">&#xf0f3;</i></div>
+     <div><div class="chipT">Due in 3 hours</div><div class="chipS">Problem Set 7</div></div>
+   </div>
+  <div class="vig"></div>
+</div>
+<div style="position:absolute;opacity:0;font-family:'Fr7'">.</div>
+<div style="position:absolute;opacity:0;font-family:'Fr6'">.</div>
+<div style="position:absolute;opacity:0;font-family:'fa'">.</div>
+</body></html>

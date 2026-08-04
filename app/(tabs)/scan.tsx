@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -383,6 +383,54 @@ export default function ScanScreen() {
     }
   };
 
+  // Real drag-and-drop for the web app — the screen's own copy already
+  // promises "drag it in". expo-document-picker's web implementation (the
+  // same one "Upload PDF"/"Pick from Files" already use successfully) hands
+  // off a blob: URL + mimeType + name from a File the same way; a dropped
+  // File is handled identically so it flows through the exact same
+  // navigateToUpload -> /syllabus/upload pipeline, no new code downstream.
+  const handleDroppedFile = async (file: File) => {
+    if (!(await checkScanLimit())) return;
+    const mimeType = file.type || inferMimeFromName(file.name);
+    if (!FILE_PICKER_MIME.includes(mimeType)) {
+      Alert.alert('Unsupported file', 'Drop a PDF, JPG, PNG, HEIC, HEIF, or WEBP file.');
+      return;
+    }
+    navigateToUpload(URL.createObjectURL(file), file.name || 'syllabus', mimeType);
+  };
+
+  const dropZoneRef = useRef<View>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const node = dropZoneRef.current as unknown as HTMLElement | null;
+    if (!node) return;
+    // react-native-web's View doesn't forward onDrop/onDragOver props (not in
+    // its curated forwardedProps list), so this listens on the underlying DOM
+    // node directly via ref instead — the same imperative-DOM pattern already
+    // used for the ⌘K/⇧⌘A shortcuts in components/WebAppFrame.tsx.
+    const onDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDraggingOver(true);
+    };
+    const onDragLeave = () => setIsDraggingOver(false);
+    const onDrop = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDraggingOver(false);
+      const file = e.dataTransfer?.files?.[0];
+      if (file) handleDroppedFile(file).catch(() => {});
+    };
+    node.addEventListener('dragover', onDragOver);
+    node.addEventListener('dragleave', onDragLeave);
+    node.addEventListener('drop', onDrop);
+    return () => {
+      node.removeEventListener('dragover', onDragOver);
+      node.removeEventListener('dragleave', onDragLeave);
+      node.removeEventListener('drop', onDrop);
+    };
+  }, []);
+
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
@@ -432,8 +480,15 @@ export default function ScanScreen() {
           </View>
         )}
 
-        {/* Scan frame */}
-        <View style={[styles.scanFrame, { backgroundColor: colors.brand }]}>
+        {/* Scan frame — also the web drag-and-drop target (see dropZoneRef). */}
+        <View
+          ref={dropZoneRef}
+          style={[
+            styles.scanFrame,
+            { backgroundColor: colors.brand },
+            isDraggingOver && styles.scanFrameDragging,
+          ]}
+        >
           <View style={styles.frameCorners}>
             <View style={[styles.corner, styles.tl]} />
             <View style={[styles.corner, styles.tr]} />
@@ -448,7 +503,7 @@ export default function ScanScreen() {
             </View>
             <View style={styles.scanLine} />
           </View>
-          <Text style={styles.frameLabel}>PDF & Photo supported</Text>
+          <Text style={styles.frameLabel}>{isDraggingOver ? 'Drop it here' : 'PDF & Photo supported'}</Text>
         </View>
 
         {/* Actions */}
@@ -520,6 +575,28 @@ export default function ScanScreen() {
             </View>
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>
+
+          {/* Desktop-native win: copy-pasting text from a PDF/LMS page skips
+              the image/OCR step entirely. No camera on a laptop, but a real
+              keyboard/clipboard — so this is web-only. */}
+          {Platform.OS === 'web' && (
+            <TouchableOpacity
+              style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+              onPress={() => router.push('/syllabus/paste' as any)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Paste syllabus text"
+            >
+              <View style={[styles.actionIcon, { backgroundColor: colors.amber50 }]}>
+                <FontAwesome name="align-left" size={16} color={colors.amber} />
+              </View>
+              <View style={styles.actionContent}>
+                <Text style={[styles.actionTitle, { color: colors.ink }]}>Paste text</Text>
+                <Text style={[styles.actionSub, { color: colors.ink3 }]}>Copied from a PDF or your LMS page</Text>
+              </View>
+              <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Photo/camera scans support multiple pages per scan; PDFs are read
@@ -546,7 +623,8 @@ const styles = StyleSheet.create({
   scanCountText: { fontSize: 13, fontWeight: '600' },
   courseCapNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 10, padding: 10, borderRadius: 12, borderWidth: 1 },
   courseCapText: { flex: 1, fontSize: 12, lineHeight: 17 },
-  scanFrame: { backgroundColor: COLORS.brand, borderRadius: 22, padding: 22, marginVertical: 18, alignItems: 'center' },
+  scanFrame: { backgroundColor: COLORS.brand, borderRadius: 22, padding: 22, marginVertical: 18, alignItems: 'center', borderWidth: 3, borderColor: 'transparent' },
+  scanFrameDragging: { borderColor: '#fff', ...Platform.select({ web: { boxShadow: '0 0 0 4px rgba(255,255,255,0.3)' }, default: {} }) },
   frameCorners: { width: '100%', height: 128, justifyContent: 'center', alignItems: 'center', position: 'relative' },
   corner: { position: 'absolute', width: 24, height: 24, borderColor: '#fff', borderWidth: 2.5 },
   tl: { top: 0, left: 10, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 4 },

@@ -375,6 +375,97 @@ export function useDeleteCard() {
   });
 }
 
+export interface GenerateFlashcardsResult {
+  deckId: string;
+  deckTitle: string;
+  cardsAdded: number;
+}
+
+/** A task the "generate for a specific X" scope picker can target. */
+export interface ScopeTask {
+  id: string;
+  title: string;
+  type: string;
+  due_date: string | null;
+}
+
+// Task types worth targeting a flashcard generation at. Excludes 'project'
+// (usually something built, not recalled) and 'other' (too ambiguous to
+// surface as a scope option).
+const SCOPEABLE_TASK_TYPES = ['exam', 'quiz', 'assignment', 'reading'] as const;
+
+/**
+ * A course's exams, quizzes, assignments, and readings — anything a student
+ * might want flashcards focused on specifically, not just exams/quizzes —
+ * for the scope picker on the generate flow. Sourced from live `tasks`, not
+ * the original parse_runs extraction — tasks are the edited, current source
+ * of truth (same reasoning tutor-chat's grounding uses tasks over parse_runs
+ * for deadlines).
+ */
+export function useScopeTasks(courseId: string | undefined) {
+  return useQuery({
+    queryKey: ['scopeTasks', courseId],
+    queryFn: async (): Promise<ScopeTask[]> => {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select('id, title, type, due_date')
+        .eq('course_id', courseId!)
+        .in('type', SCOPEABLE_TASK_TYPES)
+        .order('due_date', { ascending: true, nullsFirst: false });
+      if (error) throw error;
+      return (data ?? []) as ScopeTask[];
+    },
+    enabled: !!courseId,
+  });
+}
+
+/**
+ * Generate flashcards for a course from its scanned syllabus + uploaded
+ * lecture notes via the `generate-flashcards` edge function (Pro-gated
+ * server-side — see that function for why manual card entry stays ungated
+ * but this path isn't). Pass `deckId` to add generated cards to an existing
+ * deck, or omit it to create a new one titled after the course. Pass
+ * `taskId` (from useScopeTasks) to scope generation to one specific task
+ * instead of the whole course.
+ *
+ * Mirrors useSendTutorMessage's raw-fetch pattern (not supabase.functions.
+ * invoke) so a PRO_REQUIRED failure's `code` is easy to read off the thrown
+ * error and route straight to the paywall, same as the tutor chat does.
+ */
+export function useGenerateFlashcards() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { courseId: string; deckId?: string; deckTitle?: string; taskId?: string }): Promise<GenerateFlashcardsResult> => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      if (!supabaseUrl) throw new Error('Supabase URL not configured');
+
+      const response = await fetch(`${supabaseUrl}/functions/v1/generate-flashcards`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(args),
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({ error: response.statusText }));
+        const e = new Error(err.error || `Server error: ${response.status}`) as Error & { code?: string };
+        e.code = err.code;
+        throw e;
+      }
+
+      return (await response.json()) as GenerateFlashcardsResult;
+    },
+    onSuccess: (result) => {
+      qc.invalidateQueries({ queryKey: flashcardKeys.decks });
+      qc.invalidateQueries({ queryKey: flashcardKeys.cards(result.deckId) });
+    },
+  });
+}
+
 /**
  * Grade a card in study mode: run the pure scheduler and persist the next
  * state. Returns the updated card. Separated from useUpdateCard so callers

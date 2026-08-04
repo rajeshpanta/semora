@@ -2,7 +2,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import type { AcademicRiskReport, RecoveryStep } from '@/lib/academicRisk';
 import { useColors } from '@/lib/theme';
-import { FONTS } from '@/lib/constants';
+import { FONTS, WEB_CARD_SHADOW } from '@/lib/constants';
 
 export function AcademicRiskCard({
   report,
@@ -110,7 +110,7 @@ export function AcademicRiskCard({
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 0.5, borderRadius: 18, padding: 15, marginBottom: 14 },
+  card: { borderWidth: 0.5, borderRadius: 18, padding: 15, marginBottom: 14, ...WEB_CARD_SHADOW },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   icon: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   title: { fontFamily: FONTS.displaySemibold, fontSize: 17 },

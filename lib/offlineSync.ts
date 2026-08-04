@@ -53,6 +53,30 @@ export interface OfflineSyncSnapshot {
   nextRetryAt: string | null;
 }
 
+// Mirrors the queue's pending (non-parked) entries as `${entity}:${recordId}`
+// keys, so a realtime handler can synchronously check "is there an unflushed
+// local edit for this record?" before applying an externally-sourced change —
+// without an extra AsyncStorage round trip on every incoming event. Rebuilt at
+// every point the queue itself is read or written; never mutated directly.
+const pendingEditIndex = new Set<string>();
+
+function rebuildPendingEditIndex(queue: OfflineMutation[]) {
+  pendingEditIndex.clear();
+  for (const item of queue) {
+    if (item.failedPermanently) continue; // parked — will never auto-flush, so it must not block other devices' changes forever
+    pendingEditIndex.add(`${item.entity}:${item.recordId}`);
+  }
+}
+
+/** Is there an unflushed local edit for this record? Realtime handlers should
+ * skip applying an incoming change when this is true and let the eventual
+ * flush (which already invalidates the right query keys on completion)
+ * reconcile it instead — otherwise a stale refetch can visually stomp a
+ * pending optimistic edit before it's had a chance to reach the server. */
+export function hasPendingOfflineEdit(entity: OfflineEntity, recordId: string): boolean {
+  return pendingEditIndex.has(`${entity}:${recordId}`);
+}
+
 const listeners = new Set<() => void>();
 let snapshot: OfflineSyncSnapshot = {
   isOnline: true,
@@ -127,6 +151,7 @@ async function loadCounts() {
     meta = raw ? JSON.parse(raw) : null;
   } catch {}
   const counts = deriveQueueCounts(queue);
+  rebuildPendingEditIndex(queue);
   emit({
     pendingCount: counts.pendingCount,
     failedCount: counts.failedCount,
@@ -226,6 +251,7 @@ export async function enqueueOfflineMutation(
   }
   await writeArray(QUEUE_KEY, queue);
   const counts = deriveQueueCounts(queue);
+  rebuildPendingEditIndex(queue);
   emit({ pendingCount: counts.pendingCount, failedCount: counts.failedCount, nextRetryAt: counts.nextRetryAt, lastError: null });
   return item;
 }
@@ -376,6 +402,7 @@ export function flushOfflineQueue(
       writeArray(QUEUE_KEY, remaining),
       writeArray(CONFLICTS_KEY, conflicts),
     ]);
+    rebuildPendingEditIndex(remaining);
     const lastSyncedAt = stoppedByNetwork ? snapshot.lastSyncedAt : new Date().toISOString();
     await saveMeta(lastSyncedAt);
     const counts = deriveQueueCounts(remaining);
@@ -442,6 +469,7 @@ export async function clearOfflineUserState(userId?: string | null) {
       AsyncStorage.removeItem(CONFLICTS_KEY),
       AsyncStorage.removeItem(META_KEY),
     ]);
+    pendingEditIndex.clear();
     emit({ pendingCount: 0, conflictCount: 0, failedCount: 0, nextRetryAt: null, lastSyncedAt: null, lastError: null });
     return;
   }
@@ -455,6 +483,7 @@ export async function clearOfflineUserState(userId?: string | null) {
     writeArray(QUEUE_KEY, remainingQueue),
     writeArray(CONFLICTS_KEY, remainingConflicts),
   ]);
+  rebuildPendingEditIndex(remainingQueue);
   const counts = deriveQueueCounts(remainingQueue);
   emit({
     pendingCount: counts.pendingCount,

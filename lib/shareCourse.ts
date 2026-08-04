@@ -2,7 +2,8 @@
 //
 //   createShareLink(courseId)  — SENDING (Pro). Calls the share-course edge
 //     function (which enforces Pro + ownership and builds the snapshot),
-//     returns a semora://join?token=... URL for the native Share sheet.
+//     returns an https://semoraai.com/join/<token> URL for the native Share
+//     sheet — a landing page that works for recipients without the app.
 //
 //   importSharedCourse(token)  — RECEIVING (FREE, the growth loop). Resolves
 //     the token via the resolve_course_share RPC (migration 026) — which any
@@ -15,8 +16,7 @@
 // NOT add hooks to lib/queries.ts (contended); callers invalidate caches with
 // the exported query keys after a successful import.
 
-import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import { getDeviceItem, setDeviceItem, deleteDeviceItem } from '@/lib/deviceStore';
 import { supabase } from '@/lib/supabase';
 import { suggestCurrentSemesterName } from '@/lib/semesters';
 import { isFreeLimitError } from '@/lib/syllabus';
@@ -28,17 +28,22 @@ import { isFreeLimitError } from '@/lib/syllabus';
 // that would create a cycle, since join imports useSession from _layout.
 const PENDING_SHARE_TOKEN_KEY = 'semora_pending_share_token';
 
+// Web included, deliberately. These used to bail out on web (`if web return`),
+// which was harmless while the app was native-only — but a shared link now
+// lands on semoraai.com/join/<token> with an "Open it in your browser" option,
+// so a signed-out laptop user parks a token here and MUST get it back after
+// signing in. Without that, AuthGate's resume finds nothing and the import
+// silently dead-ends on an empty Today tab. See lib/deviceStore.ts.
 export function stashPendingShareToken(token: string) {
-  if (Platform.OS === 'web') return;
-  try { SecureStore.setItem(PENDING_SHARE_TOKEN_KEY, token); } catch {}
+  const value = token.trim().slice(0, 256);
+  if (!value) return;
+  setDeviceItem(PENDING_SHARE_TOKEN_KEY, value);
 }
 export function readPendingShareToken(): string | null {
-  if (Platform.OS === 'web') return null;
-  try { return SecureStore.getItem(PENDING_SHARE_TOKEN_KEY); } catch { return null; }
+  return getDeviceItem(PENDING_SHARE_TOKEN_KEY);
 }
 export function clearPendingShareToken() {
-  if (Platform.OS === 'web') return;
-  try { SecureStore.deleteItemAsync(PENDING_SHARE_TOKEN_KEY).catch(() => {}); } catch {}
+  deleteDeviceItem(PENDING_SHARE_TOKEN_KEY);
 }
 import { TASK_TYPES, type TaskType } from '@/lib/constants';
 import type { GradeThreshold } from '@/types/database';
@@ -92,7 +97,7 @@ async function getUserId(): Promise<string> {
 // ── SENDING (Pro) ───────────────────────────────────────────────────
 
 /**
- * Create a share link for a course. Returns the semora://join?token=... URL to
+ * Create a share link for a course. Returns the https://semoraai.com/join/<token> URL to
  * hand to the native Share sheet. Throws with a `.code` of 'PRO_REQUIRED' when
  * the server rejects a free user (the caller routes to the paywall).
  */

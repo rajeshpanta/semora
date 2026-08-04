@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Semora vs Mindgrasp: Which AI Study App Fits You?</title>
+<meta name="description" content="Compare Semora and Mindgrasp: syllabus deadline tracking and Canvas sync vs. AI notes and flashcards from any file. Features, pricing, platforms.">
+<style>
+  :root {
+    color-scheme: light;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  html {
+    background: #FAF9F5;
+  }
+  body {
+    margin: 0;
+    padding: 0;
+    background: #FAF9F5;
+    color: #1C1B1F;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: clamp(16px, 1.6vw, 18px);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: clamp(28px, 6vw, 56px) clamp(18px, 5vw, 24px) 64px;
+  }
+  h1, h2, h3 {
+    font-family: Georgia, "Times New Roman", serif;
+    color: #1C1B1F;
+    line-height: 1.25;
+    font-weight: 700;
+  }
+  h1 {
+    font-size: clamp(28px, 5vw, 40px);
+    margin: 0 0 18px;
+  }
+  h2 {
+    font-size: clamp(22px, 3.6vw, 28px);
+    margin: 48px 0 14px;
+    border-top: 1px solid #E4E1D8;
+    padding-top: 32px;
+  }
+  h2:first-of-type {
+    border-top: none;
+    padding-top: 0;
+  }
+  h3 {
+    font-size: clamp(18px, 2.8vw, 21px);
+    margin: 28px 0 10px;
+  }
+  p {
+    margin: 0 0 16px;
+  }
+  a {
+    color: #6B46C1;
+    text-decoration: underline;
+    text-decoration-color: rgba(107, 70, 193, 0.4);
+  }
+  a:hover {
+    text-decoration-color: #6B46C1;
+  }
+  .kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6B46C1;
+    margin-bottom: 12px;
+  }
+  .lede {
+    font-size: clamp(17px, 2.4vw, 19px);
+    color: #35333B;
+    background: rgba(107, 70, 193, 0.07);
+    border-left: 3px solid #6B46C1;
+    padding: 16px 20px;
+    border-radius: 4px;
+    margin: 20px 0 32px;
+  }
+  ul, ol {
+    padding-left: 22px;
+    margin: 0 0 16px;
+  }
+  li {
+    margin-bottom: 8px;
+  }
+  .table-scroll {
+    overflow-x: auto;
+    margin: 20px 0 28px;
+    border: 1px solid #E4E1D8;
+    border-radius: 8px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 560px;
+    font-size: 15px;
+    background: #FFFFFF;
+  }
+  caption {
+    caption-side: top;
+    text-align: left;
+    font-size: 13px;
+    color: #6B6A70;
+    padding: 10px 14px 0;
+  }
+  th, td {
+    text-align: left;
+    padding: 12px 14px;
+    border-bottom: 1px solid #E4E1D8;
+    vertical-align: top;
+  }
+  th {
+    background: #F2F0E9;
+    font-weight: 700;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #45434A;
+  }
+  tr:last-child td {
+    border-bottom: none;
+  }
+  td.semora-cell, th.semora-col {
+    background: rgba(107, 70, 193, 0.08);
+  }
+  td.feature-name {
+    font-weight: 600;
+    background: #FBFAF7;
+  }
+  .unconfirmed {
+    color: #6B6A70;
+    font-style: italic;
+  }
+  .brand-semora {
+    color: #6B46C1;
+    font-weight: 700;
+  }
+  .compare-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin: 20px 0 28px;
+  }
+  @media (max-width: 560px) {
+    .compare-columns {
+      grid-template-columns: 1fr;
+    }
+  }
+  .col-card {
+    border: 1px solid #E4E1D8;
+    border-radius: 8px;
+    padding: 18px 20px;
+    background: #FFFFFF;
+  }
+  .col-card.is-semora {
+    background: rgba(107, 70, 193, 0.06);
+    border-color: rgba(107, 70, 193, 0.3);
+  }
+  .col-card h3 {
+    margin-top: 0;
+  }
+  details {
+    border: 1px solid #E4E1D8;
+    border-radius: 8px;
+    padding: 4px 18px;
+    margin-bottom: 12px;
+    background: #FFFFFF;
+  }
+  summary {
+    cursor: pointer;
+    font-weight: 700;
+    padding: 12px 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 17px;
+  }
+  details p, details ul {
+    margin-top: 0;
+  }
+  .cta-block {
+    text-align: center;
+    margin: 52px 0 20px;
+    padding: 36px 24px;
+    background: rgba(107, 70, 193, 0.07);
+    border-radius: 12px;
+  }
+  .cta-block h2 {
+    margin-top: 0;
+    border-top: none;
+    padding-top: 0;
+  }
+  .cta-button {
+    display: inline-block;
+    background: #6B46C1;
+    color: #FFFFFF;
+    text-decoration: none;
+    font-weight: 700;
+    padding: 14px 32px;
+    border-radius: 8px;
+    margin-top: 10px;
+    font-size: 16px;
+  }
+  .cta-button:hover {
+    background: #59379e;
+  }
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid #E4E1D8;
+    font-size: 13px;
+    color: #6B6A70;
+    text-align: center;
+  }
+  .fact-note {
+    font-size: 13px;
+    color: #6B6A70;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    html, body { background: #17151C; color: #ECE9F1; }
+    .wrap { background: #17151C; }
+    h1, h2, h3 { color: #F4F2F9; }
+    h2 { border-top-color: #34313D; }
+    .lede { background: rgba(167, 139, 250, 0.12); border-left-color: #A78BFA; color: #DCD8E8; }
+    a { color: #B79CF0; }
+    .table-scroll { border-color: #34313D; }
+    table { background: #201D28; }
+    th { background: #2A2732; color: #D9D5E3; }
+    th, td { border-bottom-color: #34313D; }
+    td.feature-name { background: #221F2A; }
+    td.semora-cell, th.semora-col { background: rgba(167, 139, 250, 0.16); }
+    .unconfirmed { color: #A6A2AD; }
+    .brand-semora { color: #B79CF0; }
+    .col-card { background: #201D28; border-color: #34313D; }
+    .col-card.is-semora { background: rgba(167, 139, 250, 0.12); border-color: rgba(167, 139, 250, 0.35); }
+    details { background: #201D28; border-color: #34313D; }
+    .cta-block { background: rgba(167, 139, 250, 0.14); }
+    .cta-button { background: #7C5CD6; }
+    .cta-button:hover { background: #8E70E0; }
+    footer { border-top-color: #34313D; color: #A6A2AD; }
+    .fact-note { color: #A6A2AD; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="kicker">Comparison</p>
+  <h1>Semora vs Mindgrasp: which AI study app is right for you?</h1>
+
+  <p class="lede">
+    <strong>Semora turns a course syllabus into an organized, deadline-tracked semester with grades and a calendar, while Mindgrasp turns any single document, video, or lecture recording you upload into notes, flashcards, and quizzes — they solve different problems and can be used alongside each other.</strong>
+  </p>
+
+  <p>
+    If you're comparing the two, the short version is this: <span class="brand-semora">Semora</span> is built around your syllabus — it reads the PDF or photo you give it and builds your semester calendar, task list, and grade tracker from it. Mindgrasp is built around your study material — lecture recordings, PDFs, slides, videos — and turns whatever you feed it into notes, flashcards, and a quiz. Read on for how each one actually works, a side-by-side feature table, and honest guidance on which fits your situation.
+  </p>
+
+  <h2>What Semora does</h2>
+  <p>
+    Semora (iPhone app and web) starts with your syllabus. You can import it by taking a photo (including multi-page scans, up to 5 pages), uploading a PDF, dragging a file onto the web app, or pasting raw text copied from a PDF or your school's LMS page. Gemini AI then extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading — each with its due date — and builds them into your semester automatically.
+  </p>
+  <ul>
+    <li><strong>Free tier:</strong> 5 syllabus scans per calendar month, up to 4 courses per semester, full task and deadline tracking, grade tracking, a calendar with device sync and .ics export, and same-day reminders.</li>
+    <li><strong>Pro ($3.99/month or $19.99/year):</strong> unlimited scans and courses, plus Smart Plan (an AI-generated, deadline-adapting study schedule), a Workload dashboard for spotting crunch weeks and exam-heavy stretches, spaced-repetition Flashcards built from your own material, a Focus (Pomodoro) timer, an AI tutor that knows your syllabus, custom reminder timing and quiet hours, Academic Risk alerts with a recovery-step plan when grades slip or work piles up, Progress Insights with trend charts and CSV export, and Share &amp; Streaks for sharing a course and referral rewards. Pro is a subscription ($3.99/month or $19.99/year) purchased in the iPhone app and applies account-wide, including on web.</li>
+  </ul>
+  <p>
+    Semora also connects to Canvas using a personal-access-token you generate yourself inside Canvas — no OAuth app-review process involved — and supports Course Spaces, where you can share a course with classmates via an invite link so shared deadlines and group assignments sync in real time. Web and iPhone share one account and sync in near real time. (Google Classroom and Google Calendar sync exist in Semora's codebase but are not currently enabled or shipped — they aren't live features today.)
+  </p>
+
+  <h2>What Mindgrasp does</h2>
+  <p>
+    Mindgrasp takes a different starting point: you upload or link a piece of content — a PDF, DOCX, PowerPoint, MP3/MP4, YouTube video, web article, or a lecture you record live — and it generates a linked bundle of AI notes, a summary, flashcards, a quiz, and an "AI Tutor" chat for asking questions about that content. A higher Scholar/Premium tier adds an "AI math expert" for step-by-step math help, and there's a Chrome extension for capturing content from the browser. Mindgrasp also states compatibility with Canvas, Blackboard, and Panopto, though this appears to be for importing or processing files from those platforms rather than parsing a syllabus for deadlines.
+  </p>
+  <p class="fact-note">
+    Mindgrasp's marketing targets a broad range of learners — high school through graduate students, self-learners, professionals, and exam-prep candidates.
+  </p>
+
+  <h2>Semora vs Mindgrasp: feature comparison</h2>
+  <div class="table-scroll">
+    <table>
+      <caption>Based on Semora's shipped features and Mindgrasp's publicly available materials as of this writing.</caption>
+      <thead>
+        <tr>
+          <th scope="col">Feature</th>
+          <th scope="col" class="semora-col">Semora</th>
+          <th scope="col">Mindgrasp</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="feature-name">Syllabus &amp; deadline handling</td>
+          <td class="semora-cell">Scans a syllabus (photo, PDF, drag-and-drop, or pasted text) and auto-extracts every assignment, exam, quiz, project, and reading with its due date, plus course dates, grading scale, and meeting times.</td>
+          <td>No dedicated syllabus-parsing or deadline-extraction feature found in Mindgrasp's public materials. It generates notes, summaries, flashcards, and quizzes from whatever document, video, or recording you upload, but doesn't build a due-date list from a syllabus.</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Canvas sync</td>
+          <td class="semora-cell">Connects via a personal-access-token you generate yourself in Canvas — no OAuth app-review dependency.</td>
+          <td>States compatibility with Canvas (along with Blackboard and Panopto), appearing to support importing/processing files from those platforms rather than syllabus or deadline parsing.</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Grade tracking</td>
+          <td class="semora-cell">Included in the free tier; Pro adds Progress Insights with trend charts, CSV export, and a print view on web.</td>
+          <td class="unconfirmed">Not publicly confirmed — no grade-tracking feature is described in Mindgrasp's available materials.</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Study planning</td>
+          <td class="semora-cell">Pro's Smart Plan builds an AI-generated, deadline-adapting study schedule; the Workload dashboard flags crunch weeks; Academic Risk alerts warn of falling grades or overloaded weeks with a recovery plan.</td>
+          <td>Generates flashcards and quizzes from uploaded content and offers an AI Tutor chat for Q&amp;A; a Scholar/Premium tier adds an AI math expert. No dedicated study-schedule or deadline-planning feature was found.</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Pricing</td>
+          <td class="semora-cell">Free tier available (5 scans/month, 4 courses). Pro is $3.99/month or $19.99/year, purchased in the iPhone app, applying account-wide including on web.</td>
+          <td class="unconfirmed">Not listed on Mindgrasp's own site at the time of this writing. Third-party review sites report roughly $5.99–$10.99/month across tiers (cheaper billed annually) with a short free trial — check Mindgrasp's current pricing directly to confirm.</td>
+        </tr>
+        <tr>
+          <td class="feature-name">Platform availability</td>
+          <td class="semora-cell">iPhone (iOS) app and web, sharing one account with near real-time sync between them.</td>
+          <td>iOS app on the App Store (published by Apricot AI), plus a web app and a Chrome extension. Android availability is unclear — no dedicated Android app was found in the sources reviewed.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Which one fits your situation?</h2>
+  <div class="compare-columns">
+    <div class="col-card is-semora">
+      <h3>Semora may fit better if you...</h3>
+      <ul>
+        <li>Want your syllabus turned into a calendar of deadlines automatically, instead of copying dates by hand</li>
+        <li>Want grades, assignments, and class schedule tracked in one place all semester</li>
+        <li>Use Canvas and want a simple, self-service way to connect it</li>
+        <li>Want an AI-generated study schedule that adapts as deadlines change</li>
+        <li>Want to share a course and its deadlines with classmates</li>
+      </ul>
+    </div>
+    <div class="col-card">
+      <h3>Mindgrasp may fit better if you...</h3>
+      <ul>
+        <li>Have a specific lecture recording, PDF, slide deck, or video you want turned into notes, flashcards, and a quiz in one pass</li>
+        <li>Want to pull study material from YouTube videos or web articles, not just files</li>
+        <li>Want built-in step-by-step math help (on its higher tiers)</li>
+        <li>Aren't looking for syllabus parsing or a semester-long deadline calendar at all</li>
+      </ul>
+    </div>
+  </div>
+  <p>
+    Many students use a syllabus-and-deadline tool like Semora for the semester-long structure, and a document-to-study-aid tool like Mindgrasp for turning individual lectures or readings into flashcards and quizzes — the two aren't mutually exclusive.
+  </p>
+
+  <h2>Frequently asked questions</h2>
+
+  <details>
+    <summary>Does Mindgrasp extract deadlines from a syllabus the way Semora does?</summary>
+    <p>Based on Mindgrasp's public materials, no. Mindgrasp is built to turn a document, video, or recording you upload into notes, summaries, flashcards, and quizzes — it doesn't appear to parse a syllabus or extract assignment due dates onto a calendar. Semora is built specifically for that job: it reads a syllabus (photo, PDF, drag-and-drop, or pasted text) and automatically extracts every assignment, exam, quiz, and project with its due date.</p>
+  </details>
+
+  <details>
+    <summary>Is Semora free to use?</summary>
+    <p>Yes. Semora's free tier includes 5 syllabus scans per calendar month, up to 4 courses per semester, full task and deadline tracking, grade tracking, a calendar with device sync and .ics export, and same-day reminders. Pro ($3.99/month or $19.99/year) unlocks unlimited scans and courses plus additional features like Smart Plan, Flashcards, and an AI tutor.</p>
+  </details>
+
+  <details>
+    <summary>Does Semora sync with Canvas?</summary>
+    <p>Yes. You connect Canvas using a personal-access-token you generate yourself inside Canvas, so there's no OAuth app-review process to wait on. Google Classroom and Google Calendar sync exist in Semora's codebase but are not currently enabled or shipped as live features.</p>
+  </details>
+
+  <details>
+    <summary>Which is cheaper, Semora or Mindgrasp?</summary>
+    <p>Semora's pricing is confirmed directly: free, or Pro at $3.99/month or $19.99/year. Mindgrasp doesn't publish pricing on its own site as of this writing; third-party review sites report tiers of roughly $5.99–$10.99/month (less if billed annually), but that figure isn't confirmed by Mindgrasp itself, so it's worth checking their current pricing before comparing directly.</p>
+  </details>
+
+  <div class="cta-block">
+    <h2>See your syllabus turned into a semester plan</h2>
+    <p>Scan a syllabus and let Semora build your deadlines, grades, and calendar automatically.</p>
+    <!-- Placeholder CTA — replace with the real sign-in URL once deployed -->
+    <a href="#" class="cta-button">Try Semora free</a>
+  </div>
+
+  <footer>
+    <p>Semora &copy; 2026</p>
+  </footer>
+
+</div>
+</body>
+</html>
