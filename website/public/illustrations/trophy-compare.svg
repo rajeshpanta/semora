@@ -1,10 +1,34 @@
 <svg width="320" height="200" viewBox="0 0 320 200" fill="none" xmlns="http://www.w3.org/2000/svg" role="img">
-  <rect width="320" height="200" rx="10" fill="#F2EFE9"/>
-  <g stroke="#33303C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none">
-    <rect x="104" y="96" width="26" height="48" rx="5"/>
-    <rect x="144" y="72" width="26" height="72" rx="5" fill="#9A8F7D" stroke="none"/>
-    <rect x="184" y="106" width="26" height="38" rx="5"/>
-    <line x1="92" y1="148" x2="228" y2="148"/>
-    <circle cx="157" cy="58" r="5" fill="#9A8F7D" stroke="none"/>
+  <defs>
+    <linearGradient id="g3" x1="0" y1="0" x2="320" y2="200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3B0764"/><stop offset="1" stop-color="#4C1D95"/>
+    </linearGradient>
+    <radialGradient id="o3" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse"
+      gradientTransform="translate(60 180) scale(170)">
+      <stop stop-color="#C084FC" stop-opacity="0.5"/><stop offset="1" stop-color="#C084FC" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="s3" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" stop-opacity="0.22"/><stop offset="1" stop-color="#fff" stop-opacity="0.06"/>
+    </linearGradient>
+    <filter id="b3" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="10"/>
+    </filter>
+    <clipPath id="c3"><rect width="320" height="200" rx="12"/></clipPath>
+  </defs>
+  <g clip-path="url(#c3)">
+    <rect width="320" height="200" fill="url(#g3)"/>
+    <rect width="320" height="200" fill="url(#o3)"/>
+    <rect x="34" y="76" width="76" height="86" rx="14" fill="#fff" fill-opacity="0.09" stroke="#fff" stroke-opacity="0.18"/>
+    <rect x="210" y="76" width="76" height="86" rx="14" fill="#fff" fill-opacity="0.09" stroke="#fff" stroke-opacity="0.18"/>
+    <circle cx="160" cy="98" r="52" fill="#FBBF24" fill-opacity="0.24" filter="url(#b3)"/>
+    <rect x="118" y="48" width="84" height="114" rx="16" fill="url(#s3)" stroke="#fff" stroke-opacity="0.34"/>
+    <circle cx="160" cy="80" r="17" fill="#FBBF24"/>
+    <path d="M153 80 l5 5 9 -10" stroke="#3B0764" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect x="134" y="110" width="52" height="5" rx="2.5" fill="#fff" fill-opacity="0.5"/>
+    <rect x="140" y="124" width="40" height="5" rx="2.5" fill="#fff" fill-opacity="0.3"/>
+    <rect x="50" y="96" width="44" height="5" rx="2.5" fill="#fff" fill-opacity="0.26"/>
+    <rect x="50" y="110" width="32" height="5" rx="2.5" fill="#fff" fill-opacity="0.18"/>
+    <rect x="226" y="96" width="44" height="5" rx="2.5" fill="#fff" fill-opacity="0.26"/>
+    <rect x="226" y="110" width="32" height="5" rx="2.5" fill="#fff" fill-opacity="0.18"/>
   </g>
 </svg>
