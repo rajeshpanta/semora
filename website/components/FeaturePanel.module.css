@@ -1,6 +1,6 @@
-/* A single dark app window, tinted to sit on the site's one canvas rather than
-   punching a bright rectangle through it. Deliberately quiet: the headline and
-   the CTA are what the visitor is meant to act on. */
+/* A light app window sitting on the page's cream ground, so it reads as a
+   screenshot of the product rather than a slab pasted onto the page.
+   Deliberately quiet: the headline and the CTA are what to act on. */
 
 .wrap {
   position: relative;
@@ -8,25 +8,13 @@
   min-width: 0;
 }
 
-.glow {
-  position: absolute;
-  top: -18%;
-  left: 50%;
-  translate: -50% 0;
-  width: min(520px, 108%);
-  aspect-ratio: 1;
-  background: radial-gradient(circle, rgba(155, 122, 232, 0.3) 0%, transparent 68%);
-  filter: blur(30px);
-  pointer-events: none;
-}
-
 .window {
   position: relative;
   border-radius: 13px;
   overflow: hidden;
-  background: #16112a;
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 30px 70px -34px rgba(0, 0, 0, 0.85);
+  background: #ffffff;
+  border: 1px solid rgba(28, 27, 31, 0.1);
+  box-shadow: 0 18px 44px -26px rgba(28, 27, 31, 0.34);
 }
 
 .chrome {
@@ -34,22 +22,22 @@
   align-items: center;
   gap: 6px;
   padding: 10px 13px;
-  background: rgba(255, 255, 255, 0.035);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: #f4f1ec;
+  border-bottom: 1px solid rgba(28, 27, 31, 0.08);
 }
 
 .dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.16);
+  background: #cfc9c0;
   flex: none;
 }
 
 .title {
   margin-left: 8px;
   font-size: 11.5px;
-  color: rgba(255, 255, 255, 0.58);
+  color: #62616b;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -76,25 +64,25 @@
   gap: 10px;
   padding: 9px 11px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: #faf9f5;
+  border: 1px solid rgba(28, 27, 31, 0.07);
 }
 
 .check {
   width: 13px;
   height: 13px;
   border-radius: 4px;
-  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  border: 1.5px solid #cecbf6;
   flex: none;
 }
 
 .row[data-tone='exam'] .check {
-  border-color: #a78bfa;
-  background: rgba(167, 139, 250, 0.22);
+  border-color: #6b46c1;
+  background: #eeedfe;
 }
 .row[data-tone='sync'] .check,
 .row[data-tone='shared'] .check {
-  border-color: #5eead4;
+  border-color: #0f6e56;
 }
 
 .rowText {
@@ -108,7 +96,7 @@
 .rowTitle {
   font-size: 12.5px;
   font-weight: 600;
-  color: #f5f3fa;
+  color: #1c1b1f;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -116,7 +104,7 @@
 
 .rowSub {
   font-size: 10.5px;
-  color: rgba(255, 255, 255, 0.5);
+  color: #6b6975;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -125,11 +113,11 @@
 .rowRight {
   font-size: 11.5px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.72);
+  color: #46444e;
   flex: none;
 }
 
-.row[data-tone='exam'] .rowRight { color: #c4b5fd; }
+.row[data-tone='exam'] .rowRight { color: #6b46c1; }
 
 /* ── flashcard ─────────────────────────────────────────────── */
 
@@ -142,13 +130,13 @@
 .face {
   padding: 11px 13px;
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: #faf9f5;
+  border: 1px solid rgba(28, 27, 31, 0.07);
 }
 
 .face[data-back='true'] {
-  background: rgba(167, 139, 250, 0.1);
-  border-color: rgba(167, 139, 250, 0.2);
+  background: #eeedfe;
+  border-color: #cecbf6;
 }
 
 .faceLabel {
@@ -156,7 +144,7 @@
   font-size: 9.5px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.42);
+  color: #62616b;
   margin-bottom: 5px;
 }
 
@@ -164,10 +152,10 @@
   margin: 0;
   font-size: 12.5px;
   line-height: 1.5;
-  color: #f5f3fa;
+  color: #1c1b1f;
 }
 
-.face[data-back='true'] .faceText { color: #ddd4fb; }
+.face[data-back='true'] .faceText { color: #4a3a7a; }
 
 .grades {
   display: grid;
@@ -182,9 +170,9 @@
   border-radius: 7px;
   font-size: 11px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.72);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: #55555c;
+  background: #faf9f5;
+  border: 1px solid rgba(28, 27, 31, 0.07);
 }
 
 /* ── tutor chat ────────────────────────────────────────────── */
@@ -200,11 +188,11 @@
   max-width: 82%;
   padding: 10px 13px;
   border-radius: 12px 12px 3px 12px;
-  background: rgba(167, 139, 250, 0.18);
-  border: 1px solid rgba(167, 139, 250, 0.24);
+  background: #eeedfe;
+  border: 1px solid #cecbf6;
   font-size: 12.5px;
   line-height: 1.5;
-  color: #f0ebff;
+  color: #35275f;
 }
 
 .reply {
@@ -212,11 +200,11 @@
   max-width: 92%;
   padding: 11px 13px;
   border-radius: 12px 12px 12px 3px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: #faf9f5;
+  border: 1px solid rgba(28, 27, 31, 0.07);
   font-size: 12.5px;
   line-height: 1.55;
-  color: #f5f3fa;
+  color: #1c1b1f;
 }
 
 /* The citation line is the whole point of this feature — it says the answer
@@ -225,9 +213,9 @@
   display: block;
   margin-top: 9px;
   padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(28, 27, 31, 0.08);
   font-size: 10.5px;
-  color: #7dd3c0;
+  color: #0f6e56;
 }
 
 /* ── grades ────────────────────────────────────────────────── */
@@ -243,21 +231,21 @@
   align-items: baseline;
   gap: 10px;
   padding-bottom: 11px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(28, 27, 31, 0.08);
 }
 
 .overallNum {
   font-family: var(--font-fraunces), Georgia, serif;
   font-size: 30px;
   font-weight: 700;
-  color: #f5f3fa;
+  color: #1c1b1f;
   line-height: 1;
 }
 
 .overallLetter {
   font-size: 13px;
   font-weight: 700;
-  color: #c4b5fd;
+  color: #6b46c1;
 }
 
 .part {
@@ -269,13 +257,13 @@
 
 .partName {
   font-size: 11.5px;
-  color: rgba(255, 255, 255, 0.68);
+  color: #55555c;
 }
 
 .partBar {
   height: 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
+  background: #ebe8e2;
   overflow: hidden;
 }
 
@@ -283,13 +271,13 @@
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(90deg, #7c5cd6, #a78bfa);
+  background: linear-gradient(90deg, #6b46c1, #9b7ae8);
 }
 
 .partScore {
   font-size: 11.5px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.78);
+  color: #46444e;
   text-align: right;
 }
 
@@ -313,8 +301,7 @@
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  /* 0.42 measured 4.07:1 on the panel ground, just under AA for this size. */
-  color: rgba(255, 255, 255, 0.5);
+  color: #6f6e78;
   text-align: center;
 }
 
@@ -325,8 +312,8 @@
   display: block;
   height: 208px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.022);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: #faf9f5;
+  border: 1px solid rgba(28, 27, 31, 0.06);
 }
 
 .block {
@@ -341,9 +328,9 @@
   border-radius: 6px;
   font-size: 10px;
   line-height: 1.22;
-  color: #e9e4fb;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #35275f;
+  background: #ffffff;
+  border: 1px solid rgba(28, 27, 31, 0.1);
   overflow: hidden;
   /* Columns are 1fr of a phone-width panel, so a single long word ("Flashcards")
      cannot wrap and was being sliced mid-glyph by the overflow clip. Hyphenate
@@ -354,14 +341,14 @@
 }
 
 .block[data-tone='due'] {
-  background: rgba(167, 139, 250, 0.16);
-  border-color: rgba(167, 139, 250, 0.24);
+  background: #eeedfe;
+  border-color: #cecbf6;
 }
 
 .block[data-tone='exam'] {
-  background: rgba(167, 139, 250, 0.26);
-  border-color: rgba(167, 139, 250, 0.36);
-  color: #fff;
+  background: #ddd8fb;
+  border-color: #b7abf0;
+  color: #2c1f57;
 }
 
 /* ── focus timer ───────────────────────────────────────────── */
@@ -383,7 +370,7 @@
   place-items: center;
   /* 68% of the way round, then the unfilled remainder. */
   background:
-    conic-gradient(#a78bfa 0turn 0.68turn, rgba(255, 255, 255, 0.08) 0.68turn 1turn);
+    conic-gradient(#6b46c1 0turn 0.68turn, #ebe8e2 0.68turn 1turn);
   position: relative;
 }
 
@@ -392,7 +379,7 @@
   position: absolute;
   inset: 9px;
   border-radius: 50%;
-  background: #16112a;
+  background: #fff;
 }
 
 .ringTime {
@@ -401,7 +388,7 @@
   font-family: var(--font-fraunces), Georgia, serif;
   font-size: 30px;
   font-weight: 700;
-  color: #f5f3fa;
+  color: #1c1b1f;
   letter-spacing: -0.01em;
 }
 
@@ -409,7 +396,7 @@
   font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.55);
+  color: #6f6e78;
 }
 
 .pips {
@@ -421,10 +408,10 @@
   width: 26px;
   height: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: #ddd9d2;
 }
 
-.pip[data-on='true'] { background: #a78bfa; }
+.pip[data-on='true'] { background: #6b46c1; }
 
 @media (max-width: 900px) {
   .body { min-height: 0; }

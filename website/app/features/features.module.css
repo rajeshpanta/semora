@@ -1,31 +1,7 @@
 .hero {
-  background: var(--ink-deep);
-  color: #fff;
-  padding: 88px 20px 56px;
+  padding: 76px 20px 48px;
   position: relative;
   overflow: hidden;
-}
-
-.hero::before {
-  content: '';
-  position: absolute;
-  inset: -20% 40% auto auto;
-  width: 480px;
-  height: 480px;
-  background: radial-gradient(circle, var(--glow-mid) 0%, transparent 70%);
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-.hero::after {
-  content: '';
-  position: absolute;
-  inset: auto auto -30% 30%;
-  width: 420px;
-  height: 420px;
-  background: radial-gradient(circle, var(--glow-light) 0%, transparent 70%);
-  opacity: 0.22;
-  pointer-events: none;
 }
 
 .heroInner {
@@ -41,12 +17,12 @@
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--glow-light);
+  color: var(--brand);
   margin-bottom: 24px;
 }
 
 .h1 {
-  color: #fff;
+  color: var(--ink);
   font-size: clamp(2rem, 5.5vw, 3.2rem);
   max-width: 720px;
   margin: 0 auto 18px;
@@ -55,12 +31,12 @@
 .gradient {
   font-style: italic;
   font-weight: 600;
-  color: var(--glow-light);
+  color: var(--brand);
   letter-spacing: -0.02em;
 }
 
 .sub {
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--ink2);
   font-size: 17px;
   max-width: 540px;
   margin: 0 auto 32px;
@@ -75,8 +51,8 @@
 }
 
 .primaryBtn {
-  background: #fff;
-  color: var(--ink-deep);
+  background: var(--ink);
+  color: #fff;
   text-decoration: none;
   font-weight: 600;
   padding: 14px 28px;
@@ -84,20 +60,20 @@
 }
 
 .primaryBtn:hover {
-  background: var(--glow-light);
+  background: var(--brand);
 }
 
 .secondaryBtn {
-  color: #fff;
+  color: var(--ink);
   text-decoration: none;
   font-weight: 600;
   padding: 14px 24px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid var(--border);
 }
 
 .secondaryBtn:hover {
-  border-color: rgba(255, 255, 255, 0.6);
+  border-color: var(--brand);
 }
 
 .chipRow {
@@ -111,9 +87,9 @@
 .chip {
   font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink2);
+  border: 1px solid var(--border);
+  background: var(--card);
   padding: 8px 16px;
   border-radius: 999px;
   text-decoration: none;
@@ -121,8 +97,8 @@
 }
 
 .chip:hover {
-  border-color: var(--glow-light);
-  color: #fff;
+  border-color: var(--brand);
+  color: var(--brand);
 }
 
 /* --- Showcase (alternating screenshot + text) --- */
@@ -462,15 +438,4 @@
   .bannerImage img {
     max-width: 140px;
   }
-}
-
-/* Same white-on-white problem as the mobile sheet CTA: var(--ink) is near-white
-   on the dark canvas, so this button needs the inverted treatment. */
-:global(:root:has([data-canvas='dark'])) .bannerLink {
-  background: #fff;
-  color: var(--ink-deep);
-}
-
-:global(:root:has([data-canvas='dark'])) .bannerLink:hover {
-  background: var(--glow-light);
 }

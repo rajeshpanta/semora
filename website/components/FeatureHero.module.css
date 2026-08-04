@@ -2,26 +2,6 @@
   position: relative;
   overflow: hidden;
   padding: clamp(44px, 7vw, 76px) clamp(20px, 4vw, 40px) clamp(40px, 6vw, 64px);
-  /* Stated explicitly rather than inherited from the dark canvas. Everything in
-     here is hardcoded white, so if :has() is unsupported and the tokens stay
-     light, an inherited background would leave white text on cream. Identical
-     to the canvas colour when :has() does apply, so it adds no seam. */
-  background: var(--ink-deep);
-}
-
-/* A single soft light source behind the headline. Anchored well inside the
-   section so `overflow: hidden` never slices it at the edge — that cut is what
-   read as a seam between sections on the homepage. */
-.hero::before {
-  content: '';
-  position: absolute;
-  top: -22%;
-  left: 18%;
-  width: min(760px, 82%);
-  aspect-ratio: 1.4;
-  background: radial-gradient(ellipse at center, rgba(124, 92, 214, 0.3) 0%, transparent 66%);
-  filter: blur(46px);
-  pointer-events: none;
 }
 
 .inner {
@@ -44,17 +24,17 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--ink-muted);
   margin-bottom: 20px;
 }
 
 .crumbs a {
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--ink-muted);
   text-decoration: none;
 }
 
 .crumbs a:hover {
-  color: #fff;
+  color: var(--brand);
 }
 
 .h1 {
@@ -63,7 +43,7 @@
   font-size: clamp(2.1rem, 4.6vw, 3.3rem);
   line-height: 1.06;
   letter-spacing: -0.025em;
-  color: #fff;
+  color: var(--ink);
 }
 
 .lede {
@@ -71,7 +51,7 @@
   max-width: 34em;
   font-size: clamp(1rem, 1.5vw, 1.14rem);
   line-height: 1.62;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--ink2);
 }
 
 .actions {
@@ -95,24 +75,24 @@
 }
 
 .primary {
-  background: #fff;
-  color: #12101a;
+  background: var(--ink);
+  color: #fff;
 }
 
 .primary:hover {
-  background: var(--glow-light);
+  background: var(--brand);
   transform: translateY(-1px);
 }
 
 .secondary {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #f5f3fa;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--ink);
 }
 
 .secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.26);
+  border-color: var(--brand);
+  color: var(--brand);
   transform: translateY(-1px);
 }
 
@@ -121,8 +101,7 @@
   font-size: 13px;
   line-height: 1.5;
   max-width: 38em;
-  /* 0.55 white on #0f0b1a is 7.1:1 — comfortably AA at this size. */
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--ink-muted);
 }
 
 .visual {

@@ -17,10 +17,10 @@ import { usePathname } from 'next/navigation';
  */
 export function NavChrome() {
   const pathname = usePathname();
-  // The dark-canvas routes, which are the ones whose hero the bar should sit
-  // ON rather than above. Everything else keeps the solid bar from the first
-  // pixel. This list must stay in step with the pages rendering <DarkCanvas />.
-  const overlay = pathname === '/' || pathname.startsWith('/features');
+  // Only the landing page opens on a dark hero the bar should sit ON. Every
+  // other page is the light, blog-style treatment and keeps the solid bar from
+  // the first pixel. Must stay in step with the pages rendering <DarkCanvas />.
+  const overlay = pathname === '/';
 
   useEffect(() => {
     const header = document.querySelector('header[data-nav]') as HTMLElement | null;

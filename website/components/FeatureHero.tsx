@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import styles from './FeatureHero.module.css';
 import { FeaturePanel } from './FeaturePanel';
-import { DarkCanvas } from './DarkCanvas';
 import { SignupButton } from './SignupButton';
 import { APP_STORE_URL } from '@/lib/semora-facts';
 
@@ -32,8 +31,6 @@ export function FeatureHero({
 }) {
   return (
     <section className={styles.hero}>
-      {/* Every feature page is dark; this hero's own styling assumes it. */}
-      <DarkCanvas />
       <div className={styles.inner}>
         <div className={styles.copy}>
           <nav className={styles.crumbs} aria-label="Breadcrumb">
