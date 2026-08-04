@@ -9,6 +9,7 @@ import { breadcrumbListSchema, faqPageSchema } from '@/lib/schema';
 import { FEATURES, getFeature } from '@/lib/semora-facts';
 import { getFeatureContent } from '@/lib/feature-content';
 import { OG_IMAGE } from '@/lib/og';
+import { RelatedLinks } from '@/components/RelatedLinks';
 
 export function generateStaticParams() {
   return FEATURES.map((f) => ({ slug: f.slug }));
@@ -42,6 +43,30 @@ export default async function FeaturePage({
 
   const long = getFeatureContent(slug);
   const related = FEATURES.filter((f) => f.slug !== feature.slug);
+
+  // Deep landing pages that cover the same intent from the search side.
+  // Without these the landers sit with zero inbound internal links.
+  const DEEP_LINKS: Record<string, { href: string; label: string }[]> = {
+    'syllabus-scanner': [
+      { href: '/ai-syllabus-scanner', label: 'How the AI syllabus scanner works, end to end' },
+      { href: '/blog/syllabus-to-semester-calendar', label: 'Turning a syllabus into a semester calendar' },
+    ],
+    'canvas-sync': [
+      { href: '/canvas-deadline-tracker', label: 'Using Semora as a Canvas deadline tracker' },
+      { href: '/blog/canvas-deadline-reminders', label: 'Getting useful deadline reminders out of Canvas' },
+    ],
+    'smart-plan': [
+      { href: '/ai-study-planner-for-college', label: 'An AI study planner built from real deadlines' },
+      { href: '/blog/finals-week-study-plan', label: 'Planning finals week' },
+    ],
+    'grade-tracking': [
+      { href: '/blog/weighted-gpa-calculator', label: 'How a weighted GPA is actually calculated' },
+    ],
+    'focus-timer': [
+      { href: '/blog/pomodoro-technique-between-classes', label: 'Pomodoro sessions between classes' },
+    ],
+  };
+  const deepLinks = DEEP_LINKS[feature.slug] ?? [];
 
   return (
     <ArticleShell
@@ -106,6 +131,8 @@ export default async function FeaturePage({
       ) : (
         <p className={styles.body}>{feature.description}</p>
       )}
+
+      <RelatedLinks links={deepLinks} />
 
       <div className={styles.related}>
         <h2 data-toc-skip>More features</h2>

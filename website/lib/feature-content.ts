@@ -28,7 +28,7 @@ export interface FeatureLongForm {
 export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
 {
   "syllabus-scanner": {
-    "metaTitle": "AI Syllabus Scanner for College Students | Semora",
+    "metaTitle": "AI Syllabus Scanner for College Students",
     "metaDescription": "Turn a syllabus photo, PDF, or pasted text into every deadline, class time, and grade cutoff. Review each item before it saves. Free tier: 5 scans per month.",
     "h1": "AI Syllabus Scanner",
     "lede": "Photograph, upload, or paste your syllabus and Semora returns the course, the class schedule, the grading scale, and every deadline it can find. You review the list before a single item is saved.",
@@ -321,7 +321,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
     ]
   },
   "smart-plan": {
-    "metaTitle": "Smart Plan: Your Study Schedule, Built | Semora",
+    "metaTitle": "Smart Plan: Your Study Schedule, Built",
     "metaDescription": "Smart Plan turns your tracked deadlines into dated, timed study sessions for the next 14 days, placed around your classes and rebuilt each time you open it.",
     "h1": "Smart Plan: your study time, already decided",
     "lede": "Smart Plan takes every incomplete deadline you are tracking and lays it out as dated, timed study sessions across the next 14 days — around your class meetings, inside a daily budget you set, in a session length you pick. Then it rebuilds the whole thing every time you open it.",
@@ -745,7 +745,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
     ]
   },
   "ai-tutor": {
-    "metaTitle": "AI Tutor: Chat Grounded in Your Syllabus | Semora",
+    "metaTitle": "AI Tutor: Chat Grounded in Your Syllabus",
     "metaDescription": "Semora's AI Tutor answers from your course's real syllabus, your live tracked deadlines, and lecture notes you upload. It never invents a due date.",
     "h1": "AI Tutor: a study chat that has actually read your course",
     "lede": "Ask about your course and get an answer built from your own syllabus, your live deadlines, and the lecture notes you uploaded — not from a generic search. For anything involving a date, it answers strictly from what you are tracking.",
