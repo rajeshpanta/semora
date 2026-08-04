@@ -27,6 +27,10 @@
 
 /* ─────────────────────────────── Hero ─────────────────────── */
 
+@supports not (height: 100svh) {
+  .hero { min-height: 100vh; }
+}
+
 .hero {
   position: relative;
   overflow: hidden;
@@ -35,7 +39,17 @@
   /* Extra top padding so content clears the transparent header that now
      overlays this section rather than sitting above it. */
   padding: clamp(104px, 12vw, 152px) clamp(20px, 4vw, 40px) clamp(56px, 8vw, 96px);
-  margin-top: calc(-1 * var(--nav-height, 61px));
+  margin-top: calc(-1 * var(--nav-height, 76px));
+
+  /* Fill the screen. The hero was a fixed ~830px tall, so on anything taller
+     than a 1280x800 laptop a band of page background showed beneath it — 152px
+     on a 1512x982 MacBook, 250px at 1920x1080 — which read as the section
+     having stopped short rather than as a deliberate edge.
+     svh, not vh: on mobile, vh is the tallest possible viewport, so a hero
+     sized in vh sits under the browser chrome until the user scrolls. */
+  min-height: 100svh;
+  display: flex;
+  align-items: center;
 }
 
 .hero::before,
