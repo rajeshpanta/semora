@@ -22,6 +22,7 @@ export default function Page() {
   if (!content) notFound();
   return (
     <LongFormPage
+      path="/gpa-calculator"
       content={content}
       crumb={{ href: '/', label: 'Home' }}
       widget={<GpaCalculator />}

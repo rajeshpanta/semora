@@ -45,8 +45,13 @@ export function MobileNav({ links }: { links: { href: string; label: string }[] 
         </span>
       </button>
 
-      {open && (
-        <div className={styles.sheet}>
+      {/* Rendered unconditionally and hidden with CSS, not mounted on open.
+          Googlebot renders at roughly a 412px viewport, where the desktop pill
+          and actions are both `display: none` — so while this sheet was
+          conditionally mounted, the entire header contained no crawlable links
+          on the render Google actually performs, leaving the footer as the only
+          navigation it could see. */}
+      <div className={styles.sheet} data-open={open} hidden={!open}>
           <details className={styles.sheetGroup}>
             <summary className={styles.sheetSummary}>Features</summary>
             <div className={styles.sheetSub}>
@@ -82,8 +87,7 @@ export function MobileNav({ links }: { links: { href: string; label: string }[] 
           <Link href={APP_SIGNUP_URL} className={styles.sheetCta} onClick={close}>
             Try it for free
           </Link>
-        </div>
-      )}
+      </div>
     </>
   );
 }

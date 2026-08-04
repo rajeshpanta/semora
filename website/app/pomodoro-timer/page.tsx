@@ -22,6 +22,7 @@ export default function Page() {
   if (!content) notFound();
   return (
     <LongFormPage
+      path="/pomodoro-timer"
       content={content}
       crumb={{ href: '/', label: 'Home' }}
       widget={<PomodoroTimer />}

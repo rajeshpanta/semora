@@ -4,7 +4,7 @@ import styles from './LongFormPage.module.css';
 import { Faq } from './Faq';
 import { JsonLd } from './JsonLd';
 import { ArticleShell } from './ArticleShell';
-import { faqPageSchema } from '@/lib/schema';
+import { faqPageSchema, breadcrumbListSchema } from '@/lib/schema';
 import type { NewPage } from '@/lib/new-page-content';
 
 /**
@@ -16,10 +16,14 @@ import type { NewPage } from '@/lib/new-page-content';
 export function LongFormPage({
   content,
   crumb,
+  path,
   widget,
 }: {
   content: NewPage;
   crumb?: { href: string; label: string };
+  /** This page's own path, e.g. '/gpa-calculator'. Needed for the breadcrumb's
+   *  final item — a server component cannot read it from usePathname(). */
+  path: string;
   widget?: ReactNode;
 }) {
   return (
@@ -29,6 +33,18 @@ export function LongFormPage({
     >
       <article className={`${styles.wrap} article-body`}>
         {content.faq?.length ? <JsonLd data={faqPageSchema(content.faq)} /> : null}
+
+        {/* The visible trail below has been rendering without its markup, so
+            Google had no breadcrumb to substitute for the raw URL under the
+            result title. Emitted only when there is a real trail to describe. */}
+        {crumb && (
+          <JsonLd
+            data={breadcrumbListSchema([
+              { name: crumb.label, path: crumb.href },
+              { name: content.h1, path },
+            ])}
+          />
+        )}
 
         {crumb && (
           <nav className={styles.crumbs} aria-label="Breadcrumb">

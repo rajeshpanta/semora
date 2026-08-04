@@ -21,6 +21,7 @@ export default function Page() {
   if (!content) notFound();
   return (
     <LongFormPage
+      path="/studyfetch-alternative"
       content={content}
       crumb={{ href: '/compare', label: 'Compare' }}
       widget={undefined}

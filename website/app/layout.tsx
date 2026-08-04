@@ -6,7 +6,7 @@ import './globals.css';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { JsonLd } from '@/components/JsonLd';
-import { organizationSchema } from '@/lib/schema';
+import { organizationSchema, webSiteSchema } from '@/lib/schema';
 import { SITE_NAME, SITE_DESCRIPTION } from '@/lib/semora-facts';
 import { SITE_URL } from '@/lib/site';
 
@@ -44,6 +44,11 @@ export default function RootLayout({
         <noscript>
           <style>{'.js-reveal{opacity:1!important;transform:none!important;}'}</style>
         </noscript>
+        {/* WebSite carries the site name Google prints above a result; without
+            it the fallback is the bare domain ("semoraai.com"). Organization
+            covers the publisher entity. Both are site-wide, so they belong
+            here rather than being repeated per page. */}
+        <JsonLd data={webSiteSchema()} />
         <JsonLd data={organizationSchema()} />
         <Nav />
         <main>{children}</main>

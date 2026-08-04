@@ -281,6 +281,14 @@
   transform: translateY(-5.8px) rotate(-45deg);
 }
 
+/* The sheet is always in the DOM so its links are crawlable at the narrow
+   viewport Google renders at; `hidden` closes it. This rule is needed because
+   `display: flex` below would otherwise beat the user-agent stylesheet's
+   `[hidden] { display: none }` and leave the panel permanently open. */
+.sheet[hidden] {
+  display: none;
+}
+
 .sheet {
   position: absolute;
   top: 100%;

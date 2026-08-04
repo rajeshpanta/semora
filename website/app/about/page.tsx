@@ -21,6 +21,7 @@ export default function Page() {
   if (!content) notFound();
   return (
     <LongFormPage
+      path="/about"
       content={content}
       crumb={{ href: '/', label: 'Home' }}
       widget={undefined}

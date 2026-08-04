@@ -9,6 +9,7 @@ import {
   FEATURES,
 } from '@/lib/semora-facts';
 import { COMPETITORS } from '@/lib/competitors';
+import { ALTERNATIVE_SLUGS } from '@/lib/new-page-content';
 
 export function Footer() {
   return (
@@ -39,9 +40,15 @@ export function Footer() {
             <p className={styles.heading}>Free tools</p>
             <Link href="/gpa-calculator">GPA calculator</Link>
             <Link href="/pomodoro-timer">Pomodoro timer</Link>
-            <Link href="/myhomework-alternative">myHomework alternative</Link>
-            <Link href="/shovel-alternative">Shovel alternative</Link>
-            <Link href="/studyfetch-alternative">StudyFetch alternative</Link>
+            {/* Driven off the slug list, not hardcoded: dormway- and
+                mindgrasp-alternative were declared, sitemapped and reachable
+                only by typing the URL, because this column was written by hand
+                and never updated when they were added. */}
+            {ALTERNATIVE_SLUGS.map((slug) => (
+              <Link key={slug} href={`/${slug}`}>
+                {alternativeLinkLabel(slug)}
+              </Link>
+            ))}
           </div>
           <div>
             <p className={styles.heading}>Get Semora</p>
@@ -68,4 +75,21 @@ export function Footer() {
       </p>
     </footer>
   );
+}
+
+/**
+ * "studyfetch-alternative" -> "StudyFetch alternative". The brand casing has to
+ * be looked up rather than derived; title-casing the slug would print
+ * "Myhomework" and "Studyfetch".
+ */
+const ALTERNATIVE_BRANDS: Record<string, string> = {
+  'myhomework-alternative': 'myHomework',
+  'shovel-alternative': 'Shovel',
+  'studyfetch-alternative': 'StudyFetch',
+  'dormway-alternative': 'DormWay',
+  'mindgrasp-alternative': 'Mindgrasp',
+};
+
+function alternativeLinkLabel(slug: string): string {
+  return `${ALTERNATIVE_BRANDS[slug] ?? slug.replace('-alternative', '')} alternative`;
 }
