@@ -101,18 +101,23 @@
 
 .h1 {
   color: #fff;
-  font-size: clamp(2.1rem, 6.4vw, 4.15rem);
-  line-height: 1.04;
-  letter-spacing: -0.03em;
-  margin: 0 0 clamp(16px, 2.6vw, 24px);
+  /* Deliberately large. Scale is most of what separates a confident hero from
+     a template, and it is the cheapest lever available — no new asset, no new
+     copy. Caps below the viewport-relative size so it cannot overflow. */
+  font-size: clamp(2.4rem, 7.6vw, 5.4rem);
+  line-height: 1.0;
+  letter-spacing: -0.035em;
+  margin: 0 0 clamp(18px, 2.8vw, 28px);
   overflow-wrap: break-word;
+  text-wrap: balance;
 }
 
 .gradient {
-  background: linear-gradient(96deg, var(--glow-light) 10%, var(--glow-mid) 90%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-style: italic;
+  font-weight: 600;
+  color: var(--glow-light);
+  /* Italic Fraunces sits slightly tight against the roman line above it. */
+  letter-spacing: -0.02em;
 }
 
 .sub {

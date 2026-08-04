@@ -13,6 +13,10 @@ import { SITE_URL } from '@/lib/site';
 const fraunces = Fraunces({
   subsets: ['latin'],
   variable: '--font-fraunces',
+  // Italic is the accent voice in the hero headline — Fraunces' italic has real
+  // character (a true cut, not a slant), which is most of what makes the type
+  // feel designed rather than defaulted.
+  style: ['normal', 'italic'],
 });
 
 export const metadata: Metadata = {
