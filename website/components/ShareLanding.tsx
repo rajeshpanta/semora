@@ -31,7 +31,7 @@ const COPY: Record<
   join: {
     eyebrow: 'Shared course',
     heading: 'A classmate shared their course with you',
-    body: `Open it in ${SITE_NAME} and every deadline, exam, and grading weight from their syllabus lands in your own semester — as your private copy, which you can edit however you like.`,
+    body: `Open it in ${SITE_NAME} and every deadline, exam, and grading weight from their syllabus lands in your own semester, as your private copy, which you can edit however you like.`,
     deepLinkParam: 'token',
     appPath: 'join',
   },
@@ -69,7 +69,7 @@ export function ShareLanding({ kind, value }: { kind: ShareKind; value: string }
               link is primary and the app handoff sits just under it for the
               ones who do. */}
           <a href={APP_STORE_URL} className={styles.primary}>
-            Get {SITE_NAME} — free
+            Get {SITE_NAME} free
           </a>
           <a href={deepLink} className={styles.secondary}>
             Already have the app? Open it
@@ -81,7 +81,7 @@ export function ShareLanding({ kind, value }: { kind: ShareKind; value: string }
           <a href={webLink} className={styles.textLink}>
             Open it in your browser
           </a>{' '}
-          instead — no install needed.
+          instead. No install needed.
         </p>
       </section>
 

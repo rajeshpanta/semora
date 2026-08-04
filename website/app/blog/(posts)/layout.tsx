@@ -14,7 +14,7 @@ export default function PostLayout({ children }: { children: React.ReactNode }) 
         {children}
         <Cta
           heading="Ready to get organized?"
-          subheading="Scan your first syllabus free — no credit card required."
+          subheading="Scan your first syllabus free. No credit card required."
         />
       </article>
     </ArticleShell>

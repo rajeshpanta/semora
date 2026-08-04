@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
   openGraph: {
     title: `A classmate shared their course with you on ${SITE_NAME}`,
-    description: `Every deadline, exam, and grading weight from their syllabus — copied into your own semester.`,
+    description: `Every deadline, exam, and grading weight from their syllabus, copied into your own semester.`,
     ...OG_IMAGE,
   },
 };

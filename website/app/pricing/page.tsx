@@ -18,7 +18,7 @@ const PRICING_FAQ = [
   {
     question: 'Is Semora free?',
     answer:
-      'Yes. The free tier includes 5 syllabus scans per calendar month, up to 4 courses in one semester, full deadline and grade tracking, and same-day reminders — no credit card required. Calendar sync (device + .ics export) is a Pro feature.',
+      'Yes. The free tier includes 5 syllabus scans per calendar month, up to 4 courses in one semester, full deadline and grade tracking, and same-day reminders. No credit card required. Calendar sync (device + .ics export) is a Pro feature.',
   },
   {
     question: 'How do I upgrade to Pro?',
@@ -28,12 +28,12 @@ const PRICING_FAQ = [
   {
     question: 'Can I cancel anytime?',
     answer:
-      'Yes. Pro subscriptions are managed through your Apple ID — go to Settings > Apple ID > Subscriptions to cancel. Subscriptions renew automatically unless canceled at least 24 hours before the period ends.',
+      'Yes. Pro subscriptions are managed through your Apple ID. Go to Settings > Apple ID > Subscriptions to cancel. Subscriptions renew automatically unless canceled at least 24 hours before the period ends.',
   },
   {
     question: 'What happens to my data if I cancel Pro?',
     answer:
-      'Your account and academic data stay intact. You keep everything from the free tier — you just lose access to Pro-only features like Smart Plan, Flashcards, and the AI tutor.',
+      'Your account and academic data stay intact. You keep everything from the free tier. You just lose access to Pro-only features like Smart Plan, Flashcards, and the AI tutor.',
   },
 ];
 
@@ -63,7 +63,7 @@ export default function PricingPage() {
       <PageSections content={getPageContent('pricing')} withRail emitFaq={false} />
       <Cta
         heading="Start free today"
-        subheading="Scan your first syllabus in under a minute — free, no credit card."
+        subheading="Scan your first syllabus in under a minute. Free, no credit card."
       />
     </div>
   );

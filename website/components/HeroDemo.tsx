@@ -89,7 +89,7 @@ export function HeroDemo() {
             {/* Stage 1 — the syllabus, being read. */}
             <div className={styles.doc}>
               <div className={styles.docHead}>
-                <span className={styles.docTitle}>CHEM 101 — Syllabus.pdf</span>
+                <span className={styles.docTitle}>CHEM 101 Syllabus.pdf</span>
               </div>
               <div className={styles.scanline} />
               {[92, 76, 88, 61, 83, 70, 90, 58].map((w, i) => (

@@ -83,7 +83,7 @@ export const FREE_FEATURES = [
   'Full deadline and task tracking',
   'Grade tracking with weighted averages',
   'Same-day reminders',
-  'Course Spaces — join a course a classmate shares with you',
+  'Course Spaces: join a course a classmate shares with you',
 ] as const;
 
 // Calendar sync (device calendar + .ics export) is Pro-only in the shipping
@@ -92,17 +92,17 @@ export const FREE_FEATURES = [
 export const PRO_FEATURES = [
   'Unlimited courses and semesters, with no monthly scan cap',
   'Canvas, Blackboard, and Moodle assignment import',
-  'Course Spaces — host your own shared course and invite classmates',
-  'Smart Plan — an AI-generated study schedule that adapts to your deadlines',
-  'Workload dashboard — see crunch weeks and exam-dense stretches coming',
+  'Course Spaces: host your own shared course and invite classmates',
+  'Smart Plan: an AI-generated study schedule that adapts to your deadlines',
+  'Workload dashboard: see crunch weeks and exam-dense stretches coming',
   'AI-generated flashcards from your syllabus and notes, with spaced repetition',
   'Focus timer (Pomodoro-style)',
   'AI tutor chat grounded in your syllabus, notes, and deadlines',
-  'Grade Scale & Forecasting — customize your grading scale, plus what-if calculators for your final grade',
+  'Grade Scale & Forecasting: customize your grading scale, plus what-if calculators for your final grade',
   "Calendar sync to your device's calendar app, with .ics export",
   'Custom reminder timing (1-day and 3-day advance notice)',
   'Academic Risk alerts',
-  'Progress Insights — trend charts, CSV export, and a print view',
+  'Progress Insights: trend charts, CSV export, and a print view',
   'Share & Streaks',
 ] as const;
 
@@ -132,7 +132,7 @@ export const FEATURES: FeatureFact[] = [
       'Turn a syllabus photo or PDF into a full calendar of deadlines, grades, and class times.',
     tier: 'free',
     description:
-      "Take a photo or upload a PDF of your syllabus and Semora's AI extracts every assignment, exam, and deadline automatically. Review and edit everything before saving — nothing is added to your calendar without your confirmation. Free accounts get 5 scans per calendar month; Pro is unlimited.",
+      "Take a photo or upload a PDF of your syllabus and Semora's AI extracts every assignment, exam, and deadline automatically. Review and edit everything before saving. Nothing is added to your calendar without your confirmation. Free accounts get 5 scans per calendar month; Pro is unlimited.",
   },
   {
     slug: 'grade-tracking',
@@ -141,7 +141,7 @@ export const FEATURES: FeatureFact[] = [
       'A running weighted average built from the scores and weights you enter for each assignment.',
     tier: 'free',
     description:
-      'Enter the score and weight for each graded assignment and Semora calculates your current weighted average automatically — reflecting only the work graded so far, so you always know where you stand in a course. Pro adds Grade Scale & Forecasting: customize the letter-grade cutoffs your school actually uses, and run what-if calculators that show what score you need on what’s left to hit a target grade.',
+      'Enter the score and weight for each graded assignment and Semora calculates your current weighted average automatically, reflecting only the work graded so far, so you always know where you stand in a course. Pro adds Grade Scale & Forecasting: customize the letter-grade cutoffs your school actually uses, and run what-if calculators that show what score you need on what’s left to hit a target grade.',
   },
   {
     slug: 'smart-plan',
@@ -158,7 +158,7 @@ export const FEATURES: FeatureFact[] = [
     shortDescription: 'AI-generated or hand-built flashcards, reviewed on a spaced-repetition schedule.',
     tier: 'pro',
     description:
-      "Generate a full deck in seconds from a course's scanned syllabus and any lecture notes you've uploaded — Semora already has that material from the scan, so there's nothing new to type or upload. Pick your focus first: the whole course, or one specific exam or quiz pulled straight from your tracked deadlines, so a midterm review doesn't get diluted with material from finals. Got a teacher-provided review packet? Attach it as a PDF or photo and it becomes part of what gets generated from. Prefer to build your own? Every deck also supports manual cards. Either way, review happens on a spaced-repetition schedule, so time goes toward the material you're most likely to forget, not material you already know cold.",
+      "Generate a full deck in seconds from a course's scanned syllabus and any lecture notes you've uploaded. Semora already has that material from the scan, so there's nothing new to type or upload. Pick your focus first: the whole course, or one specific exam or quiz pulled straight from your tracked deadlines, so a midterm review doesn't get diluted with material from finals. Got a teacher-provided review packet? Attach it as a PDF or photo and it becomes part of what gets generated from. Prefer to build your own? Every deck also supports manual cards. Either way, review happens on a spaced-repetition schedule, so time goes toward the material you're most likely to forget, not material you already know cold.",
   },
   {
     slug: 'focus-timer',
@@ -174,13 +174,13 @@ export const FEATURES: FeatureFact[] = [
     shortDescription: 'An AI tutor chat grounded in your actual syllabus, notes, and deadlines.',
     tier: 'pro',
     description:
-      "Open a chat scoped to any course and ask it anything — the tutor answers from that course's real syllabus, your live tracked deadlines, and any lecture notes you upload (PDF or photo), instead of guessing from generic knowledge. It cites what it used naturally, like \"your syllabus lists…\" or \"from your Week 3 notes…\", and for deadline questions it answers strictly from your actual tracked tasks — it never invents a date. Ask if a question falls outside what you've given it, it says so plainly and helps with general knowledge instead of making something up.",
+      "Open a chat scoped to any course and ask it anything. The tutor answers from that course's real syllabus, your live tracked deadlines, and any lecture notes you upload (PDF or photo), instead of guessing from generic knowledge. It cites what it used naturally, like \"your syllabus lists…\" or \"from your Week 3 notes…\", and for deadline questions it answers strictly from your actual tracked tasks. It never invents a date. Ask if a question falls outside what you've given it, it says so plainly and helps with general knowledge instead of making something up.",
   },
   {
     slug: 'collaboration',
     name: 'Course Spaces',
     shortDescription:
-      'Host a shared course and invite classmates — deadlines and group assignments sync in real time. Joining is free.',
+      'Host a shared course and invite classmates. Deadlines and group assignments sync in real time. Joining is free.',
     // Pro covers HOSTING. Joining a space someone invites you to is free and
     // always will be — migration 045_gate_collaboration_create.sql gates only
     // create_course_collaboration behind is_pro(), and share-course returns
@@ -194,7 +194,7 @@ export const FEATURES: FeatureFact[] = [
     slug: 'canvas-sync',
     name: 'Canvas Sync',
     shortDescription:
-      'Import assignments from Canvas, Blackboard, or Moodle with a token you generate yourself — no OAuth app review.',
+      'Import assignments from Canvas, Blackboard, or Moodle with a token you generate yourself. No OAuth app review.',
     // Pro, NOT free. Gated in three places in the shipping app: a server-side
     // is_pro() check in supabase/functions/lms-sync (402 PRO_REQUIRED), the
     // provider list in app/settings/lms.tsx, and a paywall bounce in
@@ -202,7 +202,7 @@ export const FEATURES: FeatureFact[] = [
     // user who installs on that promise hits a paywall at the first tap.
     tier: 'pro',
     description:
-      "Semora imports assignments from Canvas, and from Blackboard or Moodle — using a personal access token you generate yourself in the platform's own settings, rather than an OAuth connection that depends on your school's IT department approving a third-party app review. Connecting a learning platform is part of Pro; on the free tier you can still get Canvas coursework in by pasting the assignment text straight into the syllabus scanner.",
+      "Semora imports assignments from Canvas, and from Blackboard or Moodle, using a personal access token you generate yourself in the platform's own settings, rather than an OAuth connection that depends on your school's IT department approving a third-party app review. Connecting a learning platform is part of Pro; on the free tier you can still get Canvas coursework in by pasting the assignment text straight into the syllabus scanner.",
   },
 ];
 

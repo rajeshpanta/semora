@@ -49,7 +49,7 @@ export default async function ComparePage({
   return (
     <ArticleShell
       ctaHeading="Try it on your own syllabus"
-      ctaSubheading={`See how Semora handles your actual courses — free, no credit card.`}
+      ctaSubheading={`See how Semora handles your actual courses. Free, no credit card.`}
     >
       <article className={styles.wrap}>
       <JsonLd data={faqPageSchema(faq)} />

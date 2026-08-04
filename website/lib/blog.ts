@@ -35,14 +35,14 @@ export const BLOG_POSTS: BlogPostMeta[] = [
     slug: 'best-college-deadline-tracking-apps-2026',
     title: 'Best Apps for Tracking College Deadlines in 2026',
     description:
-      'A practical look at how different deadline-tracking approaches — paper planners, generic to-do apps, and syllabus-aware tools — hold up for a full course load.',
+      'A practical look at how paper planners, generic to-do apps, and syllabus-aware tools hold up for a full course load.',
     date: '2026-07-22',
     image: '/illustrations/trophy-compare.svg',
     imageAlt: 'Illustration of a trophy on a podium representing an app comparison',
   },
   {
     slug: 'canvas-deadline-reminders',
-    title: "Canvas Doesn't Remind You Before Deadlines — Here's How to Fix That",
+    title: "Canvas Doesn't Remind You Before Deadlines: Here's How to Fix That",
     description:
       "Why Canvas notifications are easy to miss, and how to layer real advance reminders and grade tracking on top of your existing Canvas assignments.",
     date: '2026-07-23',

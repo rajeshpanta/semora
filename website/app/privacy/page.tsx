@@ -15,7 +15,7 @@ export default function PrivacyPage() {
   return (
     <ArticleShell
       ctaHeading="Try it on your own syllabus"
-      ctaSubheading="See how Semora handles your actual courses — free, no credit card."
+      ctaSubheading="See how Semora handles your actual courses. Free, no credit card."
     >
     <article className={`${styles.prose} article-body`}>
       <h1>Privacy Policy</h1>
@@ -55,8 +55,7 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Usage analytics:</strong> Anonymous, app-level events (e.g. a scan completed, a
-          paywall viewed) tied to a random per-install identifier — never to your name or email —
-          to help us understand which features are used and improve the app.
+          paywall viewed) tied to a random per-install identifier, never to your name or email, to help us understand which features are used and improve the app.
         </li>
         <li>
           <strong>Push notification token:</strong> If you grant notification permission, a device
@@ -77,8 +76,7 @@ export default function PrivacyPage() {
         </li>
         <li>To process syllabus documents using AI to extract course information and deadlines.</li>
         <li>
-          To send you local notification reminders about upcoming deadlines, and — if you grant
-          permission — occasional push reminders about deadlines and new semesters.
+          To send you local notification reminders about upcoming deadlines, and, if you grant permission, occasional push reminders about deadlines and new semesters.
         </li>
         <li>To sync tasks with your device calendar, and, if you connect it, with Google Calendar.</li>
         <li>

@@ -60,7 +60,7 @@ export default function OpengraphImage() {
             marginTop: 32,
           }}
         >
-          AI syllabus scanner for college — iPhone, iPad, and web
+          AI syllabus scanner for college, on iPhone, iPad and web
         </div>
       </div>
     ),

@@ -73,7 +73,7 @@ export function PageSections({
   return (
     <ArticleShell
       ctaHeading="Try it on your own syllabus"
-      ctaSubheading="See how Semora handles your actual courses — free, no credit card."
+      ctaSubheading="See how Semora handles your actual courses. Free, no credit card."
     >
       <article>{body}</article>
     </ArticleShell>

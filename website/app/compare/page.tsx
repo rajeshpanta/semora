@@ -26,7 +26,7 @@ export default function CompareIndexPage() {
             See exactly how Semora <span className={styles.gradient}>stacks up</span>
           </h1>
           <p className={styles.sub}>
-            Fact-based, feature-by-feature comparisons — no invented ratings, no exaggerated
+            Fact-based, feature-by-feature comparisons. No invented ratings, no exaggerated
             claims. Where a competitor&apos;s exact behavior isn&apos;t publicly confirmed, we say
             so.
           </p>
@@ -56,7 +56,7 @@ export default function CompareIndexPage() {
 
         <Cta
           heading="See your own syllabus turned into a semester plan"
-          subheading="Scan a syllabus and get your deadlines, grades, and schedule organized in one snap — free to start."
+          subheading="Scan a syllabus and get your deadlines, grades, and schedule organized in one snap. Free to start."
         />
       </section>
       <PageSections content={getPageContent('compare')} withRail />

@@ -58,7 +58,7 @@ const SHOWCASE: ShowcaseItem[] = [
     alt: 'Semora course detail screen showing a current grade of 86.67% calculated from graded coursework',
     tier: 'free',
     title: 'Track your grades as you go',
-    body: 'Enter the score for each graded assignment and Semora calculates your current weighted average automatically — reflecting only the work graded so far, so you always know where you actually stand.',
+    body: 'Enter the score for each graded assignment and Semora calculates your current weighted average automatically, reflecting only the work graded so far, so you always know where you actually stand.',
     bullets: [
       'Weighted average, not a flat mean',
       'Updates the moment a grade is entered',
@@ -70,8 +70,8 @@ const SHOWCASE: ShowcaseItem[] = [
     image: '/screenshots/canvas-sync.png',
     alt: 'Semora Canvas sync settings screen showing connected courses and auto-sync status',
     tier: 'free',
-    title: 'Sync with Canvas — no OAuth required',
-    body: 'Connect Canvas using a personal access token you generate yourself inside Canvas — no OAuth app-review process to wait on. Once connected, assignments and grades import automatically, and reminders reschedule themselves when a deadline moves.',
+    title: 'Sync with Canvas, without OAuth',
+    body: 'Connect Canvas using a personal access token you generate yourself inside Canvas. There is no OAuth app-review process to wait on. Once connected, assignments and grades import automatically, and reminders reschedule themselves when a deadline moves.',
     bullets: [
       'Personal access token, no OAuth wait',
       'Assignments and grades import automatically',
@@ -84,7 +84,7 @@ const SHOWCASE: ShowcaseItem[] = [
     alt: 'Semora calendar screen showing a month view with deadlines marked across courses',
     tier: 'free',
     title: 'See your whole semester, one view',
-    body: 'Every class, deadline, and exam mapped across the term in a single calendar — month view or list view, color-coded by course, so nothing sneaks up on you.',
+    body: 'Every class, deadline, and exam mapped across the term in a single calendar: month view or list view, color-coded by course, so nothing sneaks up on you.',
     bullets: [
       'Month and list views',
       'Color-coded by course',
@@ -116,7 +116,7 @@ export default function FeaturesPage() {
             Everything you need for <span className={styles.gradient}>the semester</span>
           </h1>
           <p className={styles.sub}>
-            From the first syllabus scan to finals week — start free, upgrade only if you want
+            From the first syllabus scan to finals week. Start free, upgrade only if you want
             more.
           </p>
           <div className={styles.heroActions}>
