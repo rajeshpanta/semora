@@ -166,7 +166,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
     "metaTitle": "Grade Tracking in Semora — Weighted Averages, Free",
     "metaDescription": "Enter a score as points or a percentage and Semora keeps a running weighted average: grade categories, dropped lowest grades, a letter, and a GPA estimate.",
     "h1": "Grade tracking that follows your syllabus's actual rules",
-    "lede": "Enter what you got on each assignment and Semora keeps a running weighted average over the work that has actually been graded — with your course's categories, dropped lowest grades, and letter cutoffs applied. It is on the free plan.",
+    "lede": "Enter what you got on each assignment and Semora keeps a running weighted average over the work that has actually been graded, with your course's categories, dropped lowest grades, and letter cutoffs applied. It is on the free plan.",
     "intro": [
       "Your syllabus already tells you how the course is scored. Homework 20 percent, two midterms at 20 each, a final worth 30, participation for the last 10. Then the semester starts and the numbers arrive one at a time, out of order, on different scales — an 88 on a 50-point lab, a 71 on the first midterm, a 17 out of 20 on a reading quiz. Six weeks in you have a pile of individual scores and no honest answer to the only question that matters, which is where you actually stand.",
       "Averaging them does not work. A 100 on a two-percent reading quiz does not cancel a 71 on a midterm worth a quarter of the course, and pretending otherwise is how people get blindsided in week eleven. Dividing by the full semester's weight does not work either — it counts every assignment that has not happened yet as a zero, so your grade looks catastrophic in September and recovers for reasons that have nothing to do with your work.",
@@ -194,7 +194,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "What the weighted average actually calculates",
         "paragraphs": [
           "For a course where you have put a weight on individual assignments, Semora tracks two totals. Weight total is the sum of the weights across every non-extra-credit assignment that has a weight, graded or not. Weight attempted is the slice of that which has been graded so far.",
-          "Your current grade is the weighted sum of your scores divided by weight attempted — not by weight total. That single choice is what keeps the number honest early in the term. Three graded assignments covering 45 percent of the course produce a grade based on 45 percent of the course, and the card says so: 9 of 21 graded on the left, 45% of 100% attempted on the right, and a note underneath reading \"Based on 45% of coursework completed.\"",
+          "Your current grade is the weighted sum of your scores divided by weight attempted, not by weight total. That single choice is what keeps the number honest early in the term. Three graded assignments covering 45 percent of the course produce a grade based on 45 percent of the course, and the card says so: 9 of 21 graded on the left, 45% of 100% attempted on the right, and a note underneath reading \"Based on 45% of coursework completed.\"",
           "It also tracks earned points, which is the sum of weight times score divided by 100 — the percentage points you have banked toward the final grade. That figure is what the forecasting calculator later works backward from. Percentages are rounded to two decimals, weights to one, and the displayed grade is capped at 100 because every letter scale tops out anyway and a raw 108 tells you nothing a 100 does not.",
           "There is a deliberate fallback for the very common case where an instructor never publishes weights. If none of your graded assignments carry a weight but some of them have scores, Semora uses a straight average of the posted grades rather than showing nothing at all. It is less precise, and it is better than a blank card."
         ]
@@ -204,8 +204,8 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "paragraphs": [
           "Most syllabi do not assign a percentage to each individual assignment. They assign it to a bucket: Homework 25%, Quizzes 15%, Exams 45%, Final Project 15%. The Grade Setup screen for each course mirrors that structure.",
           "You add categories with a name, a weight percent, and a drop-lowest stepper. A running total sits at the top of the screen and stays amber until the categories add up to exactly 100, at which point it turns green. Saving is blocked otherwise, and the error tells you your current total to a tenth of a percent so you can see what is missing. Every category needs a name, and each weight has to land between 1 and 100.",
-          "Once a course has categories they take over the math. Inside each category, Semora looks at how the work was scored. If every counted item has both points earned and points possible, the category average is total points earned over total points possible — so a 50-point exam legitimately outweighs a 10-point quiz sitting in the same bucket. If the items are a mix of point scores and bare percentages, it falls back to a plain mean of the percentages.",
-          "Drop-lowest runs per category, from 0 up to 20, and drops the lowest scores by percentage. It has one safety rule worth knowing: it will never drop your only graded item. The drop count is capped at one fewer than the number of graded candidates, so setting \"drop 2\" in a category with two grades drops exactly one. The course card shows what happened — \"2 lowest grades currently dropped\" — and the per-category breakdown lists each bucket with its weight and its current average.",
+          "Once a course has categories they take over the math. Inside each category, Semora looks at how the work was scored. If every counted item has both points earned and points possible, the category average is total points earned over total points possible, so a 50-point exam legitimately outweighs a 10-point quiz sitting in the same bucket. If the items are a mix of point scores and bare percentages, it falls back to a plain mean of the percentages.",
+          "Drop-lowest runs per category, from 0 up to 20, and drops the lowest scores by percentage. It has one safety rule worth knowing: it will never drop your only graded item. The drop count is capped at one fewer than the number of graded candidates, so setting \"drop 2\" in a category with two grades drops exactly one. The course card shows what happened — \"2 lowest grades currently dropped\", and the per-category breakdown lists each bucket with its weight and its current average.",
           "Categories with nothing graded yet are simply left out of the denominator. They show as \"No grades\" in the breakdown, and the header meta switches to reading \"40% of category mix reporting\" so you know how much of the mix your grade is standing on. An unscored final worth 30 percent never drags your October grade toward zero."
         ],
         "bullets": [
@@ -232,7 +232,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
           "Semora ships with the plain scale: A at 90, B at 80, C at 70, D at 60, F at 0. To turn a percentage into a letter, it sorts the scale from highest cutoff down and takes the first threshold your grade meets or beats, falling back to F if you are below all of them.",
           "The scan can replace that with your professor's actual scale. When the syllabus prints a grading table, the parser extracts it, keeps plus and minus grades if they are listed, and sorts it high to low. It applies that scale to a newly created course, or to an existing course whose scale is still the untouched default — it will not overwrite a scale you edited yourself.",
           "Editing the scale by hand is the Pro line. Free accounts see a locked \"Customize grade scale\" row with a PRO badge that opens the paywall; Pro accounts see the scale rendered as chips (A: 90%+, B: 80%+, and so on) that tap through to an editor. Pro turns that into an editor where each row is a letter and a minimum percentage, you can add and delete rows, and the scale is re-sorted descending when you save. Schools that cut A− at 90 and A at 93, or run an eleven-row plus-minus ladder, get modeled exactly.",
-          "The letter badge on the grade card is color-coded by its first character — green for anything starting with A, blue for B, amber for C, orange for D, red otherwise — so the color survives whatever custom labels you use."
+          "The letter badge on the grade card is color-coded by its first character — green for anything starting with A, blue for B, amber for C, orange for D, red otherwise, so the color survives whatever custom labels you use."
         ]
       },
       {
@@ -250,14 +250,14 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
           "This is the Pro half of grade tracking, and it is built entirely out of numbers you already have.",
           "The \"What do I need?\" card takes every letter on your course's scale and works backward. Required average equals your target percentage times weight total, minus the points you have already banked, divided by the weight still outstanding. Each row gets a verdict. \"Locked in\" with a check mark when you have already secured that letter no matter what happens. \"avg 84% on the rest\" when it is reachable, rounded up so the number is never optimistic, and colored coral when the requirement climbs above 90. \"Needs extra credit\" when the only path runs through the ungraded extra-credit work still on your list. \"Out of reach\" when the arithmetic says no. The header tells you how much is still in play: \"38% still to play for.\"",
           "The final-exam what-if is the other direction. It pulls up to six ungraded assignments, preferring anything typed as an exam or titled with final, midterm, or exam, and lets you tap a hypothetical score — 70, 80, 85, 90, or 100, defaulting to 85. It then re-runs your entire course grade calculation with that score substituted in, categories, drop-lowest, extra-credit policy and all, and shows the projected course grade and letter. It is labeled \"Projected, not saved,\" and nothing is written to your record.",
-          "Free accounts see the card in place with the real remaining number in it, and a tap takes you to the paywall. One case is identical for both tiers: once every weighted assignment has been graded, both see the same line — all weighted work is graded, your final grade is locked in — because a forecast with nothing left to forecast is not worth charging for."
+          "Free accounts see the card in place with the real remaining number in it, and a tap takes you to the paywall. One case is identical for both tiers: once every weighted assignment has been graded, both see the same line — all weighted work is graded, your final grade is locked in, because a forecast with nothing left to forecast is not worth charging for."
         ]
       },
       {
         "heading": "How it connects to everything else in Semora",
         "paragraphs": [
           "Grades are not a standalone screen. The scores you enter feed the rest of the app.",
-          "Your Courses tab shows each course's letter and percentage under its name, next to what is due next. If you connect Canvas — which is part of Pro — assignment scores come across with points earned and points possible, get converted to percentages with the same arithmetic, and land in the same running average. Canvas also carries the late flag, and Semora tracks late submissions separately: you can record an expected penalty and the task screen will show the estimated maximum you can still earn until the real grade is posted, without ever docking a posted score twice.",
+          "Your Courses tab shows each course's letter and percentage under its name, next to what is due next. If you connect Canvas, which is part of Pro — assignment scores come across with points earned and points possible, get converted to percentages with the same arithmetic, and land in the same running average. Canvas also carries the late flag, and Semora tracks late submissions separately: you can record an expected penalty and the task screen will show the estimated maximum you can still earn until the real grade is posted, without ever docking a posted score twice.",
           "On the Pro side, Academic Risk alerts read your grade history directly. A course needs at least two graded items; Semora then compares the average of your three most recent grades against the three before them, ordered by when the work was due rather than when you happened to enter it, and raises a falling-grade alert when the drop is seven points or more, or when the course estimate sits below 70. Below 65 it escalates to high severity. Progress Insights needs four graded items before it will draw a trend, and exports a semester CSV with columns for current grade, letter, completion percentage, on-time percentage, missing work, and graded count, plus a print view you can bring to an advising appointment. The Workload dashboard shows how much of each course's grade is still in play.",
           "All of it is one account across iPhone, iPad, and web, syncing in near real time, so a score you enter walking out of a lecture hall is on your laptop when you open it."
         ]
@@ -308,7 +308,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       },
       {
         "question": "What is the difference between the three extra-credit options?",
-        "answer": "Bonus points adds a flat number of percentage points on top of your course grade, scaled by your score — five points earned at 90 percent adds 4.5. Inside category folds the item into its category average and lets that category exceed 100 percent. Ignore keeps the assignment visible in your task list but leaves it out of every calculation. You pick one per course."
+        "answer": "Bonus points adds a flat number of percentage points on top of your course grade, scaled by your score, five points earned at 90 percent adds 4.5. Inside category folds the item into its category average and lets that category exceed 100 percent. Ignore keeps the assignment visible in your task list but leaves it out of every calculation. You pick one per course."
       },
       {
         "question": "Will Semora's number match what my professor has?",
@@ -336,7 +336,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "paragraphs": [
           "The planning horizon is 14 days, starting today. Everything inside that horizon is a straight, repeatable pass over your data — there is no model call and no network round trip in the scheduling itself, which is why the same inputs always produce the same plan.",
           "It starts by collecting every incomplete task in the selected semester that has a readable due date. A task with a start date in the future is held out until that day arrives, so work you deliberately deferred does not get dragged into this evening. For each remaining task it works out an effort estimate in minutes, then subtracts the minutes you have already completed against that task in earlier sessions.",
-          "Then it walks forward one day at a time. It skips the day entirely if you have weekends turned off and it is a Saturday or Sunday. Otherwise it sets a starting cursor at your weekday or weekend start time — and on today specifically, at whichever is later, your start time or the current time rounded up to the next quarter hour. It marks out the blocked time on that day, gives the day a minute budget, ranks the eligible tasks, and places sessions from the cursor forward with a 10-minute gap after each one. The day stops at 11:00 PM."
+          "Then it walks forward one day at a time. It skips the day entirely if you have weekends turned off and it is a Saturday or Sunday. Otherwise it sets a starting cursor at your weekday or weekend start time, and on today specifically, at whichever is later, your start time or the current time rounded up to the next quarter hour. It marks out the blocked time on that day, gives the day a minute budget, ranks the eligible tasks, and places sessions from the cursor forward with a 10-minute gap after each one. The day stops at 11:00 PM."
         ],
         "bullets": [
           "Blocked time includes every class meeting scheduled for that weekday, drawn from the meeting times on your course schedule.",
@@ -359,14 +359,14 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "What gets scheduled first, and why",
         "paragraphs": [
           "Ordering is where a planner earns its keep, because when the days are full, something has to lose. Each task gets a load score of its grade weight multiplied by a per-type prep multiplier: 3x for an exam, 2.5x for a project, 1.5x for a quiz, 1.2x for an assignment, and 1x for a reading or other. A task with no weight extracted still counts, using a deliberately small base of 5, so an un-weighted exam still outranks an un-weighted reading on the strength of its type alone.",
-          "That score is then multiplied by priority — 1.55x for High, 0.78x for Low, unchanged for Normal — and divided by how far away the deadline is, floored so that something due today does not divide by zero. Finally a pace term is added: the task's remaining minutes divided by the number of enabled study days between now and its due date. The pace term is what stops a large, distant project from being permanently outranked by a stream of small urgent things until it becomes an emergency.",
+          "That score is then multiplied by priority — 1.55x for High, 0.78x for Low, unchanged for Normal, and divided by how far away the deadline is, floored so that something due today does not divide by zero. Finally a pace term is added: the task's remaining minutes divided by the number of enabled study days between now and its due date. The pace term is what stops a large, distant project from being permanently outranked by a stream of small urgent things until it becomes an emergency.",
           "Within a single day, each task accumulates a share of its remaining work equal to remaining minutes divided by available days, rounded down to a 15-minute multiple. An 8-hour project due in 10 days therefore surfaces as a 30-minute session today and a 45-minute session on each following day, landing exactly on the deadline rather than as a wall on the final weekend. A task due today, or already overdue, skips the spreading entirely and targets its full remaining effort immediately. Ties break by earlier due date, then alphabetically by title, so the order is stable rather than arbitrary."
         ]
       },
       {
         "heading": "The settings you actually control",
         "paragraphs": [
-          "Plan preferences sit behind a collapsible panel at the top of the screen, and the header always shows the current values in shorthand — something like \"90m/day · 45m sessions\" — so you can see the shape of your plan without opening anything.",
+          "Plan preferences sit behind a collapsible panel at the top of the screen, and the header always shows the current values in shorthand — something like \"90m/day · 45m sessions\", so you can see the shape of your plan without opening anything.",
           "Saving runs a single \"Save & rebuild plan\" action: the preferences write and the plan regenerates together, so you never save a setting and then wonder whether it took effect. These preferences live on your account rather than on one device, so changing your session length on your iPhone changes the plan you see on your iPad and on the web."
         ],
         "bullets": [
@@ -390,7 +390,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       {
         "heading": "From a plan to actual work",
         "paragraphs": [
-          "Sessions are grouped by day with human labels — Today, Tomorrow, then a weekday and date — and each day header carries that day's total. Only today and future days are listed; yesterday's plan is not something you need to look at.",
+          "Sessions are grouped by day with human labels — Today, Tomorrow, then a weekday and date, and each day header carries that day's total. Only today and future days are listed; yesterday's plan is not something you need to look at.",
           "Each row has three actions. The circle on the left marks the session complete. Tapping the row opens the underlying task, so you can check the description or edit the deadline that created the session in the first place. The play button on the right opens the focus timer preloaded with that session's exact length and the task's title, and when the focus phase finishes, the session is marked complete for you.",
           "Above the list, a summary bar shows three live numbers: sessions ahead, total planned time still outstanding, and how much you have already finished today. It is a small thing, but it is the difference between \"I have a plan\" and \"I have done 45 minutes of it.\""
         ]
@@ -398,8 +398,8 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       {
         "heading": "The Workload dashboard, which is the same data zoomed out",
         "paragraphs": [
-          "Smart Plan handles the next 14 days. The Workload dashboard, also included with Pro, handles the semester — and it is genuinely the more useful of the two in the first week of a term, before anything is urgent yet.",
-          "The weekly chart buckets every incomplete deadline into ISO weeks spanning your semester's start and end dates, or the range of your own due dates when the semester has none. Each bar is the sum of the same weight-times-type load score the planner uses. A week is flagged as a crunch week when its load is at least one standard deviation above the mean of the loaded weeks and it holds at least two deadlines — so a single heavy exam does not paint a week red on its own, and a semester with evenly spread work correctly flags nothing rather than flagging everything."
+          "Smart Plan handles the next 14 days. The Workload dashboard, also included with Pro, handles the semester, and it is genuinely the more useful of the two in the first week of a term, before anything is urgent yet.",
+          "The weekly chart buckets every incomplete deadline into ISO weeks spanning your semester's start and end dates, or the range of your own due dates when the semester has none. Each bar is the sum of the same weight-times-type load score the planner uses. A week is flagged as a crunch week when its load is at least one standard deviation above the mean of the loaded weeks and it holds at least two deadlines, so a single heavy exam does not paint a week red on its own, and a semester with evenly spread work correctly flags nothing rather than flagging everything."
         ],
         "bullets": [
           "A crunch callout names the next crunch week, counts the deadlines stacking up in it, and tells you how many crunch weeks the term holds in total.",
@@ -423,7 +423,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
           "Not enough hours is the most common one, and it is surfaced rather than hidden. If work due inside the 14-day window cannot fit in your capacity, an amber banner states exactly how much time is unscheduled and names the two real fixes: raise your daily capacity or lower your task estimates.",
           "Overdue work is not dropped. A task past its due date targets its full remaining effort today rather than disappearing from the plan. A task due later today with a due time keeps its sessions before that time; if that time has already passed, it falls back to the normal day window so it stays actionable instead of vanishing.",
           "Bad data is contained rather than fatal. A class meeting with a missing or nonsensical end time is treated as one hour. A far-future imported due date is capped at a 120-day span for pacing, so a typo cannot make today's contribution round to zero. The weekly chart is capped at 104 weeks and folds anything beyond the last bucket into it, so a stray deadline four years out is never silently dropped from the counts.",
-          "Calendar access is handled quietly. Automatic refreshes never prompt for permission — only saving your settings can ask. If permission is denied, or you are on the web where the lookup is unavailable, the plan still avoids your classes and the status line says so directly. All-day events are ignored, since otherwise a single all-day entry would block an entire day, and events that cross midnight are split so each day is compared independently.",
+          "Calendar access is handled quietly. Automatic refreshes never prompt for permission, only saving your settings can ask. If permission is denied, or you are on the web where the lookup is unavailable, the plan still avoids your classes and the status line says so directly. All-day events are ignored, since otherwise a single all-day entry would block an entire day, and events that cross midnight are split so each day is compared independently.",
           "Finally, the save itself is validated on the server. Sessions must be between 15 and 180 minutes, every task must be one of yours and still incomplete, and the semester must belong to you. If a save fails, the plan is not left half-written — you get an inline error, and a manual rebuild also raises an alert."
         ]
       }
@@ -496,7 +496,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       {
         "heading": "Attach the review packet your professor handed out",
         "paragraphs": [
-          "Under Study material there is a dashed row that reads \"Add a PDF or photo (e.g. the teacher's review packet)\". Tapping it opens the file picker, restricted to PDFs and images. Once something is attached, the row updates to a count — \"2 files added — add another\" — so you can stack a study guide, a set of slides, and a photo of the board before generating.",
+          "Under Study material there is a dashed row that reads \"Add a PDF or photo (e.g. the teacher's review packet)\". Tapping it opens the file picker, restricted to PDFs and images. Once something is attached, the row updates to a count — \"2 files added — add another\", so you can stack a study guide, a set of slides, and a photo of the board before generating.",
           "The file goes to a private storage bucket, filed under your own user ID, with the filename sanitized for the path. Nothing is parsed on your phone. The first time a generation or tutor request needs that file, the server reads it, extracts all readable text from it while preserving structure, and caches the result on the note record. The second generation from the same packet costs nothing extra to read. Files larger than 6 MB are skipped for inline extraction rather than blocking your request.",
           "These are the same course notes the AI Tutor uses. Upload a packet here and the tutor can answer from it; upload slides in the tutor and flashcard generation picks them up. There is one note library per course, not two."
         ]
@@ -513,7 +513,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       {
         "heading": "The schedule: what Again, Hard, Good, and Easy actually do",
         "paragraphs": [
-          "Every card carries four numbers: an ease factor, an interval in days, a due date, and a count of consecutive successes. A brand-new card starts at ease 2.5, interval 0, due now, zero reps — so anything you create or generate is due in your very next session, with no waiting.",
+          "Every card carries four numbers: an ease factor, an interval in days, a due date, and a count of consecutive successes. A brand-new card starts at ease 2.5, interval 0, due now, zero reps, so anything you create or generate is due in your very next session, with no waiting.",
           "When you grade a revealed card, Semora runs a compact SM-2 variant and writes the next state. The four buttons are not cosmetic; each one moves ease and interval differently.",
           "Ease is clamped at 1.3, the SM-2 floor, both in the scheduler and by a constraint in the database, so a bad week of Again and Hard cannot drive a card into a permanent loop. Intervals of a day or more are rounded to whole days so due dates stay stable and predictable; the ten-minute relapse interval is deliberately left un-rounded so a card you missed genuinely comes back soon rather than tomorrow.",
           "In practice, a card you keep getting right goes 1 day, then 6 days, then 15, then about 38, then roughly three months. A card you keep missing stays in front of you."
@@ -601,7 +601,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
     "metaTitle": "Semora Focus Timer: Pomodoro Study Blocks",
     "metaDescription": "Semora's Focus Timer runs 15, 25, 45, or 50-minute focus blocks with 5, 10, or 15-minute breaks, keeps time in the background, and alerts you when each ends.",
     "h1": "Focus Timer: Pomodoro-Style Study Blocks Linked to Your Real Coursework",
-    "lede": "A Pomodoro-style timer built into the app that already knows your deadlines. Pick a length, link the block to a task or a planned study session, and get a notification the moment it ends — even if you left the app.",
+    "lede": "A Pomodoro-style timer built into the app that already knows your deadlines. Pick a length, link the block to a task or a planned study session, and get a notification the moment it ends, even if you left the app.",
     "intro": [
       "A college schedule is not a row of open afternoons. It is a 50-minute gap before your next lecture, twenty minutes on a bus, an hour in the library that gets interrupted twice. Most study advice assumes an unbroken block of time you do not actually have, which is part of why the advice bounces off.",
       "The Focus Timer in Semora is a Pomodoro-style countdown built into the app that already holds your syllabus, your deadlines, and your study plan. That matters more than it sounds. A standalone timer knows nothing about the paper due Thursday. You start a block, it counts, it beeps, and you are the only thing connecting those 25 minutes to anything real. Semora's timer opens directly from a task or from a session on your Smart Plan, so the block carries that task's title with it, and finishing the block ticks the planned session off your schedule.",
@@ -654,7 +654,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "paragraphs": [
           "Two things happen, and they are independent of each other on purpose.",
           "The first is a notification. When you press start, Semora schedules a real date-triggered alert with the operating system for the exact moment the phase ends, with sound on. A finished focus block arrives as \"Focus block done\", and if the session was linked to a task the body names it: \"Nice work on\" your task title, \"Time for a break.\" An unlinked block reads \"Nice work — time for a break.\" The end of a break arrives as \"Break over\", with the body \"Break's over. Ready for another focus block?\" Because that alert lives with the OS rather than inside the app, it fires whether the app is foregrounded, backgrounded, or closed.",
-          "The second is what happens on screen. The timer advances to the next phase — focus becomes break, break becomes focus — and stops there, paused, with the full new length on the clock. It does not roll straight into the next countdown. You decide when the break starts, which matters when the block ended mid-sentence and you want ninety more seconds before you stand up. On iPhone you also get a success haptic at the moment of completion if the app is open.",
+          "The second is what happens on screen. The timer advances to the next phase — focus becomes break, break becomes focus, and stops there, paused, with the full new length on the clock. It does not roll straight into the next countdown. You decide when the break starts, which matters when the block ended mid-sentence and you want ninety more seconds before you stand up. On iPhone you also get a success haptic at the moment of completion if the app is open.",
           "Only a completed focus phase counts for anything. It increments the count for this sitting, increments the all-time total, and marks the linked Smart Plan session complete. Finishing a break increments nothing. Pausing and never coming back counts as nothing."
         ]
       },
@@ -672,13 +672,13 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "paragraphs": [
           "Two numbers are tracked. The sitting count is the number of focus blocks you have completed since your last reset, and it is what drives the \"3 focus blocks done\" line under the clock. The all-time number is a running total of completed focus blocks stored on that device.",
           "Be clear about what that second number is. It is a local counter on one device, not an account statistic. It does not travel to your other devices or to the web app the way your courses and deadlines do through Semora's realtime sync, and signing in elsewhere will not bring it with you. Resetting the timer does not touch it.",
-          "Beyond those two counters, the timer keeps no history. There is no log of individual sessions, no chart of hours by course, no weekly focus report. Completed focus blocks do not feed Streaks, which are calculated from tasks completed on days that actually had work due, and they do not appear in Progress Insights. The one durable, syncing trace a focus block leaves is a Smart Plan session ticked off — which is genuinely the useful one, because that is what your plan reads when it rebuilds and works out how much effort a task has left."
+          "Beyond those two counters, the timer keeps no history. There is no log of individual sessions, no chart of hours by course, no weekly focus report. Completed focus blocks do not feed Streaks, which are calculated from tasks completed on days that actually had work due, and they do not appear in Progress Insights. The one durable, syncing trace a focus block leaves is a Smart Plan session ticked off, which is genuinely the useful one, because that is what your plan reads when it rebuilds and works out how much effort a task has left."
         ]
       },
       {
         "heading": "Free versus Pro",
         "paragraphs": [
-          "The Focus Timer is a Pro feature in full. Free accounts that tap it get a preview screen — the clock icon, a short description, and a button through to the paywall — rather than a limited number of sessions.",
+          "The Focus Timer is a Pro feature in full. Free accounts that tap it get a preview screen — the clock icon, a short description, and a button through to the paywall, rather than a limited number of sessions.",
           "That is worth stating plainly, because most of Semora's core is free and stays free. On a free account you get five syllabus scans per calendar month, up to four courses per semester, complete deadline and task tracking, grade tracking with weighted averages, same-day reminders, and free access to any Course Space a classmate invites you into. That is a working deadline tracker without paying anything.",
           "Pro is $3.99 per month or $19.99 per year, which works out to about $1.67 a month on the annual plan. It is purchased inside the iOS app and the entitlement applies to your whole account, so the timer is available in the web app too even though there is no web checkout. Alongside the Focus Timer, Pro covers unlimited scans and courses, Smart Plan, the Workload dashboard, flashcards, the AI tutor, Grade Scale and Forecasting, calendar sync with .ics export, custom reminder timing at one and three days out with quiet hours, Academic Risk alerts, Progress Insights, and Share and Streaks."
         ],
@@ -693,7 +693,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "How a focus block fits the rest of Semora",
         "paragraphs": [
           "The timer is the last step in a chain the rest of the app builds. Your syllabus gets scanned into real deadlines. Smart Plan takes those deadlines and lays study sessions across the next two weeks, working around your class meetings automatically, in 15-minute increments, with a ten-minute buffer after each session so the schedule is something a human could actually follow.",
-          "The numbers line up on purpose. Smart Plan's session length setting offers 25, 45, or 50 minutes and defaults to 45 — three of the four lengths in the focus picker. Its daily study cap offers 60, 90, 120, or 180 minutes and defaults to 90, which is two 45-minute sessions. Weekday sessions start at 5pm by default and weekend sessions at 10am, and you can turn weekends off entirely. So when you tap the play button on a planned session, the focus length you land on is the one your own planner settings produced, not a number the timer invented.",
+          "The numbers line up on purpose. Smart Plan's session length setting offers 25, 45, or 50 minutes and defaults to 45, three of the four lengths in the focus picker. Its daily study cap offers 60, 90, 120, or 180 minutes and defaults to 90, which is two 45-minute sessions. Weekday sessions start at 5pm by default and weekend sessions at 10am, and you can turn weekends off entirely. So when you tap the play button on a planned session, the focus length you land on is the one your own planner settings produced, not a number the timer invented.",
           "What you do inside the block is the rest of Semora's job. Flashcards can generate a deck for one specific tracked exam from the syllabus and any lecture notes you have uploaded, which is a good fit for a 25-minute block. The AI tutor answers from that course's actual syllabus, your notes, and your live deadlines when you get stuck, so you are not leaving the block to go searching. Grade Scale and Forecasting tells you which assignment is actually worth the next 50 minutes."
         ]
       },
@@ -701,7 +701,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "Who this is for, who it is not, and the rough edges",
         "paragraphs": [
           "This is for you if your problem is starting. A named length and a linked task takes the negotiation out of the front of a study session, and 15 minutes on a specific paper is a much smaller thing to agree to than \"work on the paper\". It is also for you if you already use Smart Plan, because the play button on a planned session closes the loop between deciding to study and having studied.",
-          "This is not for you if you want a strict Pomodoro implementation. There is no automatic long break after four cycles, and no forced auto-advance from one phase into the next — every transition waits for you to press the button. It is not a distraction blocker, there is no ambient sound or music, and it will not report how many hours you put into each course this semester. If any of those are the reason you are shopping, this particular feature will not be the reason to subscribe.",
+          "This is not for you if you want a strict Pomodoro implementation. There is no automatic long break after four cycles, and no forced auto-advance from one phase into the next, every transition waits for you to press the button. It is not a distraction blocker, there is no ambient sound or music, and it will not report how many hours you put into each course this semester. If any of those are the reason you are shopping, this particular feature will not be the reason to subscribe.",
           "A few edges to know before you rely on it. In the browser the timer runs while the tab is open, but the end-of-phase notification and the saved session are native-only, so a reload loses the block and no alert arrives — do timed work on iPhone or iPad and use the web app for planning. If you decline notification permission, scheduling is skipped and the on-screen countdown still behaves exactly as before; a failed notification is never treated as a failed session. And the quiet-hours setting that holds back deadline reminders does not suppress this alert, because you asked for it by starting a timer — an 11pm focus block will still tell you when it is over."
         ],
         "bullets": [
@@ -728,7 +728,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       },
       {
         "question": "Does finishing a focus block mark my task as complete?",
-        "answer": "No. Your task stays exactly as it was — one block of work is rarely a finished assignment, and deciding it is done stays with you. What does get marked complete is the Smart Plan study session, if you started the timer from one. That feeds back into your plan, which subtracts completed minutes from a task's remaining effort when it rebuilds your schedule."
+        "answer": "No. Your task stays exactly as it was, one block of work is rarely a finished assignment, and deciding it is done stays with you. What does get marked complete is the Smart Plan study session, if you started the timer from one. That feeds back into your plan, which subtracts completed minutes from a task's remaining effort when it rebuilds your schedule."
       },
       {
         "question": "Does it work in the web app?",
@@ -748,11 +748,11 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
     "metaTitle": "AI Tutor: Chat Grounded in Your Syllabus",
     "metaDescription": "Semora's AI Tutor answers from your course's real syllabus, your live tracked deadlines, and lecture notes you upload. It never invents a due date.",
     "h1": "AI Tutor: a study chat that has actually read your course",
-    "lede": "Ask about your course and get an answer built from your own syllabus, your live deadlines, and the lecture notes you uploaded — not from a generic search. For anything involving a date, it answers strictly from what you are tracking.",
+    "lede": "Ask about your course and get an answer built from your own syllabus, your live deadlines, and the lecture notes you uploaded, not from a generic search. For anything involving a date, it answers strictly from what you are tracking.",
     "intro": [
       "It is Tuesday. You have a problem set due, a reading you half-skimmed, and a question about the difference between two ideas your professor treated as obvious. You could search for it and get an answer written for somebody else's course, in somebody else's notation, referencing a textbook you do not own. You could post in the group chat and wait. Or you could ask something that has already read your course.",
       "General chatbots are good at explaining concepts and bad at knowing your situation. They do not know your professor said the midterm covers chapters one through six and not seven. They do not know your essay moved from the 14th to the 21st. Ask one when your final is and it will either decline or, worse, produce a date that looks right.",
-      "Semora's AI Tutor is the same class of model doing a narrower job. Before it ever sees your question, the server assembles a packet of your real course material — what your syllabus scan pulled out, what you are currently tracking as due, and the text of the lecture notes you uploaded — and instructs the model to answer from that first. It is part of Pro, at $3.99 per month or $19.99 per year."
+      "Semora's AI Tutor is the same class of model doing a narrower job. Before it ever sees your question, the server assembles a packet of your real course material — what your syllabus scan pulled out, what you are currently tracking as due, and the text of the lecture notes you uploaded, and instructs the model to answer from that first. It is part of Pro, at $3.99 per month or $19.99 per year."
     ],
     "sections": [
       {
@@ -775,12 +775,12 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       {
         "heading": "How one message actually travels",
         "paragraphs": [
-          "The screen is a plain chat. You type, you press the arrow, your message appears as a bubble immediately while the request is in flight — usually three to ten seconds. Underneath that spinner, a fixed sequence runs.",
+          "The screen is a plain chat. You type, you press the arrow, your message appears as a bubble immediately while the request is in flight, usually three to ten seconds. Underneath that spinner, a fixed sequence runs.",
           "The model call goes to Gemini 2.5 Flash at a temperature of 0.4, with an output ceiling of 2,048 tokens: enough for a worked explanation, not enough for an essay. If Google returns a retryable error, the function backs off and retries up to three times, then falls back to Gemini 2.0 Flash and does the same again. You see one spinner. The retry policy runs beneath it."
         ],
         "bullets": [
           "The request has to declare its size, and the body has to be under 256 KB. A chunked stream that tries to slip past the size check is rejected before anything else happens.",
-          "Your session is validated, then the database is asked whether you are Pro. This is a server-side check, not the app's local flag, so a stale or lapsed client cannot talk its way in — and a momentary database blip returns a temporary-unavailable error rather than quietly demoting a paying account.",
+          "Your session is validated, then the database is asked whether you are Pro. This is a server-side check, not the app's local flag, so a stale or lapsed client cannot talk its way in, and a momentary database blip returns a temporary-unavailable error rather than quietly demoting a paying account.",
           "One message is reserved from your daily allowance, atomically, under a per-user lock. Reserving before the model call is what stops ten fast taps from all sneaking past the cap together.",
           "The conversation is confirmed to be yours, and the course to ground on is read from the conversation record itself. The course ID your app sends along is treated as a hint for a brand-new thread, never as permission to read a course.",
           "The three context blocks are built, the recent turns are replayed, your new message is appended, and the model is called.",
@@ -801,7 +801,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
           "Tap Add notes in the bar above the conversation and pick a file. The picker accepts PDFs and images, so an exported slide deck, a scanned reading, or a photo of the whiteboard all count.",
           "Your device does no parsing. It uploads the raw file to a private storage bucket under a path keyed to your account, then records a pointer to it. The first time the tutor needs that file, the server downloads it and has the model transcribe every readable line, preserving structure, and caches the result. Every later message reuses the cached text, so you pay the extraction cost once per file rather than once per question. The same cached text is what flashcard generation reads, so a review packet you attach here is transcribed once and used by both features.",
           "Uploaded files appear as chips you can tap to remove. The confirmation says exactly what removal means: that file will no longer ground the tutor. Removing it deletes both the record and the stored file.",
-          "Two constraints are worth knowing up front. Notes attach to a course, so if you opened the tutor without one, the app tells you to open it from a course first instead of accepting an orphan file. And a file over roughly 6 MB is skipped at extraction time rather than sent to the model. That skip is quiet — the answer still arrives, just without that document behind it — so if a large scanned PDF does not seem to be landing, split it or export it smaller."
+          "Two constraints are worth knowing up front. Notes attach to a course, so if you opened the tutor without one, the app tells you to open it from a course first instead of accepting an orphan file. And a file over roughly 6 MB is skipped at extraction time rather than sent to the model. That skip is quiet — the answer still arrives, just without that document behind it, so if a large scanned PDF does not seem to be landing, split it or export it smaller."
         ]
       },
       {
@@ -850,7 +850,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "bullets": [
           "You want graded work done for you. The tutor is instructed to explain reasoning and guide you toward an answer rather than produce it, and that is deliberate.",
           "You have nothing in the app yet. An empty course gives you a general chatbot, which you can get for free elsewhere.",
-          "You want long formatted documents. Replies are plain text by instruction — short paragraphs and bullets, no markdown headers — and capped at 2,048 tokens.",
+          "You want long formatted documents. Replies are plain text by instruction — short paragraphs and bullets, no markdown headers, and capped at 2,048 tokens.",
           "You are on the free tier. The tutor is Pro. Free accounts see a description of what it does and a route to the paywall, not a reduced version of the chat."
         ]
       },
@@ -873,7 +873,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
     "faq": [
       {
         "question": "Does the AI Tutor actually read my syllabus, or just the course name?",
-        "answer": "It reads the structured results of your most recent syllabus scan for that course — every extracted item with its title, type, weight, and due date, up to 60 of them — plus your class meeting times, your instructor, and your grade scale if you set one. That block is capped at 8,000 characters, and if your syllabus is long enough to be cut, the truncation is marked so the model knows it is working from an abridged copy."
+        "answer": "It reads the structured results of your most recent syllabus scan for that course, every extracted item with its title, type, weight, and due date, up to 60 of them, plus your class meeting times, your instructor, and your grade scale if you set one. That block is capped at 8,000 characters, and if your syllabus is long enough to be cut, the truncation is marked so the model knows it is working from an abridged copy."
       },
       {
         "question": "Can it tell me when my exam is?",
@@ -893,7 +893,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       },
       {
         "question": "What happens if I ask about something my course material does not cover?",
-        "answer": "It says so briefly, then helps using general knowledge. That is an explicit instruction rather than a hope. The model is told to prefer your material, to cite it naturally when it uses it — phrasing like \"your syllabus lists\" or \"from your Week 3 notes\" — and to flag when it is stepping outside what you gave it. You get a straight answer either way, with a clear sense of which kind you got."
+        "answer": "It says so briefly, then helps using general knowledge. That is an explicit instruction rather than a hope. The model is told to prefer your material, to cite it naturally when it uses it — phrasing like \"your syllabus lists\" or \"from your Week 3 notes\", and to flag when it is stepping outside what you gave it. You get a straight answer either way, with a clear sense of which kind you got."
       },
       {
         "question": "Do I need an iPhone to use it?",
@@ -925,7 +925,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "paragraphs": [
           "In the hub, tapping a course under Start a course space creates the space and drops you straight into it. From there, the Invite button hands you a link through the normal iOS share sheet, with a message that names the course, so you can drop it into whatever group chat the class already uses.",
           "The link is not a guessable code. The server generates 24 random bytes and renders them as a 48-character hex token, then stores it with an expiry and a use counter. Owners and editors can both create invites; viewers cannot. Every tap of Invite mints a fresh link, and old ones keep working until they hit one of their limits.",
-          "Owners get a settings sheet showing how many invite links are still outstanding for the space — the ones that have not been revoked, have not expired, and still have uses left — with a one-tap Revoke that kills all of them at once. That is the fix for the usual accident: the link got pasted into a Discord server with three hundred people in it, and you would like that to stop being true."
+          "Owners get a settings sheet showing how many invite links are still outstanding for the space — the ones that have not been revoked, have not expired, and still have uses left, with a one-tap Revoke that kills all of them at once. That is the fix for the usual accident: the link got pasted into a Discord server with three hundred people in it, and you would like that to stop being true."
         ],
         "bullets": [
           "Token: 24 random bytes, rendered as 48 hexadecimal characters",
@@ -940,7 +940,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "What happens when a classmate taps the link",
         "paragraphs": [
           "The link opens Semora on a join screen that says what they are agreeing to before they agree to it: they will see shared deadlines and group assignments, and their personal grades, reminders, and planner stay private. Then there is one button.",
-          "If they are not signed in, the invite is not lost. The token is stashed on the device — Keychain on iPhone and iPad, browser storage on web — and they get sent to sign-in. As soon as they have an account, the app takes them back to the join screen with the invite still attached. Without that hand-off, a signed-out classmate's invite would quietly dead-end at a sign-up form, which is where most group invites go to die.",
+          "If they are not signed in, the invite is not lost. The token is stashed on the device — Keychain on iPhone and iPad, browser storage on web, and they get sent to sign-in. As soon as they have an account, the app takes them back to the join screen with the invite still attached. Without that hand-off, a signed-out classmate's invite would quietly dead-end at a sign-up form, which is where most group invites go to die.",
           "Joining is checked on the server, not in the app. The invite row is locked while it is verified as not revoked, not past its expiry, and not out of uses. If any of those fail, the join is refused with a plain message that the invite is invalid or expired. New members land as editors. Their display name comes from their profile, then their email's local part, then the fallback \"Classmate\". Tapping your own link again after you have already joined just refreshes your display name — it does not burn another use of the link, so a classmate who taps twice does not eat someone else's slot."
         ]
       },
@@ -960,7 +960,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       },
       {
-        "heading": "What syncs into your planner — and what stays private",
+        "heading": "What syncs into your planner, and what stays private",
         "paragraphs": [
           "Publishing is deliberate. The owner taps Publish, and Semora copies the not-yet-completed tasks from their own copy of the course into the space as shared deadlines: title, description, task type, due date, due time, and points possible. Completed work is skipped. Each shared deadline remembers the task it came from, so publishing again after the professor moves a date updates the existing entry in place instead of stacking a duplicate on top of it. The app tells you how many went out.",
           "On the receiving side, syncing pulls those shared deadlines and every group assignment into your own planner as normal tasks. If you have not pointed the space at a course you already track, Semora creates one for you in your selected semester, named after the space, in the space's color, with a people icon so you can tell at a glance where it came from. Owners can relink a space to an existing course from the settings sheet, which re-runs the sync so the shared work lands in the course you were already using.",
@@ -1008,7 +1008,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       },
       {
-        "heading": "Where it gets awkward — and who this is really for",
+        "heading": "Where it gets awkward, and who this is really for",
         "paragraphs": [
           "The honest edge cases. The invite link opens the Semora app, so a classmate who has never installed Semora will tap it and get nothing — send them to the App Store first, then resend the link. An expired or used-up link fails with a clear message rather than a blank screen, and the fix is always the same: ask for a fresh one. If you have no semester selected, the sync tells you to pick one before it can put anything in your planner. And if you are on the free plan already carrying four courses in a semester, the space's auto-created course cannot be added, because free accounts cap at four courses per semester — you will still see the space and everything in it, but the planner sync for that one space will not have anywhere to land.",
           "This is genuinely useful for a lab section that shares a deadline calendar, a project team splitting a build across four people, a study group that keeps missing the same quiz dates, and anyone who has been the unpaid group-chat secretary for a semester and is done with it. Assigning group assignments to a specific person, or to Everyone, is what makes the second case work — the app checks against the member list, so you cannot assign work to somebody who is not actually in the space.",
@@ -1086,7 +1086,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "Choosing which courses come in",
         "paragraphs": [
           "Tap “Find my courses” and Semora asks Canvas for your active enrollments only. Dropped courses and finished semesters still sitting in your Canvas account do not show up, which spares you from scrolling past last spring's classes to find this term's.",
-          "Everything that comes back is pre-selected. Tap any course to deselect it, or use Clear and Select all to flip the whole list at once. You also name the connection — it defaults to “Canvas” — and pick which semester the imported courses belong to, defaulting to your active one. If you have not created a semester yet, the screen links you straight to that step instead of failing on save.",
+          "Everything that comes back is pre-selected. Tap any course to deselect it, or use Clear and Select all to flip the whole list at once. You also name the connection — it defaults to “Canvas”, and pick which semester the imported courses belong to, defaulting to your active one. If you have not created a semester yet, the screen links you straight to that step instead of failing on save.",
           "Each course you keep becomes a real Semora course, not a read-only mirror. It gets a color from a rotating set of six, a book icon, and a permanent link back to its Canvas counterpart, and exactly one Canvas course maps to exactly one Semora course. From there it behaves like every other course in the app: rename it, add your own tasks alongside the imported ones, track grades in it.",
           "The import is all-or-nothing. If something fails partway through — a network drop, a rejected token — Semora deletes the connection it was building, deletes the courses it already created, and clears the stored token before telling you that nothing was saved. You do not end up with three of your five classes imported and no clear way to tell which two are missing."
         ]
@@ -1094,13 +1094,13 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       {
         "heading": "What actually gets imported from each assignment",
         "paragraphs": [
-          "For every assignment in the courses you selected, Semora pulls the full record, not just a title and a date. Descriptions arrive with the HTML stripped out — script and style blocks removed, tags flattened, the common entities decoded, whitespace collapsed — so you get readable text instead of Canvas markup pasted into your planner.",
+          "For every assignment in the courses you selected, Semora pulls the full record, not just a title and a date. Descriptions arrive with the HTML stripped out — script and style blocks removed, tags flattened, the common entities decoded, whitespace collapsed, so you get readable text instead of Canvas markup pasted into your planner.",
           "Semora also guesses a type for each item so your calendar is not one undifferentiated wall of “assignment.” If Canvas marks the submission type as a quiz, it becomes a quiz. Otherwise the title is matched: midterm, final, exam, or test becomes an exam; quiz becomes a quiz; project becomes a project; read, reading, or chapter becomes a reading; everything else stays an assignment. It is a keyword match, not comprehension, so a paper called “Unit 3 Response” lands as a plain assignment. You can change the type on any task in two taps.",
           "Here is what ends up on each imported task:"
         ],
         "bullets": [
           "The title, and the description as plain readable text.",
-          "The due date and time, converted to your device's local clock from the absolute timestamp Canvas returns — so an 11:59 p.m. deadline stays 11:59 p.m. instead of drifting by your UTC offset.",
+          "The due date and time, converted to your device's local clock from the absolute timestamp Canvas returns, so an 11:59 p.m. deadline stays 11:59 p.m. instead of drifting by your UTC offset.",
           "Points possible, your points earned, and a percentage score computed from the two when both exist.",
           "Submission status: whether Canvas shows the work as submitted, graded, or pending review, when it was submitted, and whether Canvas flagged it late.",
           "A link back to the assignment's own Canvas page, opened straight from the task in Semora."
@@ -1122,7 +1122,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
           "On iPhone and iPad the token goes into the system secure store, keyed to that one connection. On the web it goes into your browser's local storage under the same key. It is never written to Semora's database — the comment on the connections table in the schema says exactly that, in one line: access credentials are stored only in device secure storage.",
           "What Semora's servers keep about a connection is deliberately thin: which provider it is, the display name you chose, your school URL, an optional account label, the sync status, the last error message, and timestamps. The token itself passes through in a single request when a sync runs, over HTTPS, and is forwarded to your school so the assignments can come back. It is not persisted on the way through.",
           "Semora only ever calls read endpoints. It lists your courses and reads assignments and gradebook data. It never posts, submits, edits, or deletes anything in Canvas, which the connect screen states plainly before you paste anything in.",
-          "There are guardrails on the address you type, too. The URL must be HTTPS. Addresses pointing at localhost, .local hostnames, or private network ranges are refused outright, and redirects are followed at most three times and only within the same origin, so a connection cannot be quietly bounced somewhere it should not go. If you ever want it all gone, disconnecting deletes both the connection record and the stored token — while your imported courses, assignments, completion history, and grades stay in Semora."
+          "There are guardrails on the address you type, too. The URL must be HTTPS. Addresses pointing at localhost, .local hostnames, or private network ranges are refused outright, and redirects are followed at most three times and only within the same origin, so a connection cannot be quietly bounced somewhere it should not go. If you ever want it all gone, disconnecting deletes both the connection record and the stored token, while your imported courses, assignments, completion history, and grades stay in Semora."
         ]
       },
       {
@@ -1136,7 +1136,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
           "Grades merge instead of replacing. If Canvas returns nothing for a score, Semora keeps the number you typed in rather than blanking it.",
           "Completion is a logical OR. If you have checked a task off in Semora, no sync will un-check it, even if Canvas has not registered the submission yet.",
           "The same applies to the late flag: once something is marked late, a later sync will not quietly clear it.",
-          "If Canvas cannot supply a trustworthy submission timestamp, Semora leaves the completion time unknown rather than stamping the sync time — because using sync time could make on-time work look late."
+          "If Canvas cannot supply a trustworthy submission timestamp, Semora leaves the completion time unknown rather than stamping the sync time, because using sync time could make on-time work look late."
         ]
       },
       {

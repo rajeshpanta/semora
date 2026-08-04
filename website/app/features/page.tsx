@@ -45,7 +45,7 @@ const SHOWCASE: ShowcaseItem[] = [
     alt: 'Semora Today screen showing next-up assignment, overdue items, and a weekly workload snapshot',
     tier: 'free',
     title: 'Never miss a deadline',
-    body: "Every deadline from every course lands in one place, with the next thing due surfaced first. Same-day reminders are on by default, and a weekly snapshot shows tasks, exams, and courses at a glance — including anything overdue.",
+    body: "Every deadline from every course lands in one place, with the next thing due surfaced first. Same-day reminders are on by default, and a weekly snapshot shows tasks, exams, and courses at a glance, including anything overdue.",
     bullets: [
       'One list across every course, not per-class',
       'Same-day reminders included free',

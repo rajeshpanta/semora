@@ -14,7 +14,7 @@ import { SITE_NAME } from '@/lib/semora-facts';
  */
 export const metadata: Metadata = {
   title: `A classmate shared their course with you`,
-  description: `Open the shared course in ${SITE_NAME} — every deadline, exam, and grading weight from their syllabus, copied into your own semester.`,
+  description: `Open the shared course in ${SITE_NAME}, every deadline, exam, and grading weight from their syllabus, copied into your own semester.`,
   robots: { index: false, follow: true },
   openGraph: {
     title: `A classmate shared their course with you on ${SITE_NAME}`,

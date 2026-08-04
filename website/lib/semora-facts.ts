@@ -19,7 +19,7 @@ export const SITE_DESCRIPTION =
   // snippet and appends a "Read more" expander, which is what the homepage
   // result looked like at 196. The tail it was cutting ("...flashcards, a focus
   // timer, and an AI tutor") was the least load-bearing half of the sentence.
-  'Semora turns a syllabus photo or PDF into a full semester calendar — every deadline, exam, and grading weight, organized automatically.';
+  'Semora turns a syllabus photo or PDF into a full semester calendar, every deadline, exam, and grading weight, organized automatically.';
 
 export const APP_STORE_URL = 'https://apps.apple.com/us/app/semora-ai-syllabus-scanner/id6762589321';
 
@@ -202,7 +202,7 @@ export const FEATURES: FeatureFact[] = [
     // user who installs on that promise hits a paywall at the first tap.
     tier: 'pro',
     description:
-      "Semora imports assignments from Canvas — and from Blackboard or Moodle — using a personal access token you generate yourself in the platform's own settings, rather than an OAuth connection that depends on your school's IT department approving a third-party app review. Connecting a learning platform is part of Pro; on the free tier you can still get Canvas coursework in by pasting the assignment text straight into the syllabus scanner.",
+      "Semora imports assignments from Canvas, and from Blackboard or Moodle — using a personal access token you generate yourself in the platform's own settings, rather than an OAuth connection that depends on your school's IT department approving a third-party app review. Connecting a learning platform is part of Pro; on the free tier you can still get Canvas coursework in by pasting the assignment text straight into the syllabus scanner.",
   },
 ];
 

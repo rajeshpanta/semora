@@ -13,7 +13,7 @@ import { getPageContent } from '@/lib/page-content';
 export const metadata: Metadata = {
   title: 'Canvas Deadline Tracker App — Grades, Reminders & Study Planning',
   description:
-    'Semora is a Canvas deadline tracker app. Import Canvas assignments on Pro, or scan your syllabus free — with grade tracking, reminders, and a real study plan.',
+    'Semora is a Canvas deadline tracker app. Import Canvas assignments on Pro, or scan your syllabus free, with grade tracking, reminders, and a real study plan.',
   alternates: { canonical: '/canvas-deadline-tracker' },
 };
 
@@ -31,7 +31,7 @@ const FAQ = [
   {
     question: 'Is Semora free to use alongside Canvas?',
     answer:
-      'Partly. Importing assignments from Canvas is a Pro feature, but the free tier covers the syllabus side of the same job — and you can paste Canvas assignment text straight into the scanner. The free tier includes 5 syllabus scans per calendar month, up to 4 courses in one semester, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no monthly scan cap, plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
+      'Partly. Importing assignments from Canvas is a Pro feature, but the free tier covers the syllabus side of the same job, and you can paste Canvas assignment text straight into the scanner. The free tier includes 5 syllabus scans per calendar month, up to 4 courses in one semester, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no monthly scan cap, plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
   },
   {
     question: 'Does Semora work on iPhone, iPad, and web?',
@@ -76,7 +76,7 @@ export default function CanvasDeadlineTrackerPage() {
   return (
     <ArticleShell
       ctaHeading="Bring Canvas into one view"
-      ctaSubheading="No OAuth wait — just a personal access token you generate yourself."
+      ctaSubheading="No OAuth wait, just a personal access token you generate yourself."
     >
     <article className={styles.prose}>
       <JsonLd data={faqPageSchema(FAQ_ALL)} />
@@ -111,7 +111,7 @@ export default function CanvasDeadlineTrackerPage() {
           as an .ics file.
         </li>
         <li>
-          <strong>Cross-device sync</strong> — one account, shared in near real time across the
+          <strong>Cross-device sync</strong>, one account, shared in near real time across the
           iPhone app, iPad, and web (via Supabase Realtime), so a deadline you check off on one
           device updates everywhere else instantly.
         </li>

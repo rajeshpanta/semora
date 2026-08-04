@@ -45,7 +45,7 @@ const COPY: Record<
   collaborate: {
     eyebrow: 'Course space',
     heading: 'Join your classmates in a course space',
-    body: `A course space keeps one shared set of deadlines and group assignments in sync for everyone in the class — so when one person adds the exam date, everybody has it.`,
+    body: `A course space keeps one shared set of deadlines and group assignments in sync for everyone in the class, so when one person adds the exam date, everybody has it.`,
     deepLinkParam: 'token',
     appPath: 'collaborate',
   },
@@ -89,7 +89,7 @@ export function ShareLanding({ kind, value }: { kind: ShareKind; value: string }
         <h2 className={styles.explainerHeading}>What is {SITE_NAME}?</h2>
         <p className={styles.explainerBody}>
           {SITE_NAME} reads your syllabus and builds your semester for you. Take a photo or upload
-          the PDF, and every assignment, quiz, exam, and grading weight comes out organized — with
+          the PDF, and every assignment, quiz, exam, and grading weight comes out organized, with
           reminders before things are due and a grade that updates itself as scores come in.
         </p>
         <div className={styles.explainerLinks}>

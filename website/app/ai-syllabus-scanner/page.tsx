@@ -82,7 +82,7 @@ export default function AiSyllabusScannerPage() {
       <h2>What Is an AI Syllabus Scanner?</h2>
       <p>
         An AI syllabus scanner is a tool that reads the unstructured text of a course syllabus — a
-        PDF, a scanned page, a photo — and converts it into structured, usable data: a class
+        PDF, a scanned page, a photo, and converts it into structured, usable data: a class
         schedule, a grading breakdown, and a list of every due date. Instead of manually retyping
         deadlines from a 10-page syllabus PDF into a planner one by one, the syllabus is scanned
         once and the important dates come out organized and ready to use.
@@ -150,7 +150,7 @@ export default function AiSyllabusScannerPage() {
         checking off a task, adjusting a due date — appears on the other in near real time.
       </p>
 
-      <h2>How This Compares to Doing It Manually — or With a Generic To-Do App</h2>
+      <h2>How This Compares to Doing It Manually, or With a Generic To-Do App</h2>
       <p>
         The alternative to an AI syllabus scanner is retyping a syllabus by hand, or using a
         general-purpose to-do app that has no idea what a syllabus even is:
@@ -163,7 +163,7 @@ export default function AiSyllabusScannerPage() {
         </li>
         <li>
           <strong>Generic to-do apps:</strong> tools like a plain reminders or task app can hold
-          dates once you&apos;ve entered them, but they don&apos;t read a syllabus at all — every
+          dates once you&apos;ve entered them, but they don&apos;t read a syllabus at all, every
           assignment, exam, and reading still has to be typed in by hand, and there&apos;s no
           syllabus-aware structure like grading weights, office hours, or per-course grouping.
         </li>

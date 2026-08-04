@@ -138,13 +138,13 @@ export const COMPETITORS: CompetitorFact[] = [
     title: 'Semora vs Shovel: Syllabus Scanning & Canvas Sync',
     metaDescription:
       "Compare Semora and Shovel: syllabus scanning, Canvas sync, grade tracking, study planning, and pricing side by side to find the right app for your semester.",
-    lede: "Semora scans a syllabus into an organized semester — deadlines, grades, and class schedule — with a genuine free tier, while Shovel turns a syllabus or LMS connection into a time-blocked, subscription-based study schedule; the better fit depends on whether you want a lightweight deadline-and-grade tracker or a full automated study-time planner.",
+    lede: "Semora scans a syllabus into an organized semester — deadlines, grades, and class schedule, with a genuine free tier, while Shovel turns a syllabus or LMS connection into a time-blocked, subscription-based study schedule; the better fit depends on whether you want a lightweight deadline-and-grade tracker or a full automated study-time planner.",
     intro:
-      "Both Semora and Shovel start from the same problem — a syllabus PDF nobody wants to manually transcribe — but they solve it differently downstream. Here's a fact-based look at how they compare on syllabus handling, Canvas sync, grade tracking, study planning, pricing, and platform availability.",
+      "Both Semora and Shovel start from the same problem — a syllabus PDF nobody wants to manually transcribe, but they solve it differently downstream. Here's a fact-based look at how they compare on syllabus handling, Canvas sync, grade tracking, study planning, pricing, and platform availability.",
     semoraParagraph:
       'Semora turns a photographed, uploaded, or pasted syllabus into an organized semester. You can import it by camera (multi-page, up to 5 pages), PDF upload, drag-and-drop on web, or by pasting raw text copied from a PDF or LMS page. Gemini AI reads the document and extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading along with its due date. From there, Semora tracks deadlines and grades on the free tier, and — on the Pro tier — adds device calendar sync (with .ics export), an adaptive study schedule, academic-risk alerts, flashcards, a focus timer, and an AI tutor that knows your syllabus.',
     competitorParagraph:
-      'Shovel is a study-planning and scheduling app. You either upload a PDF syllabus for AI parsing — with a review/confirmation screen — or connect a school LMS (Canvas, Brightspace, Moodle, or Google Classroom) for read-only sync that auto-refreshes roughly every 24 hours. From there, Shovel builds a time-blocked study schedule across the whole semester, weighing available time against estimated time-per-task. Distinct features include "The Cushion™" predictive conflict alerts, reading-time estimators, streak-based motivation tracking, and free supplementary "how to study" courses.',
+      'Shovel is a study-planning and scheduling app. You either upload a PDF syllabus for AI parsing, with a review/confirmation screen, or connect a school LMS (Canvas, Brightspace, Moodle, or Google Classroom) for read-only sync that auto-refreshes roughly every 24 hours. From there, Shovel builds a time-blocked study schedule across the whole semester, weighing available time against estimated time-per-task. Distinct features include "The Cushion™" predictive conflict alerts, reading-time estimators, streak-based motivation tracking, and free supplementary "how to study" courses.',
     comparisonCaption: 'Comparison based on verified product details as of July 2026.',
     comparisonRows: [
       {
@@ -188,12 +188,12 @@ export const COMPETITORS: CompetitorFact[] = [
       },
     ],
     pricingWin:
-      "Semora Pro is $3.99/month or $19.99/year — less than half of Shovel's reported $9.79/month, and about half of Shovel's own $39/year plan.",
+      "Semora Pro is $3.99/month or $19.99/year, less than half of Shovel's reported $9.79/month, and about half of Shovel's own $39/year plan.",
     extraSections: [
       {
         heading: 'Syllabus import, in detail',
         body: [
-          'Semora accepts four import paths — camera photo (up to 5 pages per scan), PDF upload, drag-and-drop on web, or pasted raw text copied from a PDF or LMS page — and uses Gemini AI to extract structured course data: name, instructor, meeting times, office hours, semester dates, grading scale, and every graded item with its due date. The free tier includes 5 syllabus scans per calendar month across up to 4 courses per semester.',
+          'Semora accepts four import paths — camera photo (up to 5 pages per scan), PDF upload, drag-and-drop on web, or pasted raw text copied from a PDF or LMS page, and uses Gemini AI to extract structured course data: name, instructor, meeting times, office hours, semester dates, grading scale, and every graded item with its due date. The free tier includes 5 syllabus scans per calendar month across up to 4 courses per semester.',
           "Shovel's stated import path is a PDF upload that AI parses, followed by a review/confirmation step before the schedule is built, or connecting an LMS directly so assignments come in via sync rather than a scan.",
         ],
       },
@@ -275,9 +275,9 @@ export const COMPETITORS: CompetitorFact[] = [
     intro:
       "Both let you point a phone camera at a syllabus and get a study plan out the other end. Where they differ is what happens before and after that scan: how deadlines are organized across multiple courses, whether the tool connects to your school's LMS, and how much of the product is built around a gradebook versus a tutor. This page compares the two on the specifics that matter for choosing one — using only what each company publicly states about its own product.",
     semoraParagraph:
-      'Semora (iPhone, iPad, and web) turns a course syllabus into an organized semester. You import a syllabus by camera photo (multi-page, up to 5 pages), PDF upload, drag-and-drop on the web, or by pasting raw text copied from a PDF or LMS page. Gemini AI extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading with its due date — then organizes them into deadlines, a grade tracker, and a class schedule shared across your iPhone, iPad, and the web via one account.',
+      'Semora (iPhone, iPad, and web) turns a course syllabus into an organized semester. You import a syllabus by camera photo (multi-page, up to 5 pages), PDF upload, drag-and-drop on the web, or by pasting raw text copied from a PDF or LMS page. Gemini AI extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading with its due date, then organizes them into deadlines, a grade tracker, and a class schedule shared across your iPhone, iPad, and the web via one account.',
     competitorParagraph:
-      'StudyFetch (web, iOS, and Android) is an AI study platform built around Spark.E, a tutor that answers questions only from a student\'s own uploaded course material — slides, PDFs, notes, photos, video, or audio — rather than the open internet. Around that core, it auto-generates flashcards, quizzes, practice and full-length exam simulations, essay feedback, AI-narrated "podcast" summaries, and AI-generated explainer videos. A Live Lecture Assistant records class audio into real-time structured notes and a transcript, and Spark.E is also reachable by SMS/iMessage. StudyFetch does include a calendar feature — photograph a syllabus and Spark.E extracts events into a personal calendar with reminders and a spaced-repetition study plan — but it functions as one module inside a materials-centric tool rather than the product\'s organizing principle.',
+      'StudyFetch (web, iOS, and Android) is an AI study platform built around Spark.E, a tutor that answers questions only from a student\'s own uploaded course material — slides, PDFs, notes, photos, video, or audio, rather than the open internet. Around that core, it auto-generates flashcards, quizzes, practice and full-length exam simulations, essay feedback, AI-narrated "podcast" summaries, and AI-generated explainer videos. A Live Lecture Assistant records class audio into real-time structured notes and a transcript, and Spark.E is also reachable by SMS/iMessage. StudyFetch does include a calendar feature — photograph a syllabus and Spark.E extracts events into a personal calendar with reminders and a spaced-repetition study plan, but it functions as one module inside a materials-centric tool rather than the product\'s organizing principle.',
     comparisonCaption:
       "Based on each company's own published product information. Where StudyFetch's own site could not be independently confirmed, that is noted.",
     comparisonRows: [
@@ -323,18 +323,18 @@ export const COMPETITORS: CompetitorFact[] = [
       },
     ],
     pricingWin:
-      "Semora Pro is $3.99/month or $19.99/year — less than half of StudyFetch's reported Base tier (~$7.99/month) and well below its reported Premium tier (~$11.99/month), per third-party review coverage.",
+      "Semora Pro is $3.99/month or $19.99/year, less than half of StudyFetch's reported Base tier (~$7.99/month) and well below its reported Premium tier (~$11.99/month), per third-party review coverage.",
     extraSections: [
       {
         heading: 'Collaboration and sharing',
         body: [
-          "Semora has Course Spaces: you can share a course with classmates via an invite link, with shared deadlines and group assignments syncing in real time. It also has Share & Streaks (Pro) — a semester share card plus study-streak tracking — and a separate referral program, open to free and Pro users alike, that gives both you and your friend a free month of Pro when they join. Available research did not surface an equivalent classmate-facing course-sharing feature for StudyFetch.",
+          "Semora has Course Spaces: you can share a course with classmates via an invite link, with shared deadlines and group assignments syncing in real time. It also has Share & Streaks (Pro) — a semester share card plus study-streak tracking, and a separate referral program, open to free and Pro users alike, that gives both you and your friend a free month of Pro when they join. Available research did not surface an equivalent classmate-facing course-sharing feature for StudyFetch.",
         ],
       },
       {
         heading: 'AI tutor vs. syllabus-aware assistant',
         body: [
-          "StudyFetch's Spark.E is built to answer from a student's own uploaded slides, notes, and recordings — including live lecture audio — which is a deeper materials-ingestion capability than Semora currently offers. Semora's Pro tier includes its own AI tutor, but scoped to what it knows about a student's syllabus (deadlines, grading scale, course structure) rather than arbitrary uploaded lecture material.",
+          "StudyFetch's Spark.E is built to answer from a student's own uploaded slides, notes, and recordings, including live lecture audio, which is a deeper materials-ingestion capability than Semora currently offers. Semora's Pro tier includes its own AI tutor, but scoped to what it knows about a student's syllabus (deadlines, grading scale, course structure) rather than arbitrary uploaded lecture material.",
         ],
       },
       {
@@ -368,7 +368,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Which app has an AI tutor?',
         answer:
-          "Both do, with different scopes. StudyFetch's Spark.E is a tutor that answers from whatever course material a student uploads — slides, PDFs, notes, photos, video, or audio, including live lecture recordings. Semora's Pro plan includes an AI tutor that's aware of a student's syllabus — deadlines, grading scale, and course structure — rather than open-ended uploaded lecture material.",
+          "Both do, with different scopes. StudyFetch's Spark.E is a tutor that answers from whatever course material a student uploads — slides, PDFs, notes, photos, video, or audio, including live lecture recordings. Semora's Pro plan includes an AI tutor that's aware of a student's syllabus — deadlines, grading scale, and course structure, rather than open-ended uploaded lecture material.",
       },
     ],
   },
@@ -376,17 +376,17 @@ export const COMPETITORS: CompetitorFact[] = [
     slug: 'mindgrasp',
     name: 'Mindgrasp',
     oneLiner:
-      'Turns any uploaded document, video, or recording into notes, flashcards, and a quiz — not a syllabus parser.',
+      'Turns any uploaded document, video, or recording into notes, flashcards, and a quiz, not a syllabus parser.',
     title: 'Semora vs Mindgrasp: Which AI Study App Fits You?',
     metaDescription:
       'Compare Semora and Mindgrasp: syllabus deadline tracking and Canvas sync vs. AI notes and flashcards from any file. Features, pricing, platforms.',
     lede: 'Semora turns a course syllabus into an organized, deadline-tracked semester with grades and a calendar, while Mindgrasp turns any single document, video, or lecture recording you upload into notes, flashcards, and quizzes — they solve different problems and can be used alongside each other.',
     intro:
-      "If you're comparing the two, the short version is this: Semora is built around your syllabus — it reads the PDF or photo you give it and builds your semester calendar, task list, and grade tracker from it. Mindgrasp is built around your study material — lecture recordings, PDFs, slides, videos — and turns whatever you feed it into notes, flashcards, and a quiz. Read on for how each one actually works, a side-by-side feature table, and honest guidance on which fits your situation.",
+      "If you're comparing the two, the short version is this: Semora is built around your syllabus — it reads the PDF or photo you give it and builds your semester calendar, task list, and grade tracker from it. Mindgrasp is built around your study material — lecture recordings, PDFs, slides, videos, and turns whatever you feed it into notes, flashcards, and a quiz. Read on for how each one actually works, a side-by-side feature table, and honest guidance on which fits your situation.",
     semoraParagraph:
-      'Semora (iPhone, iPad, and web) starts with your syllabus. You can import it by taking a photo (including multi-page scans, up to 5 pages), uploading a PDF, dragging a file onto the web app, or pasting raw text copied from a PDF or your school\'s LMS page. Gemini AI then extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading — each with its due date — and builds them into your semester automatically. The free tier includes 5 syllabus scans per calendar month, up to 4 courses per semester, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited scans and courses, Smart Plan, a Workload dashboard, Grade Scale & Forecasting, spaced-repetition Flashcards, a Focus timer, an AI tutor, custom reminder timing, calendar sync (device + .ics export), Academic Risk alerts, Progress Insights, and Share & Streaks. Semora also connects to Canvas using a personal-access-token you generate yourself inside Canvas — no OAuth app-review process involved — and supports Course Spaces, where you can share a course with classmates via an invite link so shared deadlines and group assignments sync in real time (hosting a space is Pro; joining one is free). Web, iPhone, and iPad share one account and sync in near real time. (Google Classroom and Google Calendar sync exist in Semora\'s codebase but are not currently enabled or shipped — they aren\'t live features today.)',
+      'Semora (iPhone, iPad, and web) starts with your syllabus. You can import it by taking a photo (including multi-page scans, up to 5 pages), uploading a PDF, dragging a file onto the web app, or pasting raw text copied from a PDF or your school\'s LMS page. Gemini AI then extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading, each with its due date, and builds them into your semester automatically. The free tier includes 5 syllabus scans per calendar month, up to 4 courses per semester, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited scans and courses, Smart Plan, a Workload dashboard, Grade Scale & Forecasting, spaced-repetition Flashcards, a Focus timer, an AI tutor, custom reminder timing, calendar sync (device + .ics export), Academic Risk alerts, Progress Insights, and Share & Streaks. Semora also connects to Canvas using a personal-access-token you generate yourself inside Canvas — no OAuth app-review process involved, and supports Course Spaces, where you can share a course with classmates via an invite link so shared deadlines and group assignments sync in real time (hosting a space is Pro; joining one is free). Web, iPhone, and iPad share one account and sync in near real time. (Google Classroom and Google Calendar sync exist in Semora\'s codebase but are not currently enabled or shipped — they aren\'t live features today.)',
     competitorParagraph:
-      'Mindgrasp takes a different starting point: you upload or link a piece of content — a PDF, DOCX, PowerPoint, MP3/MP4, YouTube video, web article, or a lecture you record live — and it generates a linked bundle of AI notes, a summary, flashcards, a quiz, and an "AI Tutor" chat for asking questions about that content. A higher Scholar/Premium tier adds an "AI math expert" for step-by-step math help, and there\'s a Chrome extension for capturing content from the browser. Mindgrasp also states compatibility with Canvas, Blackboard, and Panopto, though this appears to be for importing or processing files from those platforms rather than parsing a syllabus for deadlines. Mindgrasp\'s marketing targets a broad range of learners — high school through graduate students, self-learners, professionals, and exam-prep candidates.',
+      'Mindgrasp takes a different starting point: you upload or link a piece of content — a PDF, DOCX, PowerPoint, MP3/MP4, YouTube video, web article, or a lecture you record live, and it generates a linked bundle of AI notes, a summary, flashcards, a quiz, and an "AI Tutor" chat for asking questions about that content. A higher Scholar/Premium tier adds an "AI math expert" for step-by-step math help, and there\'s a Chrome extension for capturing content from the browser. Mindgrasp also states compatibility with Canvas, Blackboard, and Panopto, though this appears to be for importing or processing files from those platforms rather than parsing a syllabus for deadlines. Mindgrasp\'s marketing targets a broad range of learners — high school through graduate students, self-learners, professionals, and exam-prep candidates.',
     comparisonCaption:
       "Based on Semora's shipped features and Mindgrasp's publicly available materials as of this writing.",
     comparisonRows: [
@@ -480,11 +480,11 @@ export const COMPETITORS: CompetitorFact[] = [
     title: 'Semora vs Taskade: Syllabus & Deadline Tracking',
     metaDescription:
       'Semora turns a syllabus into deadlines, grades, and a schedule for students. Taskade is a general AI workspace for teams. Compare features and pricing.',
-    lede: 'Semora is a syllabus-first app for iPhone, iPad, and web that turns a course syllabus into an organized semester — deadlines, grades, and a class schedule — while Taskade is a general-purpose AI workspace built around seven interchangeable project views (List, Board, Calendar, Table, Mind Map, Gantt, Org Chart) for teams, freelancers, and businesses, with no student- or course-specific features.',
+    lede: 'Semora is a syllabus-first app for iPhone, iPad, and web that turns a course syllabus into an organized semester — deadlines, grades, and a class schedule, while Taskade is a general-purpose AI workspace built around seven interchangeable project views (List, Board, Calendar, Table, Mind Map, Gantt, Org Chart) for teams, freelancers, and businesses, with no student- or course-specific features.',
     intro:
       "If you're comparing the two, it usually comes down to this: do you want a tool that already knows what a syllabus is, or a flexible blank-canvas workspace you configure yourself? This page walks through what each product actually does, how they price out, and where each one tends to fit best.",
     semoraParagraph:
-      'An iPhone, iPad, and web app that imports a syllabus — by photo (multi-page, up to 5 pages), PDF upload, drag-and-drop on web, or pasted text — and uses Gemini AI to extract the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading with its due date. From there it tracks deadlines and grades, syncs to your device calendar, and (on Pro) builds a study plan around what it found.',
+      'An iPhone, iPad, and web app that imports a syllabus — by photo (multi-page, up to 5 pages), PDF upload, drag-and-drop on web, or pasted text, and uses Gemini AI to extract the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading with its due date. From there it tracks deadlines and grades, syncs to your device calendar, and (on Pro) builds a study plan around what it found.',
     competitorParagraph:
       "An AI-native workspace combining task/project management, docs, and chat-style collaboration. Its signature feature is seven project views that share the same underlying data with no conversion loss, plus the ability to build custom AI agents trained on your uploaded docs or links, deploy multi-agent \"teams,\" and run automations. It's explicitly general-purpose — marketed to businesses, nonprofits, and individuals alike, not students or courses specifically.",
     comparisonCaption: 'Semora vs Taskade across the areas that matter most for course and deadline management.',
@@ -532,7 +532,7 @@ export const COMPETITORS: CompetitorFact[] = [
     tableNote:
       "All Semora details above come from Semora's own product specification. Taskade details are drawn from Taskade's public pricing/feature pages and independent review sources; anything not directly confirmed on Taskade's site is flagged as such.",
     pricingWin:
-      "Semora Pro is $3.99/month or $19.99/year. Taskade's own pricing page lists Pro at $10/month billed annually (about $120/year) — though Taskade is priced and built for teams, not individual students, so the two aren't a direct apples-to-apples comparison.",
+      "Semora Pro is $3.99/month or $19.99/year. Taskade's own pricing page lists Pro at $10/month billed annually (about $120/year), though Taskade is priced and built for teams, not individual students, so the two aren't a direct apples-to-apples comparison.",
     whereSemoraFits: [
       'You want deadlines and grades populated automatically from a syllabus photo or PDF instead of typing them in by hand.',
       "You use Canvas and want a sync option that doesn't depend on an OAuth app-review process.",

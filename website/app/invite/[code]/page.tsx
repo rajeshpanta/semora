@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
   openGraph: {
     title: `You've been invited to ${SITE_NAME}`,
-    description: `Scan your syllabus, never miss a deadline — and you both get a free month of Pro.`,
+    description: `Scan your syllabus, never miss a deadline, and you both get a free month of Pro.`,
     ...OG_IMAGE,
   },
 };
