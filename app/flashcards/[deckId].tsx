@@ -65,6 +65,62 @@ export default function DeckDetailScreen() {
 
   const dueNow = useMemo(() => dueCards(cards), [cards]);
 
+  // These hooks MUST stay above every early return below. React requires the
+  // same hook call order on every render, and this screen returns early while
+  // loading, on error, and for free users — so a hook placed after those
+  // guards is skipped on render 1 and called on render 2. Because
+  // app/_layout.tsx re-exports expo-router's ErrorBoundary at the ROOT and this
+  // screen exports none, that mismatch replaces the ENTIRE app with the error
+  // screen, not just this route.
+  // ── Publish to a course space (migration 051) ──────────────
+  // Only spaces where this user is owner/editor can accept a deck; the RPC
+  // enforces that too, this just avoids offering a choice that will fail.
+  const { session } = useSession();
+  const { data: spaces = [] } = useQuery({
+    queryKey: ['collaborations', session?.user.id],
+    queryFn: () => listCollaborations(session!.user.id),
+    enabled: !!session?.user.id,
+  });
+  const publishable = (spaces as CollaborationSummary[]).filter(
+    (space) => space.membership.role === 'owner' || space.membership.role === 'editor',
+  );
+
+  const publishDeck = useMutation({
+    mutationFn: (collaborationId: string) => {
+      if (!deck) throw new Error('Deck is still loading.');
+      return publishDeckToCollaboration(deck.id, collaborationId);
+    },
+  });
+
+  const handleShareWithClass = () => {
+    if (publishable.length === 0) {
+      Alert.alert(
+        'No course space yet',
+        'Create a course space from a course first, then you can publish a deck to everyone in it.',
+      );
+      return;
+    }
+    Alert.alert(
+      'Share with class',
+      `Everyone in the space gets their own copy of "${deck?.title ?? 'this deck'}" to study. Their review progress stays theirs.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        ...publishable.slice(0, 3).map((space) => ({
+          text: space.course_name,
+          onPress: async () => {
+            try {
+              const r = await publishDeck.mutateAsync(space.id);
+              Alert.alert('Shared', `${r.cards_published} cards published to ${space.course_name}.`);
+            } catch (err: any) {
+              Alert.alert('Could not share', err.message ?? 'Something went wrong.');
+            }
+          },
+        })),
+      ],
+    );
+  };
+
+
   if (!isPro) {
     // Non-Pro users shouldn't reach here (the index screen gates), but guard
     // deep links: bounce to the paywall teaser context.
@@ -146,51 +202,6 @@ export default function DeckDetailScreen() {
         },
       },
     ]);
-  };
-
-  // ── Publish to a course space (migration 051) ──────────────
-  // Only spaces where this user is owner/editor can accept a deck; the RPC
-  // enforces that too, this just avoids offering a choice that will fail.
-  const { session } = useSession();
-  const { data: spaces = [] } = useQuery({
-    queryKey: ['collaborations', session?.user.id],
-    queryFn: () => listCollaborations(session!.user.id),
-    enabled: !!session?.user.id,
-  });
-  const publishable = (spaces as CollaborationSummary[]).filter(
-    (space) => space.membership.role === 'owner' || space.membership.role === 'editor',
-  );
-
-  const publishDeck = useMutation({
-    mutationFn: (collaborationId: string) => publishDeckToCollaboration(deck.id, collaborationId),
-  });
-
-  const handleShareWithClass = () => {
-    if (publishable.length === 0) {
-      Alert.alert(
-        'No course space yet',
-        'Create a course space from a course first, then you can publish a deck to everyone in it.',
-      );
-      return;
-    }
-    Alert.alert(
-      'Share with class',
-      `Everyone in the space gets their own copy of "${deck.title}" to study. Their review progress stays theirs.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        ...publishable.slice(0, 3).map((space) => ({
-          text: space.course_name,
-          onPress: async () => {
-            try {
-              const r = await publishDeck.mutateAsync(space.id);
-              Alert.alert('Shared', `${r.cards_published} cards published to ${space.course_name}.`);
-            } catch (err: any) {
-              Alert.alert('Could not share', err.message ?? 'Something went wrong.');
-            }
-          },
-        })),
-      ],
-    );
   };
 
   const handleDeleteDeck = () => {
