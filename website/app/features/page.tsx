@@ -222,7 +222,7 @@ export default function FeaturesPage() {
           </div>
         </div>
       </div>
-      <PageSections content={getPageContent('features')} />
+      <PageSections content={getPageContent('features')} withRail />
     </>
   );
 }

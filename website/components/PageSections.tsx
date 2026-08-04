@@ -1,4 +1,5 @@
 import styles from './PageSections.module.css';
+import { ArticleShell } from './ArticleShell';
 import { Faq } from './Faq';
 import { JsonLd } from './JsonLd';
 import { faqPageSchema } from '@/lib/schema';
@@ -15,6 +16,7 @@ export function PageSections({
   content,
   faqHeading = 'Frequently asked questions',
   emitFaq = true,
+  withRail = false,
 }: {
   content: PageLongForm | undefined;
   faqHeading?: string;
@@ -25,13 +27,20 @@ export function PageSections({
    * their existing list instead.
    */
   emitFaq?: boolean;
+  /**
+   * Wrap the body in ArticleShell so it gets the sticky "On this page" rail
+   * and the CTA card, the same treatment the feature and comparison pages
+   * have. Hub pages opt in for their long-form body only — their hero and
+   * card grids stay full width, because an 860px column would break them.
+   */
+  withRail?: boolean;
 }) {
   if (!content) return null;
 
   const showFaq = emitFaq && !!content.faq?.length;
 
-  return (
-    <div className={styles.wrap}>
+  const body = (
+    <div className={withRail ? `${styles.railWrap} article-body` : styles.wrap}>
       {showFaq ? <JsonLd data={faqPageSchema(content.faq)} /> : null}
 
       {content.sections.map((s) => (
@@ -57,5 +66,16 @@ export function PageSections({
         </section>
       ) : null}
     </div>
+  );
+
+  if (!withRail) return body;
+
+  return (
+    <ArticleShell
+      ctaHeading="Try it on your own syllabus"
+      ctaSubheading="See how Semora handles your actual courses — free, no credit card."
+    >
+      <article>{body}</article>
+    </ArticleShell>
   );
 }

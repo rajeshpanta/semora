@@ -58,7 +58,7 @@ export default function CompareIndexPage() {
           subheading="Scan a syllabus and get your deadlines, grades, and schedule organized in one snap — free to start."
         />
       </section>
-      <PageSections content={getPageContent('compare')} />
+      <PageSections content={getPageContent('compare')} withRail />
     </>
   );
 }

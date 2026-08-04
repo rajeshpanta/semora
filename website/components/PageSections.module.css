@@ -57,3 +57,12 @@
   background: var(--brand-100);
   box-shadow: 0 0 0 4px var(--brand-50);
 }
+
+/* When the body is inside ArticleShell the shell owns width and padding —
+   the module must not re-center inside its own grid column. */
+.railWrap {
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}

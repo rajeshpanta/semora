@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import styles from '@/components/Prose.module.css';
 import { SUPPORT_EMAIL } from '@/lib/semora-facts';
 import { OG_IMAGE } from '@/lib/og';
+import { ArticleShell } from '@/components/ArticleShell';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
@@ -12,7 +13,11 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <article className={styles.prose}>
+    <ArticleShell
+      ctaHeading="Try it on your own syllabus"
+      ctaSubheading="See how Semora handles your actual courses — free, no credit card."
+    >
+    <article className={`${styles.prose} article-body`}>
       <h1>Privacy Policy</h1>
       <p className={styles.updated}>Last updated: July 16, 2026</p>
 
@@ -147,5 +152,6 @@ export default function PrivacyPage() {
         <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
       </p>
     </article>
+    </ArticleShell>
   );
 }

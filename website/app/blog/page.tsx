@@ -34,7 +34,7 @@ export default function BlogIndexPage() {
           </Link>
         ))}
       </div>
-      <PageSections content={getPageContent('blog')} />
+      <PageSections content={getPageContent('blog')} withRail />
     </div>
   );
 }

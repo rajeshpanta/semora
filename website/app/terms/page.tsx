@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import styles from '@/components/Prose.module.css';
 import { SUPPORT_EMAIL } from '@/lib/semora-facts';
 import { OG_IMAGE } from '@/lib/og';
+import { ArticleShell } from '@/components/ArticleShell';
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
@@ -12,7 +13,11 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <article className={styles.prose}>
+    <ArticleShell
+      ctaHeading="Try it on your own syllabus"
+      ctaSubheading="See how Semora handles your actual courses — free, no credit card."
+    >
+    <article className={`${styles.prose} article-body`}>
       <h1>Terms of Service</h1>
       <p className={styles.updated}>Last updated: April 19, 2026</p>
 
@@ -108,5 +113,6 @@ export default function TermsPage() {
         <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.
       </p>
     </article>
+    </ArticleShell>
   );
 }

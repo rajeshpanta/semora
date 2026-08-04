@@ -60,7 +60,7 @@ export default function PricingPage() {
         <Faq items={PRICING_FAQ_ALL} />
       </div>
 
-      <PageSections content={getPageContent('pricing')} emitFaq={false} />
+      <PageSections content={getPageContent('pricing')} withRail emitFaq={false} />
       <Cta
         heading="Start free today"
         subheading="Scan your first syllabus in under a minute — free, no credit card."

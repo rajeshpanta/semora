@@ -7,6 +7,7 @@ import { SUPPORT_EMAIL } from '@/lib/semora-facts';
 import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
 import { OG_IMAGE } from '@/lib/og';
+import { ArticleShell } from '@/components/ArticleShell';
 
 export const metadata: Metadata = {
   title: 'Support',
@@ -59,7 +60,11 @@ const SUPPORT_FAQ_ALL = [...SUPPORT_FAQ, ...(getPageContent('support')?.faq ?? [
 
 export default function SupportPage() {
   return (
-    <article className={styles.prose}>
+    <ArticleShell
+      ctaHeading="Still stuck? Try it on your own syllabus"
+      ctaSubheading="See how Semora handles your actual courses — free, no credit card."
+    >
+    <article className={`${styles.prose} article-body`}>
       <JsonLd data={faqPageSchema(SUPPORT_FAQ_ALL)} />
       <h1>Support</h1>
       <p className={styles.subtitle}>We&apos;re here to help you get the most out of Semora.</p>
@@ -74,5 +79,6 @@ export default function SupportPage() {
         <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
       </div>
     </article>
+    </ArticleShell>
   );
 }
