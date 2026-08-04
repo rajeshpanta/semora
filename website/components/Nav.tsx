@@ -13,11 +13,11 @@ export const NAV_LINKS = [
   //
   // '/about' was previously footer-only. It is a hub page and the conventional
   // sitelink slot, so it gets a plain crawlable link here.
-  { href: '/pricing', label: 'Pricing' },
+  // Pricing and About live in the footer, which keeps this bar short enough to
+  // read at a glance. Both are still crawlable from every page.
   { href: '/compare', label: 'Compare' },
   { href: '/blog', label: 'Blog' },
   { href: '/support', label: 'Support' },
-  { href: '/about', label: 'About' },
 ];
 
 export function Nav() {

@@ -26,9 +26,23 @@ export function NavChrome() {
     if (!header) return;
 
     header.toggleAttribute('data-overlay', overlay);
+
+    // Publish the header's REAL height so the hero can sit exactly under it.
+    // This was hardcoded at 61px; the bar is actually ~76px on desktop and
+    // ~67px on mobile, and the difference showed as a pale strip above the
+    // hero. Re-measured on resize because the bar wraps at narrow widths.
+    const publishHeight = () => {
+      document.documentElement.style.setProperty(
+        '--nav-height', `${header.getBoundingClientRect().height}px`,
+      );
+    };
+    publishHeight();
+    const ro = new ResizeObserver(publishHeight);
+    ro.observe(header);
+
     if (!overlay) {
       header.removeAttribute('data-scrolled');
-      return;
+      return () => ro.disconnect();
     }
 
     // Flip slightly before the hero ends so the bar is already solid by the
@@ -38,7 +52,10 @@ export function NavChrome() {
     };
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      ro.disconnect();
+    };
   }, [overlay]);
 
   return null;
