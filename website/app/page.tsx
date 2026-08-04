@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 
 const HERO_CHIPS = [
   '5 free scans every month',
-  'iPhone, iPad and web — synced',
+  'Synced across iPhone, iPad and web',
   'No credit card to start',
 ];
 
@@ -47,7 +47,7 @@ const STEPS = [
   {
     n: '01',
     title: 'Scan it',
-    body: 'Four ways in. Photograph the syllabus with your phone, up to five pages in a single scan. Upload the PDF. Drag and drop the file onto the web app. Or paste raw text you copied out of a PDF or an LMS page. Whatever format your professor handed you, one of those four takes it — on iPhone, iPad or the web.',
+    body: 'Four ways in. Photograph the syllabus with your phone, up to five pages in a single scan. Upload the PDF. Drag and drop the file onto the web app. Or paste raw text you copied out of a PDF or an LMS page. Whatever format your professor handed you, one of those four takes it, on iPhone, iPad or the web.',
   },
   {
     n: '02',
@@ -82,7 +82,7 @@ const DEEP_DIVES: DeepDive[] = [
     lead: 'Take a photo of the syllabus on the first day of class, or drop the PDF onto the web app and walk away. Semora reads it and pulls out the course name, your instructor, class meeting times, office hours, semester start and end dates, the grading scale, and every assignment, exam, quiz, project and reading with its due date. Then it hands the list back to you.',
     bullets: [
       'Four ways in: a camera photo of up to five pages per scan, a PDF, web drag-and-drop, or pasted text.',
-      'It captures meeting times, office hours, semester dates and the grading scale — not just due dates.',
+      'It captures meeting times, office hours, semester dates and the grading scale, not just due dates.',
       'Free covers five scans a calendar month and four courses a semester; Pro lifts both to unlimited.',
       'Nothing reaches your calendar until you confirm it. You are the last check on your own semester.',
     ],
@@ -95,7 +95,7 @@ const DEEP_DIVES: DeepDive[] = [
     key: 'grades',
     eyebrow: 'Grades and forecasting',
     heading: 'Know the number you need, before the final.',
-    lead: 'Semora tracks your grades with weighted averages, using the grading scale it already read off your syllabus — and that part is free. Pro adds what you actually want in week eleven: letter-grade cutoffs set to the ones your school really uses, and what-if calculators that work out the score you need on the work that is left to land the grade you are aiming at.',
+    lead: 'Semora tracks your grades with weighted averages, using the grading scale it already read off your syllabus, and that part is free. Pro adds what you actually want in week eleven: letter-grade cutoffs set to the ones your school really uses, and what-if calculators that work out the score you need on the work that is left to land the grade you are aiming at.',
     bullets: [
       'Weighted averages across every course and category are free on every plan, no credit card, no trial.',
       'Pro lets you customize letter-grade cutoffs to match the scale your school actually uses.',
@@ -128,7 +128,7 @@ const DEEP_DIVES: DeepDive[] = [
     bullets: [
       'Decks generate from your scanned syllabus and uploaded notes, scoped to a course or one specific exam.',
       'Focus blocks of 15, 25, 45 or 50 minutes, with 5, 10 or 15 minute breaks, running in the background.',
-      'The AI Tutor answers from your syllabus, your live deadlines and your notes — and cites what it used.',
+      'The AI Tutor answers from your syllabus, your live deadlines and your notes, and cites what it used.',
       'It pulls dates only from tracked tasks, never invents one, and says plainly when something is outside your material.',
     ],
     // Deliberately no screenshot. The only Pro artwork available
@@ -144,9 +144,9 @@ const DEEP_DIVES: DeepDive[] = [
 const PILLARS = [
   {
     title: 'Canvas without the IT ticket',
-    body: 'Connect Canvas with a personal access token you generate yourself, inside Canvas’s own settings. That choice is deliberate. An OAuth integration would put you in line behind your school’s IT department and a third-party app review — approval you do not control and cannot hurry. Paste the token instead and Canvas imports, whether or not anyone at your school has heard of Semora.',
+    body: 'Connect Canvas with a personal access token you generate yourself, inside Canvas’s own settings. That choice is deliberate. An OAuth integration would put you in line behind your school’s IT department and a third-party app review, approval you do not control and cannot hurry. Paste the token instead and Canvas imports, whether or not anyone at your school has heard of Semora.',
     points: [
-      'You generate the token inside Canvas — no admin request, no app review',
+      'You generate the token inside Canvas: no admin request, no app review',
       'Blackboard and Moodle connect the same way, with a token from your school',
       'Connecting a platform is part of Pro; free accounts can paste assignment text into the scanner',
     ],
@@ -157,14 +157,14 @@ const PILLARS = [
     points: [
       'Invite classmates with a single link',
       'Shared deadlines and group assignments update for the whole space',
-      'Hosting a space is Pro — joining one you are invited to is always free',
+      'Hosting a space is Pro. Joining one you are invited to is always free',
     ],
   },
   {
     title: 'iPhone, iPad, and the web',
-    body: 'One account, three places. Semora is one universal iOS app on iPhone and iPad, plus a web app you can start using without installing anything — sign in and drag a syllabus PDF straight onto the page. Courses, deadlines and grades sync in near real time across all three, so a scan you run walking out of a lecture hall is already waiting on your laptop.',
+    body: 'One account, three places. Semora is one universal iOS app on iPhone and iPad, plus a web app you can start using without installing anything. Sign in and drag a syllabus PDF straight onto the page. Courses, deadlines and grades sync in near real time across all three, so a scan you run walking out of a lecture hall is already waiting on your laptop.',
     points: [
-      'Start in the browser — no install, drag and drop a syllabus PDF',
+      'Start in the browser: no install, drag and drop a syllabus PDF',
       'Pro is bought in the iOS app and applies account-wide, web included',
       'No separate web checkout; the web app reads and refreshes your entitlement',
     ],
@@ -180,47 +180,47 @@ const HOME_FAQ = [
   {
     question: 'What does Pro cost, and where do I buy it?',
     answer:
-      'Pro is $3.99 a month or $19.99 a year. The annual plan works out to about $1.67 a month, roughly 58 percent cheaper than paying monthly. You buy it inside the iOS app through the App Store. There is no separate web checkout — once it is active, it applies to your whole account, including the web app.',
+      'Pro is $3.99 a month or $19.99 a year. The annual plan works out to about $1.67 a month, roughly 58 percent cheaper than paying monthly. You buy it inside the iOS app through the App Store. There is no separate web checkout. Once it is active, it applies to your whole account, including the web app.',
   },
   {
     question: 'What can I feed the scanner?',
     answer:
-      'Four things. A camera photo, and you can shoot multiple pages — up to five per scan. A PDF upload. Drag and drop, on the web app. Or raw text you copied out of a PDF or an LMS page and pasted in. If your professor buried the syllabus in a Canvas announcement, paste it.',
+      'Four things. A camera photo, and you can shoot multiple pages, up to five per scan. A PDF upload. Drag and drop, on the web app. Or raw text you copied out of a PDF or an LMS page and pasted in. If your professor buried the syllabus in a Canvas announcement, paste it.',
   },
   {
     question: 'Do I need Canvas for this to work?',
     answer:
-      'No. Semora works from the syllabus alone, on the free tier. Canvas import is there if you want it, as part of Pro, and it connects with a personal access token you generate yourself inside Canvas settings — no OAuth integration, so you are not waiting on your school’s IT department to approve a third-party app. On the free tier you can still paste Canvas assignment text straight into the scanner.',
+      'No. Semora works from the syllabus alone, on the free tier. Canvas import is there if you want it, as part of Pro, and it connects with a personal access token you generate yourself inside Canvas settings. There is no OAuth integration, so you are not waiting on your school’s IT department to approve a third-party app. On the free tier you can still paste Canvas assignment text straight into the scanner.',
   },
   {
     question: 'How accurate is the scan, and what if it gets something wrong?',
     answer:
-      'It pulls the course name, instructor, meeting times, office hours, semester start and end dates, the grading scale, and every assignment, exam, quiz, project and reading with its due date. Then it hands all of that to you to review and edit. Nothing lands on your calendar until you confirm it. Fix a wrong date, rename a course, delete the reading you know is optional — then save.',
+      'It pulls the course name, instructor, meeting times, office hours, semester start and end dates, the grading scale, and every assignment, exam, quiz, project and reading with its due date. Then it hands all of that to you to review and edit. Nothing lands on your calendar until you confirm it. Fix a wrong date, rename a course, delete the reading you know is optional, then save.',
   },
   {
     question: 'Does it work on iPad?',
     answer:
-      'Yes. Semora is one universal iOS app — the same download runs on iPhone and iPad. There is also the web app. One account covers all three, and your courses, deadlines and grades sync across them in near real time, so you can scan a syllabus on your phone and plan your week on a bigger screen.',
+      'Yes. Semora is one universal iOS app, so the same download runs on iPhone and iPad. There is also the web app. One account covers all three, and your courses, deadlines and grades sync across them in near real time, so you can scan a syllabus on your phone and plan your week on a bigger screen.',
   },
   {
     question: 'Can I use it without installing anything?',
     answer:
-      'Yes. Sign in on the web and use Semora straight from the browser — drag a syllabus PDF onto the page or paste the text in. It is the same account and the same data as the app. The one thing the web cannot do is take payment: Pro is purchased in the iOS app, then the web app picks the entitlement up.',
+      'Yes. Sign in on the web and use Semora straight from the browser. Drag a syllabus PDF onto the page or paste the text in. It is the same account and the same data as the app. The one thing the web cannot do is take payment: Pro is purchased in the iOS app, then the web app picks the entitlement up.',
   },
   {
     question: 'Can I share a course with classmates?',
     answer:
-      'Yes. Course Spaces let you share a course through an invite link, and shared deadlines and group assignments sync in real time for everyone in the space — so when the group project date moves, it moves for all of you. Hosting a space is part of Pro; joining one a classmate invites you into is free, with no time limit.',
+      'Yes. Course Spaces let you share a course through an invite link, and shared deadlines and group assignments sync in real time for everyone in the space, so when the group project date moves, it moves for all of you. Hosting a space is part of Pro; joining one a classmate invites you into is free, with no time limit.',
   },
   {
     question: 'What can the AI Tutor actually see?',
     answer:
-      'Just your course. Each chat is scoped to one course and answers from that course’s syllabus, your live tracked deadlines, and any lecture notes you upload as PDF or photo. It cites what it used — "your syllabus lists", "from your Week 3 notes". Deadline answers come strictly from tracked tasks; it never invents a date, and it says plainly when a question falls outside what it has. Pro.',
+      'Just your course. Each chat is scoped to one course and answers from that course’s syllabus, your live tracked deadlines, and any lecture notes you upload as PDF or photo. It cites what it used, in the answer itself: "your syllabus lists", "from your Week 3 notes". Deadline answers come strictly from tracked tasks; it never invents a date, and it says plainly when a question falls outside what it has. Pro.',
   },
   {
     question: 'How do I cancel?',
     answer:
-      'In the App Store, since that is where the subscription lives — open your Apple ID subscription settings and turn off renewal. You do not have to email anyone or explain yourself. Your account drops back to the free tier at the end of the period you already paid for, and you can go back to Pro whenever.',
+      'In the App Store, since that is where the subscription lives. Open your Apple ID subscription settings and turn off renewal. You do not have to email anyone or explain yourself. Your account drops back to the free tier at the end of the period you already paid for, and you can go back to Pro whenever.',
   },
 ];
 
@@ -240,9 +240,9 @@ export default function Home() {
               <span className={styles.gradient}>Never miss a deadline.</span>
             </h1>
             <p className={styles.sub}>
-              Take a photo, upload the PDF, or paste the text. Semora pulls out every assignment,
-              exam, quiz and reading with its due date — plus your class times, office hours and the
-              grading scale — and shows you the whole list to edit before a single thing is saved.
+              Take a photo, upload a PDF, or paste the text. Semora pulls out every assignment, exam
+              and reading with its due date, plus your class times and grading scale. Nothing saves
+              until you approve it.
             </p>
             <div className={styles.heroActions}>
               <Link href={APP_SIGNUP_URL} className={styles.primaryBtn}>
@@ -443,7 +443,7 @@ export default function Home() {
       <div className={styles.inner}>
         <Cta
           heading="Scan the first syllabus. Give it a minute."
-          subheading="Free on iPhone, iPad and the web — five scans a month, four courses, no credit card."
+          subheading="Free on iPhone, iPad and the web. Five scans a month, four courses, no credit card."
         />
       </div>
     </>
