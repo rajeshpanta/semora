@@ -1,0 +1,79 @@
+import type { ReactNode } from 'react';
+import Link from 'next/link';
+import styles from './LongFormPage.module.css';
+import { Faq } from './Faq';
+import { JsonLd } from './JsonLd';
+import { ArticleShell } from './ArticleShell';
+import { faqPageSchema } from '@/lib/schema';
+import type { NewPage } from '@/lib/new-page-content';
+
+/**
+ * Shared shell for the tool / alternative / about pages: breadcrumb, lede,
+ * an optional interactive widget slot above the prose, then the long-form
+ * body and FAQ, inside the same ArticleShell (sticky contents rail + CTA)
+ * the feature and comparison pages use.
+ */
+export function LongFormPage({
+  content,
+  crumb,
+  widget,
+}: {
+  content: NewPage;
+  crumb?: { href: string; label: string };
+  widget?: ReactNode;
+}) {
+  return (
+    <ArticleShell
+      ctaHeading="Try it on your own syllabus"
+      ctaSubheading="See how Semora handles your actual courses — free, no credit card."
+    >
+      <article className={`${styles.wrap} article-body`}>
+        {content.faq?.length ? <JsonLd data={faqPageSchema(content.faq)} /> : null}
+
+        {crumb && (
+          <nav className={styles.crumbs} aria-label="Breadcrumb">
+            <Link href={crumb.href}>{crumb.label}</Link>
+            <span aria-hidden="true">/</span>
+            <span>{content.h1}</span>
+          </nav>
+        )}
+
+        <h1>{content.h1}</h1>
+        <p className={styles.lede}>{content.lede}</p>
+
+        {widget ? <div className={styles.widget}>{widget}</div> : null}
+
+        {content.intro.map((p, i) => (
+          <p key={i} className={styles.body}>
+            {p}
+          </p>
+        ))}
+
+        {content.sections.map((s) => (
+          <section key={s.heading} className={styles.section}>
+            <h2>{s.heading}</h2>
+            {s.paragraphs.map((p, i) => (
+              <p key={i} className={styles.body}>
+                {p}
+              </p>
+            ))}
+            {s.bullets?.length ? (
+              <ul className={styles.points}>
+                {s.bullets.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
+        ))}
+
+        {content.faq.length ? (
+          <section className={styles.section}>
+            <h2>Frequently asked questions</h2>
+            <Faq items={content.faq} />
+          </section>
+        ) : null}
+      </article>
+    </ArticleShell>
+  );
+}

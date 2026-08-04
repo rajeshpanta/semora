@@ -36,6 +36,14 @@ export function Footer() {
             ))}
           </div>
           <div>
+            <p className={styles.heading}>Free tools</p>
+            <Link href="/gpa-calculator">GPA calculator</Link>
+            <Link href="/pomodoro-timer">Pomodoro timer</Link>
+            <Link href="/myhomework-alternative">myHomework alternative</Link>
+            <Link href="/shovel-alternative">Shovel alternative</Link>
+            <Link href="/studyfetch-alternative">StudyFetch alternative</Link>
+          </div>
+          <div>
             <p className={styles.heading}>Get Semora</p>
             <Link href={APP_SIGNIN_URL}>Try it for free</Link>
             <a href={APP_STORE_URL}>Download on the App Store</a>
@@ -47,6 +55,7 @@ export function Footer() {
                 (app/settings, app/paywall, app/welcome) and are required to be
                 publicly reachable — do not remove these routes. */}
             <p className={styles.heading}>Company</p>
+            <Link href="/about">About</Link>
             <Link href="/support">Support</Link>
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
