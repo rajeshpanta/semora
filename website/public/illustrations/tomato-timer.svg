@@ -10,24 +10,46 @@
     <linearGradient id="s5" x1="0" y1="0" x2="0" y2="1">
       <stop stop-color="#fff" stop-opacity="0.22"/><stop offset="1" stop-color="#fff" stop-opacity="0.06"/>
     </linearGradient>
-    <filter id="b5" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="10"/>
-    </filter>
+    <filter id="b5" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="10"/></filter>
     <clipPath id="c5"><rect width="320" height="200" rx="12"/></clipPath>
   </defs>
+    <style>
+      .fl5 { transform-box: fill-box; transform-origin: center;
+             animation: f5 3.6s ease-in-out 2.0s infinite; }
+      @keyframes f5 { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-5px) } }
+      .ey5 { transform-box: fill-box; transform-origin: center;
+             animation: b5 5.4s ease-in-out 1.6s infinite; }
+      @keyframes b5 { 0%,93%,100% { transform: scaleY(1) } 96% { transform: scaleY(0.12) } }
+      .pl5 { transform-box: fill-box; transform-origin: center;
+             animation: p5 2.8s ease-in-out infinite; }
+      @keyframes p5 { 0%,100% { opacity: .55 } 50% { opacity: 1 } }
+      @media (prefers-reduced-motion: reduce) {
+        .fl5, .ey5, .pl5 { animation: none }
+      }
+    </style>
   <g clip-path="url(#c5)">
     <rect width="320" height="200" fill="url(#g5)"/>
     <rect width="320" height="200" fill="url(#o5)"/>
-    <circle cx="128" cy="100" r="62" fill="#FBBF24" fill-opacity="0.16" filter="url(#b5)"/>
-    <circle cx="128" cy="100" r="52" stroke="#fff" stroke-opacity="0.16" stroke-width="10" fill="none"/>
-    <path d="M128 48 a52 52 0 1 1 -46 76" stroke="#FBBF24" stroke-width="10" stroke-linecap="round" fill="none"/>
-    <circle cx="128" cy="48" r="7" fill="#F59E0B"/>
-    <text x="128" y="108" font-family="Georgia, serif" font-size="25" font-weight="700" fill="#fff" text-anchor="middle">18:42</text>
-    <rect x="212" y="92" width="14" height="5" rx="2.5" fill="#FBBF24" fill-opacity="1"/>
-    <rect x="232" y="92" width="14" height="5" rx="2.5" fill="#FBBF24" fill-opacity="1"/>
-    <rect x="252" y="92" width="14" height="5" rx="2.5" fill="#FBBF24" fill-opacity="1"/>
-    <rect x="272" y="92" width="14" height="5" rx="2.5" fill="#fff" fill-opacity="0.22"/>
-    <rect x="212" y="70" width="62" height="5" rx="2.5" fill="#fff" fill-opacity="0.42"/>
-    <rect x="212" y="112" width="44" height="5" rx="2.5" fill="#fff" fill-opacity="0.22"/>
+    <circle cx="112" cy="100" r="60" fill="#FBBF24" fill-opacity="0.16" filter="url(#b5)"/>
+    <circle cx="112" cy="100" r="50" stroke="#fff" stroke-opacity="0.16" stroke-width="10" fill="none"/>
+    <path d="M112 50 a50 50 0 1 1 -44 73" stroke="#FBBF24" stroke-width="10" stroke-linecap="round" fill="none"/>
+    <circle cx="112" cy="50" r="7" fill="#F59E0B" class="pl5"/>
+    <text x="112" y="108" font-family="Georgia, serif" font-size="24" font-weight="700" fill="#fff" text-anchor="middle">18:42</text>
+    <rect x="196" y="66" width="14" height="5" rx="2.5" fill="#FBBF24" fill-opacity="1"/>
+    <rect x="216" y="66" width="14" height="5" rx="2.5" fill="#FBBF24" fill-opacity="1"/>
+    <rect x="236" y="66" width="14" height="5" rx="2.5" fill="#FBBF24" fill-opacity="1"/>
+    <rect x="256" y="66" width="14" height="5" rx="2.5" fill="#fff" fill-opacity="0.22"/>
+    <rect x="196" y="46" width="62" height="5" rx="2.5" fill="#fff" fill-opacity="0.42"/>
+  <g transform="translate(232 128) scale(0.72)"><g class="fl5">
+    <ellipse cx="0" cy="34" rx="24" ry="4.5" fill="#000" fill-opacity="0.13"/>
+    <path d="M-24 2 L-31 12" stroke="#FFF6E6" stroke-width="7" stroke-linecap="round"/>
+    <path d="M24 2 L31 12" stroke="#FFF6E6" stroke-width="7" stroke-linecap="round"/>
+    <rect x="-26" y="-28" width="52" height="58" rx="24" fill="#FFF6E6"/>
+    <ellipse cx="-16" cy="4" rx="6" ry="4" fill="#FBBF24" fill-opacity="0.5"/>
+    <ellipse cx="16" cy="4" rx="6" ry="4" fill="#FBBF24" fill-opacity="0.5"/>
+    <ellipse class="ey5" cx="-9" cy="-7" rx="4.2" ry="5.4" fill="#2A1259"/>
+    <ellipse class="ey5" cx="9" cy="-7" rx="4.2" ry="5.4" fill="#2A1259"/>
+    <path d="M-6 8 q6 6 12 0" stroke="#2A1259" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+  </g></g>
   </g>
 </svg>

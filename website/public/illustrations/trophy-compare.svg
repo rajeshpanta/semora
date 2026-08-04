@@ -10,25 +10,48 @@
     <linearGradient id="s3" x1="0" y1="0" x2="0" y2="1">
       <stop stop-color="#fff" stop-opacity="0.22"/><stop offset="1" stop-color="#fff" stop-opacity="0.06"/>
     </linearGradient>
-    <filter id="b3" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="10"/>
-    </filter>
+    <filter id="b3" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="10"/></filter>
     <clipPath id="c3"><rect width="320" height="200" rx="12"/></clipPath>
   </defs>
+    <style>
+      .fl3 { transform-box: fill-box; transform-origin: center;
+             animation: f3 3.6s ease-in-out 1.0s infinite; }
+      @keyframes f3 { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-5px) } }
+      .ey3 { transform-box: fill-box; transform-origin: center;
+             animation: b3 5.4s ease-in-out 0.4s infinite; }
+      @keyframes b3 { 0%,93%,100% { transform: scaleY(1) } 96% { transform: scaleY(0.12) } }
+      .pl3 { transform-box: fill-box; transform-origin: center;
+             animation: p3 2.8s ease-in-out infinite; }
+      @keyframes p3 { 0%,100% { opacity: .55 } 50% { opacity: 1 } }
+      @media (prefers-reduced-motion: reduce) {
+        .fl3, .ey3, .pl3 { animation: none }
+      }
+    </style>
   <g clip-path="url(#c3)">
     <rect width="320" height="200" fill="url(#g3)"/>
     <rect width="320" height="200" fill="url(#o3)"/>
-    <rect x="34" y="76" width="76" height="86" rx="14" fill="#fff" fill-opacity="0.09" stroke="#fff" stroke-opacity="0.18"/>
-    <rect x="210" y="76" width="76" height="86" rx="14" fill="#fff" fill-opacity="0.09" stroke="#fff" stroke-opacity="0.18"/>
-    <circle cx="160" cy="98" r="52" fill="#FBBF24" fill-opacity="0.24" filter="url(#b3)"/>
-    <rect x="118" y="48" width="84" height="114" rx="16" fill="url(#s3)" stroke="#fff" stroke-opacity="0.34"/>
-    <circle cx="160" cy="80" r="17" fill="#FBBF24"/>
-    <path d="M153 80 l5 5 9 -10" stroke="#3B0764" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-    <rect x="134" y="110" width="52" height="5" rx="2.5" fill="#fff" fill-opacity="0.5"/>
-    <rect x="140" y="124" width="40" height="5" rx="2.5" fill="#fff" fill-opacity="0.3"/>
-    <rect x="50" y="96" width="44" height="5" rx="2.5" fill="#fff" fill-opacity="0.26"/>
-    <rect x="50" y="110" width="32" height="5" rx="2.5" fill="#fff" fill-opacity="0.18"/>
-    <rect x="226" y="96" width="44" height="5" rx="2.5" fill="#fff" fill-opacity="0.26"/>
-    <rect x="226" y="110" width="32" height="5" rx="2.5" fill="#fff" fill-opacity="0.18"/>
+    <rect x="26" y="80" width="72" height="82" rx="14" fill="#fff" fill-opacity="0.09" stroke="#fff" stroke-opacity="0.18"/>
+    <rect x="222" y="80" width="72" height="82" rx="14" fill="#fff" fill-opacity="0.09" stroke="#fff" stroke-opacity="0.18"/>
+    <rect x="42" y="100" width="40" height="5" rx="2.5" fill="#fff" fill-opacity="0.26"/>
+    <rect x="42" y="114" width="28" height="5" rx="2.5" fill="#fff" fill-opacity="0.18"/>
+    <rect x="238" y="100" width="40" height="5" rx="2.5" fill="#fff" fill-opacity="0.26"/>
+    <rect x="238" y="114" width="28" height="5" rx="2.5" fill="#fff" fill-opacity="0.18"/>
+    <circle cx="160" cy="112" r="56" fill="#FBBF24" fill-opacity="0.22" filter="url(#b3)"/>
+    <rect x="112" y="62" width="96" height="100" rx="16" fill="url(#s3)" stroke="#fff" stroke-opacity="0.34"/>
+    <rect x="130" y="132" width="60" height="5" rx="2.5" fill="#fff" fill-opacity="0.5"/>
+    <rect x="138" y="145" width="44" height="5" rx="2.5" fill="#fff" fill-opacity="0.3"/>
+  <g transform="translate(160 98) scale(0.78)"><g class="fl3">
+    <ellipse cx="0" cy="34" rx="24" ry="4.5" fill="#000" fill-opacity="0.13"/>
+    <path d="M-24 -2 L-34 -20" stroke="#FFF6E6" stroke-width="7" stroke-linecap="round"/>
+    <path d="M24 -2 L34 -20" stroke="#FFF6E6" stroke-width="7" stroke-linecap="round"/>
+    <rect x="-26" y="-28" width="52" height="58" rx="24" fill="#FFF6E6"/>
+    <ellipse cx="-16" cy="4" rx="6" ry="4" fill="#FBBF24" fill-opacity="0.5"/>
+    <ellipse cx="16" cy="4" rx="6" ry="4" fill="#FBBF24" fill-opacity="0.5"/>
+    <ellipse class="ey3" cx="-9" cy="-7" rx="4.2" ry="5.4" fill="#2A1259"/>
+    <ellipse class="ey3" cx="9" cy="-7" rx="4.2" ry="5.4" fill="#2A1259"/>
+    <path d="M-6 8 q6 6 12 0" stroke="#2A1259" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+  </g></g>
+    <circle cx="200" cy="70" r="13" fill="#FBBF24"/>
+    <path d="M194 70 l4.5 4.5 8 -9" stroke="#2A1259" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
   </g>
 </svg>

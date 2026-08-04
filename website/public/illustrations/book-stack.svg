@@ -7,29 +7,56 @@
       gradientTransform="translate(40 30) scale(150)">
       <stop stop-color="#A78BFA" stop-opacity="0.5"/><stop offset="1" stop-color="#A78BFA" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="s6" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" stop-opacity="0.22"/><stop offset="1" stop-color="#fff" stop-opacity="0.06"/>
+    </linearGradient>
     <filter id="b6" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="10"/></filter>
     <clipPath id="c6"><rect width="320" height="200" rx="12"/></clipPath>
   </defs>
+    <style>
+      .fl6 { transform-box: fill-box; transform-origin: center;
+             animation: f6 3.6s ease-in-out 2.6s infinite; }
+      @keyframes f6 { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-5px) } }
+      .ey6 { transform-box: fill-box; transform-origin: center;
+             animation: b6 5.4s ease-in-out 0.9s infinite; }
+      @keyframes b6 { 0%,93%,100% { transform: scaleY(1) } 96% { transform: scaleY(0.12) } }
+      .pl6 { transform-box: fill-box; transform-origin: center;
+             animation: p6 2.8s ease-in-out infinite; }
+      @keyframes p6 { 0%,100% { opacity: .55 } 50% { opacity: 1 } }
+      @media (prefers-reduced-motion: reduce) {
+        .fl6, .ey6, .pl6 { animation: none }
+      }
+    </style>
   <g clip-path="url(#c6)">
     <rect width="320" height="200" fill="url(#g6)"/>
     <rect width="320" height="200" fill="url(#o6)"/>
-    <rect x="32" y="26" width="30" height="5" rx="2.5" fill="#fff" fill-opacity="0.18"/>
-    <rect x="28" y="42" width="46" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
-      <rect x="33" y="48" width="36" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
-    <rect x="84" y="26" width="30" height="5" rx="2.5" fill="#fff" fill-opacity="0.18"/>
-    <rect x="80" y="42" width="46" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
-      <rect x="85" y="69" width="36" height="58" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
-      <rect x="85" y="153" width="36" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
-    <rect x="136" y="26" width="30" height="5" rx="2.5" fill="#fff" fill-opacity="0.18"/>
-    <rect x="132" y="42" width="46" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
-      <rect x="137" y="48" width="36" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
-    <rect x="188" y="26" width="30" height="5" rx="2.5" fill="#fff" fill-opacity="0.42"/>
-    <rect x="184" y="42" width="46" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
-      <circle cx="203" cy="119.0" r="40" fill="#FBBF24" fill-opacity="0.24" filter="url(#b6)"/>
-      <rect x="189" y="69" width="36" height="100" rx="8" fill="#FBBF24"/>
-    <rect x="240" y="26" width="30" height="5" rx="2.5" fill="#fff" fill-opacity="0.18"/>
-    <rect x="236" y="42" width="46" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
-      <rect x="241" y="90" width="36" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
-      <rect x="241" y="153" width="36" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
+    <rect x="18" y="22" width="26" height="5" rx="2.5" fill="#fff" fill-opacity="0.16"/>
+    <rect x="14" y="36" width="38" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
+    <rect x="18" y="42" width="30" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
+    <rect x="62" y="22" width="26" height="5" rx="2.5" fill="#fff" fill-opacity="0.16"/>
+    <rect x="58" y="36" width="38" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
+    <rect x="62" y="63" width="30" height="58" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
+    <rect x="62" y="147" width="30" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
+    <rect x="106" y="22" width="26" height="5" rx="2.5" fill="#fff" fill-opacity="0.16"/>
+    <rect x="102" y="36" width="38" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
+    <rect x="106" y="42" width="30" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
+    <rect x="150" y="22" width="26" height="5" rx="2.5" fill="#fff" fill-opacity="0.42"/>
+    <rect x="146" y="36" width="38" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
+    <circle cx="163" cy="113.0" r="38" fill="#FBBF24" fill-opacity="0.24" filter="url(#b6)"/>
+    <rect x="150" y="63" width="30" height="100" rx="8" fill="#FBBF24"/>
+    <rect x="194" y="22" width="26" height="5" rx="2.5" fill="#fff" fill-opacity="0.16"/>
+    <rect x="190" y="36" width="38" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
+    <rect x="194" y="84" width="30" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
+  <g transform="translate(264 108) scale(0.76)"><g class="fl6">
+    <ellipse cx="0" cy="34" rx="24" ry="4.5" fill="#000" fill-opacity="0.13"/>
+    <path d="M-24 2 L-31 12" stroke="#FFF6E6" stroke-width="7" stroke-linecap="round"/>
+    <path d="M24 2 L31 12" stroke="#FFF6E6" stroke-width="7" stroke-linecap="round"/>
+    <rect x="-26" y="-28" width="52" height="58" rx="24" fill="#FFF6E6"/>
+    <ellipse cx="-16" cy="4" rx="6" ry="4" fill="#FBBF24" fill-opacity="0.5"/>
+    <ellipse cx="16" cy="4" rx="6" ry="4" fill="#FBBF24" fill-opacity="0.5"/>
+    <ellipse class="ey6" cx="-9" cy="-7" rx="4.2" ry="5.4" fill="#2A1259"/>
+    <ellipse class="ey6" cx="9" cy="-7" rx="4.2" ry="5.4" fill="#2A1259"/>
+    <path d="M-6 8 q6 6 12 0" stroke="#2A1259" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+  </g></g>
   </g>
 </svg>
