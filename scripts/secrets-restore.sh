@@ -1,21 +1,20 @@
 #!/usr/bin/env bash
 #
-# Restore the recovery bundle from the encrypted file in this repo.
+# Restore the credential bundle from an encrypted offline archive.
 #
-#   ./scripts/secrets-open.sh              -> ~/Semora-Recovery
-#   ./scripts/secrets-open.sh /some/path   -> /some/path
+#   ./scripts/secrets-restore.sh <archive.gpg> [dest]
 #
-# This is the whole point of sealing them: a fresh `git clone` on any machine
-# plus the passphrase from your password manager gets every credential back.
+# The archive is NOT in this repo — it lives in your password manager or on an
+# external drive. See secrets/README.md for why.
 
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ENC="$REPO/secrets/semora-secrets.tar.gz.gpg"
-DEST="${1:-$HOME}"
+ENC="${1:?usage: secrets-restore.sh <archive.gpg> [dest]}"
+DEST="${2:-$HOME}"
 
 if [ ! -f "$ENC" ]; then
-  echo "error: $ENC not found — has the bundle been sealed and committed?" >&2
+  echo "error: $ENC not found — point this at your offline archive." >&2
   exit 1
 fi
 

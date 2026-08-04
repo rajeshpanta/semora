@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 #
-# Encrypt the recovery bundle into a single file that is safe to commit to a
-# PUBLIC repo, then stage it.
+# Encrypt the local credential bundle into a single archive for OFFLINE backup.
 #
-#   ./scripts/secrets-seal.sh
+#   ./scripts/secrets-backup.sh
 #
-# Prompts for a passphrase. That passphrase is the ONLY thing that must never
-# be in git — put it in a password manager. Everything else lives in the repo
-# from here on, so the credentials survive this machine.
+# The output goes to ~/Desktop and must be moved somewhere outside this repo —
+# a password manager, an external drive, encrypted cloud storage.
+#
+# NOT committed, deliberately. One encrypted bundle in a public repo is a single
+# point of total compromise: one passphrase leak exposes Apple, App Store
+# Connect, Google OAuth and Supabase simultaneously, and the ciphertext is
+# permanent for anyone who already cloned it.
 #
 # Uses gpg symmetric AES-256. The plaintext tarball exists only in a temp file
 # that is removed on exit, including if the script is interrupted.
@@ -16,7 +19,7 @@ set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC="${1:-$HOME/Semora-Recovery}"
-OUT="$REPO/secrets/semora-secrets.tar.gz.gpg"
+OUT="${SEMORA_BACKUP_OUT:-$HOME/Desktop/semora-secrets.tar.gz.gpg}"
 
 if [ ! -d "$SRC" ]; then
   echo "error: no bundle at $SRC" >&2
@@ -37,7 +40,6 @@ trap 'rm -f "$TMP"' EXIT INT TERM
 echo "Sealing $(find "$SRC" -type f | wc -l | tr -d ' ') files from $SRC"
 tar -czf "$TMP" -C "$(dirname "$SRC")" "$(basename "$SRC")"
 
-mkdir -p "$REPO/secrets"
 rm -f "$OUT"
 
 # --symmetric      passphrase, no keyring to lose
@@ -68,7 +70,8 @@ if [ "$BEFORE" != "$AFTER" ]; then
 fi
 echo "verified: decrypted contents are byte-identical to $SRC"
 
-cd "$REPO" && git add -f "$OUT"
 echo
-echo "staged. commit it with:"
-echo "    git commit -m 'Update encrypted secrets bundle' && git push"
+echo "Move this file OUT of reach of the repo and off this machine:"
+echo "    $OUT"
+echo "  -> a password manager entry, an external drive, or encrypted cloud storage."
+echo "Store the passphrase separately, in the password manager."

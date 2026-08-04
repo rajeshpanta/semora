@@ -1,53 +1,58 @@
 # secrets/
 
-**This repository is public.** Nothing in plaintext may ever be committed here.
+**No credential is stored in this repository. By design.**
 
-`semora-secrets.tar.gz.gpg` is the encrypted recovery bundle: the credentials
-that exist nowhere else and cannot be re-downloaded. It is gpg symmetric
-AES-256, so committing it to a public repo is safe — the ciphertext is opaque
-without the passphrase, and a wrong passphrase yields nothing.
+This directory holds documentation only. It exists so the `.gitignore` rules
+guarding it have somewhere to live, and so this note is findable.
 
-The **passphrase is the one thing that must never be in git.** Keep it in a
-password manager. Lose it and the bundle is unrecoverable, which is the point.
+## Why not in git, even encrypted
 
-## Getting the credentials back on a new machine
+An encrypted bundle in a public repo is a **single point of total compromise**:
+one passphrase leak and every account goes at once — Apple, App Store Connect,
+Google OAuth, Supabase. The blast radius is everything, simultaneously, from one
+mistake. The ciphertext is also permanent — anyone who cloned it keeps their copy
+regardless of what is deleted later.
+
+Credentials therefore stay on the machine, and durability comes from an
+encrypted archive kept **outside** version control.
+
+## Where the credentials actually live
+
+| What | Where |
+|---|---|
+| Working set | `~/Semora-Recovery/` (plaintext, this machine) |
+| Sign in with Apple key | repo root `AuthKey_DQ64DU246B.p8` — gitignored |
+| App Store Connect key | `~/.appstoreconnect/private_keys/` |
+| Supabase config | repo root `.env.local` — gitignored |
+| Service role key | Supabase's own environment. Never checked out anywhere. |
+
+`~/Semora-Recovery/README.md` explains what each file is, which are one-shot
+(Apple allows a `.p8` download exactly once), and the exact recovery path for
+each that can be re-obtained.
+
+## Making a durable offline copy
 
 ```bash
-git clone https://github.com/rajeshpanta/semora.git
-cd semora
-./scripts/secrets-open.sh
+./scripts/secrets-backup.sh
 ```
 
-That prompts for the passphrase and restores `~/Semora-Recovery/`, whose own
-README explains what each file is and where it belongs. The script prints the
-`cp` commands to put the keys back in the paths the tooling expects.
+Prompts for a passphrase and writes an encrypted archive to `~/Desktop`. Move it
+to a password manager, an external drive, or encrypted cloud storage — anywhere
+that is **not** this repo. The script decrypts its own output and checksums it
+against the source before declaring success, so a corrupt archive is never
+mistaken for a working backup.
 
-## Updating it after adding or rotating a credential
+Restore with:
 
 ```bash
-./scripts/secrets-seal.sh
-git commit -m "Update encrypted secrets bundle" && git push
+./scripts/secrets-restore.sh ~/Desktop/semora-secrets.tar.gz.gpg
 ```
 
-`secrets-seal.sh` decrypts its own output and compares checksums against the
-source before staging anything. If the round-trip does not match byte for byte
-it deletes the archive and exits non-zero, so a corrupt bundle can never be
-committed looking like a working backup.
+## The guardrails that stay
 
-## Why the whole `secrets/` directory is gitignored
-
-`.gitignore` ignores `secrets/*` and re-allows only this README and the `.gpg`
-file. A plaintext key dropped in here is invisible to `git add`, and
-`secrets-seal.sh` uses `git add -f` on exactly the one permitted path. `*.p8`,
-`*.p12`, `*.mobileprovision` and `client_secret*.json` are also blocked
-repo-wide, at any path.
+`.gitignore` ignores everything under `secrets/` except this README, and blocks
+`*.p8`, `*.p12`, `*.mobileprovision` and `client_secret*.json` at any path in the
+repo. GitHub **secret scanning and push protection are enabled**, so a credential
+is rejected before it reaches the remote rather than after.
 
 Verified: staging a plaintext `secrets/leaked.p8` adds zero files.
-
-## What is NOT in here
-
-Anything rebuildable from a clone — `dist/`, `ios/`, `node_modules/`,
-`.next/`, `.vercel/`. Also not the Supabase **service role** key: that lives
-only in Supabase's own edge-function environment and is never checked out
-anywhere. Edge functions read it with `Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')`,
-which is a variable name, not a value.
