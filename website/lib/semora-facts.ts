@@ -24,9 +24,13 @@ export const APP_STORE_URL = 'https://apps.apple.com/us/app/semora-ai-syllabus-s
 // single edit fixes every "Get started" button at once.
 export const APP_URL = 'https://app.semoraai.com';
 
-// "Try it for free" sends people straight to the sign-in screen rather than
-// APP_URL's /welcome splash — one less tap between the homepage and an account.
-export const APP_SIGNIN_URL = `${APP_URL}/sign-in`;
+// The app's auth screen renders two framings off one route. With no query it
+// reads "Create your account"; with ?mode=signin it reads "Welcome back". The
+// app source anticipates exactly this split (app/(auth)/sign-in.tsx), so the
+// marketing site must send new and returning users to different URLs — both
+// pointing at /sign-in makes the Sign in link land on a signup page.
+export const APP_SIGNUP_URL = `${APP_URL}/sign-in`;
+export const APP_SIGNIN_URL = `${APP_URL}/sign-in?mode=signin`;
 
 // Matches docs/support.html's existing contact-box mailto — semora.app
 // belongs to an unrelated company, so there is no @semora.app inbox.

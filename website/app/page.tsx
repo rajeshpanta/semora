@@ -8,7 +8,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { Reveal } from '@/components/Reveal';
 import { PricingCards } from '@/components/PricingCards';
 import { softwareApplicationSchema, faqPageSchema } from '@/lib/schema';
-import { APP_SIGNIN_URL, APP_STORE_URL } from '@/lib/semora-facts';
+import { APP_SIGNUP_URL, APP_STORE_URL } from '@/lib/semora-facts';
 import { OG_IMAGE } from '@/lib/og';
 
 // The apex and www hostnames both serve this page, so without an explicit
@@ -244,7 +244,7 @@ export default function Home() {
               grading scale — and shows you the whole list to edit before a single thing is saved.
             </p>
             <div className={styles.heroActions}>
-              <Link href={APP_SIGNIN_URL} className={styles.primaryBtn}>
+              <Link href={APP_SIGNUP_URL} className={styles.primaryBtn}>
                 Try it for free
               </Link>
               <a href={APP_STORE_URL} className={styles.secondaryBtn}>

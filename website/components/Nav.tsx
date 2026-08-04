@@ -2,7 +2,7 @@ import Link from 'next/link';
 import styles from './Nav.module.css';
 import { FeaturesMenu } from './FeaturesMenu';
 import { MobileNav } from './MobileNav';
-import { SITE_NAME, APP_SIGNIN_URL, APP_STORE_URL } from '@/lib/semora-facts';
+import { SITE_NAME, APP_SIGNUP_URL, APP_SIGNIN_URL, APP_STORE_URL } from '@/lib/semora-facts';
 
 export const NAV_LINKS = [
   { href: '/pricing', label: 'Pricing' },
@@ -39,7 +39,7 @@ export function Nav() {
           <Link href={APP_SIGNIN_URL} className={styles.ghost}>
             Sign in
           </Link>
-          <Link href={APP_SIGNIN_URL} className={styles.cta}>
+          <Link href={APP_SIGNUP_URL} className={styles.cta}>
             Try it for free
           </Link>
         </div>

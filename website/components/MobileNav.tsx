@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import styles from './Nav.module.css';
-import { FEATURES, APP_SIGNIN_URL, APP_STORE_URL } from '@/lib/semora-facts';
+import { FEATURES, APP_SIGNUP_URL, APP_SIGNIN_URL, APP_STORE_URL } from '@/lib/semora-facts';
 
 /**
  * Phone/tablet navigation. The features list is a native <details> so it
@@ -79,7 +79,7 @@ export function MobileNav({ links }: { links: { href: string; label: string }[] 
           <a href={APP_STORE_URL} className={styles.sheetGhost} onClick={close}>
             Get the app
           </a>
-          <Link href={APP_SIGNIN_URL} className={styles.sheetCta} onClick={close}>
+          <Link href={APP_SIGNUP_URL} className={styles.sheetCta} onClick={close}>
             Try it for free
           </Link>
         </div>
