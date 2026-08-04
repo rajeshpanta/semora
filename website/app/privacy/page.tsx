@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import styles from '@/components/Prose.module.css';
 import { SUPPORT_EMAIL } from '@/lib/semora-facts';
+import { OG_IMAGE } from '@/lib/og';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description: 'How Semora collects, uses, and safeguards your information.',
   alternates: { canonical: '/privacy' },
-  openGraph: { url: '/privacy' },
+  openGraph: { url: '/privacy', ...OG_IMAGE },
 };
 
 export default function PrivacyPage() {

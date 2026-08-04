@@ -9,6 +9,7 @@ import { Reveal } from '@/components/Reveal';
 import { PricingCards } from '@/components/PricingCards';
 import { softwareApplicationSchema, faqPageSchema } from '@/lib/schema';
 import { APP_SIGNIN_URL, APP_STORE_URL } from '@/lib/semora-facts';
+import { OG_IMAGE } from '@/lib/og';
 
 // The apex and www hostnames both serve this page, so without an explicit
 // self-canonical the highest-value URL on the site is the only one without a
@@ -17,7 +18,7 @@ import { APP_SIGNIN_URL, APP_STORE_URL } from '@/lib/semora-facts';
 // there would make every subpage claim to be the homepage.
 export const metadata: Metadata = {
   alternates: { canonical: '/' },
-  openGraph: { url: '/' },
+  openGraph: { url: '/', ...OG_IMAGE },
 };
 
 const HERO_CHIPS = [

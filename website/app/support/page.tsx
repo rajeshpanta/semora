@@ -6,12 +6,13 @@ import { faqPageSchema } from '@/lib/schema';
 import { SUPPORT_EMAIL } from '@/lib/semora-facts';
 import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
+import { OG_IMAGE } from '@/lib/og';
 
 export const metadata: Metadata = {
   title: 'Support',
   description: "Answers to common questions about using Semora, plus how to reach us directly.",
   alternates: { canonical: '/support' },
-  openGraph: { url: '/support' },
+  openGraph: { url: '/support', ...OG_IMAGE },
 };
 
 const SUPPORT_FAQ = [

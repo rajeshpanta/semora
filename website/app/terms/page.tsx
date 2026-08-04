@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import styles from '@/components/Prose.module.css';
 import { SUPPORT_EMAIL } from '@/lib/semora-facts';
+import { OG_IMAGE } from '@/lib/og';
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
   description: 'The terms that govern your use of Semora.',
   alternates: { canonical: '/terms' },
-  openGraph: { url: '/terms' },
+  openGraph: { url: '/terms', ...OG_IMAGE },
 };
 
 export default function TermsPage() {

@@ -8,6 +8,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { breadcrumbListSchema, faqPageSchema } from '@/lib/schema';
 import { FEATURES, getFeature } from '@/lib/semora-facts';
 import { getFeatureContent } from '@/lib/feature-content';
+import { OG_IMAGE } from '@/lib/og';
 
 export function generateStaticParams() {
   return FEATURES.map((f) => ({ slug: f.slug }));
@@ -26,7 +27,7 @@ export async function generateMetadata({
     title: long?.metaTitle ?? feature.name,
     description: long?.metaDescription ?? feature.shortDescription,
     alternates: { canonical: `/features/${feature.slug}` },
-    openGraph: { url: `/features/${feature.slug}` },
+    openGraph: { url: `/features/${feature.slug}`, ...OG_IMAGE },
   };
 }
 
