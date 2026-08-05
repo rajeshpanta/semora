@@ -1,4 +1,10 @@
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
+import {
+  View,
+  StyleSheet,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -21,7 +27,7 @@ export default function AppearanceSettings() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Appearance' }} />
+      <Stack.Screen options={{ title: translate('Appearance') }} />
 
       <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Theme</Text>

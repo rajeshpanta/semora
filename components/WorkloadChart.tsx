@@ -1,5 +1,10 @@
+import { Text } from '@/components/LocalizedReactNative';
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
 import { COLORS, FONTS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import type { WeekBucket } from '@/lib/workload';

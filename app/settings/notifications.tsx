@@ -1,4 +1,15 @@
-import { View, Text, StyleSheet, Switch, ActivityIndicator, Alert, TouchableOpacity, Linking, Platform, AppState, ScrollView } from 'react-native';
+import { translate } from '@/lib/i18n';
+import { Switch, TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text } from '@/components/LocalizedReactNative';
+import {
+  View,
+  StyleSheet,
+  ActivityIndicator,
+  Linking,
+  Platform,
+  AppState,
+  ScrollView,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
@@ -194,7 +205,7 @@ export default function NotificationSettings() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]}>
-        <Stack.Screen options={{ title: 'Notifications' }} />
+        <Stack.Screen options={{ title: translate('Notifications') }} />
         <ActivityIndicator style={{ marginTop: 40 }} color={colors.brand} />
       </SafeAreaView>
     );
@@ -203,7 +214,7 @@ export default function NotificationSettings() {
   if (Platform.OS === 'web') {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-        <Stack.Screen options={{ title: 'Notifications' }} />
+        <Stack.Screen options={{ title: translate('Notifications') }} />
         <ScrollView
           contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
           showsVerticalScrollIndicator={false}
@@ -228,7 +239,7 @@ export default function NotificationSettings() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Notifications' }} />
+      <Stack.Screen options={{ title: translate('Notifications') }} />
 
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         {osPermission !== 'granted' && (

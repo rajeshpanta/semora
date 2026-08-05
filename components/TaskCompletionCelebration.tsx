@@ -1,5 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { Text } from '@/components/LocalizedReactNative';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState } from 'react';
+import { Animated,
+  Easing,
+  StyleSheet,
+  View,
+} from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { COLORS, FONTS } from '@/lib/constants';
 import { subscribeToTaskCelebration } from '@/lib/taskCelebration';

@@ -1,5 +1,10 @@
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import {
+  View,
+  StyleSheet,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { COLORS, FONTS } from '@/lib/constants';

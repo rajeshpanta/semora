@@ -1,5 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState } from 'react';
+import {
+  Platform,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import { signInWithApple, signInWithGoogle } from '@/lib/auth';

@@ -1,6 +1,14 @@
-import { useState, useEffect, useCallback } from 'react';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text } from '@/components/LocalizedReactNative';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Alert,
+  useState,
+  useEffect,
+  useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';

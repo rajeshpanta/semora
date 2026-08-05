@@ -1,10 +1,16 @@
-import { Link, Stack } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { translate } from '@/lib/i18n';
+import { Text } from '@/components/LocalizedReactNative';
+import {
+  Link,
+  Stack } from 'expo-router';
+import { View,
+  StyleSheet,
+} from 'react-native';
 
 export default function NotFoundScreen() {
   return (
     <>
-      <Stack.Screen options={{ title: 'Oops!' }} />
+      <Stack.Screen options={{ title: translate('Oops!') }} />
       <View style={styles.container}>
         <Text style={styles.title}>This screen doesn't exist.</Text>
         <Link href="/" style={styles.link}>

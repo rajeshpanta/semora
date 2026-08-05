@@ -1,10 +1,13 @@
-import { useEffect, type ComponentProps, type ReactNode } from 'react';
+import { Pressable } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
+import {
+  useEffect,
+  type ComponentProps,
+  type ReactNode } from 'react';
 import {
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   View,
 } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -14,6 +17,7 @@ import { useColors } from '@/lib/theme';
 import { useResponsive, WEB_SIDEBAR_WIDTH } from '@/lib/responsive';
 import { displayName } from '@/lib/user';
 import { FONTS } from '@/lib/constants';
+import { useI18n } from '@/lib/i18n';
 
 type IconName = ComponentProps<typeof FontAwesome>['name'];
 
@@ -67,6 +71,7 @@ function SidebarItem({
   onPress: () => void;
 }) {
   const colors = useColors();
+  const { t } = useI18n();
   return (
     <Pressable
       accessibilityRole="link"
@@ -83,7 +88,7 @@ function SidebarItem({
         <FontAwesome name={item.icon} size={15} color={active ? colors.brand : colors.ink3} />
       </View>
       <Text style={[styles.navText, { color: active ? colors.brand : colors.ink2 }]}>
-        {item.label}
+        {t(item.label)}
       </Text>
     </Pressable>
   );
@@ -95,6 +100,7 @@ function DesktopSidebar({ session }: { session: Session }) {
   const router = useRouter();
   const name = displayName(session.user, 'Student');
   const email = session.user.email ?? '';
+  const { locale, t } = useI18n();
 
   const navigate = (path: string) => {
     if (path === '/' || PRIMARY_ITEMS.some((item) => item.path === path)) {
@@ -136,8 +142,9 @@ function DesktopSidebar({ session }: { session: Session }) {
     const current =
       [...PRIMARY_ITEMS, ...TOOL_ITEMS].find((item) => isActive(pathname, item))?.label ??
       (pathname.startsWith('/settings') ? 'Settings' : 'Semora');
-    document.title = `${current} · Semora`;
-  }, [pathname]);
+    document.documentElement.lang = locale;
+    document.title = `${t(current)} · Semora`;
+  }, [pathname, locale]);
 
   return (
     <View
@@ -158,7 +165,7 @@ function DesktopSidebar({ session }: { session: Session }) {
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Create a new task"
+        accessibilityLabel={t('Create a new task')}
         onPress={() => router.push('/task/new' as any)}
         style={({ pressed, hovered }: any) => [
           styles.newTaskButton,

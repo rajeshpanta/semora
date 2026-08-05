@@ -1,7 +1,16 @@
-import { Fragment, useEffect, useState } from 'react';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text, TextInput } from '@/components/LocalizedReactNative';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, Platform, Keyboard,
+  Fragment,
+  useEffect,
+  useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';

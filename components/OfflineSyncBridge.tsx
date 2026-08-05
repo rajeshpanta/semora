@@ -1,8 +1,16 @@
+import { Pressable } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useQueryClient } from '@tanstack/react-query';
+import {
+  useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useEffect, useSyncExternalStore } from 'react';
-import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect,
+  useSyncExternalStore } from 'react';
+import {
+  AppState,
+  StyleSheet,
+  View,
+} from 'react-native';
 import {
   flushOfflineQueue,
   getOfflineSyncSnapshot,

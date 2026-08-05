@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { getAppLocale } from '@/lib/i18n';
 
 // Flashcards + spaced repetition (Pro). Types, React Query hooks, and a
 // pure SM-2-lite scheduler live together here so this feature is a single
@@ -447,7 +448,7 @@ export function useGenerateFlashcards() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify(args),
+        body: JSON.stringify({ ...args, locale: getAppLocale() }),
       });
 
       if (!response.ok) {

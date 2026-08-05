@@ -217,7 +217,7 @@ serve(async (req) => {
     //    in practice this isn't required (the course_notes query below reads
     //    everything for the course), it's just an explicit signal the client
     //    can pass right after an upload for a same-request guarantee.
-    let body: { courseId?: unknown; deckId?: unknown; deckTitle?: unknown; taskId?: unknown; noteIds?: unknown };
+    let body: { courseId?: unknown; deckId?: unknown; deckTitle?: unknown; taskId?: unknown; noteIds?: unknown; locale?: unknown };
     try {
       body = await req.json();
     } catch {
@@ -230,6 +230,7 @@ serve(async (req) => {
     const noteIds = Array.isArray(body.noteIds)
       ? body.noteIds.filter((id): id is string => typeof id === 'string' && id.length > 0).slice(0, 10)
       : [];
+    const locale = body.locale === 'es' ? 'es' : 'en';
     if (!courseId) {
       return jsonResponse({ error: 'courseId is required' }, 400);
     }
@@ -406,6 +407,9 @@ serve(async (req) => {
     //    cost, and the existing parser contract.
     const modelInput = [
       GENERATION_PROMPT,
+      locale === 'es'
+        ? 'LANGUAGE: Write every flashcard front and back in natural, neutral Spanish. Keep proper names and course-specific terminology accurate.'
+        : 'LANGUAGE: Write every flashcard in clear U.S. English.',
       focusDirective,
       syllabusText ? `--- SYLLABUS ---\n${syllabusText}` : '',
       notesText ? `--- LECTURE NOTES ---\n${notesText}` : '',
@@ -482,7 +486,9 @@ serve(async (req) => {
     let targetDeckId = deckId;
     let deckTitle = requestedTitle;
     if (!targetDeckId) {
-      deckTitle = requestedTitle || (targetTask ? `${course.name} — ${targetTask.title}` : `${course.name} — AI Generated`);
+      deckTitle = requestedTitle || (targetTask
+        ? `${course.name} — ${targetTask.title}`
+        : `${course.name} — ${locale === 'es' ? 'Generado con IA' : 'AI Generated'}`);
       const { data: newDeck, error: deckInsertErr } = await adminClient
         .from('decks')
         .insert({ user_id: userId, course_id: courseId, title: deckTitle })

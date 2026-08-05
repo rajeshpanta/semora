@@ -1,16 +1,20 @@
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text, TextInput } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Stack,
+  router,
+  useLocalSearchParams } from 'expo-router';
+import { useCallback,
+  useEffect,
+  useMemo,
+  useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

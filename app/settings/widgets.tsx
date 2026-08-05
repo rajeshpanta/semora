@@ -1,4 +1,11 @@
-import { View, Text, StyleSheet, ScrollView, Dimensions } from 'react-native';
+import { translate } from '@/lib/i18n';
+import { Text } from '@/components/LocalizedReactNative';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -110,7 +117,7 @@ export default function WidgetsSettings() {
   const { contentMaxWidth } = useResponsive();
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Widgets' }} />
+      <Stack.Screen options={{ title: translate('Widgets') }} />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
 
         {/* Hero */}

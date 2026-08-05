@@ -1,4 +1,12 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Share, Platform } from 'react-native';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text } from '@/components/LocalizedReactNative';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Share,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
@@ -11,6 +19,7 @@ import { displayName } from '@/lib/user';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
+import { getAppLocale } from '@/lib/i18n';
 import { useEffect, useState } from 'react';
 import Constants from 'expo-constants';
 import { getProducts, isEligibleForIntroOffer } from '@/lib/purchases';
@@ -142,7 +151,9 @@ export default function MeScreen() {
     try {
       const link = inviteLink(code);
       await Share.share({
-        message: `Join me on Semora — the AI syllabus scanner that puts your whole semester on autopilot. Use my link and we both get a free month of Pro: ${link}`,
+        message: getAppLocale() === 'es'
+          ? `Acompáñame en Semora, el escáner de programas con IA que organiza todo el semestre. Usa mi enlace y ambos recibiremos un mes gratis de Pro: ${link}`
+          : `Join me on Semora — the AI syllabus scanner that puts your whole semester on autopilot. Use my link and we both get a free month of Pro: ${link}`,
       });
       track('referral_shared', { screen: 'me' });
     } catch (err: any) {

@@ -20,6 +20,7 @@ import { Platform, Share } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '@/lib/supabase';
 import { meetingEventTitle, semesterEndOrDefault } from '@/lib/calendarSync';
+import { getAppLocale, translate } from '@/lib/i18n';
 
 // ── RFC 5545 text machinery ────────────────────────────────
 
@@ -151,6 +152,7 @@ export function generateIcs(
   semesterEnd: Date,
   now: Date = new Date(),
 ): string {
+  const locale = getAppLocale();
   const lines: string[] = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -208,7 +210,10 @@ export function generateIcs(
     lines.push('BEGIN:VEVENT');
     lines.push(`UID:semora-meeting-${meeting.id}@semora.app`);
     lines.push(`DTSTAMP:${stamp}`);
-    lines.push(`SUMMARY:${escapeText(meetingEventTitle(meeting.courseName, meeting.kind))}`);
+    const meetingTitle = locale === 'es'
+      ? `${meeting.courseName} — ${translate(meeting.kind === 'lecture' ? 'Lecture' : meeting.kind === 'lab' ? 'Lab' : meeting.kind === 'discussion' ? 'Discussion' : 'Class')}`
+      : meetingEventTitle(meeting.courseName, meeting.kind);
+    lines.push(`SUMMARY:${escapeText(meetingTitle)}`);
     lines.push(`DTSTART:${fmtLocal(start)}`);
     lines.push(`DTEND:${fmtLocal(end)}`);
     lines.push(`RRULE:FREQ=WEEKLY;UNTIL=${until};BYDAY=${days.map((d) => BYDAY[d]).join(',')}`);
@@ -250,7 +255,7 @@ export async function exportSemesterIcs(
       .eq('courses.semester_id', semesterId),
   ]);
   if (semRes.error || taskRes.error || meetRes.error) {
-    throw new Error('Could not load your semester — check your connection and try again.');
+    throw new Error(translate('Could not load your semester — check your connection and try again.'));
   }
 
   const tasks: IcsTask[] = (taskRes.data ?? []).map((t: any) => ({
@@ -276,7 +281,7 @@ export async function exportSemesterIcs(
     }));
 
   if (tasks.length === 0 && meetings.length === 0) {
-    throw new Error('Nothing to export yet — add some tasks or a class schedule first.');
+    throw new Error(translate('Nothing to export yet — add some tasks or a class schedule first.'));
   }
 
   const ics = generateIcs(tasks, meetings, semesterEndOrDefault(semRes.data?.end_date));

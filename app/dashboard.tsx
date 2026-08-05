@@ -1,6 +1,12 @@
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform,
+  View,
+  StyleSheet,
+  ScrollView,
+  Platform,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -130,7 +136,7 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Workload' }} />
+      <Stack.Screen options={{ title: translate('Workload') }} />
       <ScrollView
         contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
         showsVerticalScrollIndicator={false}

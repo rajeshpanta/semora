@@ -1,5 +1,11 @@
-import { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text } from '@/components/LocalizedReactNative';
+import {
+  useMemo } from 'react';
+import {
+  View,
+  StyleSheet,
+} from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';

@@ -1,7 +1,18 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { translate } from '@/lib/i18n';
+import { Switch, TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text } from '@/components/LocalizedReactNative';
 import {
-  ActivityIndicator, Alert, Platform, ScrollView, StyleSheet, Switch,
-  Text, TouchableOpacity, View,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState } from 'react';
+import {
+  ActivityIndicator,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
@@ -264,7 +275,7 @@ export default function PlannerScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Smart Plan' }} />
+      <Stack.Screen options={{ title: translate('Smart Plan') }} />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         <View style={styles.heroRow}>
           <View style={{ flex: 1 }}>

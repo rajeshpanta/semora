@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '@/lib/supabase';
+import { getAppLocale } from '@/lib/i18n';
 
 // ── AI Tutor client ─────────────────────────────────────────
 // Talks to the tutor-chat edge function (Pro-gated, grounded on the course's
@@ -89,7 +90,7 @@ async function callTutor(payload: Record<string, unknown>) {
   const response = await fetch(`${supabaseUrl}/functions/v1/tutor-chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ ...payload, locale: getAppLocale() }),
   });
   if (!response.ok) {
     const err = await response.json().catch(() => ({ error: response.statusText }));

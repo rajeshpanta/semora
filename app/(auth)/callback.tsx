@@ -1,4 +1,11 @@
-import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
+import {
+  ActivityIndicator,
+  Platform,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 
 import { useColors } from '@/lib/theme';

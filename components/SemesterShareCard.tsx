@@ -1,5 +1,9 @@
+import { Text } from '@/components/LocalizedReactNative';
 import React, { forwardRef } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import {
+  View,
+  StyleSheet,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { COLORS, FONTS } from '@/lib/constants';

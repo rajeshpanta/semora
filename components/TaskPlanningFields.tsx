@@ -1,5 +1,12 @@
-import { useState } from 'react';
-import { Alert, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
+import {
+  useState } from 'react';
+import {
+  View,
+  StyleSheet,
+} from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import { DatePicker } from '@/components/DatePicker';

@@ -1,7 +1,18 @@
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  Stack,
+  router,
+  useLocalSearchParams } from 'expo-router';
+import { useEffect,
+  useState } from 'react';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSession } from '@/app/_layout';
 import {
@@ -48,7 +59,7 @@ export default function JoinCollaborationScreen() {
   if (loading || !session) return null;
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]}>
-      <Stack.Screen options={{ title: 'Join Course Space' }} />
+      <Stack.Screen options={{ title: translate('Join Course Space') }} />
       <View style={styles.content}>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <View style={[styles.icon, { backgroundColor: colors.brand50 }]}>

@@ -1,7 +1,20 @@
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Stack, router } from 'expo-router';
-import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient } from '@tanstack/react-query';
+import { Stack,
+  router } from 'expo-router';
+import {
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   disconnectLms,
@@ -147,7 +160,7 @@ export default function LmsSettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Learning Platforms' }} />
+      <Stack.Screen options={{ title: translate('Learning Platforms') }} />
       <ScrollView
         contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
         refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={query.refetch} tintColor={colors.brand} />}

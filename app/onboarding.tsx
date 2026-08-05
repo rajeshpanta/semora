@@ -1,7 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Text, TextInput } from '@/components/LocalizedReactNative';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Platform, KeyboardAvoidingView, Keyboard,
+  useEffect,
+  useMemo,
+  useRef,
+  useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Platform,
+  KeyboardAvoidingView,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';

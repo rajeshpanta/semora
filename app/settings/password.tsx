@@ -1,5 +1,15 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text, TextInput } from '@/components/LocalizedReactNative';
+import {
+  useEffect,
+  useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -86,7 +96,7 @@ export default function ChangePasswordScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Change Password' }} />
+      <Stack.Screen options={{ title: translate('Change Password') }} />
 
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Current Password</Text>

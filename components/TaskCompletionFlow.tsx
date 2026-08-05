@@ -1,10 +1,20 @@
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Text, TextInput } from '@/components/LocalizedReactNative';
 import {
-  createContext, useCallback, useContext, useEffect, useRef, useState,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
   type ReactNode,
-} from 'react';
+  } from 'react';
 import {
-  KeyboardAvoidingView, Modal, Platform, StyleSheet, Text, TextInput,
-  TouchableOpacity, View,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  StyleSheet,
+  View,
 } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { differenceInCalendarDays, differenceInHours } from 'date-fns';

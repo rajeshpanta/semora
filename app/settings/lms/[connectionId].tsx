@@ -1,16 +1,22 @@
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient } from '@tanstack/react-query';
+import { Stack,
+  router,
+  useLocalSearchParams } from 'expo-router';
+import { useMemo,
+  useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Modal,
   RefreshControl,
   ScrollView,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -117,7 +123,7 @@ export default function LmsConnectionDetailScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]}>
-        <Stack.Screen options={{ title: 'Learning platform' }} />
+        <Stack.Screen options={{ title: translate('Learning platform') }} />
         <View style={styles.center}><ActivityIndicator color={colors.brand} /></View>
       </SafeAreaView>
     );
@@ -126,7 +132,7 @@ export default function LmsConnectionDetailScreen() {
   if (!connection) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]}>
-        <Stack.Screen options={{ title: 'Learning platform' }} />
+        <Stack.Screen options={{ title: translate('Learning platform') }} />
         <View style={styles.center}>
           <Text style={[styles.emptyTitle, { color: colors.ink }]}>Connection unavailable</Text>
           <Text style={[styles.emptyText, { color: colors.ink3 }]}>{connectionQuery.error instanceof Error ? connectionQuery.error.message : 'Go back and reconnect your learning platform.'}</Text>

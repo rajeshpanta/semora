@@ -1,7 +1,16 @@
-import { useRef, useState, useEffect } from 'react';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text } from '@/components/LocalizedReactNative';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  ActivityIndicator, Alert, Platform, Share,
+  useRef,
+  useState,
+  useEffect } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Platform,
+  Share,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,6 +29,7 @@ import {
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
+import { getAppLocale } from '@/lib/i18n';
 import { useAppStore } from '@/store/appStore';
 import { useCourses, useTaskStats, useSemesters } from '@/lib/queries';
 import { track } from '@/lib/analytics';
@@ -100,7 +110,9 @@ export default function ShareSemesterScreen() {
       // file:// url in `url`; the image rides along to Messages/Instagram/etc.
       await Share.share({
         url: uri,
-        message: `My ${semesterName} — organized with Semora.`,
+        message: getAppLocale() === 'es'
+          ? `Mi semestre ${semesterName}, organizado con Semora.`
+          : `My ${semesterName} — organized with Semora.`,
       });
 
       track('semester_shared', {

@@ -1,7 +1,19 @@
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Stack, router } from 'expo-router';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient } from '@tanstack/react-query';
+import { Stack,
+  router } from 'expo-router';
+import {
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSession } from '@/app/_layout';
 import { track } from '@/lib/analytics';
@@ -64,7 +76,7 @@ export default function CollaborationHubScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Class Collaboration' }} />
+      <Stack.Screen options={{ title: translate('Class Collaboration') }} />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}>
         <View style={[styles.hero, { backgroundColor: colors.brand50 }]}>
           <View style={[styles.heroIcon, { backgroundColor: colors.card }]}>

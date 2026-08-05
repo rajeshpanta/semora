@@ -1,5 +1,15 @@
-import { useCallback, useMemo } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
+import {
+  useCallback,
+  useMemo } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useFocusEffect, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
@@ -83,7 +93,7 @@ export default function CompletedWorkScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Completed Work' }} />
+      <Stack.Screen options={{ title: translate('Completed Work') }} />
       {isLoading ? (
         <View style={styles.loading}><ActivityIndicator color={colors.brand} /></View>
       ) : (

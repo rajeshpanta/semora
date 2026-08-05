@@ -1,7 +1,16 @@
-import { useMemo, useState } from 'react';
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text, TextInput } from '@/components/LocalizedReactNative';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, Alert, Platform, Keyboard,
+  useMemo,
+  useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Platform,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
@@ -126,7 +135,7 @@ export default function DeckDetailScreen() {
     // deep links: bounce to the paywall teaser context.
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-        <Stack.Screen options={{ title: 'Flashcards' }} />
+        <Stack.Screen options={{ title: translate('Flashcards') }} />
         <View style={styles.centered}>
           <FontAwesome name="lock" size={30} color={colors.ink3} />
           <Text style={[styles.lockedText, { color: colors.ink2 }]}>Flashcards are a Pro feature.</Text>

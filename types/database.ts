@@ -5,6 +5,7 @@ export interface Profile {
   email: string;
   display_name: string | null;
   timezone: string | null;
+  preferred_language: 'en' | 'es';
   reminder_same_day: boolean;
   reminder_1day: boolean;
   reminder_3day: boolean;

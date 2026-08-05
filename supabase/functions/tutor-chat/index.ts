@@ -252,7 +252,7 @@ serve(async (req) => {
     // chat rather than creating a weaker second AI path.
     let body: {
       conversationId?: unknown; message?: unknown; courseId?: unknown; mode?: unknown;
-      action?: unknown; assignmentId?: unknown; practiceId?: unknown; answer?: unknown;
+      action?: unknown; assignmentId?: unknown; practiceId?: unknown; answer?: unknown; locale?: unknown;
     };
     try {
       body = await req.json();
@@ -269,6 +269,8 @@ serve(async (req) => {
     const assignmentId = typeof body.assignmentId === 'string' ? body.assignmentId : null;
     const practiceId = typeof body.practiceId === 'string' ? body.practiceId : null;
     const submittedAnswer = typeof body.answer === 'string' ? body.answer.trim() : '';
+    const locale = body.locale === 'es' ? 'es' : 'en';
+    const localized = (english: string, spanish: string) => locale === 'es' ? spanish : english;
     if (!conversationId) {
       return jsonResponse({ error: 'conversationId is required' }, 400);
     }
@@ -314,8 +316,11 @@ serve(async (req) => {
 
       const correct = normalizeAnswer(submittedAnswer) === normalizeAnswer(String(question.expected_answer));
       const feedback = correct
-        ? `Correct. ${String(question.explanation)}`
-        : `Not quite. The best answer is ${String(question.expected_answer)}. ${String(question.explanation)}`;
+        ? localized(`Correct. ${String(question.explanation)}`, `Correcto. ${String(question.explanation)}`)
+        : localized(
+          `Not quite. The best answer is ${String(question.expected_answer)}. ${String(question.explanation)}`,
+          `Aún no. La mejor respuesta es ${String(question.expected_answer)}. ${String(question.explanation)}`,
+        );
       const topics = Array.isArray(question.topics) ? question.topics.filter((topic: unknown) => typeof topic === 'string').slice(0, 5) : [];
       const { error: recordErr } = await adminClient.rpc('record_tutor_practice_attempt', {
         p_user_id: userId,
@@ -500,9 +505,12 @@ serve(async (req) => {
         : mode === 'explain_assignment'
           ? 'Explain the selected assignment as a student-friendly checklist: what it asks for, a first step, suggested milestones, and one question to ask the instructor if the brief is unclear. Do not fabricate requirements.'
           : '';
+    const languageInstruction = locale === 'es'
+      ? 'LANGUAGE: Respond in natural, neutral Spanish. Keep course-specific names and source titles unchanged. Quiz questions, choices, explanations, topic labels, assignment checklists, and recommendations must all be in Spanish.'
+      : 'LANGUAGE: Respond in clear U.S. English.';
     const groundingIntro = contextBlock
-      ? `${TUTOR_SYSTEM_PROMPT}\n${modeInstruction ? `\nMODE: ${modeInstruction}\n` : ''}\n--- COURSE CONTEXT ---\n${contextBlock}\n--- END CONTEXT ---`
-      : `${TUTOR_SYSTEM_PROMPT}\n\n(No course material is attached to this conversation yet — help using general knowledge and invite the student to add their syllabus or notes for grounded answers.)`;
+      ? `${TUTOR_SYSTEM_PROMPT}\n\n${languageInstruction}\n${modeInstruction ? `\nMODE: ${modeInstruction}\n` : ''}\n--- COURSE CONTEXT ---\n${contextBlock}\n--- END CONTEXT ---`
+      : `${TUTOR_SYSTEM_PROMPT}\n\n${languageInstruction}\n\n(No course material is attached to this conversation yet — help using general knowledge and invite the student to add their syllabus or notes for grounded answers.)`;
 
     const input: { role: 'user' | 'assistant'; content: string }[] = [
       ...priorTurns.map((m: any) => ({

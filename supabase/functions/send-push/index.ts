@@ -93,6 +93,7 @@ serve(async (req) => {
       title?: unknown;
       body?: unknown;
       data?: unknown;
+      translations?: unknown;
     };
     try {
       body = await req.json();
@@ -109,6 +110,10 @@ serve(async (req) => {
       body.data && typeof body.data === 'object' && !Array.isArray(body.data)
         ? (body.data as Record<string, unknown>)
         : undefined;
+    const translations =
+      body.translations && typeof body.translations === 'object' && !Array.isArray(body.translations)
+        ? (body.translations as Record<string, { title?: unknown; body?: unknown }>)
+        : {};
 
     if (userIds.length === 0) {
       return jsonResponse({ error: 'user_ids (non-empty string array) is required' }, 400);
@@ -121,7 +126,7 @@ serve(async (req) => {
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const { data: tokenRows, error: tokenErr } = await adminClient
       .from('push_tokens')
-      .select('token')
+      .select('token, preferred_language')
       .in('user_id', userIds);
 
     if (tokenErr) {
@@ -131,15 +136,16 @@ serve(async (req) => {
 
     // De-dupe tokens (a user could have two rows pointing at the same device
     // after an account move) and keep only well-formed Expo tokens.
-    const tokens = Array.from(
-      new Set(
-        (tokenRows ?? [])
-          .map((r: { token: unknown }) => r.token)
-          .filter((t): t is string => typeof t === 'string' && t.startsWith('ExponentPushToken')),
-      ),
-    );
+    const devices = Array.from(new Map(
+      (tokenRows ?? [])
+        .filter((row: any) => typeof row.token === 'string' && row.token.startsWith('ExponentPushToken'))
+        .map((row: any) => [row.token, {
+          token: row.token as string,
+          language: row.preferred_language === 'es' ? 'es' : 'en',
+        }]),
+    ).values());
 
-    if (tokens.length === 0) {
+    if (devices.length === 0) {
       return jsonResponse({ sent: 0, tickets: 0, removed: 0, message: 'No registered devices for these users' }, 200);
     }
 
@@ -152,14 +158,24 @@ serve(async (req) => {
     // returned `sent` reflects real delivery instead of the token total.
     let sentCount = 0;
 
-    for (const tokenChunk of chunk(tokens, EXPO_CHUNK_SIZE)) {
-      const messages: ExpoMessage[] = tokenChunk.map((to) => ({
-        to,
-        title,
-        body: messageBody,
-        ...(data ? { data } : {}),
-        sound: 'default',
-      }));
+    for (const deviceChunk of chunk(devices, EXPO_CHUNK_SIZE)) {
+      const tokenChunk = deviceChunk.map((device) => device.token);
+      const messages: ExpoMessage[] = deviceChunk.map((device) => {
+        const localized = translations[device.language];
+        const localizedTitle = typeof localized?.title === 'string' && localized.title.trim()
+          ? localized.title.trim()
+          : title;
+        const localizedBody = typeof localized?.body === 'string' && localized.body.trim()
+          ? localized.body.trim()
+          : messageBody;
+        return {
+          to: device.token,
+          title: localizedTitle,
+          body: localizedBody,
+          ...(data ? { data } : {}),
+          sound: 'default',
+        };
+      });
 
       let expoResp: Response;
       try {

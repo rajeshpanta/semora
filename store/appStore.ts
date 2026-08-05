@@ -5,11 +5,13 @@ import { Platform } from 'react-native';
 import type { Semester } from '@/types/database';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
+export type AppLanguagePreference = 'system' | 'en' | 'es';
 // The struggle the user picked in onboarding — used to tailor the auth
 // wall and (later) paywall copy to their own words.
 export type PainPoint = 'deadlines' | 'planning' | 'grades';
 
 const THEME_KEY = 'semora_theme';
+const LANGUAGE_KEY = 'semora_language';
 const SEMESTER_KEY = 'semora_semester';
 const RESET_KEY = 'semora_reset_in_progress';
 // Device-level one-time flags. Unlike the keys above these are NOT
@@ -37,12 +39,17 @@ const PAIN_POINT_KEY = 'semora_pain_point';
 const PRO_KEY = 'semora_is_pro';
 
 function getItem(key: string): string | null {
-  if (Platform.OS === 'web') return null;
+  if (Platform.OS === 'web') {
+    try { return typeof window !== 'undefined' ? window.localStorage.getItem(key) : null; } catch { return null; }
+  }
   try { return SecureStore.getItem(key); } catch { return null; }
 }
 
 function setItem(key: string, value: string) {
-  if (Platform.OS === 'web') return;
+  if (Platform.OS === 'web') {
+    try { if (typeof window !== 'undefined') window.localStorage.setItem(key, value); } catch {}
+    return;
+  }
   try { SecureStore.setItem(key, value); } catch {}
 }
 
@@ -51,6 +58,12 @@ const initialTheme = (() => {
   const stored = getItem(THEME_KEY);
   if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
   return 'system' as ThemeMode;
+})();
+
+const initialLanguagePreference = (() => {
+  const stored = getItem(LANGUAGE_KEY);
+  if (stored === 'en' || stored === 'es' || stored === 'system') return stored;
+  return 'system' as AppLanguagePreference;
 })();
 
 const initialSemester = getItem(SEMESTER_KEY);
@@ -83,6 +96,8 @@ interface AppState {
   setSelectedSemester: (id: string | null) => void;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
+  languagePreference: AppLanguagePreference;
+  setLanguagePreference: (language: AppLanguagePreference) => void;
   isPro: boolean;
   setIsPro: (value: boolean) => void;
   subscriptionPlan: 'annual' | 'monthly' | null;
@@ -126,7 +141,10 @@ interface AppState {
 }
 
 function deleteItem(key: string) {
-  if (Platform.OS === 'web') return;
+  if (Platform.OS === 'web') {
+    try { if (typeof window !== 'undefined') window.localStorage.removeItem(key); } catch {}
+    return;
+  }
   SecureStore.deleteItemAsync(key).catch(() => {});
 }
 
@@ -144,6 +162,11 @@ export const useAppStore = create<AppState>((set) => ({
   setThemeMode: (mode) => {
     set({ themeMode: mode });
     setItem(THEME_KEY, mode);
+  },
+  languagePreference: initialLanguagePreference,
+  setLanguagePreference: (language) => {
+    set({ languagePreference: language });
+    setItem(LANGUAGE_KEY, language);
   },
   isPro: initialIsPro,
   setIsPro: (value) => {

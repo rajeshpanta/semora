@@ -1,4 +1,7 @@
-import { StyleSheet, TouchableOpacity } from 'react-native';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import {
+  StyleSheet,
+} from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import { useColors } from '@/lib/theme';

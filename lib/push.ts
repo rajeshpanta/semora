@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
+import { getAppLocale } from '@/lib/i18n';
 
 /**
  * Server-side push registration — the re-engagement channel a
@@ -67,7 +68,7 @@ export async function registerForPushNotificationsAsync(): Promise<void> {
     const { error } = await supabase
       .from('push_tokens')
       .upsert(
-        { user_id: user.id, token, platform: Platform.OS },
+        { user_id: user.id, token, platform: Platform.OS, preferred_language: getAppLocale() },
         { onConflict: 'token' },
       );
     if (error && __DEV__) console.warn('[push] token upsert failed:', error.message);

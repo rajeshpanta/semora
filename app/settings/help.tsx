@@ -1,4 +1,12 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Linking,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -45,7 +53,7 @@ export default function HelpScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Help & FAQ' }} />
+      <Stack.Screen options={{ title: translate('Help & FAQ') }} />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Frequently Asked Questions</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
@@ -74,10 +82,10 @@ export default function HelpScreen() {
           <TouchableOpacity
             style={styles.contactRow}
             activeOpacity={0.7}
-            onPress={() => Linking.openURL('mailto:rajesh.panta08@gmail.com')}
+            onPress={() => Linking.openURL('mailto:semora365@gmail.com')}
           >
             <FontAwesome name="envelope-o" size={16} color={colors.ink2} />
-            <Text style={[styles.contactText, { color: colors.ink }]}>rajesh.panta08@gmail.com</Text>
+            <Text style={[styles.contactText, { color: colors.ink }]}>semora365@gmail.com</Text>
             <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
           </TouchableOpacity>
         </View>

@@ -1,7 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text, TextInput } from '@/components/LocalizedReactNative';
 import {
-  ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput,
-  TouchableOpacity, View,
+  useEffect,
+  useMemo,
+  useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useLocalSearchParams } from 'expo-router';
@@ -133,7 +141,7 @@ export default function GradingSetupScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Grade Setup' }} />
+      <Stack.Screen options={{ title: translate('Grade Setup') }} />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: colors.ink }]}>Match the syllabus rules</Text>
         <Text style={[styles.subtitle, { color: colors.ink3 }]}>

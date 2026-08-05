@@ -1,4 +1,12 @@
-import { View, Text, StyleSheet, Switch, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { translate } from '@/lib/i18n';
+import { Switch, TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text } from '@/components/LocalizedReactNative';
+import {
+  View,
+  StyleSheet,
+  ActivityIndicator,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -320,7 +328,7 @@ export default function CalendarSyncSettings() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]}>
-        <Stack.Screen options={{ title: 'Calendar Sync' }} />
+        <Stack.Screen options={{ title: translate('Calendar Sync') }} />
         <ActivityIndicator style={{ marginTop: 40 }} color={colors.brand} />
       </SafeAreaView>
     );
@@ -328,7 +336,7 @@ export default function CalendarSyncSettings() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Calendar Sync' }} />
+      <Stack.Screen options={{ title: translate('Calendar Sync') }} />
 
       <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Sync to Device Calendar</Text>

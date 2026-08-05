@@ -1,7 +1,14 @@
-import { useEffect, useState } from 'react';
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text, TextInput } from '@/components/LocalizedReactNative';
 import {
-  ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput,
-  TouchableOpacity, View,
+  useEffect,
+  useState } from 'react';
+import {
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -70,7 +77,7 @@ export default function GpaScaleScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'GPA Scale' }} />
+      <Stack.Screen options={{ title: translate('GPA Scale') }} />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="handled">
         <Text style={[styles.title, { color: colors.ink }]}>Your school’s GPA scale</Text>
         <Text style={[styles.subtitle, { color: colors.ink3 }]}>

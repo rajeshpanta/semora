@@ -1,4 +1,9 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
+import {
+  StyleSheet,
+  View,
+} from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import type { AcademicRiskReport, RecoveryStep } from '@/lib/academicRisk';
 import { useColors } from '@/lib/theme';

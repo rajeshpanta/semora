@@ -1,5 +1,11 @@
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  Platform,
+} from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { format, isPast, isToday, isTomorrow, differenceInDays, differenceInCalendarDays, differenceInHours, differenceInMinutes } from 'date-fns';

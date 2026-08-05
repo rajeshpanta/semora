@@ -1,6 +1,11 @@
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
 import React, { useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Platform, Modal,
+  View,
+  StyleSheet,
+  Platform,
+  Modal,
 } from 'react-native';
 import { format } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';

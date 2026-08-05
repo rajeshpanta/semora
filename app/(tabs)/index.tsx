@@ -1,7 +1,18 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text } from '@/components/LocalizedReactNative';
 import {
-  View, Text, StyleSheet, ScrollView, Platform,
-  RefreshControl, TouchableOpacity, Alert, ActivityIndicator, Linking,
+  useState,
+  useCallback,
+  useEffect,
+  useRef } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Platform,
+  RefreshControl,
+  ActivityIndicator,
+  Linking,
   AppState,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

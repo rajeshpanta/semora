@@ -1,7 +1,14 @@
-import { useState } from 'react';
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text, TextInput } from '@/components/LocalizedReactNative';
 import {
-  View, Text, StyleSheet, TextInput, TouchableOpacity,
-  Alert, ActivityIndicator, ScrollView, Platform,
+  useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ActivityIndicator,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -212,7 +219,7 @@ export default function DeleteAccountScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Delete Account' }} />
+      <Stack.Screen options={{ title: translate('Delete Account') }} />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="handled">
         <View style={[styles.warningBox, { backgroundColor: colors.coral50, borderColor: colors.coral }]}>
           <FontAwesome name="exclamation-triangle" size={20} color={colors.coral} />

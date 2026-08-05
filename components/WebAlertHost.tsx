@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { Pressable } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
+import {
+  useEffect,
+  useState } from 'react';
 import {
   Alert,
   Modal,
   Platform,
-  Pressable,
   StyleSheet,
-  Text,
   View,
   type AlertButton,
   type AlertOptions,

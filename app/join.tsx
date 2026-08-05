@@ -1,7 +1,16 @@
-import { useEffect, useState, useCallback } from 'react';
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text } from '@/components/LocalizedReactNative';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  ActivityIndicator, Alert, Platform,
+  useEffect,
+  useState,
+  useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
@@ -175,7 +184,7 @@ export default function JoinScreen() {
 
   // ── Render ────────────────────────────────────────────────
   const headerOptions = (
-    <Stack.Screen options={{ title: 'Shared Course', presentation: 'modal', headerShown: false }} />
+    <Stack.Screen options={{ title: translate('Shared Course'), presentation: 'modal', headerShown: false }} />
   );
 
   // While a session is resolving, or we're bouncing a signed-out user out.

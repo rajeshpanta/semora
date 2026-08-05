@@ -1,14 +1,17 @@
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
-import { Stack, router } from 'expo-router';
+import {
+  Stack,
+  router } from 'expo-router';
 import { useMemo } from 'react';
 import {
-  Alert,
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -101,7 +104,7 @@ export default function InsightsScreen() {
   if (!isPro) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-        <Stack.Screen options={{ title: 'Progress Insights' }} />
+        <Stack.Screen options={{ title: translate('Progress Insights') }} />
         <ScrollView
           contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
           showsVerticalScrollIndicator={false}
@@ -147,7 +150,7 @@ export default function InsightsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Progress Insights' }} />
+      <Stack.Screen options={{ title: translate('Progress Insights') }} />
       <ScrollView
         contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
         showsVerticalScrollIndicator={false}

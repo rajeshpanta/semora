@@ -8,6 +8,7 @@ import * as Haptics from 'expo-haptics';
 import { COLORS } from '@/lib/constants';
 import { useColors, useResolvedScheme } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
+import { useI18n } from '@/lib/i18n';
 
 function TabIcon({ name, color, focused }: { name: any; color: string; focused: boolean }) {
   const colors = useColors();
@@ -32,6 +33,7 @@ export default function TabLayout() {
   const scheme = useResolvedScheme();
   const isWeb = Platform.OS === 'web';
   const { isDesktop } = useResponsive();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const isDark = scheme === 'dark';
   const tabBarBgRgba = isDark ? 'rgba(18,18,20,0.92)' : 'rgba(250,249,245,0.92)';
@@ -69,21 +71,21 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Today',
+          title: t('Today'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="sun-o" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="courses"
         options={{
-          title: 'Courses',
+          title: t('Courses'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="book" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="scan"
         options={{
-          title: 'Scan',
+          title: t('Scan'),
           tabBarIcon: () => <ScanFab />,
           tabBarLabelStyle: { fontSize: 10, fontWeight: '500', marginTop: 6 },
         }}
@@ -91,14 +93,14 @@ export default function TabLayout() {
       <Tabs.Screen
         name="calendar"
         options={{
-          title: 'Calendar',
+          title: t('Calendar'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="calendar" color={color} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="me"
         options={{
-          title: 'Me',
+          title: t('Me'),
           tabBarIcon: ({ color, focused }) => <TabIcon name="user" color={color} focused={focused} />,
         }}
       />

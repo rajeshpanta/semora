@@ -8,6 +8,7 @@ import {
   subWeeks,
 } from 'date-fns';
 import { Platform, Share } from 'react-native';
+import { getAppLocale, localeTag, translate } from '@/lib/i18n';
 import * as FileSystem from 'expo-file-system/legacy';
 import { calculateCourseGrade } from '@/lib/grades';
 import type { Course, GradeCategory, Task } from '@/types/database';
@@ -217,10 +218,14 @@ export function generateSemesterReportCsv(
   semesterName: string,
   insights: ProgressInsights,
 ): string {
+  const locale = getAppLocale();
+  const labels = locale === 'es'
+    ? ['Curso', 'Calificación actual', 'Letra', 'Avance %', 'A tiempo %', 'Faltantes', 'Calificadas']
+    : ['Course', 'Current grade', 'Letter', 'Completion %', 'On-time %', 'Missing', 'Graded'];
   const rows: string[] = [
-    csvRow([`Semora semester report — ${semesterName}`]),
+    csvRow([locale === 'es' ? `Informe del semestre de Semora — ${semesterName}` : `Semora semester report — ${semesterName}`]),
     '',
-    csvRow(['Course', 'Current grade', 'Letter', 'Completion %', 'On-time %', 'Missing', 'Graded']),
+    csvRow(labels),
   ];
   for (const course of insights.courseInsights) {
     rows.push(
@@ -237,7 +242,7 @@ export function generateSemesterReportCsv(
   }
   rows.push(
     csvRow([
-      'All courses',
+      locale === 'es' ? 'Todos los cursos' : 'All courses',
       '',
       '',
       insights.completionRate,
@@ -260,7 +265,7 @@ export async function exportSemesterReport(
   insights: ProgressInsights,
 ): Promise<{ courses: number }> {
   if (insights.courseInsights.length === 0) {
-    throw new Error('Nothing to export yet — add classes and assignments first.');
+    throw new Error(translate('Nothing to export yet — add classes and assignments first.'));
   }
 
   const csv = generateSemesterReportCsv(semesterName, insights);
@@ -305,6 +310,10 @@ function escapeHtml(value: string): string {
  * the print/iframe mechanics below.
  */
 export function generateSemesterReportHtml(semesterName: string, insights: ProgressInsights): string {
+  const locale = getAppLocale();
+  const labels = locale === 'es'
+    ? { report: 'Informe del semestre de Semora', generated: 'generado', course: 'Curso', grade: 'Calificación', letter: 'Letra', completion: 'Avance', onTime: 'A tiempo', missing: 'Faltantes', all: 'Todos los cursos' }
+    : { report: 'Semora semester report', generated: 'generated', course: 'Course', grade: 'Grade', letter: 'Letter', completion: 'Completion', onTime: 'On-time', missing: 'Missing', all: 'All courses' };
   const courseRows = insights.courseInsights.map((course) => `
     <tr>
       <td>${escapeHtml(course.name)}</td>
@@ -316,7 +325,7 @@ export function generateSemesterReportHtml(semesterName: string, insights: Progr
     </tr>`).join('');
 
   return `<!doctype html>
-<html>
+<html lang="${locale}">
 <head>
 <meta charset="utf-8" />
 <title>${escapeHtml(semesterName)} — Semora</title>
@@ -333,12 +342,12 @@ export function generateSemesterReportHtml(semesterName: string, insights: Progr
 </head>
 <body>
   <h1>${escapeHtml(semesterName)}</h1>
-  <div class="sub">Semora semester report · generated ${new Date().toLocaleDateString()}</div>
+  <div class="sub">${labels.report} · ${labels.generated} ${new Date().toLocaleDateString(localeTag(locale))}</div>
   <table>
-    <thead><tr><th>Course</th><th>Grade</th><th>Letter</th><th>Completion</th><th>On-time</th><th>Missing</th></tr></thead>
+    <thead><tr><th>${labels.course}</th><th>${labels.grade}</th><th>${labels.letter}</th><th>${labels.completion}</th><th>${labels.onTime}</th><th>${labels.missing}</th></tr></thead>
     <tbody>${courseRows}</tbody>
     <tfoot><tr>
-      <td>All courses</td><td></td><td></td>
+      <td>${labels.all}</td><td></td><td></td>
       <td>${insights.completionRate}%</td>
       <td>${insights.onTimeRate == null ? '—' : `${insights.onTimeRate}%`}</td>
       <td>${insights.missingCount}</td>
@@ -357,7 +366,7 @@ export function generateSemesterReportHtml(semesterName: string, insights: Progr
 export function printSemesterReport(semesterName: string, insights: ProgressInsights): void {
   if (Platform.OS !== 'web') return;
   if (insights.courseInsights.length === 0) {
-    throw new Error('Nothing to print yet — add classes and assignments first.');
+    throw new Error(translate('Nothing to print yet — add classes and assignments first.'));
   }
   const html = generateSemesterReportHtml(semesterName, insights);
   const iframe = document.createElement('iframe');

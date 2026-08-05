@@ -5,6 +5,7 @@ import { differenceInDays } from 'date-fns';
 import { useAppStore } from '@/store/appStore';
 import { registerForPushNotificationsAsync } from '@/lib/push';
 import * as SecureStore from 'expo-secure-store';
+import { getAppLocale, translate, type AppLocale } from '@/lib/i18n';
 
 // iOS silently drops new notifications once a single app has 64 pending.
 // Stay a few under to leave headroom for re-schedules that race with prune.
@@ -49,18 +50,18 @@ export async function registerTaskNotificationActions(isPro: boolean = false) {
   const actions = [
     {
       identifier: COMPLETE_TASK_ACTION,
-      buttonTitle: 'Mark Complete',
+      buttonTitle: translate('Mark Complete'),
       options: { opensAppToForeground: false },
     },
     {
       identifier: REVIEW_TASK_ACTION,
-      buttonTitle: 'Review',
+      buttonTitle: translate('Review'),
       options: { opensAppToForeground: true },
     },
     ...(isPro
       ? [{
           identifier: SNOOZE_TASK_ACTION,
-          buttonTitle: 'Snooze 1 Hour',
+          buttonTitle: translate('Snooze 1 Hour'),
           options: { opensAppToForeground: false },
         }]
       : []),
@@ -139,8 +140,8 @@ export async function snoozeNotification(response: Notifications.NotificationRes
   const triggerDate = moveOutsideQuietHours(new Date(Date.now() + minutes * 60_000), quiet);
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: content.title || 'Task reminder',
-      body: content.body || 'This task still needs your attention.',
+      title: content.title || translate('Task reminder'),
+      body: content.body || translate('This task still needs your attention.'),
       data: { ...data, fireAt: triggerDate.getTime(), snoozed: true },
       sound: true,
       categoryIdentifier: TASK_NOTIFICATION_CATEGORY,
@@ -223,7 +224,14 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return granted;
 }
 
-function getDueLabel(daysUntilDue: number): string {
+function getDueLabel(daysUntilDue: number, locale: AppLocale): string {
+  if (locale === 'es') {
+    if (daysUntilDue === 0) return 'vence hoy';
+    if (daysUntilDue === 1) return 'vence mañana';
+    if (daysUntilDue > 1) return `vence en ${daysUntilDue} días`;
+    if (daysUntilDue === -1) return 'lleva 1 día atrasada';
+    return `lleva ${Math.abs(daysUntilDue)} días atrasada`;
+  }
   if (daysUntilDue === 0) return 'due today';
   if (daysUntilDue === 1) return 'due tomorrow';
   if (daysUntilDue > 1) return `due in ${daysUntilDue} days`;
@@ -231,14 +239,14 @@ function getDueLabel(daysUntilDue: number): string {
   return `overdue by ${Math.abs(daysUntilDue)} days`;
 }
 
-function formatLeadTime(totalMinutes: number): string {
+function formatLeadTime(totalMinutes: number, locale: AppLocale): string {
   const days = Math.floor(totalMinutes / 1440);
   const hours = Math.floor((totalMinutes % 1440) / 60);
   const minutes = totalMinutes % 60;
   const parts: string[] = [];
-  if (days) parts.push(`${days} ${days === 1 ? 'day' : 'days'}`);
-  if (hours) parts.push(`${hours} ${hours === 1 ? 'hour' : 'hours'}`);
-  if (minutes) parts.push(`${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`);
+  if (days) parts.push(`${days} ${locale === 'es' ? (days === 1 ? 'día' : 'días') : (days === 1 ? 'day' : 'days')}`);
+  if (hours) parts.push(`${hours} ${locale === 'es' ? (hours === 1 ? 'hora' : 'horas') : (hours === 1 ? 'hour' : 'hours')}`);
+  if (minutes) parts.push(`${minutes} ${locale === 'es' ? (minutes === 1 ? 'minuto' : 'minutos') : (minutes === 1 ? 'minute' : 'minutes')}`);
   return parts.join(' ');
 }
 
@@ -259,6 +267,7 @@ export async function scheduleTaskReminders(
   customOffsetsMinutes?: number[] | null,
 ) {
   if (Platform.OS === 'web') return;
+  const locale = getAppLocale();
   // Schema marks tasks.due_date NOT NULL, but a malformed row coming
   // from direct DB manipulation would crash split('-') below. Bail
   // quietly rather than throw out of the toggle-complete flow.
@@ -316,9 +325,13 @@ export async function scheduleTaskReminders(
         quiet,
       );
       if (triggerDate <= now) continue;
-      const body = offsetMinutes === 0
-        ? `${taskTitle} is due now`
-        : `${taskTitle} is due in ${formatLeadTime(offsetMinutes)}`;
+      const body = locale === 'es'
+        ? offsetMinutes === 0
+          ? `${taskTitle} vence ahora`
+          : `${taskTitle} vence en ${formatLeadTime(offsetMinutes, locale)}`
+        : offsetMinutes === 0
+          ? `${taskTitle} is due now`
+          : `${taskTitle} is due in ${formatLeadTime(offsetMinutes, locale)}`;
       await Notifications.scheduleNotificationAsync({
         content: {
           title: `📚 ${courseName}`,
@@ -386,12 +399,12 @@ export async function scheduleTaskReminders(
 
     // Calculate actual days until due at notification time
     const daysUntilDue = differenceInDays(dueDateObj, new Date(year, month - 1, day - offset.days));
-    const label = getDueLabel(daysUntilDue);
+    const label = getDueLabel(daysUntilDue, locale);
 
     await Notifications.scheduleNotificationAsync({
       content: {
         title: `📚 ${courseName}`,
-        body: `${taskTitle} is ${label}`,
+        body: locale === 'es' ? `${taskTitle} ${label}` : `${taskTitle} is ${label}`,
         data: { taskId, taskTitle, courseName, dueDate, dueTime, userId, fireAt: triggerDate.getTime() },
         sound: true,
         categoryIdentifier: TASK_NOTIFICATION_CATEGORY,
@@ -415,9 +428,9 @@ export async function scheduleTaskReminders(
       ? new Date(year, month - 1, day, hour, minute - 120, 0)
       : new Date(year, month - 1, day, 19, 0, 0);
     const lastCall = moveOutsideQuietHours(rawLastCall, quiet);
-    const lastCallBody = dueTime
-      ? `${taskTitle} is due in 2 hours`
-      : `${taskTitle} is due tonight`;
+    const lastCallBody = locale === 'es'
+      ? dueTime ? `${taskTitle} vence en 2 horas` : `${taskTitle} vence esta noche`
+      : dueTime ? `${taskTitle} is due in 2 hours` : `${taskTitle} is due tonight`;
     if (lastCall > now) {
       await Notifications.scheduleNotificationAsync({
         content: {
@@ -591,7 +604,10 @@ async function checkWebDueSoonReminders(userId: string) {
     if (diff > -WEB_DUE_SOON_WINDOW_MS && diff <= WEB_DUE_SOON_WINDOW_MS) {
       const courseName = (Array.isArray(t.courses) ? t.courses[0]?.name : t.courses?.name) || 'Course';
       try {
-        new Notification(`📚 ${courseName}`, { body: `${t.title} is due soon`, tag: t.id });
+        new Notification(`📚 ${courseName}`, {
+          body: getAppLocale() === 'es' ? `${t.title} vence pronto` : `${t.title} is due soon`,
+          tag: t.id,
+        });
       } catch {
         // Some browsers (notably iOS Safari) restrict the Notification
         // constructor outside a service worker — fail silently rather than

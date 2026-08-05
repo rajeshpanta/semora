@@ -1,6 +1,13 @@
-import { useCallback } from 'react';
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform,
+  useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
@@ -86,7 +93,7 @@ export default function PomodoroScreen() {
   if (!isPro) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-        <Stack.Screen options={{ title: 'Focus' }} />
+        <Stack.Screen options={{ title: translate('Focus') }} />
         <View style={[styles.lockWrap, { maxWidth: contentMaxWidth }]}>
           <View style={[styles.lockIcon, { backgroundColor: colors.brand50 }]}>
             <FontAwesome name="clock-o" size={30} color={colors.brand} />
@@ -130,7 +137,7 @@ export default function PomodoroScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Focus' }} />
+      <Stack.Screen options={{ title: translate('Focus') }} />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}>
         {/* Linked task banner */}
         {state.taskTitle ? (

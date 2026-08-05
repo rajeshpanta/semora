@@ -1,8 +1,18 @@
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useQuery,
+  useQueryClient } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { formatDistanceToNow } from 'date-fns';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSession } from '@/app/_layout';
 import { useOfflineSyncStatus } from '@/components/OfflineSyncBridge';
@@ -50,7 +60,7 @@ export default function SyncSettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Offline & Sync' }} />
+      <Stack.Screen options={{ title: translate('Offline & Sync') }} />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}>
         <View style={[styles.statusCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <View style={[styles.statusIcon, { backgroundColor: healthy ? '#0F766E16' : colors.brand50 }]}>

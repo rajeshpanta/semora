@@ -1,15 +1,31 @@
+import { Alert } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Fraunces_600SemiBold, Fraunces_700Bold, Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces';
-import { DefaultTheme, DarkTheme, ThemeProvider } from '@react-navigation/native';
+import {
+  Fraunces_600SemiBold,
+  Fraunces_700Bold,
+  Fraunces_400Regular_Italic } from '@expo-google-fonts/fraunces';
+import { DefaultTheme,
+  DarkTheme,
+  ThemeProvider } from '@react-navigation/native';
 import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments, router as globalRouter } from 'expo-router';
+import { Stack,
+  useRouter,
+  useSegments,
+  router as globalRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 import * as Notifications from 'expo-notifications';
-import { createContext, useContext, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, AppState, Platform, View } from 'react-native';
+import { createContext,
+  useContext,
+  useEffect,
+  useState } from 'react';
+import { ActivityIndicator,
+  AppState,
+  Platform,
+  View,
+} from 'react-native';
 import 'react-native-reanimated';
 
 import { supabase } from '@/lib/supabase';
@@ -45,6 +61,9 @@ import { RealtimeSyncBridge } from '@/components/RealtimeSyncBridge';
 import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
 import { WebAppFrame } from '@/components/WebAppFrame';
 import { WebAlertHost } from '@/components/WebAlertHost';
+import { getAppLocale, useI18n } from '@/lib/i18n';
+import { setDefaultOptions } from 'date-fns';
+import { enUS, es } from 'date-fns/locale';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -253,7 +272,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session) {
         lastSignedInUserId = session.user.id;
         rememberLmsConnections(session.user.id);
-        saveTimezoneIfNeeded(session.user.id);
+        syncProfileSettings(session).then(() => registerForPushNotificationsAsync()).catch(() => {});
         // Reschedule on every cold launch (rescheduleAfter=true) so a device
         // that stays signed in picks up tasks created on OTHER devices since it
         // was last open — local reminders only live on devices that scheduled
@@ -262,7 +281,6 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         // Register this device for server-side re-engagement push (no-op unless
         // notification permission is already granted; never prompts). Fire-and-
         // forget — push infra must never gate launch.
-        registerForPushNotificationsAsync().catch(() => {});
       }
     }).catch(() => {
       setLoading(false);
@@ -316,7 +334,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session) {
         lastSignedInUserId = session.user.id;
         rememberLmsConnections(session.user.id);
-        saveTimezoneIfNeeded(session.user.id);
+        syncProfileSettings(session).catch(() => {});
 
         if (_event === 'SIGNED_IN') {
           // Account switch / fresh sign-in — full revalidation (and reschedule
@@ -328,7 +346,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           // Bind this device's push token to the freshly signed-in user for
           // server-side re-engagement. No-op unless permission is already
           // granted (never prompts); fire-and-forget.
-          registerForPushNotificationsAsync().catch(() => {});
+          syncProfileSettings(session).then(() => registerForPushNotificationsAsync()).catch(() => {});
 
           // Persist the onboarding name to the account, but ONLY when the
           // account has no real name of its own (email users, Apple
@@ -482,31 +500,43 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
  * Detect device timezone and save to profile if not already set.
  * Runs once per sign-in; skips if the profile already has a timezone.
  */
-async function saveTimezoneIfNeeded(userId: string) {
+async function syncProfileSettings(session: Session) {
   try {
+    const userId = session.user.id;
     const { data: profile } = await supabase
       .from('profiles')
-      .select('timezone')
+      .select('timezone, preferred_language')
       .eq('id', userId)
       .maybeSingle();
+
+    const metadataLanguage = session.user.user_metadata?.preferred_language;
+    const preferredLanguage = metadataLanguage === 'en' || metadataLanguage === 'es'
+      ? metadataLanguage
+      : getAppLocale();
+    useAppStore.getState().setLanguagePreference(preferredLanguage);
 
     // Two cases require setting the timezone:
     //   1. Profile exists but timezone is null — normal path on first launch
     //   2. Profile row missing — defensive against a brand-new OAuth user
     //      whose handle_new_user trigger hasn't propagated yet. Upsert
     //      lets us write either way without a follow-up read.
+    const updates: { id: string; timezone?: string; preferred_language?: 'en' | 'es' } = { id: userId };
     if (!profile || !profile.timezone) {
       const detectedTz =
         Platform.OS === 'web'
           ? Intl.DateTimeFormat().resolvedOptions().timeZone
           : Localization.getCalendars()[0]?.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-      await supabase
-        .from('profiles')
-        .upsert({ id: userId, timezone: detectedTz }, { onConflict: 'id' });
+      updates.timezone = detectedTz;
+    }
+    if (!profile || profile.preferred_language !== preferredLanguage) updates.preferred_language = preferredLanguage;
+    if (Object.keys(updates).length > 1) {
+      await supabase.from('profiles').upsert(updates, { onConflict: 'id' });
+    }
+    if (metadataLanguage !== preferredLanguage) {
+      await supabase.auth.updateUser({ data: { preferred_language: preferredLanguage } });
     }
   } catch {
-    // Non-critical — timezone will be detected on next launch
+    // Non-critical — settings are retried on the next auth/session event.
   }
 }
 
@@ -746,6 +776,10 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const scheme = useResolvedScheme();
   const colors = useColors();
+  const { locale, t } = useI18n();
+  // date-fns reads this default for every screen/helper that does not supply
+  // an explicit locale, including relative dates and calendar day names.
+  setDefaultOptions({ locale: locale === 'es' ? es : enUS });
 
   const navTheme = scheme === 'dark'
     ? {
@@ -791,8 +825,9 @@ function RootLayoutNav() {
             <AuthGate>
               <NavigationFrame>
               <Stack
+              key={locale}
               screenOptions={{
-                headerBackTitle: 'Back',
+                headerBackTitle: t('Back'),
                 headerStyle: { backgroundColor: colors.card },
                 headerTintColor: colors.ink,
                 contentStyle: { backgroundColor: colors.paper },
@@ -802,36 +837,37 @@ function RootLayoutNav() {
               <Stack.Screen name="onboarding" options={{ headerShown: false }} />
               <Stack.Screen name="welcome" options={{ headerShown: false }} />
               <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-              <Stack.Screen name="semester/new" options={{ presentation: 'modal', title: 'New Semester' }} />
-              <Stack.Screen name="semester/[id]" options={{ title: 'Edit Semester' }} />
-              <Stack.Screen name="course/new" options={{ presentation: 'modal', title: 'New Course' }} />
-              <Stack.Screen name="course/[id]" options={{ title: 'Course' }} />
-              <Stack.Screen name="task/new" options={{ presentation: 'modal', title: 'New Task' }} />
-              <Stack.Screen name="task/[id]" options={{ title: 'Task' }} />
-              <Stack.Screen name="search" options={{ title: 'Search Tasks' }} />
-              <Stack.Screen name="syllabus/paste" options={{ presentation: 'modal', title: 'Paste Syllabus Text' }} />
-              <Stack.Screen name="syllabus/upload" options={{ presentation: 'modal', title: 'Upload Syllabus' }} />
-              <Stack.Screen name="syllabus/review" options={{ title: 'Review Items' }} />
-              <Stack.Screen name="settings/index" options={{ title: 'Settings' }} />
-              <Stack.Screen name="settings/password" options={{ title: 'Change Password' }} />
-              <Stack.Screen name="settings/delete-account" options={{ title: 'Delete Account' }} />
-              <Stack.Screen name="settings/notifications" options={{ title: 'Notifications' }} />
-              <Stack.Screen name="settings/gpa-scale" options={{ title: 'GPA Scale' }} />
-              <Stack.Screen name="settings/appearance" options={{ title: 'Appearance' }} />
-              <Stack.Screen name="settings/help" options={{ title: 'Help & FAQ' }} />
-              <Stack.Screen name="settings/calendar" options={{ title: 'Calendar Sync' }} />
-              <Stack.Screen name="settings/lms" options={{ title: 'Learning Platforms' }} />
-              <Stack.Screen name="settings/lms-connect" options={{ title: 'Connect Learning Platform' }} />
-              <Stack.Screen name="settings/sync" options={{ title: 'Offline & Sync' }} />
-              <Stack.Screen name="settings/widgets" options={{ title: 'Widgets' }} />
-              <Stack.Screen name="dashboard" options={{ title: 'Workload' }} />
-              <Stack.Screen name="insights" options={{ title: 'Progress Insights' }} />
-              <Stack.Screen name="planner" options={{ title: 'Smart Plan' }} />
-              <Stack.Screen name="completed-work" options={{ title: 'Completed Work' }} />
-              <Stack.Screen name="grading/[id]" options={{ title: 'Grade Setup' }} />
-              <Stack.Screen name="collaboration/index" options={{ title: 'Class Collaboration' }} />
-              <Stack.Screen name="collaboration/[id]" options={{ title: 'Course Space' }} />
-              <Stack.Screen name="collaborate" options={{ title: 'Join Course Space' }} />
+              <Stack.Screen name="semester/new" options={{ presentation: 'modal', title: t('New Semester') }} />
+              <Stack.Screen name="semester/[id]" options={{ title: t('Edit Semester') }} />
+              <Stack.Screen name="course/new" options={{ presentation: 'modal', title: t('New Course') }} />
+              <Stack.Screen name="course/[id]" options={{ title: t('Course') }} />
+              <Stack.Screen name="task/new" options={{ presentation: 'modal', title: t('New Task') }} />
+              <Stack.Screen name="task/[id]" options={{ title: t('Task') }} />
+              <Stack.Screen name="search" options={{ title: t('Search Tasks') }} />
+              <Stack.Screen name="syllabus/paste" options={{ presentation: 'modal', title: t('Paste Syllabus Text') }} />
+              <Stack.Screen name="syllabus/upload" options={{ presentation: 'modal', title: t('Upload Syllabus') }} />
+              <Stack.Screen name="syllabus/review" options={{ title: t('Review Items') }} />
+              <Stack.Screen name="settings/index" options={{ title: t('Settings') }} />
+              <Stack.Screen name="settings/password" options={{ title: t('Change Password') }} />
+              <Stack.Screen name="settings/delete-account" options={{ title: t('Delete Account') }} />
+              <Stack.Screen name="settings/notifications" options={{ title: t('Notifications') }} />
+              <Stack.Screen name="settings/gpa-scale" options={{ title: t('GPA Scale') }} />
+              <Stack.Screen name="settings/appearance" options={{ title: t('Appearance') }} />
+              <Stack.Screen name="settings/language" options={{ title: t('Language') }} />
+              <Stack.Screen name="settings/help" options={{ title: t('Help & FAQ') }} />
+              <Stack.Screen name="settings/calendar" options={{ title: t('Calendar Sync') }} />
+              <Stack.Screen name="settings/lms" options={{ title: t('Learning Platforms') }} />
+              <Stack.Screen name="settings/lms-connect" options={{ title: t('Connect Learning Platform') }} />
+              <Stack.Screen name="settings/sync" options={{ title: t('Offline & Sync') }} />
+              <Stack.Screen name="settings/widgets" options={{ title: t('Widgets') }} />
+              <Stack.Screen name="dashboard" options={{ title: t('Workload') }} />
+              <Stack.Screen name="insights" options={{ title: t('Progress Insights') }} />
+              <Stack.Screen name="planner" options={{ title: t('Smart Plan') }} />
+              <Stack.Screen name="completed-work" options={{ title: t('Completed Work') }} />
+              <Stack.Screen name="grading/[id]" options={{ title: t('Grade Setup') }} />
+              <Stack.Screen name="collaboration/index" options={{ title: t('Class Collaboration') }} />
+              <Stack.Screen name="collaboration/[id]" options={{ title: t('Course Space') }} />
+              <Stack.Screen name="collaborate" options={{ title: t('Join Course Space') }} />
               <Stack.Screen name="share-semester" options={{ presentation: 'modal', headerShown: false }} />
               <Stack.Screen name="paywall" options={{ presentation: 'fullScreenModal', headerShown: false }} />
               </Stack>

@@ -1,20 +1,24 @@
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text, TextInput } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Stack, router, useLocalSearchParams } from 'expo-router';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient } from '@tanstack/react-query';
+import { Stack,
+  router,
+  useLocalSearchParams } from 'expo-router';
 import { format } from 'date-fns';
-import { useEffect, useState } from 'react';
+import { useEffect,
+  useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';

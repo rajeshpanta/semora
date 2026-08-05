@@ -1,14 +1,29 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text } from '@/components/LocalizedReactNative';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Linking,
+} from 'react-native';
+import {
+  SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter,
+  useFocusEffect } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
-import { Platform } from 'react-native';
+import {
+  Platform,
+} from 'react-native';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';

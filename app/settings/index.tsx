@@ -1,4 +1,12 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Linking, Alert, Platform } from 'react-native';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text } from '@/components/LocalizedReactNative';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  Linking,
+  Platform,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -17,6 +25,7 @@ import { displayName, hasEmailPassword } from '@/lib/user';
 import { useOfflineSyncStatus } from '@/components/OfflineSyncBridge';
 import { track } from '@/lib/analytics';
 import Constants from 'expo-constants';
+import { languageName, translate, useI18n } from '@/lib/i18n';
 
 export default function SettingsScreen() {
   const colors = useColors();
@@ -30,6 +39,8 @@ export default function SettingsScreen() {
   const setIsPro = useAppStore((s) => s.setIsPro);
   const setSubscriptionPlan = useAppStore((s) => s.setSubscriptionPlan);
   const themeMode = useAppStore((s) => s.themeMode);
+  const languagePreference = useAppStore((s) => s.languagePreference);
+  const { locale } = useI18n();
   const themeModeLabel = themeMode === 'system' ? 'System' : themeMode === 'light' ? 'Light' : 'Dark';
   const router = useRouter();
   const [restoring, setRestoring] = useState(false);
@@ -109,7 +120,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Settings' }} />
+      <Stack.Screen options={{ title: translate('Settings') }} />
 
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         {/* Account */}
@@ -186,6 +197,12 @@ export default function SettingsScreen() {
             onPress={() => router.push('/settings/appearance')}
           />
           <SettingsRow
+            icon="language"
+            label="Language"
+            value={languageName(languagePreference, locale)}
+            onPress={() => router.push('/settings/language' as any)}
+          />
+          <SettingsRow
             icon="th-large"
             label="Widgets"
             onPress={() => router.push('/settings/widgets')}
@@ -247,12 +264,12 @@ export default function SettingsScreen() {
           <SettingsRow
             icon="file-text-o"
             label="Terms of Service"
-            onPress={() => Linking.openURL('https://semoraai.com/terms')}
+            onPress={() => Linking.openURL(locale === 'es' ? 'https://semoraai.com/es/terminos' : 'https://semoraai.com/terms')}
           />
           <SettingsRow
             icon="shield"
             label="Privacy Policy"
-            onPress={() => Linking.openURL('https://semoraai.com/privacy')}
+            onPress={() => Linking.openURL(locale === 'es' ? 'https://semoraai.com/es/privacidad' : 'https://semoraai.com/privacy')}
             last
           />
         </View>

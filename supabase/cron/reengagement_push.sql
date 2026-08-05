@@ -53,6 +53,12 @@ select cron.schedule(
           'user_ids', ids,
           'title', 'Your week ahead',
           'body',  'You have deadlines coming up this week — open Semora to plan them.',
+          'translations', jsonb_build_object(
+            'es', jsonb_build_object(
+              'title', 'Tu próxima semana',
+              'body', 'Tienes próximas entregas esta semana. Abre Semora para organizarlas.'
+            )
+          ),
           'data',  jsonb_build_object('type', 'weekly_digest')
         )
       );

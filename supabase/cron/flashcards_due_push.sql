@@ -101,6 +101,12 @@ select cron.schedule(
           'user_ids', to_jsonb(target_ids),
           'title', 'Cards are ready to review',
           'body',  'Your flashcards are due — a few minutes now is worth an hour before the exam.',
+          'translations', jsonb_build_object(
+            'es', jsonb_build_object(
+              'title', 'Tus tarjetas están listas para repasar',
+              'body', 'Tienes tarjetas pendientes. Unos minutos ahora pueden ahorrarte una hora antes del examen.'
+            )
+          ),
           -- app/_layout.tsx routes on data.type; 'flashcards_due' opens /flashcards.
           'data',  jsonb_build_object('type', 'flashcards_due')
         )

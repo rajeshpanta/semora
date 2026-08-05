@@ -1,7 +1,18 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { translate } from '@/lib/i18n';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text, TextInput } from '@/components/LocalizedReactNative';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, Alert, Platform, KeyboardAvoidingView,
+  useCallback,
+  useMemo,
+  useRef,
+  useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
@@ -34,7 +45,7 @@ export default function TutorScreen() {
   if (!isPro) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-        <Stack.Screen options={{ title: 'AI Tutor' }} />
+        <Stack.Screen options={{ title: translate('AI Tutor') }} />
         <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}>
           <View style={[styles.teaserCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
             <View style={[styles.teaserIcon, { backgroundColor: colors.brand50 }]}>
@@ -220,7 +231,7 @@ function TutorChat({ courseId }: { courseId: string | null }) {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'AI Tutor' }} />
+      <Stack.Screen options={{ title: translate('AI Tutor') }} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

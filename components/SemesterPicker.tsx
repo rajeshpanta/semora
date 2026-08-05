@@ -1,5 +1,11 @@
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Text } from '@/components/LocalizedReactNative';
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+} from 'react-native';
 import type { Semester } from '@/types/database';
 import { useColors } from '@/lib/theme';
 

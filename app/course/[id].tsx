@@ -1,7 +1,16 @@
-import { useState } from 'react';
+import { TouchableOpacity } from '@/components/LocalizedReactNative';
+import { Alert, Text, TextInput } from '@/components/LocalizedReactNative';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ScrollView, ActivityIndicator, Alert, Platform, Keyboard, Linking, Share,
+  useState } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  Platform,
+  Keyboard,
+  Linking,
+  Share,
 } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -25,6 +34,7 @@ import { useAppStore } from '@/store/appStore';
 import { MAX_SCAN_PAGES } from '@/lib/ai-extraction';
 import { useColors } from '@/lib/theme';
 import { useResponsive, gridItemBasis } from '@/lib/responsive';
+import { getAppLocale } from '@/lib/i18n';
 import { formatMeetings, formatOfficeHours } from '@/lib/schedule';
 import { createShareLink } from '@/lib/shareCourse';
 import { track } from '@/lib/analytics';
@@ -461,7 +471,9 @@ export default function CourseDetailScreen() {
       track('share_course_created', { screen: 'course_detail', tasks: tasks.length });
       await Share.share({
         url,
-        message: `I set up ${course.name} in Semora — tap to add all its deadlines to your semester: ${url}`,
+        message: getAppLocale() === 'es'
+          ? `Organicé ${course.name} en Semora. Toca para agregar todas sus entregas a tu semestre: ${url}`
+          : `I set up ${course.name} in Semora — tap to add all its deadlines to your semester: ${url}`,
       });
     } catch (err: any) {
       // Server rejected a free/stale-Pro caller — route to the paywall instead
