@@ -435,7 +435,7 @@ export function useScopeTasks(courseId: string | undefined) {
 export function useGenerateFlashcards() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { courseId: string; deckId?: string; deckTitle?: string; taskId?: string }): Promise<GenerateFlashcardsResult> => {
+    mutationFn: async (args: { courseId: string; deckId?: string; deckTitle?: string; taskId?: string; noteIds?: string[] }): Promise<GenerateFlashcardsResult> => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
       const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;

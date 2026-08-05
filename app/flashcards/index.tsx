@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, ActivityIndicator, Alert, Platform, Keyboard,
@@ -45,6 +45,17 @@ export default function FlashcardsScreen() {
   // New-Deck expand pattern below.
   const [generateOpen, setGenerateOpen] = useState(false);
   const [scopeTaskId, setScopeTaskId] = useState<string | null>(null);
+  const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Newly uploaded notes join the selection automatically; students can
+    // still tap any chip below to focus a deck on only the notes they choose.
+    setSelectedNoteIds((current) => {
+      const known = new Set(courseNotes.map((note) => note.id));
+      const retained = current.filter((id) => known.has(id));
+      return retained.length ? retained : courseNotes.map((note) => note.id);
+    });
+  }, [courseNotes]);
 
   const handleAddMaterial = async () => {
     if (!courseId) return;
@@ -75,6 +86,7 @@ export default function FlashcardsScreen() {
       const result = await generateFlashcards.mutateAsync({
         courseId,
         taskId: scopeTaskId ?? undefined,
+        noteIds: selectedNoteIds,
       });
       track('deck_generated', {
         screen: 'flashcards', courseId, cardsAdded: result.cardsAdded,
@@ -257,6 +269,26 @@ export default function FlashcardsScreen() {
                     : "Add a PDF or photo (e.g. the teacher's review packet)"}
               </Text>
             </TouchableOpacity>
+            {courseNotes.length > 0 && (
+              <View style={styles.noteSelectWrap}>
+                <Text style={[styles.noteSelectHint, { color: colors.ink3 }]}>Choose the notes to use</Text>
+                <View style={styles.noteSelectRow}>
+                  {courseNotes.map((note) => {
+                    const selected = selectedNoteIds.includes(note.id);
+                    return (
+                      <TouchableOpacity
+                        key={note.id}
+                        style={[styles.noteSelectChip, { borderColor: selected ? colors.brand : colors.line, backgroundColor: selected ? colors.brand50 : colors.paper }]}
+                        onPress={() => setSelectedNoteIds((current) => selected ? current.filter((id) => id !== note.id) : [...current, note.id])}
+                      >
+                        <FontAwesome name={selected ? 'check-square-o' : 'square-o'} size={12} color={selected ? colors.brand : colors.ink3} />
+                        <Text style={[styles.noteSelectText, { color: colors.ink2 }]} numberOfLines={1}>{note.filename}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
 
             <TouchableOpacity
               style={[styles.generateConfirmBtn, { backgroundColor: colors.brand }, generateFlashcards.isPending && { opacity: 0.7 }]}
@@ -394,6 +426,11 @@ const styles = StyleSheet.create({
   scopeChipText: { fontSize: 13, fontWeight: '600' },
   uploadRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderStyle: 'dashed', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14 },
   uploadRowText: { flex: 1, fontSize: 13, lineHeight: 18 },
+  noteSelectWrap: { marginTop: 10 },
+  noteSelectHint: { fontSize: 11.5, fontWeight: '600', marginBottom: 7 },
+  noteSelectRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  noteSelectChip: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 10, paddingHorizontal: 9, paddingVertical: 7 },
+  noteSelectText: { fontSize: 11.5, flexShrink: 1 },
   generateConfirmBtn: { marginTop: 16, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   generateConfirmText: { fontSize: 14.5, fontWeight: '700', color: '#fff' },
 

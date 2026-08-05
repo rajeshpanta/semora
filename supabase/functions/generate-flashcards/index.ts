@@ -118,7 +118,7 @@ serve(async (req) => {
       );
     }
 
-    // 3. Parse and validate request body: { courseId, deckId?, deckTitle?, taskId?, noteId? }
+    // 3. Parse and validate request body: { courseId, deckId?, deckTitle?, taskId?, noteIds? }
     //    taskId scopes generation to one specific exam/quiz (student picked
     //    "Midterm Exam" instead of "whole course"). noteId optionally points
     //    at a just-uploaded course_notes row (e.g. a teacher's review packet)
@@ -126,7 +126,7 @@ serve(async (req) => {
     //    in practice this isn't required (the course_notes query below reads
     //    everything for the course), it's just an explicit signal the client
     //    can pass right after an upload for a same-request guarantee.
-    let body: { courseId?: unknown; deckId?: unknown; deckTitle?: unknown; taskId?: unknown };
+    let body: { courseId?: unknown; deckId?: unknown; deckTitle?: unknown; taskId?: unknown; noteIds?: unknown };
     try {
       body = await req.json();
     } catch {
@@ -136,6 +136,9 @@ serve(async (req) => {
     const deckId = typeof body.deckId === 'string' ? body.deckId : null;
     const requestedTitle = typeof body.deckTitle === 'string' ? body.deckTitle.trim().slice(0, 80) : '';
     const taskId = typeof body.taskId === 'string' ? body.taskId : null;
+    const noteIds = Array.isArray(body.noteIds)
+      ? body.noteIds.filter((id): id is string => typeof id === 'string' && id.length > 0).slice(0, 10)
+      : [];
     if (!courseId) {
       return jsonResponse({ error: 'courseId is required' }, 400);
     }
@@ -254,13 +257,14 @@ serve(async (req) => {
       syllabusText = clamp(`Course: ${course.name}\n\nSyllabus topics/items:\n${lines.join('\n')}`, MAX_SYLLABUS_CHARS);
     }
 
-    const { data: notes } = await adminClient
+    let notesQuery = adminClient
       .from('course_notes')
       .select('id, storage_path, filename, mime_type, extracted_text')
       .eq('course_id', courseId)
       .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(10);
+      .order('created_at', { ascending: false });
+    if (noteIds.length > 0) notesQuery = notesQuery.in('id', noteIds);
+    const { data: notes } = await notesQuery.limit(10);
 
     if (notes && notes.length > 0) {
       const chunks: string[] = [];

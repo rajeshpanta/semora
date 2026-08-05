@@ -19,7 +19,37 @@ export interface TutorMessage {
   conversation_id: string;
   role: 'user' | 'assistant';
   content: string;
+  citations: TutorCitation[];
   created_at: string;
+}
+
+export interface TutorCitation {
+  kind: 'syllabus' | 'deadline' | 'note' | 'assignment';
+  label: string;
+}
+
+export interface TutorPracticeQuestion {
+  id: string;
+  mode: 'practice' | 'quiz';
+  prompt: string;
+  choices: string[];
+  topics: string[];
+  citations: TutorCitation[];
+}
+
+export interface TutorPracticeEvaluation {
+  correct: boolean;
+  feedback: string;
+  topics: string[];
+}
+
+export interface CourseTopicMastery {
+  id: string;
+  course_id: string;
+  topic: string;
+  attempts: number;
+  correct: number;
+  last_practiced_at: string;
 }
 
 export interface TutorConversation {
@@ -43,12 +73,32 @@ export const tutorKeys = {
   conversation: (courseId?: string | null) => ['tutorConversation', courseId ?? 'general'] as const,
   messages: (conversationId: string | null) => ['tutorMessages', conversationId] as const,
   notes: (courseId?: string | null) => ['courseNotes', courseId ?? null] as const,
+  mastery: (courseId?: string | null) => ['courseTopicMastery', courseId ?? null] as const,
 };
 
 async function getSession() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Not authenticated');
   return session;
+}
+
+async function callTutor(payload: Record<string, unknown>) {
+  const session = await getSession();
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) throw new Error('Supabase URL not configured');
+  const response = await fetch(`${supabaseUrl}/functions/v1/tutor-chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({ error: response.statusText }));
+    const e = new Error(err.error || `Server error: ${response.status}`) as Error & { code?: string; status?: number };
+    e.code = err.code;
+    e.status = response.status;
+    throw e;
+  }
+  return response.json();
 }
 
 // ── Conversation ────────────────────────────────────────────
@@ -111,40 +161,22 @@ export function useTutorMessages(conversationId: string | null) {
 export function useSendTutorMessage(conversationId: string | null, courseId?: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (message: string): Promise<string> => {
+    mutationFn: async (input: string | { message: string; mode?: 'chat' | 'explain_assignment'; assignmentId?: string }): Promise<string> => {
       if (!conversationId) throw new Error('No conversation');
-      const session = await getSession();
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-      if (!supabaseUrl) throw new Error('Supabase URL not configured');
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/tutor-chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ conversationId, message, courseId: courseId ?? null }),
-      });
-
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({ error: response.statusText }));
-        // Preserve the server's code (e.g. PRO_REQUIRED) so the screen can
-        // route to the paywall instead of showing a generic error.
-        const e = new Error(err.error || `Server error: ${response.status}`) as Error & { code?: string; status?: number };
-        e.code = err.code;
-        e.status = response.status;
-        throw e;
-      }
-
-      const data = (await response.json()) as { reply: string };
+      const request = typeof input === 'string' ? { message: input } : input;
+      const data = await callTutor({
+        conversationId, courseId: courseId ?? null, message: request.message,
+        mode: request.mode ?? 'chat', assignmentId: request.assignmentId ?? null,
+      }) as { reply: string };
       return data.reply;
     },
-    onMutate: async (message: string) => {
+    onMutate: async (input: string | { message: string; mode?: 'chat' | 'explain_assignment'; assignmentId?: string }) => {
       // Show the user's turn immediately. The server round-trip is 3-10s and
       // without an optimistic bubble the just-sent message vanishes (draft is
       // cleared) until the reply lands. Rolled back on error below.
       await qc.cancelQueries({ queryKey: tutorKeys.messages(conversationId) });
       const previous = qc.getQueryData<TutorMessage[]>(tutorKeys.messages(conversationId));
+      const message = typeof input === 'string' ? input : input.message;
       const optimistic = {
         id: `optimistic-${Date.now()}`,
         conversation_id: conversationId ?? '',
@@ -169,6 +201,51 @@ export function useSendTutorMessage(conversationId: string | null, courseId?: st
       // The edge function wrote both turns; re-read the canonical list.
       qc.invalidateQueries({ queryKey: tutorKeys.messages(conversationId) });
     },
+  });
+}
+
+export function useGenerateTutorPractice(conversationId: string | null, courseId?: string | null) {
+  return useMutation({
+    mutationFn: async ({ mode, focus }: { mode: 'practice' | 'quiz'; focus?: string }) => {
+      if (!conversationId || !courseId) throw new Error('Open the Tutor from a course first');
+      const data = await callTutor({
+        conversationId, courseId, mode,
+        message: focus?.trim() || `Create a ${mode} question from the most important current course material.`,
+      }) as { practice: TutorPracticeQuestion };
+      return data.practice;
+    },
+  });
+}
+
+export function useEvaluateTutorPractice(conversationId: string | null, courseId?: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ practiceId, answer }: { practiceId: string; answer: string }) => {
+      if (!conversationId || !courseId) throw new Error('Open the Tutor from a course first');
+      const data = await callTutor({
+        conversationId, courseId, action: 'evaluate_practice', practiceId, answer,
+      }) as { evaluation: TutorPracticeEvaluation };
+      return data.evaluation;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: tutorKeys.mastery(courseId) }),
+  });
+}
+
+export function useCourseTopicMastery(courseId?: string | null) {
+  return useQuery({
+    queryKey: tutorKeys.mastery(courseId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('course_topic_mastery')
+        .select('*')
+        .eq('course_id', courseId!)
+        .order('correct', { ascending: true })
+        .order('attempts', { ascending: false })
+        .limit(6);
+      if (error) throw error;
+      return (data || []) as CourseTopicMastery[];
+    },
+    enabled: !!courseId,
   });
 }
 

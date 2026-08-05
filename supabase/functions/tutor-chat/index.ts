@@ -64,6 +64,17 @@ function clamp(text: string, max: number): string {
 }
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+type TutorMode = 'chat' | 'explain_assignment' | 'practice' | 'quiz';
+type TutorCitation = { kind: 'syllabus' | 'deadline' | 'note' | 'assignment'; label: string };
+
+function normalizeAnswer(value: string) {
+  return value.trim().toLocaleLowerCase().replace(/^[a-d][).:\s-]+/, '').replace(/\s+/g, ' ');
+}
+
+function parseModelJson(raw: string) {
+  const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+  try { return JSON.parse(cleaned); } catch { return null; }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -147,9 +158,13 @@ serve(async (req) => {
       );
     }
 
-    // 4. Parse and validate request body.
-    //    { conversationId, message, courseId? }
-    let body: { conversationId?: unknown; message?: unknown; courseId?: unknown };
+    // 4. Parse and validate request body. Practice generation and evaluation
+    // use the same protected endpoint, course grounding, and cost controls as
+    // chat rather than creating a weaker second AI path.
+    let body: {
+      conversationId?: unknown; message?: unknown; courseId?: unknown; mode?: unknown;
+      action?: unknown; assignmentId?: unknown; practiceId?: unknown; answer?: unknown;
+    };
     try {
       body = await req.json();
     } catch {
@@ -158,13 +173,20 @@ serve(async (req) => {
     const conversationId = typeof body.conversationId === 'string' ? body.conversationId : null;
     const message = typeof body.message === 'string' ? body.message.trim() : '';
     const courseId = typeof body.courseId === 'string' ? body.courseId : null;
+    const mode: TutorMode = body.mode === 'quiz' || body.mode === 'practice' || body.mode === 'explain_assignment'
+      ? body.mode
+      : 'chat';
+    const action = body.action === 'evaluate_practice' ? 'evaluate_practice' : 'chat';
+    const assignmentId = typeof body.assignmentId === 'string' ? body.assignmentId : null;
+    const practiceId = typeof body.practiceId === 'string' ? body.practiceId : null;
+    const submittedAnswer = typeof body.answer === 'string' ? body.answer.trim() : '';
     if (!conversationId) {
       return jsonResponse({ error: 'conversationId is required' }, 400);
     }
-    if (!message) {
+    if (!message && action !== 'evaluate_practice') {
       return jsonResponse({ error: 'message is required' }, 400);
     }
-    if (message.length > MAX_MESSAGE_CHARS) {
+    if ((message.length > MAX_MESSAGE_CHARS) || (submittedAnswer.length > MAX_MESSAGE_CHARS)) {
       return jsonResponse({ error: 'Message too long' }, 400);
     }
 
@@ -188,12 +210,47 @@ serve(async (req) => {
     // only a hint for brand-new threads the client just created with it.
     const groundCourseId = (convo.course_id as string | null) ?? courseId;
 
+    if (action === 'evaluate_practice') {
+      if (!practiceId || !submittedAnswer || !groundCourseId) {
+        return jsonResponse({ error: 'A course, practice question, and answer are required' }, 400);
+      }
+      const { data: question } = await adminClient
+        .from('tutor_practice_questions')
+        .select('id, course_id, expected_answer, explanation, topics')
+        .eq('id', practiceId)
+        .eq('user_id', userId)
+        .eq('course_id', groundCourseId)
+        .maybeSingle();
+      if (!question) return jsonResponse({ error: 'Practice question not found' }, 404);
+
+      const correct = normalizeAnswer(submittedAnswer) === normalizeAnswer(String(question.expected_answer));
+      const feedback = correct
+        ? `Correct. ${String(question.explanation)}`
+        : `Not quite. The best answer is ${String(question.expected_answer)}. ${String(question.explanation)}`;
+      const topics = Array.isArray(question.topics) ? question.topics.filter((topic: unknown) => typeof topic === 'string').slice(0, 5) : [];
+      const { error: recordErr } = await adminClient.rpc('record_tutor_practice_attempt', {
+        p_user_id: userId,
+        p_course_id: groundCourseId,
+        p_question_id: practiceId,
+        p_answer: submittedAnswer,
+        p_is_correct: correct,
+        p_feedback: feedback,
+        p_topics: topics,
+      });
+      if (recordErr) {
+        console.error('[tutor-chat] record practice attempt failed:', recordErr);
+        return jsonResponse({ error: 'Could not save your practice result' }, 503);
+      }
+      return jsonResponse({ evaluation: { correct, feedback, topics } }, 200);
+    }
+
     // 5. Build grounding context (all reads via service role, but every query
     //    is scoped to the authenticated userId as defense in depth).
     let syllabusText = '';
     let notesText = '';
     let deadlinesText = '';
     let courseHeader = '';
+    const citations: TutorCitation[] = [];
 
     if (groundCourseId) {
       // 5a. Course + schedule + grade scale.
@@ -245,6 +302,7 @@ serve(async (req) => {
           parts.push('Syllabus items:\n' + lines.join('\n'));
         }
         syllabusText = clamp(parts.join('\n\n'), MAX_SYLLABUS_CHARS);
+        citations.push({ kind: 'syllabus', label: `${course.name} syllabus & schedule` });
       }
 
       // 5c. Live tasks/deadlines (the user may have edited these after import;
@@ -265,6 +323,27 @@ serve(async (req) => {
             return `- ${status}${t.title}${w} — ${t.due_date ?? 'no date'}${time}`;
           })
           .join('\n');
+        citations.push({ kind: 'deadline', label: 'Current course deadlines' });
+      }
+
+      if (mode === 'explain_assignment' && assignmentId) {
+        const { data: assignment } = await adminClient
+          .from('tasks')
+          .select('title, description, type, due_date, due_time, weight, score, points_earned, points_possible')
+          .eq('id', assignmentId)
+          .eq('course_id', groundCourseId)
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (!assignment) return jsonResponse({ error: 'Assignment not found in this course' }, 404);
+        const details = [
+          `Title: ${assignment.title}`,
+          assignment.description ? `Description: ${assignment.description}` : '',
+          `Type: ${assignment.type}`,
+          assignment.due_date ? `Due: ${assignment.due_date}${assignment.due_time ? ` ${assignment.due_time}` : ''}` : '',
+          assignment.weight != null ? `Weight: ${assignment.weight}%` : '',
+        ].filter(Boolean).join('\n');
+        deadlinesText += `\n\nASSIGNMENT TO EXPLAIN:\n${details}`;
+        citations.push({ kind: 'assignment', label: assignment.title });
       }
 
       // 5d. Uploaded notes. extracted_text is cached on the row; when missing,
@@ -296,6 +375,7 @@ serve(async (req) => {
             const slice = text.slice(0, budget);
             budget -= slice.length;
             chunks.push(`### ${note.filename}\n${slice}`);
+            citations.push({ kind: 'note', label: note.filename });
           }
         }
         notesText = chunks.join('\n\n');
@@ -325,8 +405,15 @@ serve(async (req) => {
       .filter(Boolean)
       .join('\n\n');
 
+    const modeInstruction = mode === 'quiz'
+      ? 'Create one concise multiple-choice quiz question from the grounded course material. Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names).'
+      : mode === 'practice'
+        ? 'Create one low-stakes multiple-choice practice question from the grounded course material. Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names).'
+        : mode === 'explain_assignment'
+          ? 'Explain the selected assignment as a student-friendly checklist: what it asks for, a first step, suggested milestones, and one question to ask the instructor if the brief is unclear. Do not fabricate requirements.'
+          : '';
     const groundingIntro = contextBlock
-      ? `${TUTOR_SYSTEM_PROMPT}\n\n--- COURSE CONTEXT ---\n${contextBlock}\n--- END CONTEXT ---`
+      ? `${TUTOR_SYSTEM_PROMPT}\n${modeInstruction ? `\nMODE: ${modeInstruction}\n` : ''}\n--- COURSE CONTEXT ---\n${contextBlock}\n--- END CONTEXT ---`
       : `${TUTOR_SYSTEM_PROMPT}\n\n(No course material is attached to this conversation yet — help using general knowledge and invite the student to add their syllabus or notes for grounded answers.)`;
 
     const contents: { role: string; parts: { text: string }[] }[] = [
@@ -409,13 +496,52 @@ serve(async (req) => {
     }
     const assistantText = reply.trim();
 
+    if (mode === 'practice' || mode === 'quiz') {
+      if (!groundCourseId) {
+        return jsonResponse({ error: 'Open the Tutor from a course to generate practice.' }, 400);
+      }
+      const practice = parseModelJson(assistantText);
+      const prompt = typeof practice?.prompt === 'string' ? practice.prompt.trim().slice(0, 4000) : '';
+      const choices = Array.isArray(practice?.choices)
+        ? practice.choices.filter((choice: unknown) => typeof choice === 'string')
+          .map((choice: string) => choice.trim().slice(0, 500)).filter(Boolean).slice(0, 4)
+        : [];
+      const expectedAnswer = typeof practice?.expected_answer === 'string' ? practice.expected_answer.trim().slice(0, 500) : '';
+      const explanation = typeof practice?.explanation === 'string' ? practice.explanation.trim().slice(0, 4000) : '';
+      const topics = Array.isArray(practice?.topics)
+        ? practice.topics.filter((topic: unknown) => typeof topic === 'string')
+          .map((topic: string) => topic.trim().slice(0, 160)).filter(Boolean).slice(0, 3)
+        : [];
+      if (!prompt || choices.length < 2 || !expectedAnswer || !choices.some((choice) => normalizeAnswer(choice) === normalizeAnswer(expectedAnswer)) || !explanation || !topics.length) {
+        console.error('[tutor-chat] invalid practice JSON:', assistantText.slice(0, 500));
+        return jsonResponse({ error: "Couldn't create a usable practice question. Please try again." }, 502);
+      }
+      const { data: saved, error: saveErr } = await adminClient
+        .from('tutor_practice_questions')
+        .insert({
+          user_id: userId, course_id: groundCourseId, mode, prompt, choices,
+          expected_answer: expectedAnswer, explanation, topics, citations,
+        })
+        .select('id')
+        .single();
+      if (saveErr || !saved) {
+        console.error('[tutor-chat] practice save failed:', saveErr);
+        return jsonResponse({ error: 'Could not save your practice question. Please try again.' }, 503);
+      }
+      return jsonResponse({
+        practice: { id: saved.id, mode, prompt, choices, topics, citations },
+        model: servedModel || null,
+        duration_ms: Date.now() - startTime,
+      }, 200);
+    }
+
     // 9. Persist BOTH turns (user message + assistant reply). The user message
     //    is written here (not client-side) so history stays consistent even if
     //    the client crashes after send. Non-fatal if the insert fails — the
     //    reply is still returned.
     const { error: insertErr } = await adminClient.from('tutor_messages').insert([
       { user_id: userId, conversation_id: conversationId, role: 'user', content: message },
-      { user_id: userId, conversation_id: conversationId, role: 'assistant', content: assistantText },
+      { user_id: userId, conversation_id: conversationId, role: 'assistant', content: assistantText, citations },
     ]);
     if (insertErr) {
       console.warn('[tutor-chat] failed to persist messages (non-fatal):', insertErr);
@@ -430,6 +556,7 @@ serve(async (req) => {
     return jsonResponse(
       {
         reply: assistantText,
+        citations,
         model: servedModel || null,
         duration_ms: Date.now() - startTime,
       },
