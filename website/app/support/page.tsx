@@ -8,6 +8,8 @@ import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
 import { OG_IMAGE } from '@/lib/og';
 import { ArticleShell } from '@/components/ArticleShell';
+import { SupportForm } from '@/components/SupportForm';
+import heroStyles from './support.module.css';
 
 export const metadata: Metadata = {
   title: 'Support',
@@ -60,25 +62,56 @@ const SUPPORT_FAQ_ALL = [...SUPPORT_FAQ, ...(getPageContent('support')?.faq ?? [
 
 export default function SupportPage() {
   return (
-    <ArticleShell
-      ctaHeading="Still stuck? Try it on your own syllabus"
-      ctaSubheading="See how Semora handles your actual courses. Free, no credit card."
-    >
-    <article className={`${styles.prose} article-body`}>
+    <>
       <JsonLd data={faqPageSchema(SUPPORT_FAQ_ALL)} />
-      <h1>Support</h1>
-      <p className={styles.subtitle}>We&apos;re here to help you get the most out of Semora.</p>
+      <section className={heroStyles.hero} aria-labelledby="support-heading">
+        <div className={heroStyles.inner}>
+          <header className={heroStyles.intro}>
+            <span className={heroStyles.eyebrow}>Semora support</span>
+            <h1 id="support-heading">How can we help?</h1>
+            <p>Tell us what&apos;s going on. We usually respond within a few hours.</p>
+          </header>
 
-      <h2>Frequently Asked Questions</h2>
-      <Faq items={SUPPORT_FAQ_ALL} />
+          <div className={heroStyles.grid}>
+            <SupportForm supportEmail={SUPPORT_EMAIL} />
 
-      <PageSections content={getPageContent('support')} emitFaq={false} />
-      <div className={styles.contactBox}>
-        <h2>Still need help?</h2>
-        <p>Reach out and we&apos;ll get back to you as soon as possible.</p>
-        <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
-      </div>
-    </article>
-    </ArticleShell>
+            <aside className={heroStyles.details} aria-label="Support contact details">
+              <a className={heroStyles.detailCard} href={`mailto:${SUPPORT_EMAIL}`}>
+                <span>Email us</span>
+                <strong>{SUPPORT_EMAIL}</strong>
+                <small>Open your email app</small>
+              </a>
+              <div className={heroStyles.detailCard}>
+                <span>Response time</span>
+                <strong>Within a few hours</strong>
+                <small>Monday–Friday</small>
+              </div>
+              <a className={heroStyles.detailCard} href="https://apps.apple.com/us/app/semora-ai-syllabus-scanner/id6762589321">
+                <span>iOS app</span>
+                <strong>Download on the App Store</strong>
+                <small>iPhone and iPad</small>
+              </a>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <ArticleShell
+        ctaHeading="Still stuck? Try it on your own syllabus"
+        ctaSubheading="See how Semora handles your actual courses. Free, no credit card."
+      >
+        <article className={`${styles.prose} article-body`}>
+          <h2>Frequently Asked Questions</h2>
+          <Faq items={SUPPORT_FAQ_ALL} />
+
+          <PageSections content={getPageContent('support')} emitFaq={false} />
+          <div className={styles.contactBox}>
+            <h2>Still need help?</h2>
+            <p>Reach out and we&apos;ll get back to you as soon as possible.</p>
+            <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>
+          </div>
+        </article>
+      </ArticleShell>
+    </>
   );
 }

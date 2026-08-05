@@ -36,9 +36,9 @@ export const APP_URL = 'https://app.semoraai.com';
 export const APP_SIGNUP_URL = `${APP_URL}/sign-in`;
 export const APP_SIGNIN_URL = `${APP_URL}/sign-in?mode=signin`;
 
-// Matches docs/support.html's existing contact-box mailto — semora.app
-// belongs to an unrelated company, so there is no @semora.app inbox.
-export const SUPPORT_EMAIL = 'rajesh.panta08@gmail.com';
+// One public support address used consistently by the Support page, footer,
+// privacy policy, terms, and structured data.
+export const SUPPORT_EMAIL = 'semora365@gmail.com';
 
 export const PRICING = {
   free: {
