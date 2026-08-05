@@ -55,7 +55,7 @@ export function SupportForm({ supportEmail }: SupportFormProps) {
       </label>
       <label>
         Message
-        <textarea name="message" placeholder="Describe your issue or question…" required rows={6} />
+        <textarea name="message" placeholder="Describe your issue or question…" required rows={3} />
       </label>
       <button type="submit">Send message <span aria-hidden="true">→</span></button>
       <p className={styles.formNote} aria-live="polite">{status || 'Sending opens your email app with this message addressed to us.'}</p>

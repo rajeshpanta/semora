@@ -7,12 +7,12 @@
   width: 100%;
   max-width: var(--max-width-wide);
   margin: 0 auto;
-  padding: 76px 20px 64px;
+  padding: clamp(26px, 3vw, 34px) 20px clamp(30px, 4vw, 44px);
 }
 
 .intro {
   max-width: 680px;
-  margin-bottom: 48px;
+  margin-bottom: 18px;
 }
 
 .eyebrow,
@@ -29,7 +29,7 @@
 
 .intro h1 {
   color: var(--ink);
-  font-size: clamp(2.35rem, 5.2vw, 4.5rem);
+  font-size: clamp(2rem, 4vw, 2.7rem);
   letter-spacing: -0.045em;
   line-height: 1.02;
   margin: 0;
@@ -39,7 +39,7 @@
   color: var(--ink2);
   font-size: clamp(16px, 2.3vw, 19px);
   line-height: 1.55;
-  margin: 18px 0 0;
+  margin: 10px 0 0;
 }
 
 .grid {
@@ -62,7 +62,7 @@
   color: var(--ink2);
   font-size: 16px;
   line-height: 1.55;
-  margin: 8px 0 28px;
+  margin: 4px 0 12px;
 }
 
 .form label {
@@ -70,13 +70,13 @@
   color: var(--ink2);
   font-size: 14px;
   font-weight: 600;
-  margin: 0 0 18px;
+  margin: 0 0 8px;
 }
 
 .twoColumns {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 12px;
 }
 
 .form input,
@@ -93,16 +93,16 @@
   font-size: 16px;
   margin-top: 8px;
   outline: none;
-  padding: 14px 16px;
+  padding: 8px 14px;
   transition: border-color 0.16s ease, background 0.16s ease;
 }
 
 .form input,
-.form select { min-height: 52px; }
+.form select { min-height: 42px; }
 
 .form textarea {
   line-height: 1.5;
-  min-height: 148px;
+  min-height: 80px;
   resize: vertical;
 }
 
@@ -131,7 +131,7 @@
   font-size: 16px;
   font-weight: 700;
   margin-top: 2px;
-  padding: 14px 21px;
+  padding: 10px 18px;
   transition: transform 0.16s ease, background 0.16s ease;
 }
 
@@ -142,12 +142,12 @@
   color: var(--ink-muted);
   font-size: 13px;
   line-height: 1.45;
-  margin: 14px 0 0;
+  margin: 10px 0 0;
 }
 
 .details {
   display: grid;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -159,7 +159,7 @@
   border: 1px solid var(--border);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.68);
-  padding: 22px;
+  padding: 16px 18px;
   transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
 }
 
@@ -175,7 +175,7 @@ a.detailCard:hover {
   font-size: clamp(16px, 2.2vw, 19px);
   font-weight: 600;
   line-height: 1.35;
-  margin-top: 10px;
+  margin-top: 6px;
   overflow-wrap: anywhere;
 }
 
@@ -184,7 +184,7 @@ a.detailCard:hover {
   color: var(--ink-muted);
   font-size: 14px;
   line-height: 1.4;
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 @media (max-width: 760px) {
