@@ -1,0 +1,112 @@
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--card);
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: 0 12px 34px -28px rgba(28, 27, 31, 0.35);
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  border-color: var(--brand-100);
+  box-shadow: 0 20px 42px -28px rgba(107, 70, 193, 0.34);
+}
+
+.card strong {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 20px;
+  line-height: 1.22;
+}
+
+.card p {
+  margin: 0;
+  color: var(--ink2);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.cardMeta {
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.cardLink {
+  margin-top: auto;
+  padding-top: 4px;
+  color: var(--brand);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.articleCard {
+  min-height: 270px;
+}
+
+.cardImage {
+  width: 100%;
+  height: 112px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: var(--brand-50);
+}
+
+.featureStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--brand-100);
+  border-radius: 16px;
+  background: var(--brand-50);
+  font-weight: 650;
+}
+
+.featureStrip a {
+  flex-shrink: 0;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.supportWidget {
+  display: grid;
+  gap: 14px;
+}
+
+.supportWidget > p {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--ink2);
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .cardGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .featureStrip {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

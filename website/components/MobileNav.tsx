@@ -5,13 +5,16 @@ import { SignupButton } from './SignupButton';
 import Link from 'next/link';
 import styles from './Nav.module.css';
 import { FEATURES, APP_STORE_URL } from '@/lib/semora-facts';
+import { FEATURES_ES } from '@/lib/es-facts';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import type { SiteLocale } from '@/lib/i18n';
 
 /**
  * Phone/tablet navigation. The features list is a native <details> so it
  * expands without another piece of open/closed state, and the whole panel
  * locks body scroll while it is open.
  */
-export function MobileNav({ links }: { links: { href: string; label: string }[] }) {
+export function MobileNav({ links, locale = 'en' }: { links: { href: string; label: string }[]; locale?: SiteLocale }) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -29,13 +32,23 @@ export function MobileNav({ links }: { links: { href: string; label: string }[] 
   }, [open]);
 
   const close = () => setOpen(false);
+  const features = locale === 'es' ? FEATURES_ES : FEATURES;
+  const copy = locale === 'es'
+    ? {
+        close: 'Cerrar menú', open: 'Abrir menú', features: 'Funciones', all: 'Ver todas las funciones →',
+        signIn: 'Iniciar sesión', getApp: 'Descargar app', tryFree: 'Probar gratis', base: '/es/funciones',
+      }
+    : {
+        close: 'Close menu', open: 'Open menu', features: 'Features', all: 'See all features →',
+        signIn: 'Sign in', getApp: 'Get the app', tryFree: 'Try it for free', base: '/features',
+      };
 
   return (
     <>
       <button
         type="button"
         className={styles.burger}
-        aria-label={open ? 'Close menu' : 'Open menu'}
+        aria-label={open ? copy.close : copy.open}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
       >
@@ -53,21 +66,22 @@ export function MobileNav({ links }: { links: { href: string; label: string }[] 
           on the render Google actually performs, leaving the footer as the only
           navigation it could see. */}
       <div className={styles.sheet} data-open={open} hidden={!open}>
+          <LanguageSwitcher locale={locale} mobile />
           <details className={styles.sheetGroup}>
-            <summary className={styles.sheetSummary}>Features</summary>
+            <summary className={styles.sheetSummary}>{copy.features}</summary>
             <div className={styles.sheetSub}>
-              {FEATURES.map((f) => (
+              {features.map((f) => (
                 <Link
                   key={f.slug}
-                  href={`/features/${f.slug}`}
+                  href={`${copy.base}/${f.slug}`}
                   className={styles.sheetSubLink}
                   onClick={close}
                 >
                   {f.name}
                 </Link>
               ))}
-              <Link href="/features" className={styles.sheetSubLink} onClick={close}>
-                See all features →
+              <Link href={copy.base} className={styles.sheetSubLink} onClick={close}>
+                {copy.all}
               </Link>
             </div>
           </details>
@@ -79,14 +93,14 @@ export function MobileNav({ links }: { links: { href: string; label: string }[] 
           ))}
 
           <SignupButton mode="signin" className={styles.sheetLink} onClick={close}>
-            Sign in
+            {copy.signIn}
           </SignupButton>
 
           <a href={APP_STORE_URL} className={styles.sheetGhost} onClick={close}>
-            Get the app
+            {copy.getApp}
           </a>
           <SignupButton className={styles.sheetCta} onClick={close}>
-            Try it for free
+            {copy.tryFree}
           </SignupButton>
       </div>
     </>

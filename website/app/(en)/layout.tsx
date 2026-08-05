@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Fraunces } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
-import './globals.css';
+import '../globals.css';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { AuthDialogProvider } from '@/components/AuthDialog';
@@ -60,10 +60,10 @@ export default function RootLayout({
         <JsonLd data={organizationSchema()} />
         {/* Wraps everything so any CTA on any page can open the sign-in dialog
             without navigating away. */}
-        <AuthDialogProvider>
-          <Nav />
+        <AuthDialogProvider locale="en">
+          <Nav locale="en" />
           <main>{children}</main>
-          <Footer />
+          <Footer locale="en" />
         </AuthDialogProvider>
         <Analytics />
         <SpeedInsights />

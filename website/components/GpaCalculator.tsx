@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import styles from './GpaCalculator.module.css';
+import type { SiteLocale } from '@/lib/i18n';
 
 /**
  * Working GPA calculator, not a mock.
@@ -44,9 +45,10 @@ const START: Row[] = [
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-export function GpaCalculator() {
+export function GpaCalculator({ locale = 'en' }: { locale?: SiteLocale }) {
   const [rows, setRows] = useState<Row[]>(START);
   const [nextId, setNextId] = useState(5);
+  const es = locale === 'es';
 
   const result = useMemo(() => {
     const counted = rows
@@ -77,11 +79,11 @@ export function GpaCalculator() {
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.grid} role="group" aria-label="Courses">
+      <div className={styles.grid} role="group" aria-label={es ? 'Cursos' : 'Courses'}>
         <div className={styles.headRow} aria-hidden="true">
-          <span>Course</span>
-          <span>Grade</span>
-          <span>Credits</span>
+          <span>{es ? 'Curso' : 'Course'}</span>
+          <span>{es ? 'Nota' : 'Grade'}</span>
+          <span>{es ? 'Créditos' : 'Credits'}</span>
           <span />
         </div>
 
@@ -90,14 +92,14 @@ export function GpaCalculator() {
             <input
               className={styles.input}
               value={r.name}
-              placeholder={`Course ${i + 1}`}
-              aria-label={`Course ${i + 1} name`}
+              placeholder={`${es ? 'Curso' : 'Course'} ${i + 1}`}
+              aria-label={es ? `Nombre del curso ${i + 1}` : `Course ${i + 1} name`}
               onChange={(e) => update(r.id, { name: e.target.value })}
             />
             <select
               className={styles.select}
               value={r.letter}
-              aria-label={`Course ${i + 1} letter grade`}
+              aria-label={es ? `Calificación del curso ${i + 1}` : `Course ${i + 1} letter grade`}
               onChange={(e) => update(r.id, { letter: e.target.value })}
             >
               <option value="">—</option>
@@ -111,13 +113,13 @@ export function GpaCalculator() {
               className={styles.input}
               value={r.credits}
               inputMode="decimal"
-              aria-label={`Course ${i + 1} credit hours`}
+              aria-label={es ? `Créditos del curso ${i + 1}` : `Course ${i + 1} credit hours`}
               onChange={(e) => update(r.id, { credits: e.target.value })}
             />
             <button
               type="button"
               className={styles.remove}
-              aria-label={`Remove course ${i + 1}`}
+              aria-label={es ? `Eliminar curso ${i + 1}` : `Remove course ${i + 1}`}
               onClick={() => setRows((rs) => (rs.length > 1 ? rs.filter((x) => x.id !== r.id) : rs))}
             >
               ×
@@ -135,24 +137,26 @@ export function GpaCalculator() {
             setNextId((n) => n + 1);
           }}
         >
-          + Add course
+          {es ? '+ Agregar curso' : '+ Add course'}
         </button>
         <button type="button" className={styles.reset} onClick={() => setRows(START)}>
-          Reset
+          {es ? 'Restablecer' : 'Reset'}
         </button>
       </div>
 
       <div className={styles.result} aria-live="polite">
-        <p className={styles.resultLabel}>Semester GPA</p>
+        <p className={styles.resultLabel}>{es ? 'GPA del semestre' : 'Semester GPA'}</p>
         <p className={styles.gpa}>{result.gpa === null ? '—' : result.gpa.toFixed(2)}</p>
         <p className={styles.detail}>
           {result.gpa === null
-            ? 'Pick a letter grade for at least one course.'
-            : `${result.quality} quality points ÷ ${result.credits} credits, across ${result.courses} ${
-                result.courses === 1 ? 'course' : 'courses'
-              }.`}
+            ? (es ? 'Selecciona una calificación para al menos un curso.' : 'Pick a letter grade for at least one course.')
+            : es
+              ? `${result.quality} puntos de calidad ÷ ${result.credits} créditos en ${result.courses} ${result.courses === 1 ? 'curso' : 'cursos'}.`
+              : `${result.quality} quality points ÷ ${result.credits} credits, across ${result.courses} ${result.courses === 1 ? 'course' : 'courses'}.`}
           {result.skipped > 0 && result.gpa !== null
-            ? ` ${result.skipped} ${result.skipped === 1 ? 'course is' : 'courses are'} not counted — no grade selected.`
+            ? es
+              ? ` ${result.skipped} ${result.skipped === 1 ? 'curso no cuenta' : 'cursos no cuentan'} porque no tienen calificación.`
+              : ` ${result.skipped} ${result.skipped === 1 ? 'course is' : 'courses are'} not counted — no grade selected.`
             : ''}
         </p>
       </div>

@@ -32,7 +32,7 @@ export function Reveal({
     const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
     if (reduceMotion || typeof IntersectionObserver === 'undefined') {
-      setVisible(true);
+      queueMicrotask(() => setVisible(true));
       return;
     }
 

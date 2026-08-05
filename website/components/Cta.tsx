@@ -1,6 +1,7 @@
 import { SignupButton } from './SignupButton';
 import styles from './Cta.module.css';
 import { APP_STORE_URL } from '@/lib/semora-facts';
+import type { SiteLocale } from '@/lib/i18n';
 
 /**
  * The site's single conversion band. Two destinations, deliberately:
@@ -11,9 +12,11 @@ import { APP_STORE_URL } from '@/lib/semora-facts';
 export function Cta({
   heading,
   subheading,
+  locale = 'en',
 }: {
   heading: string;
   subheading?: string;
+  locale?: SiteLocale;
 }) {
   return (
     <section className={styles.band}>
@@ -23,10 +26,10 @@ export function Cta({
       {subheading && <p className={styles.subheading}>{subheading}</p>}
       <div className={styles.actions}>
         <SignupButton className={styles.button}>
-          Try it for free
+          {locale === 'es' ? 'Probar gratis' : 'Try it for free'}
         </SignupButton>
         <a href={APP_STORE_URL} className={styles.buttonGhost}>
-          Get the app
+          {locale === 'es' ? 'Descargar app' : 'Get the app'}
         </a>
       </div>
     </section>

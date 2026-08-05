@@ -4,6 +4,8 @@ import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import styles from './Nav.module.css';
 import { FEATURES } from '@/lib/semora-facts';
+import { FEATURES_ES } from '@/lib/es-facts';
+import type { SiteLocale } from '@/lib/i18n';
 
 /**
  * The "Features" nav dropdown.
@@ -14,11 +16,15 @@ import { FEATURES } from '@/lib/semora-facts';
  * rather than a link, because on touch a link would navigate before the panel
  * could ever open — the hub page stays reachable from the panel's own footer.
  */
-export function FeaturesMenu() {
+export function FeaturesMenu({ locale = 'en' }: { locale?: SiteLocale }) {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<number | undefined>(undefined);
   const panelId = useId();
+  const features = locale === 'es' ? FEATURES_ES : FEATURES;
+  const copy = locale === 'es'
+    ? { trigger: 'Funciones', free: 'Gratis', all: 'Ver todas las funciones', base: '/es/funciones' }
+    : { trigger: 'Features', free: 'Free', all: 'See all features', base: '/features' };
 
   useEffect(() => {
     if (!open) return;
@@ -65,7 +71,7 @@ export function FeaturesMenu() {
         aria-controls={panelId}
         onClick={() => setOpen((v) => !v)}
       >
-        Features
+        {copy.trigger}
         <svg
           className={styles.caret}
           data-open={open}
@@ -87,10 +93,10 @@ export function FeaturesMenu() {
 
       <div id={panelId} className={styles.menuPanel} data-open={open}>
         <div className={styles.menuGrid}>
-          {FEATURES.map((f) => (
+          {features.map((f) => (
             <Link
               key={f.slug}
-              href={`/features/${f.slug}`}
+              href={`${copy.base}/${f.slug}`}
               className={styles.menuItem}
               onClick={() => setOpen(false)}
             >
@@ -101,15 +107,15 @@ export function FeaturesMenu() {
                     f.tier === 'pro' ? styles.menuTierPro : styles.menuTierFree
                   }`}
                 >
-                  {f.tier === 'pro' ? 'Pro' : 'Free'}
+                  {f.tier === 'pro' ? 'Pro' : copy.free}
                 </span>
               </span>
               <span className={styles.menuItemDesc}>{f.shortDescription}</span>
             </Link>
           ))}
         </div>
-        <Link href="/features" className={styles.menuFooter} onClick={() => setOpen(false)}>
-          See all features
+        <Link href={copy.base} className={styles.menuFooter} onClick={() => setOpen(false)}>
+          {copy.all}
           <span aria-hidden="true"> →</span>
         </Link>
       </div>

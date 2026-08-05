@@ -11,7 +11,7 @@ const CANONICAL_HOST = 'semoraai.com';
  * returning 200 while subpaths correctly redirected. Middleware runs ahead of
  * that cache lookup, so it catches the root too.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const host = request.headers.get('host')?.split(':')[0];
 
   if (host && host !== CANONICAL_HOST && host.endsWith(CANONICAL_HOST)) {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './PomodoroTimer.module.css';
+import type { SiteLocale } from '@/lib/i18n';
 
 /**
  * Working Pomodoro timer.
@@ -25,13 +26,14 @@ function fmt(totalSeconds: number) {
   return `${String(m).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
-export function PomodoroTimer() {
+export function PomodoroTimer({ locale = 'en' }: { locale?: SiteLocale }) {
   const [focusMin, setFocusMin] = useState(25);
   const [breakMin, setBreakMin] = useState(5);
   const [phase, setPhase] = useState<Phase>('focus');
   const [running, setRunning] = useState(false);
   const [remaining, setRemaining] = useState(25 * 60);
   const [completed, setCompleted] = useState(0);
+  const es = locale === 'es';
 
   const deadlineRef = useRef<number | null>(null);
   const phaseLength = (p: Phase) => (p === 'focus' ? focusMin : breakMin) * 60;
@@ -98,7 +100,7 @@ export function PomodoroTimer() {
 
   return (
     <div className={styles.wrap} data-phase={phase}>
-      <p className={styles.phase}>{phase === 'focus' ? 'Focus' : 'Break'}</p>
+      <p className={styles.phase}>{phase === 'focus' ? (es ? 'Enfoque' : 'Focus') : (es ? 'Descanso' : 'Break')}</p>
       <p className={styles.clock} aria-live="off">
         {fmt(remaining)}
       </p>
@@ -109,26 +111,26 @@ export function PomodoroTimer() {
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(progress * 100)}
-        aria-label={`${phase} progress`}
+        aria-label={es ? `Progreso de ${phase === 'focus' ? 'enfoque' : 'descanso'}` : `${phase} progress`}
       >
         <div className={styles.fill} style={{ width: `${Math.min(100, progress * 100)}%` }} />
       </div>
 
       <div className={styles.controls}>
         <button type="button" className={styles.primary} onClick={running ? pause : start}>
-          {running ? 'Pause' : remaining === total ? 'Start' : 'Resume'}
+          {running ? (es ? 'Pausar' : 'Pause') : remaining === total ? (es ? 'Comenzar' : 'Start') : (es ? 'Continuar' : 'Resume')}
         </button>
         <button type="button" className={styles.ghost} onClick={advance}>
-          Skip
+          {es ? 'Saltar' : 'Skip'}
         </button>
         <button type="button" className={styles.ghost} onClick={reset}>
-          Reset
+          {es ? 'Restablecer' : 'Reset'}
         </button>
       </div>
 
       <div className={styles.options}>
         <div>
-          <p className={styles.optLabel}>Focus</p>
+          <p className={styles.optLabel}>{es ? 'Enfoque' : 'Focus'}</p>
           <div className={styles.chips}>
             {FOCUS_OPTIONS.map((m) => (
               <button
@@ -144,7 +146,7 @@ export function PomodoroTimer() {
           </div>
         </div>
         <div>
-          <p className={styles.optLabel}>Break</p>
+          <p className={styles.optLabel}>{es ? 'Descanso' : 'Break'}</p>
           <div className={styles.chips}>
             {BREAK_OPTIONS.map((m) => (
               <button
@@ -163,8 +165,10 @@ export function PomodoroTimer() {
 
       <p className={styles.count}>
         {completed === 0
-          ? 'No focus blocks finished yet in this sitting.'
-          : `${completed} focus ${completed === 1 ? 'block' : 'blocks'} finished this sitting.`}
+          ? (es ? 'Aún no has terminado ningún bloque de enfoque en esta sesión.' : 'No focus blocks finished yet in this sitting.')
+          : es
+            ? `${completed} ${completed === 1 ? 'bloque de enfoque terminado' : 'bloques de enfoque terminados'} en esta sesión.`
+            : `${completed} focus ${completed === 1 ? 'block' : 'blocks'} finished this sitting.`}
       </p>
     </div>
   );

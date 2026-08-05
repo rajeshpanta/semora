@@ -1,14 +1,17 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import styles from '@/app/support/support.module.css';
+import styles from '@/app/(en)/support/support.module.css';
+import type { SiteLocale } from '@/lib/i18n';
 
 interface SupportFormProps {
   supportEmail: string;
+  locale?: SiteLocale;
 }
 
-export function SupportForm({ supportEmail }: SupportFormProps) {
+export function SupportForm({ supportEmail, locale = 'en' }: SupportFormProps) {
   const [status, setStatus] = useState('');
+  const es = locale === 'es';
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -17,48 +20,54 @@ export function SupportForm({ supportEmail }: SupportFormProps) {
     const email = String(values.get('email') ?? '').trim();
     const topic = String(values.get('topic') ?? '').trim();
     const message = String(values.get('message') ?? '').trim();
-    const subject = topic ? `Semora support — ${topic}` : 'Semora support request';
-    const body = [`Name: ${name}`, `Email: ${email}`, '', message].join('\n');
+    const subject = topic
+      ? `${es ? 'Ayuda de Semora' : 'Semora support'} — ${topic}`
+      : es ? 'Solicitud de ayuda de Semora' : 'Semora support request';
+    const body = [es ? `Nombre: ${name}` : `Name: ${name}`, `Email: ${email}`, '', message].join('\n');
 
     window.location.href = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setStatus('Your email app is ready with your message. Send it there to reach us.');
+    setStatus(es
+      ? 'Tu aplicación de correo está lista con el mensaje. Envíalo para comunicarte con nosotros.'
+      : 'Your email app is ready with your message. Send it there to reach us.');
   }
 
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.formHeading}>
-        <h2>Send us a message</h2>
-        <p>Include as much detail as you can, and we&apos;ll help you from there.</p>
+        <h2>{es ? 'Envíanos un mensaje' : 'Send us a message'}</h2>
+        <p>{es ? 'Incluye todos los detalles que puedas y te ayudaremos.' : <>Include as much detail as you can, and we&apos;ll help you from there.</>}</p>
       </div>
 
       <div className={styles.twoColumns}>
         <label>
-          Name
-          <input name="name" autoComplete="name" placeholder="Your name" required />
+          {es ? 'Nombre' : 'Name'}
+          <input name="name" autoComplete="name" placeholder={es ? 'Tu nombre' : 'Your name'} required />
         </label>
         <label>
-          Email
+          {es ? 'Correo electrónico' : 'Email'}
           <input name="email" type="email" autoComplete="email" placeholder="you@example.com" required />
         </label>
       </div>
       <label>
-        Topic
+        {es ? 'Tema' : 'Topic'}
         <select name="topic" defaultValue="">
-          <option value="" disabled>Select a topic</option>
-          <option>Account or sign-in</option>
-          <option>Syllabus scan</option>
-          <option>Subscription or billing</option>
-          <option>Canvas or LMS sync</option>
-          <option>Bug report</option>
-          <option>Something else</option>
+          <option value="" disabled>{es ? 'Selecciona un tema' : 'Select a topic'}</option>
+          <option>{es ? 'Cuenta o inicio de sesión' : 'Account or sign-in'}</option>
+          <option>{es ? 'Escaneo del programa' : 'Syllabus scan'}</option>
+          <option>{es ? 'Suscripción o facturación' : 'Subscription or billing'}</option>
+          <option>{es ? 'Sincronización con Canvas o LMS' : 'Canvas or LMS sync'}</option>
+          <option>{es ? 'Reporte de error' : 'Bug report'}</option>
+          <option>{es ? 'Otro tema' : 'Something else'}</option>
         </select>
       </label>
       <label>
-        Message
-        <textarea name="message" placeholder="Describe your issue or question…" required rows={3} />
+        {es ? 'Mensaje' : 'Message'}
+        <textarea name="message" placeholder={es ? 'Describe tu problema o pregunta…' : 'Describe your issue or question…'} required rows={3} />
       </label>
-      <button type="submit">Send message <span aria-hidden="true">→</span></button>
-      <p className={styles.formNote} aria-live="polite">{status || 'Sending opens your email app with this message addressed to us.'}</p>
+      <button type="submit">{es ? 'Enviar mensaje' : 'Send message'} <span aria-hidden="true">→</span></button>
+      <p className={styles.formNote} aria-live="polite">{status || (es
+        ? 'Al enviar se abrirá tu aplicación de correo con el mensaje dirigido a nosotros.'
+        : 'Sending opens your email app with this message addressed to us.')}</p>
     </form>
   );
 }

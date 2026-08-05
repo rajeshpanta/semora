@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import styles from './AuthDialog.module.css';
 import { APP_URL } from '@/lib/semora-facts';
+import type { SiteLocale } from '@/lib/i18n';
 
 /**
  * Sign-in as a dialog over the page instead of a jump to another domain.
@@ -40,7 +41,7 @@ const COPY: Record<Mode, { title: string; sub: string }> = {
   },
 };
 
-export function AuthDialogProvider({ children }: { children: React.ReactNode }) {
+export function AuthDialogProvider({ children, locale = 'en' }: { children: React.ReactNode; locale?: SiteLocale }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [mode, setMode] = useState<Mode>('signup');
 
@@ -73,7 +74,22 @@ export function AuthDialogProvider({ children }: { children: React.ReactNode }) 
     };
   }, []);
 
-  const copy = COPY[mode];
+  const copy = locale === 'es'
+    ? mode === 'signup'
+      ? { title: 'Comienza gratis', sub: 'Crea tu cuenta y escanea tu primer programa. Sin tarjeta de crédito.' }
+      : { title: 'Qué bueno verte de nuevo', sub: 'Inicia sesión para continuar donde lo dejaste.' }
+    : COPY[mode];
+  const labels = locale === 'es'
+    ? {
+        close: 'Cerrar', apple: 'Continuar con Apple', google: 'Continuar con Google',
+        prefix: 'Al continuar, aceptas nuestros', terms: 'Términos', and: 'y la', privacy: 'Política de privacidad',
+        termsHref: '/es/terminos', privacyHref: '/es/privacidad',
+      }
+    : {
+        close: 'Close', apple: 'Continue with Apple', google: 'Continue with Google',
+        prefix: 'By continuing you agree to our', terms: 'Terms', and: 'and', privacy: 'Privacy Policy',
+        termsHref: '/terms', privacyHref: '/privacy',
+      };
 
   return (
     <AuthDialogContext.Provider value={{ open }}>
@@ -84,7 +100,7 @@ export function AuthDialogProvider({ children }: { children: React.ReactNode }) 
             type="button"
             className={styles.close}
             onClick={() => ref.current?.close()}
-            aria-label="Close"
+            aria-label={labels.close}
           >
             <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
               <path
@@ -106,7 +122,7 @@ export function AuthDialogProvider({ children }: { children: React.ReactNode }) 
             <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="currentColor">
               <path d="M16.36 12.78c.02 2.5 2.2 3.33 2.22 3.34-.02.06-.35 1.2-1.15 2.37-.69 1.02-1.4 2.03-2.53 2.05-1.11.02-1.47-.65-2.73-.65-1.27 0-1.67.63-2.72.67-1.09.04-1.92-1.1-2.62-2.11-1.42-2.07-2.51-5.85-1.05-8.4.73-1.27 2.02-2.07 3.43-2.09 1.07-.02 2.08.72 2.73.72.66 0 1.88-.89 3.17-.76.54.02 2.06.22 3.03 1.64-.08.05-1.81 1.06-1.79 3.16M14.3 5.1c.58-.7.97-1.67.86-2.64-.83.03-1.84.55-2.44 1.25-.53.62-1 1.61-.87 2.56.93.07 1.87-.47 2.45-1.17" />
             </svg>
-            Continue with Apple
+            {labels.apple}
           </a>
 
           <a className={styles.google} href={`${APP_URL}/oauth?provider=google`}>
@@ -116,12 +132,12 @@ export function AuthDialogProvider({ children }: { children: React.ReactNode }) 
               <path fill="#FBBC05" d="M5.58 14.21a6.9 6.9 0 0 1 0-4.41V6.83H1.73a11.5 11.5 0 0 0 0 10.34l3.85-2.96" />
               <path fill="#EA4335" d="M12 5.07c1.69 0 3.2.58 4.4 1.72l3.29-3.29C17.7 1.63 15.1.5 12 .5A11.49 11.49 0 0 0 1.73 6.83l3.85 2.97C6.48 7.09 9.01 5.07 12 5.07" />
             </svg>
-            Continue with Google
+            {labels.google}
           </a>
 
           <p className={styles.legal}>
-            By continuing you agree to our <a href="/terms">Terms</a> and{' '}
-            <a href="/privacy">Privacy Policy</a>.
+            {labels.prefix} <a href={labels.termsHref}>{labels.terms}</a> {labels.and}{' '}
+            <a href={labels.privacyHref}>{labels.privacy}</a>.
           </p>
         </div>
       </dialog>

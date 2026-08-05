@@ -2,6 +2,7 @@ import Link from 'next/link';
 import styles from './Breadcrumb.module.css';
 import { JsonLd } from './JsonLd';
 import { breadcrumbListSchema } from '@/lib/schema';
+import type { SiteLocale } from '@/lib/i18n';
 
 export interface Crumb {
   name: string;
@@ -22,7 +23,7 @@ export interface Crumb {
  * The final item is the current page: rendered as plain text (it is not a link
  * to itself) but still included in the markup, which is what the spec expects.
  */
-export function Breadcrumb({ trail }: { trail: Crumb[] }) {
+export function Breadcrumb({ trail, locale = 'en' }: { trail: Crumb[]; locale?: SiteLocale }) {
   if (trail.length === 0) return null;
   const parents = trail.slice(0, -1);
   const current = trail[trail.length - 1];
@@ -30,7 +31,7 @@ export function Breadcrumb({ trail }: { trail: Crumb[] }) {
   return (
     <>
       <JsonLd data={breadcrumbListSchema(trail)} />
-      <nav className={styles.crumbs} aria-label="Breadcrumb">
+      <nav className={styles.crumbs} aria-label={locale === 'es' ? 'Migas de pan' : 'Breadcrumb'}>
         {parents.map((crumb) => (
           <span key={crumb.path}>
             <Link href={crumb.path}>{crumb.name}</Link>

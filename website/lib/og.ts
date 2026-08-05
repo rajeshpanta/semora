@@ -32,3 +32,9 @@ export const OG_DEFAULTS = {
  * mid-migration; both spread the same object.
  */
 export const OG_IMAGE = OG_DEFAULTS;
+
+export const OG_IMAGE_ES = {
+  siteName: SITE_NAME,
+  type: 'website' as const,
+  images: ['/es/opengraph-image'],
+};

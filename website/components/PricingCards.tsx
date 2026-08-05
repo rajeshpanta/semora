@@ -9,14 +9,31 @@ import {
   PRO_ANNUAL_MONTHLY_EQUIVALENT,
   PRO_ANNUAL_SAVINGS_PCT,
 } from '@/lib/semora-facts';
+import { FREE_FEATURES_ES, PRO_FEATURES_ES } from '@/lib/es-facts';
+import type { SiteLocale } from '@/lib/i18n';
 
-export function PricingCards() {
+export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
   const [plan, setPlan] = useState<'monthly' | 'annual'>('annual');
-  const proFeatures = PRO_FEATURES;
+  const proFeatures = locale === 'es' ? PRO_FEATURES_ES : PRO_FEATURES;
+  const freeFeatures = locale === 'es' ? FREE_FEATURES_ES : FREE_FEATURES;
+  const monthlyPrice = locale === 'es' ? '$3.99/mes' : PRICING.pro.monthly.priceLabel;
+  const annualPrice = locale === 'es' ? '$19.99/año' : PRICING.pro.annual.priceLabel;
+  const copy = locale === 'es'
+    ? {
+        billing: 'Periodo de facturación', monthly: 'Mensual', annual: 'Anual', save: 'Ahorra',
+        free: 'Gratis', noCard: 'No necesitas tarjeta de crédito.', monthlyNote: 'Facturación mensual. Cancela cuando quieras.',
+        annualNote: 'Facturación anual. Cancela cuando quieras.', monthShort: 'mes',
+        purchase: 'Pro se compra dentro de la app y se aplica a toda tu cuenta, incluida la versión web.',
+      }
+    : {
+        billing: 'Billing period', monthly: 'Monthly', annual: 'Annual', save: 'Save',
+        free: PRICING.free.name, noCard: 'No credit card required.', monthlyNote: 'Billed monthly. Cancel anytime.',
+        annualNote: 'Billed annually. Cancel anytime.', monthShort: 'mo', purchase: PRICING.pro.purchaseNote,
+      };
 
   return (
     <div className={styles.wrap}>
-      <div className={styles.toggle} role="tablist" aria-label="Billing period">
+      <div className={styles.toggle} role="tablist" aria-label={copy.billing}>
         <button
           type="button"
           role="tab"
@@ -24,7 +41,7 @@ export function PricingCards() {
           className={`${styles.toggleBtn} ${plan === 'monthly' ? styles.toggleBtnActive : ''}`}
           onClick={() => setPlan('monthly')}
         >
-          Monthly
+          {copy.monthly}
         </button>
         <button
           type="button"
@@ -33,18 +50,18 @@ export function PricingCards() {
           className={`${styles.toggleBtn} ${plan === 'annual' ? styles.toggleBtnActive : ''}`}
           onClick={() => setPlan('annual')}
         >
-          Annual
-          <span className={styles.saveBadge}>Save {PRO_ANNUAL_SAVINGS_PCT}%</span>
+          {copy.annual}
+          <span className={styles.saveBadge}>{copy.save} {PRO_ANNUAL_SAVINGS_PCT}%</span>
         </button>
       </div>
 
       <div className={styles.row}>
         <div className={styles.card}>
-          <p className={styles.name}>{PRICING.free.name}</p>
+          <p className={styles.name}>{copy.free}</p>
           <p className={styles.amount}>{PRICING.free.priceLabel}</p>
-          <p className={styles.note}>No credit card required.</p>
+          <p className={styles.note}>{copy.noCard}</p>
           <ul className={styles.list}>
-            {FREE_FEATURES.map((f) => (
+            {freeFeatures.map((f) => (
               <li key={f}>{f}</li>
             ))}
           </ul>
@@ -55,20 +72,20 @@ export function PricingCards() {
           {plan === 'monthly' ? (
             <>
               <p className={styles.amount}>
-                {PRICING.pro.monthly.priceLabel}
+                {monthlyPrice}
               </p>
-              <p className={styles.note}>Billed monthly. Cancel anytime.</p>
+              <p className={styles.note}>{copy.monthlyNote}</p>
             </>
           ) : (
             <>
               <p className={styles.amount}>
-                {PRICING.pro.annual.priceLabel}
+                {annualPrice}
                 <span className={styles.perMonth}>
                   {' '}
-                  ({PRO_ANNUAL_MONTHLY_EQUIVALENT}/mo)
+                  ({PRO_ANNUAL_MONTHLY_EQUIVALENT}/{copy.monthShort})
                 </span>
               </p>
-              <p className={styles.note}>Billed annually. Cancel anytime.</p>
+              <p className={styles.note}>{copy.annualNote}</p>
             </>
           )}
           <ul className={styles.list}>
@@ -79,7 +96,7 @@ export function PricingCards() {
         </div>
       </div>
 
-      <p className={styles.purchaseNote}>{PRICING.pro.purchaseNote}</p>
+      <p className={styles.purchaseNote}>{copy.purchase}</p>
     </div>
   );
 }

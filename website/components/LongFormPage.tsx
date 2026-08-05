@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import Link from 'next/link';
 import styles from './LongFormPage.module.css';
 import { Faq } from './Faq';
 import { JsonLd } from './JsonLd';
@@ -7,6 +6,7 @@ import { ArticleShell } from './ArticleShell';
 import { faqPageSchema } from '@/lib/schema';
 import { Breadcrumb } from './Breadcrumb';
 import type { NewPage } from '@/lib/new-page-content';
+import type { SiteLocale } from '@/lib/i18n';
 
 /**
  * Shared shell for the tool / alternative / about pages: breadcrumb, lede,
@@ -19,6 +19,7 @@ export function LongFormPage({
   crumb,
   path,
   widget,
+  locale = 'en',
 }: {
   content: NewPage;
   crumb?: { href: string; label: string };
@@ -26,17 +27,24 @@ export function LongFormPage({
    *  final item — a server component cannot read it from usePathname(). */
   path: string;
   widget?: ReactNode;
+  locale?: SiteLocale;
 }) {
+  const es = locale === 'es';
   return (
     <ArticleShell
-      ctaHeading="Try it on your own syllabus"
-      ctaSubheading="See how Semora handles your actual courses. Free, no credit card."
+      ctaHeading={es ? 'Pruébalo con tu propio programa' : 'Try it on your own syllabus'}
+      ctaSubheading={es
+        ? 'Descubre cómo Semora organiza tus cursos reales. Gratis y sin tarjeta de crédito.'
+        : 'See how Semora handles your actual courses. Free, no credit card.'}
+      ctaLabel={es ? 'Probar gratis' : 'Try it for free'}
+      locale={locale}
     >
       <article className={`${styles.wrap} article-body`}>
         {content.faq?.length ? <JsonLd data={faqPageSchema(content.faq)} /> : null}
 
         {crumb && (
           <Breadcrumb
+            locale={locale}
             trail={[
               { name: crumb.label, path: crumb.href },
               { name: content.h1, path },
@@ -75,7 +83,7 @@ export function LongFormPage({
 
         {content.faq.length ? (
           <section className={styles.section}>
-            <h2>Frequently asked questions</h2>
+            <h2>{es ? 'Preguntas frecuentes' : 'Frequently asked questions'}</h2>
             <Faq items={content.faq} />
           </section>
         ) : null}

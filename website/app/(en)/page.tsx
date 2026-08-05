@@ -18,7 +18,10 @@ import { OG_IMAGE } from '@/lib/og';
 // root layout: pages inherit the layout's openGraph object wholesale, so a URL
 // there would make every subpage claim to be the homepage.
 export const metadata: Metadata = {
-  alternates: { canonical: '/' },
+  alternates: {
+    canonical: '/',
+    languages: { 'en-US': '/', es: '/es', 'x-default': '/' },
+  },
   openGraph: { url: '/', ...OG_IMAGE },
 };
 

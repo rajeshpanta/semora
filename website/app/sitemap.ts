@@ -4,6 +4,7 @@ import { FEATURES } from '@/lib/semora-facts';
 import { COMPARE_SLUGS, KEYWORD_PAGE_SLUGS } from '@/lib/routes';
 import { BLOG_POSTS } from '@/lib/blog';
 import { ALTERNATIVE_SLUGS } from '@/lib/new-page-content';
+import { LOCALE_ROUTE_PAIRS } from '@/lib/i18n';
 
 // Every non-blog route is generated from source that changes when the site is
 // rebuilt, so the deploy time is the honest "last modified". Without it 34 of
@@ -74,5 +75,47 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...compareRoutes,
   ].map((route) => ({ lastModified: BUILT_AT, ...route }));
 
-  return [...routes, ...blogRoutes];
+  const englishRoutes = [...routes, ...blogRoutes];
+  const pairByEnglish = new Map(LOCALE_ROUTE_PAIRS.map((pair) => [pair.en, pair]));
+  const englishByPath = new Map(
+    englishRoutes.map((route) => [route.url.replace(SITE_URL, '') || '/', route]),
+  );
+
+  // hreflang is emitted in both directions. A page that points to Spanish
+  // without the Spanish page pointing back can be ignored by search engines,
+  // so the sitemap derives every alternate from one shared route-pair list.
+  const localizedEnglishRoutes: MetadataRoute.Sitemap = englishRoutes.map((route) => {
+    const englishPath = route.url.replace(SITE_URL, '') || '/';
+    const pair = pairByEnglish.get(englishPath);
+    if (!pair) return route;
+    return {
+      ...route,
+      alternates: {
+        languages: {
+          en: `${SITE_URL}${pair.en === '/' ? '' : pair.en}`,
+          es: `${SITE_URL}${pair.es}`,
+          'x-default': `${SITE_URL}${pair.en === '/' ? '' : pair.en}`,
+        },
+      },
+    };
+  });
+
+  const spanishRoutes: MetadataRoute.Sitemap = LOCALE_ROUTE_PAIRS.map((pair) => {
+    const english = englishByPath.get(pair.en);
+    return {
+      url: `${SITE_URL}${pair.es}`,
+      lastModified: english?.lastModified ?? BUILT_AT,
+      changeFrequency: english?.changeFrequency ?? 'monthly',
+      priority: english?.priority ?? (pair.es === '/es' ? 1 : 0.7),
+      alternates: {
+        languages: {
+          en: `${SITE_URL}${pair.en === '/' ? '' : pair.en}`,
+          es: `${SITE_URL}${pair.es}`,
+          'x-default': `${SITE_URL}${pair.en === '/' ? '' : pair.en}`,
+        },
+      },
+    };
+  });
+
+  return [...localizedEnglishRoutes, ...spanishRoutes];
 }

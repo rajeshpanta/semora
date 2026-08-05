@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import styles from './TableOfContents.module.css';
+import type { SiteLocale } from '@/lib/i18n';
 
 function slugify(text: string, index: number): string {
   const base = text
@@ -13,8 +14,10 @@ function slugify(text: string, index: number): string {
 
 export function TableOfContents({
   selector = 'article h2:not([data-toc-skip])',
+  locale = 'en',
 }: {
   selector?: string;
+  locale?: SiteLocale;
 }) {
   const [headings, setHeadings] = useState<{ id: string; text: string }[]>([]);
   const [activeId, setActiveId] = useState('');
@@ -46,8 +49,8 @@ export function TableOfContents({
   if (headings.length < 2) return null;
 
   return (
-    <nav className={styles.toc} aria-label="Table of contents">
-      <p className={styles.tocTitle}>On this page</p>
+    <nav className={styles.toc} aria-label={locale === 'es' ? 'Contenido de la página' : 'Table of contents'}>
+      <p className={styles.tocTitle}>{locale === 'es' ? 'En esta página' : 'On this page'}</p>
       <ul>
         {headings.map((h) => (
           <li key={h.id}>

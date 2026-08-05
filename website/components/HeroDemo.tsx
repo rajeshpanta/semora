@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import styles from './HeroDemo.module.css';
+import type { SiteLocale } from '@/lib/i18n';
 
 /**
  * The hero's product demo: the actual web app, animating through what it does.
@@ -36,23 +37,44 @@ const ROWS = [
 const NAV = ['Today', 'Courses', 'Calendar', 'Import syllabus'] as const;
 const TOOLS = ['Smart Plan', 'Workload', 'Flashcards'] as const;
 
-export function HeroDemo() {
+export function HeroDemo({ locale = 'en' }: { locale?: SiteLocale }) {
   const [stage, setStage] = useState(0);
   const [paused, setPaused] = useState(false);
+  const es = locale === 'es';
+  const stages = es
+    ? [
+        { key: 'scan', label: 'Añade tu programa', hint: 'Foto, PDF o texto pegado' },
+        { key: 'extract', label: 'Todas las fechas, extraídas', hint: 'Fechas, porcentajes y horarios' },
+        { key: 'organized', label: 'Tu semestre, organizado', hint: 'Nada se guarda sin tu aprobación' },
+      ] as const
+    : STAGES;
+  const rows = es
+    ? [
+        { title: 'Lista de problemas 7', course: 'Cálculo II', due: '9 sep', tone: 'due' },
+        { title: 'Examen parcial', course: 'Cálculo II', due: '14 oct', tone: 'exam' },
+        { title: 'Informe de laboratorio 3', course: 'Biología 101', due: '7 sep', tone: 'late' },
+        { title: 'Lectura: cap. 5', course: 'Historia 210', due: '9 sep', tone: 'done' },
+        { title: 'Esquema del ensayo', course: 'Historia 210', due: '12 sep', tone: 'due' },
+      ] as const
+    : ROWS;
+  const nav = es ? ['Hoy', 'Cursos', 'Calendario', 'Importar programa'] : NAV;
+  const tools = es ? ['Plan Inteligente', 'Carga académica', 'Tarjetas'] : TOOLS;
 
   useEffect(() => {
     // Honour the OS setting: hold on the finished state rather than looping.
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
     if (reduce.matches) {
-      setStage(STAGES.length - 1);
-      setPaused(true);
+      queueMicrotask(() => {
+        setStage(stages.length - 1);
+        setPaused(true);
+      });
       return;
     }
-    const t = setInterval(() => setStage((s) => (s + 1) % STAGES.length), 3200);
+    const t = setInterval(() => setStage((s) => (s + 1) % stages.length), 3200);
     return () => clearInterval(t);
-  }, []);
+  }, [stages.length]);
 
-  const current = STAGES[stage];
+  const current = stages[stage];
 
   return (
     <div className={styles.wrap} aria-hidden="true">
@@ -70,14 +92,14 @@ export function HeroDemo() {
         <div className={styles.body}>
           <aside className={styles.sidebar}>
             <div className={styles.brand}>Semora</div>
-            {NAV.map((item, i) => (
+            {nav.map((item, i) => (
               <div key={item} className={styles.navItem} data-active={i === 0}>
                 <span className={styles.navDot} />
                 {item}
               </div>
             ))}
-            <div className={styles.navLabel}>Study tools</div>
-            {TOOLS.map((item) => (
+            <div className={styles.navLabel}>{es ? 'Herramientas de estudio' : 'Study tools'}</div>
+            {tools.map((item) => (
               <div key={item} className={styles.navItem}>
                 <span className={styles.navDot} />
                 {item}
@@ -89,7 +111,7 @@ export function HeroDemo() {
             {/* Stage 1 — the syllabus, being read. */}
             <div className={styles.doc}>
               <div className={styles.docHead}>
-                <span className={styles.docTitle}>CHEM 101 Syllabus.pdf</span>
+                <span className={styles.docTitle}>{es ? 'QUÍM 101 Programa.pdf' : 'CHEM 101 Syllabus.pdf'}</span>
               </div>
               <div className={styles.scanline} />
               {[92, 76, 88, 61, 83, 70, 90, 58].map((w, i) => (
@@ -99,7 +121,7 @@ export function HeroDemo() {
 
             {/* Stages 2 and 3 — the deadlines it found. */}
             <div className={styles.list}>
-              {ROWS.map((row, i) => (
+              {rows.map((row, i) => (
                 <div
                   key={row.title}
                   className={styles.row}
@@ -138,7 +160,7 @@ export function HeroDemo() {
         <div className={styles.captionHint}>{current.hint}</div>
         {!paused && (
           <div className={styles.progress}>
-            {STAGES.map((s, i) => (
+            {stages.map((s, i) => (
               <span key={s.key} className={styles.tick} data-on={i === stage} />
             ))}
           </div>
