@@ -50,9 +50,8 @@ export interface SyllabusExtraction {
   semester_end: string | null;
   grade_scale: GradeThreshold[] | null;
   items: ExtractedItem[];
-  // Which Gemini model actually served the request (the server falls back to
-  // a secondary model when the primary is overloaded). Optional — older Edge
-  // Function deployments don't return it.
+  // Which AI model served the request. The property name is retained for
+  // compatibility with the existing parse_runs.gemini_model column.
   gemini_model?: string | null;
 }
 

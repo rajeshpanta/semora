@@ -776,7 +776,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "How one message actually travels",
         "paragraphs": [
           "The screen is a plain chat. You type, you press the arrow, your message appears as a bubble immediately while the request is in flight, usually three to ten seconds. Underneath that spinner, a fixed sequence runs.",
-          "The model call goes to Gemini 2.5 Flash at a temperature of 0.4, with an output ceiling of 2,048 tokens: enough for a worked explanation, not enough for an essay. If Google returns a retryable error, the function backs off and retries up to three times, then falls back to Gemini 2.0 Flash and does the same again. You see one spinner. The retry policy runs beneath it."
+          "The model call goes to OpenAI GPT-5.6 Luna with low reasoning and an output ceiling of 2,048 tokens: enough for a worked explanation without inviting an essay. If OpenAI returns a retryable error, the function backs off and retries up to three times. You see one spinner; the retry policy runs beneath it."
         ],
         "bullets": [
           "The request has to declare its size, and the body has to be under 256 KB. A chunked stream that tries to slip past the size check is rejected before anything else happens.",

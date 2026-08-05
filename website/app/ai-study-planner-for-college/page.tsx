@@ -26,7 +26,7 @@ const FAQ = [
   {
     question: 'How does Semora create my study schedule from a syllabus?',
     answer:
-      'You import the syllabus by photo, PDF, drag-and-drop, or pasted text. Gemini AI extracts the course details and every assignment, exam, and reading with its due date. On Pro, Smart Plan then generates a timed study schedule from those deadlines and adapts it as dates change.',
+      'You import the syllabus by photo, PDF, drag-and-drop, or pasted text. OpenAI GPT-5.6 Luna extracts the course details and every assignment, exam, and reading with its due date. On Pro, Smart Plan then generates a timed study schedule from those deadlines and adapts it as dates change.',
   },
   {
     question: "Is Semora free, and what's included in Pro?",
@@ -116,7 +116,7 @@ export default function AiStudyPlannerPage() {
           school&apos;s LMS page.
         </li>
         <li>
-          <strong>AI extraction.</strong> Semora uses Gemini AI to read the document and pull out
+          <strong>AI extraction.</strong> Semora uses OpenAI GPT-5.6 Luna to read the document and pull out
           the course name, instructor, meeting times, office hours, semester dates, grading scale,
           and every assignment, exam, quiz, project, and reading along with its due date.
         </li>

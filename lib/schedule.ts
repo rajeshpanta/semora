@@ -98,7 +98,7 @@ export function formatMeetings(
 }
 
 /** Office hours variant: same as formatMeetings, plus a "By appointment"
- *  line for rows whose days_of_week is null (the Gemini parser emits
+ *  line for rows whose days_of_week is null (the AI parser emits
  *  these when a syllabus says office hours are by appointment only, and
  *  the UI must surface them rather than filtering them out as empty).
  *  Multiple by-appointment rows collapse to a single label. */

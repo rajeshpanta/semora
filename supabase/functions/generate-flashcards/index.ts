@@ -2,15 +2,15 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 // AI flashcard generation. Structured on tutor-chat/index.ts (CORS, JWT
-// verification, service-role client, Gemini call with retry/model-fallback,
+// verification, service-role client, OpenAI call with retries,
 // is_pro gate) — reuses the same grounding sources tutor-chat already reads
 // (parse_runs.final_results for the syllabus, course_notes.extracted_text
-// for uploaded lecture notes) instead of a chat reply, this asks Gemini for
+// for uploaded lecture notes) instead of a chat reply, this asks Luna for
 // a JSON array of {front, back} pairs and bulk-inserts them into `cards`.
 //
 // Server-side Pro gate matters MORE here than for manual card entry: typing
 // your own flashcards costs nothing, but every generation call is a paid
-// Gemini request — flashcards previously had ZERO server-side enforcement
+// AI request — flashcards previously had ZERO server-side enforcement
 // (RLS is owner-only, no is_pro() check anywhere), unlike every other Pro
 // feature. This function is that enforcement point for the AI path; manual
 // creation stays as-is (no API cost to protect there).
@@ -22,7 +22,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 // the course's OTHER tasks (see step 3a-2) — not from inferring syllabus
 // topic order, since individual syllabus topics are usually undated.
 
-const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+const OPENAI_MODEL = Deno.env.get('FLASHCARDS_OPENAI_MODEL')?.trim() || 'gpt-5.6-luna';
+const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -63,6 +65,95 @@ function clamp(text: string, max: number): string {
   return text.slice(0, max) + '\n…[truncated]';
 }
 
+const OPENAI_RETRYABLE = new Set([408, 409, 429, 500, 502, 503, 504]);
+const OPENAI_MAX_ATTEMPTS = 3;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+type OpenAIResult = {
+  data: any | null;
+  status: number;
+  networkError: boolean;
+};
+
+function readOpenAIOutputText(data: any): string | null {
+  if (typeof data?.output_text === 'string' && data.output_text.trim()) {
+    return data.output_text.trim();
+  }
+  if (!Array.isArray(data?.output)) return null;
+  const chunks: string[] = [];
+  for (const item of data.output) {
+    if (item?.type !== 'message' || !Array.isArray(item.content)) continue;
+    for (const part of item.content) {
+      if (part?.type === 'output_text' && typeof part.text === 'string') chunks.push(part.text);
+    }
+  }
+  const joined = chunks.join('\n').trim();
+  return joined || null;
+}
+
+async function callOpenAIResponses(
+  payload: Record<string, unknown>,
+  label: string,
+): Promise<OpenAIResult> {
+  if (!OPENAI_API_KEY) return { data: null, status: 0, networkError: false };
+
+  let lastStatus = 0;
+  let networkError = false;
+  for (let attempt = 1; attempt <= OPENAI_MAX_ATTEMPTS; attempt++) {
+    let response: Response;
+    try {
+      response = await fetch(OPENAI_RESPONSES_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      networkError = true;
+      console.warn(
+        `[generate-flashcards] OpenAI ${label} network error (attempt ${attempt}/${OPENAI_MAX_ATTEMPTS}):`,
+        error,
+      );
+      if (attempt < OPENAI_MAX_ATTEMPTS) {
+        await sleep(600 * attempt);
+        continue;
+      }
+      break;
+    }
+
+    networkError = false;
+    lastStatus = response.status;
+    if (response.ok) {
+      try {
+        return { data: await response.json(), status: response.status, networkError: false };
+      } catch (error) {
+        console.error(`[generate-flashcards] OpenAI ${label} returned invalid JSON:`, error);
+        return { data: null, status: response.status, networkError: false };
+      }
+    }
+
+    const errorBody = await response.text().catch(() => '');
+    console.warn(
+      `[generate-flashcards] OpenAI ${label} HTTP ${response.status} (attempt ${attempt}/${OPENAI_MAX_ATTEMPTS}):`,
+      errorBody.slice(0, 300),
+    );
+    if (OPENAI_RETRYABLE.has(response.status) && attempt < OPENAI_MAX_ATTEMPTS) {
+      await sleep(600 * attempt);
+      continue;
+    }
+    break;
+  }
+  return { data: null, status: lastStatus, networkError };
+}
+
+async function makeSafetyIdentifier(userId: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(userId));
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `semora_${hex.slice(0, 32)}`;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -98,8 +189,8 @@ serve(async (req) => {
     }
     const userId = userData.user.id;
 
-    if (!GEMINI_API_KEY) {
-      return jsonResponse({ error: 'Gemini API key not configured on server' }, 500);
+    if (!OPENAI_API_KEY) {
+      return jsonResponse({ error: 'OpenAI API key not configured on server' }, 500);
     }
 
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -310,93 +401,51 @@ serve(async (req) => {
         ].filter(Boolean).join('\n')
       : '';
 
-    // 5. Call Gemini with retry + model fallback (same policy as tutor-chat).
-    const contents = [
-      {
-        role: 'user',
-        parts: [
-          {
-            text: [
-              GENERATION_PROMPT,
-              focusDirective,
-              syllabusText ? `--- SYLLABUS ---\n${syllabusText}` : '',
-              notesText ? `--- LECTURE NOTES ---\n${notesText}` : '',
-            ]
-              .filter(Boolean)
-              .join('\n\n'),
-          },
-        ],
-      },
-    ];
+    // 5. Generate cards with OpenAI Luna. This high-volume structured task
+    //    uses explicit no-reasoning mode and JSON output to preserve latency,
+    //    cost, and the existing parser contract.
+    const modelInput = [
+      GENERATION_PROMPT,
+      focusDirective,
+      syllabusText ? `--- SYLLABUS ---\n${syllabusText}` : '',
+      notesText ? `--- LECTURE NOTES ---\n${notesText}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+    const openAIResult = await callOpenAIResponses({
+      model: OPENAI_MODEL,
+      input: [{ role: 'user', content: modelInput }],
+      reasoning: { effort: 'none' },
+      text: { format: { type: 'json_object' }, verbosity: 'low' },
+      max_output_tokens: 4096,
+      store: false,
+      safety_identifier: await makeSafetyIdentifier(userId),
+    }, 'card generation');
 
-    const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
-    const RETRYABLE = new Set([408, 429, 500, 502, 503, 504]);
-    const MAX_ATTEMPTS = 3;
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-    let geminiResponse: Response | null = null;
-    let servedModel = '';
-    let lastStatus = 0;
-    let networkError = false;
-
-    modelLoop:
-    for (const model of MODELS) {
-      const reqBody = {
-        contents,
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: model.startsWith('gemini-2.5') ? 4096 : 4096,
-        },
-      };
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        let resp: Response;
-        try {
-          resp = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(reqBody),
-          });
-        } catch (err) {
-          networkError = true;
-          console.warn(`[generate-flashcards] ${model} network error (attempt ${attempt}/${MAX_ATTEMPTS}):`, err);
-          if (attempt < MAX_ATTEMPTS) { await sleep(600 * attempt); continue; }
-          break;
-        }
-        networkError = false;
-        if (resp.ok) { geminiResponse = resp; servedModel = model; break modelLoop; }
-        lastStatus = resp.status;
-        const errBody = await resp.text().catch(() => '');
-        console.warn(`[generate-flashcards] ${model} HTTP ${resp.status} (attempt ${attempt}/${MAX_ATTEMPTS}):`, errBody.slice(0, 200));
-        if (RETRYABLE.has(resp.status)) {
-          if (attempt < MAX_ATTEMPTS) { await sleep(600 * attempt); continue; }
-          break;
-        }
-        break modelLoop;
-      }
-    }
-
-    if (!geminiResponse) {
-      console.error(`[generate-flashcards] Gemini failed after retries+fallback (network=${networkError}, status=${lastStatus})`);
-      const msg = networkError
+    if (!openAIResult.data) {
+      console.error(
+        `[generate-flashcards] OpenAI failed after retries (network=${openAIResult.networkError}, status=${openAIResult.status})`,
+      );
+      const msg = openAIResult.networkError
         ? 'AI service unreachable. Please try again.'
-        : (lastStatus === 503 || lastStatus === 429)
+        : (openAIResult.status === 503 || openAIResult.status === 429)
           ? 'The AI is busy right now — please try again in a minute.'
-          : `AI processing failed (status ${lastStatus}). Please try again.`;
+          : `AI processing failed (status ${openAIResult.status}). Please try again.`;
       return jsonResponse({ error: msg }, 502);
     }
 
-    const data = await geminiResponse.json();
-    if (data.candidates?.[0]?.finishReason === 'MAX_TOKENS') {
-      console.error('[generate-flashcards] Gemini hit MAX_TOKENS — output truncated');
+    const data = openAIResult.data;
+    const servedModel = typeof data.model === 'string' ? data.model : OPENAI_MODEL;
+    if (data.status === 'incomplete' && data.incomplete_details?.reason === 'max_output_tokens') {
+      console.error('[generate-flashcards] OpenAI hit max_output_tokens — output truncated');
       return jsonResponse(
         { error: 'That generated more than fits in one batch. Try again — it usually succeeds on retry.' },
         502,
       );
     }
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!text || typeof text !== 'string') {
-      console.error('[generate-flashcards] Gemini empty/blocked response:', JSON.stringify(data).slice(0, 500));
+    const text = readOpenAIOutputText(data);
+    if (!text) {
+      console.error('[generate-flashcards] OpenAI empty/blocked response:', JSON.stringify(data).slice(0, 500));
       return jsonResponse({ error: "Couldn't generate flashcards. Please try again." }, 502);
     }
 
@@ -473,15 +522,16 @@ serve(async (req) => {
   }
 });
 
-// Identical to tutor-chat's extractNoteText — kept as a local copy since
-// there's no shared helper module in supabase/functions/ by convention
-// (each function duplicates this block; see tutor-chat's own comment).
+// Identical in behavior to tutor-chat's note extraction. Kept local so each
+// deployed Edge Function remains self-contained.
 async function extractNoteText(
-  adminClient: ReturnType<typeof createClient>,
-  note: { id: string; storage_path: string; mime_type: string | null },
+  // Supabase's overloaded generic factory collapses to an unusable
+  // unknown/never schema through ReturnType in Deno.
+  adminClient: any,
+  note: { id: string; storage_path: string; filename: string; mime_type: string | null },
   userId: string,
 ): Promise<string | null> {
-  if (!GEMINI_API_KEY) return null;
+  if (!OPENAI_API_KEY) return null;
 
   const { data: file, error: dlErr } = await adminClient.storage
     .from('course-notes')
@@ -504,30 +554,36 @@ async function extractNoteText(
   const base64 = btoa(binary);
   const mimeType = note.mime_type || 'application/pdf';
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            { text: 'Extract ALL readable text from this document (lecture notes/slides), preserving structure. Return ONLY the extracted text, no commentary.' },
-            { inline_data: { mime_type: mimeType, data: base64 } },
-          ],
-        },
+  const attachment = mimeType.startsWith('image/')
+    ? { type: 'input_image', image_url: `data:${mimeType};base64,${base64}`, detail: 'high' }
+    : {
+      type: 'input_file',
+      filename: note.filename || 'course-note.pdf',
+      file_data: `data:${mimeType};base64,${base64}`,
+      detail: 'high',
+    };
+  const result = await callOpenAIResponses({
+    model: OPENAI_MODEL,
+    instructions: 'Extract all readable text from the supplied lecture notes or slides. Preserve headings, lists, and logical structure. Return only the extracted text with no commentary.',
+    input: [{
+      role: 'user',
+      content: [
+        attachment,
+        { type: 'input_text', text: 'Extract the complete readable text from this course note.' },
       ],
-      generationConfig: { temperature: 0, maxOutputTokens: 8192 },
-    }),
-  });
-  if (!resp.ok) {
-    console.warn('[generate-flashcards] note extraction HTTP', resp.status);
+    }],
+    reasoning: { effort: 'none' },
+    text: { verbosity: 'low' },
+    max_output_tokens: 8192,
+    store: false,
+    safety_identifier: await makeSafetyIdentifier(userId),
+  }, 'note extraction');
+  if (!result.data) {
+    console.warn('[generate-flashcards] OpenAI note extraction failed', result.status);
     return null;
   }
-  const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text || typeof text !== 'string') return null;
-  const extracted = text.trim();
+  const extracted = readOpenAIOutputText(result.data);
+  if (!extracted) return null;
 
   await adminClient
     .from('course_notes')

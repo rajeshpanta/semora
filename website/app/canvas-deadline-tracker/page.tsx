@@ -166,7 +166,7 @@ export default function CanvasDeadlineTrackerPage() {
         surfacing office hours, the instructor&apos;s grading scale, semester start/end dates, and
         exact meeting times next to your Canvas assignments. For that, Semora reads the syllabus
         itself: a photo (camera, multi-page, up to 5 pages), a PDF upload, a drag-and-drop file
-        (web), or pasted raw text copied from a PDF or LMS page (web). Gemini AI extracts the course
+        (web), or pasted raw text copied from a PDF or LMS page (web). OpenAI GPT-5.6 Luna extracts the course
         name, instructor, meeting times, office hours, semester dates, grading scale, and every
         assignment, exam, quiz, project, and reading with its due date. Used together, Canvas sync
         and syllabus import give you a fuller picture than either source alone.

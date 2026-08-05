@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { extractFromPages, extractFromText, type SyllabusExtraction, type SyllabusPage } from '@/lib/gemini';
+import { extractFromPages, extractFromText, type SyllabusExtraction, type SyllabusPage } from '@/lib/ai-extraction';
 import * as FileSystem from 'expo-file-system/legacy';
 import { isMeetingSyncEnabled, syncMeetingToCalendar } from '@/lib/calendarSync';
 import type { CourseMeeting } from '@/types/database';
@@ -44,7 +44,7 @@ export async function processSyllabus(
   // keep working unchanged. One submission = one scan regardless of pages.
   pages?: SyllabusPage[],
   // Web-only: pasted syllabus text instead of a file/photo. When set, this
-  // replaces the extraction source (Gemini gets the raw text, no OCR step)
+  // replaces the extraction source (Luna gets the raw text, no OCR step)
   // AND the storage step (the pasted text itself is stored as a .txt file
   // in place of the uploaded file, so every syllabus_uploads row still
   // points at something real). fileUri/fileName/mimeType are still required
@@ -58,7 +58,7 @@ export async function processSyllabus(
   // 0. Enforce the free scan limit BEFORE any writes. The DB trigger on
   //    syllabus_uploads fires at step 4 — by then the semester, course,
   //    meetings, and grade scale have already been created, leaving
-  //    orphan rows when the limit trips (and burning Gemini compute).
+  //    orphan rows when the limit trips (and burning AI compute).
   //    Message wording must keep the "N free scans" pattern so
   //    isFreeLimitError still surfaces the Upgrade prompt.
   //    Counting window = current calendar month (UTC), matching useScanCount,
@@ -74,7 +74,7 @@ export async function processSyllabus(
     }
   }
 
-  // 1. Extract with Gemini (abortable — the caller's timeout aborts the fetch)
+  // 1. Extract with Luna (abortable — the caller's timeout aborts the fetch)
   const pageList: SyllabusPage[] = pages && pages.length > 0 ? pages : [{ uri: fileUri, mimeType }];
   const extraction = pastedText != null
     ? await extractFromText(pastedText, signal)
@@ -128,7 +128,7 @@ export async function processSyllabus(
     }
   }
 
-  // 3c. Insert structured meeting + office hours rows from Gemini,
+  // 3c. Insert structured meeting + office hours rows from Luna,
   // *only for newly created courses*. Re-uploading a syllabus for an
   // existing course should never clobber user edits — if a row is
   // wrong they fix it via the course detail editor. Errors here are
@@ -253,11 +253,13 @@ export async function processSyllabus(
       user_id: userId,
       upload_id: upload.id,
       course_id: courseId,
+      // Legacy database value retained for compatibility with the production
+      // parse_runs schema; the extraction provider is now OpenAI Luna.
       method: 'rule_plus_gemini',
-      // The server reports which model actually answered (it falls back to a
-      // secondary model under load). Older Edge Function deployments omit the
-      // field — assume the historical primary rather than writing null.
-      gemini_model: extraction.gemini_model || 'gemini-2.5-flash',
+      // The server reports which model actually answered. Older Edge Function
+      // deployments omit the field, so use the current Luna default rather
+      // than writing null.
+      gemini_model: extraction.gemini_model || 'gpt-5.6-luna',
       parse_confidence: extraction.items.length > 0
         ? extraction.items.reduce((sum, i) => sum + i.confidence, 0) / extraction.items.length
         : null,
@@ -324,7 +326,7 @@ async function findOrCreateSemester(
   // Free-tier gate BEFORE the insert. The DB trigger (enforce_free_semester_
   // limit) still exists as the source of truth, but relying on it alone means
   // a free user scanning into what turns out to be a genuinely new semester
-  // only finds out AFTER Gemini has already run — the extraction cost is
+  // only finds out AFTER Luna has already run — the extraction cost is
   // unavoidable (we need the extracted name to know this isn't an existing
   // semester), but everything downstream of this function (course, grade
   // scale, meetings, the syllabus_uploads row itself) is not. Stopping here

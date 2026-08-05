@@ -46,7 +46,7 @@ export default function CoursesScreen() {
     router.push(route as any);
   };
 
-  // The + button surfaces both creation paths: AI scan (Gemini-backed,
+  // The + button surfaces both creation paths: AI scan (Luna-backed,
   // fills name + instructor + schedule + tasks from a syllabus) and
   // manual entry (no syllabus on hand, or class hasn't published one).
   // The Scan tab in the bottom nav stays as a direct entry point for

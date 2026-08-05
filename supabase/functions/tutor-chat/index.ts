@@ -556,7 +556,7 @@ serve(async (req) => {
       }
       const practice = parseModelJson(assistantText);
       const prompt = typeof practice?.prompt === 'string' ? practice.prompt.trim().slice(0, 4000) : '';
-      const choices = Array.isArray(practice?.choices)
+      const choices: string[] = Array.isArray(practice?.choices)
         ? practice.choices.filter((choice: unknown) => typeof choice === 'string')
           .map((choice: string) => choice.trim().slice(0, 500)).filter(Boolean).slice(0, 4)
         : [];
@@ -627,7 +627,9 @@ serve(async (req) => {
 // Extraction is best-effort grounding, so a failure drops that note from the
 // current context rather than failing the student's Tutor message.
 async function extractNoteText(
-  adminClient: ReturnType<typeof createClient>,
+  // Supabase's overloaded generic factory collapses to an unusable
+  // unknown/never schema through ReturnType in Deno.
+  adminClient: any,
   note: { id: string; storage_path: string; filename: string; mime_type: string | null },
   userId: string,
 ): Promise<string | null> {
@@ -663,6 +665,7 @@ async function extractNoteText(
       type: 'input_file',
       filename: note.filename || 'course-note.pdf',
       file_data: `data:${mimeType};base64,${base64}`,
+      detail: 'high',
     };
   const result = await callOpenAIResponses({
     model: OPENAI_MODEL,

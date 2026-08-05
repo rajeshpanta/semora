@@ -3,13 +3,13 @@
 
    For every fixtures/NAME.(pdf|png|jpg|jpeg|webp|heic) with a sibling
    fixtures/NAME.expected.json, POSTs the file to the DEPLOYED parse-syllabus
-   edge function exactly the way the app does (see lib/gemini.ts: JSON body
+   edge function exactly the way the app does (see lib/ai-extraction.ts: JSON body
    { base64, mimeType }, Authorization: Bearer <user JWT>), then scores the
    extraction against the handwritten expectations and prints per-fixture
    tables + an aggregate summary. Exits non-zero when aggregate item recall
    or due-date accuracy falls below the thresholds (default 0.9 each).
 
-   ⚠ EVERY FIXTURE BURNS A REAL GEMINI CALL, counted against the signed-in
+   ⚠ EVERY FIXTURE BURNS A REAL LUNA CALL, counted against the signed-in
    account's rolling 24h server cap (20/day) — a 20-fixture run consumes the
    entire day's quota. Use a dedicated Pro test account (see README.md).
 
@@ -417,7 +417,7 @@ function scoreFixture(expected, extraction, opts) {
 }
 
 // ---------------------------------------------------------------------------
-// Network: call the deployed edge function exactly like lib/gemini.ts does
+// Network: call the deployed edge function exactly like lib/ai-extraction.ts does
 // ---------------------------------------------------------------------------
 async function callParseSyllabus(supabaseUrl, jwt, filePath, mimeType) {
   const base64 = fs.readFileSync(filePath).toString('base64');
@@ -709,7 +709,7 @@ async function main() {
   console.log(`Target: ${supabaseUrl}/functions/v1/parse-syllabus`);
   console.log(`Fixtures: ${fixtures.map((f) => f.name).join(', ')}`);
   console.log(
-    `\n⚠ Each fixture burns ONE real Gemini call against this account's rolling` +
+    `\n⚠ Each fixture burns ONE real Luna call against this account's rolling` +
       `\n  24h server cap (20/day). This run will consume ${fixtures.length} of them.\n`,
   );
 
@@ -756,7 +756,7 @@ async function main() {
       }
     }
 
-    // Sequential + delay on purpose: the edge function retries Gemini itself,
+    // Sequential + delay on purpose: the edge function retries OpenAI itself,
     // and parallel eval traffic competes with real users on the shared key.
     if (i < fixtures.length - 1) await sleep(args.delay);
   }

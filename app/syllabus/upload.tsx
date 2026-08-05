@@ -9,7 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { processSyllabus, type ProcessResult, FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
-import { MAX_SCAN_PAGES, type SyllabusPage } from '@/lib/gemini';
+import { MAX_SCAN_PAGES, type SyllabusPage } from '@/lib/ai-extraction';
 import { takePendingScanText } from '@/lib/pendingScanText';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
@@ -124,7 +124,7 @@ export default function SyllabusUploadScreen() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rotateRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Build anticipation while Gemini works (10-30s) — specific, sequential
+  // Build anticipation while Luna works (10-30s) — specific, sequential
   // lines read as "real work happening" far better than one static spinner.
   const ANTICIPATION = [
     'Reading your syllabus…',
@@ -182,7 +182,7 @@ export default function SyllabusUploadScreen() {
       // pipeline hangs (network black hole, edge function stall). On
       // timeout the existing Scan Failed alert offers Try Again / Go Back.
       // Hard ceiling via AbortController so a hung pipeline can't strand the
-      // locked modal. Critically, abort() CANCELS the in-flight Gemini fetch
+      // locked modal. Critically, abort() CANCELS the in-flight Luna fetch
       // so processSyllabus bails before any DB writes — no orphan course /
       // double-burned scan that the old Promise.race timeout left behind.
       const controller = new AbortController();
@@ -312,7 +312,7 @@ export default function SyllabusUploadScreen() {
         );
         return;
       }
-      // A real failure (network, Gemini, parse, timeout) — capture why.
+      // A real failure (network, AI provider, parse, timeout) — capture why.
       track('scan_failed', { screen: 'scan', reason: String(error?.message ?? error).slice(0, 200) });
       Alert.alert(
         'Scan Failed',

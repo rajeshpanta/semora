@@ -61,7 +61,7 @@ export default function FlashcardsScreen() {
     if (!courseId) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const result = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf', 'image/*'],
+      type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
       copyToCacheDirectory: true,
     });
     if (result.canceled || !result.assets?.[0]) return;

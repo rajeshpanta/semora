@@ -106,9 +106,12 @@ export default function PrivacyPage() {
           <strong>Supabase:</strong> Database and authentication provider.
         </li>
         <li>
-          <strong>Google Gemini AI:</strong> Used to process syllabus documents and power the AI
-          tutor. Your syllabus content, and any study notes you upload to the tutor, are sent to
-          Google&apos;s API for processing only and are not stored by Google for training purposes.
+          <strong>OpenAI GPT-5.6 Luna:</strong> Used to process syllabus documents, generate
+          flashcards, and power the AI tutor. Your syllabus content and any study notes you choose
+          to upload are sent to the OpenAI API for processing. OpenAI states that API data is not
+          used to train its models unless a customer explicitly opts in. Semora disables response
+          storage for these requests; OpenAI may still retain abuse-monitoring logs for up to 30
+          days unless a stricter retention control applies to the account.
         </li>
         <li>
           <strong>Apple StoreKit:</strong> For processing in-app subscription purchases.

@@ -3,7 +3,7 @@
 The only way Semora can honestly claim an extraction-accuracy number. Runs a
 set of fixture syllabi (PDF/PNG/JPG) through the **deployed** `parse-syllabus`
 edge function — the exact request the app makes (`{ base64, mimeType }` +
-`Authorization: Bearer <user JWT>`, see `lib/gemini.ts`) — and scores the
+`Authorization: Bearer <user JWT>`, see `lib/ai-extraction.ts`) — and scores the
 extraction against handwritten `*.expected.json` ground truth.
 
 ```
@@ -18,10 +18,10 @@ scripts/eval-syllabi/
 
 ## ⚠️ Every run consumes real scan quota
 
-Each fixture burns **one real Gemini call**, counted against the signed-in
+Each fixture burns **one real Luna call**, counted against the signed-in
 account's **rolling 24-hour server cap of 20 scans/day** (`DAILY_CAP` in
 `supabase/functions/parse-syllabus/index.ts`). A 20-fixture run consumes an
-entire day of quota, and it shares the production Gemini API key with real
+entire day of quota, and it shares the production OpenAI API key with real
 users.
 
 **Use a dedicated Pro test account.** Free accounts are hard-capped at
@@ -67,7 +67,7 @@ createClient(get("EXPO_PUBLIC_SUPABASE_URL"), get("EXPO_PUBLIC_SUPABASE_ANON_KEY
 
 **Option C — pull from a debug build:** run the app in dev, sign in as the
 test account, and log `(await supabase.auth.getSession()).data.session.access_token`
-anywhere (e.g. a temporary `console.log` in `lib/gemini.ts`). Works for
+anywhere (e.g. a temporary `console.log` in `lib/ai-extraction.ts`). Works for
 Google/Apple-SSO test accounts that have no password.
 
 ## 2. Generate the synthetic fixture PDFs
@@ -100,7 +100,7 @@ EVAL_JWT=... node scripts/eval-syllabi/run.js
 | flag | default | meaning |
 |---|---|---|
 | `--only cs-table,humanities-prose` | all | run a subset |
-| `--delay <ms>` | 2500 | pause between fixtures (be nice to the shared Gemini key) |
+| `--delay <ms>` | 2500 | pause between fixtures (be nice to the shared OpenAI key) |
 | `--min-recall <0..1>` | 0.9 | aggregate item-recall gate |
 | `--min-date-acc <0..1>` | 0.9 | aggregate due-date accuracy gate |
 | `--date-tolerance <days>` | 0 | slack when comparing due dates |

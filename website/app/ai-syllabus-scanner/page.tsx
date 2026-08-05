@@ -88,7 +88,7 @@ export default function AiSyllabusScannerPage() {
         once and the important dates come out organized and ready to use.
       </p>
       <p>
-        Semora applies this to a student&apos;s course syllabus, using Gemini AI to read the
+        Semora applies this to a student&apos;s course syllabus, using OpenAI GPT-5.6 Luna to read the
         document and extract the details that actually affect a student&apos;s semester.
       </p>
 

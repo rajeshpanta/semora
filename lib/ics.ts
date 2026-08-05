@@ -6,7 +6,7 @@
 //
 // Deliberately dependency-free: the text generation is pure string work, the
 // file goes through expo-file-system (already a dependency, legacy API to
-// match lib/syllabus.ts / lib/gemini.ts), and the share sheet is React
+// match lib/syllabus.ts / lib/ai-extraction.ts), and the share sheet is React
 // Native's built-in Share — no expo-sharing, no ical libraries.
 //
 // Times are written as FLOATING local times (no TZID / no trailing Z) on

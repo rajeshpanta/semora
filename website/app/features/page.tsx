@@ -32,7 +32,7 @@ const SHOWCASE: ShowcaseItem[] = [
     alt: 'Semora scan syllabus screen showing options to take a photo, upload a PDF, choose from photos, or pick from files',
     tier: 'free',
     title: 'Scan a syllabus, get a semester',
-    body: "Take a photo, upload a PDF, drag a file onto the web app, or paste text copied from a PDF or your school's LMS page. Gemini AI reads it and extracts the course name, instructor, meeting times, grading scale, and every assignment, exam, quiz, project, and reading with its due date.",
+    body: "Take a photo, upload a PDF, drag a file onto the web app, or paste text copied from a PDF or your school's LMS page. OpenAI GPT-5.6 Luna reads it and extracts the course name, instructor, meeting times, grading scale, and every assignment, exam, quiz, project, and reading with its due date.",
     bullets: [
       'Photo capture, multi-page, up to 5 pages',
       'PDF upload, drag-and-drop, or pasted text',

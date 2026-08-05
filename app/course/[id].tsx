@@ -22,7 +22,7 @@ import { COURSE_COLORS, COURSE_ICONS, COLORS, FONTS, DEFAULT_GRADE_SCALE, SCREEN
 import { calculateCourseGrade } from '@/lib/grades';
 import type { GradeThreshold } from '@/types/database';
 import { useAppStore } from '@/store/appStore';
-import { MAX_SCAN_PAGES } from '@/lib/gemini';
+import { MAX_SCAN_PAGES } from '@/lib/ai-extraction';
 import { useColors } from '@/lib/theme';
 import { useResponsive, gridItemBasis } from '@/lib/responsive';
 import { formatMeetings, formatOfficeHours } from '@/lib/schedule';
@@ -192,7 +192,7 @@ export default function CourseDetailScreen() {
     // Office hours: drop new empty rows (user added a block and never filled
     // it), but keep existing empty-day rows. course_office_hours.days_of_week
     // is nullable per migration 018 to represent "by appointment" — the
-    // Gemini parser writes those, and the editor coerces null → [] on load
+    // The AI parser writes those, and the editor coerces null → [] on load
     // for chip rendering. Filtering them out here would treat them as
     // user-removed and delete the row on every save.
     const ohToPersist = editOfficeHourBlocks.filter(

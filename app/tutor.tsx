@@ -184,8 +184,8 @@ function TutorChat({ courseId }: { courseId: string | null }) {
     }
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const result = await DocumentPicker.getDocumentAsync({
-      // PDFs + images — the edge function OCRs whatever we upload.
-      type: ['application/pdf', 'image/*'],
+      // OpenAI accepts PDFs plus JPEG, PNG, and WEBP image inputs.
+      type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
       copyToCacheDirectory: true,
     });
     if (result.canceled || !result.assets?.[0]) return;

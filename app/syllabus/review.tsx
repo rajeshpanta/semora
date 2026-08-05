@@ -18,7 +18,7 @@ import { scheduleTaskReminders, requestNotificationPermission } from '@/lib/noti
 import { isSyncEnabled, syncTaskToCalendar } from '@/lib/calendarSync';
 import { useAppStore } from '@/store/appStore';
 import { track } from '@/lib/analytics';
-import type { ExtractedItem } from '@/lib/gemini';
+import type { ExtractedItem } from '@/lib/ai-extraction';
 
 interface ReviewItem extends ExtractedItem {
   accepted: boolean;

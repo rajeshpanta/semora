@@ -15,7 +15,7 @@ import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useScanCount, FREE_SCAN_LIMIT } from '@/lib/queries';
 import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
-import { MAX_SCAN_PAGES, MAX_SCAN_RAW_BYTES, scanTooLargeMessage, type SyllabusPage } from '@/lib/gemini';
+import { MAX_SCAN_PAGES, MAX_SCAN_RAW_BYTES, scanTooLargeMessage, type SyllabusPage } from '@/lib/ai-extraction';
 import { GlobalSearchButton } from '@/components/GlobalSearchButton';
 
 // Best-effort raw file size for the multi-page upload budget. Returns 0 when
@@ -337,16 +337,13 @@ export default function ScanScreen() {
     }
   };
 
-  // Mirrors ALLOWED_MIME_TYPES in the parse-syllabus Edge Function.
-  // iCloud Drive / Files contains HEIC / HEIF photos by default on iOS
-  // (the system camera writes HEIC); restricting this list to JPG/PNG
-  // hid those from the picker even though the backend accepts them.
+  // Mirrors OpenAI's supported image-input types and ALLOWED_MIME_TYPES in
+  // parse-syllabus. The Photos flow above asks iOS for a compressed image;
+  // raw HEIC/HEIF files from Files must first be exported as JPG, PNG, or PDF.
   const FILE_PICKER_MIME = [
     'application/pdf',
     'image/jpeg',
     'image/png',
-    'image/heic',
-    'image/heif',
     'image/webp',
   ];
 
@@ -357,8 +354,6 @@ export default function ScanScreen() {
     switch (ext) {
       case 'jpg': case 'jpeg': return 'image/jpeg';
       case 'png': return 'image/png';
-      case 'heic': return 'image/heic';
-      case 'heif': return 'image/heif';
       case 'webp': return 'image/webp';
       default: return 'application/pdf';
     }
@@ -393,7 +388,7 @@ export default function ScanScreen() {
     if (!(await checkScanLimit())) return;
     const mimeType = file.type || inferMimeFromName(file.name);
     if (!FILE_PICKER_MIME.includes(mimeType)) {
-      Alert.alert('Unsupported file', 'Drop a PDF, JPG, PNG, HEIC, HEIF, or WEBP file.');
+      Alert.alert('Unsupported file', 'Drop a PDF, JPG, PNG, or WEBP file.');
       return;
     }
     navigateToUpload(URL.createObjectURL(file), file.name || 'syllabus', mimeType);

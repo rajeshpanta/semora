@@ -1,5 +1,5 @@
 // Semester naming + preset suggestions. Used by:
-//   - lib/syllabus.ts (parser fallback when Gemini doesn't name the term)
+//   - lib/syllabus.ts (parser fallback when the AI doesn't name the term)
 //   - app/semester/new.tsx (quick-pick chips above the name input)
 //
 // US academic calendar conventions, with month *and* day boundaries
