@@ -362,10 +362,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       const parsed = Linking.parse(url);
       const path = (parsed.path ?? '').replace(/^\//, '');
       const code = typeof parsed.queryParams?.code === 'string' ? parsed.queryParams.code : null;
-      // Browser OAuth returns to the site's root (`https://host/?code=...`).
-      // Unlike semora:// links, the hostname is the deployment host rather
-      // than "auth", so recognize the root callback explicitly.
-      const isWebOAuthCallback = Platform.OS === 'web' && path === '' && !!code;
+      // Browser OAuth returns to `/callback`. Older deployed links used the
+      // site root, so keep that narrow legacy path working as well.
+      const isWebOAuthCallback = Platform.OS === 'web' && (path === 'callback' || path === '') && !!code;
       const isWebPasswordReset =
         Platform.OS === 'web' && path === 'reset-password' && !!code;
 
@@ -522,7 +521,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (loading) return;
 
-    // Browser OAuth returns to `https://host/?code=...` and handleDeepLink
+    // Browser OAuth returns to `/callback?code=...` and handleDeepLink
     // exchanges that code for a session. Until it does, `session` is still
     // null — redirecting here would rewrite the URL and throw the code away.
     if (

@@ -68,7 +68,10 @@ export async function signInWithApple() {
   if (Platform.OS === 'web') {
     const redirectTo =
       typeof window !== 'undefined'
-        ? `${window.location.origin}/`
+        // Keep the OAuth return on a dedicated route. Returning to the app
+        // root made the auth code compete with the normal signed-out redirect
+        // and could leave a visitor looking at the sign-in screen again.
+        ? `${window.location.origin}/callback`
         : undefined;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'apple',
@@ -125,7 +128,7 @@ export async function signInWithGoogle() {
   if (Platform.OS === 'web') {
     const redirectTo =
       typeof window !== 'undefined'
-        ? `${window.location.origin}/`
+        ? `${window.location.origin}/callback`
         : undefined;
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
