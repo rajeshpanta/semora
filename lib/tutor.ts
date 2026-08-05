@@ -10,9 +10,9 @@ import { supabase } from '@/lib/supabase';
 //
 // Note-file text extraction is done SERVER-SIDE by tutor-chat: the client only
 // uploads the raw file to the private course-notes bucket + inserts a
-// course_notes row. The edge function OCRs the file with Gemini on first use
-// and caches extracted_text. This keeps note upload dumb and cheap on-device
-// (no client-side PDF/image parsing) and is the simpler robust path.
+// course_notes row. The edge function extracts the file with OpenAI Luna on
+// first use and caches extracted_text. This keeps note upload dumb and cheap
+// on-device (no client-side PDF/image parsing) and is the simpler robust path.
 
 export interface TutorMessage {
   id: string;

@@ -2,8 +2,8 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 // AI Tutor chat endpoint. Structured on parse-syllabus/index.ts (CORS, JWT
-// verification of the caller, service-role client, Gemini call with
-// retry/model-fallback, error logging). Differences from parse-syllabus:
+// verification of the caller, service-role client, OpenAI call with retries,
+// and error logging). Differences from parse-syllabus:
 //   * Pro-only (verified server-side via the is_pro RPC).
 //   * Grounded chat: builds context from the course's syllabus/tasks + the
 //     user's uploaded notes, then answers as a tutor.
@@ -11,12 +11,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 //     here must never consume the free syllabus-scan quota (which counts
 //     gemini_call_log 'success' rows; see lib/queries.useScanCount).
 
-const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+const OPENAI_MODEL = Deno.env.get('TUTOR_OPENAI_MODEL')?.trim() || 'gpt-5.6-luna';
+const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
-// Per-user daily message cap — enforced EVEN for Pro to bound Gemini cost.
+// Per-user daily message cap — enforced EVEN for Pro to bound AI cost.
 // Overridable via env without a redeploy.
 const DAILY_MESSAGE_CAP = (() => {
   const raw = parseInt(Deno.env.get('TUTOR_DAILY_CAP') ?? '', 10);
@@ -24,7 +26,7 @@ const DAILY_MESSAGE_CAP = (() => {
 })();
 
 // Context-size guards. Grounding text can be large (multiple uploaded note
-// files, dozens of tasks) — cap each source so the Gemini request stays a
+// files, dozens of tasks) — cap each source so the OpenAI request stays a
 // bounded size and cost. Chars, not tokens: a coarse but safe ceiling.
 const MAX_SYLLABUS_CHARS = 8000;
 const MAX_NOTES_CHARS = 24000; // shared budget across all note files
@@ -76,6 +78,93 @@ function parseModelJson(raw: string) {
   try { return JSON.parse(cleaned); } catch { return null; }
 }
 
+const OPENAI_RETRYABLE = new Set([408, 409, 429, 500, 502, 503, 504]);
+const OPENAI_MAX_ATTEMPTS = 3;
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+type OpenAIResult = {
+  data: any | null;
+  status: number;
+  networkError: boolean;
+};
+
+// Raw REST responses do not expose the SDK's output_text convenience getter,
+// so support both that field and the canonical output message structure.
+function readOpenAIOutputText(data: any): string | null {
+  if (typeof data?.output_text === 'string' && data.output_text.trim()) {
+    return data.output_text.trim();
+  }
+  if (!Array.isArray(data?.output)) return null;
+  const chunks: string[] = [];
+  for (const item of data.output) {
+    if (item?.type !== 'message' || !Array.isArray(item.content)) continue;
+    for (const part of item.content) {
+      if (part?.type === 'output_text' && typeof part.text === 'string') chunks.push(part.text);
+    }
+  }
+  const joined = chunks.join('\n').trim();
+  return joined || null;
+}
+
+async function callOpenAIResponses(payload: Record<string, unknown>, label: string): Promise<OpenAIResult> {
+  if (!OPENAI_API_KEY) return { data: null, status: 0, networkError: false };
+
+  let lastStatus = 0;
+  let networkError = false;
+  for (let attempt = 1; attempt <= OPENAI_MAX_ATTEMPTS; attempt++) {
+    let response: Response;
+    try {
+      response = await fetch(OPENAI_RESPONSES_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (error) {
+      networkError = true;
+      console.warn(`[tutor-chat] OpenAI ${label} network error (attempt ${attempt}/${OPENAI_MAX_ATTEMPTS}):`, error);
+      if (attempt < OPENAI_MAX_ATTEMPTS) {
+        await sleep(600 * attempt);
+        continue;
+      }
+      break;
+    }
+
+    networkError = false;
+    lastStatus = response.status;
+    if (response.ok) {
+      try {
+        return { data: await response.json(), status: response.status, networkError: false };
+      } catch (error) {
+        console.error(`[tutor-chat] OpenAI ${label} returned invalid JSON:`, error);
+        return { data: null, status: response.status, networkError: false };
+      }
+    }
+
+    const errorBody = await response.text().catch(() => '');
+    console.warn(
+      `[tutor-chat] OpenAI ${label} HTTP ${response.status} (attempt ${attempt}/${OPENAI_MAX_ATTEMPTS}):`,
+      errorBody.slice(0, 300),
+    );
+    if (OPENAI_RETRYABLE.has(response.status) && attempt < OPENAI_MAX_ATTEMPTS) {
+      await sleep(600 * attempt);
+      continue;
+    }
+    break;
+  }
+  return { data: null, status: lastStatus, networkError };
+}
+
+// OpenAI recommends a stable safety identifier for end-user applications.
+// Hash the Supabase UUID so the external provider never receives the raw ID.
+async function makeSafetyIdentifier(userId: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(userId));
+  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `semora_${hex.slice(0, 32)}`;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -116,8 +205,8 @@ serve(async (req) => {
     }
     const userId = userData.user.id;
 
-    if (!GEMINI_API_KEY) {
-      return jsonResponse({ error: 'Gemini API key not configured on server' }, 500);
+    if (!OPENAI_API_KEY) {
+      return jsonResponse({ error: 'OpenAI API key not configured on server' }, 500);
     }
 
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
@@ -137,12 +226,12 @@ serve(async (req) => {
       );
     }
 
-    // 3. Per-user daily cap from tutor_usage (rolling 24h). Bounds Gemini cost
+    // 3. Per-user daily cap from tutor_usage (rolling 24h). Bounds AI cost
     //    even for Pro. tutor_usage is a dedicated ledger — deliberately NOT
     //    gemini_call_log, so tutor calls never eat the free scan quota.
     //    ATOMIC: try_consume_tutor_usage counts + inserts under a per-user
     //    advisory lock so a concurrent burst can't all pass the gate and
-    //    overrun the cap. The slot is reserved BEFORE the paid Gemini call.
+    //    overrun the cap. The slot is reserved BEFORE the paid model call.
     const { data: reserved, error: usageErr } = await adminClient.rpc('try_consume_tutor_usage', {
       uid: userId,
       cap: DAILY_MESSAGE_CAP,
@@ -347,7 +436,7 @@ serve(async (req) => {
       }
 
       // 5d. Uploaded notes. extracted_text is cached on the row; when missing,
-      //     read the file from storage and have Gemini OCR/extract it, then
+      //     read the file from storage and have OpenAI OCR/extract it, then
       //     persist the text so later turns skip the re-read. Robust-simple
       //     path: the edge function owns extraction (the client just uploads
       //     the raw file), which keeps note upload dumb and cheap on-device.
@@ -393,10 +482,9 @@ serve(async (req) => {
       .limit(MAX_HISTORY_TURNS);
     const priorTurns = (history ?? []).reverse();
 
-    // 7. Assemble the Gemini request. System prompt + grounding context go in
-    //    the first user turn (Gemini has no dedicated system role in v1beta
-    //    generateContent the way we call it), then the replayed history, then
-    //    the new message.
+    // 7. Assemble the OpenAI Responses request. Course grounding is supplied
+    //    as developer instructions, followed by bounded conversation history
+    //    and the new user message.
     const contextBlock = [
       syllabusText ? `SYLLABUS / COURSE:\n${syllabusText}` : '',
       deadlinesText ? `DEADLINES:\n${clamp(deadlinesText, MAX_SYLLABUS_CHARS)}` : '',
@@ -416,85 +504,51 @@ serve(async (req) => {
       ? `${TUTOR_SYSTEM_PROMPT}\n${modeInstruction ? `\nMODE: ${modeInstruction}\n` : ''}\n--- COURSE CONTEXT ---\n${contextBlock}\n--- END CONTEXT ---`
       : `${TUTOR_SYSTEM_PROMPT}\n\n(No course material is attached to this conversation yet — help using general knowledge and invite the student to add their syllabus or notes for grounded answers.)`;
 
-    const contents: { role: string; parts: { text: string }[] }[] = [
-      { role: 'user', parts: [{ text: groundingIntro }] },
-      { role: 'model', parts: [{ text: "Got it — I'm ready to help with this course. What would you like to work on?" }] },
+    const input: { role: 'user' | 'assistant'; content: string }[] = [
       ...priorTurns.map((m: any) => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: String(m.content ?? '') }],
+        role: m.role === 'assistant' ? 'assistant' as const : 'user' as const,
+        content: String(m.content ?? ''),
       })),
-      { role: 'user', parts: [{ text: message }] },
+      { role: 'user', content: message },
     ];
 
-    // 8. Call Gemini with retry + model fallback (same policy as parse-syllabus).
-    const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
-    const RETRYABLE = new Set([408, 429, 500, 502, 503, 504]);
-    const MAX_ATTEMPTS = 3;
-    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    // 8. Call GPT-5.6 Luna. Low reasoning gives the Tutor useful planning and
+    //    explanation ability while keeping latency and reasoning-token cost
+    //    bounded. Responses are not stored by OpenAI.
+    const openAIResult = await callOpenAIResponses({
+      model: OPENAI_MODEL,
+      instructions: groundingIntro,
+      input,
+      reasoning: { effort: 'low' },
+      text: { verbosity: 'low' },
+      max_output_tokens: 2048,
+      store: false,
+      safety_identifier: await makeSafetyIdentifier(userId),
+    }, 'tutor completion');
 
-    let geminiResponse: Response | null = null;
-    let servedModel = '';
-    let lastStatus = 0;
-    let networkError = false;
-
-    modelLoop:
-    for (const model of MODELS) {
-      const reqBody = {
-        contents,
-        generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: model.startsWith('gemini-2.5') ? 2048 : 2048,
-        },
-      };
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        let resp: Response;
-        try {
-          resp = await fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(reqBody),
-          });
-        } catch (err) {
-          networkError = true;
-          console.warn(`[tutor-chat] ${model} network error (attempt ${attempt}/${MAX_ATTEMPTS}):`, err);
-          if (attempt < MAX_ATTEMPTS) { await sleep(600 * attempt); continue; }
-          break;
-        }
-        networkError = false;
-        if (resp.ok) { geminiResponse = resp; servedModel = model; break modelLoop; }
-        lastStatus = resp.status;
-        const errBody = await resp.text().catch(() => '');
-        console.warn(`[tutor-chat] ${model} HTTP ${resp.status} (attempt ${attempt}/${MAX_ATTEMPTS}):`, errBody.slice(0, 200));
-        if (RETRYABLE.has(resp.status)) {
-          if (attempt < MAX_ATTEMPTS) { await sleep(600 * attempt); continue; }
-          break;
-        }
-        break modelLoop;
-      }
-    }
-
-    if (!geminiResponse) {
-      console.error(`[tutor-chat] Gemini failed after retries+fallback (network=${networkError}, status=${lastStatus})`);
-      const msg = networkError
+    if (!openAIResult.data) {
+      console.error(
+        `[tutor-chat] OpenAI failed after retries (network=${openAIResult.networkError}, status=${openAIResult.status})`,
+      );
+      const msg = openAIResult.networkError
         ? 'AI service unreachable. Please try again.'
-        : (lastStatus === 503 || lastStatus === 429)
+        : (openAIResult.status === 503 || openAIResult.status === 429)
           ? 'The tutor is busy right now — please try again in a minute.'
-          : `AI processing failed (status ${lastStatus}). Please try again.`;
+          : `AI processing failed (status ${openAIResult.status}). Please try again.`;
       return jsonResponse({ error: msg }, 502);
     }
 
-    const data = await geminiResponse.json();
-    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!reply || typeof reply !== 'string' || !reply.trim()) {
+    const reply = readOpenAIOutputText(openAIResult.data);
+    const servedModel = typeof openAIResult.data.model === 'string' ? openAIResult.data.model : OPENAI_MODEL;
+    if (!reply) {
       // A safety block or empty completion — surface a friendly message.
-      console.error('[tutor-chat] Gemini empty/blocked response:', JSON.stringify(data).slice(0, 500));
+      console.error('[tutor-chat] OpenAI empty/blocked response:', JSON.stringify(openAIResult.data).slice(0, 500));
       return jsonResponse(
         { error: "The tutor couldn't answer that one. Try rephrasing your question." },
         502,
       );
     }
-    const assistantText = reply.trim();
+    const assistantText = reply;
 
     if (mode === 'practice' || mode === 'quiz') {
       if (!groundCourseId) {
@@ -548,7 +602,7 @@ serve(async (req) => {
     }
 
     // Usage was already reserved atomically in step 3 (try_consume_tutor_usage)
-    // BEFORE the paid Gemini call, so there is no post-success insert here —
+    // BEFORE the paid model call, so there is no post-success insert here —
     // that would double-count. Reserving up front means a rare failed call
     // still consumes one of the 50/day slots, an acceptable trade for a
     // burst-proof cap.
@@ -568,16 +622,16 @@ serve(async (req) => {
   }
 });
 
-// Read a note file from the private course-notes bucket and have Gemini
+// Read a note file from the private course-notes bucket and have OpenAI Luna
 // extract its text, caching the result on the row so later turns skip it.
-// Bounded to a single retry-less call — extraction is best-effort grounding,
-// not the critical path, so a failure just drops that note from context.
+// Extraction is best-effort grounding, so a failure drops that note from the
+// current context rather than failing the student's Tutor message.
 async function extractNoteText(
   adminClient: ReturnType<typeof createClient>,
-  note: { id: string; storage_path: string; mime_type: string | null },
+  note: { id: string; storage_path: string; filename: string; mime_type: string | null },
   userId: string,
 ): Promise<string | null> {
-  if (!GEMINI_API_KEY) return null;
+  if (!OPENAI_API_KEY) return null;
 
   const { data: file, error: dlErr } = await adminClient.storage
     .from('course-notes')
@@ -588,7 +642,7 @@ async function extractNoteText(
   }
 
   const buf = new Uint8Array(await file.arrayBuffer());
-  // Guard: only send reasonably sized files to Gemini inline (base64 inflates
+  // Guard: only send reasonably sized files to OpenAI inline (base64 inflates
   // 4/3). ~6MB raw keeps the request well within limits.
   if (buf.byteLength > 6 * 1024 * 1024) {
     console.warn('[tutor-chat] note too large to extract inline, skipping');
@@ -603,30 +657,35 @@ async function extractNoteText(
   const base64 = btoa(binary);
   const mimeType = note.mime_type || 'application/pdf';
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [
-        {
-          parts: [
-            { text: 'Extract ALL readable text from this document (lecture notes/slides), preserving structure. Return ONLY the extracted text, no commentary.' },
-            { inline_data: { mime_type: mimeType, data: base64 } },
-          ],
-        },
+  const attachment = mimeType.startsWith('image/')
+    ? { type: 'input_image', image_url: `data:${mimeType};base64,${base64}`, detail: 'high' }
+    : {
+      type: 'input_file',
+      filename: note.filename || 'course-note.pdf',
+      file_data: `data:${mimeType};base64,${base64}`,
+    };
+  const result = await callOpenAIResponses({
+    model: OPENAI_MODEL,
+    instructions: 'Extract all readable text from the supplied lecture notes or slides. Preserve headings, lists, and logical structure. Return only the extracted text with no commentary.',
+    input: [{
+      role: 'user',
+      content: [
+        attachment,
+        { type: 'input_text', text: 'Extract the complete readable text from this course note.' },
       ],
-      generationConfig: { temperature: 0, maxOutputTokens: 8192 },
-    }),
-  });
-  if (!resp.ok) {
-    console.warn('[tutor-chat] note extraction HTTP', resp.status);
+    }],
+    reasoning: { effort: 'none' },
+    text: { verbosity: 'low' },
+    max_output_tokens: 8192,
+    store: false,
+    safety_identifier: await makeSafetyIdentifier(userId),
+  }, 'note extraction');
+  if (!result.data) {
+    console.warn('[tutor-chat] OpenAI note extraction failed', result.status);
     return null;
   }
-  const data = await resp.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-  if (!text || typeof text !== 'string') return null;
-  const extracted = text.trim();
+  const extracted = readOpenAIOutputText(result.data);
+  if (!extracted) return null;
 
   // Cache on the row (scoped to owner) so we never re-OCR this file.
   await adminClient
