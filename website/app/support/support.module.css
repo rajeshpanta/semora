@@ -1,22 +1,18 @@
 .hero {
   color: var(--ink);
-  background:
-    radial-gradient(circle at 86% 8%, rgba(201, 184, 255, 0.72), transparent 32%),
-    radial-gradient(circle at 7% 88%, rgba(238, 237, 254, 0.95), transparent 36%),
-    linear-gradient(135deg, #faf9f5 0%, #f7f3ff 54%, #f2ecff 100%);
-  border-bottom: 1px solid var(--border);
+  background: var(--bg);
 }
 
 .inner {
   width: 100%;
   max-width: var(--max-width-wide);
   margin: 0 auto;
-  padding: clamp(54px, 7vw, 92px) clamp(20px, 4vw, 40px) clamp(64px, 8vw, 104px);
+  padding: 76px 20px 64px;
 }
 
 .intro {
   max-width: 680px;
-  margin-bottom: clamp(40px, 5vw, 66px);
+  margin-bottom: 48px;
 }
 
 .eyebrow,
