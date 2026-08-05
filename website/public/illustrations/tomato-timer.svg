@@ -14,17 +14,42 @@
     <clipPath id="c5"><rect width="320" height="200" rx="12"/></clipPath>
   </defs>
     <style>
-      .fl5 { transform-box: fill-box; transform-origin: center;
-             animation: f5 3.6s ease-in-out 2.0s infinite; }
-      @keyframes f5 { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-5px) } }
+      .fl5 { transform-box: fill-box; transform-origin: center bottom;
+             animation: f5 2.6s ease-in-out 1.6s infinite; }
+      @keyframes f5 {
+        0%,100% { transform: translateY(0) scale(1,1) }
+        30%     { transform: translateY(-7px) scale(0.98,1.03) }
+        60%     { transform: translateY(0) scale(1.03,0.97) }
+        80%     { transform: translateY(-2px) scale(1,1) }
+      }
+      .wv5 { transform-box: fill-box; transform-origin: 0% 100%;
+             animation: w5 1.1s ease-in-out 1.6s infinite; }
+      @keyframes w5 { 0%,100% { transform: rotate(-4deg) } 50% { transform: rotate(20deg) } }
       .ey5 { transform-box: fill-box; transform-origin: center;
-             animation: b5 5.4s ease-in-out 1.6s infinite; }
-      @keyframes b5 { 0%,93%,100% { transform: scaleY(1) } 96% { transform: scaleY(0.12) } }
+             animation: b5 4.2s ease-in-out 1.6s infinite; }
+      @keyframes b5 { 0%,90%,100% { transform: scaleY(1) } 94% { transform: scaleY(0.1) } }
       .pl5 { transform-box: fill-box; transform-origin: center;
-             animation: p5 2.8s ease-in-out infinite; }
-      @keyframes p5 { 0%,100% { opacity: .55 } 50% { opacity: 1 } }
+             animation: p5 1.8s ease-in-out infinite; }
+      @keyframes p5 { 0%,100% { opacity: .45; transform: scale(.86) } 50% { opacity: 1; transform: scale(1.12) } }
+      .gr5 { transform-box: fill-box; transform-origin: center bottom;
+             animation: g5 3.4s cubic-bezier(.34,1.4,.5,1) infinite; }
+      @keyframes g5 { 0% { transform: scaleY(.18) } 34%,100% { transform: scaleY(1) } }
+      .dr5 { animation: d5 3.4s ease-in-out infinite; }
+      @keyframes d5 { 0% { stroke-dashoffset: 190 } 45%,100% { stroke-dashoffset: 0 } }
+      .rp5 { transform-box: fill-box; transform-origin: center;
+             animation: r5 2.6s ease-out infinite; }
+      @keyframes r5 { 0% { transform: scale(.45); opacity: .7 } 100% { transform: scale(1.15); opacity: 0 } }
+      .pop5 { transform-box: fill-box; transform-origin: center;
+              animation: o5 3.4s cubic-bezier(.34,1.6,.5,1) infinite; }
+      @keyframes o5 { 0%,18% { transform: scale(0); opacity: 0 } 34%,100% { transform: scale(1); opacity: 1 } }
+      .sw5 { animation: s5 4.2s linear infinite; }
+      @keyframes s5 { 0% { stroke-dashoffset: 314 } 100% { stroke-dashoffset: 0 } }
+      .sl5 { animation: l5 3.2s ease-in-out infinite; }
+      @keyframes l5 { 0%,12% { transform: translateX(26px); opacity: 0 } 32%,100% { transform: translateX(0); opacity: 1 } }
       @media (prefers-reduced-motion: reduce) {
-        .fl5, .ey5, .pl5 { animation: none }
+        .fl5, .wv5, .ey5, .pl5, .gr5, .dr5, .rp5, .pop5, .sw5, .sl5 {
+          animation: none; stroke-dashoffset: 0; opacity: 1; transform: none;
+        }
       }
     </style>
   <g clip-path="url(#c5)">
@@ -32,12 +57,11 @@
     <rect width="320" height="200" fill="url(#o5)"/>
     <circle cx="112" cy="100" r="60" fill="#FBBF24" fill-opacity="0.16" filter="url(#b5)"/>
     <circle cx="112" cy="100" r="50" stroke="#fff" stroke-opacity="0.16" stroke-width="10" fill="none"/>
-    <path d="M112 50 a50 50 0 1 1 -44 73" stroke="#FBBF24" stroke-width="10" stroke-linecap="round" fill="none"/>
-    <circle cx="112" cy="50" r="7" fill="#F59E0B" class="pl5"/>
+    <circle class="sw5" cx="112" cy="100" r="50" stroke="#FBBF24" stroke-width="10" stroke-linecap="round" fill="none" stroke-dasharray="220 94" transform="rotate(-90 112 100)"/>
     <text x="112" y="108" font-family="Georgia, serif" font-size="24" font-weight="700" fill="#fff" text-anchor="middle">18:42</text>
     <rect x="196" y="66" width="14" height="5" rx="2.5" fill="#FBBF24" fill-opacity="1"/>
     <rect x="216" y="66" width="14" height="5" rx="2.5" fill="#FBBF24" fill-opacity="1"/>
-    <rect x="236" y="66" width="14" height="5" rx="2.5" fill="#FBBF24" fill-opacity="1"/>
+    <rect x="236" y="66" width="14" height="5" rx="2.5" fill="#FBBF24" fill-opacity="1" class="pl5"/>
     <rect x="256" y="66" width="14" height="5" rx="2.5" fill="#fff" fill-opacity="0.22"/>
     <rect x="196" y="46" width="62" height="5" rx="2.5" fill="#fff" fill-opacity="0.42"/>
   <g transform="translate(232 128) scale(0.72)"><g class="fl5">

@@ -14,17 +14,42 @@
     <clipPath id="c6"><rect width="320" height="200" rx="12"/></clipPath>
   </defs>
     <style>
-      .fl6 { transform-box: fill-box; transform-origin: center;
-             animation: f6 3.6s ease-in-out 2.6s infinite; }
-      @keyframes f6 { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-5px) } }
+      .fl6 { transform-box: fill-box; transform-origin: center bottom;
+             animation: f6 2.6s ease-in-out 2.1s infinite; }
+      @keyframes f6 {
+        0%,100% { transform: translateY(0) scale(1,1) }
+        30%     { transform: translateY(-7px) scale(0.98,1.03) }
+        60%     { transform: translateY(0) scale(1.03,0.97) }
+        80%     { transform: translateY(-2px) scale(1,1) }
+      }
+      .wv6 { transform-box: fill-box; transform-origin: 0% 100%;
+             animation: w6 1.1s ease-in-out 2.1s infinite; }
+      @keyframes w6 { 0%,100% { transform: rotate(-4deg) } 50% { transform: rotate(20deg) } }
       .ey6 { transform-box: fill-box; transform-origin: center;
-             animation: b6 5.4s ease-in-out 0.9s infinite; }
-      @keyframes b6 { 0%,93%,100% { transform: scaleY(1) } 96% { transform: scaleY(0.12) } }
+             animation: b6 4.2s ease-in-out 0.9s infinite; }
+      @keyframes b6 { 0%,90%,100% { transform: scaleY(1) } 94% { transform: scaleY(0.1) } }
       .pl6 { transform-box: fill-box; transform-origin: center;
-             animation: p6 2.8s ease-in-out infinite; }
-      @keyframes p6 { 0%,100% { opacity: .55 } 50% { opacity: 1 } }
+             animation: p6 1.8s ease-in-out infinite; }
+      @keyframes p6 { 0%,100% { opacity: .45; transform: scale(.86) } 50% { opacity: 1; transform: scale(1.12) } }
+      .gr6 { transform-box: fill-box; transform-origin: center bottom;
+             animation: g6 3.4s cubic-bezier(.34,1.4,.5,1) infinite; }
+      @keyframes g6 { 0% { transform: scaleY(.18) } 34%,100% { transform: scaleY(1) } }
+      .dr6 { animation: d6 3.4s ease-in-out infinite; }
+      @keyframes d6 { 0% { stroke-dashoffset: 190 } 45%,100% { stroke-dashoffset: 0 } }
+      .rp6 { transform-box: fill-box; transform-origin: center;
+             animation: r6 2.6s ease-out infinite; }
+      @keyframes r6 { 0% { transform: scale(.45); opacity: .7 } 100% { transform: scale(1.15); opacity: 0 } }
+      .pop6 { transform-box: fill-box; transform-origin: center;
+              animation: o6 3.4s cubic-bezier(.34,1.6,.5,1) infinite; }
+      @keyframes o6 { 0%,18% { transform: scale(0); opacity: 0 } 34%,100% { transform: scale(1); opacity: 1 } }
+      .sw6 { animation: s6 4.2s linear infinite; }
+      @keyframes s6 { 0% { stroke-dashoffset: 314 } 100% { stroke-dashoffset: 0 } }
+      .sl6 { animation: l6 3.2s ease-in-out infinite; }
+      @keyframes l6 { 0%,12% { transform: translateX(26px); opacity: 0 } 32%,100% { transform: translateX(0); opacity: 1 } }
       @media (prefers-reduced-motion: reduce) {
-        .fl6, .ey6, .pl6 { animation: none }
+        .fl6, .wv6, .ey6, .pl6, .gr6, .dr6, .rp6, .pop6, .sw6, .sl6 {
+          animation: none; stroke-dashoffset: 0; opacity: 1; transform: none;
+        }
       }
     </style>
   <g clip-path="url(#c6)">
@@ -32,21 +57,21 @@
     <rect width="320" height="200" fill="url(#o6)"/>
     <rect x="18" y="22" width="26" height="5" rx="2.5" fill="#fff" fill-opacity="0.16"/>
     <rect x="14" y="36" width="38" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
-    <rect x="18" y="42" width="30" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
+    <rect class="gr6" style="animation-delay:0.0s" x="18" y="42" width="30" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
     <rect x="62" y="22" width="26" height="5" rx="2.5" fill="#fff" fill-opacity="0.16"/>
     <rect x="58" y="36" width="38" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
-    <rect x="62" y="63" width="30" height="58" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
-    <rect x="62" y="147" width="30" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
+    <rect class="gr6" style="animation-delay:0.09s" x="62" y="63" width="30" height="58" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
+    <rect class="gr6" style="animation-delay:0.18s" x="62" y="147" width="30" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
     <rect x="106" y="22" width="26" height="5" rx="2.5" fill="#fff" fill-opacity="0.16"/>
     <rect x="102" y="36" width="38" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
-    <rect x="106" y="42" width="30" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
+    <rect class="gr6" style="animation-delay:0.27s" x="106" y="42" width="30" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
     <rect x="150" y="22" width="26" height="5" rx="2.5" fill="#fff" fill-opacity="0.42"/>
     <rect x="146" y="36" width="38" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
     <circle cx="163" cy="113.0" r="38" fill="#FBBF24" fill-opacity="0.24" filter="url(#b6)"/>
-    <rect x="150" y="63" width="30" height="100" rx="8" fill="#FBBF24"/>
+    <rect class="gr6" style="animation-delay:0.5s" x="150" y="63" width="30" height="100" rx="8" fill="#FBBF24"/>
     <rect x="194" y="22" width="26" height="5" rx="2.5" fill="#fff" fill-opacity="0.16"/>
     <rect x="190" y="36" width="38" height="126" rx="10" fill="#fff" fill-opacity="0.06" stroke="#fff" stroke-opacity="0.12"/>
-    <rect x="194" y="84" width="30" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
+    <rect class="gr6" style="animation-delay:0.44999999999999996s" x="194" y="84" width="30" height="37" rx="8" fill="#fff" fill-opacity="0.16" stroke="#fff" stroke-opacity="0.22"/>
   <g transform="translate(264 108) scale(0.76)"><g class="fl6">
     <ellipse cx="0" cy="34" rx="24" ry="4.5" fill="#000" fill-opacity="0.13"/>
     <path d="M-24 2 L-31 12" stroke="#FFF6E6" stroke-width="7" stroke-linecap="round"/>
