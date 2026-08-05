@@ -17,10 +17,9 @@ import { usePathname } from 'next/navigation';
  */
 export function NavChrome() {
   const pathname = usePathname();
-  // Only the landing page opens on a dark hero the bar should sit ON. Every
-  // other page is the light, blog-style treatment and keeps the solid bar from
-  // the first pixel. Must stay in step with the pages rendering <DarkCanvas />.
-  const overlay = pathname === '/';
+  // The homepage now uses the same light canvas as the rest of the site, so
+  // the navigation is consistently solid and readable from the first pixel.
+  const overlay = false;
 
   useEffect(() => {
     const header = document.querySelector('header[data-nav]') as HTMLElement | null;

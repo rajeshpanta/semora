@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import { signInWithApple, signInWithGoogle } from '@/lib/auth';
 import { MARKETING_URL } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/lib/theme';
-import { WebAuthBackdrop, webAuthCard } from '@/components/WebAuthChrome';
 
 type Provider = 'apple' | 'google';
 
@@ -118,46 +117,46 @@ export default function OAuthLauncherScreen() {
     }
   };
 
+  // A normal OAuth launch must be visually invisible: the secure provider
+  // sheet is the next thing a visitor should see, not a Semora loading card.
+  // We only render a recovery view when a launch fails or does not open.
+  if (!error && !showExit) return null;
+
   return (
-    <WebAuthBackdrop>
-      <View style={[styles.screen, { backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.paper }]}>
-        <View style={[styles.card, webAuthCard, { backgroundColor: Platform.OS === 'web' ? undefined : colors.card }]}>
-          {error ? (
-            <>
-              <Text style={[styles.title, { color: colors.ink }]}>Sign-in could not start</Text>
-              <Text style={[styles.copy, { color: colors.ink2 }]}>{error}</Text>
-              {selectedProvider ? (
-                <TouchableOpacity style={[styles.primary, { backgroundColor: colors.brand }]} onPress={tryAgain}>
-                  <Text style={styles.primaryText}>Try again</Text>
-                </TouchableOpacity>
-              ) : null}
-              {Platform.OS === 'web' ? (
-                <TouchableOpacity style={styles.secondary} onPress={backToMarketing}>
-                  <Text style={[styles.secondaryText, { color: colors.brand }]}>Back to Semora</Text>
-                </TouchableOpacity>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <ActivityIndicator size="large" color={colors.brand} />
-              <Text style={[styles.title, { color: colors.ink }]}>Opening secure sign-in…</Text>
-              <Text style={[styles.copy, { color: colors.ink2 }]}>Continue with {selectedProvider === 'apple' ? 'Apple' : 'Google'} in the secure window.</Text>
-              {showExit && Platform.OS === 'web' ? (
-                <TouchableOpacity style={styles.secondary} onPress={goBackToPreviousPage}>
-                  <Text style={[styles.secondaryText, { color: colors.brand }]}>Cancel and go back</Text>
-                </TouchableOpacity>
-              ) : null}
-            </>
-          )}
-        </View>
+    <View style={[styles.screen, { backgroundColor: colors.paper }]}>
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+        {error ? (
+          <>
+            <Text style={[styles.title, { color: colors.ink }]}>Sign-in could not start</Text>
+            <Text style={[styles.copy, { color: colors.ink2 }]}>{error}</Text>
+            {selectedProvider ? (
+              <TouchableOpacity style={[styles.primary, { backgroundColor: colors.brand }]} onPress={tryAgain}>
+                <Text style={styles.primaryText}>Try again</Text>
+              </TouchableOpacity>
+            ) : null}
+            {Platform.OS === 'web' ? (
+              <TouchableOpacity style={styles.secondary} onPress={backToMarketing}>
+                <Text style={[styles.secondaryText, { color: colors.brand }]}>Back to Semora</Text>
+              </TouchableOpacity>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <Text style={[styles.title, { color: colors.ink }]}>Still waiting to sign in?</Text>
+            <Text style={[styles.copy, { color: colors.ink2 }]}>You can safely cancel and return to Semora.</Text>
+            <TouchableOpacity style={styles.secondary} onPress={goBackToPreviousPage}>
+              <Text style={[styles.secondaryText, { color: colors.brand }]}>Cancel and go back</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </View>
-    </WebAuthBackdrop>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  card: { width: '100%', maxWidth: 420, alignItems: 'center', paddingHorizontal: 28, paddingVertical: 36, borderRadius: 24 },
+  card: { width: '100%', maxWidth: 420, alignItems: 'center', paddingHorizontal: 28, paddingVertical: 36, borderRadius: 24, borderWidth: 1 },
   title: { fontSize: 24, lineHeight: 30, fontWeight: '700', marginTop: 18, textAlign: 'center' },
   copy: { fontSize: 15, lineHeight: 22, marginTop: 8, textAlign: 'center' },
   primary: { alignSelf: 'stretch', alignItems: 'center', borderRadius: 14, marginTop: 24, paddingVertical: 14 },

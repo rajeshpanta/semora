@@ -1,7 +1,6 @@
 /* ============================================================
-   Semora homepage — editorial display type on warm paper,
-   bento-dense supporting grids, punctuated by full-bleed dark
-   bands at the hero and the close.
+   Semora homepage — editorial display type on warm paper with
+   soft lavender accents, matching the rest of the site.
 
    Responsive contract: everything below is fluid. No element
    declares a fixed width greater than 296px (the screenshot
@@ -25,16 +24,6 @@
   border-bottom: 1px solid var(--border);
 }
 
-/* On the single dark canvas these rules become visible seams — five of them
-   down the page, the first landing exactly where the hero ends. The whole
-   point of one background is that sections are separated by whitespace, not
-   by lines, so the borders and the tint both come off. */
-:global(:root:has([data-canvas='dark'])) .band {
-  background: none;
-  border-top: 0;
-  border-bottom: 0;
-}
-
 /* ─────────────────────────────── Hero ─────────────────────── */
 
 @supports not (height: 100svh) {
@@ -44,12 +33,12 @@
 .hero {
   position: relative;
   overflow: hidden;
-  background: var(--ink-deep);
-  color: #fff;
-  /* Extra top padding so content clears the transparent header that now
-     overlays this section rather than sitting above it. */
-  padding: clamp(104px, 12vw, 152px) clamp(20px, 4vw, 40px) clamp(56px, 8vw, 96px);
-  margin-top: calc(-1 * var(--nav-height, 76px));
+  background:
+    radial-gradient(circle at 88% 10%, rgba(201, 184, 255, 0.70), transparent 32%),
+    radial-gradient(circle at 8% 86%, rgba(238, 237, 254, 0.95), transparent 34%),
+    linear-gradient(135deg, #faf9f5 0%, #f7f3ff 52%, #f2ecff 100%);
+  color: var(--ink);
+  padding: clamp(64px, 9vw, 112px) clamp(20px, 4vw, 40px) clamp(56px, 8vw, 96px);
 
   /* Fill the screen. The hero was a fixed ~830px tall, so on anything taller
      than a 1280x800 laptop a band of page background showed beneath it — 152px
@@ -73,27 +62,8 @@
   height: 60vmax;
 }
 
-.hero::before {
-  top: -28vmax;
-  right: -18vmax;
-  background: radial-gradient(circle, var(--glow-mid) 0%, transparent 68%);
-  opacity: 0.4;
-}
-
-.hero::after {
-  bottom: -34vmax;
-  left: -20vmax;
-  background: radial-gradient(circle, var(--glow-light) 0%, transparent 66%);
-  opacity: 0.18;
-}
-
-/* The bottom-left glow is anchored at bottom:-34vmax, so the hero's
-   overflow:hidden slices through its brightest part exactly at the section
-   edge — a soft but real tonal step in what is meant to be one continuous
-   canvas. The top-right glow ends well above the fold and stays. */
-:global(:root:has([data-canvas='dark'])) .hero::after {
-  display: none;
-}
+.hero::before,
+.hero::after { display: none; }
 
 .heroInner {
   position: relative;
@@ -123,12 +93,12 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--glow-light);
+  color: var(--brand);
   margin-bottom: clamp(18px, 3vw, 26px);
 }
 
 .h1 {
-  color: #fff;
+  color: var(--ink);
   /* Deliberately large. Scale is most of what separates a confident hero from
      a template, and it is the cheapest lever available — no new asset, no new
      copy. Caps below the viewport-relative size so it cannot overflow. */
@@ -143,13 +113,13 @@
 .gradient {
   font-style: italic;
   font-weight: 600;
-  color: var(--glow-light);
+  color: var(--brand);
   /* Italic Fraunces sits slightly tight against the roman line above it. */
   letter-spacing: -0.02em;
 }
 
 .sub {
-  color: rgba(255, 255, 255, 0.74);
+  color: var(--ink2);
   font-size: clamp(15px, 2.4vw, 18px);
   line-height: 1.65;
   max-width: 56ch;
@@ -174,25 +144,26 @@
 }
 
 .primaryBtn {
-  background: #fff;
-  color: var(--ink-deep);
-  border: 1px solid #fff;
+  background: var(--brand);
+  color: #fff;
+  border: 1px solid var(--brand);
 }
 
 .primaryBtn:hover {
-  background: var(--glow-light);
-  border-color: var(--glow-light);
+  background: #5637a4;
+  border-color: #5637a4;
   transform: translateY(-1px);
 }
 
 .secondaryBtn {
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.32);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .secondaryBtn:hover {
-  border-color: rgba(255, 255, 255, 0.72);
-  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(107, 70, 193, 0.35);
+  background: #fff;
   transform: translateY(-1px);
 }
 
@@ -207,7 +178,7 @@
 
 .chip {
   position: relative;
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--ink2);
   font-size: clamp(12px, 2.1vw, 13.5px);
   padding-left: 18px;
   min-width: 0;
@@ -221,7 +192,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--glow-mid);
+  background: var(--brand);
 }
 
 .heroVisual {
@@ -236,7 +207,7 @@
   inset: auto;
   width: min(300px, 82%);
   aspect-ratio: 1;
-  background: radial-gradient(circle, rgba(155, 122, 232, 0.55) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(155, 122, 232, 0.26) 0%, transparent 70%);
   filter: blur(10px);
 }
 
@@ -246,8 +217,8 @@
   height: auto;
   border-radius: clamp(20px, 4vw, 28px);
   box-shadow:
-    0 2px 6px rgba(0, 0, 0, 0.3),
-    0 42px 84px -28px rgba(0, 0, 0, 0.7);
+    0 2px 6px rgba(28, 27, 31, 0.12),
+    0 42px 84px -28px rgba(87, 62, 148, 0.32);
 }
 
 /* ───────────────────────── Section headings ───────────────── */
