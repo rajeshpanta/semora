@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
 import { signInWithApple, signInWithGoogle } from '@/lib/auth';
 import { MARKETING_URL } from '@/lib/constants';
+import { supabase } from '@/lib/supabase';
 import { useColors } from '@/lib/theme';
 import { WebAuthBackdrop, webAuthCard } from '@/components/WebAuthChrome';
 
@@ -19,8 +20,66 @@ type Provider = 'apple' | 'google';
 export default function OAuthLauncherScreen() {
   const { provider } = useLocalSearchParams<{ provider?: string }>();
   const [error, setError] = useState('');
+  const [showExit, setShowExit] = useState(false);
   const colors = useColors();
   const selectedProvider: Provider | null = provider === 'apple' || provider === 'google' ? provider : null;
+  const providerWindowOpened = useRef(false);
+  const returningFromProvider = useRef(false);
+
+  const goBackToPreviousPage = useCallback(() => {
+    if (returningFromProvider.current) return;
+    returningFromProvider.current = true;
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.location.assign(MARKETING_URL);
+    }
+  }, []);
+
+  // OAuth is allowed to use a browser-managed popup. Closing that popup does
+  // not reject Supabase's initial `signInWithOAuth` promise, so without this
+  // listener the launcher would spin forever. When focus returns to this page
+  // after a provider window was open, confirm that a session did not arrive
+  // and restore the page the visitor came from.
+  const returnAfterDismissal = useCallback(async () => {
+    if (returningFromProvider.current || !providerWindowOpened.current) return;
+    const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+    if (session || returningFromProvider.current) return;
+    goBackToPreviousPage();
+  }, [goBackToPreviousPage]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    let returnTimer: number | null = null;
+
+    const onBlur = () => {
+      providerWindowOpened.current = true;
+    };
+    const onFocus = () => {
+      if (!providerWindowOpened.current) return;
+      // A short delay lets a successful OAuth callback replace this page
+      // before we decide the provider window was dismissed.
+      returnTimer = window.setTimeout(() => void returnAfterDismissal(), 250);
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') providerWindowOpened.current = true;
+      if (document.visibilityState === 'visible' && providerWindowOpened.current) onFocus();
+    };
+
+    window.addEventListener('blur', onBlur);
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    const exitTimer = window.setTimeout(() => setShowExit(true), 4000);
+    return () => {
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.clearTimeout(exitTimer);
+      if (returnTimer != null) window.clearTimeout(returnTimer);
+    };
+  }, [returnAfterDismissal]);
 
   useEffect(() => {
     if (!selectedProvider) {
@@ -46,6 +105,9 @@ export default function OAuthLauncherScreen() {
 
   const tryAgain = () => {
     setError('');
+    setShowExit(false);
+    providerWindowOpened.current = false;
+    returningFromProvider.current = false;
     if (selectedProvider === 'apple') void signInWithApple().catch((cause: any) => setError(cause?.message ?? 'Could not continue with Apple.'));
     else if (selectedProvider === 'google') void signInWithGoogle().catch((cause: any) => setError(cause?.message ?? 'Could not continue with Google.'));
   };
@@ -80,6 +142,11 @@ export default function OAuthLauncherScreen() {
               <ActivityIndicator size="large" color={colors.brand} />
               <Text style={[styles.title, { color: colors.ink }]}>Opening secure sign-in…</Text>
               <Text style={[styles.copy, { color: colors.ink2 }]}>Continue with {selectedProvider === 'apple' ? 'Apple' : 'Google'} in the secure window.</Text>
+              {showExit && Platform.OS === 'web' ? (
+                <TouchableOpacity style={styles.secondary} onPress={goBackToPreviousPage}>
+                  <Text style={[styles.secondaryText, { color: colors.brand }]}>Cancel and go back</Text>
+                </TouchableOpacity>
+              ) : null}
             </>
           )}
         </View>
