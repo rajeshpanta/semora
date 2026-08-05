@@ -32,11 +32,11 @@ export function LongFormPage({
   const es = locale === 'es';
   return (
     <ArticleShell
-      ctaHeading={es ? 'Pruébalo con tu propio programa' : 'Try it on your own syllabus'}
+      ctaHeading={es ? 'Organiza el programa de tu próxima materia' : 'Try it on your own syllabus'}
       ctaSubheading={es
-        ? 'Descubre cómo Semora organiza tus cursos reales. Gratis y sin tarjeta de crédito.'
+        ? 'Comprueba cómo Semora organiza tus cursos. Puedes empezar gratis y sin tarjeta de crédito.'
         : 'See how Semora handles your actual courses. Free, no credit card.'}
-      ctaLabel={es ? 'Probar gratis' : 'Try it for free'}
+      ctaLabel={es ? 'Empezar gratis' : 'Try it for free'}
       locale={locale}
     >
       <article className={`${styles.wrap} article-body`}>

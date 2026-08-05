@@ -43,9 +43,9 @@ export function HeroDemo({ locale = 'en' }: { locale?: SiteLocale }) {
   const es = locale === 'es';
   const stages = es
     ? [
-        { key: 'scan', label: 'Añade tu programa', hint: 'Foto, PDF o texto pegado' },
-        { key: 'extract', label: 'Todas las fechas, extraídas', hint: 'Fechas, porcentajes y horarios' },
-        { key: 'organized', label: 'Tu semestre, organizado', hint: 'Nada se guarda sin tu aprobación' },
+        { key: 'scan', label: 'Añade el programa de la materia', hint: 'Foto, PDF o texto copiado' },
+        { key: 'extract', label: 'Semora encuentra cada fecha', hint: 'Entregas, criterios de evaluación y horarios' },
+        { key: 'organized', label: 'Tu semestre queda organizado', hint: 'Tú decides qué información guardar' },
       ] as const
     : STAGES;
   const rows = es
@@ -57,7 +57,7 @@ export function HeroDemo({ locale = 'en' }: { locale?: SiteLocale }) {
         { title: 'Esquema del ensayo', course: 'Historia 210', due: '12 sep', tone: 'due' },
       ] as const
     : ROWS;
-  const nav = es ? ['Hoy', 'Cursos', 'Calendario', 'Importar programa'] : NAV;
+  const nav = es ? ['Hoy', 'Cursos', 'Calendario', 'Añadir programa'] : NAV;
   const tools = es ? ['Plan Inteligente', 'Carga académica', 'Tarjetas'] : TOOLS;
 
   useEffect(() => {
@@ -111,7 +111,7 @@ export function HeroDemo({ locale = 'en' }: { locale?: SiteLocale }) {
             {/* Stage 1 — the syllabus, being read. */}
             <div className={styles.doc}>
               <div className={styles.docHead}>
-                <span className={styles.docTitle}>{es ? 'QUÍM 101 Programa.pdf' : 'CHEM 101 Syllabus.pdf'}</span>
+                <span className={styles.docTitle}>{es ? 'QUÍM 101 · Programa.pdf' : 'CHEM 101 Syllabus.pdf'}</span>
               </div>
               <div className={styles.scanline} />
               {[92, 76, 88, 61, 83, 70, 90, 58].map((w, i) => (

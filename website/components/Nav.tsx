@@ -33,7 +33,7 @@ export function Nav({ locale = 'en' }: { locale?: SiteLocale }) {
     : NAV_LINKS;
   const homeHref = locale === 'es' ? '/es' : '/';
   const copy = locale === 'es'
-    ? { getApp: 'Descargar app', signIn: 'Iniciar sesión', tryFree: 'Probar gratis', aria: 'Principal' }
+    ? { getApp: 'Descargar la app', signIn: 'Iniciar sesión', tryFree: 'Empezar gratis', aria: 'Navegación principal' }
     : { getApp: 'Get the app', signIn: 'Sign in', tryFree: 'Try it for free', aria: 'Main' };
 
   return (
@@ -57,20 +57,20 @@ export function Nav({ locale = 'en' }: { locale?: SiteLocale }) {
           </a>
         </nav>
 
+        <div className={styles.languageSlot}>
+          <LanguageSwitcher locale={locale} />
+        </div>
+
         {/* Sign in is deliberately separate from the signup CTA. "Try it for
             free" reads as "make a new account", so without this a returning
             user has no obvious way back into the app from the marketing site. */}
         <div className={styles.actions}>
-          <LanguageSwitcher locale={locale} />
           <SignupButton mode="signin" className={styles.ghost}>
             {copy.signIn}
           </SignupButton>
           <SignupButton className={styles.cta}>{copy.tryFree}</SignupButton>
         </div>
 
-        <div className={styles.mobileLanguage}>
-          <LanguageSwitcher locale={locale} />
-        </div>
         <MobileNav links={links} locale={locale} />
       </div>
     </header>

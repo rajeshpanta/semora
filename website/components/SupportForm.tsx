@@ -27,7 +27,7 @@ export function SupportForm({ supportEmail, locale = 'en' }: SupportFormProps) {
 
     window.location.href = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
     setStatus(es
-      ? 'Tu aplicación de correo está lista con el mensaje. Envíalo para comunicarte con nosotros.'
+      ? 'Hemos preparado el mensaje en tu aplicación de correo. Solo falta enviarlo.'
       : 'Your email app is ready with your message. Send it there to reach us.');
   }
 
@@ -35,7 +35,7 @@ export function SupportForm({ supportEmail, locale = 'en' }: SupportFormProps) {
     <form className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.formHeading}>
         <h2>{es ? 'Envíanos un mensaje' : 'Send us a message'}</h2>
-        <p>{es ? 'Incluye todos los detalles que puedas y te ayudaremos.' : <>Include as much detail as you can, and we&apos;ll help you from there.</>}</p>
+        <p>{es ? 'Cuéntanos qué ocurrió y añade todos los detalles que puedas.' : <>Include as much detail as you can, and we&apos;ll help you from there.</>}</p>
       </div>
 
       <div className={styles.twoColumns}>
@@ -53,7 +53,7 @@ export function SupportForm({ supportEmail, locale = 'en' }: SupportFormProps) {
         <select name="topic" defaultValue="">
           <option value="" disabled>{es ? 'Selecciona un tema' : 'Select a topic'}</option>
           <option>{es ? 'Cuenta o inicio de sesión' : 'Account or sign-in'}</option>
-          <option>{es ? 'Escaneo del programa' : 'Syllabus scan'}</option>
+          <option>{es ? 'Análisis del programa de una materia' : 'Syllabus scan'}</option>
           <option>{es ? 'Suscripción o facturación' : 'Subscription or billing'}</option>
           <option>{es ? 'Sincronización con Canvas o LMS' : 'Canvas or LMS sync'}</option>
           <option>{es ? 'Reporte de error' : 'Bug report'}</option>
@@ -66,7 +66,7 @@ export function SupportForm({ supportEmail, locale = 'en' }: SupportFormProps) {
       </label>
       <button type="submit">{es ? 'Enviar mensaje' : 'Send message'} <span aria-hidden="true">→</span></button>
       <p className={styles.formNote} aria-live="polite">{status || (es
-        ? 'Al enviar se abrirá tu aplicación de correo con el mensaje dirigido a nosotros.'
+        ? 'Al pulsar Enviar, se abrirá tu aplicación de correo con el mensaje listo.'
         : 'Sending opens your email app with this message addressed to us.')}</p>
     </form>
   );

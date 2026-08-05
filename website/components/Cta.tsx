@@ -26,10 +26,10 @@ export function Cta({
       {subheading && <p className={styles.subheading}>{subheading}</p>}
       <div className={styles.actions}>
         <SignupButton className={styles.button}>
-          {locale === 'es' ? 'Probar gratis' : 'Try it for free'}
+          {locale === 'es' ? 'Empezar gratis' : 'Try it for free'}
         </SignupButton>
         <a href={APP_STORE_URL} className={styles.buttonGhost}>
-          {locale === 'es' ? 'Descargar app' : 'Get the app'}
+          {locale === 'es' ? 'Descargar la app' : 'Get the app'}
         </a>
       </div>
     </section>

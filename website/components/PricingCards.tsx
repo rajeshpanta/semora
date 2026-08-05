@@ -23,7 +23,7 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         billing: 'Periodo de facturación', monthly: 'Mensual', annual: 'Anual', save: 'Ahorra',
         free: 'Gratis', noCard: 'No necesitas tarjeta de crédito.', monthlyNote: 'Facturación mensual. Cancela cuando quieras.',
         annualNote: 'Facturación anual. Cancela cuando quieras.', monthShort: 'mes',
-        purchase: 'Pro se compra dentro de la app y se aplica a toda tu cuenta, incluida la versión web.',
+        purchase: 'Puedes contratar Pro desde la app. La suscripción se activa en toda tu cuenta, incluida la versión web.',
       }
     : {
         billing: 'Billing period', monthly: 'Monthly', annual: 'Annual', save: 'Save',

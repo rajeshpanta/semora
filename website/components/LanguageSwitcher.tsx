@@ -1,43 +1,31 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import styles from './Nav.module.css';
 import { englishToSpanishPath, spanishToEnglishPath, type SiteLocale } from '@/lib/i18n';
 
-export function LanguageSwitcher({ locale, mobile = false }: { locale: SiteLocale; mobile?: boolean }) {
+export function LanguageSwitcher({ locale }: { locale: SiteLocale }) {
   const pathname = usePathname();
+  const router = useRouter();
   const englishHref = locale === 'es' ? spanishToEnglishPath(pathname) : pathname || '/';
   const spanishHref = locale === 'es' ? pathname || '/es' : englishToSpanishPath(pathname);
-  const label = locale === 'es' ? 'Cambiar idioma' : 'Switch language';
+  const label = locale === 'es' ? 'Seleccionar idioma' : 'Select language';
 
   return (
-    <div
-      className={mobile ? styles.languageSwitchMobile : styles.languageSwitch}
-      role="group"
-      aria-label={label}
-    >
-      <Link
-        href={englishHref}
-        hrefLang="en"
-        lang="en"
-        className={styles.languageOption}
-        data-active={locale === 'en'}
-        aria-current={locale === 'en' ? 'page' : undefined}
+    <div className={styles.languageDropdown}>
+      <select
+        className={styles.languageSelect}
+        value={locale}
+        aria-label={label}
+        onChange={(event) => {
+          const href = event.target.value === 'es' ? spanishHref : englishHref;
+          router.push(href);
+        }}
       >
-        {mobile ? 'English' : 'EN'}
-      </Link>
-      <span className={styles.languageDivider} aria-hidden="true" />
-      <Link
-        href={spanishHref}
-        hrefLang="es"
-        lang="es"
-        className={styles.languageOption}
-        data-active={locale === 'es'}
-        aria-current={locale === 'es' ? 'page' : undefined}
-      >
-        {mobile ? 'Español' : 'ES'}
-      </Link>
+        <option value="en" lang="en">English</option>
+        <option value="es" lang="es">Español</option>
+      </select>
+      <span className={styles.languageCaret} aria-hidden="true">⌄</span>
     </div>
   );
 }

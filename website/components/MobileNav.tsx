@@ -6,7 +6,6 @@ import Link from 'next/link';
 import styles from './Nav.module.css';
 import { FEATURES, APP_STORE_URL } from '@/lib/semora-facts';
 import { FEATURES_ES } from '@/lib/es-facts';
-import { LanguageSwitcher } from './LanguageSwitcher';
 import type { SiteLocale } from '@/lib/i18n';
 
 /**
@@ -36,7 +35,7 @@ export function MobileNav({ links, locale = 'en' }: { links: { href: string; lab
   const copy = locale === 'es'
     ? {
         close: 'Cerrar menú', open: 'Abrir menú', features: 'Funciones', all: 'Ver todas las funciones →',
-        signIn: 'Iniciar sesión', getApp: 'Descargar app', tryFree: 'Probar gratis', base: '/es/funciones',
+        signIn: 'Iniciar sesión', getApp: 'Descargar la app', tryFree: 'Empezar gratis', base: '/es/funciones',
       }
     : {
         close: 'Close menu', open: 'Open menu', features: 'Features', all: 'See all features →',
@@ -66,7 +65,6 @@ export function MobileNav({ links, locale = 'en' }: { links: { href: string; lab
           on the render Google actually performs, leaving the footer as the only
           navigation it could see. */}
       <div className={styles.sheet} data-open={open} hidden={!open}>
-          <LanguageSwitcher locale={locale} mobile />
           <details className={styles.sheetGroup}>
             <summary className={styles.sheetSummary}>{copy.features}</summary>
             <div className={styles.sheetSub}>

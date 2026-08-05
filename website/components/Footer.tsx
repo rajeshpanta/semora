@@ -18,8 +18,8 @@ export function Footer({ locale = 'en' }: { locale?: SiteLocale }) {
   const copy = locale === 'es'
     ? {
         tagline: TAGLINE_ES, features: 'Funciones', compare: 'Comparar', tools: 'Herramientas gratis',
-        gpa: 'Calculadora de GPA', pomodoro: 'Temporizador Pomodoro', get: 'Obtén Semora',
-        tryFree: 'Probar gratis', download: 'Descargar en App Store', pricing: 'Precios', blog: 'Blog',
+        gpa: 'Calculadora de GPA', pomodoro: 'Temporizador Pomodoro', get: 'Empieza con Semora',
+        tryFree: 'Empezar gratis', download: 'Descargar en App Store', pricing: 'Precios', blog: 'Blog',
         company: 'Empresa', about: 'Acerca de', support: 'Ayuda', privacy: 'Privacidad', terms: 'Términos',
         alternative: 'alternativa', featureBase: '/es/funciones', compareBase: '/es/comparar',
       }

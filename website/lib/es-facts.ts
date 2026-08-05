@@ -1,34 +1,34 @@
 import type { FeatureSlug } from './semora-facts';
 
-export const TAGLINE_ES = 'Escanea tu programa. No vuelvas a perder una fecha de entrega.';
+export const TAGLINE_ES = 'Organiza el programa de tus materias y ten cada entrega bajo control.';
 
 export const SITE_DESCRIPTION_ES =
-  'Semora convierte una foto o PDF de tu programa de estudios en un calendario del semestre con tareas, exámenes y porcentajes organizados.';
+  'Semora convierte una foto o PDF del programa de tu materia en un calendario con tareas, exámenes y criterios de evaluación organizados.';
 
 export const FREE_FEATURES_ES = [
-  '5 escaneos de programas por mes calendario',
-  'Hasta 4 cursos en un semestre',
-  'Seguimiento completo de tareas y fechas de entrega',
+  '5 análisis de programas al mes',
+  'Hasta 4 cursos por semestre',
+  'Seguimiento de tareas y fechas de entrega',
   'Calificaciones con promedios ponderados',
   'Recordatorios el mismo día',
-  'Espacios de curso: únete gratis al curso que comparta un compañero',
+  'Espacios de curso: únete gratis al espacio que comparta un compañero',
 ] as const;
 
 export const PRO_FEATURES_ES = [
-  'Cursos y semestres ilimitados, sin límite mensual de escaneos',
+  'Cursos y semestres ilimitados, sin límite mensual de análisis',
   'Importación de tareas desde Canvas, Blackboard y Moodle',
   'Crea Espacios de curso e invita a tus compañeros',
   'Plan Inteligente que se adapta a tus fechas de entrega',
   'Panel de carga académica para detectar semanas pesadas',
-  'Tarjetas de estudio generadas desde tu programa y tus notas',
+  'Tarjetas de estudio generadas a partir del programa y tus apuntes',
   'Temporizador de enfoque estilo Pomodoro',
-  'Tutor con IA basado en tu programa, notas y fechas reales',
+  'Tutor con IA basado en el programa, tus apuntes y fechas reales',
   'Escala de calificaciones, pronósticos y calculadoras hipotéticas',
   'Sincronización con el calendario del dispositivo y exportación .ics',
   'Recordatorios personalizados con 1 o 3 días de anticipación',
   'Alertas de riesgo académico',
   'Tendencias de progreso, exportación CSV y vista para imprimir',
-  'Funciones para compartir y mantener rachas',
+  'Opciones para compartir y mantener tu racha de estudio',
 ] as const;
 
 export interface SpanishFeatureFact {
@@ -44,10 +44,10 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
   {
     slug: 'escaner-de-programas',
     englishSlug: 'syllabus-scanner',
-    name: 'Escáner de programas con IA',
-    shortDescription: 'Convierte una foto o PDF en fechas, clases y calificaciones organizadas.',
+    name: 'Análisis de programas con IA',
+    shortDescription: 'Convierte una foto o PDF en fechas, horarios y calificaciones organizadas.',
     tier: 'free',
-    description: 'Toma una foto, sube un PDF o pega el texto. Semora extrae las tareas, exámenes, horarios y porcentajes para que los revises antes de guardar.',
+    description: 'Toma una foto, sube un PDF o pega el texto. Semora identifica tareas, exámenes, horarios y criterios de evaluación para que los revises antes de guardar.',
   },
   {
     slug: 'calificaciones',
@@ -55,7 +55,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     name: 'Seguimiento de calificaciones',
     shortDescription: 'Conoce tu promedio ponderado y qué necesitas en lo que falta.',
     tier: 'free',
-    description: 'Registra cada nota y su peso. Semora calcula el promedio del trabajo ya calificado y Pro añade pronósticos para explorar distintos resultados.',
+    description: 'Registra cada calificación y su peso. Semora calcula el promedio del trabajo ya evaluado y Pro añade pronósticos para explorar distintos resultados.',
   },
   {
     slug: 'plan-inteligente',
@@ -69,15 +69,15 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     slug: 'tarjetas-de-estudio',
     englishSlug: 'flashcards',
     name: 'Tarjetas de estudio',
-    shortDescription: 'Genera tarjetas desde tus notas y repásalas con repetición espaciada.',
+    shortDescription: 'Genera tarjetas a partir de tus apuntes y repásalas con repetición espaciada.',
     tier: 'pro',
-    description: 'Crea un mazo para todo el curso o para un examen específico usando el programa y las notas que seleccionaste.',
+    description: 'Crea un mazo para todo el curso o para un examen específico usando el programa y los apuntes que hayas seleccionado.',
   },
   {
     slug: 'temporizador-de-enfoque',
     englishSlug: 'focus-timer',
     name: 'Temporizador de enfoque',
-    shortDescription: 'Sesiones Pomodoro que caben entre tus clases.',
+    shortDescription: 'Sesiones Pomodoro que se adaptan a los espacios entre clases.',
     tier: 'pro',
     description: 'Elige sesiones de 15, 25, 45 o 50 minutos y descansos cortos para aprovechar espacios reales de tu horario.',
   },
@@ -87,7 +87,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     name: 'Tutor con IA',
     shortDescription: 'Respuestas, práctica y recomendaciones basadas en tus cursos reales.',
     tier: 'pro',
-    description: 'Pregunta sobre una tarea, practica con cuestionarios o encuentra temas débiles. El Tutor cita tu programa y tus notas cuando los usa.',
+    description: 'Pregunta sobre una tarea, practica con cuestionarios o identifica los temas que necesitas reforzar. El Tutor incluye referencias al programa y a tus apuntes cuando los utiliza.',
   },
   {
     slug: 'espacios-de-curso',
@@ -103,7 +103,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     name: 'Sincronización con Canvas',
     shortDescription: 'Importa tareas de Canvas, Blackboard o Moodle y mantén sus cambios al día.',
     tier: 'pro',
-    description: 'Conecta el acceso que ofrece tu institución, revisa el historial de sincronización y recupera errores sin duplicar tareas.',
+    description: 'Conecta Semora mediante el método que permita tu institución, consulta el historial de sincronización y resuelve errores sin duplicar tareas.',
   },
 ];
 

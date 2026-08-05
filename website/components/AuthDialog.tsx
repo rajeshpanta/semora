@@ -76,13 +76,13 @@ export function AuthDialogProvider({ children, locale = 'en' }: { children: Reac
 
   const copy = locale === 'es'
     ? mode === 'signup'
-      ? { title: 'Comienza gratis', sub: 'Crea tu cuenta y escanea tu primer programa. Sin tarjeta de crédito.' }
-      : { title: 'Qué bueno verte de nuevo', sub: 'Inicia sesión para continuar donde lo dejaste.' }
+      ? { title: 'Empieza gratis', sub: 'Crea tu cuenta y organiza tu primera materia. No necesitas tarjeta de crédito.' }
+      : { title: 'Qué bueno verte de nuevo', sub: 'Inicia sesión y continúa donde lo dejaste.' }
     : COPY[mode];
   const labels = locale === 'es'
     ? {
         close: 'Cerrar', apple: 'Continuar con Apple', google: 'Continuar con Google',
-        prefix: 'Al continuar, aceptas nuestros', terms: 'Términos', and: 'y la', privacy: 'Política de privacidad',
+        prefix: 'Al continuar, aceptas los', terms: 'Términos de servicio', and: 'y la', privacy: 'Política de privacidad',
         termsHref: '/es/terminos', privacyHref: '/es/privacidad',
       }
     : {

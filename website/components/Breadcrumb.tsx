@@ -31,7 +31,7 @@ export function Breadcrumb({ trail, locale = 'en' }: { trail: Crumb[]; locale?: 
   return (
     <>
       <JsonLd data={breadcrumbListSchema(trail)} />
-      <nav className={styles.crumbs} aria-label={locale === 'es' ? 'Migas de pan' : 'Breadcrumb'}>
+      <nav className={styles.crumbs} aria-label={locale === 'es' ? 'Ruta de navegación' : 'Breadcrumb'}>
         {parents.map((crumb) => (
           <span key={crumb.path}>
             <Link href={crumb.path}>{crumb.name}</Link>

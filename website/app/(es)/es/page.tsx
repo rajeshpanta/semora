@@ -13,34 +13,34 @@ import { APP_STORE_URL } from '@/lib/semora-facts';
 import { OG_IMAGE_ES } from '@/lib/og';
 
 export const metadata: Metadata = {
-  title: 'Escáner de programas universitarios con IA',
+  title: 'Organiza tu semestre con IA',
   description:
-    'Convierte una foto o PDF de tu programa de estudios en tareas, exámenes, horarios y calificaciones organizadas. Empieza gratis con Semora.',
+    'Convierte una foto o PDF del programa de tu materia en tareas, exámenes, horarios y calificaciones organizadas. Empieza gratis con Semora.',
   alternates: {
     canonical: '/es',
     languages: { 'en-US': '/', es: '/es', 'x-default': '/' },
   },
   openGraph: {
     url: '/es',
-    title: 'Semora — Escanea tu programa. No pierdas ninguna fecha.',
-    description: 'Organiza todo tu semestre desde una foto o PDF del programa de estudios.',
+    title: 'Semora — Tu semestre, organizado desde el primer día',
+    description: 'Organiza todo el semestre a partir de una foto o PDF del programa de tu materia.',
     locale: 'es_US',
     ...OG_IMAGE_ES,
   },
 };
 
-const CHIPS = ['5 escaneos gratis cada mes', 'Sincronizado en iPhone, iPad y web'];
+const CHIPS = ['5 análisis gratis al mes', 'Tus datos al día en iPhone, iPad y web'];
 
 const STEPS = [
   {
     n: '01',
-    title: 'Escanéalo',
-    body: 'Toma una foto, sube un PDF, arrástralo en la web o pega el texto.',
+    title: 'Añádelo',
+    body: 'Toma una foto, sube un PDF, arrastra el archivo en la web o pega el texto.',
   },
   {
     n: '02',
     title: 'Revísalo',
-    body: 'Confirma las fechas, los horarios y los porcentajes antes de guardar cualquier dato.',
+    body: 'Confirma las fechas, los horarios y las ponderaciones antes de guardar cualquier dato.',
   },
   {
     n: '03',
@@ -63,21 +63,21 @@ type SpanishHomeDetail = {
 const DETAILS: SpanishHomeDetail[] = [
   {
     key: 'scanner',
-    eyebrow: 'Escáner de programas',
-    heading: 'Convierte la primera semana en un plan claro.',
-    lead: 'OpenAI GPT-5.6 Luna transforma un programa en un curso que puedes revisar en minutos.',
+    eyebrow: 'Análisis del programa',
+    heading: 'Empieza el semestre con un plan claro.',
+    lead: 'La IA de Semora convierte el programa de la materia en un curso que puedes revisar en pocos minutos.',
     bullets: [
-      'Usa una foto, PDF, archivo arrastrado o texto pegado.',
-      'Revisa cada fecha, horario y categoría antes de confirmar.',
+      'Usa una foto, un PDF, un archivo o texto copiado.',
+      'Comprueba cada fecha, horario y categoría antes de guardar.',
     ],
     image: '/screenshots/scan-syllabus.png',
-    alt: 'Pantalla de Semora con opciones para importar un programa mediante foto, PDF o archivo',
+    alt: 'Pantalla de Semora con opciones para añadir el programa de una materia mediante foto, PDF o archivo',
   },
   {
     key: 'grades',
     eyebrow: 'Calificaciones y pronósticos',
-    heading: 'Conoce la nota que necesitas antes del examen final.',
-    lead: 'Mira dónde estás y cuánto puede cambiar tu próxima entrega.',
+    heading: 'Averigua qué calificación necesitas antes del examen final.',
+    lead: 'Consulta tu promedio actual y descubre cuánto puede influir la próxima entrega.',
     bullets: [
       'Calcula promedios ponderados por curso y categoría.',
       'Usa pronósticos y alertas para concentrarte donde más importa.',
@@ -90,10 +90,10 @@ const DETAILS: SpanishHomeDetail[] = [
     key: 'plan',
     eyebrow: 'Pro · Planificación',
     heading: 'Un horario de estudio que cambia contigo.',
-    lead: 'El plan se adapta cuando mueves una fecha o no completas una sesión.',
+    lead: 'El plan se adapta cuando cambia una fecha o dejas una sesión sin completar.',
     bullets: [
-      'Crea bloques alrededor de tus clases, exámenes y entregas.',
-      'Reorganiza sesiones perdidas y explica por qué cambió el plan.',
+      'Reserva bloques de estudio alrededor de tus clases, exámenes y entregas.',
+      'Reprograma las sesiones pendientes y te explica por qué cambió el plan.',
     ],
     image: '/screenshots/plan-semester.png',
     alt: 'Calendario de Semora con fechas de varios cursos durante todo el mes',
@@ -104,22 +104,22 @@ const FAQ = [
   {
     question: '¿Semora es realmente gratis?',
     answer:
-      'Sí. El plan gratis incluye cinco escaneos al mes, hasta cuatro cursos en un semestre, seguimiento de fechas, promedios ponderados y recordatorios. No necesitas tarjeta de crédito.',
+      'Sí. El plan gratuito incluye cinco análisis al mes, hasta cuatro cursos por semestre, seguimiento de entregas, promedios ponderados y recordatorios. No necesitas tarjeta de crédito.',
   },
   {
     question: '¿Cuánto cuesta Pro?',
     answer:
-      'Pro cuesta $3.99 al mes o $19.99 al año. Se compra dentro de la app de iOS y se aplica a la misma cuenta en iPhone, iPad y web.',
+      'Pro cuesta $3.99 al mes o $19.99 al año. Puedes contratarlo desde la app de iOS y usarlo con la misma cuenta en iPhone, iPad y la web.',
   },
   {
-    question: '¿Qué puedo añadir al escáner?',
+    question: '¿Qué tipos de archivo puedo añadir?',
     answer:
-      'Puedes usar una foto, un PDF, arrastrar un archivo en la web o pegar texto. Siempre revisas el resultado antes de guardarlo.',
+      'Puedes tomar una foto, subir un PDF, arrastrar un archivo en la web o pegar el texto. Siempre puedes revisar el resultado antes de guardarlo.',
   },
   {
     question: '¿Necesito Canvas?',
     answer:
-      'No. Semora funciona solamente con tu programa de estudios. Las conexiones con Canvas, Blackboard y Moodle son funciones Pro opcionales.',
+      'No. Puedes usar Semora solo con el programa de tus materias. Las conexiones con Canvas, Blackboard y Moodle son funciones opcionales de Pro.',
   },
   {
     question: '¿Funciona en iPad y en español?',
@@ -137,18 +137,18 @@ export default function SpanishHome() {
       <section className={styles.hero}>
         <div className={styles.heroInner}>
           <div className={styles.heroCopy}>
-            <span className={styles.eyebrow}>Escáner universitario con IA</span>
+            <span className={styles.eyebrow}>Organización universitaria con IA</span>
             <h1 className={styles.h1}>
-              Escanea tu programa.{' '}
-              <span className={styles.gradient}>No pierdas ninguna fecha.</span>
+              Sube el programa.{' '}
+              <span className={styles.gradient}>Ten todo el semestre bajo control.</span>
             </h1>
             <p className={styles.sub}>
               Toma una foto, sube un PDF o pega el texto. Semora encuentra tareas, exámenes,
-              lecturas, horarios y porcentajes. Nada se guarda hasta que tú lo apruebas.
+              lecturas, horarios y criterios de evaluación. Tú revisas todo antes de guardarlo.
             </p>
             <div className={styles.heroActions}>
-              <SignupButton className={styles.primaryBtn}>Probar gratis</SignupButton>
-              <a href={APP_STORE_URL} className={styles.secondaryBtn}>Descargar app</a>
+              <SignupButton className={styles.primaryBtn}>Empezar gratis</SignupButton>
+              <a href={APP_STORE_URL} className={styles.secondaryBtn}>Descargar la app</a>
             </div>
             <ul className={styles.chips}>
               {CHIPS.map((chip) => <li key={chip} className={styles.chip}>{chip}</li>)}
@@ -165,7 +165,7 @@ export default function SpanishHome() {
           <div className={styles.sectionHead}>
             <span className={styles.label}>Del PDF al plan</span>
             <h2>Cómo funciona</h2>
-            <p>De un programa de estudios a un semestre claro en tres pasos.</p>
+            <p>Del programa de una materia a un semestre organizado en tres pasos.</p>
           </div>
         </Reveal>
         <ol className={styles.steps}>
@@ -209,8 +209,8 @@ export default function SpanishHome() {
         <Reveal>
           <div className={styles.sectionHead}>
             <span className={styles.label}>Precios</span>
-            <h2>El plan gratis cubre un semestre real.</h2>
-            <p>Empieza con fechas, calificaciones y recordatorios. Mejora cuando necesites planificación avanzada.</p>
+            <h2>Empieza gratis. Pásate a Pro cuando lo necesites.</h2>
+            <p>Organiza fechas, calificaciones y recordatorios sin pagar. Añade planificación avanzada cuando te haga falta.</p>
           </div>
         </Reveal>
         <PricingCards locale="es" />
@@ -232,8 +232,8 @@ export default function SpanishHome() {
       <div className={styles.inner}>
         <Cta
           locale="es"
-          heading="Haz que tu semestre sea más fácil de ver."
-          subheading="Empieza gratis en iPhone, iPad o la web."
+          heading="Ten todo tu semestre bajo control."
+          subheading="Empieza gratis desde tu iPhone, iPad o computadora."
         />
       </div>
     </>
