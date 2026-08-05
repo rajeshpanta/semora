@@ -44,6 +44,23 @@ interface LmsAssignment {
 export interface LmsCredential {
   accessToken: string;
   accountLabel?: string | null;
+  /** Present when an OAuth provider gives Semora a renewable server credential. */
+  refreshToken?: string | null;
+  expiresAt?: string | null;
+}
+
+export interface LmsSyncRun {
+  id: string;
+  connection_id: string;
+  user_id: string;
+  trigger: 'initial' | 'manual' | 'foreground_auto' | 'background';
+  status: 'running' | 'success' | 'partial' | 'error' | 'credentials_required';
+  processed: number;
+  skipped: number;
+  error_code: string | null;
+  error_message: string | null;
+  started_at: string;
+  finished_at: string | null;
 }
 
 const COLORS = ['#4F46E5', '#0F766E', '#C2410C', '#9333EA', '#0369A1', '#BE123C'];
@@ -157,7 +174,7 @@ export async function connectLms(input: {
       });
       if (linkError) throw linkError;
     }
-    const result = await syncLmsConnection(connection.id);
+    const result = await syncLmsConnection(connection.id, 'initial');
     return { connectionId: connection.id, ...result };
   } catch (error) {
     await supabase.from('lms_connections').delete().eq('id', connection.id);
@@ -175,6 +192,7 @@ export async function connectLms(input: {
 
 export async function syncLmsConnection(
   connectionId: string,
+  trigger: 'initial' | 'manual' | 'foreground_auto' = 'manual',
 ): Promise<{ processed: number; skipped: number }> {
   const { data: connection, error: connectionError } = await supabase
     .from('lms_connections')
@@ -185,11 +203,6 @@ export async function syncLmsConnection(
 
   const links = ((connection as any).links ?? []).filter((link: LmsCourseLink) => link.sync_enabled);
   if (!links.length) throw new Error('This LMS connection has no enabled courses.');
-
-  await supabase
-    .from('lms_connections')
-    .update({ last_sync_status: 'syncing', last_error: null })
-    .eq('id', connectionId);
 
   try {
     let credential = await getLmsCredential(connectionId);
@@ -213,47 +226,16 @@ export async function syncLmsConnection(
       throw new Error('Reconnect this LMS on this device to continue syncing.');
     }
 
-    const data = await invokeLms<{ assignments: LmsAssignment[]; removal_safe?: boolean }>({
-      action: 'assignments',
-      provider: connection.provider,
-      base_url: connection.base_url,
+    const data = await invokeLms<{ processed: number; skipped: number }>({
+      action: 'sync',
+      connection_id: connectionId,
       access_token: credential.accessToken,
-      course_ids: links.map((link: LmsCourseLink) => link.external_course_id),
+      trigger,
     });
-    const localByExternal = new Map(
-      links.map((link: LmsCourseLink) => [link.external_course_id, link.local_course_id]),
-    );
-    const items = (data.assignments ?? []).map((item) => {
-      let localDue: { due_date?: string | null; due_time?: string | null } = {};
-      if (item.due_at) {
-        const date = new Date(item.due_at);
-        if (Number.isFinite(date.getTime())) {
-          localDue = {
-            due_date:
-              `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
-            due_time:
-              `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`,
-          };
-        }
-      }
-      return {
-        ...item,
-        ...localDue,
-        local_course_id: localByExternal.get(item.external_course_id) ?? null,
-      };
-    });
-    const { data: applied, error: applyError } = await supabase.rpc('apply_lms_assignment_sync', {
-      p_connection_id: connectionId,
-      p_items: items,
-      p_external_course_ids: data.removal_safe
-        ? links.map((link: LmsCourseLink) => link.external_course_id)
-        : [],
-    });
-    if (applyError) throw applyError;
     rescheduleAllTaskReminders(connection.user_id).catch(() => {});
     return {
-      processed: Number(applied?.processed ?? 0),
-      skipped: Number(applied?.skipped ?? 0),
+      processed: Number(data?.processed ?? 0),
+      skipped: Number(data?.skipped ?? 0),
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'LMS synchronization failed.';
@@ -268,6 +250,69 @@ export async function syncLmsConnection(
       .eq('id', connectionId);
     throw error;
   }
+}
+
+/**
+ * Lets a student opt into scheduled sync. The credential is sent over TLS to
+ * the authenticated edge function, encrypted in Supabase Vault, and never
+ * returned to the client or exposed in a public table.
+ */
+export async function enableLmsBackgroundSync(connectionId: string): Promise<void> {
+  const { data: connection, error } = await supabase
+    .from('lms_connections')
+    .select('*')
+    .eq('id', connectionId)
+    .single();
+  if (error) throw error;
+
+  let credential = await getLmsCredential(connectionId);
+  if (connection.provider === 'google_classroom') {
+    try {
+      credential = await refreshGoogleClassroomAccessToken(connection.account_label);
+      await storeLmsCredential(connectionId, credential);
+    } catch {
+      // The existing credential may still be valid; the server confirms it on
+      // the next scheduled run and records reconnect guidance if it is not.
+    }
+  }
+  if (!credential?.accessToken) {
+    throw new Error('Reconnect this LMS on this device before enabling automatic sync.');
+  }
+  await invokeLms({
+    action: 'enable_background',
+    connection_id: connectionId,
+    access_token: credential.accessToken,
+    refresh_token: credential.refreshToken ?? null,
+    expires_at: credential.expiresAt ?? null,
+  });
+}
+
+export async function disableLmsBackgroundSync(connectionId: string): Promise<void> {
+  await invokeLms({ action: 'disable_background', connection_id: connectionId });
+}
+
+export async function listLmsSyncRuns(connectionId: string): Promise<LmsSyncRun[]> {
+  const { data, error } = await supabase
+    .from('lms_sync_runs')
+    .select('*')
+    .eq('connection_id', connectionId)
+    .order('started_at', { ascending: false })
+    .limit(12);
+  if (error) throw error;
+  return (data ?? []) as LmsSyncRun[];
+}
+
+export async function setLmsCourseMapping(input: {
+  linkId: string;
+  localCourseId: string;
+  syncEnabled: boolean;
+}): Promise<void> {
+  const { error } = await supabase.rpc('set_lms_course_mapping', {
+    p_link_id: input.linkId,
+    p_local_course_id: input.localCourseId,
+    p_sync_enabled: input.syncEnabled,
+  });
+  if (error) throw error;
 }
 
 export async function reconnectLmsConnection(

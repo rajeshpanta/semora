@@ -19,13 +19,13 @@ export default function PrivacyPage() {
     >
     <article className={`${styles.prose} article-body`}>
       <h1>Privacy Policy</h1>
-      <p className={styles.updated}>Last updated: July 16, 2026</p>
+      <p className={styles.updated}>Last updated: August 4, 2026</p>
 
       <h2>Introduction</h2>
       <p>
         Semora (&quot;we&quot;, &quot;our&quot;, &quot;us&quot;) is committed to protecting your
         privacy. This policy explains how we collect, use, and safeguard your information when
-        you use our mobile application.
+        you use our applications and websites.
       </p>
 
       <h2>Information We Collect</h2>
@@ -38,6 +38,12 @@ export default function PrivacyPage() {
         <li>
           <strong>Academic data:</strong> Semesters, courses, tasks, grades, and syllabus content
           that you enter or scan.
+        </li>
+        <li>
+          <strong>Learning-platform data (optional):</strong> If you choose to connect Canvas,
+          Blackboard, Moodle, or Google Classroom, we retrieve the courses and assignments you
+          select to import or sync. The imported information is stored as academic data in your
+          Semora account.
         </li>
         <li>
           <strong>Device information:</strong> Timezone, device type, and operating system version
@@ -79,6 +85,7 @@ export default function PrivacyPage() {
           To send you local notification reminders about upcoming deadlines, and, if you grant permission, occasional push reminders about deadlines and new semesters.
         </li>
         <li>To sync tasks with your device calendar, and, if you connect it, with Google Calendar.</li>
+        <li>To import and sync the courses and assignments you choose from a connected learning platform.</li>
         <li>
           To power study tools you choose to use (flashcards, focus timer, and an AI tutor grounded
           on your syllabus and any notes you upload).
@@ -114,6 +121,15 @@ export default function PrivacyPage() {
           <strong>Google Calendar (optional):</strong> If you connect Google Calendar, we access
           your calendar solely to add and update your Semora deadlines; we do not read your other
           events.
+        </li>
+        <li>
+          <strong>Learning platforms (optional):</strong> Canvas, Blackboard, Moodle, and Google
+          Classroom provide the course and assignment data you choose to sync. By default, their
+          access tokens or authorization credentials stay on your device and are used only while you
+          sync in Semora. If you explicitly turn on <em>Automatic sync</em>, we store that credential
+          encrypted in Supabase Vault so Semora can check for selected course, assignment,
+          submission, and grade updates while the app is closed. It is never exposed in your Semora
+          account, and we delete it when you turn off Automatic sync or disconnect the platform.
         </li>
       </ul>
 

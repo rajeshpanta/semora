@@ -71,3 +71,4 @@ secrets/*
 *.mobileprovision
 client_secret*.json
 .vercel
+.env*

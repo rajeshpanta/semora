@@ -4,7 +4,7 @@ import type {
   Semester, Course, Task, NewSemester, NewCourse, NewTask,
   CourseMeeting, NewCourseMeeting,
   CourseOfficeHours, NewCourseOfficeHours,
-  TaskSubtask, NewTaskSubtask, StudyBlock, StudyPlannerSettings,
+  TaskSubtask, NewTaskSubtask, StudyBlock, StudyPlannerSettings, StudyPlanChange,
   GradeCategory, NewGradeCategory, GpaScaleEntry,
 } from '@/types/database';
 import { format, addDays } from 'date-fns';
@@ -33,6 +33,7 @@ export const queryKeys = {
   task: (id: string) => ['task', id] as const,
   subtasks: (taskId: string) => ['taskSubtasks', taskId] as const,
   studyBlocks: (semesterId?: string | null) => ['studyBlocks', semesterId] as const,
+  studyPlanChanges: (semesterId?: string | null) => ['studyPlanChanges', semesterId] as const,
   studyPlannerSettings: ['studyPlannerSettings'] as const,
   gradeCategories: (courseId: string) => ['gradeCategories', courseId] as const,
   semesterGradeCategories: (semesterId: string) => ['gradeCategories', 'semester', semesterId] as const,
@@ -264,6 +265,23 @@ export function useStudyBlocks(semesterId?: string | null) {
         : rows;
     },
     enabled: semesterId !== null,
+  });
+}
+
+export function useStudyPlanChanges(semesterId?: string | null) {
+  return useQuery({
+    queryKey: queryKeys.studyPlanChanges(semesterId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('study_plan_changes')
+        .select('*')
+        .eq('semester_id', semesterId!)
+        .order('created_at', { ascending: false })
+        .limit(8);
+      if (error) throw error;
+      return (data || []) as StudyPlanChange[];
+    },
+    enabled: !!semesterId,
   });
 }
 
@@ -1262,6 +1280,7 @@ export function useReplaceStudyPlan() {
         duration_minutes: number;
         reschedule_reason?: 'missed' | 'conflict' | 'rebuild' | null;
         rescheduled_from_date?: string | null;
+        coach_reason?: 'exam' | 'grade_risk';
       }>;
     }) => {
       const { data, error } = await supabase.rpc('replace_study_plan', {
@@ -1274,6 +1293,35 @@ export function useReplaceStudyPlan() {
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: queryKeys.studyBlocks(variables.semesterId) });
       qc.invalidateQueries({ queryKey: ['studyBlocks'] });
+    },
+  });
+}
+
+export function useRecordStudyPlanChanges() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      semesterId,
+      changes,
+    }: {
+      semesterId: string;
+      changes: Array<{
+        kind: 'habit' | 'missed' | 'calendar' | 'exam' | 'grade_risk' | 'capacity';
+        key: string;
+        title: string;
+        detail: string;
+        metadata?: Record<string, unknown>;
+      }>;
+    }) => {
+      if (!changes.length) return;
+      const { error } = await supabase.rpc('record_study_plan_changes', {
+        p_semester_id: semesterId,
+        p_changes: changes,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_data, variables) => {
+      qc.invalidateQueries({ queryKey: queryKeys.studyPlanChanges(variables.semesterId) });
     },
   });
 }

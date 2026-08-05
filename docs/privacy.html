@@ -21,16 +21,17 @@
   <div class="container">
     <a href="index.html" class="back">&larr; Back</a>
     <h1>Privacy Policy</h1>
-    <p class="updated">Last updated: July 16, 2026</p>
+    <p class="updated">Last updated: August 4, 2026</p>
 
     <h2>Introduction</h2>
-    <p>Semora ("we", "our", "us") is committed to protecting your privacy. This policy explains how we collect, use, and safeguard your information when you use our mobile application.</p>
+    <p>Semora ("we", "our", "us") is committed to protecting your privacy. This policy explains how we collect, use, and safeguard your information when you use our applications and websites.</p>
 
     <h2>Information We Collect</h2>
     <p>We collect the following information:</p>
     <ul>
       <li><strong>Account information:</strong> Email address and password (encrypted) when you create an account.</li>
       <li><strong>Academic data:</strong> Semesters, courses, tasks, grades, and syllabus content that you enter or scan.</li>
+      <li><strong>Learning-platform data (optional):</strong> If you choose to connect Canvas, Blackboard, Moodle, or Google Classroom, we retrieve the courses and assignments you select to import or sync. The imported information is stored as academic data in your Semora account.</li>
       <li><strong>Device information:</strong> Timezone, device type, and operating system version for app functionality.</li>
       <li><strong>Syllabus files:</strong> Documents you upload for AI-powered scanning. These are processed to extract deadlines and are not shared with third parties beyond the AI processing service.</li>
       <li><strong>Study notes:</strong> Lecture notes or slides you optionally upload to the AI Tutor. These are stored privately in your account and used only to answer your questions about that course.</li>
@@ -45,6 +46,7 @@
       <li>To process syllabus documents using AI to extract course information and deadlines.</li>
       <li>To send you local notification reminders about upcoming deadlines, and — if you grant permission — occasional push reminders about deadlines and new semesters.</li>
       <li>To sync tasks with your device calendar, and, if you connect it, with Google Calendar.</li>
+      <li>To import and sync the courses and assignments you choose from a connected learning platform.</li>
       <li>To power study tools you choose to use (flashcards, focus timer, and an AI tutor grounded on your syllabus and any notes you upload).</li>
       <li>To apply referral rewards when you invite friends.</li>
     </ul>
@@ -59,6 +61,7 @@
       <li><strong>Apple StoreKit:</strong> For processing in-app subscription purchases.</li>
       <li><strong>Expo push service:</strong> Delivers push notifications to your device if you enable them.</li>
       <li><strong>Google Calendar (optional):</strong> If you connect Google Calendar, we access your calendar solely to add and update your Semora deadlines; we do not read your other events.</li>
+      <li><strong>Learning platforms (optional):</strong> Canvas, Blackboard, Moodle, and Google Classroom provide the course and assignment data you choose to sync. By default, their access tokens or authorization credentials stay on your device and are used only while you sync in Semora. If you explicitly turn on <em>Automatic sync</em>, we store that credential encrypted in Supabase Vault so Semora can check for selected course, assignment, submission, and grade updates while the app is closed. It is never exposed in your Semora account, and we delete it when you turn off Automatic sync or disconnect the platform.</li>
     </ul>
 
     <h2>Data Retention</h2>

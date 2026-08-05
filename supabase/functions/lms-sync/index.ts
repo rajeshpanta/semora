@@ -33,6 +33,24 @@ type LmsAssignment = {
   url?: string | null;
 };
 
+type SyncTrigger = 'initial' | 'manual' | 'foreground_auto' | 'background';
+type SyncConnection = {
+  id: string;
+  user_id: string;
+  provider: Provider;
+  base_url: string | null;
+  display_name: string;
+  sync_enabled: boolean;
+  background_sync_enabled: boolean;
+  consecutive_sync_failures: number;
+  links: Array<{
+    id: string;
+    external_course_id: string;
+    local_course_id: string;
+    sync_enabled: boolean;
+  }>;
+};
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -496,6 +514,229 @@ async function googleAssignments(token: string, courseIds: string[]): Promise<Lm
   return output;
 }
 
+function validProvider(value: unknown): value is Provider {
+  return ['canvas', 'blackboard', 'moodle', 'google_classroom'].includes(String(value));
+}
+
+function errorCode(error: unknown): 'credentials_required' | 'provider_error' {
+  const status = Number((error as any)?.status);
+  return status === 401 || status === 403 || /reconnect|permission|unauthor|token/i.test(String((error as Error)?.message ?? ''))
+    ? 'credentials_required'
+    : 'provider_error';
+}
+
+function nextBackgroundAttempt(failures: number) {
+  // 4h after a healthy sync. Failures back off 1h → 2h → 4h → 8h → 24h,
+  // keeping Semora considerate of institution API rate limits.
+  const hours = Math.min(24, Math.max(1, 2 ** Math.min(Math.max(failures - 1, 0), 4)));
+  return new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
+}
+
+async function requireUser(req: Request) {
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    const error: any = new Error('Authentication required');
+    error.status = 401;
+    throw error;
+  }
+  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data, error } = await userClient.auth.getUser();
+  if (error || !data.user) {
+    const authError: any = new Error('Invalid or expired session');
+    authError.status = 401;
+    throw authError;
+  }
+  return data.user;
+}
+
+async function requirePro(admin: ReturnType<typeof createClient>, userId: string) {
+  const { data, error } = await admin.rpc('is_pro', { uid: userId });
+  if (error) {
+    console.error('[lms-sync] is_pro check failed:', error);
+    const unavailable: any = new Error('Service temporarily unavailable');
+    unavailable.status = 503;
+    throw unavailable;
+  }
+  if (data !== true) {
+    const denied: any = new Error('Connecting a learning platform is a Pro feature. Upgrade to import your courses and assignments.');
+    denied.status = 402;
+    denied.code = 'PRO_REQUIRED';
+    throw denied;
+  }
+}
+
+async function loadConnection(
+  admin: ReturnType<typeof createClient>,
+  connectionId: string,
+  expectedUserId?: string,
+): Promise<SyncConnection> {
+  let query = admin
+    .from('lms_connections')
+    .select('*, links:lms_course_links(*)')
+    .eq('id', connectionId);
+  if (expectedUserId) query = query.eq('user_id', expectedUserId);
+  const { data, error } = await query.single();
+  if (error || !data) {
+    const missing: any = new Error('LMS connection not found');
+    missing.status = 404;
+    throw missing;
+  }
+  return { ...data, links: Array.isArray((data as any).links) ? (data as any).links : [] } as SyncConnection;
+}
+
+async function fetchAssignmentsForConnection(
+  connection: SyncConnection,
+  token: string,
+): Promise<{ assignments: LmsAssignment[]; removalSafe: boolean }> {
+  const links = connection.links.filter((link) => link.sync_enabled);
+  if (!links.length) throw new Error('This LMS connection has no enabled courses.');
+  const courseIds = links.map((link) => link.external_course_id);
+  const base = safeBaseUrl(connection.base_url, connection.provider);
+  let assignments: LmsAssignment[];
+  if (connection.provider === 'canvas') assignments = await canvasAssignments(base, token, courseIds);
+  else if (connection.provider === 'blackboard') assignments = await blackboardAssignments(base, token, courseIds);
+  else if (connection.provider === 'moodle') assignments = await moodleAssignments(base, token, courseIds);
+  else assignments = await googleAssignments(token, courseIds);
+  // Current provider pagination is bounded; no result is trusted as a complete
+  // deletion feed. Imported work is therefore preserved when an API response is
+  // truncated or restricted by a school.
+  return { assignments: assignments.slice(0, 5000), removalSafe: false };
+}
+
+function normalizeAssignments(connection: SyncConnection, assignments: LmsAssignment[]) {
+  const localByExternal = new Map(
+    connection.links.map((link) => [link.external_course_id, link.local_course_id]),
+  );
+  return assignments.map((item) => {
+    let localDue: { due_date?: string | null; due_time?: string | null } = {};
+    if (item.due_at) {
+      const date = new Date(item.due_at);
+      if (Number.isFinite(date.getTime())) {
+        localDue = {
+          due_date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+          due_time: `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`,
+        };
+      }
+    }
+    return { ...item, ...localDue, local_course_id: localByExternal.get(item.external_course_id) ?? null };
+  });
+}
+
+async function createRun(
+  admin: ReturnType<typeof createClient>,
+  connection: SyncConnection,
+  trigger: SyncTrigger,
+) {
+  const { data, error } = await admin
+    .from('lms_sync_runs')
+    .insert({ connection_id: connection.id, user_id: connection.user_id, trigger, status: 'running' })
+    .select('id')
+    .single();
+  if (error || !data) throw error ?? new Error('Could not create LMS sync record.');
+  return data.id as string;
+}
+
+async function performConnectionSync(
+  admin: ReturnType<typeof createClient>,
+  connection: SyncConnection,
+  token: string,
+  trigger: SyncTrigger,
+) {
+  const runId = await createRun(admin, connection, trigger);
+  await admin.from('lms_connections').update({
+    last_sync_status: 'syncing', last_error: null, last_sync_attempt_at: new Date().toISOString(),
+  }).eq('id', connection.id);
+
+  try {
+    const { assignments, removalSafe } = await fetchAssignmentsForConnection(connection, token);
+    const items = normalizeAssignments(connection, assignments);
+    const { data: applied, error: applyError } = await admin.rpc('apply_lms_assignment_sync_service', {
+      p_user_id: connection.user_id,
+      p_connection_id: connection.id,
+      p_items: items,
+      p_external_course_ids: removalSafe
+        ? connection.links.filter((link) => link.sync_enabled).map((link) => link.external_course_id)
+        : [],
+    });
+    if (applyError) throw applyError;
+    const processed = Number((applied as any)?.processed ?? 0);
+    const skipped = Number((applied as any)?.skipped ?? 0);
+    const status = skipped > 0 ? 'partial' : 'success';
+    await Promise.all([
+      admin.from('lms_sync_runs').update({ status, processed, skipped, finished_at: new Date().toISOString() }).eq('id', runId),
+      admin.from('lms_connections').update({
+        next_background_sync_at: connection.background_sync_enabled
+          ? new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
+          : null,
+        background_sync_paused_at: null,
+      }).eq('id', connection.id),
+    ]);
+    return { processed, skipped };
+  } catch (error) {
+    const code = errorCode(error);
+    const message = cleanText((error as Error)?.message, 500) ?? 'LMS synchronization failed.';
+    const failures = Number(connection.consecutive_sync_failures ?? 0) + 1;
+    const credentialsRequired = code === 'credentials_required';
+    await Promise.all([
+      admin.from('lms_sync_runs').update({
+        status: credentialsRequired ? 'credentials_required' : 'error',
+        error_code: code,
+        error_message: message,
+        finished_at: new Date().toISOString(),
+      }).eq('id', runId),
+      admin.from('lms_connections').update({
+        last_sync_status: credentialsRequired ? 'credentials_required' : 'error',
+        last_error: message,
+        consecutive_sync_failures: failures,
+        // Authorization errors are never retried behind the student's back.
+        // Temporary provider failures use capped backoff and remain visible.
+        background_sync_enabled: credentialsRequired ? false : connection.background_sync_enabled,
+        background_sync_paused_at: credentialsRequired ? new Date().toISOString() : null,
+        next_background_sync_at: credentialsRequired
+          ? null
+          : connection.background_sync_enabled
+            ? nextBackgroundAttempt(failures)
+            : null,
+      }).eq('id', connection.id),
+    ]);
+    // A rejected/revoked credential must not remain in the vault waiting for
+    // a student to notice a status message. Remove it immediately; reconnecting
+    // supplies a fresh credential and explicitly authorizes storage again.
+    if (credentialsRequired && connection.background_sync_enabled) {
+      const { error: revokeError } = await admin.rpc('disable_lms_background_sync', {
+        p_connection_id: connection.id,
+      });
+      if (revokeError) console.error('[lms-sync] could not remove expired background credential:', revokeError);
+    }
+    throw error;
+  }
+}
+
+async function backgroundCredential(admin: ReturnType<typeof createClient>, connectionId: string) {
+  const { data, error } = await admin.rpc('read_lms_background_credential', { p_connection_id: connectionId });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  const token = typeof row?.access_token === 'string' ? row.access_token : '';
+  if (!token) {
+    const credentialError: any = new Error('Reconnect this LMS to continue automatic syncing.');
+    credentialError.status = 401;
+    throw credentialError;
+  }
+  return token;
+}
+
+async function verifyCron(req: Request, admin: ReturnType<typeof createClient>) {
+  const supplied = req.headers.get('x-semora-lms-cron-secret') ?? '';
+  const { data, error } = await admin.rpc('read_lms_cron_secret');
+  if (error || typeof data !== 'string' || !supplied || supplied !== data) {
+    const denied: any = new Error('Unauthorized scheduler');
+    denied.status = 401;
+    throw denied;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
@@ -504,77 +745,102 @@ serve(async (req) => {
     const length = Number(req.headers.get('content-length'));
     if (!Number.isFinite(length) || length < 0) return json({ error: 'Content-Length required' }, 411);
     if (length > MAX_BODY_BYTES) return json({ error: 'Request too large' }, 413);
-
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) return json({ error: 'Authentication required' }, 401);
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData, error: userError } = await userClient.auth.getUser();
-    if (userError || !userData.user) return json({ error: 'Invalid or expired session' }, 401);
-
-    // Pro gate (server-side, the backstop the client can't bypass). LMS import
-    // is a Pro feature: both actions (discover + assignments) hit the school's
-    // provider API, so a patched free client could otherwise sync unlimited and
-    // run up our egress. Check BEFORE any provider fetch. is_pro() is SECURITY
-    // DEFINER and granted to service_role, so the admin client can call it. Same
-    // is_pro RPC + fail-closed-transient (503) policy as parse-syllabus, so an
-    // RPC blip never falsely demotes a paying user.
-    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { data: proResult, error: proErr } = await adminClient.rpc('is_pro', { uid: userData.user.id });
-    if (proErr) {
-      console.error('[lms-sync] is_pro check failed:', proErr);
-      return json({ error: 'Service temporarily unavailable' }, 503);
-    }
-    if (proResult !== true) {
-      // 402 + code so the client routes to the paywall rather than showing a
-      // generic error (mirrors share-course / google-cal-sync PRO_REQUIRED).
-      return json(
-        { error: 'Connecting a learning platform is a Pro feature. Upgrade to import your courses and assignments.', code: 'PRO_REQUIRED' },
-        402,
-      );
-    }
-
     const body = await req.json();
-    const provider = body?.provider as Provider;
     const action = body?.action;
+    const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    if (action === 'background') {
+      await verifyCron(req, admin);
+      const limit = Math.min(Math.max(Number(body?.limit) || 20, 1), 30);
+      const { data: rows, error } = await admin
+        .from('lms_connections')
+        .select('*, links:lms_course_links(*)')
+        .eq('sync_enabled', true)
+        .eq('background_sync_enabled', true)
+        .lte('next_background_sync_at', new Date().toISOString())
+        .order('next_background_sync_at', { ascending: true })
+        .limit(limit);
+      if (error) throw error;
+      let succeeded = 0;
+      let failed = 0;
+      for (const row of rows ?? []) {
+        const connection = { ...row, links: (row as any).links ?? [] } as SyncConnection;
+        try {
+          await requirePro(admin, connection.user_id);
+          await performConnectionSync(admin, connection, await backgroundCredential(admin, connection.id), 'background');
+          succeeded += 1;
+        } catch (error) {
+          failed += 1;
+          if ((error as any)?.code === 'PRO_REQUIRED') {
+            await admin.from('lms_connections').update({
+              background_sync_enabled: false,
+              background_sync_paused_at: new Date().toISOString(),
+              next_background_sync_at: null,
+              last_sync_status: 'error',
+              last_error: 'Automatic LMS sync is available with Semora Pro.',
+            }).eq('id', connection.id);
+          }
+          console.error('[lms-sync] background connection failed:', connection.id, (error as Error)?.message);
+        }
+      }
+      return json({ processed_connections: (rows ?? []).length, succeeded, failed });
+    }
+
+    const user = await requireUser(req);
+    await requirePro(admin, user.id);
+    const provider = body?.provider as Provider;
     const token = typeof body?.access_token === 'string' ? body.access_token.trim() : '';
-    const courseIds = Array.isArray(body?.course_ids)
-      ? body.course_ids.filter((id: unknown) => typeof id === 'string').slice(0, 50)
-      : [];
-    if (!['canvas', 'blackboard', 'moodle', 'google_classroom'].includes(provider)) {
-      return json({ error: 'Unsupported LMS provider' }, 400);
-    }
-    if (!['discover', 'assignments'].includes(action)) return json({ error: 'Invalid action' }, 400);
-    if (!token || token.length > 8192) return json({ error: 'A valid LMS access token is required' }, 400);
-    if (action === 'assignments' && courseIds.length === 0) {
-      return json({ error: 'Select at least one course' }, 400);
-    }
 
-    const base = safeBaseUrl(body?.base_url, provider);
-    let result: LmsCourse[] | LmsAssignment[];
     if (action === 'discover') {
-      if (provider === 'canvas') result = await canvasDiscover(base, token);
-      else if (provider === 'blackboard') result = await blackboardDiscover(base, token);
-      else if (provider === 'moodle') result = await moodleDiscover(base, token);
-      else result = await googleDiscover(token);
-      return json({ courses: result.slice(0, 500) });
+      if (!validProvider(provider)) return json({ error: 'Unsupported LMS provider' }, 400);
+      if (!token || token.length > 8192) return json({ error: 'A valid LMS access token is required' }, 400);
+      const base = safeBaseUrl(body?.base_url, provider);
+      let courses: LmsCourse[];
+      if (provider === 'canvas') courses = await canvasDiscover(base, token);
+      else if (provider === 'blackboard') courses = await blackboardDiscover(base, token);
+      else if (provider === 'moodle') courses = await moodleDiscover(base, token);
+      else courses = await googleDiscover(token);
+      return json({ courses: courses.slice(0, 500) });
     }
 
-    if (provider === 'canvas') result = await canvasAssignments(base, token, courseIds);
-    else if (provider === 'blackboard') result = await blackboardAssignments(base, token, courseIds);
-    else if (provider === 'moodle') result = await moodleAssignments(base, token, courseIds);
-    else result = await googleAssignments(token, courseIds);
-    // Provider pagination is intentionally bounded. Never authorize the
-    // client to infer deletions from this response: an extremely large course
-    // or a provider-side visibility rule could otherwise make valid local
-    // assignments look removed.
-    return json({ assignments: result.slice(0, 5000), removal_safe: false });
+    const connectionId = typeof body?.connection_id === 'string' ? body.connection_id : '';
+    if (!connectionId) return json({ error: 'LMS connection is required' }, 400);
+    const connection = await loadConnection(admin, connectionId, user.id);
+
+    if (action === 'sync') {
+      const syncToken = token || await backgroundCredential(admin, connection.id);
+      const trigger: SyncTrigger = body?.trigger === 'foreground_auto' ? 'foreground_auto' : body?.trigger === 'initial' ? 'initial' : 'manual';
+      const result = await performConnectionSync(admin, connection, syncToken, trigger);
+      return json(result);
+    }
+
+    if (action === 'enable_background') {
+      if (!token || token.length > 8192) return json({ error: 'Reconnect this LMS before enabling automatic sync.' }, 400);
+      const { error } = await admin.rpc('store_lms_background_credential', {
+        p_connection_id: connection.id,
+        p_access_token: token,
+        p_refresh_token: typeof body?.refresh_token === 'string' ? body.refresh_token : null,
+        p_expires_at: typeof body?.expires_at === 'string' ? body.expires_at : null,
+      });
+      if (error) throw error;
+      return json({ enabled: true });
+    }
+
+    if (action === 'disable_background') {
+      const { error } = await admin.rpc('disable_lms_background_sync', { p_connection_id: connection.id });
+      if (error) throw error;
+      return json({ enabled: false });
+    }
+
+    return json({ error: 'Invalid action' }, 400);
   } catch (error) {
     const status = Number((error as any)?.status);
-    const message = cleanText((error as Error)?.message, 400) ?? 'LMS synchronization failed.';
-    if (status === 401 || status === 403) return json({ error: message, code: 'credentials_required' }, 401);
+    const message = cleanText((error as Error)?.message, 500) ?? 'LMS synchronization failed.';
+    const code = (error as any)?.code ?? (status === 401 || status === 403 ? 'credentials_required' : undefined);
+    if (status === 401 || status === 403) return json({ error: message, code }, 401);
+    if (status === 402) return json({ error: message, code: 'PRO_REQUIRED' }, 402);
+    if (status === 503) return json({ error: message }, 503);
     console.error('[lms-sync] request failed:', message);
-    return json({ error: message }, 400);
+    return json({ error: message, code }, status >= 400 && status < 500 ? status : 400);
   }
 });

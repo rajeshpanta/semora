@@ -4,6 +4,7 @@ import type {
   StudyPlannerSettings, StudySessionMinutes, TaskPriority,
 } from '@/types/database';
 import { taskLoadScore } from '@/lib/workload';
+import type { AdaptivePlannerContext } from '@/lib/studyCoach';
 
 export const DEFAULT_STUDY_PLANNER_SETTINGS: StudyPlannerSettings = {
   study_daily_minutes: 90,
@@ -71,6 +72,8 @@ export interface PlannedStudyBlock {
   courseName: string;
   courseColor: string | null;
   dueDate: string;
+  /** A concise reason shown beside a session when coach signals affected its priority. */
+  coachReason?: 'exam' | 'grade_risk';
 }
 
 export interface GeneratedStudyPlan {
@@ -201,13 +204,20 @@ function nextFreeStart(cursor: number, duration: number, blocked: MinuteRange[],
   return null;
 }
 
-function taskUrgency(task: TaskState, day: Date, settings: StudyPlannerSettings) {
+function taskUrgency(
+  task: TaskState,
+  day: Date,
+  settings: StudyPlannerSettings,
+  adaptive?: AdaptivePlannerContext,
+) {
   const due = parseDateKey(task.due_date) ?? day;
   const days = differenceInCalendarDays(due, day);
   const urgencyDays = Math.max(0.5, days + 0.5);
   const priority = task.priority === 'high' ? 1.55 : task.priority === 'low' ? 0.78 : 1;
   const pace = task.remaining / daysAvailable(day, task, settings);
-  return (taskLoadScore({ type: task.type, weight: task.weight ?? null }) * priority) / urgencyDays + pace;
+  const examBoost = adaptive?.examTaskIds.includes(task.id) ? 1.7 : 1;
+  const gradeRiskBoost = adaptive?.gradeRiskCourseIds.includes(task.course_id) ? 1.28 : 1;
+  return ((taskLoadScore({ type: task.type, weight: task.weight ?? null }) * priority * examBoost * gradeRiskBoost) / urgencyDays) + pace;
 }
 
 function normalizeSettings(settings?: Partial<StudyPlannerSettings>): StudyPlannerSettings {
@@ -239,6 +249,7 @@ export function generateStudyPlan(
   now: Date = new Date(),
   horizonDays = STUDY_PLAN_HORIZON_DAYS,
   calendarBusy: PlannerBusyInterval[] = [],
+  adaptive?: AdaptivePlannerContext,
 ): GeneratedStudyPlan {
   const settings = normalizeSettings(rawSettings);
   const today = new Date(now);
@@ -278,7 +289,13 @@ export function generateStudyPlan(
       day.getDay() === 0 || day.getDay() === 6 ? 10 * 60 : 17 * 60,
     );
     const roundedNow = Math.ceil((now.getHours() * 60 + now.getMinutes()) / 15) * 15;
-    let cursor = Math.max(preferred, isToday ? roundedNow : 0);
+    // The student-selected start remains the floor. Once enough completions
+    // exist, the coach can gently avoid placing work earlier than the time the
+    // student actually tends to finish it on this weekday.
+    const learnedStart = adaptive?.preferredStartByWeekday[day.getDay()]
+      ?? adaptive?.preferredStartMinutes
+      ?? 0;
+    let cursor = Math.max(preferred, learnedStart, isToday ? roundedNow : 0);
     const dayEnd = 23 * 60;
     // Completed sessions stay fixed as history, so reserve their time just as
     // we reserve class meetings. This prevents a rebuild from stacking a new
@@ -309,7 +326,7 @@ export function generateStudyPlan(
         return task.start_date <= dayKey;
       })
       .sort((a, b) =>
-        taskUrgency(b, day, settings) - taskUrgency(a, day, settings)
+        taskUrgency(b, day, settings, adaptive) - taskUrgency(a, day, settings, adaptive)
         || a.due_date.localeCompare(b.due_date)
         || a.title.localeCompare(b.title),
       );
@@ -353,6 +370,11 @@ export function generateStudyPlan(
           courseName: task.courses?.name || 'Course',
           courseColor: task.courses?.color || null,
           dueDate: task.due_date,
+          coachReason: adaptive?.examTaskIds.includes(task.id)
+            ? 'exam'
+            : adaptive?.gradeRiskCourseIds.includes(task.course_id)
+              ? 'grade_risk'
+              : undefined,
         });
         task.remaining -= duration;
         targetToday -= duration;

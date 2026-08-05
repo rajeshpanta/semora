@@ -171,9 +171,25 @@ export interface StudyBlock {
   completed_at: string | null;
   reschedule_reason: 'missed' | 'conflict' | 'rebuild' | null;
   rescheduled_from_date: string | null;
+  /** Why the adaptive coach raised this session's priority, if applicable. */
+  coach_reason: 'exam' | 'grade_risk' | null;
   generated_at: string;
   created_at: string;
   updated_at: string;
+}
+
+export type StudyPlanChangeKind = 'habit' | 'missed' | 'calendar' | 'exam' | 'grade_risk' | 'capacity';
+
+export interface StudyPlanChange {
+  id: string;
+  user_id: string;
+  semester_id: string;
+  kind: StudyPlanChangeKind;
+  change_key: string;
+  title: string;
+  detail: string;
+  metadata: Record<string, unknown>;
+  created_at: string;
 }
 
 export interface StudyPlannerSettings {
@@ -218,6 +234,14 @@ export interface LmsConnection {
   last_synced_at: string | null;
   last_sync_status: LmsSyncStatus;
   last_error: string | null;
+  /** Student-approved encrypted credential exists server-side for scheduled sync. */
+  background_sync_enabled: boolean;
+  background_sync_authorized_at: string | null;
+  background_sync_paused_at: string | null;
+  next_background_sync_at: string | null;
+  last_sync_attempt_at: string | null;
+  last_successful_sync_at: string | null;
+  consecutive_sync_failures: number;
   created_at: string;
   updated_at: string;
 }

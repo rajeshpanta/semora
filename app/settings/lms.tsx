@@ -5,6 +5,8 @@ import { Alert, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   disconnectLms,
+  disableLmsBackgroundSync,
+  enableLmsBackgroundSync,
   listLmsConnections,
   LMS_PROVIDER_LABELS,
   syncLmsConnection,
@@ -15,6 +17,19 @@ import { useResponsive } from '@/lib/responsive';
 import { useColors } from '@/lib/theme';
 import { useAppStore } from '@/store/appStore';
 import type { LmsProvider } from '@/types/database';
+
+function syncTimeLabel(value: string | null) {
+  if (!value) return 'Not synced yet';
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return 'Sync time unavailable';
+  const seconds = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+  if (seconds < 60) return 'Updated just now';
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `Updated ${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return `Updated ${hours}h ago`;
+  return `Updated ${Math.round(hours / 24)}d ago`;
+}
 
 // Google Classroom is temporarily NOT offered here: it needs the Google OAuth
 // client verified for its sensitive classroom.* scopes (same Google verification
@@ -46,7 +61,7 @@ export default function LmsSettingsScreen() {
     queryFn: listLmsConnections,
   });
   const sync = useMutation({
-    mutationFn: syncLmsConnection,
+    mutationFn: (connectionId: string) => syncLmsConnection(connectionId),
     onSuccess: (result) => {
       query.refetch();
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -84,6 +99,35 @@ export default function LmsSettingsScreen() {
       );
     },
   });
+  const automatic = useMutation({
+    mutationFn: async ({ connectionId, enabled }: { connectionId: string; enabled: boolean }) => {
+      if (enabled) await enableLmsBackgroundSync(connectionId);
+      else await disableLmsBackgroundSync(connectionId);
+    },
+    onSuccess: () => query.refetch(),
+    onError: (error: Error) => Alert.alert('Couldn’t update automatic sync', error.message),
+  });
+  const toggleAutomatic = (connection: NonNullable<typeof query.data>[number]) => {
+    if (connection.background_sync_enabled) {
+      Alert.alert(
+        'Turn off automatic sync?',
+        'Semora will remove the encrypted server credential and will only sync this LMS while you use the app on this device.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Turn off', style: 'destructive', onPress: () => automatic.mutate({ connectionId: connection.id, enabled: false }) },
+        ],
+      );
+      return;
+    }
+    Alert.alert(
+      'Turn on automatic sync?',
+      'Semora will encrypt this LMS credential in its secure server vault so it can check for assignment and grade changes every few hours, even when the app is closed. You can turn this off at any time.',
+      [
+        { text: 'Not now', style: 'cancel' },
+        { text: 'Turn on', onPress: () => automatic.mutate({ connectionId: connection.id, enabled: true }) },
+      ],
+    );
+  };
   const remove = (id: string) => {
     Alert.alert(
       'Disconnect LMS?',
@@ -111,7 +155,7 @@ export default function LmsSettingsScreen() {
         <View style={[styles.notice, { backgroundColor: colors.brand50 }]}>
           <FontAwesome name="shield" size={16} color={colors.brand} />
           <Text style={[styles.noticeText, { color: colors.ink2 }]}>
-            Access tokens stay on this device. Semora stores only the course links and sync health.
+            Sync on this device is private by default. Turn on automatic sync only if you want Semora to keep an encrypted credential in its secure server vault for background updates.
           </Text>
         </View>
 
@@ -131,6 +175,10 @@ export default function LmsSettingsScreen() {
                       <Text style={[styles.meta, { color: colors.ink3 }]}>
                         {connection.links.length} {connection.links.length === 1 ? 'course' : 'courses'}
                         {connection.account_label ? ` · ${connection.account_label}` : ''}
+                      </Text>
+                      <Text style={[styles.syncMeta, { color: colors.ink3 }]}>
+                        {syncTimeLabel(connection.last_successful_sync_at ?? connection.last_synced_at)}
+                        {connection.background_sync_enabled ? ' · Automatic sync on' : ' · Device sync only'}
                       </Text>
                     </View>
                     <Text style={[styles.status, { color: needsAttention ? colors.coral : '#0F766E' }]}>
@@ -155,6 +203,27 @@ export default function LmsSettingsScreen() {
                       <Text style={[styles.textButtonLabel, { color: colors.brand }]}>
                         {sync.isPending && sync.variables === connection.id ? 'Syncing…' : 'Sync now'}
                       </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => toggleAutomatic(connection)}
+                      disabled={automatic.isPending}
+                      style={styles.textButton}
+                    >
+                      <FontAwesome name={connection.background_sync_enabled ? 'clock-o' : 'bolt'} size={13} color={colors.brand} />
+                      <Text style={[styles.textButtonLabel, { color: colors.brand }]}>
+                        {automatic.isPending && automatic.variables?.connectionId === connection.id
+                          ? 'Saving…'
+                          : connection.background_sync_enabled ? 'Automatic on' : 'Automatic'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={[styles.connectionActions, { borderTopColor: colors.line, marginTop: 8, paddingTop: 8 }]}>
+                    <TouchableOpacity
+                      onPress={() => router.push({ pathname: '/settings/lms/[connectionId]', params: { connectionId: connection.id } } as any)}
+                      style={styles.textButton}
+                    >
+                      <FontAwesome name="random" size={13} color={colors.ink2} />
+                      <Text style={[styles.textButtonLabel, { color: colors.ink2 }]}>Courses & activity</Text>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => remove(connection.id)} style={styles.textButton}>
                       <FontAwesome name="unlink" size={13} color={colors.ink3} />
@@ -212,6 +281,7 @@ const styles = StyleSheet.create({
   connectionName: { fontSize: 15, fontWeight: '800' },
   providerName: { fontSize: 15, fontWeight: '700' },
   meta: { fontSize: 12, marginTop: 3, lineHeight: 17 },
+  syncMeta: { fontSize: 11, marginTop: 4, lineHeight: 16 },
   status: { fontSize: 11, fontWeight: '800', textTransform: 'capitalize' },
   error: { fontSize: 12, lineHeight: 17, marginTop: 10 },
   connectionActions: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 11, marginTop: 11 },

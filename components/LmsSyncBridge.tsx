@@ -34,7 +34,7 @@ export function LmsSyncBridge({ userId }: { userId: string | null }) {
         if (Number.isFinite(last) && now - last < AUTO_SYNC_INTERVAL_MS) continue;
         if (!(await getLmsCredential(connection.id))) continue;
         try {
-          await syncLmsConnection(connection.id);
+          await syncLmsConnection(connection.id, 'foreground_auto');
           changed = true;
         } catch {
           // syncLmsConnection records a user-facing health state. Foreground
