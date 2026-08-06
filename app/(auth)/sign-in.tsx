@@ -2,7 +2,6 @@ import { TouchableOpacity } from '@/components/LocalizedReactNative';
 import { Alert, Text, TextInput } from '@/components/LocalizedReactNative';
 import {
   useEffect,
-  useRef,
   useState } from 'react';
 import {
   View,
@@ -29,7 +28,7 @@ export default function SignInScreen() {
   // so the user sees confirmation when they're bounced back here to sign in).
   const banner = useAppStore((s) => s.postSignupBanner);
   const router = useRouter();
-  const params = useLocalSearchParams<{ mode?: string; provider?: string }>();
+  const params = useLocalSearchParams<{ mode?: string }>();
 
   // New installs land here straight from onboarding, so account CREATION
   // is the default framing. By policy, accounts are created ONLY via
@@ -81,25 +80,6 @@ export default function SignInScreen() {
   useEffect(() => {
     isAppleSignInAvailable().then(setAppleAvailable);
   }, []);
-
-  // The marketing site's sign-in dialog sends ?provider=apple|google when the
-  // visitor has already picked one there. Without this they would land on a
-  // screen asking them to pick the same provider a second time, which makes
-  // the dialog look like a fake step. Guarded by a ref so a re-render (or a
-  // back-navigation onto this screen) cannot fire the OAuth flow twice.
-  const autoProviderFired = useRef(false);
-  useEffect(() => {
-    if (autoProviderFired.current) return;
-    const p = params.provider;
-    if (p !== 'apple' && p !== 'google') return;
-    autoProviderFired.current = true;
-    // Clear it from the URL first: if OAuth bounces the user back here, a
-    // surviving ?provider= would relaunch the flow in a loop.
-    router.setParams({ provider: undefined });
-    if (p === 'apple') void handleApple();
-    else void handleGoogle();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.provider]);
 
   const handleApple = async () => {
     setError('');

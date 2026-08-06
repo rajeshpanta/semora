@@ -1,5 +1,6 @@
 import { TouchableOpacity } from '@/components/LocalizedReactNative';
 import { Text } from '@/components/LocalizedReactNative';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -25,11 +26,25 @@ export default function OAuthCallbackScreen() {
   }>();
   const failure = typeof error === 'string' ? error : '';
   const failureDescription = typeof errorDescription === 'string' ? errorDescription : '';
+
+  // If the exchange never completes — someone typed /callback directly, or a
+  // provider error came back in the URL fragment where useLocalSearchParams
+  // cannot see it — this screen used to spin forever with no way out.
+  // AuthProvider's exchange navigates away well inside this window when a code
+  // is actually present, so a still-mounted spinner after 12s means stranded.
+  const [timedOut, setTimedOut] = useState(false);
+  useEffect(() => {
+    if (failure) return;
+    const timer = setTimeout(() => setTimedOut(true), 12000);
+    return () => clearTimeout(timer);
+  }, [failure]);
+  const stuck = failure ? true : timedOut;
+
   return (
     <WebAuthBackdrop>
       <View style={[styles.screen, { backgroundColor: Platform.OS === 'web' ? 'transparent' : colors.paper }]}>
         <View style={[styles.card, webAuthCard, { backgroundColor: Platform.OS === 'web' ? undefined : colors.card }]}>
-          {failure ? (
+          {stuck ? (
             <>
               <Text style={[styles.title, { color: colors.ink }]}>Sign-in didn’t finish</Text>
               <Text style={[styles.copy, { color: colors.ink2 }]}>

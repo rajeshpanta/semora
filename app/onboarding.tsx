@@ -27,6 +27,7 @@ import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useAppStore, type PainPoint } from '@/store/appStore';
+import { useI18n } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
 
 const STEP_COUNT = 4; // hook · live demo · outcome · personalize
@@ -232,16 +233,21 @@ function rowColor(colors: C, k: 'coral' | 'brand' | 'teal' | 'blue') {
 /* ------------------------------------------------ step 0: hook */
 
 function Hook({ colors, isWide }: { colors: C; isWide: boolean }) {
+  // Animated.Text wraps react-native's raw Text, not the localized wrapper, so
+  // its children bypass runtime translation entirely — this hero rendered in
+  // English for Spanish users even though every piece below has a dictionary
+  // entry. Translate explicitly; useI18n() keeps it reactive to the setting.
+  const { t } = useI18n();
   return (
     <View style={styles.stepPad}>
       <Animated.Text entering={FadeInDown.duration(420)} style={[styles.kicker, { color: colors.brand }]}>
-        WELCOME TO SEMORA
+        {t('WELCOME TO SEMORA')}
       </Animated.Text>
       <Animated.Text entering={FadeInDown.delay(80).duration(420)} style={[styles.display, { color: colors.ink }]}>
-        Your semester,{'\n'}organized in{'\n'}one snap.
+        {t('Your semester,')}{'\n'}{t('organized in')}{'\n'}{t('one snap.')}
       </Animated.Text>
       <Animated.Text entering={FadeInDown.delay(160).duration(420)} style={[styles.lead, { color: colors.ink2 }, isWide && { maxWidth: 700 }]}>
-        Turn any syllabus — a photo or a PDF — into a calendar of every deadline. In seconds, without typing a thing.
+        {t('Turn any syllabus — a photo or a PDF — into a calendar of every deadline. In seconds, without typing a thing.')}
       </Animated.Text>
       <Animated.View entering={FadeInDown.delay(280).duration(480)} style={styles.heroCardWrap}>
         <View pointerEvents="none" style={[styles.miniResultCard, { backgroundColor: colors.card, borderColor: colors.line, transform: [{ scale: 0.92 }, { rotate: '-3deg' }] }]}>
