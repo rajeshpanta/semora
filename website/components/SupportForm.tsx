@@ -45,7 +45,7 @@ export function SupportForm({ supportEmail, locale = 'en' }: SupportFormProps) {
         </label>
         <label>
           {es ? 'Correo electrónico' : 'Email'}
-          <input name="email" type="email" autoComplete="email" placeholder="you@example.com" required />
+          <input name="email" type="email" autoComplete="email" placeholder={es ? 'tu@ejemplo.com' : 'you@example.com'} required />
         </label>
       </div>
       <label>

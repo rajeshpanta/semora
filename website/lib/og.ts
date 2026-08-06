@@ -23,7 +23,14 @@ import { SITE_NAME } from './semora-facts';
 export const OG_DEFAULTS = {
   siteName: SITE_NAME,
   type: 'website' as const,
-  images: ['/opengraph-image'],
+  // Points at the stable /og.png route handler, NOT the file-convention path.
+  // The bare '/opengraph-image' literal that used to live here 404s in this
+  // Next version (the file-convention image is only served content-hashed),
+  // and omitting `images` doesn't work either: a page-level `openGraph` drops
+  // the inherited file-convention image (verified in the built HTML — deep
+  // pages emitted no og:image at all). /og.png renders the same card via
+  // lib/og-card.tsx, force-static.
+  images: ['/og.png'],
 };
 
 /**
@@ -36,5 +43,6 @@ export const OG_IMAGE = OG_DEFAULTS;
 export const OG_IMAGE_ES = {
   siteName: SITE_NAME,
   type: 'website' as const,
-  images: ['/es/opengraph-image'],
+  // Same mechanism as OG_DEFAULTS — the stable Spanish card route.
+  images: ['/es/og.png'],
 };

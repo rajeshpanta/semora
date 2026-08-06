@@ -42,9 +42,6 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // No palette attribute here: the canvas is per-route, and a page opts into
-    // the dark one by rendering <DarkCanvas />. See that component for why the
-    // choice cannot live in this layout.
     <html lang="en" className={fraunces.variable}>
       <body>
         {/* If JS never runs, Reveal's scroll-triggered content must not stay

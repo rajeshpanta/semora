@@ -155,7 +155,7 @@ export function GpaCalculator({ locale = 'en' }: { locale?: SiteLocale }) {
               : `${result.quality} quality points ÷ ${result.credits} credits, across ${result.courses} ${result.courses === 1 ? 'course' : 'courses'}.`}
           {result.skipped > 0 && result.gpa !== null
             ? es
-              ? ` ${result.skipped} ${result.skipped === 1 ? 'curso no cuenta' : 'cursos no cuentan'} porque no tienen calificación.`
+              ? ` ${result.skipped} ${result.skipped === 1 ? 'curso no cuenta porque no tiene' : 'cursos no cuentan porque no tienen'} calificación.`
               : ` ${result.skipped} ${result.skipped === 1 ? 'course is' : 'courses are'} not counted — no grade selected.`
             : ''}
         </p>

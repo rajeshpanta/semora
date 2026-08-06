@@ -2,9 +2,6 @@
    (lib/constants.ts in the main Expo app) so the website, the app's own
    web build, and this marketing site all read as one brand. */
 :root {
-  /* Overwritten with the measured value by NavChrome once JS runs; these are
-     the observed heights so the first painted frame does not show a gap. */
-  --nav-height: 67px;
   --bg: #faf9f5;
   --card: #ffffff;
   --ink: #1c1b1f;
@@ -88,29 +85,4 @@ img {
   outline-offset: 2px;
 }
 
-@media (min-width: 1000px) {
-  :root { --nav-height: 76px; }
-}
 
-/* ── Single-canvas dark page (homepage) ──────────────────────
-   Laxu-style: one background top to bottom, sections separated by whitespace
-   and hairline borders rather than by alternating colour. Re-pointing the
-   tokens means every component built on them inverts without being touched. */
-:root:has([data-canvas='dark']) {
-  --bg: #0f0b1a;
-  --card: rgba(255, 255, 255, 0.035);
-  --ink: #f5f3fa;
-  --ink2: rgba(255, 255, 255, 0.70);
-  --ink3: rgba(255, 255, 255, 0.45);
-  --ink-muted: rgba(255, 255, 255, 0.62);
-  --border: rgba(255, 255, 255, 0.10);
-  /* Lift the brand tints off pure purple so they read on a dark ground. */
-  --brand: #a78bfa;
-  --brand-50: rgba(167, 139, 250, 0.12);
-  --brand-100: rgba(167, 139, 250, 0.28);
-}
-
-:root:has([data-canvas='dark']) body {
-  background: var(--bg);
-  color: var(--ink);
-}

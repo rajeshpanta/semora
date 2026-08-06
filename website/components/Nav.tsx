@@ -3,7 +3,6 @@ import { SignupButton } from './SignupButton';
 import styles from './Nav.module.css';
 import { FeaturesMenu } from './FeaturesMenu';
 import { MobileNav } from './MobileNav';
-import { NavChrome } from './NavChrome';
 import { SITE_NAME, APP_STORE_URL } from '@/lib/semora-facts';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import type { SiteLocale } from '@/lib/i18n';
@@ -37,8 +36,7 @@ export function Nav({ locale = 'en' }: { locale?: SiteLocale }) {
     : { getApp: 'Get the app', signIn: 'Sign in', tryFree: 'Try it for free', aria: 'Main' };
 
   return (
-    <header className={styles.header} data-nav>
-      <NavChrome />
+    <header className={styles.header}>
       <div className={styles.inner}>
         <Link href={homeHref} className={styles.logo}>
           {SITE_NAME}
