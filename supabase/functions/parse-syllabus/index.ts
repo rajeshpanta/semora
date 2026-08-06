@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-const OPENAI_MODEL = Deno.env.get('SYLLABUS_OPENAI_MODEL')?.trim() || 'gpt-5.6-luna';
+const OPENAI_MODEL = Deno.env.get('SYLLABUS_OPENAI_MODEL')?.trim() || 'gpt-5.6-terra'; // mid tier: $2/$12 per 1M vs luna $0.20/$1.20 — better quality at ~10x cost; per-user quotas bound the spend
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
