@@ -56,6 +56,21 @@ function spanishPattern(input: string): string | null {
   if (match) return `vence en ${match[1]} ${match[1] === '1' ? 'día' : 'días'}`;
   match = input.match(/^overdue by (\d+) days?$/i);
   if (match) return `atrasada por ${match[1]} ${match[1] === '1' ? 'día' : 'días'}`;
+  // These all MUST precede the generic "<x> due <y>" rule below, which blindly
+  // inserts its own "·". Where the source string already carries one — the
+  // "{course} · due in N days" shape used by StudySuggestionsCard and the Today
+  // list — the generic rule produced "BIO 210 · · entrega in 34 days": a doubled
+  // separator AND an untranslated tail, because the date phrase is a second
+  // English fragment it never looks at.
+  match = input.match(/^(.+?) · due in (\d+) days?$/i);
+  if (match) return `${match[1]} · entrega en ${match[2]} ${match[2] === '1' ? 'día' : 'días'}`;
+  match = input.match(/^(.+?) · due (today|tomorrow)$/i);
+  if (match) return `${match[1]} · entrega ${match[2].toLowerCase() === 'today' ? 'hoy' : 'mañana'}`;
+  match = input.match(/^(.+?) · due (.+)$/i);
+  if (match) return `${match[1]} · entrega ${match[2]}`;
+  match = input.match(/^due in (\d+) days?$/i);
+  if (match) return `entrega en ${match[1]} ${match[1] === '1' ? 'día' : 'días'}`;
+
   // MUST precede the generic "<x> due <y>" rule below. The Today screen renders
   // "Next up: {title} ({course}) — due {date}" as mixed JSX, which the localized
   // Text wrapper joins into ONE string before translating; the generic rule then
