@@ -470,7 +470,17 @@ serve(async (req) => {
     const promptText = pages.length > 1
       ? `${EXTRACTION_PROMPT}\n\nThe ${pages.length} images that follow are sequential pages of the SAME syllabus document. Read them together as one document and return ONE combined JSON object.`
       : EXTRACTION_PROMPT;
-    const inputContent = pastedText != null
+    // The Responses API rejects `text.format: json_object` unless the word
+    // "json" appears in the INPUT messages — it does not count the word
+    // appearing in `instructions`, which is where EXTRACTION_PROMPT lives.
+    // Without this line every scan failed with HTTP 400:
+    //   "Response input messages must contain the word 'json' in some form
+    //    to use 'text.format' of type 'json_object'."
+    const jsonDirective = {
+      type: 'input_text',
+      text: 'Extract this syllabus and return the single JSON object described in the instructions.',
+    };
+    const inputContent = [jsonDirective, ...(pastedText != null
       ? [{ type: 'input_text', text: pastedText }]
       : pages.map((page, index) => page.mimeType === 'application/pdf'
         ? {
@@ -483,7 +493,7 @@ serve(async (req) => {
           type: 'input_image',
           image_url: `data:${page.mimeType};base64,${page.base64}`,
           detail: 'high',
-        });
+        }))];
 
     const openAIResult = await callOpenAIResponses({
       model: OPENAI_MODEL,
