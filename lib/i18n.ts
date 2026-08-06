@@ -56,6 +56,26 @@ function spanishPattern(input: string): string | null {
   if (match) return `vence en ${match[1]} ${match[1] === '1' ? 'día' : 'días'}`;
   match = input.match(/^overdue by (\d+) days?$/i);
   if (match) return `atrasada por ${match[1]} ${match[1] === '1' ? 'día' : 'días'}`;
+  // Progress Insights / Workload metric fragments (found on-device during
+  // pre-release QA — these render as interpolated JSX, so the joined string is
+  // what reaches the lookup).
+  match = input.match(/^(\d+)\/(\d+) tasks$/i);
+  if (match) return `${match[1]}/${match[2]} ${match[2] === '1' ? 'tarea' : 'tareas'}`;
+  match = input.match(/^(\d+)% complete$/i);
+  if (match) return `${match[1]} % completado`;
+  match = input.match(/^(\d+) left$/i);
+  if (match) return `${match[1]} ${match[1] === '1' ? 'restante' : 'restantes'}`;
+  // translate() trims before matching and re-inserts the surrounding
+  // whitespace afterwards, so anchor on the trimmed form, not " · N weeks left".
+  match = input.match(/^· (\d+) (week|weeks) left$/i);
+  if (match) return `· ${match[1]} ${match[1] === '1' ? 'semana restante' : 'semanas restantes'}`;
+  match = input.match(/^Next: (.+) · (.+)$/);
+  if (match) return `Siguiente: ${match[1]} · ${match[2]}`;
+  match = input.match(/^(\d+)m left$/i);
+  if (match) return `quedan ${match[1]} min`;
+  match = input.match(/^(\d+)h left$/i);
+  if (match) return `quedan ${match[1]} h`;
+
   // These all MUST precede the generic "<x> due <y>" rule below, which blindly
   // inserts its own "·". Where the source string already carries one — the
   // "{course} · due in N days" shape used by StudySuggestionsCard and the Today
