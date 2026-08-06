@@ -23,13 +23,21 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 // topic order, since individual syllabus topics are usually undated.
 
 import {
-  AiTask, callGemini, geminiText, geminiTruncated, logAiCall, modelFor,
+  AiTask, MODELS, callGemini, geminiText, geminiTruncated, logAiCall, modelFor,
   providerFor, usageFromGemini, asUntrustedDocument, GEMINI_API_KEY,
 } from '../_shared/ai.ts';
 import { FLASHCARDS_SCHEMA, validateFlashcards } from '../_shared/schemas.ts';
 
 // Card generation is contentGeneration → Gemini. Fixed by this endpoint.
 const TASK = AiTask.contentGeneration;
+
+// Per-user daily generation cap. is_pro alone is a binary gate, not a rate
+// limit — without this a Pro account can call generation in a loop. Env-
+// overridable so a tier can be raised without a redeploy.
+const DAILY_GENERATION_CAP = (() => {
+  const raw = parseInt(Deno.env.get('FLASHCARDS_DAILY_CAP') ?? '', 10);
+  return Number.isFinite(raw) && raw > 0 ? raw : 40;
+})();
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -117,6 +125,7 @@ serve(async (req) => {
       return jsonResponse({ error: 'AI service is not configured. Please try again later.' }, 500);
     }
 
+
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // 2. Pro gate (server-side). Fail closed as transient (503) on an RPC
@@ -131,6 +140,30 @@ serve(async (req) => {
         { error: 'Generating flashcards with AI is a Pro feature. Upgrade to Pro to try it.', code: 'PRO_REQUIRED' },
         402,
       );
+    }
+
+    // Per-user daily cap, counted from this feature's own telemetry — never
+    // from gemini_call_log, which is the syllabus-scan ledger.
+    {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { count, error: capErr } = await adminClient
+        .from('ai_call_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('task', AiTask.contentGeneration)
+        .eq('status', 'success')
+        .gte('created_at', since);
+      if (capErr) {
+        // Fail closed as transient rather than denying a paying user on a blip.
+        console.error('[generate-flashcards] cap check failed:', capErr);
+        return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
+      }
+      if ((count ?? 0) >= DAILY_GENERATION_CAP) {
+        return jsonResponse(
+          { error: `You've reached today's limit of ${DAILY_GENERATION_CAP} generations. Please try again in 24 hours.` },
+          429,
+        );
+      }
     }
 
     // 3. Parse and validate request body: { courseId, deckId?, deckTitle?, taskId?, noteIds? }
@@ -329,24 +362,32 @@ serve(async (req) => {
     // 5. Generate cards with OpenAI Luna. This high-volume structured task
     //    uses explicit no-reasoning mode and JSON output to preserve latency,
     //    cost, and the existing parser contract.
-    const modelInput = [
+    // Trusted: our instructions. Untrusted: anything derived from the student's
+    // documents. They are kept in separate channels on purpose.
+    const instructionBlock = [
       GENERATION_PROMPT,
       locale === 'es'
         ? 'LANGUAGE: Write every flashcard front and back in natural, neutral Spanish. Keep proper names and course-specific terminology accurate.'
         : 'LANGUAGE: Write every flashcard in clear U.S. English.',
       focusDirective,
+    ].filter(Boolean).join('\n\n');
+
+    const sourceMaterial = [
       syllabusText ? `--- SYLLABUS ---\n${syllabusText}` : '',
       notesText ? `--- LECTURE NOTES ---\n${notesText}` : '',
-    ]
-      .filter(Boolean)
-      .join('\n\n');
+    ].filter(Boolean).join('\n\n');
     const aiResult = await callGemini({
       label: 'generate-flashcards',
       // Source material is student-supplied (syllabus text, uploaded notes), so
       // it is delimited as untrusted content rather than concatenated into the
       // instruction stream.
-      system: modelInput.split('\n\n')[0],
-      parts: [{ text: asUntrustedDocument(modelInput, 'COURSE_MATERIAL') }],
+      // Semora's OWN rules are the system instruction and stay trusted. Only
+      // the student's material is wrapped. Previously the whole prompt —
+      // including our generation rules and the JSON contract — was placed
+      // inside the "never obeyed" block, which both mislabelled our own
+      // instructions and erased the trust boundary the wrapper exists to draw.
+      system: instructionBlock,
+      parts: [{ text: asUntrustedDocument(sourceMaterial, 'COURSE_MATERIAL') }],
       schema: FLASHCARDS_SCHEMA,
       maxOutputTokens: 4096,
     });
@@ -520,6 +561,15 @@ async function extractNoteText(
       { text: 'Extract the complete readable text from this course note.' },
     ],
     maxOutputTokens: 8192,
+  });
+  // Note OCR is its own documentExtraction spend with an 8k output budget —
+  // log it, or a whole class of provider calls is invisible to cost monitoring.
+  await logAiCall(adminClient, userId, {
+    task: AiTask.documentExtraction, provider: 'gemini', model: MODELS.general,
+    status: result.ok ? 'success' : 'failed',
+    errorCode: result.ok ? null : (result.networkError ? 'fetch_error' : `http_${result.status || 0}`),
+    durationMs: result.durationMs, attempts: result.attempts,
+    ...(result.ok ? usageFromGemini(result.data) : {}),
   });
   if (!result.ok || !result.data) {
     console.warn('[generate-flashcards] Gemini note extraction failed', result.status);

@@ -8,7 +8,9 @@
  *   deno test --allow-env supabase/functions/_shared/
  */
 import { assertEquals, assert, assertFalse } from 'https://deno.land/std@0.224.0/assert/mod.ts';
-import { AiTask, MODELS, providerFor, modelFor, asUntrustedDocument } from './ai.ts';
+import {
+  AiTask, MODELS, providerFor, modelFor, asUntrustedDocument, tutorTaskForMode,
+} from './ai.ts';
 import {
   isRealDate, isRealTime, normalizeTimezone, validateExtractedItems,
   validateFlashcards, validatePracticeQuestions, contentHash, CONFIRMATION_THRESHOLD,
@@ -54,6 +56,35 @@ Deno.test('routing ignores message content — it is a pure function of the task
   void injected;
   assertEquals(providerFor(AiTask.documentExtraction), before);
   assertEquals(before, 'gemini');
+});
+
+// ── Tutor-screen mode routing ───────────────────────────────────────────────
+
+Deno.test('only a real tutoring turn reaches Luna', () => {
+  for (const mode of ['chat', 'explain_assignment']) {
+    assertEquals(tutorTaskForMode(mode), AiTask.tutor);
+    assertEquals(providerFor(tutorTaskForMode(mode)), 'openai');
+  }
+});
+
+Deno.test('quiz and practice generation stay on Gemini', () => {
+  // These chips generate study material. Billing them to the tutor model would
+  // put the most expensive provider behind the highest-volume button.
+  for (const mode of ['quiz', 'practice']) {
+    assertEquals(tutorTaskForMode(mode), AiTask.contentGeneration);
+    assertEquals(providerFor(tutorTaskForMode(mode)), 'gemini');
+  }
+});
+
+Deno.test('an unrecognised mode does not silently become generation', () => {
+  // Defaulting the other way would let a bad client downgrade the tutor.
+  assertEquals(tutorTaskForMode('nonsense'), AiTask.tutor);
+  assertEquals(tutorTaskForMode(''), AiTask.tutor);
+});
+
+Deno.test('mode routing is decided by the control, not the message text', () => {
+  // A student typing "quiz" into chat is still a tutoring turn.
+  assertEquals(tutorTaskForMode('chat'), AiTask.tutor);
 });
 
 // ── Prompt-injection containment ────────────────────────────────────────────

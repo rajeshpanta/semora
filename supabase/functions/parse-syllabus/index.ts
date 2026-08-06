@@ -124,6 +124,41 @@ function jsonResponse(body: unknown, status: number) {
   });
 }
 
+/**
+ * Write the syllabus-scan QUOTA row.
+ *
+ * gemini_call_log is the scan ledger, not a telemetry sink: the free 5/month
+ * cap, the 20/24h per-user cap, the 1500/24h global breaker and the client's
+ * "scans left" pill all count these rows. So exactly ONE row per scan attempt,
+ * and the three original statuses only — 'rate_limited' in particular MUST stay
+ * its own status, because both cap queries exclude it by
+ * .neq('status','rate_limited') and would otherwise count a cost-free rejection
+ * toward the very cap that produced it.
+ *
+ * Cost/latency/routing telemetry goes to ai_call_log via logAiCall instead.
+ */
+async function logScanQuota(
+  adminClient: any,
+  userId: string,
+  status: 'success' | 'failed' | 'rate_limited',
+  durationMs: number,
+  errorCode?: string,
+) {
+  try {
+    const { error } = await adminClient.from('gemini_call_log').insert({
+      user_id: userId,
+      status,
+      error_code: errorCode ?? null,
+      duration_ms: durationMs,
+      provider: 'gemini',
+      task: 'documentExtraction',
+    });
+    if (error) console.error('[parse-syllabus] quota row rejected:', error.message);
+  } catch (err) {
+    console.error('[parse-syllabus] Failed to log scan quota:', err);
+  }
+}
+
 async function makeSafetyIdentifier(userId: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(userId));
   const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -242,10 +277,7 @@ serve(async (req) => {
     }
 
     if ((recentCount ?? 0) >= DAILY_CAP) {
-      await logAiCall(adminClient, userId, {
-        task: TASK, provider: providerFor(TASK), model: modelFor(TASK),
-        status: 'failed', errorCode: 'rate_limited', durationMs: Date.now() - startTime,
-      });
+      await logScanQuota(adminClient, userId, 'rate_limited', Date.now() - startTime);
       return jsonResponse(
         { error: `You've reached the daily scan limit of ${DAILY_CAP}. Please try again in 24 hours.` },
         429,
@@ -432,7 +464,7 @@ serve(async (req) => {
 
     const { data: cached } = await adminClient
       .from('syllabus_extraction_cache')
-      .select('result, model')
+      .select('result, model, hit_count')
       .eq('content_hash', docHash)
       .eq('user_id', userId)
       .maybeSingle();
@@ -444,8 +476,9 @@ serve(async (req) => {
       // Fire-and-forget usage bump; never block the response on it.
       adminClient
         .from('syllabus_extraction_cache')
-        .update({ hit_count: (cached as any).hit_count ?? 1, last_used_at: new Date().toISOString() })
+        .update({ hit_count: ((cached as any).hit_count ?? 0) + 1, last_used_at: new Date().toISOString() })
         .eq('content_hash', docHash)
+        .eq('user_id', userId)
         .then(() => {}, () => {});
       console.log('[parse-syllabus] cache hit — no provider call');
     }
@@ -478,6 +511,7 @@ serve(async (req) => {
           status: 'failed', errorCode: code, durationMs: Date.now() - startTime,
           attempts: aiResult.attempts,
         });
+        await logScanQuota(adminClient, userId, 'failed', Date.now() - startTime, code);
         // Non-tutor features never fail over to the tutor model — a Gemini
         // outage surfaces as a retryable error, it does not silently spend
         // tutor budget on extraction.
@@ -496,6 +530,7 @@ serve(async (req) => {
           status: 'failed', errorCode: 'max_tokens', durationMs: Date.now() - startTime,
           attempts: aiResult.attempts,
         });
+        await logScanQuota(adminClient, userId, 'failed', Date.now() - startTime, 'max_tokens');
         return jsonResponse(
           { error: 'This syllabus is very dense and the response was cut off. Try scanning one course (or fewer pages) at a time.' },
           502,
@@ -510,6 +545,7 @@ serve(async (req) => {
           status: 'failed', errorCode: 'empty_response', durationMs: Date.now() - startTime,
           attempts: aiResult.attempts,
         });
+        await logScanQuota(adminClient, userId, 'failed', Date.now() - startTime, 'empty_response');
         return jsonResponse({ error: 'No response from the AI service', retryable: true }, 502);
       }
 
@@ -525,6 +561,7 @@ serve(async (req) => {
           status: 'failed', errorCode: 'parse_error', durationMs: Date.now() - startTime,
           attempts: aiResult.attempts,
         });
+        await logScanQuota(adminClient, userId, 'failed', Date.now() - startTime, 'parse_error');
         return jsonResponse(
           { error: 'Failed to parse AI response. Please try again with a clearer document.', retryable: true },
           502,
@@ -538,9 +575,16 @@ serve(async (req) => {
         promptTokens: usage.promptTokens, outputTokens: usage.outputTokens,
       });
 
-      // Cache only a genuine syllabus. Caching a NOT_SYLLABUS verdict would
-      // make a mis-scan permanent for that exact file.
-      if (result?.is_syllabus !== false) {
+      // Cache only a genuine, usable extraction. Caching either a
+      // NOT_SYLLABUS verdict OR an empty result would make a mis-scan
+      // permanent for that exact file — the retry the 422 invites would be
+      // served from cache without ever calling the provider again.
+      const usable =
+        result?.is_syllabus !== false
+        && (Boolean(result?.course_name)
+          || (Array.isArray(result?.items) && result.items.length > 0)
+          || (Array.isArray(result?.meetings) && result.meetings.length > 0));
+      if (usable) {
         adminClient
           .from('syllabus_extraction_cache')
           .upsert({
@@ -564,11 +608,8 @@ serve(async (req) => {
       (!Array.isArray(result.meetings) || result.meetings.length === 0);
     if (result.is_syllabus === false || nothingExtracted) {
       console.warn(`[parse-syllabus] Rejected non-syllabus (is_syllabus=${result.is_syllabus}, empty=${nothingExtracted})`);
-      await logAiCall(adminClient, userId, {
-        task: TASK, provider: providerFor(TASK), model: modelFor(TASK),
-        status: 'failed', durationMs: Date.now() - startTime,
-        errorCode: result.is_syllabus === false ? 'not_syllabus' : 'empty_extraction',
-      });
+      await logScanQuota(adminClient, userId, 'failed', Date.now() - startTime,
+        result.is_syllabus === false ? 'not_syllabus' : 'empty_extraction');
       return jsonResponse(
         { error: "This doesn't look like a course syllabus. Try scanning your syllabus, course outline, or class schedule.", code: 'NOT_SYLLABUS' },
         422,
@@ -727,10 +768,7 @@ serve(async (req) => {
     };
 
     // 6. Log success and return
-    await logAiCall(adminClient, userId, {
-      task: TASK, provider: providerFor(TASK), model: servedModel,
-      status: 'success', durationMs: Date.now() - startTime,
-    });
+    await logScanQuota(adminClient, userId, 'success', Date.now() - startTime);
 
     return jsonResponse(extraction, 200);
   } catch (err) {

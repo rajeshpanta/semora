@@ -56,6 +56,30 @@ const ROUTING: Record<AiTask, Provider> = {
   [AiTask.tutor]: 'openai',
 };
 
+/**
+ * Which task a tutor-screen request belongs to, decided by the control the
+ * student used — not by anything in their message.
+ *
+ * The "Practice" and "Quick quiz" chips generate study material, so they are
+ * contentGeneration and run on Gemini like every other generation feature.
+ * Only an actual tutoring turn is AiTask.tutor and reaches Luna.
+ */
+export function tutorTaskForMode(mode: string): AiTask {
+  return mode === 'quiz' || mode === 'practice' ? AiTask.contentGeneration : AiTask.tutor;
+}
+
+/**
+ * Whether a provider has a credential in THIS environment.
+ *
+ * Distinct from the routing table, which is a fixed product decision. This
+ * answers a deployment question: staging may have both keys, a rollback
+ * environment only one. Call sites use it to degrade deliberately and loudly
+ * rather than returning 502s for a task nobody can serve.
+ */
+export function isProviderConfigured(provider: Provider): boolean {
+  return provider === 'gemini' ? Boolean(GEMINI_API_KEY) : Boolean(OPENAI_API_KEY);
+}
+
 export function providerFor(task: AiTask): Provider {
   return ROUTING[task];
 }
@@ -270,7 +294,7 @@ export type AiTelemetry = {
   task: AiTask;
   provider: Provider;
   model: string;
-  status: 'success' | 'failed' | 'fallback';
+  status: 'success' | 'failed' | 'fallback' | 'rate_limited';
   errorCode?: string | null;
   durationMs: number;
   attempts?: number;
@@ -289,12 +313,17 @@ export function usageFromOpenAI(data: any) {
 }
 
 /**
- * Write one telemetry row. Best-effort: a logging failure must never fail a
- * request the student already paid for in latency.
+ * Write one telemetry row to `ai_call_log`.
  *
- * Uses the existing `gemini_call_log` table — the name predates multi-provider
- * and is kept so historical rows (which the free-scan cap counts) stay in one
- * place; migration 059 adds the provider/model/token columns.
+ * NOT `gemini_call_log`. That table looks like a log but is the syllabus-scan
+ * QUOTA LEDGER — parse-syllabus counts its rows for the free-tier cap, the
+ * per-user daily cap and the global circuit breaker, and the client mirrors the
+ * same count. Writing tutor or flashcard rows into it charges those features
+ * against the scan budget, which is exactly the regression this split fixes.
+ *
+ * Best-effort: telemetry must never fail a request the student already waited
+ * for. But supabase-js RETURNS `{ error }` rather than throwing, so a bare
+ * try/catch silently discards failed inserts — the error is checked explicitly.
  */
 export async function logAiCall(
   admin: { from: (t: string) => any },
@@ -302,18 +331,21 @@ export async function logAiCall(
   t: AiTelemetry,
 ): Promise<void> {
   try {
-    await admin.from('gemini_call_log').insert({
+    const { error } = await admin.from('ai_call_log').insert({
       user_id: userId,
+      task: t.task,
+      provider: t.provider,
+      model: t.model,
       status: t.status,
       error_code: t.errorCode ?? null,
       duration_ms: t.durationMs,
-      provider: t.provider,
-      model: t.model,
-      task: t.task,
+      attempts: t.attempts ?? null,
       prompt_tokens: t.promptTokens ?? null,
       output_tokens: t.outputTokens ?? null,
-      attempts: t.attempts ?? null,
     });
+    if (error) {
+      console.warn('[ai] telemetry insert rejected (non-fatal):', String(error.message ?? error).slice(0, 200));
+    }
   } catch (error) {
     console.warn('[ai] telemetry insert failed (non-fatal):', String(error).slice(0, 160));
   }
