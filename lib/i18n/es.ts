@@ -1678,4 +1678,14 @@ export const ES: Record<string, string> = {
   'your provider': 'tu proveedor',
   'Your school needs you to reconnect before Semora can continue syncing.': 'Tu institución necesita que vuelvas a conectarte para que Semora pueda seguir sincronizando.',
   'Your whole semester, one place': 'Todo tu semestre en un solo lugar',
+
+  // Joined-JSX strings (2026-08-06): these render as JSX text split by inline
+  // expressions such as {'\u2019'}. The localized Text wrapper joins the
+  // children into ONE string before lookup, so only the joined form matches —
+  // a dictionary entry for a fragment never fires.
+  'Snap it, upload it, or drag it in.\nWe\'ll pull every deadline.': 'Tómale una foto, súbelo o arrástralo aquí.\nExtraeremos todas las entregas.',
+  'Then it runs\nyour semester': 'Después organiza\ntu semestre',
+  'Let’s make it yours': 'Hazlo tuyo',
+  'We\'ll extract the course name, semester,\nand all deadlines automatically.': 'Extraeremos automáticamente el nombre del curso, el semestre\ny todas las entregas.',
+  'Nothing pressing — you’re all caught up. Nice.': 'Nada urgente: estás al día. Bien hecho.',
 };
