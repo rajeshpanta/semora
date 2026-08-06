@@ -56,6 +56,13 @@ function spanishPattern(input: string): string | null {
   if (match) return `vence en ${match[1]} ${match[1] === '1' ? 'día' : 'días'}`;
   match = input.match(/^overdue by (\d+) days?$/i);
   if (match) return `atrasada por ${match[1]} ${match[1] === '1' ? 'día' : 'días'}`;
+  // MUST precede the generic "<x> due <y>" rule below. The Today screen renders
+  // "Next up: {title} ({course}) — due {date}" as mixed JSX, which the localized
+  // Text wrapper joins into ONE string before translating; the generic rule then
+  // matched first and returned "Next up: … — · entrega …", leaving the English
+  // "Next up:" in place on an otherwise fully Spanish screen.
+  match = input.match(/^Next up: (.+) \((.+)\) — due (.+)$/i);
+  if (match) return `Lo siguiente: ${match[1]} (${match[2]}) · entrega ${match[3]}`;
   match = input.match(/^(.+) due (.+)$/i);
   if (match) return `${match[1]} · entrega ${match[2]}`;
   match = input.match(/^Ask about (.+)…$/);
