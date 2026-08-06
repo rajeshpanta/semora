@@ -66,7 +66,10 @@ export default {
     // on /settings, /paywall, or an OAuth callback preserves the route instead
     // of redirecting the browser back to /.
     if (isSpaDocument) {
-      const indexUrl = new URL("/index.html", url);
+      // Request the root document rather than /index.html. Cloudflare Assets'
+      // HTML normalization redirects /index.html back to /, whereas fetching
+      // / returns the document body directly.
+      const indexUrl = new URL("/", url);
       const indexRequest = new Request(indexUrl, request);
       const indexResponse = await env.ASSETS.fetch(indexRequest);
       return withDocumentHeaders(indexResponse, url.origin, request.method === "HEAD");

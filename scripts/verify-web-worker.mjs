@@ -20,8 +20,8 @@ const env = {
   ASSETS: {
     async fetch(request) {
       const pathname = decodeURIComponent(new URL(request.url).pathname);
-      const relativePath = pathname.replace(/^\/+/, '');
-      if (!relativePath) return new Response(null, { status: 404 });
+      let relativePath = pathname.replace(/^\/+/, '');
+      if (!relativePath) relativePath = 'index.html';
 
       // Cloudflare Assets may normalize extensionless paths with a redirect.
       // The application worker must never ask it to resolve SPA routes.
