@@ -372,13 +372,24 @@ export default function PaywallScreen() {
 
   return (
     <View style={[styles.screen, { backgroundColor: colors.paper }]}>
-      <SafeAreaView style={styles.safe} edges={['top']}>
+      <SafeAreaView style={styles.safe} edges={[]}>
         {/* Fixed close button outside ScrollView */}
         <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.card, top: insets.top + 8 }]} onPress={handleClose} hitSlop={16} accessibilityRole="button" accessibilityLabel="Close">
           <FontAwesome name="times" size={20} color={colors.ink2} />
         </TouchableOpacity>
 
-        <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false} bounces={false}>
+        {/* Top clearance comes from the measured inset, NOT from
+            SafeAreaView edges={['top']} — under this screen's presentation that
+            edge resolved to zero and the hero card rendered under the status
+            bar and Dynamic Island, with "SEMORA PRO" struck through by the
+            clock. Padding the scroll content is deterministic in every
+            presentation context, and it keeps the close button (absolutely
+            positioned against the screen) from being double-inset. */}
+        <ScrollView
+          contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth, paddingTop: insets.top + 8 }]}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
 
           {/* Hero */}
           <View style={[styles.hero, { backgroundColor: colors.ink }]}>
