@@ -16,7 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rajeshpanta.syllabussnap",
-      "buildNumber": "22",
+      "buildNumber": "23",
       "appleTeamId": "7T9897GFKH",
       "usesAppleSignIn": true,
       "entitlements": {
@@ -34,7 +34,12 @@
           "UIInterfaceOrientationPortraitUpsideDown",
           "UIInterfaceOrientationLandscapeLeft",
           "UIInterfaceOrientationLandscapeRight"
-        ]
+        ],
+        "CFBundleLocalizations": [
+          "en",
+          "es"
+        ],
+        "CFBundleDevelopmentRegion": "en"
       }
     },
     "web": {
@@ -114,6 +119,9 @@
         "projectId": "063fbdf9-33e3-49b4-8b0b-ba9d6f18490b"
       }
     },
-    "owner": "smallpantas-organization"
+    "owner": "smallpantas-organization",
+    "locales": {
+      "es": "./locales/es.json"
+    }
   }
 }

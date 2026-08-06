@@ -1,0 +1,9 @@
+{
+  "NSCameraUsageDescription": "Semora usa tu cámara para tomar fotos de programas de curso impresos o en papel. Por ejemplo, toma una foto del programa impreso de tu profesor y Semora extraerá automáticamente las tareas, las fechas de exámenes y las fechas de entrega a tu calendario del semestre.",
+  "NSPhotoLibraryUsageDescription": "Semora accede a tu biblioteca de fotos para que selecciones imágenes existentes de tu programa de curso. Por ejemplo, elige una captura de pantalla guardada del programa de tu curso y Semora extraerá las tareas, las fechas de exámenes y las fechas de entrega a tu calendario del semestre.",
+  "NSCalendarsUsageDescription": "Semora necesita acceso al calendario para sincronizar las fechas de entrega de tus tareas.",
+  "NSCalendarsFullAccessUsageDescription": "Semora necesita acceso al calendario para sincronizar las fechas de entrega de tus tareas.",
+  "NSFaceIDUsageDescription": "Semora usa Face ID para verificar tu identidad antes de eliminar tu cuenta.",
+  "NSRemindersUsageDescription": "Permite que Semora acceda a tus recordatorios.",
+  "NSRemindersFullAccessUsageDescription": "Permite que Semora acceda a tus recordatorios."
+}
