@@ -58,21 +58,29 @@ export default {
     }
 
     const url = new URL(request.url);
+    const lastSegment = url.pathname.split("/").filter(Boolean).at(-1) ?? "";
+    const isSpaDocument = url.pathname === "/" || !lastSegment.includes(".");
+
+    // Cloudflare's asset binding redirects extensionless paths before it
+    // reports a miss. Resolve SPA routes directly to index.html so a refresh
+    // on /settings, /paywall, or an OAuth callback preserves the route instead
+    // of redirecting the browser back to /.
+    if (isSpaDocument) {
+      const indexUrl = new URL("/index.html", url);
+      const indexRequest = new Request(indexUrl, request);
+      const indexResponse = await env.ASSETS.fetch(indexRequest);
+      return withDocumentHeaders(indexResponse, url.origin, request.method === "HEAD");
+    }
+
     const assetResponse = await env.ASSETS.fetch(request);
     if (assetResponse.status !== 404) {
-      if (url.pathname === "/" || url.pathname.endsWith(".html")) {
+      if (url.pathname.endsWith(".html")) {
         return withDocumentHeaders(assetResponse, url.origin, request.method === "HEAD");
       }
       return withHeaders(assetResponse);
     }
 
-    // Expo Router is exported as a single-page app. Unknown document routes
-    // (including OAuth/reset callbacks and shared deep links) must boot the
-    // same index document so the client router can resolve them.
-    const indexUrl = new URL("/index.html", url);
-    const indexRequest = new Request(indexUrl, request);
-    const indexResponse = await env.ASSETS.fetch(indexRequest);
-    return withDocumentHeaders(indexResponse, url.origin, request.method === "HEAD");
+    return withHeaders(assetResponse);
   }
 };
 `;

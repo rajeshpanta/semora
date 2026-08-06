@@ -23,6 +23,12 @@ const env = {
       const relativePath = pathname.replace(/^\/+/, '');
       if (!relativePath) return new Response(null, { status: 404 });
 
+      // Cloudflare Assets may normalize extensionless paths with a redirect.
+      // The application worker must never ask it to resolve SPA routes.
+      if (!relativePath.split('/').at(-1)?.includes('.')) {
+        return new Response(null, { status: 307, headers: { Location: '/' } });
+      }
+
       const file = resolve(clientDirectory, relativePath);
       if (file !== clientDirectory && !file.startsWith(`${clientDirectory}${sep}`)) {
         return new Response(null, { status: 404 });
