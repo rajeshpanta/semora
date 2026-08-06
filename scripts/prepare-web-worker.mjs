@@ -1,8 +1,10 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readdir, rm, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-const outputDirectory = resolve(process.cwd(), 'dist/server');
+const distDirectory = resolve(process.cwd(), 'dist');
+const outputDirectory = resolve(distDirectory, 'server');
 const outputFile = resolve(outputDirectory, 'index.js');
+const clientDirectory = resolve(distDirectory, 'client');
 
 const worker = `const SECURITY_HEADERS = {
   "Referrer-Policy": "strict-origin-when-cross-origin",
@@ -77,3 +79,31 @@ export default {
 
 await mkdir(outputDirectory, { recursive: true });
 await writeFile(outputFile, worker, 'utf8');
+
+// Sites' Cloudflare deployment binds static files from dist/client to
+// env.ASSETS. Expo exports them at the dist root for Vercel, so mirror the
+// browser assets into the directory Sites expects while preserving the
+// existing root export. Without this step the worker deploys successfully but
+// every request (including /index.html) resolves to 404.
+await rm(clientDirectory, { recursive: true, force: true });
+await mkdir(clientDirectory, { recursive: true });
+
+const siteOnlyEntries = new Set([
+  '.gitignore',
+  '.openai',
+  '.vercelignore',
+  'client',
+  'server',
+  'vercel.json',
+]);
+
+for (const entry of await readdir(distDirectory, { withFileTypes: true })) {
+  if (siteOnlyEntries.has(entry.name)) continue;
+  await cp(
+    resolve(distDirectory, entry.name),
+    resolve(clientDirectory, entry.name),
+    { recursive: entry.isDirectory() },
+  );
+}
+
+console.log('prepare-web-worker: wrote worker and staged Expo assets in dist/client');

@@ -7,7 +7,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "android": "expo run:android",
-    "build": "npm run build:web",
+    "build": "npm run build:web && node scripts/prepare-web-worker.mjs && node scripts/verify-web-worker.mjs",
     "build:web": "expo export --platform web --clear && node scripts/prepare-web-deploy.mjs",
     "postinstall": "patch-package"
   },
