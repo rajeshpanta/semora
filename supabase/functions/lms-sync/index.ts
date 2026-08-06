@@ -772,13 +772,25 @@ serve(async (req) => {
         } catch (error) {
           failed += 1;
           if ((error as any)?.code === 'PRO_REQUIRED') {
-            await admin.from('lms_connections').update({
-              background_sync_enabled: false,
-              background_sync_paused_at: new Date().toISOString(),
-              next_background_sync_at: null,
-              last_sync_status: 'error',
-              last_error: 'Automatic LMS sync is available with Semora Pro.',
-            }).eq('id', connection.id);
+            // Through the RPC, not a direct update: disable_lms_background_sync
+            // also DELETES the lms_sync_credentials row (whose delete trigger
+            // purges the vault secrets). The previous direct update here left a
+            // lapsed-Pro user's encrypted LMS token in the vault indefinitely,
+            // while the privacy policy shipped with this feature says the
+            // credential is deleted when automatic sync turns off.
+            const { error: disableError } = await admin.rpc('disable_lms_background_sync', {
+              p_connection_id: connection.id,
+            });
+            if (disableError) {
+              console.error('[lms-sync] failed to disable lapsed-Pro connection:', connection.id, disableError.message);
+            } else {
+              // The RPC covers the sync flags; record WHY it was paused so the
+              // settings screen can explain rather than showing a bare error.
+              await admin.from('lms_connections').update({
+                last_sync_status: 'error',
+                last_error: 'Automatic LMS sync is available with Semora Pro.',
+              }).eq('id', connection.id);
+            }
           }
           console.error('[lms-sync] background connection failed:', connection.id, (error as Error)?.message);
         }
