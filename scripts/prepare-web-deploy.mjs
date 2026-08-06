@@ -19,7 +19,7 @@
  *    to override that and does not reliably, so the files are renamed out of
  *    the way instead and the bundle is repointed at the new path.
  */
-import { readFile, writeFile, readdir, rename, stat } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, readdir, rename, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 
@@ -70,11 +70,26 @@ const VERCELIGNORE = `# Deploy everything in this static export as-is — do not
 
 const DIST_GITIGNORE = `.vercel\n.env*\n`;
 
+// app.semoraai.com is served by semora1/semora-app. The repository also
+// contains the separate marketing site (semora1/semora-website), so the app
+// export carries its own non-secret project link to make the deployment target
+// unambiguous after Expo recreates dist/.
+const VERCEL_APP_PROJECT = {
+  projectId: 'prj_LoKf1ZrtrGfNfjwQ3oUD4obBjGtn',
+  orgId: 'team_UizlaRnMnqrelwFIXn26T0cg',
+  projectName: 'semora-app',
+};
+
 await writeFile(join(dist, 'vercel.json'), JSON.stringify(VERCEL_JSON, null, 2) + '\n');
 await writeFile(join(dist, 'robots.txt'), ROBOTS_TXT);
 await writeFile(join(dist, '.vercelignore'), VERCELIGNORE);
 await writeFile(join(dist, '.gitignore'), DIST_GITIGNORE);
-console.log('prepare-web-deploy: wrote vercel.json, robots.txt, .vercelignore, .gitignore');
+await mkdir(join(dist, '.vercel'), { recursive: true });
+await writeFile(
+  join(dist, '.vercel', 'project.json'),
+  JSON.stringify(VERCEL_APP_PROJECT) + '\n',
+);
+console.log('prepare-web-deploy: wrote Vercel app config, robots.txt, and deployment guards');
 
 // ── 2. Relocate assets out of assets/node_modules/ ──────────────────────────
 
@@ -136,7 +151,7 @@ if (leftovers.length) {
   process.exit(1);
 }
 
-for (const required of ['index.html', 'robots.txt', 'vercel.json']) {
+for (const required of ['index.html', 'robots.txt', 'vercel.json', '.vercel/project.json']) {
   await stat(join(dist, required));
 }
 console.log('prepare-web-deploy: ok');
