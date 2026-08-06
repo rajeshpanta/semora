@@ -55,6 +55,16 @@ export async function purchaseProduct(_productId: string): Promise<boolean> {
   return false;
 }
 
+export type SubscriptionManagementResult = {
+  opened: boolean;
+  purchase: Purchase | null;
+};
+
+/** Apple's in-app management sheet is unavailable in a browser. */
+export async function openSubscriptionManagement(): Promise<SubscriptionManagementResult> {
+  return { opened: false, purchase: null };
+}
+
 /** Web can never confirm a trial offer; false is the safe default. */
 export async function isEligibleForIntroOffer(_groupId: string): Promise<boolean> {
   return false;

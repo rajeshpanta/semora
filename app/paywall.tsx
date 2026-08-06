@@ -66,9 +66,11 @@ const FEATURES = [
   },
 ];
 
+const APP_STORE_URL = 'https://apps.apple.com/us/app/semora-ai-syllabus-scanner/id6762589321';
+
 export default function PaywallScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ context?: string; count?: string; courseId?: string }>();
+  const params = useLocalSearchParams<{ context?: string; count?: string; courseId?: string; plan?: string }>();
   const setIsPro = useAppStore((s) => s.setIsPro);
   const setSubscriptionPlan = useAppStore((s) => s.setSubscriptionPlan);
   const colors = useColors();
@@ -89,7 +91,8 @@ export default function PaywallScreen() {
   // Annual is the recommended path for the default paywall (better value,
   // surfaced first). The post-scan reverse trial instead leads with the
   // monthly free trial, so the CTA reads "Try 7 Days Free".
-  const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>(isPostScan ? 'monthly' : 'annual');
+  const requestedPlan = params.plan === 'monthly' || params.plan === 'annual' ? params.plan : null;
+  const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>(requestedPlan ?? (isPostScan ? 'monthly' : 'annual'));
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [monthlySub, setMonthlySub] = useState<ProductOrSubscription | null>(null);
@@ -430,25 +433,43 @@ export default function PaywallScreen() {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.webBillingTitle, { color: colors.ink }]}>
-                    Subscribe in the Semora iPhone app
+                    Purchase Pro in Semora for iPhone or iPad
                   </Text>
                   <Text style={[styles.webBillingText, { color: colors.ink2 }]}>
-                    Your Pro access follows your account automatically. If you already subscribed on iPhone, refresh your access here.
+                    Choose $3.99 monthly or $19.99 yearly in the app. Apple completes the purchase securely, and Pro then follows this Semora account on every device.
                   </Text>
                 </View>
               </View>
+              <View style={styles.webPlanRow}>
+                <View style={[styles.webPlan, { backgroundColor: colors.card, borderColor: colors.line }]}>
+                  <Text style={[styles.webPlanName, { color: colors.ink2 }]}>Monthly</Text>
+                  <Text style={[styles.webPlanPrice, { color: colors.ink }]}>$3.99<Text style={[styles.planPeriod, { color: colors.ink2 }]}>/month</Text></Text>
+                </View>
+                <View style={[styles.webPlan, { backgroundColor: colors.card, borderColor: colors.brand }]}>
+                  <Text style={[styles.webPlanName, { color: colors.ink2 }]}>Yearly</Text>
+                  <Text style={[styles.webPlanPrice, { color: colors.ink }]}>$19.99<Text style={[styles.planPeriod, { color: colors.ink2 }]}>/year</Text></Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() => Linking.openURL(APP_STORE_URL)}
+                activeOpacity={0.85}
+                style={[styles.webRefreshButton, { backgroundColor: colors.brand }]}
+              >
+                <FontAwesome name="apple" size={15} color="#fff" />
+                <Text style={styles.webRefreshText}>Open Semora in the App Store</Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleRestore}
                 disabled={restoring}
                 activeOpacity={0.85}
-                style={[styles.webRefreshButton, { backgroundColor: colors.brand }]}
+                style={[styles.webRefreshButton, styles.webRefreshSecondary, { backgroundColor: colors.card, borderColor: colors.line }]}
               >
                 {restoring ? (
-                  <ActivityIndicator color="#fff" />
+                  <ActivityIndicator color={colors.brand} />
                 ) : (
                   <>
-                    <FontAwesome name="refresh" size={13} color="#fff" />
-                    <Text style={styles.webRefreshText}>Refresh Pro access</Text>
+                    <FontAwesome name="refresh" size={13} color={colors.brand} />
+                    <Text style={[styles.webRefreshText, { color: colors.brand }]}>Refresh Pro access</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -720,6 +741,29 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     lineHeight: 20,
   },
+  webPlanRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  webPlan: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  webPlanName: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+  },
+  webPlanPrice: {
+    marginTop: 3,
+    fontSize: 18,
+    fontWeight: '800',
+  },
   webRefreshButton: {
     minHeight: 48,
     borderRadius: 14,
@@ -728,6 +772,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+  },
+  webRefreshSecondary: {
+    borderWidth: 1,
   },
   webRefreshText: {
     color: '#fff',

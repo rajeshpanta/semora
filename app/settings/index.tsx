@@ -11,12 +11,17 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 import { useSession } from '@/app/_layout';
 import { useAppStore } from '@/store/appStore';
 import { supabase } from '@/lib/supabase';
-import { restorePurchases } from '@/lib/purchases';
+import {
+  getProducts,
+  openSubscriptionManagement,
+  restorePurchases,
+  validateAfterPurchase,
+} from '@/lib/purchases';
 import { rescheduleAllTaskReminders } from '@/lib/notifications';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
@@ -38,13 +43,28 @@ export default function SettingsScreen() {
   const isPro = useAppStore((s) => s.isPro);
   const setIsPro = useAppStore((s) => s.setIsPro);
   const setSubscriptionPlan = useAppStore((s) => s.setSubscriptionPlan);
+  const subscriptionPlan = useAppStore((s) => s.subscriptionPlan);
   const themeMode = useAppStore((s) => s.themeMode);
   const languagePreference = useAppStore((s) => s.languagePreference);
   const { locale } = useI18n();
   const themeModeLabel = themeMode === 'system' ? 'System' : themeMode === 'light' ? 'Light' : 'Dark';
   const router = useRouter();
   const [restoring, setRestoring] = useState(false);
+  const [managing, setManaging] = useState(false);
+  const [monthlyPrice, setMonthlyPrice] = useState('$3.99');
+  const [annualPrice, setAnnualPrice] = useState('$19.99');
   const syncStatus = useOfflineSyncStatus();
+  const hasPaidPlan = isPro && subscriptionPlan !== null;
+
+  useEffect(() => {
+    let active = true;
+    getProducts().then((products) => {
+      if (!active || !products) return;
+      if (products.monthly?.displayPrice) setMonthlyPrice(products.monthly.displayPrice);
+      if (products.annual?.displayPrice) setAnnualPrice(products.annual.displayPrice);
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
 
   // Always-reachable Restore (mirrors the paywall's handler). The paywall is
   // only reachable while !isPro, so without this a user whose subscription
@@ -85,11 +105,38 @@ export default function SettingsScreen() {
     }
   };
 
-  // Deep-link to Apple's subscription management (cancel / change plan).
-  const handleManageSubscription = () => {
-    Linking.openURL('https://apps.apple.com/account/subscriptions').catch(() => {
-      Alert.alert('Couldn\'t open', 'Open the App Store, tap your account, then Subscriptions to manage your plan.');
-    });
+  // Present Apple's in-app StoreKit sheet, which is scoped to Semora rather
+  // than opening the user's full Apple Account subscription list.
+  const handleManageSubscription = async () => {
+    if (managing) return;
+    if (Platform.OS === 'web') {
+      Alert.alert(
+        'Manage Semora on iPhone or iPad',
+        'Open Semora on your iPhone or iPad, then go to Settings → Subscription → Manage Semora Plan.',
+      );
+      return;
+    }
+
+    setManaging(true);
+    try {
+      const result = await openSubscriptionManagement();
+      if (!result.opened) {
+        Alert.alert(
+          'Couldn\'t open subscription management',
+          'Please try again. You can also manage Semora from Settings → Apple Account → Subscriptions.',
+        );
+        return;
+      }
+      if (result.purchase) {
+        const entitlement = await validateAfterPurchase(result.purchase);
+        if (!entitlement.transient) {
+          setIsPro(entitlement.is_pro);
+          setSubscriptionPlan(entitlement.plan);
+        }
+      }
+    } finally {
+      setManaging(false);
+    }
   };
 
   // Reflect the user's *actual* enabled reminders on the settings row,
@@ -146,6 +193,19 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* Language is intentionally its own early section. It used to sit
+            near the bottom of a long Preferences card and was easy to miss. */}
+        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Language</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <SettingsRow
+            icon="language"
+            label="App language"
+            value={languageName(languagePreference, locale)}
+            onPress={() => router.push('/settings/language' as any)}
+            last
+          />
+        </View>
+
         {/* Preferences */}
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Preferences</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
@@ -197,12 +257,6 @@ export default function SettingsScreen() {
             onPress={() => router.push('/settings/appearance')}
           />
           <SettingsRow
-            icon="language"
-            label="Language"
-            value={languageName(languagePreference, locale)}
-            onPress={() => router.push('/settings/language' as any)}
-          />
-          <SettingsRow
             icon="th-large"
             label="Widgets"
             onPress={() => router.push('/settings/widgets')}
@@ -210,41 +264,47 @@ export default function SettingsScreen() {
           />
         </View>
 
-        {/* Subscription — Restore is always reachable (the paywall is not, once
-            isPro is cached true); Manage opens Apple's subscription settings. */}
+        {/* Subscription — free users can enter either plan directly. Existing
+            subscribers get Apple's in-app, Semora-scoped management sheet. */}
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Subscription</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          {/* Free users otherwise see only Restore here — a conversion dead end.
-              Give them a first-class way into the paywall from Settings. */}
-          {!isPro && (
-            <TouchableOpacity
-              style={[styles.row, styles.rowBorder, { borderBottomColor: colors.line }]}
-              activeOpacity={0.7}
-              onPress={() => {
-                track('paywall_open', { screen: 'settings', context: 'settings' });
-                router.push({ pathname: '/paywall', params: { context: 'settings' } } as any);
-              }}
-            >
-              <FontAwesome name="star" size={16} color={colors.brand} style={styles.icon} />
-              <Text style={[styles.rowLabel, { flex: 1, color: colors.brand, fontWeight: '700' }]}>Upgrade to Pro</Text>
-              <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
-            </TouchableOpacity>
+          {!hasPaidPlan && (
+            <>
+              <SettingsRow
+                icon="calendar-o"
+                label="Monthly plan"
+                value={`${monthlyPrice}/${locale === 'es' ? 'mes' : 'month'}`}
+                onPress={() => {
+                  track('paywall_open', { screen: 'settings', context: 'settings_monthly' });
+                  router.push({ pathname: '/paywall', params: { context: 'settings', plan: 'monthly' } } as any);
+                }}
+              />
+              <SettingsRow
+                icon="star"
+                label="Yearly plan"
+                value={`${annualPrice}/${locale === 'es' ? 'año' : 'year'}`}
+                onPress={() => {
+                  track('paywall_open', { screen: 'settings', context: 'settings_annual' });
+                  router.push({ pathname: '/paywall', params: { context: 'settings', plan: 'annual' } } as any);
+                }}
+              />
+            </>
+          )}
+          {hasPaidPlan && (
+            <SettingsRow
+              icon="credit-card"
+              label="Manage Semora Plan"
+              value={managing ? 'Opening…' : subscriptionPlan === 'annual' ? 'Annual' : subscriptionPlan === 'monthly' ? 'Monthly' : 'Active'}
+              onPress={handleManageSubscription}
+            />
           )}
           <SettingsRow
             icon="refresh"
             label="Restore Purchases"
             value={restoring ? 'Restoring…' : undefined}
             onPress={handleRestore}
-            last={!isPro}
+            last
           />
-          {isPro && (
-            <SettingsRow
-              icon="credit-card"
-              label="Manage Subscription"
-              onPress={handleManageSubscription}
-              last
-            />
-          )}
         </View>
 
         {/* Support — Help & FAQ screen exists but was orphaned; link it here. */}

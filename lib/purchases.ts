@@ -11,6 +11,7 @@ import {
   purchaseErrorListener,
   finishTransaction,
   isEligibleForIntroOfferIOS,
+  showManageSubscriptionsIOS,
   type ProductOrSubscription,
   type Purchase,
   type PurchaseError,
@@ -171,6 +172,38 @@ export async function purchaseProduct(productId: string): Promise<boolean> {
     // ('user-cancelled'); keep the legacy code for safety.
     if (e?.code === 'user-cancelled' || e?.code === 'E_USER_CANCELLED') return false;
     throw e;
+  }
+}
+
+export type SubscriptionManagementResult = {
+  opened: boolean;
+  purchase: Purchase | null;
+};
+
+/**
+ * Present Apple's in-app subscription sheet for Semora.
+ *
+ * Unlike the old apps.apple.com/account/subscriptions URL, StoreKit keeps the
+ * customer inside Semora and scopes the sheet to this app's subscription
+ * group. Apple can then show the active plan plus the monthly/yearly switch,
+ * cancellation, and renewal options without dropping the user into the full
+ * Apple Account subscriptions list.
+ */
+export async function openSubscriptionManagement(): Promise<SubscriptionManagementResult> {
+  if (Platform.OS !== 'ios') return { opened: false, purchase: null };
+  if (!connected) {
+    await initIAP();
+    if (!connected) return { opened: false, purchase: null };
+  }
+
+  try {
+    const purchases = await showManageSubscriptionsIOS();
+    const purchase = (purchases ?? [])
+      .filter((item) => ALL_SKUS.includes(item.productId))
+      .sort((a, b) => (b.transactionDate ?? 0) - (a.transactionDate ?? 0))[0] ?? null;
+    return { opened: true, purchase };
+  } catch {
+    return { opened: false, purchase: null };
   }
 }
 
