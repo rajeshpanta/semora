@@ -23,7 +23,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 // topic order, since individual syllabus topics are usually undated.
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-const OPENAI_MODEL = Deno.env.get('FLASHCARDS_OPENAI_MODEL')?.trim() || 'gpt-5.6-terra'; // mid tier: $2/$12 per 1M vs luna $0.20/$1.20 — better quality at ~10x cost; per-user quotas bound the spend
+const OPENAI_MODEL = Deno.env.get('FLASHCARDS_OPENAI_MODEL')?.trim() || 'gpt-5.6-luna'; // $0.20/$1.20 per 1M — 10x cheaper than terra ($2/$12) and verified sufficient for this task; override per function with the *_OPENAI_MODEL secret
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
