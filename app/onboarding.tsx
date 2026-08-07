@@ -51,6 +51,12 @@ type DemoPhase = 'idle' | 'scanning' | 'done';
 export default function OnboardingScreen() {
   const colors = useColors();
   const { contentMaxWidth, isWide, isLandscape } = useResponsive();
+  // Onboarding is prose and a short form, not a dashboard. contentMaxWidth
+  // opens to 786pt on an iPad because its `isWide` tier was sized for the
+  // desktop web canvas, where a 256pt sidebar is subtracted first; used raw
+  // here it ran the headline and body nearly edge to edge on a tablet. Cap it
+  // at a readable measure. Phones are unaffected — min() leaves 390 alone.
+  const stageMaxWidth = Math.min(contentMaxWidth, 640);
   const router = useRouter();
   const setHasOnboarded = useAppStore((s) => s.setHasOnboarded);
   const setUserName = useAppStore((s) => s.setUserName);
@@ -140,7 +146,7 @@ export default function OnboardingScreen() {
       <View pointerEvents="none" style={[styles.glow, { backgroundColor: colors.brand, opacity: 0.06 }]} />
 
       {/* Top bar */}
-      <View style={[styles.topBar, { maxWidth: contentMaxWidth }]}>
+      <View style={[styles.topBar, { maxWidth: stageMaxWidth }]}>
         <View style={styles.brandRow}>
           <View style={[styles.brandDot, { backgroundColor: colors.brand }]} />
           <Text style={[styles.brandWord, { color: colors.ink }]}>Semora</Text>
@@ -153,7 +159,7 @@ export default function OnboardingScreen() {
       </View>
 
       {/* Progress */}
-      <View style={[styles.progress, { maxWidth: contentMaxWidth }]}>
+      <View style={[styles.progress, { maxWidth: stageMaxWidth }]}>
         {Array.from({ length: STEP_COUNT }).map((_, i) => (
           <View key={i} style={[styles.bar, { backgroundColor: colors.brand50 }, i <= step && { backgroundColor: colors.brand }]} />
         ))}
@@ -162,7 +168,7 @@ export default function OnboardingScreen() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={[styles.stageScroll, { maxWidth: contentMaxWidth }]}
+          contentContainerStyle={[styles.stageScroll, { maxWidth: stageMaxWidth }, isWide && styles.stageScrollCentered]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
@@ -186,7 +192,7 @@ export default function OnboardingScreen() {
       </KeyboardAvoidingView>
 
       {/* Footer */}
-      <View style={[styles.footer, { maxWidth: contentMaxWidth }, isLandscape && { paddingBottom: 8 }]}>
+      <View style={[styles.footer, { maxWidth: stageMaxWidth }, isLandscape && { paddingBottom: 8 }]}>
         {step === 0 && (
           <Text style={[styles.reassure, { color: colors.ink3 }]}>Free to try · takes 30 seconds</Text>
         )}
@@ -569,6 +575,7 @@ const styles = StyleSheet.create({
   // tall), and scrolls when content exceeds the viewport (iPad landscape /
   // short height) so no step clips behind the pinned footer CTA.
   stageScroll: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 26, paddingBottom: 24, width: '100%', alignSelf: 'center' },
+  stageScrollCentered: { justifyContent: 'center' },
   stepPad: { paddingVertical: 8 },
 
   kicker: { fontSize: 12, fontWeight: '800', letterSpacing: 2, marginBottom: 14 },
