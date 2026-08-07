@@ -9,12 +9,14 @@ import {
   StyleSheet,
   ScrollView,
   Platform,
+  Text as RawText,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isToday as isDateToday } from 'date-fns';
+import { useI18n } from '@/lib/i18n';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useTasks, useSemesters, useCourses, useToggleTaskComplete } from '@/lib/queries';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH, WEB_CARD_SHADOW } from '@/lib/constants';
@@ -25,7 +27,19 @@ import type { TaskWithCourse } from '@/lib/queries';
 import { GlobalSearchButton } from '@/components/GlobalSearchButton';
 import { useTaskCompletionFlow } from '@/components/TaskCompletionFlow';
 
-const DAY_LABELS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+// Weekday initials, Sunday-first to match the grid.
+//
+// These are per-language data, not translatable strings: Spanish needs
+// D L M M J V S, and running the English letters through the app-wide
+// translating <Text> gave the wrong answer twice over — it left them in
+// English AND turned Monday's "M" into "MIN", because the Spanish map has a
+// bare 'm' → ' min' entry for the minutes abbreviation and lookups are
+// case-insensitive. Rendered with RawText below for the same reason: a single
+// letter has no business being matched against a phrase table.
+const DAY_LABELS: Record<'en' | 'es', readonly string[]> = {
+  en: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+  es: ['D', 'L', 'M', 'M', 'J', 'V', 'S'],
+};
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 function getCalendarDays(year: number, month: number, todayDate: Date) {
@@ -67,6 +81,7 @@ function getCalendarDays(year: number, month: number, todayDate: Date) {
 
 export default function CalendarScreen() {
   const colors = useColors();
+  const { locale } = useI18n();
   const { contentMaxWidth } = useResponsive();
   const router = useRouter();
   const [viewDate, setViewDate] = useState(new Date());
@@ -210,8 +225,8 @@ export default function CalendarScreen() {
           <>
             {/* Day labels */}
             <View style={styles.dayLabels}>
-              {DAY_LABELS.map((l, i) => (
-                <Text key={i} style={[styles.dayLabelText, { color: colors.ink3 }]}>{l}</Text>
+              {DAY_LABELS[locale].map((l, i) => (
+                <RawText key={i} style={[styles.dayLabelText, { color: colors.ink3 }]}>{l}</RawText>
               ))}
             </View>
 

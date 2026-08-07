@@ -36,6 +36,17 @@ export function getAppLocale(): AppLocale {
 function spanishPattern(input: string): string | null {
   let match: RegExpMatchArray | null;
 
+  // Strings assembled from JSX split by inline expressions, so they never
+  // appear in the phrase map as whole sentences. Kept at the top of the chain
+  // because each is more specific than the generic count patterns below, and a
+  // generic rule matching first is how "Next up:" lost its label once already.
+  match = input.match(/^NEXT (\d+) DAYS$/);
+  if (match) return `PRÓXIMOS ${match[1]} DÍAS`;
+  match = input.match(/^(\d+)m\/day · (\d+)m sessions$/);
+  if (match) return `${match[1]} min/día · sesiones de ${match[2]} min`;
+  match = input.match(/^Today · (\d+) items?$/i);
+  if (match) return `Hoy · ${match[1]} ${match[1] === '1' ? 'elemento' : 'elementos'}`;
+
   match = input.match(/^(\d+) (task|tasks)$/i);
   if (match) return `${match[1]} ${match[1] === '1' ? 'tarea' : 'tareas'}`;
   match = input.match(/^(\d+) (course|courses)$/i);
