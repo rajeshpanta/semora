@@ -27,7 +27,18 @@ import {
   useDecks, useCreateDeck, useCourseLookup, useGenerateFlashcards, useScopeTasks,
   type DeckWithCounts, type CourseLite,
 } from '@/lib/flashcards';
-import { useCourseNotes, useUploadCourseNote } from '@/lib/tutor';
+import { useCourseNotes, useUploadCourseNote, type CourseNote } from '@/lib/tutor';
+
+/**
+ * Shared empty default for the notes query.
+ *
+ * `useCourseNotes` is `enabled: !!courseId`, so on /flashcards without a course
+ * scope `data` stays undefined forever. A `= []` default would then mint a NEW
+ * array on every render, which is an effect dependency below — and that effect
+ * sets state, so the screen re-rendered itself without end and React threw
+ * "Maximum update depth exceeded" (#185). One stable reference stops it.
+ */
+const NO_NOTES: CourseNote[] = [];
 
 export default function FlashcardsScreen() {
   const router = useRouter();
@@ -43,7 +54,7 @@ export default function FlashcardsScreen() {
   const createDeck = useCreateDeck();
   const generateFlashcards = useGenerateFlashcards();
   const { data: scopeTasks = [] } = useScopeTasks(courseId);
-  const { data: courseNotes = [] } = useCourseNotes(courseId);
+  const { data: courseNotes = NO_NOTES } = useCourseNotes(courseId);
   const uploadNote = useUploadCourseNote(courseId);
 
   const [creating, setCreating] = useState(false);
@@ -63,7 +74,14 @@ export default function FlashcardsScreen() {
     setSelectedNoteIds((current) => {
       const known = new Set(courseNotes.map((note) => note.id));
       const retained = current.filter((id) => known.has(id));
-      return retained.length ? retained : courseNotes.map((note) => note.id);
+      const next = retained.length ? retained : courseNotes.map((note) => note.id);
+      // React only skips the re-render when the updater returns the SAME
+      // reference, and both branches above always build a fresh array. Return
+      // `current` when nothing actually changed, so an unchanged note list
+      // can't keep the component re-rendering itself.
+      const unchanged = next.length === current.length
+        && next.every((id, i) => id === current[i]);
+      return unchanged ? current : next;
     });
   }, [courseNotes]);
 
