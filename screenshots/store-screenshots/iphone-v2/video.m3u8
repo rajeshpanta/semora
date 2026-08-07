@@ -1,0 +1,18 @@
+#EXTM3U
+#EXT-X-VERSION:7
+#EXT-X-INDEPENDENT-SEGMENTS
+
+#-- en (3) --
+#EXT-X-MEDIA:TYPE=AUDIO,LANGUAGE="en",GROUP-ID="audio-HE2-stereo-32",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="2",CHARACTERISTICS="com.apple.amp.tv.is-default",URI="https://apptrailers.itunes.apple.com/itunes-assets/PurpleVideo221/v4/21/9e/f8/219ef814-9d1f-05d9-a35a-b6eed0e44efe/P1460843094_Anull_audio_en_gr32_mp4a-40-2.m3u8"
+#EXT-X-MEDIA:TYPE=AUDIO,LANGUAGE="en",GROUP-ID="audio-stereo-64",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="2",CHARACTERISTICS="com.apple.amp.tv.is-default",URI="https://apptrailers.itunes.apple.com/itunes-assets/PurpleVideo211/v4/7d/1e/87/7d1e87c0-f5f4-d5a4-01a7-cb1e7abbfc1c/P1460843094_Anull_audio_en_gr64_mp4a-40-2.m3u8"
+#EXT-X-MEDIA:TYPE=AUDIO,LANGUAGE="en",GROUP-ID="audio-stereo-128",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="2",CHARACTERISTICS="com.apple.amp.tv.is-default",URI="https://apptrailers.itunes.apple.com/itunes-assets/PurpleVideo221/v4/77/fa/30/77fa30b1-328a-30dc-57a8-98e63a7aad18/P1460843094_Anull_audio_en_gr128_mp4a-40-2.m3u8"
+
+#EXT-X-I-FRAME-STREAM-INF:AVERAGE-BANDWIDTH=43275,BANDWIDTH=50029,VIDEO-RANGE=SDR,CODECS="avc1.640016",RESOLUTION=326x706,URI="https://apptrailers.itunes.apple.com/itunes-assets/PurpleVideo211/v4/e7/90/ef/e790ef4b-77bd-7cc9-1cf2-a11a80cd2fb4/P1460843094_Anull_trickPlay_gr7101_sdr_326x706_iframes.m3u8"
+#EXT-X-I-FRAME-STREAM-INF:AVERAGE-BANDWIDTH=57855,BANDWIDTH=67041,VIDEO-RANGE=SDR,CODECS="avc1.640016",RESOLUTION=332x720,URI="https://apptrailers.itunes.apple.com/itunes-assets/PurpleVideo221/v4/e2/b6/42/e2b642ce-4a06-3e10-5aa7-7e4d5ed692e7/P1460843094_Anull_trickPlay_gr7201_sdr_332x720_iframes.m3u8"
+
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=412195,BANDWIDTH=632698,VIDEO-RANGE=SDR,CLOSED-CAPTIONS=NONE,CODECS="avc1.64001e,mp4a.40.2",AUDIO="audio-stereo-128",FRAME-RATE=30.000,RESOLUTION=326x706,STABLE-VARIANT-ID="a2686391c2f7946bb29c99b2fc215ad3705dc6daddef9c2c7f91ebda1887fd34"
+https://apptrailers.itunes.apple.com/itunes-assets/PurpleVideo211/v4/f3/0c/1e/f30c1e79-df91-8103-78df-f37a053e00cf/P1460843094_Anull_video_gr7101_sdr_326x706.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=746426,BANDWIDTH=1075940,VIDEO-RANGE=SDR,CLOSED-CAPTIONS=NONE,CODECS="avc1.64001e,mp4a.40.2",AUDIO="audio-stereo-128",FRAME-RATE=30.000,RESOLUTION=332x720,STABLE-VARIANT-ID="7db79f1094822bfa8d6acbcccbc598b1c29670302bd5504a5c4d034c9a0b0ba5"
+https://apptrailers.itunes.apple.com/itunes-assets/PurpleVideo221/v4/50/7d/b0/507db060-88ec-5b37-32c6-de88eb38ed40/P1460843094_Anull_video_gr7201_sdr_332x720.m3u8
+
+#1460843094 video appTrailer external en US AppleTV6,3 HD   
