@@ -99,6 +99,15 @@ function spanishPattern(input: string): string | null {
   match = input.match(/^If you earn (\d+)% on (.+)$/);
   if (match) return `Si sacas un ${match[1]} % en ${match[2]}`;
 
+  // Seen untranslated on the Spanish simulator build: the Courses card badge,
+  // the Scan screen's page-limit note, and the Focus timer's background hint.
+  match = input.match(/^(\d+) UP NEXT$/);
+  if (match) return `${match[1]} ${match[1] === '1' ? 'PENDIENTE' : 'PENDIENTES'}`;
+  match = input.match(/^Photo scans support up to (\d+) pages per scan — snap page after page, or multi-select from your library\. Longer syllabus\? Upload a PDF\.$/);
+  if (match) return `Los escaneos con foto admiten hasta ${match[1]} páginas por escaneo: fotografía una página tras otra o selecciona varias de tu galería. ¿Programa más largo? Sube un PDF.`;
+  match = input.match(/^The timer keeps running in the background\. You['’]ll get a ?notification the moment your (focus block|break) ends\.$/);
+  if (match) return `El temporizador sigue funcionando en segundo plano. Recibirás una notificación en cuanto termine tu ${match[1] === 'break' ? 'descanso' : 'bloque de enfoque'}.`;
+
   // Tutor. The lookahead matters: a bare /^Explain (.+)$/ here would swallow
   // "Explain the assignment “…” and help me make a plan to complete it.",
   // which has its own rule further down and would never be reached.
