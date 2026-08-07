@@ -72,6 +72,18 @@ for(const [s,loc] of out) console.log(`  ${JSON.stringify(s)}  @ ${loc}`);
 // always are (counts, minutes, days). A hit here means: at the probe value, the
 // runtime returns the input unchanged.
 const PROBE='2';
+const lit=e=>ts.isStringLiteral(e)||ts.isNoSubstitutionTemplateLiteral(e);
+// A pluralising ternary (`{n !== 1 ? 's' : ''}`) is not an unknown value — both
+// arms are known text. Probing it with a number produced "Found 2 deadline2!",
+// which matches no pattern and got reported even though the real strings
+// ("Found 1 deadline!" / "Found 10 deadlines!") translate fine. Take the plural
+// arm so the probe reads like something the app actually renders.
+function probeFor(e){
+  if(lit(e)) return e.text;
+  if(ts.isConditionalExpression(e)&&lit(e.whenTrue)&&lit(e.whenFalse))
+    return e.whenTrue.text.length>=e.whenFalse.text.length ? e.whenTrue.text : e.whenFalse.text;
+  return PROBE;
+}
 const out2=[];
 for(const f of files){
   const sf=ts.createSourceFile(f,fs.readFileSync(f,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
@@ -90,9 +102,7 @@ for(const f of files){
         let joined='';
         for(const k of kids){
           if(ts.isJsxText(k)) joined+=k.text.replace(/\s*\n\s*/g,'');
-          else if(ts.isJsxExpression(k)&&k.expression)
-            joined+=(ts.isStringLiteral(k.expression)||ts.isNoSubstitutionTemplateLiteral(k.expression))
-              ? k.expression.text : PROBE;
+          else if(ts.isJsxExpression(k)&&k.expression) joined+=probeFor(k.expression);
         }
         joined=joined.replace(/\s+/g,' ').trim();
         if(joined.length>6&&translate(joined,'es')===joined){

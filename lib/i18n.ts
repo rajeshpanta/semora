@@ -72,6 +72,41 @@ function spanishPattern(input: string): string | null {
   match = input.match(/^SAVE (\d+)%$/);
   if (match) return `AHORRA ${match[1]} %`;
 
+  // Task detail — the screen a student opens most often after Today.
+  match = input.match(/^(\d+)% of grade( \(extra credit\))?$/);
+  if (match) return `${match[1]} % de la nota${match[2] ? ' (crédito extra)' : ''}`;
+  match = input.match(/^(High|Low|Normal) priority$/);
+  if (match) return `Prioridad ${match[1] === 'High' ? 'alta' : match[1] === 'Low' ? 'baja' : 'normal'}`;
+  // (No `… effort` rule here: one already exists further down, and adding a
+  // second earlier in the chain would shadow it. The audit only flagged it
+  // because the probe rendered the pluralising ternary as a digit.)
+  match = input.match(/^(\d+)\/(\d+) done$/);
+  if (match) return `${match[1]}/${match[2]} completadas`;
+  match = input.match(/^(\d+(?:\.\d+)?)\/(\d+(?:\.\d+)?) points$/);
+  if (match) return `${match[1]}/${match[2]} puntos`;
+  match = input.match(/^This assignment is worth (\d+)% of your grade$/);
+  if (match) return `Esta tarea vale el ${match[1]} % de tu nota`;
+  match = input.match(/^Enter your percentage score on this (\d+)% assignment$/);
+  if (match) return `Introduce tu porcentaje en esta tarea que vale el ${match[1]} %`;
+  match = input.match(/^Estimated maximum: (\d+)% until the final grade is posted$/);
+  if (match) return `Máximo estimado: ${match[1]} % hasta que se publique la nota final`;
+  match = input.match(/^Estimated maximum before grading: (\d+)%$/);
+  if (match) return `Máximo estimado antes de calificar: ${match[1]} %`;
+
+  // Grade projection — the "what do I need?" guidance.
+  match = input.match(/^See the exact average you need on your remaining (\d+)% of coursework to land an (.+?) — or any grade\. Computed from this course['’]s real weights\.$/);
+  if (match) return `Consulta la nota media exacta que necesitas en el ${match[1]} % de trabajo que te queda para sacar un ${match[2]} — o cualquier otra nota. Calculado con los pesos reales de este curso.`;
+  match = input.match(/^If you earn (\d+)% on (.+)$/);
+  if (match) return `Si sacas un ${match[1]} % en ${match[2]}`;
+
+  // Tutor. The lookahead matters: a bare /^Explain (.+)$/ here would swallow
+  // "Explain the assignment “…” and help me make a plan to complete it.",
+  // which has its own rule further down and would never be reached.
+  match = input.match(/^Explain (?!the assignment )(.+)$/);
+  if (match) return `Explica ${match[1]}`;
+  match = input.match(/^Sources: (.+)$/);
+  if (match) return `Fuentes: ${match[1]}`;
+
   match = input.match(/^(\d+) (task|tasks)$/i);
   if (match) return `${match[1]} ${match[1] === '1' ? 'tarea' : 'tareas'}`;
   match = input.match(/^(\d+) (course|courses)$/i);
