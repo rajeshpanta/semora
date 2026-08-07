@@ -1,0 +1,58 @@
+# Syllabus-scan canary — is the hero flow actually up?
+#
+# Semora's whole product is "scan a syllabus, get a semester". On 2026-08-06
+# that returned 502 on every request and nothing said so; it was found by
+# accident. This runs the real flow against production on a schedule and fails
+# the job when a student could not scan a syllabus right now.
+#
+# ALERTING: none is configured here on purpose. GitHub emails the repo owner on
+# a failed scheduled workflow by default, which needs no APNs key, no email
+# provider and no secret — all of which are things that can themselves be down.
+# Confirm it's on at Settings → Notifications → "Actions: notify on failure".
+#
+# REQUIRED SECRETS (Settings → Secrets and variables → Actions):
+#   SEMORA_SUPABASE_URL        https://<ref>.supabase.co
+#   SEMORA_SUPABASE_ANON_KEY   the anon/publishable key (public by design)
+#   SEMORA_CANARY_EMAIL        a Pro account
+#   SEMORA_CANARY_PASSWORD
+#
+# USE A DEDICATED CANARY ACCOUNT, not the App Review demo login. Scans share a
+# 20-per-24h per-user cap, so a reviewer and the canary can starve each other —
+# the canary reports 429 (a warning, not a failure) and stops proving anything
+# for the rest of the day, exactly when you'd want it working.
+#
+# Each run costs one small pasted-text extraction. At every 3 hours that is
+# 8/day against a 20/day cap, leaving headroom for manual runs.
+
+name: scan-canary
+
+on:
+  schedule:
+    - cron: '17 */3 * * *' # every 3h, off the hour to dodge scheduler pileups
+  workflow_dispatch: # run on demand after deploying parse-syllabus
+
+# A stuck run should never block the next scheduled check.
+concurrency:
+  group: scan-canary
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20' # global fetch + AbortSignal.timeout
+
+      # No install step: the canary is dependency-free by design, so it cannot
+      # fail for reasons unrelated to the product it is watching.
+      - name: Scan a fixture syllabus end to end
+        env:
+          SEMORA_SUPABASE_URL: ${{ secrets.SEMORA_SUPABASE_URL }}
+          SEMORA_SUPABASE_ANON_KEY: ${{ secrets.SEMORA_SUPABASE_ANON_KEY }}
+          SEMORA_CANARY_EMAIL: ${{ secrets.SEMORA_CANARY_EMAIL }}
+          SEMORA_CANARY_PASSWORD: ${{ secrets.SEMORA_CANARY_PASSWORD }}
+        run: node scripts/scan-canary.mjs
