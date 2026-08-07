@@ -47,6 +47,31 @@ function spanishPattern(input: string): string | null {
   match = input.match(/^Today · (\d+) items?$/i);
   if (match) return `Hoy · ${match[1]} ${match[1] === '1' ? 'elemento' : 'elementos'}`;
 
+  // Scan review + upload — the hero flow, so these are the most-seen strings in
+  // the app after the Today tab.
+  match = input.match(/^(\d+) items found$/);
+  if (match) return `${match[1]} ${match[1] === '1' ? 'elemento encontrado' : 'elementos encontrados'}`;
+  match = input.match(/^(\d+) selected to save$/);
+  if (match) return `${match[1]} ${match[1] === '1' ? 'seleccionado' : 'seleccionados'} para guardar`;
+  match = input.match(/^Save (\d+) tasks?$/);
+  if (match) return `Guardar ${match[1]} ${match[1] === '1' ? 'tarea' : 'tareas'}`;
+  match = input.match(/^Found (\d+) deadlines?!$/);
+  if (match) return `¡${match[1]} ${match[1] === '1' ? 'fecha de entrega encontrada' : 'fechas de entrega encontradas'}!`;
+
+  // Grade card / dashboard / insights counters.
+  match = input.match(/^(\d+) of (\d+) graded$/);
+  if (match) return `${match[1]} de ${match[2]} ${match[2] === '1' ? 'calificada' : 'calificadas'}`;
+  match = input.match(/^(\d+)% still to play for$/);
+  if (match) return `Aún queda ${match[1]} % en juego`;
+  match = input.match(/^(\d+) missing$/);
+  if (match) return `${match[1]} sin entregar`;
+  match = input.match(/^(\d+) left$/);
+  if (match) return `${match[1]} ${match[1] === '1' ? 'pendiente' : 'pendientes'}`;
+
+  // Paywall annual-savings badge.
+  match = input.match(/^SAVE (\d+)%$/);
+  if (match) return `AHORRA ${match[1]} %`;
+
   match = input.match(/^(\d+) (task|tasks)$/i);
   if (match) return `${match[1]} ${match[1] === '1' ? 'tarea' : 'tareas'}`;
   match = input.match(/^(\d+) (course|courses)$/i);

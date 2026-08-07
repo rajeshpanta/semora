@@ -58,3 +58,53 @@ for(const f of files){
 }
 console.log('joined-JSX strings still untranslated:', out.length);
 for(const [s,loc] of out) console.log(`  ${JSON.stringify(s)}  @ ${loc}`);
+
+// ── Pass 2: text interleaved with VALUE expressions ─────────────────────────
+// Pass 1 only fires when one of the expressions is a string literal, which is
+// the `{'’'}` apostrophe case it was written for. It therefore never looked at
+// the far more common shape — text around a variable, as in
+// `{gradedCount} of {totalCount} graded`. Those join into one string at runtime
+// exactly the same way, so they need a PATTERN in spanishPattern() rather than
+// a dictionary entry, and pass 1 reported "0 untranslated" while several were
+// shipping in English.
+//
+// Values are probed with a number because that is what these expressions almost
+// always are (counts, minutes, days). A hit here means: at the probe value, the
+// runtime returns the input unchanged.
+const PROBE='2';
+const out2=[];
+for(const f of files){
+  const sf=ts.createSourceFile(f,fs.readFileSync(f,'utf8'),ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
+  const rel=path.relative(ROOT,f);
+  (function visit(n){
+    if(ts.isJsxElement(n)){
+      const kids=n.children.filter(k=>!(ts.isJsxText(k)&&!k.text.trim()));
+      // Only the all-scalar case: the localized Text wrapper joins children into
+      // one string solely when every child is a string or number. With a nested
+      // element it translates each run separately, which is a different shape.
+      const allScalar=kids.every(k=>ts.isJsxText(k)||ts.isJsxExpression(k));
+      const hasValueExpr=kids.some(k=>ts.isJsxExpression(k)&&k.expression&&
+        !ts.isStringLiteral(k.expression)&&!ts.isNoSubstitutionTemplateLiteral(k.expression));
+      const words=kids.filter(ts.isJsxText).map(k=>k.text).join(' ');
+      if(kids.length>1&&allScalar&&hasValueExpr&&/[a-zA-Z]{3}/.test(words)){
+        let joined='';
+        for(const k of kids){
+          if(ts.isJsxText(k)) joined+=k.text.replace(/\s*\n\s*/g,'');
+          else if(ts.isJsxExpression(k)&&k.expression)
+            joined+=(ts.isStringLiteral(k.expression)||ts.isNoSubstitutionTemplateLiteral(k.expression))
+              ? k.expression.text : PROBE;
+        }
+        joined=joined.replace(/\s+/g,' ').trim();
+        if(joined.length>6&&translate(joined,'es')===joined){
+          out2.push([joined, `${rel}:${sf.getLineAndCharacterOfPosition(n.getStart()).line+1}`]);
+        }
+      }
+    }
+    ts.forEachChild(n,visit);
+  })(sf);
+}
+const seen=new Set();
+const uniq=out2.filter(([s])=>!seen.has(s)&&seen.add(s));
+console.log(`\ntext-around-a-value strings still untranslated (probe ${PROBE}): ${uniq.length}`);
+for(const [s,loc] of uniq) console.log(`  ${JSON.stringify(s)}  @ ${loc}`);
+process.exitCode = (out.length + uniq.length) ? 1 : 0;
