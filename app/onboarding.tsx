@@ -30,7 +30,7 @@ import { useAppStore, type PainPoint } from '@/store/appStore';
 import { useI18n } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
 
-const STEP_COUNT = 4; // hook · live demo · outcome · personalize
+const STEP_COUNT = 5; // hook · live demo · outcome · toolkit · personalize
 
 /** Current + adjacent academic terms, with a sensible default for today. */
 function useTermOptions() {
@@ -129,8 +129,9 @@ export default function OnboardingScreen() {
     1: demoPhase === 'idle' ? 'Scan the sample syllabus'
       : demoPhase === 'scanning' ? 'Scanning…'
       : 'See what I get',
-    2: 'Make it mine',
-    3: 'Save my semester',
+    2: 'See the whole toolkit',
+    3: 'Make it mine',
+    4: 'Save my semester',
   };
   const ctaDisabled = step === 1 && demoPhase === 'scanning';
   const isLast = step === STEP_COUNT - 1;
@@ -177,7 +178,8 @@ export default function OnboardingScreen() {
             {step === 0 && <Hook colors={colors} isWide={isWide} />}
             {step === 1 && <LiveDemo colors={colors} phase={demoPhase} onDone={() => setDemoPhase('done')} isWide={isWide} isLandscape={isLandscape} />}
             {step === 2 && <Outcome colors={colors} isWide={isWide} />}
-            {step === 3 && (
+            {step === 3 && <Toolkit colors={colors} isWide={isWide} />}
+            {step === 4 && (
               <Personalize
                 colors={colors}
                 isWide={isWide}
@@ -488,7 +490,74 @@ function Outcome({ colors, isWide }: { colors: C; isWide: boolean }) {
   );
 }
 
-/* ------------------------------------------------ step 3: personalize */
+/* ------------------------------------------------ step 3: the toolkit */
+
+/**
+ * What the app actually contains.
+ *
+ * The first three steps prove the scan and the deadlines that follow, which is
+ * the hook — but they never mention the study tools, so a student finished
+ * onboarding without knowing the tutor, flashcards, focus timer, insights or
+ * course spaces existed at all. Those are most of what they are paying for.
+ *
+ * Deliberately icon + label + one short line each: recognisable at a glance and
+ * skimmable in about ten seconds. No screenshots, no paragraphs — the point is
+ * familiarity, not a feature tour.
+ */
+const TOOLKIT: { icon: React.ComponentProps<typeof FontAwesome>['name']; label: string; note: string }[] = [
+  { icon: 'bolt', label: 'Smart Plan', note: 'Study time, scheduled around your classes' },
+  { icon: 'comments', label: 'AI Tutor', note: 'Answers from your syllabus and your notes' },
+  { icon: 'clone', label: 'Flashcards', note: 'Spaced repetition, generated from your material' },
+  { icon: 'clock-o', label: 'Focus timer', note: 'Pomodoro sessions tied to a task' },
+  { icon: 'line-chart', label: 'Grades & GPA', note: 'Your own scale, and what you need on the final' },
+  { icon: 'bar-chart', label: 'Workload', note: 'Spot the heavy weeks before they arrive' },
+  { icon: 'compass', label: 'Progress insights', note: 'Where you stand, and what to do next' },
+  { icon: 'bell', label: 'Reminders', note: '3-day, 1-day and same-day, at your times' },
+  { icon: 'calendar', label: 'Calendar sync', note: 'Apple Calendar, or export anywhere' },
+  { icon: 'th-large', label: 'Widgets', note: 'This week\'s deadlines on your home screen' },
+  { icon: 'graduation-cap', label: 'Canvas import', note: 'Pull in classes, assignments and grades' },
+  { icon: 'users', label: 'Course spaces', note: 'Share deadlines with your classmates' },
+];
+
+function Toolkit({ colors, isWide }: { colors: C; isWide: boolean }) {
+  return (
+    <View style={styles.stepPad}>
+      <Text style={[styles.display2, { color: colors.ink }]}>One app for{'\n'}the whole semester</Text>
+      <Text style={[styles.lead, { color: colors.ink2, marginBottom: 20 }, isWide && { maxWidth: 700 }]}>
+        Planning, studying and grades in one place — so nothing lives in a
+        different app you forget to open.
+      </Text>
+
+      {/* Above the grid on purpose. Twelve cards scroll, so a footnote at the
+          bottom was below the fold — and a student should learn which parts
+          cost money here, not at a paywall later. */}
+      <Text style={[styles.toolFootnote, { color: colors.ink3, borderColor: colors.line }]}>
+        Scanning, deadlines and same-day reminders are free. The study tools below come with Pro.
+      </Text>
+
+      <View style={styles.toolGrid}>
+        {TOOLKIT.map((tool, i) => (
+          <Animated.View
+            key={tool.label}
+            entering={FadeInDown.delay(60 + i * 45).springify().damping(18)}
+            style={[styles.toolCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+          >
+            <View style={[styles.toolIcon, { backgroundColor: colors.brand50 }]}>
+              <FontAwesome name={tool.icon} size={13} color={colors.brand} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.toolLabel, { color: colors.ink }]}>{tool.label}</Text>
+              <Text style={[styles.toolNote, { color: colors.ink3 }]}>{tool.note}</Text>
+            </View>
+          </Animated.View>
+        ))}
+      </View>
+
+    </View>
+  );
+}
+
+/* ------------------------------------------------ step 4: personalize */
 
 const PAIN_OPTIONS: { key: PainPoint; label: string }[] = [
   { key: 'deadlines', label: 'Missing deadlines' },
@@ -577,6 +646,12 @@ const styles = StyleSheet.create({
   stageScroll: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 26, paddingBottom: 24, width: '100%', alignSelf: 'center' },
   stageScrollCentered: { justifyContent: 'center' },
   stepPad: { paddingVertical: 8 },
+  toolGrid: { gap: 6 },
+  toolCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8 },
+  toolIcon: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  toolLabel: { fontSize: 14.5, fontWeight: '700' },
+  toolNote: { fontSize: 12, lineHeight: 16, marginTop: 1 },
+  toolFootnote: { fontSize: 12.5, lineHeight: 18, marginBottom: 14, borderTopWidth: 0 },
 
   kicker: { fontSize: 12, fontWeight: '800', letterSpacing: 2, marginBottom: 14 },
   display: { fontFamily: FONTS.display, fontSize: 42, lineHeight: 46, letterSpacing: -1 },
