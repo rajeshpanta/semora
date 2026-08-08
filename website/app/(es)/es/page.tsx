@@ -74,7 +74,7 @@ const DETAILS: SpanishHomeDetail[] = [
       'Usa una foto, un PDF, un archivo o texto copiado.',
       'Comprueba cada fecha, horario y categoría antes de guardar.',
     ],
-    image: '/screenshots/scan-syllabus.png',
+    image: '/screenshots/es/scan-syllabus.png',
     alt: 'Pantalla de Semora con opciones para añadir el programa de una materia mediante foto, PDF o archivo',
   },
   {
@@ -86,7 +86,7 @@ const DETAILS: SpanishHomeDetail[] = [
       'Calcula promedios ponderados por curso y categoría.',
       'Usa pronósticos y alertas para concentrarte donde más importa.',
     ],
-    image: '/screenshots/track-grades.png',
+    image: '/screenshots/es/track-grades.png',
     alt: 'Pantalla de un curso en Semora con promedio actual y pronóstico de calificaciones',
     flip: true,
   },
@@ -99,7 +99,7 @@ const DETAILS: SpanishHomeDetail[] = [
       'Reserva bloques de estudio alrededor de tus clases, exámenes y entregas.',
       'Reprograma las sesiones pendientes y te explica por qué cambió el plan.',
     ],
-    image: '/screenshots/plan-semester.png',
+    image: '/screenshots/es/plan-semester.png',
     alt: 'Calendario de Semora con fechas de varios cursos durante todo el mes',
   },
 ];
