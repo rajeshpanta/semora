@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as FileSystem from 'expo-file-system/legacy';
+import { readFileAsBase64 } from '@/lib/readFileBase64';
 import { supabase } from '@/lib/supabase';
 import { getAppLocale } from '@/lib/i18n';
 
@@ -291,7 +292,7 @@ export function useUploadCourseNote(courseId?: string | null) {
       const session = await getSession();
       const userId = session.user.id;
 
-      const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: 'base64' });
+      const base64 = await readFileAsBase64(file.uri);
       // Sanitize the filename for the storage key — spaces/slashes in the
       // path segment break the folder convention the RLS check relies on.
       const safeName = file.filename.replace(/[^\w.\-]+/g, '_');

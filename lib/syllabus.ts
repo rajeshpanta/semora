@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { extractFromPages, extractFromText, type SyllabusExtraction, type SyllabusPage } from '@/lib/ai-extraction';
 import * as FileSystem from 'expo-file-system/legacy';
+import { readFileAsBase64 } from '@/lib/readFileBase64';
 import { isMeetingSyncEnabled, syncMeetingToCalendar } from '@/lib/calendarSync';
 import type { CourseMeeting } from '@/types/database';
 import { COURSE_COLORS, COURSE_ICONS, DEFAULT_GRADE_SCALE } from '@/lib/constants';
@@ -235,7 +236,7 @@ export async function processSyllabus(
     // single-page path uploads exactly what it always did.
     const pagePath = p === 0 ? storagePath : `${pathStem}_p${p + 1}${pathExt}`;
     try {
-      const base64 = await FileSystem.readAsStringAsync(pageList[p].uri, { encoding: 'base64' });
+      const base64 = await readFileAsBase64(pageList[p].uri);
       await supabase.storage.from('syllabi').upload(pagePath, decode(base64), {
         contentType: pageList[p].mimeType,
         upsert: true,

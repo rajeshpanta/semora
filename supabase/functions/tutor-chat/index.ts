@@ -159,27 +159,6 @@ serve(async (req) => {
       );
     }
 
-    // 3. Per-user daily cap from tutor_usage (rolling 24h). Bounds AI cost
-    //    even for Pro. tutor_usage is a dedicated ledger — deliberately NOT
-    //    gemini_call_log, so tutor calls never eat the free scan quota.
-    //    ATOMIC: try_consume_tutor_usage counts + inserts under a per-user
-    //    advisory lock so a concurrent burst can't all pass the gate and
-    //    overrun the cap. The slot is reserved BEFORE the paid model call.
-    const { data: reserved, error: usageErr } = await adminClient.rpc('try_consume_tutor_usage', {
-      uid: userId,
-      cap: DAILY_MESSAGE_CAP,
-    });
-    if (usageErr) {
-      console.error('[tutor-chat] usage reservation failed:', usageErr);
-      return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
-    }
-    if (reserved !== true) {
-      return jsonResponse(
-        { error: `You've reached today's tutor limit of ${DAILY_MESSAGE_CAP} messages. Please try again in 24 hours.` },
-        429,
-      );
-    }
-
     // 4. Parse and validate request body. Practice generation and evaluation
     // use the same protected endpoint, course grounding, and cost controls as
     // chat rather than creating a weaker second AI path.
@@ -284,6 +263,34 @@ serve(async (req) => {
       }
       return jsonResponse({ evaluation: { correct, feedback, topics } }, 200);
     }
+
+    // Reserved HERE, not before the body is parsed. evaluate_practice returns
+    // above without calling a model at all — it compares the submitted answer
+    // to the stored one and records the attempt — so charging it a slot spent
+    // a student's 50 daily messages on work that costs nothing. A ten-question
+    // practice set used to consume ten of them. Everything past this point
+    // does reach a model, so the cap still guards every paid call.
+    // 4b. Per-user daily cap from tutor_usage (rolling 24h). Bounds AI cost
+    //    even for Pro. tutor_usage is a dedicated ledger — deliberately NOT
+    //    gemini_call_log, so tutor calls never eat the free scan quota.
+    //    ATOMIC: try_consume_tutor_usage counts + inserts under a per-user
+    //    advisory lock so a concurrent burst can't all pass the gate and
+    //    overrun the cap. The slot is reserved BEFORE the paid model call.
+    const { data: reserved, error: usageErr } = await adminClient.rpc('try_consume_tutor_usage', {
+      uid: userId,
+      cap: DAILY_MESSAGE_CAP,
+    });
+    if (usageErr) {
+      console.error('[tutor-chat] usage reservation failed:', usageErr);
+      return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
+    }
+    if (reserved !== true) {
+      return jsonResponse(
+        { error: `You've reached today's tutor limit of ${DAILY_MESSAGE_CAP} messages. Please try again in 24 hours.` },
+        429,
+      );
+    }
+
 
     // 5. Build grounding context (all reads via service role, but every query
     //    is scoped to the authenticated userId as defense in depth).

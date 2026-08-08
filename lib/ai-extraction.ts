@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import { readFileAsBase64 } from '@/lib/readFileBase64';
 import { supabase } from '@/lib/supabase';
 import type { GradeThreshold, CourseMeetingKind } from '@/types/database';
 
@@ -103,7 +104,7 @@ export async function extractFromPages(
   }
   const encoded = await Promise.all(
     pages.map(async (p) => ({
-      base64: await FileSystem.readAsStringAsync(p.uri, { encoding: 'base64' }),
+      base64: await readFileAsBase64(p.uri),
       mimeType: p.mimeType,
     })),
   );
