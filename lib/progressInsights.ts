@@ -36,6 +36,10 @@ export interface WeeklyCompletionInsight {
 export interface ProgressInsights {
   totalTasks: number;
   completedTasks: number;
+  /** Tasks whose due date has passed — the denominator for completionRate. */
+  dueSoFarTasks: number;
+  completedDueSoFarTasks: number;
+  /** Share of work DUE SO FAR that is done. 100 when nothing is due yet. */
   completionRate: number;
   onTimeRate: number | null;
   missingCount: number;
@@ -166,7 +170,13 @@ export function buildProgressInsights(
       grade: result.percentage,
       letter: result.letter,
       gradeTrend: gradeTrend(rows),
-      completionRate: rows.length ? round(courseCompleted.length / rows.length * 100) : 0,
+      // Measured against work that is actually DUE, not the whole semester —
+      // see the note on the top-level completionRate below.
+      completionRate: (() => {
+        const dueSoFar = rows.filter((task) => !isAfter(dueAt(task), now));
+        const done = dueSoFar.filter((task) => task.is_completed);
+        return dueSoFar.length ? round(done.length / dueSoFar.length * 100) : 100;
+      })(),
       onTimeRate: courseOnTime.length
         ? round(courseOnTime.filter(Boolean).length / courseOnTime.length * 100)
         : null,
@@ -175,10 +185,24 @@ export function buildProgressInsights(
     };
   });
 
+  // "Completed" is the headline metric of a screen whose job is to tell a
+  // student whether they are keeping up. Dividing by every task in the
+  // semester answered a different question — how far through the term are you —
+  // so a student who had done everything asked of them in September still read
+  // 12%, which is exactly the opposite of the encouragement the screen exists
+  // to give. Measure against what is actually due by now; work not yet due
+  // cannot be behind.
+  const dueSoFar = tasks.filter((task) => !isAfter(dueAt(task), now));
+  const completedOfDueSoFar = dueSoFar.filter((task) => task.is_completed);
+
   return {
     totalTasks: tasks.length,
     completedTasks: completed.length,
-    completionRate: tasks.length ? round(completed.length / tasks.length * 100) : 0,
+    dueSoFarTasks: dueSoFar.length,
+    completedDueSoFarTasks: completedOfDueSoFar.length,
+    completionRate: dueSoFar.length
+      ? round(completedOfDueSoFar.length / dueSoFar.length * 100)
+      : 100,
     onTimeRate: onTimeValues.length
       ? round(onTimeValues.filter(Boolean).length / onTimeValues.length * 100)
       : null,

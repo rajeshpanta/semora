@@ -109,3 +109,39 @@ export function updateTodayWidget(
     // Widget data is a nice-to-have; never let it surface as an app error.
   }
 }
+
+/**
+ * Wipe the widget payload.
+ *
+ * Home-screen widgets read from the shared App Group container, which outlives
+ * the session: after sign-out the widget kept rendering the previous account's
+ * task titles and due counts on the lock and home screens indefinitely, with no
+ * way for the next person to clear it from inside the app. Sign-out already
+ * cancels notifications for exactly this reason ("leak A's task titles via
+ * banners") — the widget is the same leak on a bigger surface.
+ *
+ * Writes an empty payload rather than deleting the key so an installed widget
+ * decodes cleanly into its empty state instead of showing stale placeholder
+ * data on a decode failure.
+ */
+export function clearTodayWidget(): void {
+  if (Platform.OS !== 'ios') return;
+  try {
+    const { ExtensionStorage } = require('@bacons/apple-targets');
+    const storage = new ExtensionStorage(APP_GROUP);
+    storage.set(
+      PAYLOAD_KEY,
+      JSON.stringify({
+        updatedAt: new Date().toISOString(),
+        dueTodayCount: 0,
+        items: [],
+        streak: 0,
+        dueThisWeek: [],
+      }),
+    );
+    ExtensionStorage.reloadWidget(WIDGET_KIND);
+    try { ExtensionStorage.reloadWidget(DUE_THIS_WEEK_KIND); } catch {}
+  } catch {
+    // Never let widget cleanup block or fail a sign-out.
+  }
+}

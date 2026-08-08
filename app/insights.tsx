@@ -186,7 +186,7 @@ export default function InsightsScreen() {
         <SyncStatusPill />
 
         <View style={styles.metricGrid}>
-          <Metric label="Completed" value={`${insights.completionRate}%`} detail={`${insights.completedTasks}/${insights.totalTasks} tasks`} color={colors.brand} />
+          <Metric label="Kept up" value={`${insights.completionRate}%`} detail={`${insights.completedDueSoFarTasks}/${insights.dueSoFarTasks} due so far`} color={colors.brand} />
           <Metric label="On time" value={insights.onTimeRate == null ? '—' : `${insights.onTimeRate}%`} detail="of finished work" color="#0F766E" />
           <Metric label="Missing" value={String(insights.missingCount)} detail="past due" color={insights.missingCount ? colors.coral : '#0F766E'} />
           <Metric label="Graded" value={String(insights.gradedTasks)} detail="scores recorded" color="#7C3AED" />

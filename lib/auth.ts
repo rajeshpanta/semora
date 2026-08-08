@@ -7,6 +7,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { endIAP } from '@/lib/purchases';
 import { clearLocalSyncState } from '@/lib/calendarSync';
 import { cancelAllRemindersOnSignOut } from '@/lib/notifications';
+import { clearTodayWidget } from '@/lib/widgetBridge';
 import { unregisterPushToken } from '@/lib/push';
 import { clearPersistedQueryCache } from '@/lib/queryPersistence';
 import { clearOfflineUserState } from '@/lib/offlineSync';
@@ -316,6 +317,11 @@ export async function signOut() {
     // Use the helper (not the raw cancel) so it also invalidates any
     // in-flight reschedule racing this sign-out.
     cancelAllRemindersOnSignOut();
+
+    // Same reasoning as the notification cancel above, on a surface that is
+    // visible without unlocking the phone: the widget reads the shared App
+    // Group container, which survives sign-out.
+    clearTodayWidget();
 
     // Drop calendar-sync references — without this, B's app would
     // push events into A's "Semora" calendar.

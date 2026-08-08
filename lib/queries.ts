@@ -435,10 +435,43 @@ export function useLatestSyllabus(courseId: string | null | undefined) {
 
 // ── Mutation Hooks ──────────────────────────────────────────
 
+// Last id seen from a real session. Kept because getUserId() runs inside
+// mutations, which must still work with no network.
+let lastKnownUserId: string | null = null;
+supabase.auth.onAuthStateChange((_event, session) => {
+  lastKnownUserId = session?.user.id ?? null;
+});
+
+/**
+ * The signed-in user's id, without requiring the network.
+ *
+ * getSession() refreshes an expired access token, and a refresh is an HTTP
+ * call. Offline it stalls for the full timeout and then throws, so every
+ * mutation that needed an id threw BEFORE reaching the offline queue — a task
+ * you completed on a plane was simply dropped, and the queue that exists to
+ * catch exactly that never saw it. Tokens last an hour, which is why offline
+ * edits worked right after going offline and silently stopped later.
+ *
+ * The id is stable for the life of a session, so a cached one is as correct as
+ * a freshly fetched one; only the token needs refreshing, and the request the
+ * caller is about to make will surface an auth failure by itself.
+ */
 async function getUserId() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Not authenticated');
-  return session.user.id;
+  try {
+    const settled = await Promise.race([
+      supabase.auth.getSession(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 3000)),
+    ]);
+    const id = settled?.data?.session?.user?.id;
+    if (id) {
+      lastKnownUserId = id;
+      return id;
+    }
+  } catch {
+    // fall through to the cached id
+  }
+  if (lastKnownUserId) return lastKnownUserId;
+  throw new Error('Not authenticated');
 }
 
 function useInvalidateAll() {

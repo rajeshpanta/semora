@@ -467,7 +467,14 @@ export async function removeTaskFromCalendar(taskId: string): Promise<void> {
  * Returns the number of events synced.
  */
 export async function syncAllTasks(semesterId: string | null): Promise<number> {
-  if (Platform.OS === 'web' || !semesterId) return 0;
+  if (Platform.OS === 'web') return 0;
+  // Returning 0 here used to look like a successful sync of nothing: the
+  // settings screen reported "Synced!" and flipped its local toggle, but the
+  // enabled flag at the end of this function was never reached, so the toggle
+  // read back as OFF on the next open with no explanation. Say why instead.
+  if (!semesterId) {
+    throw new Error('Choose a semester first — calendar sync mirrors one semester at a time.');
+  }
 
   const Calendar = await getCalendarModule();
   if (!Calendar) return 0;
@@ -485,6 +492,10 @@ export async function syncAllTasks(semesterId: string | null): Promise<number> {
   if (error) {
     throw new Error('Could not load your tasks — check your connection and try again.');
   }
+  // No incomplete tasks is a valid state, not a failure: fall through so the
+  // enabled flag below is still written and the toggle stays on. Anything that
+  // returns before that flag leaves the user with a toggle that silently
+  // reverts.
   if (!tasks) return 0;
 
   let count = 0;

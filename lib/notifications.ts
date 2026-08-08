@@ -380,6 +380,20 @@ export async function scheduleTaskReminders(
 
   const dueDateObj = new Date(year, month - 1, day);
 
+  // The actual moment the work is due: the stated time, or end of day when the
+  // task has no time. Quiet hours can defer a reminder PAST this — a 10pm
+  // "due today" nudge pushed to 8am arrives the morning after the deadline —
+  // so every trigger below is checked against it.
+  const dueMoment = (() => {
+    if (dueTime) {
+      const [dh, dm] = dueTime.split(':').map(Number);
+      if (Number.isFinite(dh) && Number.isFinite(dm)) {
+        return new Date(year, month - 1, day, dh, dm, 0);
+      }
+    }
+    return new Date(year, month - 1, day, 23, 59, 59);
+  })();
+
   const offsets = [
     { days: 0, enabled: preferences.reminder_same_day },
     { days: 1, enabled: preferences.reminder_1day },
@@ -397,8 +411,19 @@ export async function scheduleTaskReminders(
     // Don't schedule if in the past
     if (triggerDate <= now) continue;
 
-    // Calculate actual days until due at notification time
-    const daysUntilDue = differenceInDays(dueDateObj, new Date(year, month - 1, day - offset.days));
+    // A reminder that lands after the deadline is not a reminder. Rather than
+    // telling someone their essay "is due today" the morning after it was due,
+    // drop this offset — the deadline itself has already passed and the
+    // overdue surfaces in-app own that message.
+    if (triggerDate >= dueMoment) continue;
+
+    // Derive the label from when the notification will ACTUALLY fire, not from
+    // the unshifted date: quiet hours can move a trigger across midnight, and
+    // the label was still describing the original day.
+    const daysUntilDue = differenceInDays(
+      dueDateObj,
+      new Date(triggerDate.getFullYear(), triggerDate.getMonth(), triggerDate.getDate()),
+    );
     const label = getDueLabel(daysUntilDue, locale);
 
     await Notifications.scheduleNotificationAsync({
