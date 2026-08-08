@@ -1600,7 +1600,7 @@ export const ES: Record<string, string> = {
   'Sending…': 'Enviando…',
   'September': 'Septiembre',
   'Set up Face ID, Touch ID, or a device passcode in Settings to delete your account.': 'Configura Face ID, Touch ID o un código en Configuración para eliminar tu cuenta.',
-  'Set your own reminder times, get 1- and 3-day advance nudges, and sync to Apple or Google Calendar.': 'Elige tus horarios de recordatorio, recibe avisos con 1 y 3 días de anticipación y sincroniza con el Calendario de Apple o con Google Calendar.',
+  'Set your own reminder times, get 1- and 3-day advance nudges, sync to Apple Calendar, and export to Google Calendar or Outlook.': 'Elige tus horarios de recordatorio, recibe avisos con 1 y 3 días de anticipación, sincroniza con el Calendario de Apple y exporta a Google Calendar o a Outlook.',
   'Share a course with classmates, post your semester, and keep your study streak going.': 'Comparte un curso con tus compañeros, publica tu semestre y mantén tu racha de estudio.',
   'Share changing deadlines and group assignments': 'Comparte entregas que cambian y tareas grupales',
   'Shared Course': 'Curso compartido',

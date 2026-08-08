@@ -52,7 +52,7 @@ const FEATURES = [
   {
     icon: 'bell' as const,
     title: 'Custom Reminders & Calendar Sync',
-    desc: 'Set your own reminder times, get 1- and 3-day advance nudges, and sync to Apple or Google Calendar.',
+    desc: 'Set your own reminder times, get 1- and 3-day advance nudges, sync to Apple Calendar, and export to Google Calendar or Outlook.',
   },
   {
     icon: 'life-ring' as const,
