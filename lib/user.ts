@@ -36,6 +36,27 @@ export function primaryProvider(user: User | null | undefined): string | null {
 }
 
 /**
+ * What to show under the account name in Settings.
+ *
+ * Normally the email. But Apple returns the address only on the FIRST
+ * authorization of an app and never again, so a user who re-authorizes has no
+ * email on their auth record at all — and this row rendered blank, which reads
+ * as "my account is broken" rather than "Apple didn't share this".
+ *
+ * Falls back to naming the sign-in method, which is always known and is the
+ * thing the user would actually need in order to sign in again.
+ */
+export function accountSubtitle(user: User | null | undefined): string {
+  const email = user?.email?.trim();
+  if (email) return email;
+  switch (primaryProvider(user)) {
+    case 'apple': return 'Signed in with Apple';
+    case 'google': return 'Signed in with Google';
+    default: return 'Signed in';
+  }
+}
+
+/**
  * Friendly display name for a user. Prefers any name we captured at
  * sign-up time (Apple's FULL_NAME scope, Google's profile), falls back
  * to the email's local part — except for Apple "Hide My Email" relay

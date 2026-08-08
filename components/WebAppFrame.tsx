@@ -15,7 +15,7 @@ import { usePathname, useRouter } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
 import { useColors } from '@/lib/theme';
 import { useResponsive, WEB_SIDEBAR_WIDTH } from '@/lib/responsive';
-import { displayName } from '@/lib/user';
+import { displayName, accountSubtitle } from '@/lib/user';
 import { FONTS } from '@/lib/constants';
 import { useI18n } from '@/lib/i18n';
 
@@ -99,7 +99,8 @@ function DesktopSidebar({ session }: { session: Session }) {
   const pathname = usePathname();
   const router = useRouter();
   const name = displayName(session.user, 'Student');
-  const email = session.user.email ?? '';
+  // Same reason as Settings: an Apple user can have no email on record.
+  const email = accountSubtitle(session.user);
   const { locale, t } = useI18n();
 
   const navigate = (path: string) => {

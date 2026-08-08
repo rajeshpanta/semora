@@ -26,7 +26,7 @@ import { rescheduleAllTaskReminders } from '@/lib/notifications';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
-import { displayName, hasEmailPassword } from '@/lib/user';
+import { accountSubtitle, displayName, hasEmailPassword } from '@/lib/user';
 import { useOfflineSyncStatus } from '@/components/OfflineSyncBridge';
 import { track } from '@/lib/analytics';
 import Constants from 'expo-constants';
@@ -37,7 +37,8 @@ export default function SettingsScreen() {
   const { contentMaxWidth } = useResponsive();
   const { session } = useSession();
   const userId = session?.user?.id;
-  const email = session?.user?.email ?? '';
+  // Apple users can legitimately have no email on record — see accountSubtitle.
+  const accountSub = accountSubtitle(session?.user);
   const name = displayName(session?.user, 'User');
   const showChangePassword = hasEmailPassword(session?.user);
   const isPro = useAppStore((s) => s.isPro);
@@ -177,7 +178,7 @@ export default function SettingsScreen() {
             <FontAwesome name="user" size={16} color={colors.ink2} style={styles.icon} />
             <View style={{ flex: 1 }}>
               <Text style={[styles.rowLabel, { color: colors.ink }]}>{name}</Text>
-              <Text style={[styles.rowSub, { color: colors.ink3 }]}>{email}</Text>
+              <Text style={[styles.rowSub, { color: colors.ink3 }]}>{accountSub}</Text>
             </View>
           </View>
           {showChangePassword && (

@@ -1692,4 +1692,7 @@ export const ES: Record<string, string> = {
   'Choose a course above and the tutor will build practice from its material.': 'Elige un curso arriba y el tutor creará práctica con su material.',
   'Add a course first — practice is generated from a course\'s own material.': 'Añade un curso primero: la práctica se genera con el material del propio curso.',
   'Reminders before every due date. Deadlines synced to your phone’s calendar. Your grade in every class — and what you need on the final.': 'Recordatorios antes de cada entrega. Fechas sincronizadas con el calendario de tu teléfono. Tu calificación en cada curso y lo que necesitas en el examen final.',
+  'Signed in with Apple': 'Sesión iniciada con Apple',
+  'Signed in with Google': 'Sesión iniciada con Google',
+  'Signed in': 'Sesión iniciada',
 };
