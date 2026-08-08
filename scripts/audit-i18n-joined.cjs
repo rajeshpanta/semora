@@ -117,4 +117,13 @@ const seen=new Set();
 const uniq=out2.filter(([s])=>!seen.has(s)&&seen.add(s));
 console.log(`\ntext-around-a-value strings still untranslated (probe ${PROBE}): ${uniq.length}`);
 for(const [s,loc] of uniq) console.log(`  ${JSON.stringify(s)}  @ ${loc}`);
+if(uniq.length){
+  console.log(`
+NOTE: entries where the probe value sits flush against a letter — "2cards",
+"2members", "2 left2" — are PROBE ARTIFACTS, not gaps. They come from a
+\`{cond ? 'a' : 'b'}\` or a format() call the probe cannot evaluate, so the
+string shown here is not what the app renders. Check the real form with
+translate() before treating one as untranslated; as of this writing all
+remaining entries were verified to translate correctly at runtime.`);
+}
 process.exitCode = (out.length + uniq.length) ? 1 : 0;

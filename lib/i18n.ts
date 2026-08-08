@@ -117,6 +117,101 @@ function spanishPattern(input: string): string | null {
   match = input.match(/^Your current capacity leaves (.+?) due within two weeks unscheduled\. Increase daily time or reduce task estimates\.$/);
   if (match) return `Con tu capacidad actual quedan ${translate(match[1], 'es')} sin programar que vencen en dos semanas. Aumenta el tiempo diario o reduce las estimaciones de tus tareas.`;
 
+  // ── Remaining text-around-a-value strings (audit sweep) ─────────────────
+  // Each of these is JSX text interleaved with a value, so it only ever exists
+  // as a joined string at runtime and can never be a dictionary entry.
+  match = input.match(/^(.+) · (\d+) items?$/);
+  if (match) return `${translate(match[1], 'es')} · ${match[2]} ${match[2] === '1' ? 'elemento' : 'elementos'}`;
+  match = input.match(/^(\d+) of (\d+) courses · (\d+) graded credits$/);
+  if (match) return `${match[1]} de ${match[2]} cursos · ${match[3]} créditos calificados`;
+  match = input.match(/^(\d+)-day streak 🔥$/);
+  if (match) return `Racha de ${match[1]} ${match[1] === '1' ? 'día' : 'días'} 🔥`;
+  match = input.match(/^Today['’]s classes · (\d+)$/);
+  if (match) return `Clases de hoy · ${match[1]}`;
+  match = input.match(/^Overdue · (\d+)$/);
+  if (match) return `Atrasadas · ${match[1]}`;
+  match = input.match(/^(\d+)d late$/);
+  if (match) return `${match[1]} ${match[1] === '1' ? 'día' : 'días'} de retraso`;
+  match = input.match(/^Show (\d+) more$/);
+  if (match) return `Ver ${match[1]} más`;
+  match = input.match(/^(\d+) need grade$/);
+  if (match) return `${match[1]} sin calificar`;
+  match = input.match(/^Tomorrow · (.+)$/);
+  if (match) return `Mañana · ${match[1]}`;
+  match = input.match(/^(\d+) (member|members) · Your role: (.+)$/);
+  if (match) return `${match[1]} ${match[1] === '1' ? 'integrante' : 'integrantes'} · Tu rol: ${translate(match[3], 'es')}`;
+  match = input.match(/^View original(?: · (.+))?$/);
+  if (match) return `Ver original${match[1] ? ` · ${match[1]}` : ''}`;
+  match = input.match(/^(\d+) lowest grades? currently dropped$/);
+  if (match) return `Se ${match[1] === '1' ? 'descarta' : 'descartan'} ${match[1] === '1' ? 'la nota más baja' : `las ${match[1]} notas más bajas`}`;
+  match = input.match(/^Tasks \((\d+)\)$/);
+  if (match) return `Tareas (${match[1]})`;
+  match = input.match(/^Cards \((\d+)\)$/);
+  if (match) return `Tarjetas (${match[1]})`;
+  match = input.match(/^Crunch week: (.+)$/);
+  if (match) return `Semana intensa: ${match[1]}`;
+  match = input.match(/^(\d+) (?:deadline|deadlines) stack up that week\.? ?(Get ahead now\.)?$/);
+  if (match) {
+    const body = `${match[1]} ${match[1] === '1' ? 'entrega se acumula' : 'entregas se acumulan'} esa semana`;
+    return match[2] ? `${body}. Ponte al día ahora.` : body;
+  }
+  match = input.match(/^You reviewed (\d+) cards?\.$/);
+  if (match) return `Repasaste ${match[1]} ${match[1] === '1' ? 'tarjeta' : 'tarjetas'}.`;
+  match = input.match(/^Semora excludes the (\d+) lowest graded items? once enough grades exist\.$/);
+  if (match) return `Semora descarta ${match[1] === '1' ? 'el trabajo calificado más bajo' : `los ${match[1]} trabajos calificados más bajos`} cuando haya suficientes notas.`;
+  match = input.match(/^You're seeing the next (\d+) days$/);
+  if (match) return `Estás viendo los próximos ${match[1]} días`;
+  match = input.match(/^Pro plans a full (\d+) days ahead and rolls missed sessions ?forward automatically\.$/);
+  if (match) return `Pro planifica ${match[1]} días completos por adelantado y reprograma automáticamente las sesiones omitidas.`;
+  match = input.match(/^Moved from (.+)$/);
+  if (match) return `Movida desde ${match[1]}`;
+  match = input.match(/^Focusing on (.+)$/);
+  if (match) return `Enfocado en ${match[1]}`;
+  match = input.match(/^Reconnect (.+)$/);
+  if (match) return `Volver a conectar ${match[1]}`;
+  match = input.match(/^(.+) sync · (.+)$/);
+  if (match) return `Sincronización ${translate(match[1], 'es')} · ${translate(match[2], 'es')}`;
+  match = input.match(/^Courses \((\d+) selected\)$/);
+  if (match) return `Cursos (${match[1]} ${match[1] === '1' ? 'seleccionado' : 'seleccionados'})`;
+  match = input.match(/^Start (.+)$/);
+  if (match) return `Inicio ${match[1]}`;
+  match = input.match(/^(\d+) (risks?|signals?) worth attention — see them with Pro$/);
+  if (match) return `${match[1]} ${match[1] === '1' ? 'señal que merece' : 'señales que merecen'} atención: míralas con Pro`;
+  // The noun comes from the dictionary capitalised ("Sesión"), and Spanish
+  // wants an article here, so lowercase it and supply one.
+  match = input.match(/^Add a(?:nother)? (.+)$/);
+  if (match) {
+    const noun = translate(match[1], 'es').toLocaleLowerCase('es');
+    return `${input.startsWith('Add another') ? 'Agregar otra' : 'Agregar una'} ${noun}`;
+  }
+  match = input.match(/^\+(\d+) more$/);
+  if (match) return `+${match[1]} más`;
+  match = input.match(/^You have (\d+) pending tasks this semester\. Check your courses for upcoming deadlines\.$/);
+  if (match) return `Tienes ${match[1]} tareas pendientes este semestre. Revisa tus cursos para ver las próximas entregas.`;
+
+  // Today-tab coaching lines and the delete-account warning. Long, fully
+  // interpolated sentences that only exist joined at runtime.
+  match = input.match(/^You have (\d+) overdue\. Knock out the oldest first: (.+) \((.+)\) — (\d+)d late\.$/);
+  if (match) {
+    return `Tienes ${match[1]} ${match[1] === '1' ? 'tarea atrasada' : 'tareas atrasadas'}. Empieza por la más antigua: ${match[2]} (${match[3]}) — ${match[4]} ${match[4] === '1' ? 'día' : 'días'} de retraso.`;
+  }
+  match = input.match(/^Next exam: (.+) · (.+) — (.+) \((today|\d+ days?)\)\. A good time to start preparing\.$/);
+  if (match) {
+    const when = match[4] === 'today'
+      ? 'hoy'
+      : `en ${match[4].replace(/ days?$/, '')} ${match[4].startsWith('1 ') ? 'día' : 'días'}`;
+    return `Próximo examen: ${match[1]} · ${match[2]} — ${match[3]} (${when}). Buen momento para empezar a prepararlo.`;
+  }
+  match = input.match(/^For security, we'll ask you to sign in again with (.+) before deleting your account\. Tap the button below to start\.$/);
+  if (match) return `Por seguridad, te pediremos que vuelvas a iniciar sesión con ${match[1]} antes de eliminar tu cuenta. Toca el botón de abajo para empezar.`;
+  match = input.match(/^All your semesters, courses, tasks, grades, uploaded syllabi, and course notes will be deleted\. This cannot be undone\.(?: Deleting your account does NOT cancel your Pro subscription — Apple keeps billing until you cancel it in Settings → Apple Account → Subscriptions\.)?$/);
+  if (match) {
+    const base = 'Se eliminarán todos tus semestres, cursos, tareas, calificaciones, programas subidos y apuntes. Esta acción no se puede deshacer.';
+    return input.includes('Pro subscription')
+      ? `${base} Eliminar tu cuenta NO cancela tu suscripción Pro: Apple seguirá cobrándote hasta que la canceles en Ajustes → Cuenta de Apple → Suscripciones.`
+      : base;
+  }
+
   // Tutor. The lookahead matters: a bare /^Explain (.+)$/ here would swallow
   // "Explain the assignment “…” and help me make a plan to complete it.",
   // which has its own rule further down and would never be reached.
