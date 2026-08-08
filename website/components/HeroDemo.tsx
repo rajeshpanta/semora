@@ -140,7 +140,11 @@ export function HeroDemo({ locale = 'en' }: { locale?: SiteLocale }) {
 
             {/* Stage 3 — the payoff, a week that adds up. */}
             <div className={styles.week}>
-              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
+              {/* Every other string in this component is localized — the stage
+                  captions, the rows, the sidebar, "QUÍM 101 · Programa.pdf" —
+                  so these English initials were the one untranslated element in
+                  the Spanish hero, and M/T/W/T/F/S/S means nothing in Spanish. */}
+              {(es ? ['L', 'M', 'X', 'J', 'V', 'S', 'D'] : ['M', 'T', 'W', 'T', 'F', 'S', 'S']).map((d, i) => (
                 <div key={i} className={styles.day}>
                   <span
                     className={styles.bar}

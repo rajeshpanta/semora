@@ -45,7 +45,7 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         noCard: 'Sin tarjeta de crédito.',
         monthlyNote: 'Facturación mensual. Cancela cuando quieras.',
         annualNote: `Equivale a ${PRO_ANNUAL_MONTHLY_EQUIVALENT} al mes. Cancela cuando quieras.`,
-        best: 'MEJOR VALOR',
+        best: 'MEJOR PRECIO',
         save: `Ahorra ${PRO_ANNUAL_SAVINGS_PCT} %`,
         everything: 'Todo lo de Gratis, y además:',
         purchase:

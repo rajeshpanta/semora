@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 const CHIPS = [
   '5 análisis gratis al mes',
   'App completa en español',
-  'Tus datos al día en iPhone, iPad y web',
+  'Tus datos al día en iPhone, iPad y la web',
 ];
 
 const STEPS = [
@@ -69,7 +69,7 @@ const DETAILS: SpanishHomeDetail[] = [
     key: 'scanner',
     eyebrow: 'Análisis del programa',
     heading: 'Empieza el semestre con un plan claro.',
-    lead: 'La IA de Semora convierte el programa de la materia en un curso que puedes revisar en pocos minutos.',
+    lead: 'La IA de Semora convierte el programa de la materia en tareas, exámenes y horarios que puedes revisar en pocos minutos.',
     bullets: [
       'Usa una foto, un PDF, un archivo o texto copiado.',
       'Comprueba cada fecha, horario y categoría antes de guardar.',
@@ -84,7 +84,7 @@ const DETAILS: SpanishHomeDetail[] = [
     lead: 'Consulta tu promedio actual y descubre cuánto puede influir la próxima entrega.',
     bullets: [
       'Calcula promedios ponderados por curso y categoría.',
-      'Usa pronósticos y alertas para concentrarte donde más importa.',
+      'Usa pronósticos y alertas para concentrarte en lo que más importa.',
     ],
     image: '/screenshots/es/track-grades.png',
     alt: 'Pantalla de un curso en Semora con promedio actual y pronóstico de calificaciones',
@@ -96,8 +96,8 @@ const DETAILS: SpanishHomeDetail[] = [
     heading: 'Un horario de estudio que cambia contigo.',
     lead: 'El plan se adapta cuando cambia una fecha o dejas una sesión sin completar.',
     bullets: [
-      'Reserva bloques de estudio alrededor de tus clases, exámenes y entregas.',
-      'Reprograma las sesiones pendientes y te explica por qué cambió el plan.',
+      'Reserva bloques de estudio que se adapten a tus clases, exámenes y entregas.',
+      'Semora reprograma las sesiones pendientes y te explica por qué cambió el plan.',
     ],
     image: '/screenshots/es/plan-semester.png',
     alt: 'Calendario de Semora con fechas de varios cursos durante todo el mes',

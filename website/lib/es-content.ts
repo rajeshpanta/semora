@@ -42,10 +42,10 @@ const CORE_PAGES: SpanishPageConfig[] = [
     ],
     sections: [
       {
-        heading: 'Construido alrededor de cursos reales',
+        heading: 'Pensado a partir de tus cursos reales',
         paragraphs: [
           'Semora no empieza con una lista vacía. Empieza con el programa de la materia, tus tareas, horarios y calificaciones. Así, el calendario, los recordatorios, el Plan Inteligente y el Tutor con IA trabajan con el contexto académico correcto.',
-          'Canvas, Blackboard y Moodle pueden complementar esa información. Si tu institución no permite una conexión directa, todavía puedes añadir el programa con una foto, un PDF o texto copiado.',
+          'Canvas, Blackboard y Moodle pueden complementar esa información. Si tu institución no permite una conexión directa, de todos modos puedes añadir el programa con una foto, un PDF o texto copiado.',
         ],
       },
       {
@@ -127,8 +127,8 @@ const CORE_PAGES: SpanishPageConfig[] = [
     ],
     faq: [
       { question: '¿Cómo añado el programa de una materia?', answer: 'Abre Escanear y toma una foto, sube un PDF o elige un archivo. En la web también puedes arrastrarlo o pegar el texto. Revisa el resultado antes de guardarlo.' },
-      { question: '¿Puedo editar una tarea después?', answer: 'Sí. Abre la tarea y elige Editar para cambiar título, fecha, hora, tipo o descripción.' },
-      { question: '¿Cómo se calcula mi calificación?', answer: 'Semora usa las puntuaciones y ponderaciones que registras. El promedio actual solo tiene en cuenta el trabajo que ya ha sido calificado.' },
+      { question: '¿Puedo editar una tarea después?', answer: 'Sí. Sí. Abre la tarea y elige Editar para cambiar el título, la fecha, la hora, el tipo o la descripción.' },
+      { question: '¿Cómo se calcula mi calificación?', answer: 'Semora usa las puntuaciones y ponderaciones que registras. El promedio actual solo toma en cuenta lo que ya está calificado.' },
       { question: '¿Cómo cancelo Pro?', answer: 'En tu dispositivo abre Configuración > Apple ID > Suscripciones y selecciona Semora.' },
       { question: '¿Cómo elimino mi cuenta?', answer: 'En la app, abre la pestaña Mi cuenta, desplázate hasta Eliminar cuenta y confirma. La eliminación es permanente.' },
     ],
@@ -147,7 +147,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
         paragraphs: ['Recopilamos solo la información necesaria para ofrecer las funciones que decides usar.'],
         bullets: [
           'Información de cuenta, como correo electrónico y credenciales protegidas.',
-          'Datos académicos: semestres, cursos, tareas, apuntes, calificaciones y contenido de los programas de clase.',
+          'Datos académicos: semestres, cursos, tareas, apuntes, calificaciones y contenido de los programas de tus materias.',
           'Cursos y tareas de Canvas, Blackboard, Moodle o Google Classroom cuando decides conectarlos.',
           'Zona horaria, tipo de dispositivo y versión del sistema para el funcionamiento de la app.',
           'Programas de clase y apuntes que decides subir para analizarlos, crear tarjetas o usar el Tutor con IA.',
@@ -162,14 +162,14 @@ const CORE_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Almacenamiento y seguridad',
         paragraphs: [
-          'Los datos se almacenan en Supabase, alojado en AWS. Los tokens de autenticación usan el almacenamiento seguro del dispositivo. La base de datos aplica seguridad por fila para limitar cada cuenta a sus propios datos y los archivos se guardan en espacios privados.',
+          'Los datos se almacenan en Supabase, alojado en AWS. Los tokens de autenticación usan el almacenamiento seguro del dispositivo. La base de datos aplica seguridad a nivel de fila para que cada cuenta solo acceda a sus propios datos y los archivos se guardan en espacios privados.',
         ],
       },
       {
         heading: 'Servicios externos',
         paragraphs: [
           'Supabase proporciona la base de datos y la autenticación. OpenAI es el único proveedor de IA al que Semora envía tu contenido: lee los programas de clase, genera las tarjetas de estudio, las preguntas de práctica y los cuestionarios, y responde tus preguntas en el Tutor. Según la política de OpenAI, los datos enviados mediante la API no se utilizan para entrenar modelos salvo que el cliente lo autorice expresamente. Semora desactiva el almacenamiento de respuestas, aunque OpenAI puede conservar registros para detectar abusos durante un máximo de 30 días cuando no se aplique un control más estricto.',
-          'Apple StoreKit procesa suscripciones. Expo entrega notificaciones autorizadas. Google Calendar solo recibe las fechas que eliges sincronizar; Semora no lee tus otros eventos.',
+          'Apple StoreKit procesa las suscripciones. Expo envía las notificaciones que autorizas. Google Calendar solo recibe las fechas que eliges sincronizar; Semora no lee tus otros eventos. Google Calendar solo recibe las fechas que eliges sincronizar; Semora no lee tus otros eventos.',
           'De forma predeterminada, las credenciales de Canvas, Blackboard, Moodle o Google Classroom permanecen en el dispositivo. Si activas la Sincronización automática, la credencial se guarda cifrada en Supabase Vault para actualizar cursos, tareas, entregas y calificaciones mientras la app está cerrada. La credencial se elimina cuando desactivas la función o desconectas la plataforma.',
         ],
       },
@@ -193,11 +193,11 @@ const CORE_PAGES: SpanishPageConfig[] = [
     h1: 'Términos de servicio',
     lede: 'Última actualización: 19 de abril de 2026. Esta traducción comunica los mismos términos que la versión en inglés.',
     intro: [
-      'Al descargar, instalar o usar Semora aceptas estos Términos de servicio. Si no estás de acuerdo, no utilices la aplicación.',
+      'Al descargar, instalar o usar Semora aceptas estos Términos de servicio. Si no estás de acuerdo, no uses la app.',
     ],
     sections: [
       { heading: '1. Descripción del servicio', paragraphs: ['Semora ayuda a estudiantes a organizar tareas, fechas de entrega y calificaciones mediante el análisis de programas de clase con IA, seguimiento académico, herramientas de estudio y sincronización con calendarios y plataformas educativas.'] },
-      { heading: '2. Registro y seguridad de la cuenta', paragraphs: ['Debes crear una cuenta y eres responsable de proteger sus credenciales y de la actividad realizada bajo ella.'] },
+      { heading: '2. Registro y seguridad de la cuenta', paragraphs: ['Debes crear una cuenta y eres responsable de proteger tus credenciales y de toda la actividad que se realice en ella.'] },
       { heading: '3. Suscripciones y pagos', paragraphs: ['Semora ofrece los planes Gratis y Pro. Apple App Store procesa las compras. Las suscripciones se renuevan automáticamente, salvo que las canceles al menos 24 horas antes de que termine el periodo. Puedes administrarlas desde tu Apple ID; Apple también gestiona los reembolsos de acuerdo con sus políticas. Si se ofrece una prueba gratuita, esta pasa a ser de pago si no la cancelas antes de que finalice.'] },
       { heading: '4. Límites del plan Gratis', paragraphs: ['El plan Gratis limita el número de análisis, cursos y semestres. Pro amplía esos límites y añade personalización, sincronización, planificación y herramientas con IA. La app muestra los límites y precios vigentes antes de que realices una compra.'] },
       {
@@ -212,7 +212,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
       { heading: '6. Funciones con inteligencia artificial', paragraphs: ['La IA puede cometer errores. Debes revisar las fechas, calificaciones y demás resultados antes de basarte en ellos. Semora no se hace responsable de entregas vencidas ni de información incorrecta cuando el resultado no haya sido verificado.'] },
       { heading: '7. Propiedad intelectual', paragraphs: ['Semora conserva la propiedad de la aplicación, su contenido original y sus funciones. Tus datos académicos siguen siendo tuyos.'] },
       { heading: '8. Terminación', paragraphs: ['Puedes eliminar tu cuenta en cualquier momento. Podemos suspender o cancelar una cuenta que incumpla estos términos.'] },
-      { heading: '9. Garantías y responsabilidad', paragraphs: ['El servicio se ofrece “tal cual”, sin garantía de funcionamiento ininterrumpido ni libre de errores. En la medida permitida por la ley, Semora no responde por daños indirectos, incidentales o consecuentes, incluidas las entregas vencidas, los cálculos incorrectos o la pérdida de datos.'] },
+      { heading: '9. Garantías y responsabilidad', paragraphs: ['El servicio se ofrece “tal cual”, sin garantía de funcionamiento ininterrumpido ni libre de errores. En la medida permitida por la ley, Semora no responde por daños indirectos, incidentales o consecuenciales, incluidas las entregas vencidas, los cálculos incorrectos o la pérdida de datos.'] },
       { heading: '10. Cambios y contacto', paragraphs: ['Podemos modificar estos términos. Continuar usando Semora después de un cambio constituye aceptación. Para preguntas escribe a semora365@gmail.com.'] },
     ],
     faq: [],
@@ -232,13 +232,13 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
       { heading: 'Un sistema conectado, no ocho herramientas separadas', paragraphs: ['El análisis crea la estructura del curso. Las fechas se incorporan al calendario y al Plan Inteligente; las calificaciones sirven para crear pronósticos y recomendaciones; y tus apuntes dan contexto a las tarjetas y al Tutor.'] },
       { heading: 'Funciona donde estudias', paragraphs: [
         'iPhone y iPad comparten la misma app universal. La web usa la misma cuenta para que puedas organizar un PDF desde una computadora y revisar el plan desde tu teléfono.',
-        'Y funciona en tu idioma: la app entera está en español, no solo este sitio. Puedes elegirlo en la primera pantalla de bienvenida o en Mi cuenta > Configuración > Idioma, y la elección se guarda en tu cuenta, así que te acompaña al iPad y a la web.',
+        'Y funciona en tu idioma: la app entera está en español, no solo este sitio. Puedes elegirlo en la primera pantalla de bienvenida o en Mi cuenta > Configuración > Idioma, y la elección se guarda en tu cuenta, así que se mantiene igual en el iPad y en la web.',
         'Sin conexión también avanzas: puedes crear cursos y tareas, editarlos y marcarlos como completados. Los cambios se guardan en el dispositivo y se sincronizan solos cuando vuelve la señal, y los últimos siete días de tus datos quedan en caché para que el aula del sótano no te deje con una pantalla vacía. Eliminar es lo único que espera a tener conexión.',
       ] },
     ],
     faq: [
       { question: '¿Qué funciones son gratis?', answer: 'Cinco análisis al mes, hasta cuatro cursos por semestre, tareas, fechas de entrega, calificaciones y recordatorios el mismo día.' },
-      { question: '¿Qué añade Pro?', answer: 'Cursos ilimitados, LMS, Plan Inteligente, Tutor, tarjetas, temporizador, pronósticos, alertas y sincronización de calendario.' },
+      { question: '¿Qué añade Pro?', answer: 'Cursos ilimitados, sincronización con Canvas, Blackboard y Moodle, Plan Inteligente, Tutor, tarjetas, temporizador, pronósticos, alertas y sincronización de calendario.' },
     ],
   }),
   page('/es/calculadora-gpa', '/gpa-calculator', 'gpa', {
@@ -261,7 +261,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
   }),
   page('/es/temporizador-pomodoro', '/pomodoro-timer', 'pomodoro', {
     metaTitle: 'Temporizador Pomodoro gratis para estudiantes',
-    metaDescription: 'Temporizador de enfoque con sesiones de 15, 25, 45 o 50 minutos y descansos ajustables.',
+    metaDescription: 'Temporizador de concentración con sesiones de 15, 25, 45 o 50 minutos y descansos ajustables.',
     h1: 'Temporizador Pomodoro para estudiar entre clases',
     lede: 'Elige una sesión que se adapte al tiempo que realmente tienes. El reloj sigue siendo preciso aunque cambies de pestaña.',
     intro: [
@@ -269,12 +269,12 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
     ],
     sections: [
       { heading: 'Cómo usarlo', paragraphs: ['Elige una duración, define el descanso, empieza con una tarea concreta y evita cambiar de objetivo durante el bloque. Cuando termine, descansa de verdad antes de continuar.'] },
-      { heading: 'Haz que cada bloque tenga una intención', paragraphs: ['“Estudiar química” es demasiado amplio. “Resolver los problemas 1–8 sin apuntes” crea un final claro y te permite medir si el bloque funcionó.'] },
-      { heading: 'Conecta cada sesión con tu semestre', paragraphs: ['El temporizador de Semora Pro está integrado con tus tareas y tu Plan Inteligente, para que cada sesión de estudio responda a una fecha real.'] },
+      { heading: 'Dale un objetivo concreto a cada bloque', paragraphs: ['“Estudiar química” es demasiado amplio. “Resolver los problemas 1–8 sin apuntes” crea un final claro y te permite medir si el bloque funcionó.'] },
+      { heading: 'Conecta cada sesión con tu semestre', paragraphs: ['El temporizador de Semora Pro está integrado con tus tareas y tu Plan Inteligente, para que cada sesión de estudio corresponda a una fecha de entrega real.'] },
     ],
     faq: [
       { question: '¿Tengo que usar 25 minutos?', answer: 'No. Puedes elegir 15, 25, 45 o 50 minutos y descansos de 5, 10 o 15.' },
-      { question: '¿El temporizador sigue si cambio de pestaña?', answer: 'Sí. Usa una hora de finalización para mantener la cuenta correcta, incluso cuando el navegador reduce la actividad de una pestaña en segundo plano.' },
+      { question: '¿El temporizador sigue si cambio de pestaña?', answer: 'Sí. Sí. El temporizador se basa en una hora de finalización, así que el tiempo restante sigue siendo exacto incluso cuando el navegador reduce la actividad de una pestaña en segundo plano., incluso cuando el navegador reduce la actividad de una pestaña en segundo plano.' },
     ],
   }),
   page('/es/blog', '/blog', 'blog-index', {
@@ -289,7 +289,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
   page('/es/comparar', '/compare', 'compare-index', {
     metaTitle: 'Comparar Semora con otras apps para estudiantes',
     metaDescription: 'Compara Semora con Shovel, StudyFetch, Mindgrasp, Taskade, DormWay, Studley AI y myHomework.',
-    h1: 'Compara por el trabajo que realmente necesitas hacer',
+    h1: 'Compara según el problema que de verdad necesitas resolver',
     lede: 'No todas las aplicaciones para estudiantes resuelven el mismo problema. Estas comparaciones distinguen entre organización del semestre, estudio con IA y gestión general de tareas.',
     intro: ['Semora parte del programa de cada materia y conecta fechas de entrega, calificaciones y planificación. Otras herramientas dan prioridad a los resúmenes, las tarjetas, los proyectos generales o la entrada manual de datos.'],
     sections: [
@@ -305,14 +305,14 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
     metaDescription: 'Extrae tareas, exámenes, horarios y ponderaciones a partir de fotos, PDFs o texto, y revisa todo antes de guardar.',
     h1: 'Convierte el programa de una materia en un semestre organizado',
     lede: 'Sube el documento una vez. La IA de Semora identifica la estructura académica y te permite comprobar cada resultado.',
-    intro: ['Las fechas pueden aparecer en tablas, párrafos, calendarios o notas al pie. Copiarlas a mano lleva tiempo y facilita los errores. Semora convierte ese contenido en información que puedes revisar antes de guardarla.'],
+    intro: ['Las fechas pueden aparecer en tablas, párrafos, calendarios o notas al pie. Copiarlas a mano lleva tiempo y es fácil equivocarse. Semora convierte ese contenido en información que puedes revisar antes de guardarla.'],
     sections: [
       { heading: 'Cuatro formas de añadir el programa', paragraphs: ['Toma una foto de hasta cinco páginas, sube un PDF, arrastra un archivo en la web o pega texto desde un visor de PDF o una página del LMS.'], bullets: ['Nombre y código del curso', 'Profesor, horarios y horas de atención', 'Fechas del semestre y criterios de evaluación', 'Tareas, exámenes, proyectos, lecturas y ponderaciones'] },
       { heading: 'La revisión evita que una suposición se convierta en una fecha', paragraphs: ['Los resultados con menor confianza se marcan para revisión. Los elementos sin fecha quedan separados y desactivados hasta que los corrijas. Nada llega a tu calendario automáticamente solo porque la IA lo sugirió.'] },
       { heading: 'Después del análisis', paragraphs: ['Las fechas se incorporan a la vista Hoy, al calendario, a los recordatorios, a la carga académica y al Plan Inteligente. Las categorías y ponderaciones preparan el seguimiento de calificaciones.'] },
     ],
     faq: [
-      { question: '¿Puede leer un PDF escaneado?', answer: 'Sí. Los PDFs y las imágenes compatibles se procesan visualmente. Para mejores resultados usa páginas enfocadas, rectas y con buena luz.' },
+      { question: '¿Puede leer un PDF escaneado?', answer: 'Sí. Los archivos PDF y las imágenes compatibles se procesan visualmente. Para obtener mejores resultados, procura que las páginas salgan nítidas, sin inclinación y bien iluminadas.' },
       { question: '¿Guarda algo sin preguntarme?', answer: 'No. Primero revisas y editas el resultado; luego eliges qué guardar.' },
       { question: '¿Cuántos análisis son gratis?', answer: 'Cinco análisis completados al mes. Pro elimina el límite mensual.' },
     ],
@@ -322,10 +322,10 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
     metaDescription: 'Crea un plan adaptativo desde tus fechas reales, hábitos, exámenes, calificaciones y tiempo disponible.',
     h1: 'Un plan de estudio que aprende de tu semestre',
     lede: 'Plan Inteligente distribuye trabajo antes de las fechas importantes, reajusta lo que no completaste y explica cada cambio.',
-    intro: ['Una lista de tareas te dice qué existe. Un plan útil también decide cuándo empezar, cuánto tiempo reservar y qué mover cuando la semana cambia.'],
+    intro: ['Una lista de tareas solo te dice qué tienes pendiente. Un plan útil también decide cuándo empezar, cuánto tiempo reservar y qué mover cuando la semana cambia. Un plan útil también decide cuándo empezar, cuánto tiempo reservar y qué mover cuando la semana cambia.'],
     sections: [
       { heading: 'Señales que tiene en cuenta', paragraphs: ['El plan considera las fechas y la dificultad, la proximidad de los exámenes, los bloques disponibles, el tiempo real que tardas, las sesiones pendientes, los cambios del calendario y el riesgo académico.'], bullets: ['Empieza antes con los trabajos grandes', 'Reserva tiempo para los exámenes cercanos', 'Reduce o mueve sesiones cuando la semana se llena', 'Da prioridad a los cursos donde una calificación puede tener más impacto'] },
-      { heading: 'Cada ajuste tiene una razón', paragraphs: ['En lugar de mover bloques silenciosamente, Semora muestra si el cambio se debe a una fecha nueva, una sesión perdida, un examen cercano, disponibilidad diferente o riesgo académico.'] },
+      { heading: 'Cada ajuste tiene una razón', paragraphs: ['En lugar de mover los bloques sin avisarte, Semora muestra si el cambio se debe a una fecha nueva, una sesión perdida, un examen cercano, disponibilidad diferente o riesgo académico., Semora muestra si el cambio se debe a una fecha nueva, una sesión perdida, un examen cercano, disponibilidad diferente o riesgo académico.'] },
       { heading: 'Tú sigues teniendo el control', paragraphs: ['Puedes completar, mover o ignorar un bloque. El sistema aprende de lo que realmente ocurre sin convertir una recomendación en una obligación rígida.'] },
     ],
     faq: [
@@ -338,11 +338,11 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
     metaTitle: 'Seguimiento de fechas de Canvas',
     metaDescription: 'Importa tareas y calificaciones de Canvas, revisa el historial y actualiza recordatorios cuando cambian las fechas.',
     h1: 'Haz que las fechas de Canvas formen parte de tu plan completo',
-    lede: 'Canvas contiene las tareas. Semora las combina con horarios, calificaciones, recordatorios y planificación entre todos tus cursos.',
+    lede: 'Canvas contiene las tareas. Semora las combina con los horarios, las calificaciones, los recordatorios y la planificación de todos tus cursos.',
     intro: ['Un anuncio o cambio de fecha puede quedar enterrado dentro de un curso. Semora reúne las entregas en una sola vista y registra cuándo se sincronizaron.'],
     sections: [
-      { heading: 'Conexión flexible', paragraphs: ['Los estudiantes pueden conectar Canvas con un token personal cuando su institución lo permite. Si una escuela aprueba OAuth, el flujo puede abrir una autorización directa. La disponibilidad depende de la institución.'] },
-      { heading: 'Sincronización automática y fácil de recuperar', paragraphs: ['Al activar la sincronización automática, Semora busca cambios en segundo plano. El historial muestra la última actualización, los cursos incluidos, los elementos importados y cualquier error que requiera tu atención.'], bullets: ['Correspondencia entre cursos para evitar duplicados', 'Actualización de fechas y calificaciones', 'Nuevos intentos con mensajes claros', 'Eliminación de la credencial guardada al desconectar'] },
+      { heading: 'Conexión flexible', paragraphs: ['Los estudiantes pueden conectar Canvas con un token personal cuando su institución lo permite. Si la universidad habilita OAuth, Si una escuela aprueba OAuth, puedes autorizar la conexión directamente desde tu cuenta institucional.. La disponibilidad depende de la institución.'] },
+      { heading: 'Sincronización automática con historial revisable', paragraphs: ['Al activar la sincronización automática, Semora busca cambios en segundo plano. El historial muestra la última actualización, los cursos incluidos, los elementos importados y cualquier error que requiera tu atención.'], bullets: ['Vinculación de cursos para evitar duplicados', 'Actualización de fechas y calificaciones', 'Reintentos con mensajes claros', 'Eliminación de la credencial guardada al desconectar'] },
       { heading: 'Canvas más el programa', paragraphs: ['Canvas puede no incluir las horas de atención del profesor, la escala de calificación o el calendario completo. Añadir el programa aporta ese contexto sin reemplazar los datos oficiales de Canvas.'] },
     ],
     faq: [
@@ -362,52 +362,52 @@ type FeatureDetail = {
 
 const FEATURE_DETAILS: Record<string, FeatureDetail> = {
   'syllabus-scanner': {
-    why: 'El programa contiene la estructura del curso, pero no siempre es fácil convertir ese documento en acciones concretas. Semora hace la primera organización y tú mantienes la revisión final.',
+    why: 'El programa contiene la estructura del curso, pero no siempre es fácil convertir ese documento en acciones concretas. El programa contiene la estructura del curso, pero no siempre es fácil convertir ese documento en acciones concretas. Semora hace la organización inicial y la revisión final la haces tú.',
     steps: ['Añade una foto, un PDF o texto.', 'La IA identifica los datos y señala lo que conviene revisar.', 'Corrige cualquier dato dudoso.', 'Guarda solo los elementos que hayas seleccionado.'],
     result: 'Obtienes un curso con fechas, horarios, criterios de evaluación y tareas, listo para usar en el resto de Semora.',
     faq: [{ question: '¿Qué formatos admite?', answer: 'PDF, JPEG, PNG y WEBP; en la web también puedes pegar texto.' }],
   },
   'grade-tracking': {
-    why: 'Una lista de calificaciones no muestra cuánto vale cada actividad ni qué parte del curso ya ha sido evaluada. El promedio ponderado sí.',
-    steps: ['Registra puntuación y porcentaje.', 'Agrupa por categorías cuando el curso las usa.', 'Compara el promedio actual con tu escala.', 'Usa Pro para probar resultados futuros.'],
-    result: 'Ves cómo vas ahora y qué resultados futuros pueden tener un mayor impacto.',
+    why: 'Una lista de calificaciones no muestra cuánto vale cada actividad Una lista de calificaciones no muestra cuánto vale cada actividad ni qué parte del curso ya se calificó. El promedio ponderado sí.. El promedio ponderado sí.',
+    steps: ['Registra la puntuación y el porcentaje de cada tarea.', 'Agrupa por categorías cuando el curso las usa.', 'Compara el promedio actual con tu escala.', 'Usa Pro para probar resultados futuros.'],
+    result: 'Ves cómo vas ahora y qué actividades pendientes pesan más en tu promedio.',
     faq: [{ question: '¿Cuenta las tareas sin calificación?', answer: 'No. El promedio actual refleja el trabajo ya evaluado; los pronósticos tratan las actividades pendientes por separado.' }],
   },
   'smart-plan': {
-    why: 'Las fechas por sí solas no reservan tiempo. Plan Inteligente convierte prioridad, riesgo y disponibilidad en bloques concretos.',
-    steps: ['Lee fechas y exámenes próximos.', 'Estima bloques según tamaño y riesgo.', 'Observa sesiones terminadas o perdidas.', 'Reajusta y explica cada cambio.'],
+    why: 'Las fechas por sí solas no reservan tiempo. Plan Inteligente convierte la prioridad, el riesgo y la disponibilidad en bloques concretos.',
+    steps: ['Semora lee tus próximas entregas y exámenes.', 'Estima bloques según tamaño y riesgo.', 'Detecta las sesiones que completaste y las que te saltaste.', 'Reajusta y explica cada cambio.'],
     result: 'Tienes una propuesta diaria que se adapta a lo que sucede, en lugar de quedarse anclada al plan del inicio del semestre.',
     faq: [{ question: '¿Puedo mover un bloque?', answer: 'Sí. El plan es una recomendación editable y usa tus cambios como nueva información.' }],
   },
   flashcards: {
-    why: 'Crear tarjetas consume tiempo antes de que empiece el repaso. Semora usa el material que ya vinculaste al curso.',
-    steps: ['Elige todo el curso o una evaluación.', 'Selecciona el programa y los apuntes relevantes.', 'Genera y revisa las tarjetas.', 'Repasa con repetición espaciada.'],
-    result: 'El mazo se concentra en material del curso y puedes editar o añadir tarjetas manuales.',
+    why: 'Preparar las tarjetas lleva tiempo que podrías dedicar al repaso. Semora usa el material que ya vinculaste al curso.',
+    steps: ['Elige todo el curso o un examen específico.', 'Selecciona el programa y los apuntes que quieras usar.', 'Genera y revisa las tarjetas.', 'Repasa con repetición espaciada.'],
+    result: 'El mazo se centra en el material del curso y puedes editar las tarjetas o añadir las tuyas a mano.',
     faq: [{ question: '¿Puedo crear tarjetas sin IA?', answer: 'Sí. Cada mazo también admite tarjetas manuales.' }],
   },
   'focus-timer': {
     why: 'Las sesiones sin un límite claro tienden a alargarse o interrumpirse. Un bloque con principio y final facilita dar el primer paso.',
     steps: ['Elige 15, 25, 45 o 50 minutos.', 'Define un objetivo concreto.', 'Trabaja sin cambiar de tarea.', 'Descansa 5, 10 o 15 minutos.'],
     result: 'Acumulas sesiones pequeñas y medibles que caben entre clases.',
-    faq: [{ question: '¿Funciona en segundo plano?', answer: 'El reloj se corrige con la hora real cuando vuelves a la pestaña.' }],
+    faq: [{ question: '¿Funciona en segundo plano?', answer: 'Sí. El temporizador sigue corriendo y se ajusta a la hora real cuando vuelves a la app.' }],
   },
   'ai-tutor': {
-    why: 'Un chat general no sabe qué temas incluye tu curso ni cuál es tu próxima entrega. El Tutor utiliza las fuentes que has vinculado.',
+    why: 'Un chatbot genérico no sabe qué temas incluye tu curso ni cuál es tu próxima entrega. El Tutor utiliza las fuentes que has vinculado. El Tutor utiliza las fuentes que has vinculado.',
     steps: ['Abre el Tutor desde un curso.', 'Haz una pregunta o elige un modo de práctica.', 'Consulta las referencias al programa, los apuntes o las tareas.', 'Sigue recomendaciones basadas en los temas que debes reforzar y en tus próximas fechas.'],
-    result: 'Recibes explicaciones, cuestionarios, tarjetas y sugerencias conectadas con el contexto real del curso.',
-    faq: [{ question: '¿Puede inventar una fecha?', answer: 'Las preguntas sobre fechas se responden a partir de tus tareas guardadas. Si la fecha no está disponible, el Tutor debe indicarlo.' }],
+    result: 'Recibes explicaciones, cuestionarios, tarjetas y sugerencias conectados con el contexto real del curso.',
+    faq: [{ question: '¿Puede inventar una fecha?', answer: 'Las preguntas sobre fechas se responden a partir de tus tareas guardadas. Las preguntas sobre fechas se responden a partir de tus tareas guardadas. Si no la tiene guardada, el Tutor te lo indica en lugar de inventarla.' }],
   },
   collaboration: {
-    why: 'Los grupos pierden tiempo comparando versiones distintas de la misma fecha. Un Espacio de curso mantiene una fuente compartida.',
+    why: 'Los grupos pierden tiempo comparando versiones distintas de la misma fecha. Un Espacio de curso mantiene una única versión compartida de cada fecha.',
     steps: ['Un usuario Pro crea el espacio.', 'Comparte el enlace de invitación.', 'Los compañeros se unen gratis.', 'Las fechas y tareas de grupo se actualizan para todos.'],
     result: 'El grupo ve el mismo calendario sin depender de capturas o mensajes antiguos.',
     faq: [{ question: '¿Necesito Pro para unirme?', answer: 'No. Crear un espacio requiere Pro, pero unirse mediante una invitación es gratis.' }],
   },
   'canvas-sync': {
-    why: 'Las plataformas académicas separan cada curso. Semora reúne sus fechas y conserva el historial de actualización.',
-    steps: ['Conecta Semora mediante el acceso que permita tu institución.', 'Relaciona cada curso con la materia correcta.', 'Elige entre sincronización manual o automática.', 'Consulta la última actualización y cualquier error.'],
-    result: 'Las tareas, entregas y calificaciones seleccionadas se mantienen conectadas sin crear duplicados.',
-    faq: [{ question: '¿Dónde se guarda el token?', answer: 'De forma predeterminada permanece en el dispositivo. Si activas sincronización automática, se guarda cifrado en Supabase Vault hasta que la desactives o desconectes.' }],
+    why: 'Las plataformas académicas mantienen cada curso por separado. Semora reúne todas las fechas en un solo lugar y conserva el historial de sincronización.',
+    steps: ['Conecta Semora con tu plataforma académica mediante el método que permita tu institución.', 'Relaciona cada curso de tu plataforma con el curso correspondiente en Semora.', 'Elige entre sincronización manual y automática.', 'Consulta la última actualización y cualquier error.'],
+    result: 'Las tareas, entregas y calificaciones seleccionadas se mantienen sincronizadas sin crear duplicados.',
+    faq: [{ question: '¿Dónde se guarda el token?', answer: 'De forma predeterminada permanece en el dispositivo. Si activas la sincronización automática, el token se guarda cifrado en Supabase Vault hasta que la desactives o desconectes la plataforma.' }],
   },
 };
 
@@ -422,11 +422,14 @@ const FEATURE_PAGES = FEATURES_ES.map((feature) => {
     sections: [
       { heading: 'Cómo funciona', paragraphs: [], bullets: detail.steps },
       { heading: 'Qué obtienes', paragraphs: [detail.result] },
-      { heading: feature.tier === 'pro' ? 'Incluido con Semora Pro' : 'Incluido en el plan Gratis', paragraphs: [feature.tier === 'pro' ? 'Crea una cuenta gratuita y prueba los análisis, cursos y calificaciones antes de pasarte a Pro.' : 'Puedes empezar sin tarjeta de crédito. El plan Gratis incluye cinco análisis al mes y hasta cuatro cursos por semestre.'] },
+      { heading: feature.tier === 'pro' ? 'Incluido con Semora Pro' : 'Incluido en el plan Gratis', paragraphs: [feature.tier === 'pro' ? 'Crea una cuenta gratuita y prueba el análisis de programas, los cursos y las calificaciones antes de pasarte a Pro.' : 'Puedes empezar sin tarjeta de crédito. El plan Gratis incluye cinco análisis al mes y hasta cuatro cursos por semestre.'] },
     ],
     faq: [
       ...detail.faq,
-      { question: `¿${feature.name} funciona en iPhone, iPad y la web?`, answer: 'Sí. La misma cuenta mantiene tus datos disponibles en las tres plataformas; algunas integraciones propias del dispositivo pueden variar.' },
+      // "La función" keeps the subject singular. Without it a plural feature name
+      // ("Espacios de curso", "Tarjetas de estudio") produced "¿Espacios de curso
+      // funciona…?" on every plural feature page.
+      { question: `¿La función ${feature.name} funciona en iPhone, iPad y la web?`, answer: 'Sí. La misma cuenta mantiene tus datos disponibles en las tres plataformas; algunas integraciones propias del dispositivo pueden variar.' },
     ],
   }, feature);
 });
@@ -468,7 +471,7 @@ export const SPANISH_BLOG_POSTS = [
     path: '/es/blog/tecnica-pomodoro-entre-clases',
     englishPath: '/blog/pomodoro-technique-between-classes',
     title: 'La técnica Pomodoro entre clases',
-    description: 'Cómo adaptar sesiones de enfoque a los espacios reales de un horario universitario.',
+    description: 'Cómo adaptar tus sesiones de concentración a los huecos reales de un horario universitario.',
     date: '24 de julio de 2026',
     image: '/illustrations/tomato-timer.svg',
   },
@@ -493,8 +496,8 @@ const BLOG_PAGES: SpanishPageConfig[] = [
     ],
     sections: [
       {
-        heading: '1. Reúne una versión legible',
-        paragraphs: ['Descarga el PDF original si está disponible. Si solo tienes una copia en papel, toma fotos rectas, enfocadas y con buena luz. Si el documento está dentro del LMS, copia el texto o guárdalo como PDF.'],
+        heading: '1. Consigue una versión legible',
+        paragraphs: ['Descarga el PDF original si está disponible. Si solo tienes una copia en papel, Descarga el PDF original si está disponible. Si solo tienes una copia en papel, toma fotos bien encuadradas, enfocadas y con buena luz. Si el documento está en la plataforma del curso, copia el texto o guárdalo como PDF.. Si el documento está en la plataforma del curso, copia el texto o guárdalo como PDF.'],
       },
       {
         heading: '2. Extrae primero la estructura del curso',
@@ -503,14 +506,14 @@ const BLOG_PAGES: SpanishPageConfig[] = [
       {
         heading: '3. Convierte cada entrega en una entrada concreta',
         paragraphs: ['Cada elemento debe tener título, curso, tipo, fecha, hora y ponderación cuando se conozcan. No confundas “sin fecha” con “sin importancia”: un examen final sin fecha sigue necesitando seguimiento.'],
-        bullets: ['Tareas y listas de problemas', 'Exámenes y pruebas', 'Proyectos y presentaciones', 'Lecturas con entrega o discusión', 'Laboratorios e informes'],
+        bullets: ['Tareas y guías de ejercicios', 'Exámenes y pruebas', 'Proyectos y presentaciones', 'Lecturas con entrega o discusión', 'Laboratorios e informes'],
       },
       {
         heading: '4. Revisa antes de activar recordatorios',
-        paragraphs: ['Busca años incorrectos, fechas reutilizadas de otro semestre, zonas horarias y tablas que separan la fecha del nombre. Solo después configura recordatorios y bloques de estudio.'],
+        paragraphs: ['Busca años incorrectos, fechas reutilizadas de otro semestre, errores de zona horaria y tablas que separan la fecha del nombre. Solo después configura recordatorios y bloques de estudio.'],
       },
       {
-        heading: '5. Mantén el calendario vivo',
+        heading: '5. Mantén el calendario al día',
         paragraphs: ['El programa es el punto de partida. Los anuncios y el LMS pueden cambiar fechas. Registra la última actualización y conserva la fuente del cambio para no terminar con dos versiones de la misma tarea.'],
       },
       {
@@ -527,11 +530,11 @@ const BLOG_PAGES: SpanishPageConfig[] = [
     metaTitle: SPANISH_BLOG_POSTS[1].title,
     metaDescription: SPANISH_BLOG_POSTS[1].description,
     h1: SPANISH_BLOG_POSTS[1].title,
-    lede: 'Un promedio ponderado responde cuánto cuenta cada curso; un promedio simple trata todo como si tuviera el mismo peso.',
+    lede: 'Un promedio ponderado te dice cuánto pesa cada curso; un promedio simple trata todo como si tuviera el mismo peso.; un promedio simple trata todo como si tuviera el mismo peso.',
     intro: ['Para calcular el GPA necesitas la calificación en letras, los puntos que asigna tu institución y los créditos de cada curso. Las ponderaciones dentro de una materia son un cálculo diferente.'],
     sections: [
       { heading: 'La fórmula del GPA', paragraphs: ['Multiplica los puntos de cada letra por los créditos del curso. Suma esos puntos de calidad y divídelos entre los créditos totales: GPA = Σ(puntos × créditos) ÷ Σ(créditos).'] },
-      { heading: 'Ejemplo de tres cursos', paragraphs: ['Una A en 3 créditos aporta 12 puntos de calidad. Una B+ en 3 créditos aporta 9.9. Una A− en 4 créditos aporta 14.8. El total es 36.7 ÷ 10 = 3.67.'] },
+      { heading: 'Ejemplo de tres cursos', paragraphs: ['Una A en un curso de 3 créditos aporta 12 puntos de calidad. Una B+ en otro curso de 3 créditos aporta 9.9. Una A− en un curso de 4 créditos aporta 14.8. El total es 36.7 ÷ 10 = 3.67. Una B+ en 3 créditos aporta 9.9. Una A− en 4 créditos aporta 14.8. El total es 36.7 ÷ 10 = 3.67.'] },
       { heading: 'Errores comunes', paragraphs: ['No promedies las letras directamente, no cuentes un curso sin calificación como cero y no des por hecho que todas las instituciones usan la misma escala. Comprueba también cómo tratan los cursos repetidos, las materias con aprobado/no aprobado (pass/fail) y los créditos transferidos.'] },
       { heading: 'GPA y calificación dentro del curso', paragraphs: ['El GPA combina cursos según sus créditos. La calificación de un curso suele combinar tareas por ponderación o categoría. Semora mantiene ambos cálculos separados para que una tarea del 5 % no tenga el mismo impacto que un examen del 30 %.'] },
     ],
@@ -551,7 +554,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
       { heading: 'Herramientas conectadas al LMS', paragraphs: ['Reducen la entrada manual cuando tu institución permite el acceso. Comprueba si importan solo tareas o también calificaciones y cambios, si muestran la última sincronización y qué ocurre cuando una actualización falla.'] },
       { heading: 'Herramientas que analizan programas de clase', paragraphs: ['Resultan especialmente útiles al principio del semestre, porque el programa puede incluir fechas que todavía no aparecen en el LMS. La revisión es indispensable: una IA debe señalar las dudas en lugar de guardar suposiciones como si fueran datos confirmados.'] },
       { heading: 'Planificación y estudio', paragraphs: ['El calendario, el GPA, las tarjetas, el temporizador y el Tutor aportan más valor cuando comparten el mismo contexto. Si cada función te obliga a subir el material de nuevo, el sistema genera más trabajo.'] },
-      { heading: 'Lista de evaluación', paragraphs: [], bullets: ['¿Funciona en tus dispositivos?', '¿Mantiene una sola cuenta sincronizada?', '¿Puedes exportar o eliminar tus datos?', '¿Explica los límites Gratis y Pro antes de registrarte?', '¿Las fechas importantes conservan su fuente?'] },
+      { heading: 'Lista de evaluación', paragraphs: [], bullets: ['¿Funciona en tus dispositivos?', '¿Mantiene una sola cuenta sincronizada?', '¿Puedes exportar o eliminar tus datos?', '¿Explica los límites de los planes Gratis y Pro antes de registrarte?', '¿Las fechas importantes conservan su fuente?'] },
     ],
     faq: [
       { question: '¿Debo elegir una app conectada a Canvas?', answer: 'Solo si tu institución permite una conexión estable. Una buena herramienta para analizar el programa o añadir datos manualmente sigue siendo importante para la información que Canvas no incluye.' },
@@ -580,12 +583,12 @@ const BLOG_PAGES: SpanishPageConfig[] = [
     metaDescription: SPANISH_BLOG_POSTS[4].description,
     h1: SPANISH_BLOG_POSTS[4].title,
     lede: 'No necesitas una tarde libre para progresar. Necesitas un bloque que termine antes de tu próxima obligación.',
-    intro: ['El Pomodoro clásico usa 25 minutos de trabajo y 5 de descanso. En la universidad, la duración debe adaptarse al espacio entre clases y al tipo de tarea.'],
+    intro: ['El Pomodoro clásico usa 25 minutos de trabajo y 5 de descanso. El Pomodoro clásico usa 25 minutos de trabajo y 5 de descanso. En la universidad, la duración debe adaptarse al hueco que tengas entre clases y al tipo de tarea.'],
     sections: [
       { heading: 'Bloques de 15 minutos', paragraphs: ['Úsalos para organizar apuntes, responder preguntas cortas, revisar tarjetas o preparar lo necesario para una sesión más larga. El objetivo debe ser pequeño y específico.'] },
-      { heading: 'Bloques de 25 minutos', paragraphs: ['Funcionan bien para lectura activa, una sección de problemas o un borrador. Deja dos minutos al final para anotar el siguiente paso.'] },
+      { heading: 'Bloques de 25 minutos', paragraphs: ['Funcionan bien para la lectura activa, una serie de ejercicios o un borrador. Deja dos minutos al final para anotar el siguiente paso. Deja dos minutos al final para anotar el siguiente paso.'] },
       { heading: 'Bloques de 45 o 50 minutos', paragraphs: ['Reserva estas sesiones para práctica profunda, ensayos o problemas que necesitan contexto continuo. Después toma un descanso real de 10 o 15 minutos.'] },
-      { heading: 'Evita medir solo tiempo', paragraphs: ['Cuenta también qué terminaste y qué aprendiste. Si tres bloques no resuelven el mismo tipo de problema, cambia de estrategia o busca ayuda en lugar de acumular minutos.'] },
+      { heading: 'Evita medir solo tiempo', paragraphs: ['Cuenta también qué terminaste y qué aprendiste. Cuenta también qué terminaste y qué aprendiste. Si después de tres bloques sigues sin avanzar con el mismo tipo de problema, cambia de estrategia o pide ayuda en lugar de acumular minutos.'] },
     ],
     faq: [
       { question: '¿Puedo usar el teléfono durante el descanso?', answer: 'Puedes, pero levantarte, beber agua o mirar a lo lejos suele ayudarte más a recuperar la concentración.' },
@@ -599,14 +602,14 @@ const BLOG_PAGES: SpanishPageConfig[] = [
     lede: 'La semana de finales no se organiza repartiendo las horas por igual. Hay que tener en cuenta la fecha, el peso de cada evaluación, tu dominio del tema y el tiempo disponible.',
     intro: ['Empieza con una lista de todos los exámenes y entregas, con su hora, ponderación, formato y contenido. Después estima cuánto dominas cada tema.'],
     sections: [
-      { heading: '1. Calcula la presión de cada evaluación', paragraphs: ['Una evaluación cercana, con mucho peso y sobre un tema que dominas poco necesita atención antes que otra lejana, pequeña y sobre un tema que ya controlas. Usa esas cuatro señales para establecer prioridades, no solo la fecha.'] },
-      { heading: '2. Divide el material en resultados observables', paragraphs: ['Cambia “estudiar biología” por “explicar respiración celular sin apuntes” o “resolver diez preguntas mixtas y revisar errores”. Cada bloque debe terminar con evidencia.'] },
+      { heading: '1. Calcula la presión de cada evaluación', paragraphs: ['Una evaluación cercana, con mucho peso y sobre un tema que dominas poco necesita atención antes que otra lejana, pequeña y sobre un tema que ya controlas. Usa esos cuatro criterios —fecha, peso, dominio del tema y tiempo disponible— para establecer prioridades, no solo la fecha.'] },
+      { heading: '2. Divide el material en resultados observables', paragraphs: ['Cambia “estudiar biología” por “explicar la respiración celular sin apuntes” o “resolver diez preguntas mixtas y revisar errores”. Cada bloque debe terminar con evidencia.'] },
       { heading: '3. Combina práctica y recuperación activa', paragraphs: ['Alterna la recuperación activa, la resolución de problemas, las explicaciones y los simulacros. Deja espacio entre repasos del mismo tema para que el siguiente intento mida lo que recuerdas, no solo lo familiar que te resulta el contenido.'] },
       { heading: '4. Protege sueño, comida y traslado', paragraphs: ['Un plan que usa cada minuto disponible se rompe con el primer retraso. Conserva márgenes y fija una hora para terminar la noche antes de un examen.'] },
       { heading: '5. Revisa el plan cada día', paragraphs: ['Marca lo terminado, dedica menos tiempo a lo que ya dominas y reprograma lo que no pudiste completar. Si el tiempo no alcanza, elimina de forma consciente las tareas de menor impacto en lugar de fingir que todo cabe.'] },
     ],
     faq: [
-      { question: '¿Cuándo debo empezar?', answer: 'Tan pronto tengas el calendario de finales. Incluso diez minutos para listar evaluaciones y material reduce decisiones posteriores.' },
+      { question: '¿Cuándo debo empezar?', answer: 'En cuanto tengas el calendario de finales. Incluso diez minutos para listar evaluaciones y material reduce decisiones posteriores.' },
       { question: '¿Cómo priorizo dos exámenes el mismo día?', answer: 'Compara peso, nivel actual, cantidad de material y oportunidades futuras. Alterna bloques para evitar abandonar por completo uno de los cursos.' },
     ],
   }),
@@ -614,12 +617,12 @@ const BLOG_PAGES: SpanishPageConfig[] = [
 
 export const SPANISH_COMPARISONS = [
   { slug: 'dormway', name: 'DormWay', focus: 'una experiencia académica y de campus más amplia' },
-  { slug: 'shovel', name: 'Shovel', focus: 'planificación de estudio por tiempo e integración con LMS' },
-  { slug: 'studyfetch', name: 'StudyFetch', focus: 'generación de materiales de estudio con IA' },
-  { slug: 'mindgrasp', name: 'Mindgrasp', focus: 'resúmenes, apuntes y preguntas a partir de documentos y videos' },
-  { slug: 'taskade', name: 'Taskade', focus: 'gestión general de proyectos y agentes de IA' },
-  { slug: 'studley-ai', name: 'Studley AI', focus: 'tarjetas, cuestionarios y contenido de estudio generado' },
-  { slug: 'myhomework', name: 'myHomework Student Planner', focus: 'planificación manual multiplataforma e importación LMS' },
+  { slug: 'shovel', name: 'Shovel', focus: 'la planificación de estudio por tiempo y la integración con el LMS' },
+  { slug: 'studyfetch', name: 'StudyFetch', focus: 'la generación de materiales de estudio con IA' },
+  { slug: 'mindgrasp', name: 'Mindgrasp', focus: 'los resúmenes, los apuntes y las preguntas a partir de documentos y videos' },
+  { slug: 'taskade', name: 'Taskade', focus: 'la gestión general de proyectos y los agentes de IA' },
+  { slug: 'studley-ai', name: 'Studley AI', focus: 'las tarjetas, los cuestionarios y el contenido de estudio generado' },
+  { slug: 'myhomework', name: 'myHomework Student Planner', focus: 'la planificación manual multiplataforma y la importación desde el LMS' },
 ] as const;
 
 function comparisonPage(item: (typeof SPANISH_COMPARISONS)[number]): SpanishPageConfig {
@@ -629,7 +632,7 @@ function comparisonPage(item: (typeof SPANISH_COMPARISONS)[number]): SpanishPage
     h1: `Semora vs ${item.name}`,
     lede: `La diferencia principal es el punto de partida: Semora organiza el semestre desde el programa; ${item.name} se concentra en ${item.focus}.`,
     intro: [
-      'La mejor opción depende del problema que quieras resolver. Compara cómo incorporas la información, qué datos se mantienen actualizados y qué puedes hacer con ellos después.',
+      'La mejor opción depende del problema que quieras resolver. Compara cómo entra la información, qué datos se mantienen actualizados y qué puedes hacer con ellos después.',
     ],
     sections: [
       {
@@ -648,8 +651,8 @@ function comparisonPage(item: (typeof SPANISH_COMPARISONS)[number]): SpanishPage
         heading: 'Preguntas que debes hacer antes de elegir',
         paragraphs: [],
         bullets: [
-          '¿Debo copiar las fechas manualmente o puede leer el programa?',
-          '¿Actualiza los cambios del LMS y muestra cuándo se sincronizó por última vez?',
+          '¿Tengo que copiar las fechas a mano o la app puede leer el programa?',
+          '¿Refleja los cambios del LMS y muestra cuándo se sincronizó por última vez?',
           '¿Las calificaciones se utilizan para crear pronósticos y recomendaciones?',
           '¿Funciona con la misma cuenta en iPhone, iPad y la web?',
           '¿Puedo revisar, exportar y eliminar mis datos?',
@@ -658,7 +661,7 @@ function comparisonPage(item: (typeof SPANISH_COMPARISONS)[number]): SpanishPage
       {
         heading: 'Cuándo elegir cada uno',
         paragraphs: [
-          `Elige Semora si quieres tener una vista conectada del semestre y partir de los programas y fechas reales de tus cursos. Considera ${item.name} si tu prioridad principal es ${item.focus} y sus herramientas encajan mejor con tu forma de estudiar.`,
+          `Elige Semora si quieres una visión integrada del semestre y partir de los programas y las fechas reales de tus cursos. Considera ${item.name} si lo que más te importa es ${item.focus} y sus herramientas encajan mejor con tu forma de estudiar.`,
         ],
       },
     ],
@@ -689,7 +692,7 @@ const ALTERNATIVE_PAGES = ALTERNATIVES.map((item) => page(`/es/${item.slug}`, it
   ],
   sections: [
     { heading: 'Por qué considerar Semora', paragraphs: ['Semora empieza con una foto, un PDF o el texto del programa de la materia. Una vez que revisas el resultado, crea las tareas, los exámenes, los horarios y la estructura de calificaciones. Las conexiones con el LMS pueden mantener esa información al día.'] },
-    { heading: 'Qué puedes probar sin pagar', paragraphs: ['Crea una cuenta sin tarjeta y utiliza cinco análisis al mes, hasta cuatro cursos por semestre, seguimiento de entregas, promedios ponderados y recordatorios el mismo día.'] },
+    { heading: 'Qué puedes probar sin pagar', paragraphs: ['Crea una cuenta sin tarjeta y Crea una cuenta sin tarjeta y obtén cinco análisis al mes, hasta cuatro cursos por semestre, seguimiento de entregas, promedios ponderados y recordatorios el mismo día., hasta cuatro cursos por semestre, seguimiento de entregas, promedios ponderados y recordatorios el mismo día.'] },
     { heading: 'Qué añade Pro', paragraphs: ['Pro elimina límites de cursos y semestres y añade Plan Inteligente, Canvas/Blackboard/Moodle, tarjetas, Tutor con IA, temporizador, pronósticos, alertas y sincronización de calendario.'] },
     { heading: 'Cómo hacer la transición', paragraphs: ['Empieza con un solo curso. Añade el programa, revisa las fechas y compara el resultado con tu sistema actual durante una semana. No dejes de usar tu herramienta anterior hasta confirmar que toda la información importante es correcta.'] },
   ],

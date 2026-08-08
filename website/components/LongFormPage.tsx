@@ -34,7 +34,7 @@ export function LongFormPage({
     <ArticleShell
       ctaHeading={es ? 'Organiza el programa de tu próxima materia' : 'Try it on your own syllabus'}
       ctaSubheading={es
-        ? 'Comprueba cómo Semora organiza tus cursos. Puedes empezar gratis y sin tarjeta de crédito.'
+        ? 'Descubre cómo Semora organiza tus cursos. Puedes empezar gratis y sin tarjeta de crédito.'
         : 'See how Semora handles your actual courses. Free, no credit card.'}
       ctaLabel={es ? 'Empezar gratis' : 'Try it for free'}
       locale={locale}

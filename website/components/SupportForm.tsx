@@ -66,7 +66,7 @@ export function SupportForm({ supportEmail, locale = 'en' }: SupportFormProps) {
       </label>
       <button type="submit">{es ? 'Enviar mensaje' : 'Send message'} <span aria-hidden="true">→</span></button>
       <p className={styles.formNote} aria-live="polite">{status || (es
-        ? 'Al pulsar Enviar, se abrirá tu aplicación de correo con el mensaje listo.'
+        ? 'Al enviar el formulario, se abrirá tu app de correo con el mensaje listo.'
         : 'Sending opens your email app with this message addressed to us.')}</p>
     </form>
   );
