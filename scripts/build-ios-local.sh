@@ -22,11 +22,9 @@
 #      it has to be a command-line override because prebuild rewrites the
 #      pbxproj on every run.
 #
-# Credentials are read from the environment or from the recovery bundle, never
-# hardcoded — this repo is public.
-#
-#   ASC_KEY_ID     defaults to the single key in ~/.appstoreconnect/private_keys
-#   ASC_ISSUER_ID  defaults to ~/Semora-Recovery/issuer_id.txt
+# Prerequisite: an Apple ID signed in under Xcode → Settings → Accounts, with
+# the Rajesh Panta (7T9897GFKH) team. No secrets live in this file — the repo is
+# public — and none are needed; Xcode holds the session.
 #
 # Usage:  scripts/build-ios-local.sh [--no-prebuild]
 # Output: ~/Desktop/SemoraBuild/Semora.ipa
@@ -34,26 +32,18 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="$HOME/Desktop/SemoraBuild"
-KEYS="$HOME/.appstoreconnect/private_keys"
 TEAM_ID="7T9897GFKH"
 
-ASC_KEY_ID="${ASC_KEY_ID:-$(ls "$KEYS" 2>/dev/null | sed -n 's/^AuthKey_\(.*\)\.p8$/\1/p' | head -1)}"
-# issuer_id.txt is a notes file, not a bare id — pull the UUID out of it. Reading
-# the whole file and stripping whitespace yields a 250-char string that every
-# Apple API rejects with a bare 401, which reads like a permissions problem and
-# is not one.
-ASC_ISSUER_ID="${ASC_ISSUER_ID:-$(grep -oE '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}' "$HOME/Semora-Recovery/issuer_id.txt" 2>/dev/null | head -1)}"
-
-# The API key is optional: if an Apple ID is signed into Xcode, xcodebuild can
-# manage provisioning through that session instead.
+# Signing goes through the Apple ID in Xcode → Settings → Accounts.
+#
+# Deliberately NOT passing -authenticationKeyPath. When an App Store Connect
+# API key is supplied, xcodebuild uses it for cloud signing and ignores the
+# Xcode account entirely — and the key in ~/.appstoreconnect/private_keys is
+# Developer role, i.e. read-only. It cannot create the profile the widget needs,
+# so the export dies with "Cloud signing permission error" plus a misleading
+# "profile doesn't include the App Groups capability". Removing the key is what
+# fixes it. Only reintroduce one if it has Admin or App Manager access.
 AUTH=(-allowProvisioningUpdates)
-if [[ -n "$ASC_KEY_ID" && -n "$ASC_ISSUER_ID" && -f "$KEYS/AuthKey_$ASC_KEY_ID.p8" ]]; then
-  AUTH+=(-authenticationKeyPath "$KEYS/AuthKey_$ASC_KEY_ID.p8"
-         -authenticationKeyID "$ASC_KEY_ID"
-         -authenticationKeyIssuerID "$ASC_ISSUER_ID")
-else
-  echo "note: no App Store Connect API key found; relying on the Apple ID signed into Xcode."
-fi
 
 mkdir -p "$OUT"
 cd "$ROOT"
@@ -105,7 +95,7 @@ cp -f "$IPA" "$OUT/Semora.ipa"
 
 echo
 echo "Semora $VERSION ($BUILD) -> $OUT/Semora.ipa"
-echo "Upload with:"
-echo "  xcrun altool --upload-app -f \"$OUT/Semora.ipa\" -t ios \\"
-echo "    --apiKey $ASC_KEY_ID --apiIssuer \"\$ASC_ISSUER_ID\""
-echo "or drag it into Transporter.app."
+echo "Upload by dragging it into Transporter.app, or:"
+echo "  xcrun altool --upload-app -f \"$OUT/Semora.ipa\" -t ios --apiKey <KEYID> --apiIssuer <ISSUER>"
+echo "(altool needs a key with Admin or App Manager access; the Developer-role"
+echo " key in ~/.appstoreconnect/private_keys cannot upload.)"
