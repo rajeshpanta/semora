@@ -8,7 +8,20 @@ const QUEUE_KEY = 'semora.offline.queue.v1';
 const CONFLICTS_KEY = 'semora.offline.conflicts.v1';
 const META_KEY = 'semora.offline.meta.v1';
 
-export type OfflineEntity = 'tasks' | 'task_subtasks';
+// Tables whose UPDATES can be replayed from the queue. performMutation is
+// entity-agnostic — it reads/writes `.from(item.entity)` and detects conflicts
+// on updated_at — so widening this list is all that is needed, provided the
+// table is user-owned (has user_id) and carries updated_at.
+//
+// Inserts and deletes are deliberately still absent: an offline insert needs a
+// client-generated id and an ordering guarantee against later edits, which is a
+// different problem from replaying an update.
+export type OfflineEntity =
+  | 'tasks'
+  | 'task_subtasks'
+  | 'courses'
+  | 'semesters'
+  | 'grade_categories';
 export type OfflineOperation = 'update';
 
 // A queued mutation that fails transiently (offline/timeout/5xx) is retried with

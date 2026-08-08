@@ -73,10 +73,25 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
+const OFFLINE_CACHE_MS = 1000 * 60 * 60 * 24 * 7; // 7 days — matches the persister's maxAge
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60, // 1 minute
+      // The persister below keeps 7 days of data, but only queries still in the
+      // cache get written to it, and React Query's default gcTime is 5 MINUTES.
+      // So the 7-day offline promise was empty: anything not opened in the last
+      // five minutes had been evicted and came back blank with no network.
+      gcTime: OFFLINE_CACHE_MS,
+    },
+    mutations: {
+      // Default ('online') PAUSES a mutation with no connection: the save button
+      // spins with no explanation, and the paused mutation is dropped if the app
+      // is closed. 'always' lets it run and fail, so callers that queue offline
+      // (see enqueueOfflineMutation) get their chance, and callers that cannot
+      // surface an honest error instead of hanging forever.
+      networkMode: 'always',
     },
   },
 });

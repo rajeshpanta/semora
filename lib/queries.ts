@@ -609,14 +609,42 @@ export function useUpdateCourse() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...data }: { id: string } & Partial<NewCourse>) => {
-      const { data: result, error } = await supabase
-        .from('courses')
-        .update(data)
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw error;
-      return result as Course;
+      const userId = await getUserId();
+      // Same queue-and-replay the task edits use. The offline queue is
+      // entity-agnostic, so a course edit made on a plane is held and applied
+      // on reconnect instead of spinning until the app is closed.
+      const queueOffline = async () => {
+        const cached = qc.getQueryData<Course>(queryKeys.course(id));
+        if (!cached) {
+          throw new Error('Open this course once while online before editing it offline.');
+        }
+        await enqueueOfflineMutation({
+          userId,
+          entity: 'courses',
+          operation: 'update',
+          recordId: id,
+          payload: data as Record<string, unknown>,
+          baseUpdatedAt: cached.updated_at ?? null,
+        });
+        const optimistic = { ...cached, ...data, updated_at: new Date().toISOString() } as Course;
+        qc.setQueryData(queryKeys.course(id), optimistic);
+        return optimistic;
+      };
+
+      if (!isDeviceOnline()) return await queueOffline();
+      try {
+        const { data: result, error } = await supabase
+          .from('courses')
+          .update(data)
+          .eq('id', id)
+          .select()
+          .single();
+        if (error) throw error;
+        return result as Course;
+      } catch (error) {
+        if (!isNetworkFailure(error)) throw error;
+        return await queueOffline();
+      }
     },
     onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: queryKeys.courses(result.semester_id) });
@@ -1249,14 +1277,43 @@ export function useUpdateGradeCategory() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...input }: { id: string } & Partial<NewGradeCategory>) => {
-      const { data, error } = await supabase
-        .from('grade_categories')
-        .update(input)
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as GradeCategory;
+      const userId = await getUserId();
+      // Grade weights are edited from the same screens a student opens without
+      // signal (a lecture hall, a basement library), so this queues like tasks
+      // rather than hanging.
+      const queueOffline = async () => {
+        const lists = qc.getQueriesData<GradeCategory[]>({ queryKey: ['gradeCategories'] });
+        const cached = lists
+          .flatMap(([, rows]) => rows ?? [])
+          .find((row) => row.id === id);
+        if (!cached) {
+          throw new Error('Open this course\'s grade setup once while online before editing it offline.');
+        }
+        await enqueueOfflineMutation({
+          userId,
+          entity: 'grade_categories',
+          operation: 'update',
+          recordId: id,
+          payload: input as Record<string, unknown>,
+          baseUpdatedAt: cached.updated_at ?? null,
+        });
+        return { ...cached, ...input, updated_at: new Date().toISOString() } as GradeCategory;
+      };
+
+      if (!isDeviceOnline()) return await queueOffline();
+      try {
+        const { data, error } = await supabase
+          .from('grade_categories')
+          .update(input)
+          .eq('id', id)
+          .select()
+          .single();
+        if (error) throw error;
+        return data as GradeCategory;
+      } catch (error) {
+        if (!isNetworkFailure(error)) throw error;
+        return await queueOffline();
+      }
     },
     onSuccess: (category) => {
       qc.invalidateQueries({ queryKey: queryKeys.gradeCategories(category.course_id) });
