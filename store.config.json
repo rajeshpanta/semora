@@ -1,7 +1,7 @@
 {
   "configVersion": 0,
   "apple": {
-    "version": "1.4.1",
+    "version": "1.5",
     "copyright": "2026 Rajesh Panta",
     "release": {
       "automaticRelease": true
@@ -32,24 +32,23 @@
         "privacyPolicyUrl": "https://semoraai.com/privacy",
         "screenshots": {
           "APP_IPHONE_65": [
-            "store/apple/screenshot/en-US/APP_IPHONE_65/06-pro.png",
-            "store/apple/screenshot/en-US/APP_IPHONE_65/02-today.png",
-            "store/apple/screenshot/en-US/APP_IPHONE_65/05-calendar.png",
-            "store/apple/screenshot/en-US/APP_IPHONE_65/03-grades.png",
-            "store/apple/screenshot/en-US/APP_IPHONE_65/01-scan.png",
-            "store/apple/screenshot/en-US/APP_IPHONE_65/04-canvas.png"
+            "screenshots/store-screenshots/iPhone/01-scan-your-syllabus.png",
+            "screenshots/store-screenshots/iPhone/02-never-miss-a-deadline.png",
+            "screenshots/store-screenshots/iPhone/03-track-your-grades.png",
+            "screenshots/store-screenshots/iPhone/04-plan-your-semester.png",
+            "screenshots/store-screenshots/iPhone/05-go-pro.png"
           ],
           "APP_IPAD_PRO_3GEN_129": [
-            "store/apple/screenshot/en-US/APP_IPAD_PRO_3GEN_129/01-scan.png",
-            "store/apple/screenshot/en-US/APP_IPAD_PRO_3GEN_129/02-deadline.png",
-            "store/apple/screenshot/en-US/APP_IPAD_PRO_3GEN_129/03-grades.png",
-            "store/apple/screenshot/en-US/APP_IPAD_PRO_3GEN_129/04-semester.png",
-            "store/apple/screenshot/en-US/APP_IPAD_PRO_3GEN_129/05-pro.png"
+            "screenshots/store-screenshots/iPad/01-scan.png",
+            "screenshots/store-screenshots/iPad/02-deadline.png",
+            "screenshots/store-screenshots/iPad/03-grades.png",
+            "screenshots/store-screenshots/iPad/04-semester.png",
+            "screenshots/store-screenshots/iPad/05-pro.png"
           ]
         },
         "previews": {
           "IPHONE_65": {
-            "path": "store/apple/preview/en-US/IPHONE_65/semora-appstore-preview-6.5-captioned-886x1920.mp4",
+            "path": "screenshots/store-screenshots/preview/semora-appstore-preview-6.5-captioned-886x1920.mp4",
             "previewFrameTimeCode": "00:00:05:01"
           }
         }
@@ -74,7 +73,17 @@
         "supportUrl": "https://semoraai.com/es/ayuda",
         "title": "Semora: AI Syllabus Scanner",
         "subtitle": "Escanea, organiza y aprueba",
-        "privacyPolicyUrl": "https://semoraai.com/es/privacidad"
+        "privacyPolicyUrl": "https://semoraai.com/es/privacidad",
+        "screenshots": {
+          "APP_IPHONE_65": [
+            "screenshots/store-screenshots/iPhone-es-6.5/01-pro.png",
+            "screenshots/store-screenshots/iPhone-es-6.5/02-tu-dia.png",
+            "screenshots/store-screenshots/iPhone-es-6.5/03-semestre.png",
+            "screenshots/store-screenshots/iPhone-es-6.5/04-notas.png",
+            "screenshots/store-screenshots/iPhone-es-6.5/05-escanea.png",
+            "screenshots/store-screenshots/iPhone-es-6.5/06-canvas.png"
+          ]
+        }
       }
     },
     "categories": [
