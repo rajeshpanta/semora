@@ -49,7 +49,7 @@ import { TaskCompletionFlowProvider } from '@/components/TaskCompletionFlow';
 import { TaskCompletionCelebration } from '@/components/TaskCompletionCelebration';
 import { showTaskCelebration } from '@/lib/taskCelebration';
 import { queryPersister, clearPersistedQueryCache } from '@/lib/queryPersistence';
-import { clearOfflineUserState } from '@/lib/offlineSync';
+import { isNetworkFailure, clearOfflineUserState } from '@/lib/offlineSync';
 import { OfflineSyncBridge } from '@/components/OfflineSyncBridge';
 import {
   readPendingCollaborationToken,
@@ -92,6 +92,14 @@ const queryClient = new QueryClient({
       // (see enqueueOfflineMutation) get their chance, and callers that cannot
       // surface an honest error instead of hanging forever.
       networkMode: 'always',
+      // ...but "TypeError: Network request failed" is not an honest error, it is
+      // a stack trace shown to a student. Anything that reaches here genuinely
+      // could not be saved offline, so say that in words they can act on.
+      onError: (error: unknown) => {
+        if (error instanceof Error && isNetworkFailure(error)) {
+          error.message = "You're offline. This one needs a connection — it'll work once you're back online.";
+        }
+      },
     },
   },
 });

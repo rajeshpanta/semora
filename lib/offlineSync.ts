@@ -22,7 +22,11 @@ export type OfflineEntity =
   | 'courses'
   | 'semesters'
   | 'grade_categories';
-export type OfflineOperation = 'update';
+// 'insert' requires the CLIENT to generate the row id up front, so the record
+// can be referenced (and edited, and deleted) before it has ever reached the
+// server. That id is what makes replay idempotent: a retry of an insert that
+// already landed is a duplicate-key error, which is a success, not a failure.
+export type OfflineOperation = 'update' | 'insert';
 
 // A queued mutation that fails transiently (offline/timeout/5xx) is retried with
 // exponential backoff up to MAX_RETRY_ATTEMPTS. After that — or on a permanent
@@ -279,6 +283,18 @@ async function saveMeta(lastSyncedAt: string | null) {
 }
 
 async function performMutation(item: OfflineMutation): Promise<'synced' | SyncConflict> {
+  if (item.operation === 'insert') {
+    const { error } = await supabase
+      .from(item.entity)
+      .insert({ ...item.payload, id: item.recordId, user_id: item.userId });
+    if (!error) return 'synced';
+    // 23505 = unique_violation. The row is already there, which means a previous
+    // attempt succeeded and only the acknowledgement was lost. Replaying must
+    // not surface that as an error or the item would retry until it parks.
+    if ((error as { code?: string }).code === '23505') return 'synced';
+    throw error;
+  }
+
   const { data: server, error: readError } = await supabase
     .from(item.entity)
     .select('*')

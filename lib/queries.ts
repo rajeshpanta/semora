@@ -435,6 +435,16 @@ export function useLatestSyllabus(courseId: string | null | undefined) {
 
 // ── Mutation Hooks ──────────────────────────────────────────
 
+// Client-side row id, so a record created offline has a stable identity before
+// it ever reaches Postgres. Not security-sensitive — it only has to be unique,
+// and the column's own default is gen_random_uuid() for the online path.
+function newRecordId(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
+  });
+}
+
 // Last id seen from a real session. Kept because getUserId() runs inside
 // mutations, which must still work with no network.
 let lastKnownUserId: string | null = null;
@@ -590,13 +600,34 @@ export function useCreateCourse() {
   return useMutation({
     mutationFn: async (data: NewCourse) => {
       const user_id = await getUserId();
-      const { data: result, error } = await supabase
-        .from('courses')
-        .insert({ ...data, user_id })
-        .select()
-        .single();
-      if (error) throw error;
-      return result as Course;
+      const row = { ...data, user_id };
+      const queueOffline = async () => {
+        const id = newRecordId();
+        await enqueueOfflineMutation({
+          userId: user_id,
+          entity: 'courses',
+          operation: 'insert',
+          recordId: id,
+          payload: row as Record<string, unknown>,
+          baseUpdatedAt: null,
+        });
+        const now = new Date().toISOString();
+        return { ...row, id, created_at: now, updated_at: now } as unknown as Course;
+      };
+
+      if (!isDeviceOnline()) return await queueOffline();
+      try {
+        const { data: result, error } = await supabase
+          .from('courses')
+          .insert(row)
+          .select()
+          .single();
+        if (error) throw error;
+        return result as Course;
+      } catch (error) {
+        if (!isNetworkFailure(error)) throw error;
+        return await queueOffline();
+      }
     },
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: queryKeys.courses(variables.semester_id) });
@@ -843,12 +874,44 @@ export function useCreateTask() {
     mutationFn: async (data: NewTask & { _courseName?: string; _subtasks?: string[] }) => {
       const { _courseName, _subtasks, ...insertData } = data;
       const user_id = await getUserId();
-      const { data: result, error } = await supabase
-        .from('tasks')
-        .insert({ ...insertData, source: insertData.source || 'manual', user_id })
-        .select()
-        .single();
-      if (error) throw error;
+      const row = { ...insertData, source: insertData.source || 'manual', user_id };
+
+      // Jotting down a deadline in a lecture with no signal is one of the most
+      // ordinary things a student does, and it used to fail outright with a raw
+      // "Network request failed". The id is generated here so the task exists,
+      // can be edited, and can be replayed later under the same identity.
+      const queueOffline = async () => {
+        if (_subtasks?.length) {
+          throw new Error('Connect to the internet to add a task with steps.');
+        }
+        const id = newRecordId();
+        await enqueueOfflineMutation({
+          userId: user_id,
+          entity: 'tasks',
+          operation: 'insert',
+          recordId: id,
+          payload: row as Record<string, unknown>,
+          baseUpdatedAt: null,
+        });
+        const now = new Date().toISOString();
+        return { is_completed: false, ...row, id, created_at: now, updated_at: now } as unknown as Task;
+      };
+
+      if (!isDeviceOnline()) return await queueOffline();
+
+      let result: Task;
+      try {
+        const { data: inserted, error } = await supabase
+          .from('tasks')
+          .insert(row)
+          .select()
+          .single();
+        if (error) throw error;
+        result = inserted as Task;
+      } catch (error) {
+        if (!isNetworkFailure(error)) throw error;
+        return await queueOffline();
+      }
 
       if (_subtasks?.length) {
         const { error: subtaskError } = await supabase.from('task_subtasks').insert(
