@@ -53,6 +53,28 @@
             "previewFrameTimeCode": "00:00:05:01"
           }
         }
+      },
+      "es-ES": {
+        "description": "Organiza tu semestre desde el iPhone, el iPad o la web con Semora: es la primera semana del semestre y te acaban de llegar cinco programas en PDF, cada uno con un formato distinto y las fechas de entrega repartidas por doce páginas. Semora los lee por ti.\n\nHaz una foto o sube el PDF y la IA extrae cada tarea, examen, cuestionario, proyecto y lectura, con sus fechas de entrega, sus horas y su ponderación, normalmente en menos de un minuto. Lo revisas y corriges lo que quieras antes de guardar, así que nada entra en tu semestre sin tu visto bueno.\n\nTu panel\nCuando ya tienes los cursos dentro, el panel baja el ruido. Una tarjeta de «Lo siguiente» hace la cuenta atrás para lo más urgente y lo atrasado queda marcado. Ves hoy, esta semana y todo lo que viene después sin recorrer una lista interminable.\n\nCalificaciones que se actualizan sobre la marcha\nIntroduce una nota y tu calificación ponderada se recalcula al momento. Cada curso muestra su porcentaje actual y su nota. Pro añade escalas de calificación propias por curso y pronósticos: dile qué nota quieres sacar y calcula lo que necesitas en lo que te queda.\n\nTu semestre en un calendario\nHay vista de mes y vista de lista, con un color por curso, y puedes tocar cualquier día para ver qué se entrega. Eso es gratis. Si quieres que todo pase al Calendario de tu iPhone, eso es de Pro.\n\nLos detalles que suman\nCada curso tiene su color y su icono, además de un sitio para el profesor, los horarios de clase y el horario de atención. Lleva varios semestres a la vez, consulta tu carga semanal, controla las entregas tardías y los puntos extra, y pon el widget de «Lo siguiente» en la pantalla de inicio para tener delante tu próxima entrega. También hay modo oscuro.\n\nQué es gratis y qué es Pro\nEl plan gratuito da para mucho: 5 análisis de programa al mes, hasta 4 cursos en un semestre, el calendario completo, el panel, recordatorios el mismo día y seguimiento de calificaciones en tiempo real.\n\nSemora Pro añade:\n- Análisis, cursos y semestres ilimitados\n- Recordatorios con 1 y 3 días de antelación, no solo el mismo día\n- Sincronización con el Calendario del iPhone\n- Escalas de calificación propias por curso\n- Pronósticos y proyección de la nota final\n\nPrecios\nSemora Pro Mensual cuesta 3,99 $ al mes. Semora Pro Anual cuesta 19,99 $ al año, que sale a unos 1,67 $ al mes.\n\nOrganiza el semestre antes de que se te eche encima la segunda semana.\n\nSemora Pro es una suscripción de renovación automática.\n\n- Semora Pro Mensual: 3,99 $ al mes\n- Semora Pro Anual: 19,99 $ al año\n\nEl pago se cargará en tu cuenta de Apple ID al confirmar la compra. La suscripción se renueva automáticamente salvo que desactives la renovación al menos 24 horas antes de que termine el periodo en curso. El cargo se realiza en las 24 horas previas al final del periodo, al mismo precio. Puedes gestionar o cancelar tu suscripción en Configuración de iOS > Apple ID > Suscripciones después de la compra.\n\nPolítica de privacidad: https://semoraai.com/es/privacidad\nCondiciones de uso (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/\n\n¿Dudas o comentarios? Escríbenos a semora365@gmail.com.",
+        "keywords": [
+          "agenda",
+          "tareas",
+          "universidad",
+          "estudiante",
+          "examen",
+          "horario",
+          "notas",
+          "entregas",
+          "recordatorio",
+          "calendario",
+          "estudio"
+        ],
+        "releaseNotes": "Semora ya habla español, funciona sin conexión y corrige los dos fallos que más molestaban.\n\n• Español completo: todas las pantallas, los recordatorios y el Tutor con IA. Elige idioma en la primera pantalla o en Configuración, y la elección te acompaña en tu cuenta al iPad y a la web\n• Sin conexión: crea y edita cursos y tareas, y márcalas como completadas, aunque no tengas cobertura. Los cambios se sincronizan solos cuando vuelve la señal\n• Tus últimos 7 días quedan guardados en el dispositivo, así que la app abre con tu semestre real aunque estés sin señal\n• Corregido: la pantalla de Tarjetas de estudio se cerraba cada vez que la abrías\n• Corregido: «Iniciar sesión con Apple» fallaba con un error de base de datos\n• El Tutor con IA ya lee los apuntes que subes, y puedes elegir el curso sin salir de la pantalla\n• Bienvenida más clara, mejor diseño en iPad y una larga lista de correcciones menores\n\nGracias por usar Semora. ¿Dudas o fallos? semora365@gmail.com",
+        "marketingUrl": "https://semoraai.com/es",
+        "supportUrl": "https://semoraai.com/es/ayuda",
+        "title": "Semora: AI Syllabus Scanner",
+        "subtitle": "Escanea, organiza y aprueba",
+        "privacyPolicyUrl": "https://semoraai.com/es/privacidad"
       }
     },
     "categories": [
