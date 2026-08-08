@@ -12,6 +12,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   Keyboard,
+  Text as RawText,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -62,6 +63,11 @@ export default function OnboardingScreen() {
   const setUserName = useAppStore((s) => s.setUserName);
   const setDefaultTerm = useAppStore((s) => s.setDefaultTerm);
   const setPainPoint = useAppStore((s) => s.setPainPoint);
+
+  // Locale drives which pill reads as selected; setPreference persists the
+  // choice and, because the localized Text wrapper subscribes to the same store
+  // field, re-renders the rest of onboarding in that language immediately.
+  const { locale, setPreference } = useI18n();
 
   const { options: termOptions, def: defaultTerm } = useTermOptions();
   const [step, setStep] = useState(0);
@@ -152,7 +158,37 @@ export default function OnboardingScreen() {
           <View style={[styles.brandDot, { backgroundColor: colors.brand }]} />
           <Text style={[styles.brandWord, { color: colors.ink }]}>Semora</Text>
         </View>
-        {step > 0 && !isLast ? (
+        {step === 0 ? (
+          /* Language first, before any copy has to be understood. Each label is
+             written in its OWN language and rendered with react-native's raw
+             Text: routed through the localizing wrapper, "English" would come
+             out as "Inglés" for a Spanish reader, which is precisely the person
+             who needs to recognise it. */
+          <View style={[styles.langRow, { borderColor: colors.line, backgroundColor: colors.card }]}>
+            {(['en', 'es'] as const).map((code) => {
+              const active = locale === code;
+              return (
+                <TouchableOpacity
+                  key={code}
+                  onPress={() => {
+                    if (Platform.OS === 'ios') Haptics.selectionAsync();
+                    setPreference(code);
+                    track('onboarding_language_selected', { locale: code });
+                  }}
+                  hitSlop={6}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  style={[styles.langPill, active && { backgroundColor: colors.brand }]}
+                >
+                  <RawText style={[styles.langPillText, { color: active ? '#fff' : colors.ink2 }]}>
+                    {code === 'en' ? 'English' : 'Español'}
+                  </RawText>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : !isLast ? (
           <TouchableOpacity onPress={skip} hitSlop={12} activeOpacity={0.7}>
             <Text style={[styles.skip, { color: colors.ink3 }]}>Skip</Text>
           </TouchableOpacity>
@@ -646,6 +682,9 @@ const styles = StyleSheet.create({
   stageScroll: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 26, paddingBottom: 24, width: '100%', alignSelf: 'center' },
   stageScrollCentered: { justifyContent: 'center' },
   stepPad: { paddingVertical: 8 },
+  langRow: { flexDirection: 'row', gap: 2, borderWidth: 1, borderRadius: 999, padding: 2 },
+  langPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  langPillText: { fontSize: 12, fontWeight: '700' },
   toolGrid: { gap: 6 },
   toolCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8 },
   toolIcon: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
