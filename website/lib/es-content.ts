@@ -169,7 +169,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
         heading: 'Servicios externos',
         paragraphs: [
           'Supabase proporciona la base de datos y la autenticación. OpenAI es el único proveedor de IA al que Semora envía tu contenido: lee los programas de clase, genera las tarjetas de estudio, las preguntas de práctica y los cuestionarios, y responde tus preguntas en el Tutor. Según la política de OpenAI, los datos enviados mediante la API no se utilizan para entrenar modelos salvo que el cliente lo autorice expresamente. Semora desactiva el almacenamiento de respuestas, aunque OpenAI puede conservar registros para detectar abusos durante un máximo de 30 días cuando no se aplique un control más estricto.',
-          'Apple StoreKit procesa las suscripciones. Expo envía las notificaciones que autorizas. Google Calendar solo recibe las fechas que eliges sincronizar; Semora no lee tus otros eventos. Google Calendar solo recibe las fechas que eliges sincronizar; Semora no lee tus otros eventos.',
+          'Apple StoreKit procesa las suscripciones. Expo envía las notificaciones que autorizas. Google Calendar solo recibe las fechas que eliges sincronizar; Semora no lee tus otros eventos.',
           'De forma predeterminada, las credenciales de Canvas, Blackboard, Moodle o Google Classroom permanecen en el dispositivo. Si activas la Sincronización automática, la credencial se guarda cifrada en Supabase Vault para actualizar cursos, tareas, entregas y calificaciones mientras la app está cerrada. La credencial se elimina cuando desactivas la función o desconectas la plataforma.',
         ],
       },
@@ -322,7 +322,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
     metaDescription: 'Crea un plan adaptativo desde tus fechas reales, hábitos, exámenes, calificaciones y tiempo disponible.',
     h1: 'Un plan de estudio que aprende de tu semestre',
     lede: 'Plan Inteligente distribuye trabajo antes de las fechas importantes, reajusta lo que no completaste y explica cada cambio.',
-    intro: ['Una lista de tareas solo te dice qué tienes pendiente. Un plan útil también decide cuándo empezar, cuánto tiempo reservar y qué mover cuando la semana cambia. Un plan útil también decide cuándo empezar, cuánto tiempo reservar y qué mover cuando la semana cambia.'],
+    intro: ['Una lista de tareas solo te dice qué tienes pendiente. Un plan útil también decide cuándo empezar, cuánto tiempo reservar y qué mover cuando la semana cambia.'],
     sections: [
       { heading: 'Señales que tiene en cuenta', paragraphs: ['El plan considera las fechas y la dificultad, la proximidad de los exámenes, los bloques disponibles, el tiempo real que tardas, las sesiones pendientes, los cambios del calendario y el riesgo académico.'], bullets: ['Empieza antes con los trabajos grandes', 'Reserva tiempo para los exámenes cercanos', 'Reduce o mueve sesiones cuando la semana se llena', 'Da prioridad a los cursos donde una calificación puede tener más impacto'] },
       { heading: 'Cada ajuste tiene una razón', paragraphs: ['En lugar de mover los bloques sin avisarte, Semora muestra si el cambio se debe a una fecha nueva, una sesión perdida, un examen cercano, disponibilidad diferente o riesgo académico., Semora muestra si el cambio se debe a una fecha nueva, una sesión perdida, un examen cercano, disponibilidad diferente o riesgo académico.'] },
@@ -362,7 +362,7 @@ type FeatureDetail = {
 
 const FEATURE_DETAILS: Record<string, FeatureDetail> = {
   'syllabus-scanner': {
-    why: 'El programa contiene la estructura del curso, pero no siempre es fácil convertir ese documento en acciones concretas. El programa contiene la estructura del curso, pero no siempre es fácil convertir ese documento en acciones concretas. Semora hace la organización inicial y la revisión final la haces tú.',
+    why: 'El programa contiene la estructura del curso, pero no siempre es fácil convertir ese documento en acciones concretas. Semora hace la organización inicial y la revisión final la haces tú.',
     steps: ['Añade una foto, un PDF o texto.', 'La IA identifica los datos y señala lo que conviene revisar.', 'Corrige cualquier dato dudoso.', 'Guarda solo los elementos que hayas seleccionado.'],
     result: 'Obtienes un curso con fechas, horarios, criterios de evaluación y tareas, listo para usar en el resto de Semora.',
     faq: [{ question: '¿Qué formatos admite?', answer: 'PDF, JPEG, PNG y WEBP; en la web también puedes pegar texto.' }],
@@ -392,10 +392,10 @@ const FEATURE_DETAILS: Record<string, FeatureDetail> = {
     faq: [{ question: '¿Funciona en segundo plano?', answer: 'Sí. El temporizador sigue corriendo y se ajusta a la hora real cuando vuelves a la app.' }],
   },
   'ai-tutor': {
-    why: 'Un chatbot genérico no sabe qué temas incluye tu curso ni cuál es tu próxima entrega. El Tutor utiliza las fuentes que has vinculado. El Tutor utiliza las fuentes que has vinculado.',
+    why: 'Un chatbot genérico no sabe qué temas incluye tu curso ni cuál es tu próxima entrega. El Tutor utiliza las fuentes que has vinculado.',
     steps: ['Abre el Tutor desde un curso.', 'Haz una pregunta o elige un modo de práctica.', 'Consulta las referencias al programa, los apuntes o las tareas.', 'Sigue recomendaciones basadas en los temas que debes reforzar y en tus próximas fechas.'],
     result: 'Recibes explicaciones, cuestionarios, tarjetas y sugerencias conectados con el contexto real del curso.',
-    faq: [{ question: '¿Puede inventar una fecha?', answer: 'Las preguntas sobre fechas se responden a partir de tus tareas guardadas. Las preguntas sobre fechas se responden a partir de tus tareas guardadas. Si no la tiene guardada, el Tutor te lo indica en lugar de inventarla.' }],
+    faq: [{ question: '¿Puede inventar una fecha?', answer: 'Las preguntas sobre fechas se responden a partir de tus tareas guardadas. Si no la tiene guardada, el Tutor te lo indica en lugar de inventarla.' }],
   },
   collaboration: {
     why: 'Los grupos pierden tiempo comparando versiones distintas de la misma fecha. Un Espacio de curso mantiene una única versión compartida de cada fecha.',
@@ -530,11 +530,11 @@ const BLOG_PAGES: SpanishPageConfig[] = [
     metaTitle: SPANISH_BLOG_POSTS[1].title,
     metaDescription: SPANISH_BLOG_POSTS[1].description,
     h1: SPANISH_BLOG_POSTS[1].title,
-    lede: 'Un promedio ponderado te dice cuánto pesa cada curso; un promedio simple trata todo como si tuviera el mismo peso.; un promedio simple trata todo como si tuviera el mismo peso.',
+    lede: 'Un promedio ponderado te dice cuánto pesa cada curso; un promedio simple trata todo como si tuviera el mismo peso.',
     intro: ['Para calcular el GPA necesitas la calificación en letras, los puntos que asigna tu institución y los créditos de cada curso. Las ponderaciones dentro de una materia son un cálculo diferente.'],
     sections: [
       { heading: 'La fórmula del GPA', paragraphs: ['Multiplica los puntos de cada letra por los créditos del curso. Suma esos puntos de calidad y divídelos entre los créditos totales: GPA = Σ(puntos × créditos) ÷ Σ(créditos).'] },
-      { heading: 'Ejemplo de tres cursos', paragraphs: ['Una A en un curso de 3 créditos aporta 12 puntos de calidad. Una B+ en otro curso de 3 créditos aporta 9.9. Una A− en un curso de 4 créditos aporta 14.8. El total es 36.7 ÷ 10 = 3.67. Una B+ en 3 créditos aporta 9.9. Una A− en 4 créditos aporta 14.8. El total es 36.7 ÷ 10 = 3.67.'] },
+      { heading: 'Ejemplo de tres cursos', paragraphs: ['Una A en un curso de 3 créditos aporta 12 puntos de calidad. Una B+ en otro curso de 3 créditos aporta 9.9. Una A− en un curso de 4 créditos aporta 14.8. El total es 36.7 ÷ 10 = 3.67.'] },
       { heading: 'Errores comunes', paragraphs: ['No promedies las letras directamente, no cuentes un curso sin calificación como cero y no des por hecho que todas las instituciones usan la misma escala. Comprueba también cómo tratan los cursos repetidos, las materias con aprobado/no aprobado (pass/fail) y los créditos transferidos.'] },
       { heading: 'GPA y calificación dentro del curso', paragraphs: ['El GPA combina cursos según sus créditos. La calificación de un curso suele combinar tareas por ponderación o categoría. Semora mantiene ambos cálculos separados para que una tarea del 5 % no tenga el mismo impacto que un examen del 30 %.'] },
     ],
@@ -583,12 +583,12 @@ const BLOG_PAGES: SpanishPageConfig[] = [
     metaDescription: SPANISH_BLOG_POSTS[4].description,
     h1: SPANISH_BLOG_POSTS[4].title,
     lede: 'No necesitas una tarde libre para progresar. Necesitas un bloque que termine antes de tu próxima obligación.',
-    intro: ['El Pomodoro clásico usa 25 minutos de trabajo y 5 de descanso. El Pomodoro clásico usa 25 minutos de trabajo y 5 de descanso. En la universidad, la duración debe adaptarse al hueco que tengas entre clases y al tipo de tarea.'],
+    intro: ['El Pomodoro clásico usa 25 minutos de trabajo y 5 de descanso. En la universidad, la duración debe adaptarse al hueco que tengas entre clases y al tipo de tarea.'],
     sections: [
       { heading: 'Bloques de 15 minutos', paragraphs: ['Úsalos para organizar apuntes, responder preguntas cortas, revisar tarjetas o preparar lo necesario para una sesión más larga. El objetivo debe ser pequeño y específico.'] },
-      { heading: 'Bloques de 25 minutos', paragraphs: ['Funcionan bien para la lectura activa, una serie de ejercicios o un borrador. Deja dos minutos al final para anotar el siguiente paso. Deja dos minutos al final para anotar el siguiente paso.'] },
+      { heading: 'Bloques de 25 minutos', paragraphs: ['Funcionan bien para la lectura activa, una serie de ejercicios o un borrador. Deja dos minutos al final para anotar el siguiente paso.'] },
       { heading: 'Bloques de 45 o 50 minutos', paragraphs: ['Reserva estas sesiones para práctica profunda, ensayos o problemas que necesitan contexto continuo. Después toma un descanso real de 10 o 15 minutos.'] },
-      { heading: 'Evita medir solo tiempo', paragraphs: ['Cuenta también qué terminaste y qué aprendiste. Cuenta también qué terminaste y qué aprendiste. Si después de tres bloques sigues sin avanzar con el mismo tipo de problema, cambia de estrategia o pide ayuda en lugar de acumular minutos.'] },
+      { heading: 'Evita medir solo tiempo', paragraphs: ['Cuenta también qué terminaste y qué aprendiste. Si después de tres bloques sigues sin avanzar con el mismo tipo de problema, cambia de estrategia o pide ayuda en lugar de acumular minutos.'] },
     ],
     faq: [
       { question: '¿Puedo usar el teléfono durante el descanso?', answer: 'Puedes, pero levantarte, beber agua o mirar a lo lejos suele ayudarte más a recuperar la concentración.' },
