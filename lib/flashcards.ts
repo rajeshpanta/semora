@@ -103,6 +103,18 @@ export function scheduleCard(
   let ease = card.ease;
   let interval: number;
 
+  // A lapsed card carries a ~10-minute interval (AGAIN_INTERVAL_DAYS), which is
+  // > 0, so the `card.interval <= 0` tests below all took the "already
+  // graduated" branch and MULTIPLIED that 10 minutes instead of restarting the
+  // ladder. A card you failed and then answered correctly came back in ~23
+  // minutes, and kept coming back in minutes: from 0.0069 days it needs about
+  // ten more correct reviews just to reach a one-day gap. That is the opposite
+  // of spaced repetition, on the mechanic the Pro teaser sells.
+  //
+  // Anything below a day is relearning, not a graduated interval.
+  const isRelearning = card.interval > 0 && card.interval < 1;
+  const needsGraduating = card.interval <= 0 || isRelearning;
+
   switch (grade) {
     case 'again':
       // Lapse: knock ease down and send the card back to (near-immediate)
@@ -115,22 +127,21 @@ export function scheduleCard(
       ease = clampEase(ease - 0.15);
       // A brand-new/relapsed card (interval 0) still graduates, just on a
       // shorter first step than 'good'.
-      interval =
-        card.interval <= 0
-          ? FIRST_GOOD_INTERVAL
-          : card.interval * HARD_INTERVAL_MULTIPLIER;
+      interval = needsGraduating
+        ? FIRST_GOOD_INTERVAL
+        : card.interval * HARD_INTERVAL_MULTIPLIER;
       break;
 
     case 'good':
       // SM-2 ladder: first success → 1 day, second → 6 days, then × ease.
-      if (card.interval <= 0) interval = FIRST_GOOD_INTERVAL;
+      if (needsGraduating) interval = FIRST_GOOD_INTERVAL;
       else if (card.reps <= 1) interval = SECOND_GOOD_INTERVAL;
       else interval = card.interval * ease;
       break;
 
     case 'easy':
       ease = clampEase(ease + 0.15);
-      if (card.interval <= 0) interval = SECOND_GOOD_INTERVAL;
+      if (needsGraduating) interval = SECOND_GOOD_INTERVAL;
       else interval = card.interval * ease * EASY_BONUS;
       break;
   }

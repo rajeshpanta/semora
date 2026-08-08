@@ -32,7 +32,10 @@ export default function GpaScaleScreen() {
   const isPro = useAppStore((s) => s.isPro);
   const { data, isLoading } = useGpaScale();
   const update = useUpdateGpaScale();
-  const [rows, setRows] = useState<GpaScaleEntry[]>(DEFAULT_GPA_SCALE);
+  // pointsText is editor-only state: the raw keystrokes, so a half-typed
+  // "0." survives until it parses. Only `points` is ever persisted.
+  type EditableRow = GpaScaleEntry & { pointsText?: string };
+  const [rows, setRows] = useState<EditableRow[]>(DEFAULT_GPA_SCALE);
 
   useEffect(() => {
     if (data?.length) setRows(data);
@@ -121,12 +124,17 @@ export default function GpaScaleScreen() {
               <Text style={[styles.equals, { color: colors.ink3 }]}>=</Text>
               <TextInput
                 style={[styles.pointsInput, { color: colors.ink, borderColor: colors.line }]}
-                value={String(row.points)}
+                // Held as typed text, not a number: `Number('0.') || 0` is 0,
+                // so re-deriving the field from state erased the decimal point
+                // the instant it was typed and "0.7" ended up saved as 7.
+                value={row.pointsText ?? String(row.points)}
                 placeholder="4.0"
                 placeholderTextColor={colors.ink3}
                 keyboardType="decimal-pad"
                 editable={isPro}
-                onChangeText={(value) => setRows((current) => current.map((item, i) => i === index ? { ...item, points: Number(value) || 0 } : item))}
+                onChangeText={(value) => setRows((current) => current.map((item, i) => i === index
+                  ? { ...item, pointsText: value, points: Number.parseFloat(value) || 0 }
+                  : item))}
               />
               <Text style={[styles.pointsLabel, { color: colors.ink3 }]}>points</Text>
               {isPro && (
