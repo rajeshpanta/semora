@@ -1695,4 +1695,5 @@ export const ES: Record<string, string> = {
   'Signed in with Apple': 'Sesión iniciada con Apple',
   'Signed in with Google': 'Sesión iniciada con Google',
   'Signed in': 'Sesión iniciada',
+  'Kept up': 'Al día',
 };

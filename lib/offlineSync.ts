@@ -207,7 +207,17 @@ export function isDeviceOnline() {
 }
 
 export function isNetworkFailure(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error ?? '');
+  // supabase-js does NOT reject with an Error: postgrest-js resolves with a
+  // plain object literal { message, details, hint, code }. `String(obj)` on
+  // that is "[object Object]", so the regex below could never match a real
+  // network failure coming from a query — every caller that branches on this
+  // (the offline queue paths in lib/queries.ts) fell through to `throw`
+  // instead of queueing. Read .message off whatever shape arrives.
+  const message = error instanceof Error
+    ? error.message
+    : typeof (error as { message?: unknown } | null)?.message === 'string'
+      ? String((error as { message: string }).message)
+      : String(error ?? '');
   return /network request failed|failed to fetch|internet connection|offline|load failed|timed? ?out/i.test(message);
 }
 
@@ -239,6 +249,43 @@ export async function enqueueOfflineMutation(
     createdAt: new Date().toISOString(),
   };
   const queue = await readArray<OfflineMutation>(QUEUE_KEY);
+
+  // An UPDATE to a record that is still waiting to be INSERTED must fold into
+  // that insert, not queue behind it.
+  //
+  // Otherwise the most ordinary offline sequence there is — create a task on a
+  // plane, tick it off on the same plane — replays as [insert, update]. The
+  // insert lands and Postgres stamps its own updated_at default, so the
+  // update's baseUpdatedAt (a client timestamp from the optimistic row) can
+  // never match. performMutation reads that as a genuine conflict, drops the
+  // edit into the conflicts list, and the refetch un-ticks the checkbox in
+  // front of the student. Nothing is lost — Settings > Sync can keep the local
+  // copy — but the conflict never existed.
+  if (item.operation === 'update') {
+    const pendingInsert = queue.findIndex(
+      (row) =>
+        row.userId === item.userId &&
+        row.entity === item.entity &&
+        row.recordId === item.recordId &&
+        row.operation === 'insert',
+    );
+    if (pendingInsert !== -1) {
+      queue[pendingInsert] = {
+        ...queue[pendingInsert],
+        payload: { ...queue[pendingInsert].payload, ...item.payload },
+      };
+      await writeArray(QUEUE_KEY, queue);
+      const merged = deriveQueueCounts(queue);
+      rebuildPendingEditIndex(queue);
+      emit({
+        pendingCount: merged.pendingCount,
+        failedCount: merged.failedCount,
+        nextRetryAt: merged.nextRetryAt,
+        lastError: null,
+      });
+      return queue[pendingInsert];
+    }
+  }
 
   // Multiple edits to the same record while offline become one latest patch.
   // Preserve the earliest base timestamp so conflict detection still compares
@@ -448,6 +495,14 @@ export function flushOfflineQueue(
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
     queryClient.invalidateQueries({ queryKey: ['task'] });
     queryClient.invalidateQueries({ queryKey: ['taskSubtasks'] });
+  queryClient.invalidateQueries({ queryKey: ['courses'] });
+  queryClient.invalidateQueries({ queryKey: ['course'] });
+  queryClient.invalidateQueries({ queryKey: ['semesters'] });
+  queryClient.invalidateQueries({ queryKey: ['gradeCategories'] });
+    queryClient.invalidateQueries({ queryKey: ['courses'] });
+    queryClient.invalidateQueries({ queryKey: ['course'] });
+    queryClient.invalidateQueries({ queryKey: ['semesters'] });
+    queryClient.invalidateQueries({ queryKey: ['gradeCategories'] });
     if (syncedTaskChanges > 0) {
       // Rebuild local delivery state after queued edits. This also discovers
       // the next occurrence created by the recurring-task database trigger.
@@ -486,6 +541,10 @@ export async function resolveSyncConflict(
   queryClient.invalidateQueries({ queryKey: ['tasks'] });
   queryClient.invalidateQueries({ queryKey: ['task'] });
   queryClient.invalidateQueries({ queryKey: ['taskSubtasks'] });
+  queryClient.invalidateQueries({ queryKey: ['courses'] });
+  queryClient.invalidateQueries({ queryKey: ['course'] });
+  queryClient.invalidateQueries({ queryKey: ['semesters'] });
+  queryClient.invalidateQueries({ queryKey: ['gradeCategories'] });
   if (conflict.entity === 'tasks') {
     rescheduleAllTaskReminders(conflict.userId).catch(() => {});
   }

@@ -86,37 +86,12 @@ export const Alert = {
       text: button.text ? translate(button.text) : button.text,
     }));
 
-    // react-native-web ships `class Alert { static alert() {} }` — a literal
-    // no-op. The app puts real work inside alert callbacks (delete a deck,
-    // delete a card, publish a deck to a class), so on the web those buttons
-    // did nothing at all, and every error and validation message was swallowed
-    // in silence. Map onto the browser's own dialogs instead.
-    //
-    // Handled here rather than in a LocalizedReactNative.web.tsx: on web that
-    // filename IS this module, so importing the shared implementation from it
-    // resolves to itself and dies with "Cannot access 'Alert' before
-    // initialization".
-    if (Platform.OS === 'web') {
-      const heading = translate(title);
-      const body = message ? translate(message) : '';
-      const text = [heading, body].filter(Boolean).join('\n\n');
-      const list = localizedButtons ?? [];
-
-      if (list.length <= 1) {
-        if (typeof window !== 'undefined') window.alert(text);
-        list[0]?.onPress?.();
-        return;
-      }
-      // confirm() reads as "OK does the thing", so OK runs the last
-      // non-cancel action and Cancel runs the cancel button.
-      const actionable = list.filter((b) => b.style !== 'cancel');
-      const primary = actionable[actionable.length - 1] ?? list[list.length - 1];
-      const cancel = list.find((b) => b.style === 'cancel');
-      if (typeof window !== 'undefined' && window.confirm(text)) primary?.onPress?.();
-      else cancel?.onPress?.();
-      return;
-    }
-
+    // No web branch here on purpose. components/WebAlertHost.tsx already
+    // patches react-native-web's no-op Alert.alert with a real in-app modal
+    // that renders EVERY button, and it is mounted in app/_layout.tsx. A
+    // window.confirm shim added here intercepted before that host and silently
+    // downgraded three-button dialogs (Edit / Delete / Cancel on Courses) to
+    // two choices. Delegating keeps one implementation.
     NativeAlert.alert(translate(title), message ? translate(message) : message, localizedButtons, options);
   },
 };

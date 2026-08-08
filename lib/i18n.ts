@@ -59,6 +59,10 @@ function spanishPattern(input: string): string | null {
   if (match) return `¡${match[1]} ${match[1] === '1' ? 'fecha de entrega encontrada' : 'fechas de entrega encontradas'}!`;
 
   // Grade card / dashboard / insights counters.
+  // Insights headline. Without this the generic "<x> due <y>" rule turned
+  // "12/20 due so far" into "12/20 · entrega so far" — Spanglish on a Pro screen.
+  match = input.match(/^(\d+)\/(\d+) due so far$/);
+  if (match) return `${match[1]}/${match[2]} vencidas hasta ahora`;
   match = input.match(/^(\d+) of (\d+) graded$/);
   if (match) return `${match[1]} de ${match[2]} ${match[2] === '1' ? 'calificada' : 'calificadas'}`;
   match = input.match(/^(\d+)% still to play for$/);

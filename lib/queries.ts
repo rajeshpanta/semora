@@ -504,6 +504,69 @@ function findCachedTask(qc: QueryClient, id: string): TaskWithCourse | Task | nu
   return null;
 }
 
+/**
+ * Put a row created OFFLINE into the caches that should already contain it.
+ *
+ * The update path patches the cache directly; create only invalidated, which
+ * offline triggers a refetch that fails — so the list came back unchanged and
+ * the task the student had just typed simply was not there. No error, no row.
+ * Worse than the failure it replaced.
+ *
+ * Only lists whose filters actually match are touched, so a new task cannot
+ * appear under the wrong course or outside the date range a screen is showing.
+ * The next successful refetch replaces all of this with server truth.
+ */
+function insertCachedTask(qc: QueryClient, task: Task) {
+  // Reuse the real course row so the card renders with its actual name and
+  // colour rather than a placeholder that styles wrongly.
+  const course = qc
+    .getQueriesData<Course[]>({ queryKey: ['courses'] })
+    .flatMap(([, rows]) => rows ?? [])
+    .find((row) => row.id === task.course_id);
+  const withCourse = {
+    ...task,
+    courses: {
+      name: course?.name ?? 'Course',
+      color: course?.color ?? null,
+      icon: course?.icon ?? null,
+      semester_id: course?.semester_id ?? null,
+    },
+  } as unknown as TaskWithCourse;
+
+  qc.setQueryData(queryKeys.task(task.id), withCourse);
+
+  for (const query of qc.getQueryCache().findAll({ queryKey: ['tasks'] })) {
+    const filters = query.queryKey[1] as TaskFilters | undefined;
+    if (filters) {
+      if (filters.courseId && filters.courseId !== task.course_id) continue;
+      if (filters.semesterId && filters.semesterId !== withCourse.courses.semester_id) continue;
+      if (filters.isCompleted !== undefined && filters.isCompleted !== task.is_completed) continue;
+      if (filters.dueDateFrom && task.due_date < filters.dueDateFrom) continue;
+      if (filters.dueDateTo && task.due_date > filters.dueDateTo) continue;
+    }
+    const current = query.state.data;
+    if (!Array.isArray(current)) continue;
+    qc.setQueryData(query.queryKey, [withCourse, ...current]);
+  }
+}
+
+/**
+ * The course equivalent of insertCachedTask. Omitting it is why an
+ * offline-created course said "Course saved" and then returned the student to a
+ * list that did not contain it — so they created it again, and got duplicates
+ * on reconnect.
+ */
+function insertCachedCourse(qc: QueryClient, course: Course) {
+  qc.setQueryData(queryKeys.course(course.id), course);
+  for (const query of qc.getQueryCache().findAll({ queryKey: ['courses'] })) {
+    const scopedSemester = query.queryKey[1] as string | undefined;
+    if (scopedSemester && scopedSemester !== course.semester_id) continue;
+    const current = query.state.data;
+    if (!Array.isArray(current)) continue;
+    qc.setQueryData(query.queryKey, [...current, course]);
+  }
+}
+
 function patchCachedTask(qc: QueryClient, id: string, patch: Record<string, unknown>) {
   qc.setQueryData(queryKeys.task(id), (current: any) =>
     current ? { ...current, ...patch } : current,
@@ -612,7 +675,9 @@ export function useCreateCourse() {
           baseUpdatedAt: null,
         });
         const now = new Date().toISOString();
-        return { ...row, id, created_at: now, updated_at: now } as unknown as Course;
+        const optimistic = { ...row, id, created_at: now, updated_at: now } as unknown as Course;
+        insertCachedCourse(qc, optimistic);
+        return optimistic;
       };
 
       if (!isDeviceOnline()) return await queueOffline();
@@ -894,7 +959,9 @@ export function useCreateTask() {
           baseUpdatedAt: null,
         });
         const now = new Date().toISOString();
-        return { is_completed: false, ...row, id, created_at: now, updated_at: now } as unknown as Task;
+        const optimistic = { is_completed: false, ...row, id, created_at: now, updated_at: now } as unknown as Task;
+        insertCachedTask(qc, optimistic);
+        return optimistic;
       };
 
       if (!isDeviceOnline()) return await queueOffline();

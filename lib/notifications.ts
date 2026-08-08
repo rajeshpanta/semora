@@ -411,11 +411,16 @@ export async function scheduleTaskReminders(
     // Don't schedule if in the past
     if (triggerDate <= now) continue;
 
-    // A reminder that lands after the deadline is not a reminder. Rather than
-    // telling someone their essay "is due today" the morning after it was due,
-    // drop this offset — the deadline itself has already passed and the
-    // overdue surfaces in-app own that message.
-    if (triggerDate >= dueMoment) continue;
+    // A reminder that lands AFTER the deadline is not a reminder — quiet hours
+    // can defer a 10pm "due today" nudge to 8am the next morning. Drop those.
+    //
+    // Strictly after, not at: for a task WITH a due time the same-day trigger is
+    // built from that very time (hour/minute above), so it equals dueMoment
+    // exactly. A >= comparison silently cancelled the same-day reminder for
+    // every timed task in the app — the common case — while leaving untimed
+    // ones (which default to 09:00 against a 23:59 dueMoment) working, so it
+    // looked fine in casual testing.
+    if (triggerDate > dueMoment) continue;
 
     // Derive the label from when the notification will ACTUALLY fire, not from
     // the unshifted date: quiet hours can move a trigger across midnight, and
