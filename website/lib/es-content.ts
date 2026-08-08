@@ -37,7 +37,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
     h1: 'Menos tiempo organizando. Más tiempo aprendiendo.',
     lede: 'Semora nació para convertir uno de los documentos más importantes del primer día —el programa de cada materia— en un semestre fácil de entender y organizar.',
     intro: [
-      'Las fechas llegan en PDFs, plataformas académicas, correos y anuncios. El problema no es la falta de esfuerzo: la información está repartida entre demasiados lugares.',
+      'Las fechas llegan en archivos PDF, plataformas académicas, correos y avisos del profesor. El problema no es la falta de esfuerzo: la información está repartida entre demasiados lugares.',
       'Semora reúne todo en una sola cuenta disponible en iPhone, iPad y la web. Tú revisas los datos antes de guardarlos y mantienes el control de cada cambio.',
     ],
     sections: [
@@ -78,7 +78,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
     h1: 'Precios simples para un semestre real',
     lede: 'Empieza gratis con lo esencial. Pásate a Pro cuando necesites cursos ilimitados, planificación adaptativa y herramientas de estudio avanzadas.',
     intro: [
-      'El plan Gratis incluye cinco análisis al mes, hasta cuatro cursos por semestre, tareas, fechas de entrega, calificaciones ponderadas y recordatorios el mismo día. No necesitas tarjeta de crédito.',
+      'El plan Gratis incluye cinco escaneos al mes, hasta cuatro cursos por semestre, tareas, fechas de entrega, calificaciones ponderadas y recordatorios el mismo día. No necesitas tarjeta de crédito.',
       'Pro cuesta $3.99 al mes o $19.99 al año. Puedes contratarlo desde la app con tu Apple ID y usarlo con la misma cuenta en iPhone, iPad y la web.',
     ],
     sections: [
@@ -86,7 +86,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
         heading: 'Cuándo vale la pena Pro',
         paragraphs: ['Pro está pensado para estudiantes que quieren organizar varios semestres, sincronizar sus plataformas académicas o convertir sus datos en un plan de estudio que se reajusta automáticamente.'],
         bullets: [
-          'Cursos, semestres y análisis ilimitados.',
+          'Cursos, semestres y escaneos ilimitados.',
           'Canvas, Blackboard y Moodle con historial de sincronización.',
           'Plan Inteligente, tarjetas, Tutor con IA y temporizador de enfoque.',
           'Pronósticos de calificaciones, alertas de riesgo y sincronización con calendarios externos.',
@@ -100,7 +100,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
       },
     ],
     faq: [
-      { question: '¿Semora tiene un plan gratis?', answer: 'Sí. Incluye cinco análisis al mes, hasta cuatro cursos por semestre, seguimiento de entregas y calificaciones, y recordatorios el mismo día.' },
+      { question: '¿Semora tiene un plan gratis?', answer: 'Sí. Incluye cinco escaneos al mes, hasta cuatro cursos por semestre, seguimiento de entregas y calificaciones, y recordatorios el mismo día.' },
       { question: '¿Cómo compro Pro?', answer: 'Dentro de la app en iPhone o iPad mediante App Store. La suscripción se activa en toda tu cuenta, incluida la web.' },
       { question: '¿Puedo cancelar cuando quiera?', answer: 'Sí. Administra o cancela la suscripción desde la configuración de tu Apple ID.' },
       { question: '¿Pierdo mis datos si cancelo?', answer: 'No. Conservas tu cuenta y los datos compatibles con el plan Gratis; solo se desactivan las funciones exclusivas de Pro.' },
@@ -108,7 +108,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
   }),
   page('/es/ayuda', '/support', 'support', {
     metaTitle: 'Ayuda de Semora',
-    metaDescription: 'Respuestas en español sobre el análisis de programas, cuentas, suscripciones, calificaciones y sincronización, además de contacto directo.',
+    metaDescription: 'Respuestas en español sobre el escaneo de programas, cuentas, suscripciones, calificaciones y sincronización, además de contacto directo.',
     h1: '¿Cómo podemos ayudarte?',
     lede: 'Cuéntanos qué sucede o revisa las respuestas más comunes. Los mensajes llegan a semora365@gmail.com.',
     intro: [
@@ -150,7 +150,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
           'Datos académicos: semestres, cursos, tareas, apuntes, calificaciones y contenido de los programas de tus materias.',
           'Cursos y tareas de Canvas, Blackboard, Moodle o Google Classroom cuando decides conectarlos.',
           'Zona horaria, tipo de dispositivo y versión del sistema para el funcionamiento de la app.',
-          'Programas de clase y apuntes que decides subir para analizarlos, crear tarjetas o usar el Tutor con IA.',
+          'Programas de clase y apuntes que decides subir para escanearlos, crear tarjetas o usar el Tutor con IA.',
           'Datos de uso anónimos asociados a un identificador aleatorio de instalación, no a tu nombre ni a tu correo electrónico.',
           'Un identificador para enviar notificaciones si autorizas los recordatorios y datos de referidos si utilizas una invitación.',
         ],
@@ -196,10 +196,10 @@ const CORE_PAGES: SpanishPageConfig[] = [
       'Al descargar, instalar o usar Semora aceptas estos Términos de servicio. Si no estás de acuerdo, no uses la app.',
     ],
     sections: [
-      { heading: '1. Descripción del servicio', paragraphs: ['Semora ayuda a estudiantes a organizar tareas, fechas de entrega y calificaciones mediante el análisis de programas de clase con IA, seguimiento académico, herramientas de estudio y sincronización con calendarios y plataformas educativas.'] },
+      { heading: '1. Descripción del servicio', paragraphs: ['Semora ayuda a estudiantes a organizar tareas, fechas de entrega y calificaciones mediante el escaneo de programas de clase con IA, seguimiento académico, herramientas de estudio y sincronización con calendarios y plataformas educativas.'] },
       { heading: '2. Registro y seguridad de la cuenta', paragraphs: ['Debes crear una cuenta y eres responsable de proteger tus credenciales y de toda la actividad que se realice en ella.'] },
       { heading: '3. Suscripciones y pagos', paragraphs: ['Semora ofrece los planes Gratis y Pro. Apple App Store procesa las compras. Las suscripciones se renuevan automáticamente, salvo que las canceles al menos 24 horas antes de que termine el periodo. Puedes administrarlas desde tu Apple ID; Apple también gestiona los reembolsos de acuerdo con sus políticas. Si se ofrece una prueba gratuita, esta pasa a ser de pago si no la cancelas antes de que finalice.'] },
-      { heading: '4. Límites del plan Gratis', paragraphs: ['El plan Gratis limita el número de análisis, cursos y semestres. Pro amplía esos límites y añade personalización, sincronización, planificación y herramientas con IA. La app muestra los límites y precios vigentes antes de que realices una compra.'] },
+      { heading: '4. Límites del plan Gratis', paragraphs: ['El plan Gratis limita el número de escaneos, cursos y semestres. Pro amplía esos límites y añade personalización, sincronización, planificación y herramientas con IA. La app muestra los límites y precios vigentes antes de que realices una compra.'] },
       {
         heading: '5. Uso aceptable',
         paragraphs: ['Aceptas no usar Semora con fines ilegales ni interferir con su funcionamiento.'],
@@ -226,18 +226,18 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
     h1: 'Todo lo que necesitas para organizar el semestre',
     lede: 'Desde la primera foto del programa de una materia hasta la semana de finales: una sola cuenta para tus entregas, calificaciones y tiempo de estudio.',
     intro: [
-      'Empieza gratis con cinco análisis al mes, cuatro cursos, tareas, calificaciones y recordatorios. Pro añade automatización, cursos ilimitados y herramientas de estudio basadas en tus datos reales.',
+      'Empieza gratis con cinco escaneos al mes, cuatro cursos, tareas, calificaciones y recordatorios. Pro añade automatización, cursos ilimitados y herramientas de estudio basadas en tus datos reales.',
     ],
     sections: [
-      { heading: 'Un sistema conectado, no ocho herramientas separadas', paragraphs: ['El análisis crea la estructura del curso. Las fechas se incorporan al calendario y al Plan Inteligente; las calificaciones sirven para crear pronósticos y recomendaciones; y tus apuntes dan contexto a las tarjetas y al Tutor.'] },
+      { heading: 'Un sistema conectado, no ocho herramientas separadas', paragraphs: ['El escaneo crea la estructura del curso. Las fechas se incorporan al calendario y al Plan Inteligente; las calificaciones sirven para crear pronósticos y recomendaciones; y tus apuntes dan contexto a las tarjetas y al Tutor.'] },
       { heading: 'Funciona donde estudias', paragraphs: [
         'iPhone y iPad comparten la misma app universal. La web usa la misma cuenta para que puedas organizar un PDF desde una computadora y revisar el plan desde tu teléfono.',
         'Y funciona en tu idioma: la app entera está en español, no solo este sitio. Puedes elegirlo en la primera pantalla de bienvenida o en Mi cuenta > Configuración > Idioma, y la elección se guarda en tu cuenta, así que se mantiene igual en el iPad y en la web.',
-        'Sin conexión también avanzas: puedes crear cursos y tareas, editarlos y marcarlos como completados. Los cambios se guardan en el dispositivo y se sincronizan solos cuando vuelve la señal, y los últimos siete días de tus datos quedan en caché para que el aula del sótano no te deje con una pantalla vacía. Eliminar es lo único que espera a tener conexión.',
+        'Sin conexión también avanzas: puedes crear cursos y tareas, editarlos y marcarlos como completados. Los cambios se guardan en el dispositivo y se sincronizan solos cuando vuelve la señal, y los últimos siete días de tus datos quedan en caché para que un aula sin señal no te deje con una pantalla vacía. Eliminar es lo único que espera a tener conexión.',
       ] },
     ],
     faq: [
-      { question: '¿Qué funciones son gratis?', answer: 'Cinco análisis al mes, hasta cuatro cursos por semestre, tareas, fechas de entrega, calificaciones y recordatorios el mismo día.' },
+      { question: '¿Qué funciones son gratis?', answer: 'Cinco escaneos al mes, hasta cuatro cursos por semestre, tareas, fechas de entrega, calificaciones y recordatorios el mismo día.' },
       { question: '¿Qué añade Pro?', answer: 'Cursos ilimitados, sincronización con Canvas, Blackboard y Moodle, Plan Inteligente, Tutor, tarjetas, temporizador, pronósticos, alertas y sincronización de calendario.' },
     ],
   }),
@@ -309,12 +309,12 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
     sections: [
       { heading: 'Cuatro formas de añadir el programa', paragraphs: ['Toma una foto de hasta cinco páginas, sube un PDF, arrastra un archivo en la web o pega texto desde un visor de PDF o una página del LMS.'], bullets: ['Nombre y código del curso', 'Profesor, horarios y horas de atención', 'Fechas del semestre y criterios de evaluación', 'Tareas, exámenes, proyectos, lecturas y ponderaciones'] },
       { heading: 'La revisión evita que una suposición se convierta en una fecha', paragraphs: ['Los resultados con menor confianza se marcan para revisión. Los elementos sin fecha quedan separados y desactivados hasta que los corrijas. Nada llega a tu calendario automáticamente solo porque la IA lo sugirió.'] },
-      { heading: 'Después del análisis', paragraphs: ['Las fechas se incorporan a la vista Hoy, al calendario, a los recordatorios, a la carga académica y al Plan Inteligente. Las categorías y ponderaciones preparan el seguimiento de calificaciones.'] },
+      { heading: 'Después del escaneo', paragraphs: ['Las fechas se incorporan a la vista Hoy, al calendario, a los recordatorios, a la carga académica y al Plan Inteligente. Las categorías y ponderaciones preparan el seguimiento de calificaciones.'] },
     ],
     faq: [
       { question: '¿Puede leer un PDF escaneado?', answer: 'Sí. Los archivos PDF y las imágenes compatibles se procesan visualmente. Para obtener mejores resultados, procura que las páginas salgan nítidas, sin inclinación y bien iluminadas.' },
       { question: '¿Guarda algo sin preguntarme?', answer: 'No. Primero revisas y editas el resultado; luego eliges qué guardar.' },
-      { question: '¿Cuántos análisis son gratis?', answer: 'Cinco análisis completados al mes. Pro elimina el límite mensual.' },
+      { question: '¿Cuántos escaneos son gratis?', answer: 'Cinco escaneos completados al mes. Pro elimina el límite mensual.' },
     ],
   }),
   page('/es/planificador-de-estudio-con-ia', '/ai-study-planner-for-college', 'standard', {
@@ -422,7 +422,7 @@ const FEATURE_PAGES = FEATURES_ES.map((feature) => {
     sections: [
       { heading: 'Cómo funciona', paragraphs: [], bullets: detail.steps },
       { heading: 'Qué obtienes', paragraphs: [detail.result] },
-      { heading: feature.tier === 'pro' ? 'Incluido con Semora Pro' : 'Incluido en el plan Gratis', paragraphs: [feature.tier === 'pro' ? 'Crea una cuenta gratuita y prueba el análisis de programas, los cursos y las calificaciones antes de pasarte a Pro.' : 'Puedes empezar sin tarjeta de crédito. El plan Gratis incluye cinco análisis al mes y hasta cuatro cursos por semestre.'] },
+      { heading: feature.tier === 'pro' ? 'Incluido con Semora Pro' : 'Incluido en el plan Gratis', paragraphs: [feature.tier === 'pro' ? 'Crea una cuenta gratuita y prueba el escaneo de programas, los cursos y las calificaciones antes de pasarte a Pro.' : 'Puedes empezar sin tarjeta de crédito. El plan Gratis incluye cinco escaneos al mes y hasta cuatro cursos por semestre.'] },
     ],
     faq: [
       ...detail.faq,
@@ -455,7 +455,7 @@ export const SPANISH_BLOG_POSTS = [
     path: '/es/blog/mejores-apps-fechas-universidad-2026',
     englishPath: '/blog/best-college-deadline-tracking-apps-2026',
     title: 'Las mejores apps para controlar las entregas universitarias en 2026',
-    description: 'Qué buscar en un planificador y cómo comparar la entrada manual, la conexión con un LMS y el análisis del programa.',
+    description: 'Qué buscar en un planificador y cómo comparar la entrada manual, la conexión con un LMS y el escaneo del programa.',
     date: '22 de julio de 2026',
     image: '/illustrations/trophy-compare.svg',
   },
@@ -552,12 +552,12 @@ const BLOG_PAGES: SpanishPageConfig[] = [
     sections: [
       { heading: 'Planificadores de entrada manual', paragraphs: ['Son flexibles y fáciles de entender. Funcionan bien si llevas pocas materias, pero dependen de que recuerdes cada anuncio, cambio y ponderación. Busca opciones de importación, recordatorios y edición rápida.'] },
       { heading: 'Herramientas conectadas al LMS', paragraphs: ['Reducen la entrada manual cuando tu institución permite el acceso. Comprueba si importan solo tareas o también calificaciones y cambios, si muestran la última sincronización y qué ocurre cuando una actualización falla.'] },
-      { heading: 'Herramientas que analizan programas de clase', paragraphs: ['Resultan especialmente útiles al principio del semestre, porque el programa puede incluir fechas que todavía no aparecen en el LMS. La revisión es indispensable: una IA debe señalar las dudas en lugar de guardar suposiciones como si fueran datos confirmados.'] },
+      { heading: 'Herramientas que escanean el programa de la materia', paragraphs: ['Resultan especialmente útiles al principio del semestre, porque el programa puede incluir fechas que todavía no aparecen en el LMS. La revisión es indispensable: una IA debe señalar las dudas en lugar de guardar suposiciones como si fueran datos confirmados.'] },
       { heading: 'Planificación y estudio', paragraphs: ['El calendario, el GPA, las tarjetas, el temporizador y el Tutor aportan más valor cuando comparten el mismo contexto. Si cada función te obliga a subir el material de nuevo, el sistema genera más trabajo.'] },
       { heading: 'Lista de evaluación', paragraphs: [], bullets: ['¿Funciona en tus dispositivos?', '¿Mantiene una sola cuenta sincronizada?', '¿Puedes exportar o eliminar tus datos?', '¿Explica los límites de los planes Gratis y Pro antes de registrarte?', '¿Las fechas importantes conservan su fuente?'] },
     ],
     faq: [
-      { question: '¿Debo elegir una app conectada a Canvas?', answer: 'Solo si tu institución permite una conexión estable. Una buena herramienta para analizar el programa o añadir datos manualmente sigue siendo importante para la información que Canvas no incluye.' },
+      { question: '¿Debo elegir una app conectada a Canvas?', answer: 'Solo si tu institución permite una conexión estable. Una buena herramienta para escanear el programa o añadir datos manualmente sigue siendo importante para la información que Canvas no incluye.' },
       { question: '¿Tener más funciones significa que una app es mejor?', answer: 'No necesariamente. Da prioridad al flujo que usarás cada semana y a cuánto trabajo manual te exige.' },
     ],
   }),
@@ -605,11 +605,11 @@ const BLOG_PAGES: SpanishPageConfig[] = [
       { heading: '1. Calcula la presión de cada evaluación', paragraphs: ['Una evaluación cercana, con mucho peso y sobre un tema que dominas poco necesita atención antes que otra lejana, pequeña y sobre un tema que ya controlas. Usa esos cuatro criterios —fecha, peso, dominio del tema y tiempo disponible— para establecer prioridades, no solo la fecha.'] },
       { heading: '2. Divide el material en resultados observables', paragraphs: ['Cambia “estudiar biología” por “explicar la respiración celular sin apuntes” o “resolver diez preguntas mixtas y revisar errores”. Cada bloque debe terminar con evidencia.'] },
       { heading: '3. Combina práctica y recuperación activa', paragraphs: ['Alterna la recuperación activa, la resolución de problemas, las explicaciones y los simulacros. Deja espacio entre repasos del mismo tema para que el siguiente intento mida lo que recuerdas, no solo lo familiar que te resulta el contenido.'] },
-      { heading: '4. Protege sueño, comida y traslado', paragraphs: ['Un plan que usa cada minuto disponible se rompe con el primer retraso. Conserva márgenes y fija una hora para terminar la noche antes de un examen.'] },
+      { heading: '4. Protege el sueño, las comidas y los traslados', paragraphs: ['Un plan que usa cada minuto disponible se rompe con el primer retraso. Conserva márgenes y fija una hora tope para dejar de estudiar la noche anterior al examen.'] },
       { heading: '5. Revisa el plan cada día', paragraphs: ['Marca lo terminado, dedica menos tiempo a lo que ya dominas y reprograma lo que no pudiste completar. Si el tiempo no alcanza, elimina de forma consciente las tareas de menor impacto en lugar de fingir que todo cabe.'] },
     ],
     faq: [
-      { question: '¿Cuándo debo empezar?', answer: 'En cuanto tengas el calendario de finales. Incluso diez minutos para listar evaluaciones y material reduce decisiones posteriores.' },
+      { question: '¿Cuándo debo empezar?', answer: 'En cuanto tengas el calendario de finales. Incluso diez minutos para anotar las evaluaciones y el material te ahorran decisiones más adelante.' },
       { question: '¿Cómo priorizo dos exámenes el mismo día?', answer: 'Compara peso, nivel actual, cantidad de material y oportunidades futuras. Alterna bloques para evitar abandonar por completo uno de los cursos.' },
     ],
   }),
@@ -667,7 +667,7 @@ function comparisonPage(item: (typeof SPANISH_COMPARISONS)[number]): SpanishPage
     ],
     faq: [
       { question: `¿Semora reemplaza completamente a ${item.name}?`, answer: 'No necesariamente. Las herramientas pueden resolver problemas distintos. La comparación ayuda a decidir cuál debe ser tu sistema principal.' },
-      { question: '¿Puedo probar Semora gratis?', answer: 'Sí. El plan Gratis no requiere tarjeta e incluye cinco análisis al mes, hasta cuatro cursos por semestre, fechas de entrega y calificaciones.' },
+      { question: '¿Puedo probar Semora gratis?', answer: 'Sí. El plan Gratis no requiere tarjeta e incluye cinco escaneos al mes, hasta cuatro cursos por semestre, fechas de entrega y calificaciones.' },
     ],
   });
 }
@@ -676,29 +676,29 @@ const COMPARISON_PAGES = SPANISH_COMPARISONS.map(comparisonPage);
 
 const ALTERNATIVES = [
   { slug: 'alternativa-a-dormway', english: '/dormway-alternative', name: 'DormWay', need: 'organización del semestre desde el programa y seguimiento de calificaciones' },
-  { slug: 'alternativa-a-shovel', english: '/shovel-alternative', name: 'Shovel', need: 'analizar programas de clase, revisar cada resultado y usar una sola cuenta en iOS y la web' },
+  { slug: 'alternativa-a-shovel', english: '/shovel-alternative', name: 'Shovel', need: 'escanear programas de clase, revisar cada resultado y usar una sola cuenta en iOS y la web' },
   { slug: 'alternativa-a-studyfetch', english: '/studyfetch-alternative', name: 'StudyFetch', need: 'fechas, calificaciones y planificación además de herramientas de estudio con IA' },
   { slug: 'alternativa-a-mindgrasp', english: '/mindgrasp-alternative', name: 'Mindgrasp', need: 'convertir el programa en calendario y seguimiento académico, no solo resumir material' },
-  { slug: 'alternativa-a-myhomework', english: '/myhomework-alternative', name: 'myHomework', need: 'reducir la entrada manual mediante el análisis del programa y una planificación adaptativa' },
+  { slug: 'alternativa-a-myhomework', english: '/myhomework-alternative', name: 'myHomework', need: 'reducir la entrada manual mediante el escaneo del programa y una planificación adaptativa' },
 ] as const;
 
 const ALTERNATIVE_PAGES = ALTERNATIVES.map((item) => page(`/es/${item.slug}`, item.english, 'standard', {
   metaTitle: `Alternativa a ${item.name} para estudiantes`,
   metaDescription: `Conoce Semora como alternativa a ${item.name} para programas, fechas, calificaciones y planificación universitaria.`,
   h1: `¿Buscas una alternativa a ${item.name}?`,
-  lede: `Semora puede encajar si necesitas ${item.need}.`,
+  lede: `Semora puede ser una buena opción si necesitas ${item.need}.`,
   intro: [
     `Cambiar de herramienta vale la pena cuando elimina trabajo repetitivo. Antes de mover tus cursos, identifica qué información de ${item.name} tienes que actualizar a mano y qué datos necesitas conservar.`,
   ],
   sections: [
     { heading: 'Por qué considerar Semora', paragraphs: ['Semora empieza con una foto, un PDF o el texto del programa de la materia. Una vez que revisas el resultado, crea las tareas, los exámenes, los horarios y la estructura de calificaciones. Las conexiones con el LMS pueden mantener esa información al día.'] },
-    { heading: 'Qué puedes probar sin pagar', paragraphs: ['Crea una cuenta sin tarjeta y Crea una cuenta sin tarjeta y obtén cinco análisis al mes, hasta cuatro cursos por semestre, seguimiento de entregas, promedios ponderados y recordatorios el mismo día., hasta cuatro cursos por semestre, seguimiento de entregas, promedios ponderados y recordatorios el mismo día.'] },
+    { heading: 'Qué puedes probar sin pagar', paragraphs: ['Crea una cuenta sin tarjeta y Crea una cuenta sin tarjeta y obtén cinco escaneos al mes, hasta cuatro cursos por semestre, seguimiento de entregas, promedios ponderados y recordatorios el mismo día., hasta cuatro cursos por semestre, seguimiento de entregas, promedios ponderados y recordatorios el mismo día.'] },
     { heading: 'Qué añade Pro', paragraphs: ['Pro elimina límites de cursos y semestres y añade Plan Inteligente, Canvas/Blackboard/Moodle, tarjetas, Tutor con IA, temporizador, pronósticos, alertas y sincronización de calendario.'] },
     { heading: 'Cómo hacer la transición', paragraphs: ['Empieza con un solo curso. Añade el programa, revisa las fechas y compara el resultado con tu sistema actual durante una semana. No dejes de usar tu herramienta anterior hasta confirmar que toda la información importante es correcta.'] },
   ],
   faq: [
     { question: `¿Puedo usar Semora junto con ${item.name}?`, answer: 'Sí. Puedes probar un curso sin abandonar inmediatamente tu herramienta actual.' },
-    { question: '¿Semora importa mis datos desde cualquier app?', answer: 'No existe una importación universal. Semora admite programas, entrada manual y conexiones seleccionadas con Canvas, Blackboard y Moodle.' },
+    { question: '¿Semora importa mis datos desde cualquier app?', answer: 'No existe una importación universal. Semora admite programas, entrada manual y conexiones con algunas plataformas: Canvas, Blackboard y Moodle.' },
   ],
 }));
 

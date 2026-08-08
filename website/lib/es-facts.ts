@@ -6,7 +6,7 @@ export const SITE_DESCRIPTION_ES =
   'Semora convierte una foto o PDF del programa de tu materia en un calendario con tareas, exámenes y criterios de evaluación organizados.';
 
 export const FREE_FEATURES_ES = [
-  '5 análisis de programas al mes',
+  '5 escaneos de programas al mes',
   'Hasta 4 cursos por semestre',
   'Seguimiento de tareas y fechas de entrega',
   'Calificaciones con promedios ponderados',
@@ -15,7 +15,7 @@ export const FREE_FEATURES_ES = [
 ] as const;
 
 export const PRO_FEATURES_ES = [
-  'Cursos y semestres ilimitados, sin límite mensual de análisis',
+  'Cursos y semestres ilimitados, sin límite mensual de escaneos',
   'Importación de tareas desde Canvas, Blackboard y Moodle',
   'Crea Espacios de curso e invita a tus compañeros',
   'Plan Inteligente que se adapta a tus fechas de entrega',
@@ -44,7 +44,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
   {
     slug: 'escaner-de-programas',
     englishSlug: 'syllabus-scanner',
-    name: 'Análisis de programas con IA',
+    name: 'Escaneo de programas con IA',
     shortDescription: 'Convierte una foto o un PDF en fechas de entrega, horarios y criterios de evaluación organizados.',
     tier: 'free',
     description: 'Toma una foto, sube un PDF o pega el texto. Semora identifica tareas, exámenes, horarios y criterios de evaluación para que los revises antes de guardar.',

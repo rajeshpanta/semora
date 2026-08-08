@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 };
 
 const CHIPS = [
-  '5 análisis gratis al mes',
+  '5 escaneos gratis al mes',
   'App completa en español',
   'Tus datos al día en iPhone, iPad y la web',
 ];
@@ -108,7 +108,7 @@ const FAQ = [
   {
     question: '¿Semora es realmente gratis?',
     answer:
-      'Sí. El plan gratuito incluye cinco análisis al mes, hasta cuatro cursos por semestre, seguimiento de entregas, promedios ponderados y recordatorios. No necesitas tarjeta de crédito.',
+      'Sí. El plan gratuito incluye cinco escaneos al mes, hasta cuatro cursos por semestre, seguimiento de entregas, promedios ponderados y recordatorios. No necesitas tarjeta de crédito.',
   },
   {
     question: '¿Cuánto cuesta Pro?',
@@ -128,12 +128,12 @@ const FAQ = [
   {
     question: '¿La app está en español?',
     answer:
-      'Sí, la app completa, no solo este sitio: pantallas, recordatorios, el Tutor y la configuración. Si tu dispositivo está en español, Semora arranca en español. También puedes elegir el idioma en la primera pantalla de bienvenida o cambiarlo cuando quieras en Mi cuenta > Configuración > Idioma, y el cambio se aplica al instante, sin reiniciar.',
+      'Sí, la app completa, no solo este sitio: pantallas, recordatorios, el Tutor y la configuración. Si tu dispositivo está en español, Semora se abre en español. También puedes elegir el idioma en la primera pantalla de bienvenida o cambiarlo cuando quieras en Mi cuenta > Configuración > Idioma, y el cambio se aplica al instante, sin reiniciar.',
   },
   {
     question: '¿Funciona en iPhone y iPad?',
     answer:
-      'Sí. Semora es una app universal: la misma compra y la misma cuenta funcionan en iPhone y en iPad, con diseño adaptado a cada pantalla. Tus cursos también están disponibles en la web, y el idioma que elijas viaja con tu cuenta a los tres.',
+      'Sí. Semora es una app universal: la misma compra y la misma cuenta funcionan en iPhone y en iPad, con diseño adaptado a cada pantalla. Tus cursos también están disponibles en la web, y el idioma que elijas se mantiene en las tres plataformas.',
   },
 ];
 

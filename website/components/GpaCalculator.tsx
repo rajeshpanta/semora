@@ -137,7 +137,7 @@ export function GpaCalculator({ locale = 'en' }: { locale?: SiteLocale }) {
             setNextId((n) => n + 1);
           }}
         >
-          {es ? '+ Agregar curso' : '+ Add course'}
+          {es ? '+ Añadir curso' : '+ Add course'}
         </button>
         <button type="button" className={styles.reset} onClick={() => setRows(START)}>
           {es ? 'Restablecer' : 'Reset'}
