@@ -130,14 +130,14 @@ const CORE_PAGES: SpanishPageConfig[] = [
       { question: '¿Puedo editar una tarea después?', answer: 'Sí. Abre la tarea y elige Editar para cambiar título, fecha, hora, tipo o descripción.' },
       { question: '¿Cómo se calcula mi calificación?', answer: 'Semora usa las puntuaciones y ponderaciones que registras. El promedio actual solo tiene en cuenta el trabajo que ya ha sido calificado.' },
       { question: '¿Cómo cancelo Pro?', answer: 'En tu dispositivo abre Configuración > Apple ID > Suscripciones y selecciona Semora.' },
-      { question: '¿Cómo elimino mi cuenta?', answer: 'En la app, abre la pestaña Tú, desplázate hasta Eliminar cuenta y confirma. La eliminación es permanente.' },
+      { question: '¿Cómo elimino mi cuenta?', answer: 'En la app, abre la pestaña Mi cuenta, desplázate hasta Eliminar cuenta y confirma. La eliminación es permanente.' },
     ],
   }),
   page('/es/privacidad', '/privacy', 'standard', {
     metaTitle: 'Política de privacidad',
     metaDescription: 'Cómo Semora recopila, usa, protege y elimina tu información académica y personal.',
     h1: 'Política de privacidad',
-    lede: 'Última actualización: 4 de agosto de 2026. Esta traducción explica la misma política que la versión en inglés.',
+    lede: 'Última actualización: 8 de agosto de 2026. Esta traducción explica la misma política que la versión en inglés.',
     intro: [
       'Semora se compromete a proteger tu privacidad. Esta política describe la información que recopilamos, por qué la usamos, dónde se procesa y las opciones que tienes cuando utilizas nuestras aplicaciones y sitios web.',
     ],
@@ -168,7 +168,8 @@ const CORE_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Servicios externos',
         paragraphs: [
-          'Supabase proporciona la base de datos y la autenticación. OpenAI procesa programas de clase, genera tarjetas de estudio y presta las funciones del Tutor. Según la política de OpenAI, los datos enviados mediante la API no se utilizan para entrenar modelos salvo que el cliente lo autorice expresamente. Semora desactiva el almacenamiento de respuestas, aunque OpenAI puede conservar registros para detectar abusos durante un máximo de 30 días cuando no se aplique un control más estricto.',
+          'Supabase proporciona la base de datos y la autenticación. OpenAI lee los programas de clase, genera las tarjetas de estudio y responde tus preguntas en el Tutor. Según la política de OpenAI, los datos enviados mediante la API no se utilizan para entrenar modelos salvo que el cliente lo autorice expresamente. Semora desactiva el almacenamiento de respuestas, aunque OpenAI puede conservar registros para detectar abusos durante un máximo de 30 días cuando no se aplique un control más estricto.',
+          'Google Gemini genera las preguntas de práctica y los cuestionarios rápidos del Tutor, y sustituye temporalmente al modelo del Tutor si OpenAI no está disponible, para no interrumpir una sesión en curso. Esas solicitudes incluyen el mismo contexto del curso que una pregunta al Tutor: el texto del programa, los apuntes que hayas subido a ese curso, tus fechas de entrega y el mensaje que enviaste. Según Google, las solicitudes y respuestas enviadas mediante la versión de pago de la API de Gemini no se utilizan para entrenar sus modelos.',
           'Apple StoreKit procesa suscripciones. Expo entrega notificaciones autorizadas. Google Calendar solo recibe las fechas que eliges sincronizar; Semora no lee tus otros eventos.',
           'De forma predeterminada, las credenciales de Canvas, Blackboard, Moodle o Google Classroom permanecen en el dispositivo. Si activas la Sincronización automática, la credencial se guarda cifrada en Supabase Vault para actualizar cursos, tareas, entregas y calificaciones mientras la app está cerrada. La credencial se elimina cuando desactivas la función o desconectas la plataforma.',
         ],
@@ -176,7 +177,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Retención, eliminación y tus derechos',
         paragraphs: [
-          'Conservamos tus datos mientras la cuenta esté activa. Puedes acceder a ellos desde la app, solicitar una exportación o eliminar permanentemente la cuenta y sus archivos desde Tú > Eliminar cuenta.',
+          'Conservamos tus datos mientras la cuenta esté activa. Puedes acceder a ellos desde la app, solicitar una exportación o eliminar permanentemente la cuenta y sus archivos desde Mi cuenta > Eliminar cuenta.',
           'Semora está destinado a estudiantes universitarios y no recopila intencionalmente información de menores de 13 años. Podemos actualizar esta política y publicaremos los cambios en la app.',
         ],
       },
@@ -230,7 +231,11 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
     ],
     sections: [
       { heading: 'Un sistema conectado, no ocho herramientas separadas', paragraphs: ['El análisis crea la estructura del curso. Las fechas se incorporan al calendario y al Plan Inteligente; las calificaciones sirven para crear pronósticos y recomendaciones; y tus apuntes dan contexto a las tarjetas y al Tutor.'] },
-      { heading: 'Funciona donde estudias', paragraphs: ['iPhone y iPad comparten la misma app universal. La web usa la misma cuenta para que puedas organizar un PDF desde una computadora y revisar el plan desde tu teléfono.'] },
+      { heading: 'Funciona donde estudias', paragraphs: [
+        'iPhone y iPad comparten la misma app universal. La web usa la misma cuenta para que puedas organizar un PDF desde una computadora y revisar el plan desde tu teléfono.',
+        'Y funciona en tu idioma: la app entera está en español, no solo este sitio. Puedes elegirlo en la primera pantalla de bienvenida o en Mi cuenta > Configuración > Idioma, y la elección se guarda en tu cuenta, así que te acompaña al iPad y a la web.',
+        'Sin conexión también avanzas: puedes crear cursos y tareas, editarlos y marcarlos como completados. Los cambios se guardan en el dispositivo y se sincronizan solos cuando vuelve la señal, y los últimos siete días de tus datos quedan en caché para que el aula del sótano no te deje con una pantalla vacía. Eliminar es lo único que espera a tener conexión.',
+      ] },
     ],
     faq: [
       { question: '¿Qué funciones son gratis?', answer: 'Cinco análisis al mes, hasta cuatro cursos por semestre, tareas, fechas de entrega, calificaciones y recordatorios el mismo día.' },

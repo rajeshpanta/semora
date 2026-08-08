@@ -29,7 +29,11 @@ export const metadata: Metadata = {
   },
 };
 
-const CHIPS = ['5 análisis gratis al mes', 'Tus datos al día en iPhone, iPad y web'];
+const CHIPS = [
+  '5 análisis gratis al mes',
+  'App completa en español',
+  'Tus datos al día en iPhone, iPad y web',
+];
 
 const STEPS = [
   {
@@ -122,9 +126,14 @@ const FAQ = [
       'No. Puedes usar Semora solo con el programa de tus materias. Las conexiones con Canvas, Blackboard y Moodle son funciones opcionales de Pro.',
   },
   {
-    question: '¿Funciona en iPad y en español?',
+    question: '¿La app está en español?',
     answer:
-      'El sitio está disponible en español y Semora funciona como app universal en iPhone y iPad. Tus cursos también están disponibles en la web con la misma cuenta.',
+      'Sí, la app completa, no solo este sitio: pantallas, recordatorios, el Tutor y la configuración. Si tu dispositivo está en español, Semora arranca en español. También puedes elegir el idioma en la primera pantalla de bienvenida o cambiarlo cuando quieras en Mi cuenta > Configuración > Idioma, y el cambio se aplica al instante, sin reiniciar.',
+  },
+  {
+    question: '¿Funciona en iPhone y iPad?',
+    answer:
+      'Sí. Semora es una app universal: la misma compra y la misma cuenta funcionan en iPhone y en iPad, con diseño adaptado a cada pantalla. Tus cursos también están disponibles en la web, y el idioma que elijas viaja con tu cuenta a los tres.',
   },
 ];
 
