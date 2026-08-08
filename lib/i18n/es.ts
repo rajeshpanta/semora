@@ -1688,4 +1688,10 @@ export const ES: Record<string, string> = {
   'Let’s make it yours': 'Hazlo tuyo',
   'We\'ll extract the course name, semester,\nand all deadlines automatically.': 'Extraeremos automáticamente el nombre del curso, el semestre\ny todas las entregas.',
   'Nothing pressing — you’re all caught up. Nice.': 'Nada urgente: estás al día. Bien hecho.',
+  'General': 'General',
+  'Pick a course above to ground answers in your syllabus and notes, or just ask anything.': 'Elige un curso arriba para basar las respuestas en tu programa y tus apuntes, o simplemente pregunta lo que quieras.',
+  'Choose a course above, then attach lecture notes to ground the tutor on it.': 'Elige un curso arriba y luego adjunta apuntes de clase para basar el tutor en él.',
+  'Add a course first — the tutor grounds notes against a specific course.': 'Añade un curso primero: el tutor asocia los apuntes a un curso concreto.',
+  'Choose a course above and the tutor will build practice from its material.': 'Elige un curso arriba y el tutor creará práctica con su material.',
+  'Add a course first — practice is generated from a course\'s own material.': 'Añade un curso primero: la práctica se genera con el material del propio curso.',
 };

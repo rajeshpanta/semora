@@ -22,9 +22,9 @@ import * as DocumentPicker from 'expo-document-picker';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
-import { useAppStore } from '@/store/appStore';
+import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { track } from '@/lib/analytics';
-import { useCourse, useGradeCategories, useTasks } from '@/lib/queries';
+import { useCourse, useCourses, useSemesters, useGradeCategories, useTasks } from '@/lib/queries';
 import { buildAcademicRiskReport } from '@/lib/academicRisk';
 import {
   useTutorConversation, useTutorMessages, useSendTutorMessage,
@@ -74,16 +74,42 @@ export default function TutorScreen() {
     );
   }
 
-  return <TutorChat courseId={courseId ?? null} />;
+  return <TutorChat initialCourseId={courseId ?? null} />;
 }
 
 // Pro-only chat body, split out so the hooks below never run for free users
 // (the early return above would otherwise violate the rules-of-hooks).
-function TutorChat({ courseId }: { courseId: string | null }) {
+function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
+  // The tutor is reachable two ways: from a course (which passes courseId) and
+  // from the Study Tools list, which passes nothing. Opening it the second way
+  // used to be a dead end — "Add notes" and the practice chips just told you to
+  // "open the tutor from a course" with no way to do so from here. The scope is
+  // now state, seeded from the route, so a student can pick the course on this
+  // screen instead of backing out to find another entry point.
+  const [courseId, setCourseId] = useState<string | null>(initialCourseId);
+  // Expo Router reuses this screen when only the param changes, so navigating
+  // from one course's tutor straight to another would otherwise keep showing
+  // the first course. Adjusting during render (rather than in an effect) is the
+  // sanctioned way to follow a prop: it converges on the same commit, with no
+  // extra pass and no dependency array to get wrong.
+  const [lastParam, setLastParam] = useState<string | null>(initialCourseId);
+  if (initialCourseId !== lastParam) {
+    setLastParam(initialCourseId);
+    setCourseId(initialCourseId);
+  }
   const router = useRouter();
   const colors = useColors();
   const { contentMaxWidth } = useResponsive();
 
+  // Resolve the semester by derivation rather than reading global state alone:
+  // selectedSemesterId is only populated by the tabs that set it, so arriving
+  // here straight from Study Tools left it null and the picker had no courses
+  // to offer. Deriving costs nothing and needs no effect, so there is no state
+  // write on this path to loop on.
+  const selectedSemesterId = useAppStore((st) => st.selectedSemesterId);
+  const { data: semesters = [] } = useSemesters();
+  const activeSemesterId = selectedSemesterId ?? findCurrentSemester(semesters);
+  const { data: semesterCourses = [] } = useCourses(activeSemesterId);
   const { data: course } = useCourse(courseId ?? '');
   const { data: courseTasks = [] } = useTasks(courseId ? { courseId } : { semesterId: null });
   const { data: gradeCategories = [] } = useGradeCategories(courseId);
@@ -120,7 +146,12 @@ function TutorChat({ courseId }: { courseId: string | null }) {
 
   const handleGeneratePractice = async (mode: 'practice' | 'quiz') => {
     if (!courseId) {
-      Alert.alert('Pick a course first', 'Open the Tutor from a course to create grounded practice.');
+      Alert.alert(
+        'Pick a course first',
+        semesterCourses.length
+          ? 'Choose a course above and the tutor will build practice from its material.'
+          : 'Add a course first — practice is generated from a course\'s own material.',
+      );
       return;
     }
     try {
@@ -187,9 +218,13 @@ function TutorChat({ courseId }: { courseId: string | null }) {
 
   const handleAddNotes = async () => {
     if (!courseId) {
+      // The picker is right above this chip now, so say where to go rather than
+      // sending the student back out to find a different way in.
       Alert.alert(
         'Pick a course first',
-        'Open the tutor from a course to attach lecture notes for grounding.',
+        semesterCourses.length
+          ? 'Choose a course above, then attach lecture notes to ground the tutor on it.'
+          : 'Add a course first — the tutor grounds notes against a specific course.',
       );
       return;
     }
@@ -237,6 +272,60 @@ function TutorChat({ courseId }: { courseId: string | null }) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
+        {/* Course scope picker — only worth showing when there's a choice to
+            make. "General" keeps the unscoped chat that this screen already
+            offered, so nothing is taken away by adding the scope. */}
+        {semesterCourses.length > 0 && (
+          <View style={[styles.scopeBar, { borderBottomColor: colors.line, maxWidth: contentMaxWidth }]}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scopeRow}>
+              <Text style={[styles.scopeLabel, { color: colors.ink3 }]}>Course</Text>
+              <TouchableOpacity
+                style={[
+                  styles.scopeChip,
+                  { borderColor: colors.line, backgroundColor: colors.card },
+                  courseId === null && { borderColor: colors.brand, backgroundColor: colors.brand50 },
+                ]}
+                onPress={() => {
+                  if (Platform.OS === 'ios') Haptics.selectionAsync();
+                  setCourseId(null);
+                }}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.scopeChipText, { color: courseId === null ? colors.brand : colors.ink2 }]}>
+                  General
+                </Text>
+              </TouchableOpacity>
+              {semesterCourses.map((c) => {
+                const active = c.id === courseId;
+                return (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={[
+                      styles.scopeChip,
+                      { borderColor: colors.line, backgroundColor: colors.card },
+                      active && { borderColor: colors.brand, backgroundColor: colors.brand50 },
+                    ]}
+                    onPress={() => {
+                      if (Platform.OS === 'ios') Haptics.selectionAsync();
+                      setCourseId(c.id);
+                      track('tutor_course_scoped', { screen: 'tutor' });
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.scopeDot, { backgroundColor: c.color || colors.brand }]} />
+                    <Text
+                      style={[styles.scopeChipText, { color: active ? colors.brand : colors.ink2 }]}
+                      numberOfLines={1}
+                    >
+                      {c.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Notes / grounding bar */}
         <View style={[styles.notesBar, { borderBottomColor: colors.line, maxWidth: contentMaxWidth }]}>
           <ScrollView
@@ -333,7 +422,7 @@ function TutorChat({ courseId }: { courseId: string | null }) {
               <Text style={[styles.emptyText, { color: colors.ink3 }]}>
                 {courseId
                   ? 'Answers are grounded in this course’s syllabus, deadlines, and any notes you attach above.'
-                  : 'Open the tutor from a course to ground answers in your syllabus and notes.'}
+                  : 'Pick a course above to ground answers in your syllabus and notes, or just ask anything.'}
               </Text>
             </View>
           ) : (
@@ -441,6 +530,12 @@ const styles = StyleSheet.create({
   upgradeText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 
   // Notes bar
+  scopeBar: { borderBottomWidth: 1, width: '100%', alignSelf: 'center' },
+  scopeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
+  scopeLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', marginRight: 2 },
+  scopeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7, maxWidth: 190 },
+  scopeChipText: { fontSize: 13, fontWeight: '600' },
+  scopeDot: { width: 7, height: 7, borderRadius: 999 },
   notesBar: { borderBottomWidth: 0.5, width: '100%', alignSelf: 'center' },
   notesRow: { paddingHorizontal: 14, paddingVertical: 10, gap: 8, alignItems: 'center' },
   addNoteChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
