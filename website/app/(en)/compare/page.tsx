@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { enAlternates } from '@/lib/hreflang';
 import Link from 'next/link';
 import styles from './compare-index.module.css';
 import { Reveal } from '@/components/Reveal';
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   title: pageTitle('Compare Semora'),
   description:
     'Honest, feature-by-feature comparisons of Semora against DormWay, Shovel, StudyFetch, Mindgrasp, Taskade, Studley AI, and myHomework Student Planner.',
-  alternates: { canonical: '/compare' },
+  alternates: enAlternates('/compare'),
 };
 
 export default function CompareIndexPage() {

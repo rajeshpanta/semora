@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { enAlternates } from '@/lib/hreflang';
 import styles from '@/components/Prose.module.css';
 import { TierTable } from '@/components/TierTable';
 import { Faq } from '@/components/Faq';
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
   title: 'AI Syllabus Scanner: Turn a Syllabus Photo into a Semester Calendar',
   description:
     'Semora is an AI syllabus scanner that automatically turns a syllabus photo or PDF into a full calendar of deadlines, grades, and class times.',
-  alternates: { canonical: '/ai-syllabus-scanner' },
+  alternates: enAlternates('/ai-syllabus-scanner'),
 };
 
 const FAQ = [

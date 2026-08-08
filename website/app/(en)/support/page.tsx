@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { enAlternates } from '@/lib/hreflang';
 import styles from '@/components/Prose.module.css';
 import { Faq } from '@/components/Faq';
 import { JsonLd } from '@/components/JsonLd';
@@ -14,7 +15,7 @@ import heroStyles from './support.module.css';
 export const metadata: Metadata = {
   title: 'Support',
   description: "Answers to common questions about using Semora, plus how to reach us directly.",
-  alternates: { canonical: '/support' },
+  alternates: enAlternates('/support'),
   openGraph: { url: '/support', ...OG_IMAGE },
 };
 

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { enAlternates } from '@/lib/hreflang';
 import styles from '@/components/Prose.module.css';
 import { TierTable } from '@/components/TierTable';
 import { Faq } from '@/components/Faq';
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
   title: 'Canvas Deadline Tracker App: Grades, Reminders & Study Planning',
   description:
     'Semora is a Canvas deadline tracker app. Import Canvas assignments on Pro, or scan your syllabus free, with grade tracking, reminders, and a real study plan.',
-  alternates: { canonical: '/canvas-deadline-tracker' },
+  alternates: enAlternates('/canvas-deadline-tracker'),
 };
 
 const FAQ = [

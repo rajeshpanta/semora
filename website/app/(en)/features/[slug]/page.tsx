@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { enAlternates } from '@/lib/hreflang';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import styles from './feature.module.css';
@@ -29,7 +30,7 @@ export async function generateMetadata({
   return {
     title: pageTitle(long?.metaTitle ?? feature.name),
     description: long?.metaDescription ?? feature.shortDescription,
-    alternates: { canonical: `/features/${feature.slug}` },
+    alternates: enAlternates(`/features/${feature.slug}`),
     openGraph: { url: `/features/${feature.slug}`, ...OG_IMAGE },
   };
 }

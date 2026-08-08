@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { enAlternates } from '@/lib/hreflang';
 import styles from '@/components/Prose.module.css';
 import { SUPPORT_EMAIL } from '@/lib/semora-facts';
 import { OG_IMAGE } from '@/lib/og';
@@ -7,7 +8,7 @@ import { ArticleShell } from '@/components/ArticleShell';
 export const metadata: Metadata = {
   title: 'Privacy Policy',
   description: 'How Semora collects, uses, and safeguards your information.',
-  alternates: { canonical: '/privacy' },
+  alternates: enAlternates('/privacy'),
   openGraph: { url: '/privacy', ...OG_IMAGE },
 };
 

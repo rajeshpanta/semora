@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { enAlternates } from '@/lib/hreflang';
 import Image from 'next/image';
 import Link from 'next/link';
 import styles from './blog.module.css';
@@ -9,7 +10,7 @@ import { getPageContent } from '@/lib/page-content';
 export const metadata: Metadata = {
   title: 'Blog',
   description: 'Guides on syllabus planning, GPA calculation, Canvas reminders, and study scheduling.',
-  alternates: { canonical: '/blog' },
+  alternates: enAlternates('/blog'),
 };
 
 export default function BlogIndexPage() {

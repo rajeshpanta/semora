@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { enAlternates } from '@/lib/hreflang';
 import styles from './pricing.module.css';
 import { Faq } from '@/components/Faq';
 import { Cta } from '@/components/Cta';
@@ -11,7 +12,7 @@ import { getPageContent } from '@/lib/page-content';
 export const metadata: Metadata = {
   title: 'Pricing',
   description: "Semora is free to start. Pro is $3.99/month or $19.99/year, purchased in the app and applied account-wide including web.",
-  alternates: { canonical: '/pricing' },
+  alternates: enAlternates('/pricing'),
 };
 
 const PRICING_FAQ = [

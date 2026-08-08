@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { enAlternates } from '@/lib/hreflang';
 import type { ComponentType } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
   title: 'Features',
   description:
     'Everything Semora does: AI syllabus scanning, grade tracking, Smart Plan, flashcards, focus timer, AI tutor, Course Spaces, and Canvas sync.',
-  alternates: { canonical: '/features' },
+  alternates: enAlternates('/features'),
 };
 
 interface ShowcaseItem {

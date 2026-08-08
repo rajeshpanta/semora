@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { enAlternates } from '@/lib/hreflang';
 import { notFound } from 'next/navigation';
 import { LongFormPage } from '@/components/LongFormPage';
 import { getNewPage } from '@/lib/new-page-content';
@@ -13,7 +14,7 @@ export function generateMetadata(): Metadata {
   return {
     title: c?.metaTitle ? pageTitle(c.metaTitle) : undefined,
     description: c?.metaDescription,
-    alternates: { canonical: '/pomodoro-timer' },
+    alternates: enAlternates('/pomodoro-timer'),
     openGraph: { url: '/pomodoro-timer', ...OG_IMAGE },
   };
 }

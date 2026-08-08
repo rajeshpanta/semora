@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { enAlternates } from '@/lib/hreflang';
 import { notFound } from 'next/navigation';
 import styles from './compare.module.css';
 import { CompareTable } from '@/components/CompareTable';
@@ -27,7 +28,7 @@ export async function generateMetadata({
   return {
     title: pageTitle(competitor.title),
     description: competitor.metaDescription,
-    alternates: { canonical: `/compare/${competitor.slug}` },
+    alternates: enAlternates(`/compare/${competitor.slug}`),
   };
 }
 

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { enAlternates } from '@/lib/hreflang';
 import styles from '@/components/Prose.module.css';
 import { TierTable } from '@/components/TierTable';
 import { Faq } from '@/components/Faq';
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
   title: 'AI Study Planner for College Students',
   description:
     'Semora is an AI study planner for college students: scan your syllabus and get tracked deadlines, calculated grades, and an adaptive study schedule.',
-  alternates: { canonical: '/ai-study-planner-for-college' },
+  alternates: enAlternates('/ai-study-planner-for-college'),
 };
 
 const FAQ = [
