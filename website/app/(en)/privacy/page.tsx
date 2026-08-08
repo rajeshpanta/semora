@@ -106,21 +106,13 @@ export default function PrivacyPage() {
           <strong>Supabase:</strong> Database and authentication provider.
         </li>
         <li>
-          <strong>OpenAI GPT-5.6 Luna:</strong> Reads your syllabus documents, generates flashcards,
+          <strong>OpenAI GPT-5.6 Luna:</strong> The only AI provider Semora sends your content to.
+          It reads your syllabus documents, generates flashcards, practice questions and quizzes,
           and answers your questions in the AI Tutor. Your syllabus content and any study notes you
           choose to upload are sent to the OpenAI API for processing. OpenAI states that API data is
           not used to train its models unless a customer explicitly opts in. Semora disables response
           storage for these requests; OpenAI may still retain abuse-monitoring logs for up to 30
           days unless a stricter retention control applies to the account.
-        </li>
-        <li>
-          <strong>Google Gemini 2.5 Flash-Lite:</strong> Generates the AI Tutor&apos;s Practice
-          questions and Quick quizzes, and temporarily stands in for the tutor itself if OpenAI is
-          unreachable, so a session in progress is not lost. These requests carry the same course
-          context a tutor question does: the syllabus text for that course, any lecture notes you
-          uploaded to it, your tracked deadlines for it, and the message you sent. Google states
-          that prompts and responses sent through the paid Gemini API are not used to train its
-          models.
         </li>
         <li>
           <strong>Apple StoreKit:</strong> For processing in-app subscription purchases.

@@ -20,9 +20,12 @@
 // can be changed or rolled back without touching feature code or redeploying a
 // new bundle — set the secret and the next invocation picks it up.
 export const MODELS = {
-  /** Everything except the tutor: extraction, planning, content generation. */
+  /**
+   * The Gemini model, kept configured but UNROUTED — see ROUTING below, where
+   * every task currently resolves to OpenAI. Nothing reaches this model today.
+   */
   general: Deno.env.get('GEMINI_MODEL')?.trim() || 'gemini-2.5-flash-lite',
-  /** The AI Tutor only. */
+  /** OpenAI Luna. Serves every task: extraction, planning, generation, tutor. */
   tutor: Deno.env.get('TUTOR_OPENAI_MODEL')?.trim() || 'gpt-5.6-luna',
 } as const;
 
@@ -47,12 +50,24 @@ export enum AiTask {
   tutor = 'tutor',
 }
 
-/** The routing table. Exhaustive and total — every task has exactly one home. */
+/**
+ * The routing table. Exhaustive and total — every task has exactly one home.
+ *
+ * EVERYTHING IS ON OPENAI LUNA (2026-08-08, product decision). Gemini is not in
+ * use. The transport below (callGemini, geminiText, usageFromGemini) is kept
+ * deliberately: routing is the ONLY thing that changed, so bringing Gemini back
+ * for a task is a one-word edit on that task's line here, not a re-import.
+ *
+ * If you flip any line back to 'gemini', two things must move with it:
+ *   1. the Gemini entry in the privacy policy on semoraai.com (EN + /es), since
+ *      routing a task there makes Google a subprocessor for user content, and
+ *   2. the fallback policy in tutor-chat/index.ts, which is currently closed.
+ */
 const ROUTING: Record<AiTask, Provider> = {
-  [AiTask.generalAI]: 'gemini',
-  [AiTask.documentExtraction]: 'gemini',
-  [AiTask.planning]: 'gemini',
-  [AiTask.contentGeneration]: 'gemini',
+  [AiTask.generalAI]: 'openai',
+  [AiTask.documentExtraction]: 'openai',
+  [AiTask.planning]: 'openai',
+  [AiTask.contentGeneration]: 'openai',
   [AiTask.tutor]: 'openai',
 };
 
@@ -61,8 +76,10 @@ const ROUTING: Record<AiTask, Provider> = {
  * student used — not by anything in their message.
  *
  * The "Practice" and "Quick quiz" chips generate study material, so they are
- * contentGeneration and run on Gemini like every other generation feature.
- * Only an actual tutoring turn is AiTask.tutor and reaches Luna.
+ * contentGeneration; an actual tutoring turn is AiTask.tutor. Both resolve to
+ * Luna today, so the split no longer changes which model answers — it is kept
+ * because it still drives per-task telemetry in ai_call_log, and because it is
+ * the seam a future non-tutor provider would route on.
  */
 export function tutorTaskForMode(mode: string): AiTask {
   return mode === 'quiz' || mode === 'practice' ? AiTask.contentGeneration : AiTask.tutor;

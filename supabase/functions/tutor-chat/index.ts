@@ -484,7 +484,6 @@ serve(async (req) => {
     //    bounded. Responses are not stored by OpenAI.
     let reply: string | null = null;
     let servedModel: string = MODELS.tutor;
-    let usedFallback = false;
 
     // Quiz/practice generation is contentGeneration -> Gemini. Only a real
     // tutoring turn reaches Luna. Same deterministic table, applied per mode.
@@ -533,67 +532,35 @@ serve(async (req) => {
           ? 'fetch_error'
           : openAIResult.ok ? 'empty_response' : `http_${openAIResult.status || 0}`;
 
-        // FALLBACK POLICY.
-        // Luna is the tutor. Gemini may stand in ONLY for transient failures —
-        // network errors, 429, 5xx — so a student mid-question is not left with
-        // nothing. It must NOT stand in for:
-        //   • auth failures (401/403) — our credential is wrong, hiding it is worse
-        //   • malformed requests (400/404/422) — our bug, and Gemini would fail too
-        //   • safety refusals / empty completions — the model declined on purpose;
-        //     shopping the same prompt to another provider to get a different
-        //     answer is exactly what a safety boundary exists to prevent
-        // The two providers are never called concurrently: this runs only after
-        // OpenAI has exhausted its retries.
-        const mayFallback = openAIResult.retryable && !openAIResult.ok && Boolean(GEMINI_API_KEY);
-
+        // NO CROSS-PROVIDER FALLBACK (2026-08-08, product decision).
+        // Luna serves every task and Gemini is not in use, so a failed tutor
+        // turn surfaces as an error the student can retry rather than being
+        // quietly answered by a second provider. The path is deleted, not
+        // flagged off: a disabled branch that still holds a callGemini() is one
+        // edit away from sending syllabus text, uploaded notes and deadlines to
+        // a vendor the privacy policy no longer names.
+        //
+        // If it comes back, restore it from git (this file, before this commit)
+        // and re-add the Gemini entry to the privacy policy in the SAME change.
+        // Its policy was: stand in ONLY for transient failures (network, 429,
+        // 5xx); never for auth failures, where our own credential is wrong and
+        // hiding that is worse; never for malformed requests, which are our bug
+        // and would fail on Gemini too; and never for a safety refusal or empty
+        // completion, since reshopping a declined prompt to another provider is
+        // exactly what a safety boundary exists to prevent.
         await logAiCall(adminClient, userId, {
           task: TASK, provider: 'openai', model: MODELS.tutor,
           status: 'failed', errorCode: failCode,
           durationMs: openAIResult.durationMs, attempts: openAIResult.attempts,
         });
 
-        if (!mayFallback) {
-          console.error(`[tutor-chat] tutor failed, no fallback permitted (${failCode})`);
-          const msg = openAIResult.networkError
-            ? 'AI service unreachable. Please try again.'
-            : (openAIResult.status === 503 || openAIResult.status === 429)
-              ? 'The tutor is busy right now — please try again in a minute.'
-              : "The tutor couldn't answer that one. Try rephrasing your question.";
-          return jsonResponse({ error: msg, retryable: openAIResult.retryable }, 502);
-        }
-
-        console.warn(`[tutor-chat] Luna unavailable (${failCode}) — temporary Gemini fallback`);
-        const fb = await callGemini({
-          label: 'tutor-fallback',
-          system: groundingIntro,
-          parts: [{
-            text: input
-              .map((m: any) => `${String(m.role).toUpperCase()}: ${m.content}`)
-              .join('\n\n'),
-          }],
-          maxOutputTokens: 2048,
-          temperature: 0.2,
-        });
-        reply = fb.ok ? geminiText(fb.data) : null;
-        if (reply) {
-          usedFallback = true;
-          servedModel = MODELS.general;
-          const u = usageFromGemini(fb.data);
-          // Recorded as 'fallback' so fallback rate is visible in telemetry
-          // rather than being indistinguishable from a normal tutor turn.
-          await logAiCall(adminClient, userId, {
-            task: TASK, provider: 'gemini', model: MODELS.general,
-            status: 'fallback', errorCode: failCode,
-            durationMs: fb.durationMs, attempts: fb.attempts,
-            promptTokens: u.promptTokens, outputTokens: u.outputTokens,
-          });
-        } else {
-          await logAiCall(adminClient, userId, {
-            task: TASK, provider: 'gemini', model: MODELS.general,
-            status: 'failed', errorCode: 'fallback_failed',
-            durationMs: fb.durationMs, attempts: fb.attempts,
-          });
-        }
+        console.error(`[tutor-chat] tutor failed (${failCode})`);
+        const msg = openAIResult.networkError
+          ? 'AI service unreachable. Please try again.'
+          : (openAIResult.status === 503 || openAIResult.status === 429)
+            ? 'The tutor is busy right now — please try again in a minute.'
+            : "The tutor couldn't answer that one. Try rephrasing your question.";
+        return jsonResponse({ error: msg, retryable: openAIResult.retryable }, 502);
     } else {
         const u = usageFromOpenAI(openAIResult.data);
         await logAiCall(adminClient, userId, {
@@ -679,10 +646,10 @@ serve(async (req) => {
         reply: assistantText,
         citations,
         model: servedModel || null,
-        // Neutral signal that the primary tutor was unavailable and a stand-in
-        // answered. The client can soften its presentation; it deliberately
-        // carries no provider name — that stays in telemetry for support.
-        degraded: usedFallback || undefined,
+        // `degraded` used to ride here when a stand-in provider answered. With
+        // no cross-provider fallback there is no degraded state to report: a
+        // tutor turn either succeeds on Luna or returns an error above. No
+        // client ever read the field, so dropping it breaks nothing.
         duration_ms: Date.now() - startTime,
       },
       200,
