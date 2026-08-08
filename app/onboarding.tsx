@@ -77,6 +77,7 @@ export default function OnboardingScreen() {
   const [pain, setPain] = useState<PainPoint | null>(null);
   // The live-demo state machine lives up here so the footer CTA can drive it.
   const [demoPhase, setDemoPhase] = useState<DemoPhase>('idle');
+  const scrollRef = useRef<ScrollView>(null);
 
   const tap = () => { if (Platform.OS === 'ios') Haptics.selectionAsync(); };
 
@@ -105,8 +106,11 @@ export default function OnboardingScreen() {
   // Single choke point for step changes — every transition (next/back/skip)
   // logs one onboarding_step event with the step being ENTERED.
   const goTo = (target: number, dir: 'fwd' | 'back', via: 'next' | 'back' | 'skip' = dir === 'fwd' ? 'next' : 'back') => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
     dirRef.current = dir;
-    if (target === 1) setDemoPhase('idle'); // re-arm the demo when revisited
+    // Re-arm the demo only on FORWARD entry: going back to look at the result
+    // again used to wipe it and show the un-scanned page instead.
+    if (target === 1 && dir === 'fwd') setDemoPhase('idle');
     setStep(target);
     track('onboarding_step', { screen: 'onboarding', step: target, via });
   };
@@ -204,17 +208,20 @@ export default function OnboardingScreen() {
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
+          ref={scrollRef}
           style={{ flex: 1 }}
           contentContainerStyle={[styles.stageScroll, { maxWidth: stageMaxWidth }, isWide && styles.stageScrollCentered]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          showsVerticalScrollIndicator={false}
+          // Was false. When a step overflowed there was nothing to say so, which
+          // is how seven of twelve tools read as the whole list.
+          showsVerticalScrollIndicator
         >
           <Animated.View key={step} entering={entering} exiting={exiting}>
             {step === 0 && <Hook colors={colors} isWide={isWide} />}
             {step === 1 && <LiveDemo colors={colors} phase={demoPhase} onDone={() => setDemoPhase('done')} isWide={isWide} isLandscape={isLandscape} />}
             {step === 2 && <Outcome colors={colors} isWide={isWide} />}
-            {step === 3 && <Toolkit colors={colors} isWide={isWide} />}
+            {step === 3 && <Toolkit colors={colors} isWide={isWide} isLandscape={isLandscape} />}
             {step === 4 && (
               <Personalize
                 colors={colors}
@@ -232,7 +239,7 @@ export default function OnboardingScreen() {
       {/* Footer */}
       <View style={[styles.footer, { maxWidth: stageMaxWidth }, isLandscape && { paddingBottom: 8 }]}>
         {step === 0 && (
-          <Text style={[styles.reassure, { color: colors.ink3 }]}>Free to try · takes 30 seconds</Text>
+          <Text style={[styles.reassure, { color: colors.ink3 }]}>A quick tour first — you{'’'}ll see it read a real syllabus.</Text>
         )}
         <Animated.View style={[{ width: '100%' }, ctaStyle]}>
           <TouchableOpacity
@@ -406,7 +413,7 @@ function LiveDemo({ colors, phase, onDone, isWide, isLandscape }: { colors: C; p
     const iv = setInterval(() => {
       n += 1;
       setCount(n);
-      if (n >= 14) clearInterval(iv);
+      if (n >= RESULT_ROWS.length) clearInterval(iv);
     }, 55);
     return () => clearInterval(iv);
   }, [phase]);
@@ -448,7 +455,7 @@ function LiveDemo({ colors, phase, onDone, isWide, isLandscape }: { colors: C; p
         </>
       ) : (
         <Animated.View entering={FadeIn.duration(260)}>
-          <Text style={[styles.kicker, { color: colors.teal }]}>SCANNED IN 2.4 SECONDS</Text>
+          <Text style={[styles.kicker, { color: colors.teal }]}>STRAIGHT FROM THE PAGE</Text>
           <Text style={[styles.display2, { color: colors.ink }]}>
             <Text style={{ color: colors.brand }}>{count}</Text> deadlines,{'\n'}zero typing
           </Text>
@@ -464,7 +471,7 @@ function LiveDemo({ colors, phase, onDone, isWide, isLandscape }: { colors: C; p
             ))}
             <Animated.View entering={FadeInDown.delay(150 + RESULT_ROWS.length * 170).springify().damping(16)}>
               <View style={styles.row}>
-                <Text style={[styles.moreRow, { color: colors.brand }]}>+ 10 more, plus class times & office hours</Text>
+                <Text numberOfLines={2} style={[styles.moreRow, { color: colors.brand }]}>Plus class times and office hours</Text>
               </View>
             </Animated.View>
           </View>
@@ -522,6 +529,27 @@ function Outcome({ colors, isWide }: { colors: C; isWide: boolean }) {
           <Text style={styles.mockGradeBadgeText}>B+</Text>
         </View>
       </Animated.View>
+
+      {/* Reminders, Calendar and Widgets used to be three more rows on step 3,
+          below the fold — restating what the two mockups above already show.
+          Named here instead, in the dead space this step had to spare. */}
+      <Animated.View entering={FadeInDown.delay(540).springify().damping(17)}>
+        <Text style={[styles.plugsCaption, { color: colors.ink2 }]}>
+          And it plugs into the phone you already use.
+        </Text>
+        <View style={styles.plugsRow}>
+          {([
+            { icon: 'bell', label: 'Reminders' },
+            { icon: 'calendar', label: 'Calendar' },
+            { icon: 'th-large', label: 'Widgets' },
+          ] as { icon: React.ComponentProps<typeof FontAwesome>['name']; label: string }[]).map((p) => (
+            <View key={p.label} style={styles.plug}>
+              <FontAwesome name={p.icon} size={20} color={colors.brand} accessible={false} />
+              <Text numberOfLines={1} style={[styles.plugLabel, { color: colors.ink }]}>{p.label}</Text>
+            </View>
+          ))}
+        </View>
+      </Animated.View>
     </View>
   );
 }
@@ -536,59 +564,105 @@ function Outcome({ colors, isWide }: { colors: C; isWide: boolean }) {
  * onboarding without knowing the tutor, flashcards, focus timer, insights or
  * course spaces existed at all. Those are most of what they are paying for.
  *
- * Deliberately icon + label + one short line each: recognisable at a glance and
- * skimmable in about ten seconds. No screenshots, no paragraphs — the point is
- * familiarity, not a feature tour.
+ * This used to be twelve identical bordered rows. Every one rendered through
+ * the same recipe, so nothing said the AI Tutor is a headline capability and
+ * Widgets is a convenience — the eye read one ruled block, not twelve items,
+ * and only seven fit before the CTA cut the list off with no scroll indicator.
+ *
+ * Now: three named groups, each led by one anchor tool that carries a sentence,
+ * with two companions named underneath. The group headers are the same three
+ * nouns the lead used to spell out in prose, so the copy and the structure say
+ * it once instead of twice. Reminders, Calendar sync and Widgets moved to
+ * step 2, which already demonstrates all three with mockups.
  */
-const TOOLKIT: { icon: React.ComponentProps<typeof FontAwesome>['name']; label: string; note: string }[] = [
-  { icon: 'bolt', label: 'Smart Plan', note: 'Study time, scheduled around your classes' },
-  { icon: 'comments', label: 'AI Tutor', note: 'Answers from your syllabus and your notes' },
-  { icon: 'clone', label: 'Flashcards', note: 'Spaced repetition, generated from your material' },
-  { icon: 'clock-o', label: 'Focus timer', note: 'Pomodoro sessions tied to a task' },
-  { icon: 'line-chart', label: 'Grades & GPA', note: 'Your own scale, and what you need on the final' },
-  { icon: 'bar-chart', label: 'Workload', note: 'Spot the heavy weeks before they arrive' },
-  { icon: 'compass', label: 'Progress insights', note: 'Where you stand, and what to do next' },
-  { icon: 'bell', label: 'Reminders', note: '3-day, 1-day and same-day, at your times' },
-  { icon: 'calendar', label: 'Calendar sync', note: 'Apple Calendar, or export anywhere' },
-  { icon: 'th-large', label: 'Widgets', note: 'This week\'s deadlines on your home screen' },
-  { icon: 'graduation-cap', label: 'Canvas import', note: 'Pull in classes, assignments and grades' },
-  { icon: 'users', label: 'Course spaces', note: 'Share deadlines with your classmates' },
+type Tool = { icon: React.ComponentProps<typeof FontAwesome>['name']; label: string };
+const TOOLKIT_GROUPS: { header: string; anchor: Tool & { note: string }; also: Tool[] }[] = [
+  {
+    header: 'PLANNING',
+    anchor: { icon: 'bolt', label: 'Smart Plan', note: 'Study time, scheduled around your classes' },
+    // 'tachometer', not 'bar-chart': stacked under line-chart and compass, three
+    // chart glyphs at this size are indistinguishable in a vertical scan.
+    also: [{ icon: 'tachometer', label: 'Workload' }, { icon: 'compass', label: 'Progress insights' }],
+  },
+  {
+    header: 'STUDYING',
+    anchor: { icon: 'comments', label: 'AI Tutor', note: 'Answers from your syllabus and your notes' },
+    also: [{ icon: 'clone', label: 'Flashcards' }, { icon: 'clock-o', label: 'Focus timer' }],
+  },
+  {
+    header: 'GRADES & COURSES',
+    anchor: { icon: 'line-chart', label: 'Grades & GPA', note: 'Your own scale, and what you need on the final' },
+    also: [{ icon: 'graduation-cap', label: 'Canvas import' }, { icon: 'users', label: 'Course spaces' }],
+  },
 ];
 
-function Toolkit({ colors, isWide }: { colors: C; isWide: boolean }) {
+function ToolGroup({
+  colors, group, delay, columns,
+}: { colors: C; group: typeof TOOLKIT_GROUPS[number]; delay: number; columns: boolean }) {
+  return (
+    <Animated.View entering={FadeInDown.delay(delay).springify().damping(18)} style={{ flex: 1 }}>
+      <View style={styles.toolGroupHead}>
+        <Text style={[styles.toolGroupLabel, { color: colors.ink3 }]}>{group.header}</Text>
+        <View style={[styles.toolGroupRule, { backgroundColor: colors.line }]} />
+      </View>
+
+      <View
+        accessible
+        accessibilityLabel={`${group.anchor.label}. ${group.anchor.note}`}
+        style={[styles.toolCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+      >
+        <View style={[styles.toolIcon, { backgroundColor: colors.brand50 }]}>
+          <FontAwesome name={group.anchor.icon} size={15} color={colors.brand} accessible={false} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text numberOfLines={1} style={[styles.toolLabel, { color: colors.ink }]}>{group.anchor.label}</Text>
+          <Text numberOfLines={columns ? 3 : 2} style={[styles.toolNote, { color: colors.ink2 }]}>{group.anchor.note}</Text>
+        </View>
+      </View>
+
+      {/* Side by side, each group is only ~190pt wide; splitting that again into
+          two cells left ~85pt, which broke "Workload" and "Flashcards"
+          mid-word. Stack the companions when the groups are already columns. */}
+      <View style={columns ? styles.toolAlsoCol : styles.toolAlsoRow}>
+        {group.also.map((t) => (
+          <View key={t.label} style={styles.toolAlso}>
+            <FontAwesome name={t.icon} size={20} color={colors.brand} accessible={false} />
+            <Text numberOfLines={2} style={[styles.toolAlsoLabel, { color: colors.ink2 }]}>{t.label}</Text>
+          </View>
+        ))}
+      </View>
+    </Animated.View>
+  );
+}
+
+function Toolkit({ colors, isWide, isLandscape }: { colors: C; isWide: boolean; isLandscape: boolean }) {
+  // Side by side on a tablet or in landscape: all three headers land on screen
+  // at once, which is the clearest possible statement of "planning, studying,
+  // grades". Stacked on a phone, where three columns would be ~100pt wide.
+  const columns = isWide || isLandscape;
   return (
     <View style={styles.stepPad}>
-      <Text style={[styles.display2, { color: colors.ink }]}>One app for{'\n'}the whole semester</Text>
-      <Text style={[styles.lead, { color: colors.ink2, marginBottom: 20 }, isWide && { maxWidth: 700 }]}>
-        Planning, studying and grades in one place — so nothing lives in a
-        different app you forget to open.
+      <Text style={[styles.display2, { color: colors.ink }]}>
+        {columns ? 'One app for the whole semester' : 'One app for\nthe whole semester'}
+      </Text>
+      <Text style={[styles.lead, { color: colors.ink2, marginBottom: 18 }, isWide && { maxWidth: 700 }]}>
+        Planning, studying and grades — all in here.
       </Text>
 
-      {/* Above the grid on purpose. Twelve cards scroll, so a footnote at the
-          bottom was below the fold — and a student should learn which parts
-          cost money here, not at a paywall later. */}
-      <Text style={[styles.toolFootnote, { color: colors.ink3, borderColor: colors.line }]}>
-        Scanning, deadlines and same-day reminders are free. The study tools below come with Pro.
-      </Text>
-
-      <View style={styles.toolGrid}>
-        {TOOLKIT.map((tool, i) => (
-          <Animated.View
-            key={tool.label}
-            entering={FadeInDown.delay(60 + i * 45).springify().damping(18)}
-            style={[styles.toolCard, { backgroundColor: colors.card, borderColor: colors.line }]}
-          >
-            <View style={[styles.toolIcon, { backgroundColor: colors.brand50 }]}>
-              <FontAwesome name={tool.icon} size={13} color={colors.brand} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.toolLabel, { color: colors.ink }]}>{tool.label}</Text>
-              <Text style={[styles.toolNote, { color: colors.ink3 }]}>{tool.note}</Text>
-            </View>
-          </Animated.View>
+      <View style={columns ? styles.toolColumns : undefined}>
+        {TOOLKIT_GROUPS.map((g, i) => (
+          <ToolGroup key={g.header} colors={colors} group={g} delay={60 + i * 90} columns={columns} />
         ))}
       </View>
 
+      {/* Below the tools, not above them. This used to be the first thing on
+          the step — a price fence read before a single feature name, which is
+          the opposite of introducing the app. It stays honest, and now it fits
+          on screen, which was the original reason for hoisting it. All nine
+          tools above are Pro, so it can say exactly that. */}
+      <Text style={[styles.toolFootnote, { color: colors.ink2, borderColor: colors.line }]}>
+        Free every month: 5 scans, 4 courses and same-day reminders. The tools above are part of Pro.
+      </Text>
     </View>
   );
 }
@@ -685,12 +759,26 @@ const styles = StyleSheet.create({
   langRow: { flexDirection: 'row', gap: 2, borderWidth: 1, borderRadius: 999, padding: 2 },
   langPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   langPillText: { fontSize: 12, fontWeight: '700' },
-  toolGrid: { gap: 6 },
-  toolCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderRadius: 13, paddingHorizontal: 11, paddingVertical: 8 },
-  toolIcon: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  toolColumns: { flexDirection: 'row', gap: 16 },
+  toolGroupHead: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, marginBottom: 7 },
+  toolGroupLabel: { fontSize: 11.5, fontWeight: '800', letterSpacing: 1.4 },
+  toolGroupRule: { flex: 1, height: 1 },
+  toolCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderWidth: 1, borderRadius: 13, paddingHorizontal: 11, paddingVertical: 9 },
+  toolIcon: { width: 28, height: 28, borderRadius: 9, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   toolLabel: { fontSize: 14.5, fontWeight: '700' },
-  toolNote: { fontSize: 12, lineHeight: 16, marginTop: 1 },
-  toolFootnote: { fontSize: 12.5, lineHeight: 18, marginBottom: 14, borderTopWidth: 0 },
+  toolNote: { fontSize: 12.5, lineHeight: 17, marginTop: 1 },
+  toolAlsoRow: { flexDirection: 'row', gap: 8, marginTop: 6 },
+  toolAlsoCol: { flexDirection: 'column', gap: 0, marginTop: 4 },
+  toolAlso: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 7, paddingHorizontal: 4 },
+  toolAlsoLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
+  // borderTopWidth was 0 while a borderColor was passed, so the rule meant to
+  // separate this from the tools never drew and it read as more body copy.
+  toolFootnote: { fontSize: 12.5, lineHeight: 18, marginTop: 14, paddingTop: 12, borderTopWidth: 1 },
+
+  plugsCaption: { fontSize: 12.5, lineHeight: 18, marginTop: 18, marginBottom: 10 },
+  plugsRow: { flexDirection: 'row', gap: 8 },
+  plug: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: 4 },
+  plugLabel: { fontSize: 13, fontWeight: '700' },
 
   kicker: { fontSize: 12, fontWeight: '800', letterSpacing: 2, marginBottom: 14 },
   display: { fontFamily: FONTS.display, fontSize: 42, lineHeight: 46, letterSpacing: -1 },

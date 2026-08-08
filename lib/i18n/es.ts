@@ -1377,6 +1377,43 @@ export const ES: Record<string, string> = {
   'A classmate shared a course': 'Un compañero compartió un curso',
   'A few things are worth correcting now': 'Hay algunos puntos que conviene corregir ahora',
   'A real syllabus.\nWatch this.': 'Un programa real.\nMira esto.',
+
+  // ── Onboarding step 3: the toolkit, regrouped ──────────────────────────
+  // Group headers. Kept short: they sit beside a rule that takes the rest of
+  // the row, and all three are on one line side by side on a tablet.
+  'PLANNING': 'PLANIFICACIÓN',
+  'STUDYING': 'ESTUDIO',
+  'GRADES & COURSES': 'NOTAS Y CURSOS',
+  'Planning, studying and grades — all in here.': 'Planificación, estudio y notas: todo aquí.',
+  // Landscape/tablet variant of the headline, which wraps naturally there
+  // instead of using the phone's hard line break.
+  'One app for the whole semester': 'Una sola app para todo el semestre',
+  'Free every month: 5 scans, 4 courses and same-day reminders. The tools above are part of Pro.':
+    'Gratis cada mes: 5 escaneos, 4 cursos y recordatorios el mismo día. Las herramientas de arriba son parte de Pro.',
+
+  // ── Onboarding step 2: the three things it plugs into ──────────────────
+  'And it plugs into the phone you already use.': 'Y se conecta con el teléfono que ya usas.',
+
+  // ── Onboarding step 0 / demo ───────────────────────────────────────────
+  'A quick tour first — you’ll see it read a real syllabus.':
+    'Primero un recorrido rápido: lo verás leer un programa real.',
+  'STRAIGHT FROM THE PAGE': 'DIRECTO DE LA PÁGINA',
+  'Plus class times and office hours': 'Más los horarios de clase y de atención',
+
+  // The sample syllabus the demo scans. These shipped in English inside an
+  // otherwise-Spanish screen. Each renders with numberOfLines={1} in a narrow
+  // column, so the Spanish is kept at or under the English width — "Tarea 3"
+  // rather than "Lista de problemas 3", which truncates the time.
+  'PSYCH 201 · Cognitive Psychology': 'PSYCH 201 · Psicología cognitiva',
+  'Fall — Dr. Reyes · MWF 10:00': 'Otoño — Dra. Reyes · L-M-V 10:00',
+  'Weekly readings: chapters 1–14': 'Lecturas semanales: capítulos 1–14',
+  'Quizzes every other Friday': 'Cuestionarios cada dos viernes',
+  'Midterm Exam — Oct 14, in class': 'Examen parcial — 14 de oct., en clase',
+  'Problem Set 3 — due Oct 21, 11:59 PM': 'Tarea 3 — entrega 21 de oct., 11:59 p. m.',
+  'Final Project — due Dec 9': 'Proyecto final — entrega 9 de dic.',
+  'Late work: −10% per day': 'Entrega tardía: −10 % por día',
+  'Group Presentation — Nov 4': 'Presentación grupal — 4 de nov.',
+  'Office hours: Tue 2–4, Rm 114': 'Tutorías: mar. 2–4, aula 114',
   'A weighted extra-credit task adds points without increasing the total.': 'Una tarea de crédito extra con valor suma puntos sin aumentar el total.',
   'about 1 hour after the deadline': 'aproximadamente 1 hora después de la fecha límite',
   'Account Created': 'Cuenta creada',
