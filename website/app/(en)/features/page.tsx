@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { FeatureShowcase, type ShowcaseItem } from '@/components/FeatureShowcase';
 import { enAlternates } from '@/lib/hreflang';
 import type { ComponentType } from 'react';
 import Image from 'next/image';
@@ -16,16 +17,6 @@ export const metadata: Metadata = {
     'Everything Semora does: AI syllabus scanning, grade tracking, Smart Plan, flashcards, focus timer, AI tutor, Course Spaces, and Canvas sync.',
   alternates: enAlternates('/features'),
 };
-
-interface ShowcaseItem {
-  image: string;
-  alt: string;
-  tier: 'free' | 'pro';
-  title: string;
-  body: string;
-  bullets: string[];
-  href: string;
-}
 
 const SHOWCASE: ShowcaseItem[] = [
   {
@@ -138,39 +129,11 @@ export default function FeaturesPage() {
         </div>
       </section>
 
-      <section className={styles.showcase}>
-        <div className={styles.showcaseHead}>
-          <h2>Five ways Semora organizes your semester</h2>
-          <p>The core loop, from a syllabus photo to a grade you can trust.</p>
-        </div>
-
-        {SHOWCASE.map((item, i) => (
-          <Reveal key={item.title} delay={i * 60}>
-            <div className={`${styles.showcaseRow} ${i % 2 === 1 ? styles.reverse : ''}`}>
-              <div className={styles.showcaseImage}>
-                <Image src={item.image} alt={item.alt} width={260} height={562} />
-              </div>
-              <div className={styles.showcaseText}>
-                <span
-                  className={`${styles.showcaseTier} ${item.tier === 'pro' ? styles.tierPro : styles.tierFree}`}
-                >
-                  {item.tier === 'pro' ? 'Pro' : 'Free'}
-                </span>
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-                <ul>
-                  {item.bullets.map((b) => (
-                    <li key={b}>{b}</li>
-                  ))}
-                </ul>
-                <Link href={item.href} className={styles.showcaseLink}>
-                  Learn more →
-                </Link>
-              </div>
-            </div>
-          </Reveal>
-        ))}
-      </section>
+      <FeatureShowcase
+        heading="Five ways Semora organizes your semester"
+        sub="The core loop, from a syllabus photo to a grade you can trust."
+        items={SHOWCASE}
+      />
 
       <section className={styles.gridSection}>
         <div className={styles.gridHead}>

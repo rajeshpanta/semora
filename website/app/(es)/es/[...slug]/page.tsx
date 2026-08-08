@@ -5,11 +5,12 @@ import { notFound } from 'next/navigation';
 import styles from './spanish.module.css';
 import { LongFormPage } from '@/components/LongFormPage';
 import { PricingCards } from '@/components/PricingCards';
+import { FeatureShowcase } from '@/components/FeatureShowcase';
 import { GpaCalculator } from '@/components/GpaCalculator';
 import { PomodoroTimer } from '@/components/PomodoroTimer';
 import { SupportForm } from '@/components/SupportForm';
 import { SUPPORT_EMAIL } from '@/lib/semora-facts';
-import { FEATURES_ES } from '@/lib/es-facts';
+import { FEATURES_ES, SHOWCASE_ES } from '@/lib/es-facts';
 import {
   getSpanishPage,
   SPANISH_BLOG_POSTS,
@@ -72,7 +73,17 @@ function DirectoryWidget({ config }: { config: SpanishPageConfig }) {
   }
   if (config.kind === 'features-index') {
     return (
-      <div className={styles.cardGrid}>
+      <>
+        {/* /features has shown five screenshots since launch while
+            /es/funciones showed none — the last asymmetry between the two
+            locales. Same component, Spanish assets and Spanish copy. */}
+        <FeatureShowcase
+          locale="es"
+          heading="Cinco formas en que Semora organiza tu semestre"
+          sub="El recorrido completo: de la foto de un programa a una calificación en la que puedes confiar."
+          items={SHOWCASE_ES}
+        />
+        <div className={styles.cardGrid}>
         {FEATURES_ES.map((feature) => (
           <Link key={feature.slug} href={`/es/funciones/${feature.slug}`} className={styles.card}>
             <span className={styles.cardMeta}>{feature.tier === 'pro' ? 'Pro' : 'Gratis'}</span>
@@ -81,7 +92,8 @@ function DirectoryWidget({ config }: { config: SpanishPageConfig }) {
             <span className={styles.cardLink}>Conocer la función →</span>
           </Link>
         ))}
-      </div>
+        </div>
+      </>
     );
   }
   if (config.kind === 'feature') {

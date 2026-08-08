@@ -110,3 +110,80 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
 export function getSpanishFeature(slug: string): SpanishFeatureFact | undefined {
   return FEATURES_ES.find((feature) => feature.slug === slug);
 }
+
+/**
+ * The screenshot showcase on /es/funciones.
+ *
+ * Written in Spanish rather than translated from the English page: the bullets
+ * are shorter than their English counterparts because Spanish runs longer and
+ * these sit in a narrow column, and the phrasing uses the site's own
+ * vocabulary — "escaneo" (the app's word, not "análisis"), "programa de la
+ * materia" for the syllabus, "curso" for the record inside Semora.
+ */
+export const SHOWCASE_ES = [
+  {
+    image: '/screenshots/es/scan-syllabus.png',
+    alt: 'Pantalla de escaneo de Semora con las opciones de tomar una foto, subir un PDF o elegir un archivo',
+    tier: 'free' as const,
+    title: 'Escanea el programa y ten el semestre listo',
+    body: 'Toma una foto, sube un PDF, arrastra el archivo en la web o pega el texto que copiaste del programa o de tu plataforma académica. OpenAI GPT-5.6 Luna lo lee y extrae el nombre del curso, el profesor, los horarios, los criterios de evaluación y cada tarea, examen, cuestionario, proyecto y lectura con su fecha de entrega.',
+    bullets: [
+      'Foto de hasta 5 páginas por escaneo',
+      'PDF, arrastrar y soltar o texto pegado',
+      '5 escaneos gratis al mes',
+    ],
+    href: '/es/funciones/escaner-de-programas',
+  },
+  {
+    image: '/screenshots/es/never-miss-deadline.png',
+    alt: 'Pantalla Hoy de Semora con la próxima entrega, las tareas atrasadas y el resumen de la semana',
+    tier: 'free' as const,
+    title: 'No se te pasa ninguna entrega',
+    body: 'Todas las fechas de todos tus cursos llegan a un mismo lugar, y lo que vence primero aparece arriba. Los recordatorios del mismo día vienen activados, y un resumen semanal te muestra tareas, exámenes y cursos de un vistazo, incluido lo que quedó atrasado.',
+    bullets: [
+      'Una sola lista para todos tus cursos',
+      'Recordatorios el mismo día, incluidos gratis',
+      'Lo atrasado se marca solo',
+    ],
+    href: '/es/escaner-de-programa-de-estudios',
+  },
+  {
+    image: '/screenshots/es/track-grades.png',
+    alt: 'Pantalla de un curso en Semora con la calificación actual calculada a partir del trabajo ya evaluado',
+    tier: 'free' as const,
+    title: 'Sabes cómo vas en cada curso',
+    body: 'Anota la calificación de cada tarea evaluada y Semora calcula tu promedio ponderado al momento, contando solo lo que ya está calificado. Así siempre sabes en qué punto estás de verdad, no una estimación.',
+    bullets: [
+      'Promedio ponderado, no un promedio simple',
+      'Se actualiza en cuanto anotas una nota',
+      'Pro añade tendencias, exportación CSV y vista para imprimir',
+    ],
+    href: '/es/funciones/calificaciones',
+  },
+  {
+    image: '/screenshots/es/canvas-sync.png',
+    alt: 'Pantalla de plataformas educativas de Semora con los cursos conectados y el estado de sincronización',
+    tier: 'free' as const,
+    title: 'Conecta Canvas sin esperar a OAuth',
+    body: 'Conecta Canvas con un token de acceso personal que generas tú mismo dentro de Canvas, sin depender de una revisión de OAuth. Una vez conectado, las tareas y calificaciones se importan solas, y los recordatorios se reprograman cuando el profesor cambia una fecha.',
+    bullets: [
+      'Token personal, sin esperar a OAuth',
+      'Tareas y calificaciones se importan solas',
+      'El token no sale de tu dispositivo',
+    ],
+    href: '/es/funciones/sincronizacion-canvas',
+  },
+  {
+    image: '/screenshots/es/plan-semester.png',
+    alt: 'Calendario mensual de Semora con las entregas de varios cursos marcadas a lo largo del mes',
+    tier: 'free' as const,
+    title: 'Todo el semestre en una sola vista',
+    body: 'Cada clase, entrega y examen del semestre en un mismo calendario: vista de mes o de lista, con un color por curso, para que nada te tome por sorpresa.',
+    bullets: [
+      'Vista de mes y vista de lista',
+      'Un color por curso',
+      'Pro añade sincronización con el calendario del dispositivo y exportación .ics',
+    ],
+    href: '/es/planificador-de-estudio-con-ia',
+  },
+];
