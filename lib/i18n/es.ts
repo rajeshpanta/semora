@@ -1428,6 +1428,10 @@ export const ES: Record<string, string> = {
   'Could not sync tasks. Check calendar permissions and try again.': 'No se pudieron sincronizar las tareas. Revisa los permisos del calendario e inténtalo de nuevo.',
   'Could not sync your class schedule. Check calendar permissions and try again.': 'No se pudo sincronizar tu horario de clases. Revisa los permisos del calendario e inténtalo de nuevo.',
   'Could not update password. Please try again.': 'No se pudo actualizar la contraseña. Inténtalo de nuevo.',
+  // Must stay in the dictionary: the generic "<title> due <when>" deadline-chip
+  // pattern in spanishPattern() would otherwise fire on this and render
+  // "Courses, assignments, · entrega dates and points" on the LMS screen.
+  'Courses, assignments, due dates and points': 'Cursos, tareas, fechas de entrega y puntos',
   'Courses and gradebook assignments': 'Cursos y tareas del libro de calificaciones',
   'Create account': 'Crear cuenta',
   'Create Duplicate': 'Crear duplicado',
@@ -1473,6 +1477,9 @@ export const ES: Record<string, string> = {
   'Find my courses': 'Buscar mis cursos',
   'Finding every date that matters.': 'Encontrando cada fecha importante.',
   'Finding exam dates…': 'Buscando fechas de exámenes…',
+  // Same reason as the Canvas detail above — without an entry the deadline-chip
+  // pattern turns this into "Extracting assignment · entrega dates…".
+  'Extracting assignment due dates…': 'Extrayendo fechas de entrega…',
   'Focus': 'Enfoque',
   'For the URL, use your school’s Canvas web address — often yourschool.instructure.com.': 'Para la URL, usa la dirección web de Canvas de tu institución — a menudo yourschool.instructure.com.',
   'Found deadlines!': '¡Encontramos las entregas!',

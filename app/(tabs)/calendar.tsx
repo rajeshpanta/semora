@@ -40,6 +40,12 @@ const DAY_LABELS: Record<'en' | 'es', readonly string[]> = {
   en: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
   es: ['D', 'L', 'M', 'M', 'J', 'V', 'S'],
 };
+// Sits under the time in a 42pt-wide agenda column. Translating "DUE" through
+// the phrase table yields "ENTREGA", which is too wide and wrapped mid-word as
+// "ENTRE / GA". "VENCE" is the natural short form and fits, and it has to live
+// here rather than in the dictionary: an entry for 'DUE' would also capture the
+// lowercase 'due' used inside sentences, since lookups are case-insensitive.
+const DUE_LABELS: Record<'en' | 'es', string> = { en: 'DUE', es: 'VENCE' };
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
 function getCalendarDays(year: number, month: number, todayDate: Date) {
@@ -304,7 +310,7 @@ export default function CalendarScreen() {
                         {task.due_time ? (
                           <>
                             <Text style={[styles.agendaTime, { color: colors.ink }, !task.is_completed && { color: colors.coral }]}>{task.due_time.slice(0, 5)}</Text>
-                            <Text style={[styles.agendaDueLabel, { color: colors.ink3 }, !task.is_completed && { color: colors.coral }]}>DUE</Text>
+                            <RawText numberOfLines={1} style={[styles.agendaDueLabel, { color: colors.ink3 }, !task.is_completed && { color: colors.coral }]}>{DUE_LABELS[locale]}</RawText>
                           </>
                         ) : (
                           <Text style={[styles.agendaTime, { color: colors.ink }]}>--:--</Text>

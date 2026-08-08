@@ -212,6 +212,14 @@ function spanishPattern(input: string): string | null {
       : base;
   }
 
+  // Grade card meta, built as template literals inside one expression child —
+  // a shape the joined-JSX audit does not inspect, so these shipped in English
+  // and were caught only by looking at a Spanish screenshot.
+  match = input.match(/^(\d+)% of (\d+)% attempted$/);
+  if (match) return `${match[1]} % de ${match[2]} % evaluado`;
+  match = input.match(/^(\d+)% of category mix reporting$/);
+  if (match) return `${match[1]} % de las categorías con datos`;
+
   // Tutor. The lookahead matters: a bare /^Explain (.+)$/ here would swallow
   // "Explain the assignment “…” and help me make a plan to complete it.",
   // which has its own rule further down and would never be reached.
