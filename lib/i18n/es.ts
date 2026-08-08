@@ -1757,4 +1757,64 @@ export const ES: Record<string, string> = {
   'Pull in classes, assignments and grades': 'Trae tus clases, tareas y calificaciones',
   'Course spaces': 'Espacios de curso',
   'Share deadlines with your classmates': 'Comparte entregas con tus compañeros',
+
+  // ── Server-returned strings ──────────────────────────────────────
+  // Composed in edge functions, so they never passed through this catalogue
+  // even though the app already displays them via the localized Alert,
+  // which calls translate() on err.message. Adding them here is a
+  // client-only fix — no function redeploy.
+  // Returned by supabase/functions/parse-syllabus — the scan flow
+  'File too large. Maximum size is approximately 11 MB.': 'El archivo es demasiado grande. El tamaño máximo es de unos 11 MB.',
+  'We\'re seeing unusually high demand right now — please try again shortly.': 'Ahora mismo hay mucha demanda. Vuelve a intentarlo en un momento.',
+  'Paste more of the syllabus text — that looks too short to extract anything from.': 'Pega más texto del programa: es demasiado corto para extraer nada.',
+  'This syllabus is very dense and the response was cut off. Try scanning one course (or fewer pages) at a time.': 'Este programa es muy denso y la respuesta se cortó. Escanea un curso (o menos páginas) cada vez.',
+  'No response from the AI service': 'El servicio de IA no respondió.',
+  'Failed to parse AI response. Please try again with a clearer document.': 'No se pudo interpretar la respuesta de la IA. Inténtalo con un documento más nítido.',
+  'This doesn\'t look like a course syllabus. Try scanning your syllabus, course outline, or class schedule.': 'Esto no parece el programa de un curso. Escanea el programa, el temario o el horario de clases.',
+  'Each page needs a base64 string': 'Cada página necesita una cadena base64.',
+  'Missing base64 or mimeType in request body': 'Falta base64 o mimeType en la solicitud.',
+  'base64 must be a string': 'base64 debe ser una cadena.',
+  // Returned by supabase/functions/tutor-chat
+  'The AI tutor is a Pro feature. Upgrade to Pro to start studying with it.': 'El Tutor con IA es una función Pro. Hazte Pro para empezar a estudiar con él.',
+  'conversationId is required': 'Falta el identificador de la conversación.',
+  'message is required': 'Falta el mensaje.',
+  'Message too long': 'El mensaje es demasiado largo.',
+  'A course, practice question, and answer are required': 'Se necesitan un curso, una pregunta de práctica y una respuesta.',
+  'Couldn\'t build a question right now. Please try again.': 'No se pudo crear una pregunta ahora mismo. Inténtalo de nuevo.',
+  'The tutor is unavailable right now. Please try again in a moment.': 'El Tutor no está disponible ahora mismo. Inténtalo en un momento.',
+  // Returned by supabase/functions/generate-flashcards
+  'OpenAI API key not configured on server': 'La clave de la API de OpenAI no está configurada en el servidor.',
+  'Generating flashcards with AI is a Pro feature. Upgrade to Pro to try it.': 'Generar tarjetas de estudio con IA es una función Pro. Hazte Pro para probarlo.',
+  'courseId is required': 'Falta el identificador del curso.',
+  'Nothing to generate from yet — scan this course\'s syllabus or upload lecture notes first.': 'Todavía no hay material: escanea el programa de este curso o sube apuntes primero.',
+  'That generated more than fits in one batch. Try again — it usually succeeds on retry.': 'Se generó más de lo que cabe en un lote. Inténtalo otra vez; suele funcionar al segundo intento.',
+  'Couldn\'t generate flashcards from this course yet. Try again, or add more material first.': 'Todavía no se pueden generar tarjetas de este curso. Inténtalo de nuevo o añade más material.',
+  // Returned by supabase/functions/share-course
+  'Missing courseId': 'Falta el identificador del curso.',
+  'Sharing a course is a Pro feature. Upgrade to share your deadlines with classmates.': 'Compartir un curso es una función Pro. Hazte Pro para compartir tus entregas con tus compañeros.',
+  'Could not create share link. Please try again.': 'No se pudo crear el enlace para compartir. Inténtalo de nuevo.',
+  // Returned by supabase/functions/lms-sync
+  'Method not allowed': 'Método no permitido.',
+  'Automatic LMS sync is available with Semora Pro.': 'La sincronización automática con tu plataforma está disponible con Semora Pro.',
+  'Unsupported LMS provider': 'Plataforma no compatible.',
+  'A valid LMS access token is required': 'Se necesita un token de acceso válido de la plataforma.',
+  'LMS connection is required': 'Se necesita una conexión con la plataforma.',
+  'Reconnect this LMS before enabling automatic sync.': 'Vuelve a conectar esta plataforma antes de activar la sincronización automática.',
+  'Invalid action': 'Acción no válida.',
+  // Returned by supabase/functions/redeem-referral
+  'A referral code is required': 'Falta el código de invitación.',
+  'Invalid referral code': 'Código de invitación no válido.',
+  'That referral code doesn\'t exist.': 'Ese código de invitación no existe.',
+  'You can\'t redeem your own referral code.': 'No puedes canjear tu propio código de invitación.',
+  'You\'ve already redeemed a referral code.': 'Ya has canjeado un código de invitación.',
+  // Returned by supabase/functions/validate-receipt — purchase restore
+  'Request body too large': 'La solicitud es demasiado grande.',
+  'Too many receipt validations. Please wait a few minutes before trying again.': 'Demasiadas validaciones de compra. Espera unos minutos antes de volver a intentarlo.',
+  'Server is not configured for receipt validation. Please contact support.': 'El servidor no está configurado para validar compras. Escríbenos a soporte.',
+  'Missing or malformed receipt': 'Falta el recibo de compra o no es válido.',
+  'Android receipt validation not yet supported': 'La validación de compras de Android todavía no es compatible.',
+  'Invalid purchase token': 'Token de compra no válido.',
+  'This subscription is already linked to a different Semora account.': 'Esta suscripción ya está vinculada a otra cuenta de Semora.',
+  'This subscription was previously linked to a Semora account that has been deleted.': 'Esta suscripción estaba vinculada a una cuenta de Semora que se ha eliminado.',
+  'Could not save entitlement. Please try again.': 'No se pudo guardar la suscripción. Inténtalo de nuevo.',
 };
