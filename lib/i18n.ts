@@ -108,6 +108,11 @@ function spanishPattern(input: string): string | null {
   match = input.match(/^The timer keeps running in the background\. You['’]ll get a ?notification the moment your (focus block|break) ends\.$/);
   if (match) return `El temporizador sigue funcionando en segundo plano. Recibirás una notificación en cuanto termine tu ${match[1] === 'break' ? 'descanso' : 'bloque de enfoque'}.`;
 
+  // Smart Plan capacity warning. Previously the greedy "<x> due <y>" rule
+  // mangled this into half-Spanish; with that rule guarded it needs a real one.
+  match = input.match(/^Your current capacity leaves (.+?) due within two weeks unscheduled\. Increase daily time or reduce task estimates\.$/);
+  if (match) return `Con tu capacidad actual quedan ${translate(match[1], 'es')} sin programar que vencen en dos semanas. Aumenta el tiempo diario o reduce las estimaciones de tus tareas.`;
+
   // Tutor. The lookahead matters: a bare /^Explain (.+)$/ here would swallow
   // "Explain the assignment “…” and help me make a plan to complete it.",
   // which has its own rule further down and would never be reached.
@@ -178,8 +183,18 @@ function spanishPattern(input: string): string | null {
   // "Next up:" in place on an otherwise fully Spanish screen.
   match = input.match(/^Next up: (.+) \((.+)\) — due (.+)$/i);
   if (match) return `Lo siguiente: ${match[1]} (${match[2]}) · entrega ${match[3]}`;
+  // "<item> due <when>" — a deadline chip, e.g. "Problem Set 1 due Friday".
+  // The guard is the point. Without it this fires on ANY prose containing the
+  // word "due" and splices "· entrega" into the middle of a sentence: the
+  // onboarding line "Reminders before every due date. Deadlines synced to your
+  // phone's calendar…" came out as "Reminders before every · entrega date.
+  // Deadlines synced…" — mangled, on the second screen a new Spanish user sees.
+  // A real chip is one short clause, so refuse anything that runs past a
+  // sentence boundary or reads as prose.
   match = input.match(/^(.+) due (.+)$/i);
-  if (match) return `${match[1]} · entrega ${match[2]}`;
+  if (match && !input.includes('. ') && input.length <= 72) {
+    return `${match[1]} · entrega ${match[2]}`;
+  }
   match = input.match(/^Ask about (.+)…$/);
   if (match) return `Pregunta sobre ${match[1]}…`;
   match = input.match(/^Remove reminder (.+)$/);
