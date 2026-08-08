@@ -505,7 +505,7 @@ async function syncProfileSettings(session: Session) {
     const userId = session.user.id;
     const { data: profile } = await supabase
       .from('profiles')
-      .select('timezone, preferred_language')
+      .select('timezone, preferred_language, email, display_name')
       .eq('id', userId)
       .maybeSingle();
 
@@ -520,7 +520,10 @@ async function syncProfileSettings(session: Session) {
     //   2. Profile row missing — defensive against a brand-new OAuth user
     //      whose handle_new_user trigger hasn't propagated yet. Upsert
     //      lets us write either way without a follow-up read.
-    const updates: { id: string; timezone?: string; preferred_language?: 'en' | 'es' } = { id: userId };
+    const updates: {
+      id: string; timezone?: string; preferred_language?: 'en' | 'es';
+      email?: string; display_name?: string;
+    } = { id: userId };
     if (!profile || !profile.timezone) {
       const detectedTz =
         Platform.OS === 'web'
@@ -529,11 +532,37 @@ async function syncProfileSettings(session: Session) {
       updates.timezone = detectedTz;
     }
     if (!profile || profile.preferred_language !== preferredLanguage) updates.preferred_language = preferredLanguage;
+
+    // Mirror identity into the profile so it survives a reinstall or a second
+    // device, and so anything server-side (push copy, a shared Course Space)
+    // has a name to use. Neither field is written anywhere else: the trigger
+    // only ever stored the email, and the onboarding name lived exclusively in
+    // this device's SecureStore, so signing in on a new phone lost it.
+    const authEmail = session.user.email?.trim();
+    if (authEmail && profile?.email !== authEmail) updates.email = authEmail;
+
+    // Apple supplies a name only on the FIRST authorization, so prefer whatever
+    // is already on the auth record, then fall back to the name the student
+    // typed during onboarding.
+    const metaName = typeof session.user.user_metadata?.full_name === 'string'
+      ? session.user.user_metadata.full_name.trim()
+      : '';
+    const localName = useAppStore.getState().userName?.trim() ?? '';
+    const resolvedName = metaName || localName;
+    if (resolvedName && profile?.display_name !== resolvedName) {
+      updates.display_name = resolvedName;
+    }
     if (Object.keys(updates).length > 1) {
       await supabase.from('profiles').upsert(updates, { onConflict: 'id' });
     }
     if (metadataLanguage !== preferredLanguage) {
       await supabase.auth.updateUser({ data: { preferred_language: preferredLanguage } });
+    }
+    // The greeting reads user_metadata, not the profile, so an onboarding-only
+    // name has to be promoted there or "Good morning, <name>" stays generic on
+    // every other device.
+    if (!metaName && localName) {
+      await supabase.auth.updateUser({ data: { full_name: localName } });
     }
   } catch {
     // Non-critical — settings are retried on the next auth/session event.
