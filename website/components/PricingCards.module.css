@@ -1,67 +1,69 @@
+/* Three plans side by side. The old billing toggle and its .toggle/.toggleBtn/
+   .toggleBtnActive rules are gone with it — only one Pro price could be on
+   screen at a time, which is what made the page hard to read. */
+
 .wrap {
-  max-width: 780px;
+  /* Was 780px for two cards. Three need room before they wrap. */
+  max-width: 1120px;
   margin: 0 auto;
-}
-
-.toggle {
-  display: flex;
-  justify-content: center;
-  gap: 4px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 4px;
-  width: fit-content;
-  margin: 0 auto 36px;
-  box-shadow: 0 1px 2px rgba(28, 27, 31, 0.04);
-}
-
-.toggleBtn {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--ink2);
-  font-size: 14px;
-  font-weight: 600;
-  padding: 9px 18px;
-  border-radius: 999px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.toggleBtn:hover {
-  color: var(--ink);
-}
-
-.toggleBtnActive,
-.toggleBtnActive:hover {
-  background: var(--ink-deep);
-  color: #fff;
-}
-
-.saveBadge {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--teal);
-  background: var(--teal-50);
-  padding: 2px 8px;
-  border-radius: 999px;
-  letter-spacing: 0.01em;
-}
-
-.toggleBtnActive .saveBadge {
-  color: var(--glow-light);
-  background: rgba(255, 255, 255, 0.14);
+  /* Sized against the CONTAINER, not the viewport. /pricing hands these cards
+     the full 1120px, but the Spanish /es/precios renders them inside
+     LongFormPage's .widget slot next to a sidebar — about 750px at the same
+     1280px viewport. A viewport media query cannot tell those apart, and
+     auto-fit put two cards on the first row and orphaned the third, which is
+     the recommended plan. */
+  container-type: inline-size;
 }
 
 .row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  /* Stacked by default: one column is always correct, and it is what a phone
+     and any narrow slot should get. */
+  grid-template-columns: 1fr;
   gap: 24px;
   margin-bottom: 32px;
+  align-items: start;
+}
+
+/* Three across as soon as the container can hold them. Never two — with three
+   plans that always leaves one alone on the second row. */
+@container (min-width: 640px) {
+  .row {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  /* At ~234px per card the default 32px padding leaves only ~170px of measure
+     for a 14-item list. */
+  .card {
+    padding: 22px;
+  }
+
+  .amount {
+    font-size: 32px;
+  }
+
+  .list {
+    font-size: 13.5px;
+  }
+}
+
+@container (min-width: 940px) {
+  .row {
+    gap: 24px;
+  }
+
+  .card {
+    padding: 32px;
+  }
+
+  .amount {
+    font-size: 40px;
+  }
+
+  .list {
+    font-size: 14.5px;
+  }
 }
 
 .card {
@@ -80,7 +82,22 @@
   position: relative;
 }
 
+/* Marks the recommended plan the way the rest of the site marks things — an
+   uppercase brand-coloured label, like .eyebrow in BlogPostHero/ShareLanding —
+   rather than a floating filled ribbon, which would read louder than anything
+   else on the site. The brand border and gradient on .card.pro already carry
+   most of the emphasis. */
+.best {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--brand);
+}
+
 .name {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-weight: 700;
   font-size: 13px;
   text-transform: uppercase;
@@ -94,19 +111,46 @@
   font-size: 40px;
   margin: 0 0 4px;
   line-height: 1.1;
+  /* The period and the save badge sit on the price baseline; wrapping is
+     allowed so a longer localized period ("al año") never clips the figure. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
 }
 
-.perMonth {
+.period {
   font-family: -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 15px;
   font-weight: 500;
   color: var(--ink-muted);
 }
 
+.saveBadge {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--teal);
+  background: var(--teal-50);
+  padding: 3px 9px;
+  border-radius: 999px;
+  letter-spacing: 0.01em;
+}
+
 .note {
   color: var(--ink-muted);
   font-size: 13px;
-  margin: 0 0 24px;
+  margin: 0 0 20px;
+  min-height: 32px;
+}
+
+/* Names the relationship between the tiers, so the two Pro cards repeating the
+   free features is unnecessary — they inherit them by statement instead. */
+.listHead {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink2);
+  margin: 0 0 12px;
 }
 
 .list {
@@ -133,4 +177,3 @@
   max-width: 480px;
   margin: 0 auto;
 }
-

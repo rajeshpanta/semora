@@ -55,12 +55,17 @@ export default function PricingPage() {
 
       <PricingCards />
 
+      {/* Explanation before questions. The FAQ used to sit here, directly under
+          the cards, so twelve accordions came between the prices and the pages
+          that explain them — a reader looking for "what does Pro actually add"
+          had to scroll past every question first. */}
+      <PageSections content={getPageContent('pricing')} withRail emitFaq={false} />
+
       <div style={{ maxWidth: 720, margin: '64px auto' }}>
         <h2 style={{ textAlign: 'center', marginBottom: 24 }}>Pricing questions</h2>
         <Faq items={PRICING_FAQ_ALL} />
       </div>
 
-      <PageSections content={getPageContent('pricing')} withRail emitFaq={false} />
       <Cta
         heading="Start free today"
         subheading="Scan your first syllabus in under a minute. Free, no credit card."
