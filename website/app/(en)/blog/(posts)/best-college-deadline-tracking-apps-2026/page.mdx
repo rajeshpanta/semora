@@ -9,6 +9,8 @@ export const metadata = {
 import { JsonLd } from '@/components/JsonLd'
 import { articleSchema } from '@/lib/schema'
 import { BlogPostHero } from '@/components/BlogPostHero'
+import { RelatedPosts } from '@/components/RelatedPosts'
+import { relatedPosts } from '@/lib/blog'
 
 <JsonLd data={articleSchema({
   title: metadata.title,
@@ -77,3 +79,5 @@ One honest caveat: these comparisons rest on each product's own publicly stated 
 ## Where Semora fits
 
 Semora's free tier includes 5 syllabus scans per calendar month, up to 4 courses in one semester, full deadline and grade tracking, and same-day reminders — with Pro ($3.99/month or $19.99/year) adding unlimited courses and semesters (no monthly scan cap), Smart Plan, a Workload dashboard, Grade Scale & Forecasting, calendar sync with .ics export, Flashcards, a Focus timer, an AI tutor, Academic Risk alerts, Progress Insights, and Share & Streaks. It runs on iPhone and web, sharing one account so an edit on one syncs to the other in near real time. See the [full features list](/features) or the [pricing page](/pricing) for the complete breakdown.
+
+<RelatedPosts posts={relatedPosts('best-college-deadline-tracking-apps-2026')} />

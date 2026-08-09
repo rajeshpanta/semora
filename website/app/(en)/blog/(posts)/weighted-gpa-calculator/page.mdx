@@ -9,6 +9,8 @@ export const metadata = {
 import { JsonLd } from '@/components/JsonLd'
 import { articleSchema } from '@/lib/schema'
 import { BlogPostHero } from '@/components/BlogPostHero'
+import { RelatedPosts } from '@/components/RelatedPosts'
+import { relatedPosts } from '@/lib/blog'
 
 <JsonLd data={articleSchema({
   title: metadata.title,
@@ -116,3 +118,5 @@ Semora extracts each course's grading scale directly from the syllabus during th
 Grade tracking like this is included on Semora's free tier. Pro ($3.99/month or $19.99/year) adds Progress Insights — trend charts, CSV export, and a print view on web — plus Academic Risk alerts if a grade starts slipping or work goes missing. It's available on iPhone and web, syncing on one account, so a grade entered on one shows up on the other in near real time.
 
 One limitation worth stating plainly: Semora calculates the per-course weighted grade covered throughout this guide, and rolls those course grades up into a credit-hour-weighted semester GPA estimate on the Courses tab — both on the free tier. It does not calculate cumulative GPA. That one still means converting every completed term's final letter grades to 4.0-scale point values and running the credit-hour-weighted average described above, whether by hand or through whatever system your registrar uses. (Pro adds an editable grade-point scale, under Settings, if your school's letter-to-points conversion differs from the standard one.)
+
+<RelatedPosts posts={relatedPosts('weighted-gpa-calculator')} />

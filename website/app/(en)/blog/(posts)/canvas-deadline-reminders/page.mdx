@@ -9,6 +9,8 @@ export const metadata = {
 import { JsonLd } from '@/components/JsonLd'
 import { articleSchema } from '@/lib/schema'
 import { BlogPostHero } from '@/components/BlogPostHero'
+import { RelatedPosts } from '@/components/RelatedPosts'
+import { relatedPosts } from '@/lib/blog'
 
 <JsonLd data={articleSchema({
   title: metadata.title,
@@ -89,3 +91,5 @@ Semora runs on iPhone and web, sharing one account so a reminder acknowledged or
 None of this — Canvas's own notifications, Semora's reminders, or any other system — replaces the basic habit of occasionally opening a calendar and looking a week or two ahead on your own. Reminders are good at catching the specific thing you'd otherwise forget entirely: the paper that slipped your mind because it was assigned in week two and due in week eleven, the office hours that only happen on a day you don't normally have class. They're less good as a complete substitute for keeping your own general sense of where the semester stands, because a reminder only fires for things a system already knows about, on a schedule someone configured in advance — it can't tell you "you're falling behind in this class overall" the way glancing at your own calendar and noticing three assignments clustered together in the same week can.
 
 The realistic version of a good system, then, is reminders plus a habit, not reminders instead of one. Let same-day and advance reminders handle the specific dates so nothing slips through unnoticed, but keep the once-a-week or once-every-two-weeks habit of opening the calendar and looking ahead anyway — not because the reminders are likely to fail, but because a periodic look at the whole picture catches things no single reminder was ever built to catch: a slow buildup of small assignments, a stretch of the semester that's noticeably heavier than the rest, or a deadline worth starting on today even though nothing is telling you to yet.
+
+<RelatedPosts posts={relatedPosts('canvas-deadline-reminders')} />

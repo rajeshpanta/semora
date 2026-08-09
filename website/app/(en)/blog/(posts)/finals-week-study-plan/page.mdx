@@ -9,6 +9,8 @@ export const metadata = {
 import { JsonLd } from '@/components/JsonLd'
 import { articleSchema } from '@/lib/schema'
 import { BlogPostHero } from '@/components/BlogPostHero'
+import { RelatedPosts } from '@/components/RelatedPosts'
+import { relatedPosts } from '@/lib/blog'
 
 <JsonLd data={articleSchema({
   title: metadata.title,
@@ -83,3 +85,5 @@ None of this makes finals week effortless, and it isn't meant to. The goal is na
 ## Where this gets easier with the right visibility
 
 Building this plan by hand means manually cross-referencing every course's exam date, weight, and your current grade. Semora surfaces this automatically: grade tracking (free tier) keeps a running weighted average per course as work gets graded, and Pro's ($3.99/month or $19.99/year) Workload dashboard gives a crunch-week and exam-density view across every course at once — the exact clustering that step 3 above depends on spotting early. Smart Plan (Pro) then builds an AI-generated study schedule from those deadlines and adapts it as dates shift, and Academic Risk alerts flag a course where a grade is slipping or work is missing, with a recovery-step plan, well before finals week arrives.
+
+<RelatedPosts posts={relatedPosts('finals-week-study-plan')} />

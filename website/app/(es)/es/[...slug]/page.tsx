@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import styles from './spanish.module.css';
 import { LongFormPage } from '@/components/LongFormPage';
+import { JsonLd } from '@/components/JsonLd';
+import { RelatedPosts } from '@/components/RelatedPosts';
+import { articleSchema, blogIndexSchema } from '@/lib/schema';
 import { PricingCards } from '@/components/PricingCards';
 import { FeatureShowcase } from '@/components/FeatureShowcase';
 import { GpaCalculator } from '@/components/GpaCalculator';
@@ -154,7 +157,34 @@ export default async function SpanishPage({ params }: { params: Params }) {
   // rendered no image at all.
   const post = SPANISH_BLOG_POSTS.find((b) => b.path === config.path);
 
+  // The English posts have emitted Article since launch; the Spanish ones
+  // emitted only BreadcrumbList and FAQPage, so Google had nothing marking them
+  // as articles at all.
+  const articleLd = post
+    ? articleSchema({
+        title: post.title,
+        description: post.description,
+        path: post.path,
+        datePublished: post.isoDate,
+        inLanguage: 'es',
+      })
+    : null;
+
+  const isBlogIndex = config.path === '/es/blog';
+
   return (
+    <>
+      {articleLd ? <JsonLd data={articleLd} /> : null}
+      {isBlogIndex ? (
+        <JsonLd
+          data={blogIndexSchema(
+            SPANISH_BLOG_POSTS.map((b) => ({
+              path: b.path, title: b.title, description: b.description, datePublished: b.isoDate,
+            })),
+            { path: '/es/blog', name: 'El blog de Semora', inLanguage: 'es' },
+          )}
+        />
+      ) : null}
     <LongFormPage
       locale="es"
       path={config.path}
@@ -163,5 +193,14 @@ export default async function SpanishPage({ params }: { params: Params }) {
       widget={widget}
       hero={post ? { image: post.image, alt: post.imageAlt ?? '', date: post.date } : undefined}
     />
+      {post ? (
+        <RelatedPosts
+          locale="es"
+          posts={SPANISH_BLOG_POSTS.filter((b) => b.path !== post.path)
+            .slice(0, 3)
+            .map((b) => ({ path: b.path, title: b.title, description: b.description }))}
+        />
+      ) : null}
+    </>
   );
 }

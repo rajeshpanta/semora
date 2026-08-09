@@ -9,6 +9,8 @@ export const metadata = {
 import { JsonLd } from '@/components/JsonLd'
 import { articleSchema } from '@/lib/schema'
 import { BlogPostHero } from '@/components/BlogPostHero'
+import { RelatedPosts } from '@/components/RelatedPosts'
+import { relatedPosts } from '@/lib/blog'
 
 <JsonLd data={articleSchema({
   title: metadata.title,
@@ -82,3 +84,5 @@ None of these mistakes are exotic — they're the obvious shortcuts a deadline m
 ## A built-in timer, tied to what you're actually studying for
 
 Semora's Focus timer (Pro) is a Pomodoro-style timer built into the same app where your deadlines and grades already live, so a study session ties directly to a specific course or assignment rather than existing as a separate, disconnected timer. It sits alongside Smart Plan, which builds an AI-generated study schedule from your actual deadlines and adapts as they change, and the Workload dashboard, which shows crunch weeks and exam-dense stretches across all your courses at once — useful context for deciding which course's Pomodoro session to prioritize on a given day. Pro is $3.99 a month or $19.99 a year.
+
+<RelatedPosts posts={relatedPosts('pomodoro-technique-between-classes')} />

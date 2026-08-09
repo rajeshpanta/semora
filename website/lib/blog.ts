@@ -85,3 +85,16 @@ export function formatBlogDate(iso: string): string {
     day: 'numeric',
   });
 }
+
+/**
+ * Three sibling posts for the "Keep reading" block.
+ *
+ * Every post previously had exactly one inbound internal link — its row on the
+ * /blog index — and linked to no other post, so the six sat as leaf nodes with
+ * nothing connecting them as a topic cluster.
+ */
+export function relatedPosts(slug: string, limit = 3) {
+  return BLOG_POSTS.filter((p) => p.slug !== slug)
+    .slice(0, limit)
+    .map((p) => ({ path: `/blog/${p.slug}`, title: p.title, description: p.description }));
+}

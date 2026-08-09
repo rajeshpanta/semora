@@ -119,18 +119,28 @@ export function faqPageSchema(items: { question: string; answer: string }[]): Wi
 export function articleSchema(post: {
   title: string;
   description: string;
-  slug: string;
+  /** English posts pass a slug and get /blog/<slug>. */
+  slug?: string;
+  /** Spanish posts live at /es/blog/<slug>, so they pass the full path
+   *  instead — building the URL from a slug alone produced the wrong one and
+   *  is why the Spanish posts carried no Article schema at all. */
+  path?: string;
   datePublished: string;
   dateModified?: string;
+  /** 'en' | 'es'. Emitted so each locale's article is described in its own
+   *  language rather than inheriting the site default. */
+  inLanguage?: string;
 }): WithContext<Article> {
+  const url = post.path ? `${SITE_URL}${post.path}` : `${SITE_URL}/blog/${post.slug}`;
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
     description: post.description,
-    url: `${SITE_URL}/blog/${post.slug}`,
+    url,
     datePublished: post.datePublished,
     dateModified: post.dateModified ?? post.datePublished,
+    inLanguage: post.inLanguage ?? 'en',
     author: { '@id': ORGANIZATION_ID },
     publisher: { '@id': ORGANIZATION_ID },
   };
@@ -147,6 +157,36 @@ export function breadcrumbListSchema(
       position: index + 1,
       name: item.name,
       item: `${SITE_URL}${item.path}`,
+    })),
+  };
+}
+
+/**
+ * Blog + ItemList for a blog index.
+ *
+ * Both indexes previously emitted only Organization/WebSite (and the English
+ * one a FAQPage), so nothing told a crawler the page was a blog or which
+ * articles it contained — the posts were discoverable only by following links.
+ */
+export function blogIndexSchema(
+  posts: { path: string; title: string; description: string; datePublished?: string }[],
+  meta: { path: string; name: string; inLanguage: string },
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Blog',
+    '@id': `${SITE_URL}${meta.path}`,
+    name: meta.name,
+    url: `${SITE_URL}${meta.path}`,
+    inLanguage: meta.inLanguage,
+    publisher: { '@id': ORGANIZATION_ID },
+    blogPost: posts.map((p) => ({
+      '@type': 'BlogPosting',
+      headline: p.title,
+      description: p.description,
+      url: `${SITE_URL}${p.path}`,
+      ...(p.datePublished ? { datePublished: p.datePublished } : {}),
+      author: { '@id': ORGANIZATION_ID },
     })),
   };
 }
