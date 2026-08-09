@@ -5,6 +5,7 @@ import { JsonLd } from './JsonLd';
 import { ArticleShell } from './ArticleShell';
 import { faqPageSchema } from '@/lib/schema';
 import { Breadcrumb } from './Breadcrumb';
+import { BlogPostHero } from './BlogPostHero';
 import type { NewPage } from '@/lib/new-page-content';
 import type { SiteLocale } from '@/lib/i18n';
 
@@ -19,6 +20,7 @@ export function LongFormPage({
   crumb,
   path,
   widget,
+  hero,
   locale = 'en',
 }: {
   content: NewPage;
@@ -27,6 +29,10 @@ export function LongFormPage({
    *  final item — a server component cannot read it from usePathname(). */
   path: string;
   widget?: ReactNode;
+  /** Illustration for blog posts. The English posts render one through
+   *  BlogPostHero; the Spanish ones go through this shell instead, so without
+   *  this slot every Spanish post shipped with no image at all. */
+  hero?: { image: string; alt: string; date?: string };
   locale?: SiteLocale;
 }) {
   const es = locale === 'es';
@@ -52,7 +58,11 @@ export function LongFormPage({
           />
         )}
 
-        <h1>{content.h1}</h1>
+        {hero ? (
+          <BlogPostHero title={content.h1} date={hero.date ?? ''} image={hero.image} imageAlt={hero.alt} />
+        ) : (
+          <h1>{content.h1}</h1>
+        )}
         <p className={styles.lede}>{content.lede}</p>
 
         {widget ? <div className={styles.widget}>{widget}</div> : null}

@@ -442,6 +442,7 @@ export const SPANISH_BLOG_POSTS = [
     description: 'Un método paso a paso para extraer fechas, horarios y ponderaciones de un programa y convertirlos en un plan útil.',
     date: '20 de julio de 2026',
     image: '/illustrations/syllabus-calendar.svg',
+    imageAlt: 'Ilustración de la página de un programa que se convierte en un calendario con una fecha de entrega marcada',
   },
   {
     path: '/es/blog/calcular-gpa-ponderado',
@@ -450,6 +451,7 @@ export const SPANISH_BLOG_POSTS = [
     description: 'La fórmula, los puntos de calidad y la diferencia entre créditos, ponderaciones y promedios simples.',
     date: '21 de julio de 2026',
     image: '/illustrations/grade-card.svg',
+    imageAlt: 'Ilustración de una boleta de calificaciones con una nota A− y una insignia de estrella',
   },
   {
     path: '/es/blog/mejores-apps-fechas-universidad-2026',
@@ -458,6 +460,7 @@ export const SPANISH_BLOG_POSTS = [
     description: 'Qué buscar en un planificador y cómo comparar la entrada manual, la conexión con un LMS y el escaneo del programa.',
     date: '22 de julio de 2026',
     image: '/illustrations/trophy-compare.svg',
+    imageAlt: 'Ilustración de un trofeo sobre un podio que representa una comparación de apps',
   },
   {
     path: '/es/blog/recordatorios-fechas-canvas',
@@ -466,6 +469,7 @@ export const SPANISH_BLOG_POSTS = [
     description: 'Por qué algunas notificaciones pasan desapercibidas y cómo convertir los cambios de Canvas en recordatorios útiles.',
     date: '23 de julio de 2026',
     image: '/illustrations/bell-reminder.svg',
+    imageAlt: 'Ilustración de una campana de recordatorio frente a la hoja de un calendario',
   },
   {
     path: '/es/blog/tecnica-pomodoro-entre-clases',
@@ -474,6 +478,7 @@ export const SPANISH_BLOG_POSTS = [
     description: 'Cómo adaptar tus sesiones de concentración a los huecos reales de un horario universitario.',
     date: '24 de julio de 2026',
     image: '/illustrations/tomato-timer.svg',
+    imageAlt: 'Ilustración de un temporizador de cocina con forma de tomate, el origen de la técnica Pomodoro',
   },
   {
     path: '/es/blog/plan-de-estudio-para-finales',
@@ -482,6 +487,7 @@ export const SPANISH_BLOG_POSTS = [
     description: 'Prioriza según la fecha, el peso de cada evaluación, tu dominio del tema y el tiempo disponible, sin sobrecargar los últimos días.',
     date: '25 de julio de 2026',
     image: '/illustrations/book-stack.svg',
+    imageAlt: 'Ilustración de una pila de libros de texto con un birrete encima',
   },
 ] as const;
 

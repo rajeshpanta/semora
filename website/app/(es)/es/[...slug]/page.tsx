@@ -149,6 +149,11 @@ export default async function SpanishPage({ params }: { params: Params }) {
   if (!config) notFound();
   const widget = config.kind === 'standard' ? undefined : <DirectoryWidget config={config} />;
 
+  // Blog posts carry the same illustration their card uses on the index. The
+  // English posts have had one since launch via BlogPostHero; the Spanish ones
+  // rendered no image at all.
+  const post = SPANISH_BLOG_POSTS.find((b) => b.path === config.path);
+
   return (
     <LongFormPage
       locale="es"
@@ -156,6 +161,7 @@ export default async function SpanishPage({ params }: { params: Params }) {
       content={config.content}
       crumb={getCrumb(config)}
       widget={widget}
+      hero={post ? { image: post.image, alt: post.imageAlt ?? '', date: post.date } : undefined}
     />
   );
 }
