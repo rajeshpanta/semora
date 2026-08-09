@@ -47,6 +47,7 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
           "The chain runs in a specific order. The scanner extracts the course and instructor, the meeting blocks with days and rooms, the semester start and end, the letter-grade scale, and every assignment, quiz, exam, project and reading it can find with a due date, a due time, a percentage weight and a confidence score. On a course you are creating for the first time, the course record, its meeting times and its grading scale are written for you straight away. Only the deadlines wait, on a review screen where you edit, deselect and approve them. Approve, and they appear in Today and in the Calendar tab. Enter a score against any of them and your weighted average updates immediately, because the weights already came off the syllabus rather than out of your memory.",
           "A re-scan behaves differently on purpose, and it is worth knowing before your professor posts version two. Scanning a revised syllabus into a course you already have merges the deadlines in, but it will not rewrite the schedule you have already touched: the meeting and office-hour rows are written on first creation only, and the grading scale is replaced only if you have left it on the default. So a revision that moves the lecture to a new room, or swaps 30 percent midterm for 25, lands as deadlines and nothing else — update the meeting times or the scale by hand on the course screen. It is a deliberate trade: the app would rather keep your corrections than overwrite them with a fresh guess.",
           "Everything above that layer is analysis of those same rows. The workload engine scores each dated task as its grade weight multiplied by a prep-effort factor (an exam counts three times, a project 2.5, a quiz 1.5, an assignment 1.2, a reading 1) so a week holding two exams reads as heavy even when your professor never printed a percentage next to them. Smart Plan takes the same tasks and lays study sessions across a fourteen-day horizon, working around the class times the scan already knows about. Academic Risk watches three specific things: a grade trending down, work that has gone missing, and a week that is overloaded. Flashcards and the AI tutor read the same syllabus text plus any lecture notes you attach, so there is nothing to re-upload.",
+          "None of this makes the scanner compulsory. You can create a course by hand and add its deadlines, subtasks and grades yourself, and the grade maths, Calendar, Today and reminders all behave identically on hand-entered data. The scan is a shortcut past the tedious part, not an entry requirement — it just happens to matter most in week one, when the tedious part is four syllabi at once.",
           "The practical consequence is worth stating plainly. Every planning and study feature is only as good as how much of your semester is actually in the app. Two half-entered courses give Smart Plan and the Workload dashboard almost nothing to reason about. Four scanned courses with real weights and a few graded items make both sharp within a week. Scan first, grade as you go, and the rest of the product has something to work with."
         ],
         "bullets": [
@@ -96,6 +97,7 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
           "The clean way to describe the split: free is enough to know what is due and where you stand. Pro is for deciding what to do about it, plus the connective tissue to other platforms, other people and other calendars. Nothing in the free tier expires or quietly degrades — the scan counter refills on the 1st of every month, and the free features stay on for as long as you keep using the app.",
           "Two boundaries get misreported often enough to be worth stating directly. First, Canvas, Blackboard and Moodle import is Pro, not free. It is gated on the server, so the paywall is not a client-side suggestion. The free route into Canvas is real and worth using: open the assignments page, select the text, and paste it into the scanner's paste box on the web app, which accepts 20 to 60,000 characters. You get the same extraction and the same review screen. It costs one of your five monthly scans and nothing else.",
           "Second, Course Spaces splits down the middle. Hosting a shared course — creating the space and sending the invite — is Pro, and that check runs on the server too. Joining a space a classmate invites you to is free, permanently, with no time limit and no card; the only thing to watch is that the course it imports counts against your four. One person in a study group holding Pro is enough for that whole group to work off the same synced deadlines.",
+          "Nothing is deleted if you stop paying. The free limits are checked when you add something new, so the courses, semesters, deadlines and grades you already have stay readable and editable — what changes is that Pro-only screens lock again and new additions are held to 5 scans a month, 4 courses and the one-semester rule.",
           "Pricing is $3.99 a month or $19.99 a year, which works out to about $1.67 a month and roughly 58 percent less than paying monthly. The purchase happens inside the iOS app through StoreKit, and the entitlement applies to your whole account, the web app included. There is no separate web checkout to buy through and nothing to activate on the browser side beyond signing in."
         ],
         "bullets": [
@@ -144,36 +146,7 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
         ]
       }
     ],
-    "faq": [
-      {
-        "question": "Do the 5 free scans reset each month, or is that a lifetime limit?",
-        "answer": "They reset. The free tier gives you 5 scans per calendar month, and the counter starts again on the 1st, measured in UTC. It is not a lifetime cap. Four syllabi in week one leaves one spare that month for a revised version or a course you add late, and next month you get another five. A photo scan of up to five pages submitted in one pass counts as one scan, not five."
-      },
-      {
-        "question": "Is Pro scanning actually unlimited?",
-        "answer": "There is no monthly cap on Pro, which is the limit that matters in practice — scan as many syllabi as your term throws at you, in any month. There is one fair-use ceiling behind it: 20 scans in any rolling 24 hours, after which the scanner asks you to try again tomorrow. It exists to stop scripted abuse of a paid extraction endpoint, and a normal student, even one re-scanning revisions for six courses in a single afternoon, will not reach it."
-      },
-      {
-        "question": "Is 4 courses enough for a normal full-time semester?",
-        "answer": "For a four-course load, yes, completely. A typical 12 to 15 credit semester is four or five courses, so the free limit covers the smaller of those exactly and leaves a five-course semester one short. Re-scanning a syllabus for a course you already have merges into it rather than creating a second, so revisions do not eat a slot. Two things push you to Pro: a fifth course, and the next term — free is one semester in total, not four courses per term, so a second semester needs Pro or a destructive delete of the first."
-      },
-      {
-        "question": "I bought Pro on my iPhone. Do I pay again to use it on the web?",
-        "answer": "No. Pro is purchased once in the iOS app through StoreKit and the entitlement is attached to your account, not to the device. Sign in to the web app with the same account and the Pro features are already on. There is no separate web checkout, no second charge and no activation code. The browser reads and refreshes the entitlement your iPhone purchase created."
-      },
-      {
-        "question": "Can I use Semora without scanning anything?",
-        "answer": "Yes. You can create courses by hand and add deadlines, subtasks and grades manually, and the grade math, Calendar, Today and reminders all work the same way on hand-entered data. The scanner is a shortcut for the tedious part, not a requirement. It matters most in week one, when you are facing four syllabi at once; after that, most people are adding one task at a time anyway."
-      },
-      {
-        "question": "What happens to my data if I stop paying for Pro?",
-        "answer": "Nothing is deleted. The free limits are checked when you add something new, so courses, semesters, deadlines and grades you already have stay readable and editable. What changes is that Pro-only screens lock again and new additions are held to 5 scans a month, 4 courses and the one-semester rule, which, if you already have a semester on the account, means no new term until you resubscribe. Resubscribing turns everything back on against the same data, with no re-import needed."
-      },
-      {
-        "question": "If I only have ten minutes today, what should I set up first?",
-        "answer": "Scan one syllabus, even if you only get through one. That single action creates the course, its meeting times and its grading scale, and hands you a reviewable list of every deadline in the term, which is the input every other feature reads. Anything you set up before scanning has less to work with. If you already scanned everything, the next highest-value step is entering the grades you have."
-      }
-    ]
+    "faq": []
   },
   "pricing": {
     "sections": [
