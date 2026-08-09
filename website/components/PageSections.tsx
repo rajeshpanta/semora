@@ -45,18 +45,15 @@ export function PageSections({
       {showFaq ? <JsonLd data={faqPageSchema(content.faq)} /> : null}
 
       {content.sections.map((s) => (
-        <section key={s.heading} className={styles.section}>
-          <h2>{s.heading}</h2>
-          <CollapsibleSection paragraphs={s.paragraphs} bullets={s.bullets} moreLabel="More detail">
-            {s.bullets?.length ? (
-              <ul className={styles.points}>
-                {s.bullets.map((b) => (
-                  <li key={b}>{b}</li>
-                ))}
-              </ul>
-            ) : null}
-          </CollapsibleSection>
-        </section>
+        <CollapsibleSection key={s.heading} heading={s.heading} paragraphs={s.paragraphs}>
+          {s.bullets?.length ? (
+            <ul className={styles.points}>
+              {s.bullets.map((b) => (
+                <li key={b}>{b}</li>
+              ))}
+            </ul>
+          ) : null}
+        </CollapsibleSection>
       ))}
 
       {showFaq ? (

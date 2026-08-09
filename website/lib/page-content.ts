@@ -34,6 +34,13 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
   "features": {
     "sections": [
       {
+        "heading": "The first week arrives as five different PDFs",
+        "paragraphs": [
+          "Every instructor publishes a syllabus their own way. One hands you a table, another buries the exam dates in a paragraph halfway down, a third spreads deadlines across twelve pages of calendar. Copying all of that by hand is why most planners get abandoned by week six: the work of keeping it current costs more than the problem it solves.",
+          "Semora targets that specific moment. Instead of handing you an empty list to fill in, it reads the document that already contains your whole term and turns it into a semester you can check over in a few minutes."
+        ]
+      },
+      {
         "heading": "One scan, and everything else is downstream",
         "paragraphs": [
           "Semora is one chain, not a folder of separate tools. The scan is the input step and every other feature reads what the scan produced. That is why the feature list looks long while the actual work is short: you handle each syllabus once, in about the time it takes to photograph five pages, and the deadlines, class meeting blocks, grade weights and letter-grade cutoffs that come out of it become the raw material for the calendar, the grade math, the planner, the workload analysis, the flashcards and the tutor.",
@@ -50,6 +57,19 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
           "Grade: a weighted average that reflects only what has been graded so far, with extra credit adding to the numerator without inflating the denominator.",
           "Plan: Workload names the crunch weeks, Smart Plan fills the days, Academic Risk says what is slipping and what to do first.",
           "Study: flashcards and the tutor are scoped to a course you have already scanned."
+        ]
+      },
+      {
+        "heading": "What changes about your week",
+        "paragraphs": [
+          "The difference is not a longer feature list. It is how much manual work disappears."
+        ],
+        "bullets": [
+          "Before: copying every date by hand out of five syllabi. After: one photo per course and a review screen.",
+          "Before: a spreadsheet to work out where you stand. After: enter a score and the weighted average recalculates itself.",
+          "Before: finding out a week is overloaded once you are in it. After: the workload dashboard flags it in advance.",
+          "Before: reminders you set yourself, when you remember. After: they are scheduled the moment you approve the dates.",
+          "Before: three apps for calendar, grades and study. After: one account where all of it reads the same data."
         ]
       },
       {

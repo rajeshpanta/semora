@@ -1,69 +1,78 @@
-/* Progressive disclosure for the long-form bodies.
-   Tokens and rhythm are lifted from PageSections/Faq so a collapsed section is
-   visually the same object as an expanded one — only the detail is hidden. */
-
-.lead {
-  color: var(--ink2);
-  font-size: clamp(14.5px, 2.1vw, 16.5px);
-  line-height: 1.75;
-  margin: 0;
-}
+/* Long-form sections collapsed into FAQ-style rows.
+   Border, spacing and the +/− affordance are taken from Faq.module.css so the
+   two read as one system rather than two accordions that happen to share a page. */
 
 .details {
-  margin-top: 14px;
-  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
-/* The toggle reads as a control, not a heading: small, uppercase, tracked out,
-   in the brand colour. Monospace-adjacent tracking is what gives it the
-   technical feel without introducing a second typeface. */
 .summary {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 14px;
-  padding: 6px 12px 6px 0;
-  font-size: 12.5px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--brand);
+  gap: 16px;
+  padding: 20px 0;
   cursor: pointer;
   list-style: none;
-  transition: opacity 0.15s ease;
 }
 
 .summary::-webkit-details-marker {
   display: none;
 }
 
-.summary:hover {
-  opacity: 0.72;
-}
-
 .summary:focus-visible {
   outline: 2px solid var(--brand);
-  outline-offset: 3px;
+  outline-offset: 4px;
   border-radius: 4px;
 }
 
-/* Chevron rotates in place rather than swapping glyphs, so the control does not
-   reflow when it opens. */
-.chevron {
-  width: 9px;
-  height: 9px;
-  border-right: 1.8px solid currentColor;
-  border-bottom: 1.8px solid currentColor;
-  transform: rotate(45deg) translate(-1px, -1px);
-  transition: transform 0.2s ease;
+/* Kept an h2 for the document outline and the "on this page" rail, but sized as
+   a row label rather than a section title — a collapsed list wants even weight. */
+.heading {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: clamp(1.02rem, 2.3vw, 1.18rem);
+  line-height: 1.35;
+  letter-spacing: -0.014em;
+  color: var(--ink);
+  overflow-wrap: break-word;
 }
 
-.details[open] .chevron {
-  transform: rotate(-135deg) translate(-1px, -1px);
+.summary:hover .heading {
+  color: var(--brand);
+}
+
+/* +/− drawn with two rules so it animates rather than swapping glyphs. */
+.icon {
+  position: relative;
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+.icon::before,
+.icon::after {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto 0;
+  height: 1.8px;
+  background: var(--brand);
+  border-radius: 2px;
+  transform: translateY(-50%);
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.icon::after {
+  transform: translateY(-50%) rotate(90deg);
+}
+
+.details[open] .icon::after {
+  transform: translateY(-50%) rotate(0deg);
+  opacity: 0;
 }
 
 .body {
-  padding-bottom: 4px;
+  padding: 0 0 24px;
 }
 
 .body p {
@@ -78,8 +87,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chevron,
-  .summary {
+  .icon::before,
+  .icon::after {
     transition: none;
   }
 }

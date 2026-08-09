@@ -2,57 +2,47 @@ import type { ReactNode } from 'react';
 import styles from './CollapsibleSection.module.css';
 
 /**
- * A long-form section that shows its first paragraph and hides the rest behind
- * a toggle.
+ * A long-form section collapsed into a single row, the same way the FAQ is.
  *
- * The features pages had grown to where nobody read them end to end — 21KB on
- * /features, and the Spanish page matched it. Trimming would have meant deleting
- * answers people actually search for (what the free tier covers, where the Pro
- * line falls, what happens offline), so the detail stays and the page gets
- * shorter instead.
+ * The features pages had grown past the point anyone read them — 21KB on
+ * /features, and the Spanish page matches it. Trimming would have meant deleting
+ * the answers people actually search for (what the free tier covers, where the
+ * Pro line falls, what happens offline), so the detail stays and the page
+ * collapses instead: heading visible, body one click away.
  *
- * Native <details>, matching Faq.tsx: no JavaScript, keyboard and screen-reader
- * behaviour for free, and the collapsed text is still in the HTML, so it is
- * indexed and Cmd-F finds it.
+ * Native <details>, the same primitive Faq.tsx uses. No JavaScript, keyboard and
+ * screen-reader behaviour for free, and the hidden text is still in the HTML, so
+ * it stays indexed and Cmd-F still finds it. Browsers also auto-open a <details>
+ * when you follow an anchor into it, which is what keeps the "On this page" rail
+ * working against collapsed sections.
  *
- * A section with nothing beyond its first paragraph renders plainly — a toggle
- * that reveals one line is worse than no toggle.
+ * The <h2> lives inside <summary> deliberately: the heading IS the control, and
+ * keeping it an h2 preserves the document outline the rail is built from.
  */
 export function CollapsibleSection({
+  heading,
+  id,
   paragraphs,
-  bullets,
-  moreLabel,
   children,
 }: {
+  heading: string;
+  id?: string;
   paragraphs: readonly string[];
-  bullets?: readonly string[];
-  /** "More detail" / "Ver detalles" — supplied by the caller so this stays locale-agnostic. */
-  moreLabel: string;
-  /** Rendered inside the disclosure, after the paragraphs — the bullet list. */
+  /** Rendered after the paragraphs inside the disclosure — the bullet list. */
   children?: ReactNode;
 }) {
-  const [lead, ...rest] = paragraphs;
-  const hasMore = rest.length > 0 || (bullets?.length ?? 0) > 0;
-
-  if (!hasMore) {
-    return <p className={styles.lead}>{lead}</p>;
-  }
-
   return (
-    <>
-      <p className={styles.lead}>{lead}</p>
-      <details className={styles.details}>
-        <summary className={styles.summary}>
-          {moreLabel}
-          <span className={styles.chevron} aria-hidden="true" />
-        </summary>
-        <div className={styles.body}>
-          {rest.map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
-          {children}
-        </div>
-      </details>
-    </>
+    <details className={styles.details} id={id}>
+      <summary className={styles.summary}>
+        <h2 className={styles.heading}>{heading}</h2>
+        <span className={styles.icon} aria-hidden="true" />
+      </summary>
+      <div className={styles.body}>
+        {paragraphs.map((p, i) => (
+          <p key={i}>{p}</p>
+        ))}
+        {children}
+      </div>
+    </details>
   );
 }
