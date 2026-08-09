@@ -1,9 +1,11 @@
 import type { Metadata } from 'next';
-import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import styles from './spanish.module.css';
 import { LongFormPage } from '@/components/LongFormPage';
+import { BlogIndex } from '@/components/BlogIndex';
+import { BlogPostArticle } from '@/components/BlogPostArticle';
+import { PageSections } from '@/components/PageSections';
 import { JsonLd } from '@/components/JsonLd';
 import { RelatedPosts } from '@/components/RelatedPosts';
 import { articleSchema, blogIndexSchema } from '@/lib/schema';
@@ -16,6 +18,7 @@ import { SUPPORT_EMAIL } from '@/lib/semora-facts';
 import { FEATURES_ES, SHOWCASE_ES } from '@/lib/es-facts';
 import {
   getSpanishPage,
+  SPANISH_BLOG_INDEX_BODY,
   SPANISH_BLOG_POSTS,
   SPANISH_COMPARISONS,
   SPANISH_PAGES,
@@ -107,21 +110,6 @@ function DirectoryWidget({ config }: { config: SpanishPageConfig }) {
       </div>
     );
   }
-  if (config.kind === 'blog-index') {
-    return (
-      <div className={styles.cardGrid}>
-        {SPANISH_BLOG_POSTS.map((post) => (
-          <Link key={post.path} href={post.path} className={`${styles.card} ${styles.articleCard}`}>
-            <Image src={post.image} alt="" width={120} height={90} className={styles.cardImage} />
-            <span className={styles.cardMeta}>{post.date}</span>
-            <strong>{post.title}</strong>
-            <p>{post.description}</p>
-            <span className={styles.cardLink}>Leer la guía →</span>
-          </Link>
-        ))}
-      </div>
-    );
-  }
   if (config.kind === 'compare-index') {
     return (
       <div className={styles.cardGrid}>
@@ -186,12 +174,12 @@ export default async function SpanishPage({ params }: { params: Params }) {
       })
     : null;
 
-  const isBlogIndex = config.path === '/es/blog';
-
-  return (
-    <>
-      {articleLd ? <JsonLd data={articleLd} /> : null}
-      {isBlogIndex ? (
+  // The blog index and the posts render through the same components /blog and
+  // its posts use, not through LongFormPage — see BlogIndex.tsx and
+  // BlogPostArticle.tsx for why the two locales had drifted apart.
+  if (config.kind === 'blog-index') {
+    return (
+      <>
         <JsonLd
           data={blogIndexSchema(
             SPANISH_BLOG_POSTS.map((b) => ({
@@ -200,18 +188,48 @@ export default async function SpanishPage({ params }: { params: Params }) {
             { path: '/es/blog', name: 'El blog de Semora', inLanguage: 'es' },
           )}
         />
-      ) : null}
+        <BlogIndex
+          heading={config.content.h1}
+          sub={config.content.lede}
+          posts={SPANISH_BLOG_POSTS.map((b) => ({
+            path: b.path,
+            title: b.title,
+            description: b.description,
+            image: b.image,
+            imageAlt: b.imageAlt,
+            dateLabel: b.date,
+          }))}
+        >
+          <PageSections locale="es" content={SPANISH_BLOG_INDEX_BODY} withRail />
+        </BlogIndex>
+      </>
+    );
+  }
+
+  if (post) {
+    return (
+      <>
+        {articleLd ? <JsonLd data={articleLd} /> : null}
+        <BlogPostArticle
+          locale="es"
+          path={config.path}
+          crumbHref="/es/blog"
+          content={config.content}
+          hero={{ image: post.image, alt: post.imageAlt ?? '', date: post.date }}
+        >
+          <RelatedPosts locale="es" posts={spanishRelatedPosts(post.path)} />
+        </BlogPostArticle>
+      </>
+    );
+  }
+
+  return (
     <LongFormPage
       locale="es"
       path={config.path}
       content={config.content}
       crumb={getCrumb(config)}
       widget={widget}
-      hero={post ? { image: post.image, alt: post.imageAlt ?? '', date: post.date } : undefined}
     />
-      {post ? (
-        <RelatedPosts locale="es" posts={spanishRelatedPosts(post.path)} />
-      ) : null}
-    </>
   );
 }

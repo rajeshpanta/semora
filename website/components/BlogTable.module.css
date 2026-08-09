@@ -41,7 +41,11 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--ink2);
-  white-space: nowrap;
+  /* Deliberately allowed to wrap. Spanish column labels run noticeably longer
+     than their English equivalents ("Para terminar en 70 %" vs "To finish at
+     70%"), and a nowrap header pushed the last column off the edge of the
+     scroller in one locale while the other fit. */
+  white-space: normal;
 }
 
 .table tbody th {

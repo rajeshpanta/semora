@@ -5,6 +5,7 @@ import { Faq } from './Faq';
 import { JsonLd } from './JsonLd';
 import { faqPageSchema } from '@/lib/schema';
 import type { PageLongForm } from '@/lib/page-content';
+import type { SiteLocale } from '@/lib/i18n';
 
 /**
  * Renders the long-form body appended to hub and landing pages.
@@ -15,11 +16,13 @@ import type { PageLongForm } from '@/lib/page-content';
  */
 export function PageSections({
   content,
-  faqHeading = 'Frequently asked questions',
+  faqHeading,
   emitFaq = true,
   withRail = false,
+  locale = 'en',
 }: {
   content: PageLongForm | undefined;
+  /** Defaults to the locale's own wording. */
   faqHeading?: string;
   /**
    * Set false on pages that already render their own FAQ and FAQPage schema
@@ -35,10 +38,13 @@ export function PageSections({
    * card grids stay full width, because an 860px column would break them.
    */
   withRail?: boolean;
+  locale?: SiteLocale;
 }) {
   if (!content) return null;
 
+  const es = locale === 'es';
   const showFaq = emitFaq && !!content.faq?.length;
+  const heading = faqHeading ?? (es ? 'Preguntas frecuentes' : 'Frequently asked questions');
 
   const body = (
     <div className={withRail ? `${styles.railWrap} article-body` : styles.wrap}>
@@ -58,7 +64,7 @@ export function PageSections({
 
       {showFaq ? (
         <section className={styles.section}>
-          <h2>{faqHeading}</h2>
+          <h2>{heading}</h2>
           <Faq items={content.faq} />
         </section>
       ) : null}
@@ -69,8 +75,12 @@ export function PageSections({
 
   return (
     <ArticleShell
-      ctaHeading="Try it on your own syllabus"
-      ctaSubheading="See how Semora handles your actual courses. Free, no credit card."
+      locale={locale}
+      ctaHeading={es ? 'Organiza el programa de tu próxima materia' : 'Try it on your own syllabus'}
+      ctaSubheading={es
+        ? 'Descubre cómo Semora organiza tus cursos. Puedes empezar gratis y sin tarjeta de crédito.'
+        : 'See how Semora handles your actual courses. Free, no credit card.'}
+      ctaLabel={es ? 'Empezar gratis' : 'Try it for free'}
     >
       <article>{body}</article>
     </ArticleShell>

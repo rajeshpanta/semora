@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { NewPage } from './new-page-content';
+import type { PageLongForm } from './page-content';
 import { FEATURES_ES, type SpanishFeatureFact } from './es-facts';
 import { ES_FEATURE_CONTENT } from './es-feature-content';
 
@@ -641,6 +642,201 @@ export const SPANISH_BLOG_POSTS = [
     imageAlt: 'Ilustración de un medidor que se llena hasta la nota que necesitas en el examen final',
   },
 ] as const;
+
+/**
+ * The long-form body under the card grid on /es/blog.
+ *
+ * Mirrors PAGE_CONTENT.blog, which /blog has rendered since launch. The Spanish
+ * index had the grid and nothing else, so the same page carried roughly 4,500
+ * fewer words in one language than the other.
+ */
+export const SPANISH_BLOG_INDEX_BODY: PageLongForm = {
+  sections: [
+    {
+      heading: 'Para quién es este blog',
+      paragraphs: [
+        'Este blog está escrito para una persona concreta: alguien de licenciatura con cuatro a seis materias, cada una con su propio programa, su propio esquema de calificación y su propia idea de cuándo se entregan las cosas. No para un aficionado a la productividad que colecciona sistemas, sino para quien quiere que el semestre deje de producir sorpresas: el trabajo asignado en la semana dos que se entrega en la once, el parcial que resulta valer el treinta por ciento, el miércoles de diciembre con dos exámenes finales.',
+        'Cada entrada toma un mecanismo concreto y lo explica de principio a fin, en el orden en que de verdad lo harías. Los métodos funcionan con una hoja de cálculo, una agenda de papel o el calendario que ya traes en el teléfono. Semora aparece al final de cada guía como la versión automática de un trabajo que podrías hacer a mano, con el plan indicado con claridad para que sepas qué partes no cuestan nada. Si una guía solo sirve después de suscribirte, está mal escrita.',
+        'Hay nueve entradas, publicadas entre el 20 de julio y el 9 de agosto de 2026. Corresponden a nueve problemas, descritos abajo. Cada descripción explica el problema de fondo lo suficiente como para servir por sí sola, así que esta página vale la pena aunque no abras ninguna entrada.',
+      ],
+      bullets: [
+        'Convertir un programa de clase en un calendario del semestre: la conversión que exige toda materia y que ninguna enseña',
+        'Calcular bien una calificación ponderada, incluidas las reglas de eliminar la nota más baja y la política de redondeo',
+        'Saber qué necesitas sacar en un examen final, y qué hacer cuando la respuesta pasa de 100',
+        'Conseguir que un recordatorio de Canvas llegue con tiempo suficiente para actuar',
+        'Planear la semana de finales según la densidad y el peso de los exámenes, no según el orden cronológico',
+        'Aprovechar sesiones de estudio cronometradas en los huecos de cincuenta y noventa minutos que deja un horario real',
+        'Convertir los apuntes de clase en tarjetas de estudio que valga la pena repasar, en vez de un mazo abandonado el jueves',
+        'Distinguir los tres tipos de app de estudio con IA antes de pagar por la equivocada',
+        'Elegir qué clase de sistema —papel, app de tareas genérica o herramienta que entiende programas— aguanta más allá de la semana diez',
+      ],
+    },
+    {
+      heading: 'Convertir un programa en un calendario del semestre',
+      paragraphs: [
+        'Un programa de clase está escrito como un contrato, no como un cronograma. Tiene que fijar una política de entregas tardías, una cláusula de integridad académica y un desglose de la calificación, y esas obligaciones moldean el documento mucho más que tu necesidad de saber qué se entrega el próximo martes. El resultado es que las fechas que te hacen falta quedan repartidas entre párrafos, tablas y notas al pie, en un formato completo pero inutilizable. Nadie enseña el paso de conversión, y toda materia da por hecho en silencio que ya lo hiciste.',
+        'La conversión también es más trabajo de lo que parece. Una sola línea como «reporte de lectura cada viernes antes de las 11:59 p. m.» es una oración en el programa y entre doce y quince fechas distintas en el calendario. Las fechas escritas en relación con las sesiones de clase —«se entrega al inicio de la clase 14»— no significan nada hasta que mapeas el patrón de reuniones y descuentas los días feriados. Las fechas de examen suelen aparecer como «por definir» porque el calendario de finales se publica aparte, a mitad del periodo. Y las materias con muchos estudiantes reparten con frecuencia un segundo documento para el laboratorio o la monitoría, con entregas que no aparecen en el programa principal.',
+        'La guía recorre todo el proceso: leer el programa completo antes de anotar nada, capturar primero la estructura que se repite (días y horas de clase, horario de atención, inicio y fin del periodo, ponderación de las categorías), después resolver cada elemento evaluado a una fecha real del calendario, y por último ponerlo en un calendario y no en una lista, porque una lista no puede mostrarte tres exámenes convergiendo en la misma semana. El último paso es el que la gente se salta: hazlo con cada materia y luego mira todas juntas. Un programa solo rara vez se ve alarmante. Cuatro apilados en los mismos siete días a veces sí.',
+        'El escáner de Semora hace esa pasada de una sola vez y está en el plan Gratis: cinco escaneos por mes calendario, y una cuenta gratuita admite hasta cuatro cursos dentro de un semestre. Ese tope de semestre es rígido y conviene conocerlo antes de empezar: una cuenta gratuita cubre un solo periodo, así que un segundo semestre es el punto en el que Pro pasa de opcional a necesario. Puedes importar con una foto de cámara (hasta cinco páginas por escaneo, unos diez megabytes en total), subiendo un PDF, arrastrando el archivo en la versión web o pegando texto. Extrae el nombre y la clave del curso, el profesor, los bloques de clase, el horario de atención, el inicio y el fin del semestre, la escala de letras y cada tarea, cuestionario, examen, proyecto y lectura con su fecha, su hora y su porcentaje. Una pantalla de revisión muestra todo con edición por elemento antes de que se guarde nada: lo que el modelo interpretó con menos seguridad aparece marcado como «Poca confianza: verifica», los elementos con fecha fuera del periodo se señalan para revisar, y lo que quedó sin fecha se queda deseleccionado en una sección de «Falta la fecha», para que no entre a tu calendario como una suposición equivocada.',
+      ],
+      bullets: [
+        'Las líneas recurrentes se expanden: una entrega semanal son una docena o más de entradas de calendario',
+        'Las fechas relativas («el viernes anterior al receso») hay que resolverlas a fechas reales sobre la marcha',
+        'Los exámenes «por definir» deben quedar marcados como pendientes, no omitidos: un elemento que falta en silencio es peor',
+        'Las secciones de laboratorio y monitoría suelen tener un cronograma aparte que el programa principal nunca menciona',
+        'Anota las ponderaciones junto a las fechas; sin ellas, después es imposible hacer seguimiento de la calificación',
+      ],
+    },
+    {
+      heading: 'Saber cuál es realmente tu calificación',
+      paragraphs: [
+        'La mayoría de los estudiantes lleva en la cabeza un número que en realidad es el promedio simple de lo último que le devolvieron. La calificación ponderada existe precisamente porque ese número está mal: un cuestionario que vale cinco por ciento y un examen final que vale treinta no deberían mover tu calificación lo mismo. La fórmula no es difícil (multiplica el promedio de cada categoría por su peso, suma esos productos y divide entre los pesos que ya tienen trabajo calificado), pero dos detalles causan casi toda la confusión.',
+        'El primero es el denominador. Una categoría solo cuenta cuando ya tiene una nota dentro, y por eso un examen final sin calificar que vale treinta por ciento no arrastra tu promedio actual hacia cero: simplemente todavía no forma parte del cálculo. El segundo es dónde se aplican las reglas especiales. Una política de «se elimina el cuestionario más bajo» tiene que aplicarse dentro de la categoría, antes de calcular su promedio. La guía resuelve un ejemplo donde hacerlo en el punto equivocado produce 87.3 por ciento en lugar de 88.3: las mismas notas, un punto completo de diferencia, solo por el orden.',
+        'El redondeo es la otra cosa que vale la pena entender, sobre todo porque es una decisión de política y no aritmética. La convención estadounidense habitual de que 89.5 sube a 90 es eso, una convención, no una regla: hay profesores que toman el porcentaje exactamente como sale, otros que redondean después de cada tarea en lugar de una sola vez al final, y muchos programas que fijan el umbral de la letra más alta en un punto distinto de 90. Nada de eso se responde con matemáticas, y por eso conviene leer tu política de calificación concreta o preguntar por correo.',
+        'La guía también separa tres números que todo el mundo llama GPA: el porcentaje ponderado de un solo curso, el GPA del semestre construido a partir de esas calificaciones y las horas crédito, y el GPA acumulado de todos los periodos. Semora calcula los dos primeros, y ambos son gratuitos. Los porcentajes por curso se actualizan conforme registras notas, y la pestaña de Cursos lleva una estimación del GPA del semestre encima de la lista, con cada calificación convertida a puntos y ponderada por las horas crédito de ese curso, y una línea debajo que te dice cuántos de tus cursos tienen ya suficiente trabajo calificado para contar. Lo que no calcula es el GPA acumulado, y la entrada lo dice de frente: ese necesita las calificaciones finales y las horas crédito de todos los periodos que ya terminaste, y eso vive en la oficina de registro académico, no en ningún programa de clase. Pro agrega una escala de puntos editable, para que la conversión de letra a puntos corresponda a tu institución y no a la tabla estándar de 4.0, además de proyección de calificaciones para calcular escenarios sobre el trabajo que falta, y Progress Insights con gráficas de tendencia, exportación CSV y vista de impresión.',
+      ],
+    },
+    {
+      heading: 'Conseguir un recordatorio con tiempo suficiente para actuar',
+      paragraphs: [
+        'Canvas es donde los profesores publican las tareas, y es un sistema de registro perfectamente bueno. Lo que no es es un sistema pensado para asegurarse de que notes una fecha con anticipación. Las preferencias de notificación se activan por categoría y se configuran a nivel de cuenta, lo que significa que un estudiante puede estar convencido de que tiene las notificaciones encendidas mientras la única categoría que importa —las fechas de entrega— está en «nunca» o dentro de un resumen diario que no abre. Vale cinco minutos revisarlo antes de concluir que las notificaciones no funcionan.',
+        'Aun así, incluso una configuración perfecta tiene un techo, y es estructural, no un error. Las notificaciones de Canvas están construidas alrededor de eventos: se publicó una tarea, cambió una fecha, se registró una calificación. No hay forma integrada de decir «recuérdamelo tres días antes». Además, el flujo de cada curso solo ve su propio curso, así que nada te avisa de que el trabajo del viernes, un parcial de otra materia y un reporte de laboratorio caen en la misma semana. Y como las calificaciones y las fechas viven por separado, un trabajo que vale treinta por ciento en una materia donde vas raspando se ve idéntico en el listado a un ejercicio que vale dos.',
+        'El impulso de poner todas las categorías en «inmediatamente» suele salir contraproducente. En cuanto el teléfono vibra por cada nota de cuestionario y cada edición del programa en seis materias, el volumen te entrena a tratar las alertas como ruido de fondo, y el único mensaje realmente urgente recibe el mismo medio segundo de descarte que todo lo demás. Lo que determina si un recordatorio sirve no es cuántos llegan, sino cuándo llegan los importantes. Con tres días por delante todavía puedes empezar la lectura, escribir una pregunta al profesor o mover algo del fin de semana. La mañana de la entrega, un recordatorio solo puede confirmar lo que ya sospechabas.',
+        'Los recordatorios el mismo día de Semora están activos por defecto en todos los planes, incluido el Gratis, y cubren el caso básico. Pro agrega horarios de recordatorio personalizados (un aviso de uno o tres días de anticipación, configurado una vez y aplicado automáticamente) más horas de silencio, para que una alerta no suene a las 2 de la mañana cuando no hay nada que puedas hacer con ella. Conectar Canvas, Blackboard o Moodle es una función de Pro, y se hace con un token de acceso personal que generas tú mismo en lugar de una integración OAuth que dependa del departamento de sistemas de tu institución. En el plan Gratis la alternativa es real: copia el texto de tus tareas de Canvas y pégalo en el escáner. La entrada cierra con una nota honesta que vale la pena repetir: recordatorios más una mirada semanal al calendario, no recordatorios en lugar de esa mirada.',
+      ],
+      bullets: [
+        'Revisa Cuenta y después Notificaciones en Canvas: cada categoría tiene su propio ajuste de entrega',
+        'Fecha de entrega y Cambios en la tarea son las dos categorías que más conviene poner en «inmediatamente»',
+        'Una notificación sin leer dentro de un resumen semanal equivale funcionalmente a no recibir ninguna',
+        'Pasado cierto punto, más alertas compiten entre sí en vez de darte más seguridad',
+        'Un recordatorio no puede avisarte de que vas quedándote atrás en una materia en general; una mirada periódica al calendario sí',
+      ],
+    },
+    {
+      heading: 'Planear una semana en la que todo cae junto',
+      paragraphs: [
+        'La semana de finales recompensa la planificación más que cualquier otro tramo del periodo, por una razón concreta: lo que la hace difícil es visible con meses de anticipación. Varios exámenes de mucho peso caen en una ventana corta, y los choques dentro de esa ventana se pueden conocer mucho antes de que lleguen. La forma de fallar no es la pereza: es tratar el orden cronológico como orden de urgencia y descubrir el día de dos exámenes el fin de semana anterior.',
+        'El método de la guía es un inventario y después un juicio. Enumera cada examen final con su fecha, su hora y su peso en la calificación del curso. Después combina ese peso con el punto en el que realmente está tu calificación en esa materia. Un final que vale veinte por ciento de una clase donde llevas 92 necesita menos repaso defensivo que un final del mismo veinte por ciento en una clase que va en un 78 al límite, aunque el primero caiga antes en el calendario. Luego mapea los exámenes por densidad y no por fecha: un examen que parece tener una semana completa de repaso puede tener dos días en la práctica si está encajonado entre otros dos.',
+        'La guía también cubre qué hacer dentro de los bloques de repaso, porque programar horas es solo la mitad del problema. Releer un capítulo mide sobre todo si el material te resulta familiar mientras lo tienes delante, que es una habilidad distinta de reconstruirlo en condiciones de examen. La recuperación activa (cerrar el libro y resolver ejercicios en frío, escribir una respuesta de memoria, explicar un concepto en voz alta) y repartir el repaso en varios días en lugar de una noche larga suelen aguantar mejor. Hay además una sección de logística: muchas instituciones publican un calendario maestro de finales que se impone sobre el programa, y las aulas y los materiales permitidos cambian más seguido de lo que los estudiantes esperan.',
+        'El seguimiento de calificaciones es lo que hace posible el segundo paso, y es gratuito: necesitas saber qué materia va en un 92 cómodo y cuál en un 78 al límite antes de repartir horas con honestidad, y la estimación del GPA del semestre en la pestaña de Cursos también es gratuita, y te dice cuánto vale el periodo completo en este momento. El panel de carga académica de Pro es lo que facilita el tercer paso, mostrando las semanas pesadas y los tramos densos en exámenes de todos los cursos a la vez en lugar de dejarte cruzar la información a mano. El Plan Inteligente arma después un horario de estudio con esas fechas y lo reajusta cuando algo se mueve, y las alertas de riesgo académico señalan una calificación que baja o un trabajo faltante con pasos de recuperación bastante antes de que llegue la semana de finales.',
+      ],
+      bullets: [
+        'El peso por sí solo no es el plan: el plan es el peso combinado con tu situación actual',
+        'Busca acumulaciones: dos exámenes en un día, o tres en 48 horas, cambia todo lo que viene antes',
+        'Agenda el repaso como citas concretas, no como la intención de «estudiar química»',
+        'Varias sesiones cortas por examen rinden más que una noche maratónica con las mismas horas totales',
+        'Deja el sueño y una actividad no académica normal como bloques fijos, no como sobras',
+      ],
+    },
+    {
+      heading: 'Estudiar en los huecos que de verdad tienes',
+      paragraphs: [
+        'La técnica Pomodoro —veinticinco minutos de trabajo concentrado, cinco de descanso y un descanso más largo cada cuatro ciclos— la desarrolló Francesco Cirillo a finales de los años ochenta, cuando era estudiante universitario y usaba un temporizador de cocina con forma de tomate para sacar adelante sus propias materias. Es duradera porque es simple. El problema es que casi toda explicación de la técnica asume una tarde tranquila sin nada más en la agenda, que no es como se ve un horario de clases.',
+        'Un día universitario real está hecho de fragmentos: cincuenta minutos entre una clase de 10 y una de 11, noventa minutos a la hora de comer, una tarde libre. En cada uno cabe una cantidad distinta de trabajo, y lo útil es planear para el hueco que tienes y no para el que quisieras. Cincuenta minutos son dos bloques de concentración con un descanso y nada de sobra: el camino a la siguiente clase se presupuesta aparte. Noventa minutos son dos ciclos completos con unos treinta minutos de margen. Tres horas son el conjunto tradicional de cuatro ciclos con un descanso de verdad al final. Sumado a lo largo de un martes cualquiera, eso son unos seis ciclos sacados de huecos que ya estaban en el horario.',
+        'El tamaño de la tarea es donde esto suele romperse. «Avanzar el ensayo» no es una tarea de veinticinco minutos: es un proyecto de varias sesiones disfrazado, y meterlo en un bloque produce avance difuso y ninguna sensación de qué quedó hecho. Un bloque necesita una meta concreta: redactar el segundo párrafo, resolver los ejercicios del uno al cinco, repasar las tarjetas de una materia. Los otros dos errores comunes son dejar que un descanso de cinco minutos se vuelva de quince porque costó cerrar una aplicación, y saltarse el descanso largo porque una entrega apremia, lo que cambia una pausa corta por un bajón más largo.',
+        'El temporizador de concentración de Semora es una función de Pro, igual que las tarjetas de estudio y el tutor con IA que lo acompañan. Lo que el temporizador agrega frente a cualquier temporizador gratuito es contexto: la sesión se vincula a un curso o una tarea que la app ya está siguiendo, así que el tiempo de estudio queda registrado contra trabajo real y no corriendo en una app desconectada. Está al lado del Plan Inteligente y del panel de carga académica, que es la parte que de verdad responde a qué materia conviene dedicarle la sesión de hoy.',
+      ],
+      bullets: [
+        'Hueco de 50 minutos: 25 de trabajo, 5 de descanso, 25 de trabajo, sin margen para recoger',
+        'Hueco de 90 minutos: dos ciclos completos más unos 30 minutos de margen',
+        'Bloque de 3 horas: cuatro ciclos y después un descanso real de 15 a 30 minutos',
+        'Ajusta la tarea al bloque: trabajo corto y autocontenido en ventanas cortas',
+        'Levántate y camina en los descansos; las pantallas cuestan mucho de soltar a tiempo',
+      ],
+    },
+    {
+      heading: 'Elegir el sistema que sostiene todo esto',
+      paragraphs: [
+        'Todo método para controlar fechas de entrega enfrenta tarde o temprano la misma prueba: qué pasa cuando las tareas, los exámenes y las lecturas de cuatro materias tienen que vivir en un mismo lugar al mismo tiempo. Muchos enfoques funcionan bien con una sola clase en la semana dos y se desmoronan para la semana diez. La entrada de comparación aplica esa prueba en lugar de ordenar apps según su publicidad.',
+        'Las agendas de papel y las apps de tareas genéricas son la referencia honesta, y ninguna de las dos está mal. Eso sí, ninguna te quita trabajo: cada fecha sigue teniendo que transcribirse a mano desde cada programa, y cuando un profesor mueve una entrega tienes que darte cuenta y volver a copiarla tú. Ninguna tiene noción de ponderación, así que «Ensayo 2» y «Ejercicios 6» se ven idénticos aunque uno valga diez veces más, y ninguna puede avisarte de que tres materias acaban de poner examen en la misma semana.',
+        'La entrada evalúa siete apps a las que los estudiantes suelen recurrir —algunas entienden programas, otras se conectan al LMS, otras ninguna de las dos cosas, y eso mismo es parte del hallazgo— con cuatro preguntas: ¿lee un programa siquiera, o exige conexión con un LMS o registro manual?; ¿incluye seguimiento de calificaciones o es solo una lista de fechas?; ¿hay un plan gratuito permanente de verdad y no un periodo de prueba que termina en cobro?; ¿sincroniza entre el teléfono y el navegador sin configuración extra? Varias de esas herramientas resultan ser generadoras de material de estudio y no controladores de fechas, lo cual es una respuesta real a la primera pregunta y no un demérito. Cierra con una sección de cuál te conviene, incluidos los casos en que la mejor respuesta no es Semora.',
+        'La entrada deja dicha una advertencia que vale la pena repetir: esas comparaciones se apoyan en las funciones publicadas por cada producto, sus páginas de precios y sus fichas de App Store, más reseñas de terceros en los casos en que una empresa no publica sus precios, y no en pruebas de uso a lo largo de un semestre completo. Todo lo que no está confirmado en el sitio de la empresa aparece señalado como reportado en lugar de afirmado como hecho, y los precios en particular cambian lo suficiente como para revisarlos directamente antes de suscribirte a nada.',
+      ],
+    },
+    {
+      heading: 'Saber qué necesitas en un examen final',
+      paragraphs: [
+        'La aritmética es una línea —resta lo que la parte ya calificada del curso aporta a tu objetivo y divide el resto entre el peso del final— y casi nadie se equivoca en ese paso. Los errores están todos en los datos de entrada. El porcentaje que muestra la plataforma del curso se calcula solo sobre el trabajo calificado, y que las tareas sin calificar queden excluidas o cuenten como cero depende de cómo lo haya configurado tu profesor, así que meter ese número directamente es calcular a partir de una incógnita.',
+        'El caso que de verdad hace tropezar a la gente es una categoría que todavía no se ha calificado, casi siempre la participación. No es un cero, y tratarla como si lo fuera te dirá que un curso ya está perdido cuando no lo está. Lo correcto es trabajar en puntos, suponer un valor pesimista para la categoría abierta y fijarse en cuánto se mueve la respuesta: en el ejemplo resuelto de esa entrada, suponer el crédito completo de participación en vez de 85 por ciento cambia la nota requerida en casi cuatro puntos.',
+        'La entrada también explica cómo el peso del final funciona como palanca en las dos direcciones. Si llegas al final con un 85, un examen que vale 20 por ciento no puede llevarte a 90 por bien que salga, mientras que uno que vale 50 por ciento sí puede: exigiendo un 95, pero exigiendo algo alcanzable en lugar de algo imposible. El mismo peso que te rescata es el que puede deshacer un buen semestre, y por eso vale la pena leerlo del programa en la semana tres y no en la quince.',
+        'El seguimiento de calificaciones con categorías ponderadas está en el plan Gratis, y las ponderaciones salen del escaneo del programa junto con las fechas, así que el número en curso existe sin configuración manual. Pro agrega la escala de calificación y la proyección: calculadoras de escenarios para el trabajo que falta y una escala editable para las materias cuyos umbrales de letra no son los estándar. La entrada dice con claridad que una calculadora web suelta responde perfectamente la pregunta una vez; lo que no puede es responderla otra vez la semana siguiente, ni para cinco materias a la vez, que es la versión que decide cómo se gasta la semana de finales.',
+      ],
+      bullets: [
+        'Nota necesaria = (objetivo − calificación actual × (1 − peso del final)) ÷ peso del final',
+        'Una categoría sin calificar no es un cero: déjala fuera o supón un valor pesimista, y di cuál usaste',
+        'Los puntos extra suman a lo ganado sin sumar al denominador; no son otra categoría ponderada',
+        'Revisa la política de redondeo si el resultado cae a menos de un punto de un umbral de letra',
+        'Calcúlalo para todas las materias, no solo para la que más angustia te da: el objetivo es reasignar horas',
+      ],
+    },
+    {
+      heading: 'Hacer tarjetas de estudio que sobrevivan al jueves',
+      paragraphs: [
+        'Generar un mazo a partir de los apuntes toma segundos hoy en día, y eso ha movido la parte difícil a otro lado sin que se note. Un mazo de 120 tarjetas indiferenciadas es peor que uno de 30 buenas, porque el mazo grande es el que la gente deja de abrir, y la repetición espaciada solo funciona con contacto repetido. Cada tarjeta que no evalúa nada cuesta tiempo de repaso en cada pasada.',
+        'Dos hallazgos explican cómo debe ser una buena tarjeta. La práctica de recuperación significa que el acto de sacar una respuesta de la memoria es el mecanismo, así que una tarjeta que no obliga a un intento de recuperación es un apunte y no una tarjeta. El efecto de espaciamiento significa que el calendario importa tanto como el mazo. Juntos implican la regla que casi todos los mazos generados rompen: una idea por tarjeta. Una tarjeta con cuatro oraciones en el reverso no se puede calificar con honestidad —recuerdas dos a medias, redondeas hacia arriba— y el algoritmo de programación se aleja de lo que de verdad sabes.',
+        'Los mazos generados además fallan de formas reconocibles, lo que los hace rápidos de arreglar en una sola pasada de edición: el reverso con párrafo, la pregunta tan específica que contiene su propia respuesta, la tarjeta de dato curioso sacada de una nota al pie, el racimo de casi duplicados y, de vez en cuando, una invención dicha con seguridad que no aparece en ningún lugar de tus apuntes. Esa última es la razón para verificar el mazo contra tus propios apuntes antes del primer repaso y no después de un mal cuestionario: una tarjeta equivocada en un calendario espaciado significa ensayar un error a propósito.',
+        'La entrada también es clara sobre cuándo las tarjetas son la herramienta equivocada. Son excelentes para cualquier cosa con una respuesta correcta que quepa en una tarjeta, y malas para materias de resolución de problemas, donde lo que se evalúa es elegir y ejecutar un método y no recordar que existe uno. Las tarjetas, el temporizador de concentración y el tutor con IA son funciones de Pro. Lo que agrega la versión de Semora es de dónde sale el material: los mazos se generan del programa que ya escaneó y de los apuntes que hayas subido, y pueden acotarse a un examen o cuestionario concreto tomado de tus entregas registradas, para que un repaso de parcial no llegue diluido con material del final.',
+      ],
+      bullets: [
+        'Una idea por tarjeta: es lo que hace que la autocalificación, y por lo tanto el calendario, signifiquen algo',
+        'Acota un mazo a una sola evaluación, no a un curso entero',
+        'Cuenta con borrar cerca de un tercio de lo que devuelve un generador',
+        'Verifica las tarjetas contra tus propios apuntes antes del primer repaso, no después',
+        'Un día sin repasar sale caro: todo lo programado cae encima de la cola del día siguiente',
+      ],
+    },
+    {
+      heading: 'Distinguir las apps de estudio con IA antes de pagar una',
+      paragraphs: [
+        '«App de estudio con IA» describe por lo menos tres productos distintos, y casi toda la decepción en esta categoría es un desajuste y no un mal producto. Las apps centradas en el programa leen los documentos de tus materias y arman un semestre de fechas. Las centradas en el material convierten un PDF o la grabación de una clase en tarjetas, apuntes y cuestionarios. Las centradas en la agenda organizan el tiempo y las tareas que tú registras o importas. Solo la primera responde qué se entrega y cuánto vale; solo la segunda te ayuda a aprender un capítulo.',
+        'Las categorías fallan en direcciones opuestas, que es lo que hace práctica la distinción en vez de académica. Una app centrada en el material te generará con gusto sesenta tarjetas de una materia en la que estás a punto de perder una entrega. Una agenda te recordará una entrega que no tiene forma de ayudarte a cumplir. Saber cuál de las dos carencias tienes es la mayor parte de la decisión, y por eso la respuesta honesta para muchos estudiantes es una app de cada categoría en lugar de un solo ganador.',
+        'La palabra «IA» también hace tres trabajos distintos a lo largo del grupo. En las apps centradas en el programa es extracción: convertir un documento sin estructura en fechas y ponderaciones, el trabajo con más probabilidad de salir mal en silencio, y por eso un paso de revisión antes de guardar importa más que el modelo que hay detrás. En las centradas en el material es generación, donde los fallos son más visibles pero más frecuentes. En las agendas es estimación, lo más difícil de hacer bien de los tres y lo más fácil de comprobar tú mismo en una semana.',
+        'La entrada compara siete apps por aquello alrededor de lo que están construidas, si convierten un programa en fechas, si llevan una calificación y cuánto cuestan, con una segunda tabla sobre lo que incluye realmente cada plan gratuito. Vale la pena adelantar un patrón: los planes gratuitos de la categoría centrada en el material suelen ser demostraciones dimensionadas para enseñarte el producto, mientras que los de las categorías centradas en el programa y en la agenda son utilizables, porque generar respuestas de tutor le cuesta dinero al proveedor cada vez que se usan y guardar una fecha no.',
+      ],
+      bullets: [
+        'Centradas en el programa: el documento del curso es la fuente de verdad (fechas, ponderaciones, horarios)',
+        'Centradas en el material: tus archivos subidos son la fuente de verdad (tarjetas, apuntes, cuestionarios, tutoría)',
+        'Centradas en la agenda: lo que escribes o importas es la fuente de verdad (planificación y recordatorios)',
+        'Nombra la falla que te sigue pasando y elige de la categoría que la resuelve',
+        'Los precios de la competencia se mueven, y varios proveedores no los publican: confírmalos antes de suscribirte',
+      ],
+    },
+    {
+      heading: 'Cómo están escritas estas guías',
+      paragraphs: [
+        'En este blog no aparece ningún número inventado. Semora se lanzó hace poco y no tiene un historial de calificaciones significativo, así que aquí no vas a encontrar cifras de descargas, totales de usuarios, valoraciones con estrellas, testimonios ni nombres de universidades, ni presentados de forma vaga ni como estimaciones. Cuando una entrada se apoya en un principio general sobre el aprendizaje, como que el repaso espaciado rinde más que una sola noche de atracón, lo dice como hallazgo general y no lo disfraza de estudio que nadie puede comprobar.',
+        'Las menciones al producto llevan indicado el plan en el punto en que aparecen, porque una guía que te empuja en silencio hacia un muro de pago no es una guía. Gratis significa gratis: cinco escaneos de programas por mes calendario, hasta cuatro cursos, seguimiento completo de entregas y tareas, seguimiento de calificaciones con promedios ponderados, una estimación del GPA del semestre ponderada por horas crédito, recordatorios el mismo día y la posibilidad de unirte a un Course Space al que te invite un compañero. El único límite rígido son los semestres: una cuenta gratuita cubre un solo semestre, así que un segundo periodo es donde Pro deja de ser opcional. Pro cuesta $3.99 al mes o $19.99 al año, lo que sale alrededor de $1.67 mensuales en el plan anual, se compra dentro de la app de iOS y se aplica a toda tu cuenta, incluida la versión web; no hay un pago aparte en el navegador. Ser anfitrión de tu propio Course Space es de Pro; unirte a uno que alguien comparta contigo es gratis y sigue siéndolo.',
+        'También conviene ser claro sobre lo que este blog no cubre. No calcula el GPA acumulado, porque Semora tampoco lo hace: calificaciones ponderadas por curso y una estimación del GPA del semestre, sí; un número de todo el expediente, no. No escribe sobre funciones que no se han lanzado, y por eso aquí no vas a encontrar nada sobre sincronización con Google Classroom o Google Calendar. Y Semora es una app universal de iOS para iPhone y iPad más una app web en una sola cuenta, sincronizadas casi en tiempo real: no hay app de Android, así que quien use Android trabaja en el navegador, donde la sincronización con el calendario del dispositivo no funciona y la exportación .ics es la forma de llevar las fechas a un calendario externo.',
+      ],
+    },
+  ],
+  faq: [
+    {
+      question: '¿Necesito Semora para seguir estas guías?',
+      answer: 'No. Cada entrada está escrita para que el método funcione con una hoja de cálculo, una agenda de papel o el calendario que ya traes en el teléfono: primero van los pasos y al final el producto. Semora aparece al cierre de cada guía como la versión automática de un trabajo que podrías hacer a mano, con el plan indicado para que sepas qué no cuesta nada. Una guía que solo sirve después de suscribirte es una página de ventas, no una guía.',
+    },
+    {
+      question: '¿Cuál entrada debería leer primero?',
+      answer: 'Depende de en qué punto del periodo estés. En la primera semana, empieza por convertir el programa en un calendario del semestre, porque todo lo demás asume que esas fechas ya existen en algún lado. Cuando regrese el primer trabajo calificado, la guía de calificación ponderada es la que importa. Lee la entrada de recordatorios de Canvas en cuanto una fecha te tome por sorpresa. Guarda la guía de finales para más o menos un mes antes, mientras todavía hay tiempo de adelantar el repaso.',
+    },
+    {
+      question: '¿La importación desde Canvas está incluida en el plan Gratis?',
+      answer: 'No. Conectar Canvas, Blackboard o Moodle forma parte de Pro, a $3.99 al mes o $19.99 al año, y lo aplica el servidor en lugar de que la app se limite a ocultar un botón. De todos modos la ruta del plan Gratis es real, y la entrada sobre Canvas la explica: copia tu lista de tareas como texto y pégala directamente en el escáner de programas, que acepta texto pegado en la web desde veinte hasta sesenta mil caracteres.',
+    },
+    {
+      question: '¿Semora calcula mi GPA acumulado?',
+      answer: 'No, y la entrada sobre GPA ponderado lo dice de frente en lugar de esconderlo. Lo que Semora sí calcula, ambos en el plan Gratis, es el porcentaje ponderado por curso (tu calificación actual en una materia, a partir de las notas y ponderaciones que registras y contando solo las categorías que ya tienen trabajo calificado) y una estimación del GPA del semestre en la pestaña de Cursos, que convierte cada una de esas calificaciones a puntos y la pondera por las horas crédito del curso. El GPA acumulado es el que queda fuera de alcance: necesita las calificaciones finales y las horas crédito de todos los periodos de tu expediente, y eso vive en la oficina de registro académico y no en ningún programa de clase. Pro agrega una escala de puntos editable si la conversión de letra a puntos de tu institución no es la estándar.',
+    },
+    {
+      question: '¿Qué puedo hacer realmente sin pagar?',
+      answer: 'Cinco escaneos de programas por mes calendario, hasta cuatro cursos, seguimiento completo de entregas y tareas, seguimiento de calificaciones con promedios ponderados, una estimación del GPA del semestre, recordatorios el mismo día y unirte a un Course Space al que te invite un compañero. Sin tarjeta de crédito y sin límite de tiempo sobre el plan en sí: el límite es de alcance y no de reloj, con una excepción que conviene saber desde el principio, y es que una cuenta gratuita cubre un semestre, así que empezar un segundo periodo implica Pro. Pro quita el tope mensual de escaneos (sigue habiendo un techo de uso razonable de veinte escaneos al día) y agrega cursos y semestres ilimitados, importación desde el LMS, ser anfitrión de tu propio Course Space, el Plan Inteligente, el panel de carga académica, las tarjetas de estudio, el temporizador de concentración, el tutor con IA y la sincronización de calendario con exportación .ics.',
+    },
+    {
+      question: '¿Estas entradas citan investigación o estadísticas de usuarios?',
+      answer: 'Estadísticas de usuarios, ninguna, porque no existen para reportar e inventarlas sería peor que no decir nada: aquí no vas a encontrar cifras de descargas, valoraciones ni testimonios. Cuando una entrada se apoya en un principio general sobre el aprendizaje, como que el repaso espaciado rinde más que una sola noche de atracón, se presenta como hallazgo general. Los datos de la competencia salen del sitio, la página de precios o la ficha de App Store de cada empresa, más reseñas de terceros cuando la empresa no publica sus precios, y todo lo que la empresa no confirma queda señalado como reportado.',
+    },
+  ],
+};
 
 const BLOG_PAGES: SpanishPageConfig[] = [
   page(SPANISH_BLOG_POSTS[0].path, SPANISH_BLOG_POSTS[0].englishPath, 'standard', {

@@ -438,14 +438,17 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
         "paragraphs": [
           "This blog is written for one specific person: an undergraduate carrying four to six courses, each with its own syllabus, its own grading scheme, and its own idea of when things are due. Not a productivity hobbyist collecting systems. Someone who wants the semester to stop producing surprises — the paper assigned in week two and due in week eleven, the midterm that turns out to be worth thirty percent, the Wednesday in December with two finals on it.",
           "Every post here takes one concrete mechanic and explains it end to end, in the order you would actually do it. The methods work with a spreadsheet, a paper planner, or the calendar app already on your phone. Semora shows up at the end of each guide as the automated version of work you could do by hand, with the tier stated plainly so you know which parts cost nothing. If a guide is only useful once you subscribe, it was written wrong.",
-          "There are six posts, published between July 20 and July 25, 2026. They fall into six problems, described below. Each description explains the underlying problem well enough to be useful on its own, so this page is worth reading even if you never open a single post."
+          "There are nine posts, published between July 20 and August 9, 2026. They fall into nine problems, described below. Each description explains the underlying problem well enough to be useful on its own, so this page is worth reading even if you never open a single post."
         ],
         "bullets": [
           "Turning a syllabus into a semester calendar — the conversion every course demands and no course teaches",
           "Calculating a weighted grade correctly, including drop-the-lowest rules and rounding policy",
+          "Working out what you need on a final exam, and what to do when the answer is above 100",
           "Getting a deadline reminder out of Canvas early enough to act on it",
           "Planning finals week around exam density and weight rather than chronological order",
           "Running timed study sessions in the fifty- and ninety-minute gaps a class schedule actually leaves",
+          "Turning lecture notes into flashcards worth reviewing, rather than a deck abandoned by Thursday",
+          "Telling the three kinds of AI study app apart before paying for the wrong one",
           "Choosing which kind of system — paper, generic to-do app, or syllabus-aware tool — holds up past week ten"
         ]
       },
@@ -529,6 +532,54 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
           "Paper planners and generic to-do apps are the honest baseline, and neither is wrong. Both remove nothing from the labor, though. Every date still has to be transcribed by hand from every syllabus, and when a professor moves a deadline you have to notice and re-copy it yourself. Neither has any concept of grading weight, so \"Essay 2\" and \"Problem Set 6\" look identical even when one is worth ten times as much, and neither can flag that three courses just landed exams in the same week.",
           "The post evaluates seven apps students commonly reach for — some syllabus-aware, some LMS-connected, some neither, which is itself part of the finding — against four questions: does it read a syllabus at all, or does it require an LMS connection or manual entry; is grade tracking included or is it only a deadline list; is there a genuine ongoing free tier rather than a free period that expires into billing; and does it sync between a phone and a browser without extra setup. Several of the tools in that lineup turn out to be study-material generators rather than deadline trackers, which is a real answer to question one rather than a knock. It closes with a which-one-fits-you section, including cases where something other than Semora is the better answer.",
           "One caveat is stated in the post and worth restating: those comparisons rest on each product's own publicly stated features, pricing pages, and App Store listings, plus third-party review coverage in the cases where a company does not publish its pricing itself, not on hands-on testing across a full semester. Anything not confirmed on a company's own site is labeled as reported rather than stated as fact, and pricing in particular changes often enough that it is worth checking directly before subscribing to anything."
+        ]
+      },
+      {
+        "heading": "Working out what you need on a final",
+        "paragraphs": [
+          "The arithmetic is one line — subtract what the already-graded portion of the course contributes to your target, then divide the remainder by the final's weight — and almost nobody gets it wrong at that step. The errors are all in the inputs. The percentage your LMS shows is calculated over graded work only, and whether ungraded assignments are excluded or counted as zero depends on how your instructor configured it, so plugging that number straight in means calculating from an unknown.",
+          "The case that actually trips people up is a category that has not been graded yet — participation, most often. It is not a zero, and treating it as one will tell you a course is already lost when it is not. The right move is to work in points, assume a pessimistic value for the open category, and notice how much the answer moves: in the worked example in that post, assuming full participation credit rather than 85 percent changes the required final score by nearly four points.",
+          "The post also lays out how the final's weight behaves as a lever in both directions. Walking into a final with an 85, a 20-percent final cannot reach a 90 no matter how well it goes, while a 50-percent final can — needing a 95, but needing something achievable rather than something impossible. The same weight that rescues you is the one that can undo a good semester, which is why the weight is worth reading off the syllabus in week three rather than week fifteen.",
+          "Grade tracking with weighted categories is on the free tier, and the weights come out of the syllabus scan alongside the deadlines, so the running number exists without any manual setup. Pro adds Grade Scale and Forecasting: what-if calculators for the work still ahead, and an editable grading scale for courses whose letter cutoffs are not the standard ones. The post is explicit that a standalone web calculator answers the question perfectly well once — it just cannot answer it again next week, or for five courses at the same time, which is the version that decides how finals week gets spent."
+        ],
+        "bullets": [
+          "Needed score = (target − current grade × (1 − final's weight)) ÷ final's weight",
+          "An ungraded category is not a zero — leave it out or assume a pessimistic value, and say which",
+          "Extra credit adds to earned points without adding to the denominator; it is not another weighted category",
+          "Check the rounding policy if the answer lands within a point of a letter cutoff",
+          "Calculate it for every course, not just the one causing the most anxiety — the point is reallocating hours"
+        ]
+      },
+      {
+        "heading": "Making flashcards that survive past Thursday",
+        "paragraphs": [
+          "Generating a deck from lecture notes takes seconds now, which has quietly moved the hard part elsewhere. A deck of 120 undifferentiated cards is worse than 30 good ones, because the large deck is the one people stop opening — and spaced repetition only works through repeated contact. Every card that tests nothing costs review time on every single pass.",
+          "Two findings explain what a good card looks like. Retrieval practice means the act of pulling an answer out of memory is the mechanism, so a card that does not force a retrieval attempt is a note rather than a flashcard. The spacing effect means the schedule matters as much as the deck. Together they imply the rule most generated decks break: one idea per card. A card with four sentences on the back cannot be graded honestly — you half-remember two of them, round up, and the scheduling algorithm drifts away from what you actually know.",
+          "Generated decks also fail in recognizable ways, which makes them quick to fix in one editing pass: the paragraph back, the question phrased so specifically it contains its own answer, the trivia card pulled from a footnote, the cluster of near-duplicates, and occasionally a confident invention that appears nowhere in your notes. That last one is the reason to check a deck against your own notes before the first review rather than after a bad quiz — a wrong card on a spaced schedule means rehearsing an error on purpose.",
+          "The post is also clear about when flashcards are the wrong tool. They are excellent for anything with a right answer that fits on a card, and poor for problem-solving courses, where the skill being tested is choosing and executing a method rather than recalling that one exists. Flashcards, the Focus timer, and the AI Tutor are Pro features. What Semora's version adds is where the material comes from: decks generate from the syllabus it already scanned and any notes you have uploaded, and can be scoped to one specific exam or quiz pulled from your tracked deadlines, so a midterm review does not arrive diluted with material from finals."
+        ],
+        "bullets": [
+          "One idea per card — it is what makes the self-grading step, and therefore the schedule, mean anything",
+          "Scope a deck to one assessment, not to a whole course",
+          "Expect to delete about a third of what a generator returns",
+          "Verify cards against your own notes before the first review, not after",
+          "A day off is expensive: everything scheduled lands on top of tomorrow's queue"
+        ]
+      },
+      {
+        "heading": "Telling AI study apps apart before paying for one",
+        "paragraphs": [
+          "\"AI study app\" describes at least three different products, and most disappointment in this category is a mismatch rather than a bad product. Syllabus-first apps read your course documents and build a semester of deadlines. Materials-first apps turn a PDF or a lecture recording into flashcards, notes, and quizzes. Planner-first apps organize time and tasks you enter or import. Only the first answers what is due and what it is worth; only the second helps you learn a chapter.",
+          "The categories fail in opposite directions, which is what makes the distinction practical rather than academic. A materials-first app will cheerfully generate sixty flashcards for a class you are about to miss a deadline in. A planner will remind you about a deadline it has no way to help you meet. Knowing which gap you actually have is most of the decision, and it is why the honest answer for many students is one app from each category rather than a single winner.",
+          "The word \"AI\" is also doing three different jobs across the lineup. In syllabus-first apps it is extraction — turning an unstructured document into dates and weights, the job most likely to be quietly wrong, which is why a review step before anything saves matters more than the model behind it. In materials-first apps it is generation, where failures are more visible but more common. In planners it is estimation, the hardest of the three to do well and the easiest to sanity-check yourself within a week.",
+          "The post compares seven apps on what they are built around, whether they turn a syllabus into deadlines, whether they track a grade, and what they cost, with a second table on what each free tier actually includes. One pattern is worth stating up front: free tiers in the materials-first category tend to be demos sized to show you the product, while the syllabus-first and planner-first free tiers are usable — because generating tutor answers costs a vendor money on every use and storing a deadline does not."
+        ],
+        "bullets": [
+          "Syllabus-first: the course document is the source of truth (deadlines, weights, meeting times)",
+          "Materials-first: your uploads are the source of truth (flashcards, notes, quizzes, tutoring)",
+          "Planner-first: what you type or import is the source of truth (scheduling and reminders)",
+          "Name the failure you keep having, then pick from the category that addresses it",
+          "Competitor pricing moves — several vendors do not publish it at all, so check before subscribing"
         ]
       },
       {
