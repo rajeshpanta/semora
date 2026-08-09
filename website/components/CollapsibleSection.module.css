@@ -1,0 +1,85 @@
+/* Progressive disclosure for the long-form bodies.
+   Tokens and rhythm are lifted from PageSections/Faq so a collapsed section is
+   visually the same object as an expanded one — only the detail is hidden. */
+
+.lead {
+  color: var(--ink2);
+  font-size: clamp(14.5px, 2.1vw, 16.5px);
+  line-height: 1.75;
+  margin: 0;
+}
+
+.details {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* The toggle reads as a control, not a heading: small, uppercase, tracked out,
+   in the brand colour. Monospace-adjacent tracking is what gives it the
+   technical feel without introducing a second typeface. */
+.summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 6px 12px 6px 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--brand);
+  cursor: pointer;
+  list-style: none;
+  transition: opacity 0.15s ease;
+}
+
+.summary::-webkit-details-marker {
+  display: none;
+}
+
+.summary:hover {
+  opacity: 0.72;
+}
+
+.summary:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Chevron rotates in place rather than swapping glyphs, so the control does not
+   reflow when it opens. */
+.chevron {
+  width: 9px;
+  height: 9px;
+  border-right: 1.8px solid currentColor;
+  border-bottom: 1.8px solid currentColor;
+  transform: rotate(45deg) translate(-1px, -1px);
+  transition: transform 0.2s ease;
+}
+
+.details[open] .chevron {
+  transform: rotate(-135deg) translate(-1px, -1px);
+}
+
+.body {
+  padding-bottom: 4px;
+}
+
+.body p {
+  color: var(--ink2);
+  font-size: clamp(14.5px, 2.1vw, 16.5px);
+  line-height: 1.75;
+  margin: 0 0 16px;
+}
+
+.body p:last-child {
+  margin-bottom: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron,
+  .summary {
+    transition: none;
+  }
+}

@@ -6,6 +6,7 @@ import { ArticleShell } from './ArticleShell';
 import { faqPageSchema } from '@/lib/schema';
 import { Breadcrumb } from './Breadcrumb';
 import { BlogPostHero } from './BlogPostHero';
+import { CollapsibleSection } from './CollapsibleSection';
 import type { NewPage } from '@/lib/new-page-content';
 import type { SiteLocale } from '@/lib/i18n';
 
@@ -76,18 +77,19 @@ export function LongFormPage({
         {content.sections.map((s) => (
           <section key={s.heading} className={styles.section}>
             <h2>{s.heading}</h2>
-            {s.paragraphs.map((p, i) => (
-              <p key={i} className={styles.body}>
-                {p}
-              </p>
-            ))}
-            {s.bullets?.length ? (
-              <ul className={styles.points}>
-                {s.bullets.map((b) => (
-                  <li key={b}>{b}</li>
-                ))}
-              </ul>
-            ) : null}
+            <CollapsibleSection
+              paragraphs={s.paragraphs}
+              bullets={s.bullets}
+              moreLabel={es ? 'Ver detalles' : 'More detail'}
+            >
+              {s.bullets?.length ? (
+                <ul className={styles.points}>
+                  {s.bullets.map((b) => (
+                    <li key={b}>{b}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </CollapsibleSection>
           </section>
         ))}
 

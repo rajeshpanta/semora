@@ -1,5 +1,6 @@
 import styles from './PageSections.module.css';
 import { ArticleShell } from './ArticleShell';
+import { CollapsibleSection } from './CollapsibleSection';
 import { Faq } from './Faq';
 import { JsonLd } from './JsonLd';
 import { faqPageSchema } from '@/lib/schema';
@@ -46,16 +47,15 @@ export function PageSections({
       {content.sections.map((s) => (
         <section key={s.heading} className={styles.section}>
           <h2>{s.heading}</h2>
-          {s.paragraphs.map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
-          {s.bullets?.length ? (
-            <ul className={styles.points}>
-              {s.bullets.map((b) => (
-                <li key={b}>{b}</li>
-              ))}
-            </ul>
-          ) : null}
+          <CollapsibleSection paragraphs={s.paragraphs} bullets={s.bullets} moreLabel="More detail">
+            {s.bullets?.length ? (
+              <ul className={styles.points}>
+                {s.bullets.map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ul>
+            ) : null}
+          </CollapsibleSection>
         </section>
       ))}
 
