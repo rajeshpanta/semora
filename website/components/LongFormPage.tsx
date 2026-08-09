@@ -59,7 +59,7 @@ export function LongFormPage({
         )}
 
         {hero ? (
-          <BlogPostHero title={content.h1} date={hero.date ?? ''} image={hero.image} imageAlt={hero.alt} />
+          <BlogPostHero locale={locale} title={content.h1} date={hero.date ?? ''} image={hero.image} imageAlt={hero.alt} />
         ) : (
           <h1>{content.h1}</h1>
         )}
