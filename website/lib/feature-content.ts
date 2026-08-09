@@ -131,36 +131,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": [
-      {
-        "question": "Do I need a PDF, or will a photo work?",
-        "answer": "A photo works. You can shoot the syllabus with the camera, pick images from your photo library, or upload a PDF, and images can be JPG, PNG, HEIC, HEIF, or WEBP. Photo scans handle up to five pages in a single scan, captured one at a time or multi-selected in order. For anything longer than five pages, a PDF is the better route because PDFs are read in full with no page limit."
-      },
-      {
-        "question": "What happens if it gets a date or a title wrong?",
-        "answer": "You fix it before anything saves. Every extracted item lands on a review screen with an edit pencil that opens fields for the title, type, date, time, weight, and description. Items the model was unsure about are badged as low confidence, and dates that fall outside the expected window for your term are flagged separately. Deselect anything you do not want. Only the items you check are written as tasks."
-      },
-      {
-        "question": "Does a failed or wrong scan use up one of my five?",
-        "answer": "No. If the document is not a syllabus, the server classifies it as such and returns before writing anything, so no course is created and no free scan is consumed. The same is true of a network failure, a timeout, or an overloaded AI service. Only a successful extraction counts. Rejected attempts do count toward a separate rolling limit of 20 attempts per 24 hours, which normal use will not reach."
-      },
-      {
-        "question": "What exactly happens when I hit five scans?",
-        "answer": "The Scan tab shows a red pill saying you have no free scans left this month, and tapping a scan option explains that scans reset on the 1st and offers to upgrade. Before you spend the fifth one, Semora warns you first and lets you cancel. The window is the calendar month, so the count resets automatically. Pro removes the cap at $3.99 a month or $19.99 a year."
-      },
-      {
-        "question": "What if I scan the same syllabus twice?",
-        "answer": "Semora recognizes that the course already exists in that semester and stops to ask what you want. You can open the existing course, or create a separate duplicate course with its own copy of the deadlines. It deliberately does not merge into the existing course, because there is no per-item comparison against your current tasks and a merge would silently duplicate every deadline you had already saved."
-      },
-      {
-        "question": "Does it pull anything besides assignment dates?",
-        "answer": "Yes, and that is most of the value. It extracts the course name and code, the instructor, your recurring class meetings with days, times, room, and whether each block is lecture, lab, or discussion, office hours including by-appointment ones, the term name and start and end dates, and the grading scale with its letter cutoffs. Each deadline also carries its type, its time, and its percentage weight toward your final grade."
-      },
-      {
-        "question": "Can I scan from a laptop instead of my phone?",
-        "answer": "Yes. The web app takes the same PDF and image uploads, and adds two things a laptop is better at: you can drag a file straight onto the scan frame, and you can paste syllabus text copied from a PDF or an LMS page instead of uploading anything. Pasted text between 20 and 60,000 characters skips image reading entirely. It is one account, so anything you scan on the web appears on your phone."
-      }
-    ]
+    "faq": []
   },
   "grade-tracking": {
     "metaTitle": "Grade Tracking in Semora — Weighted Averages, Free",
@@ -289,36 +260,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": [
-      {
-        "question": "Is grade tracking free, or do I need Pro?",
-        "answer": "The tracking itself is free — weighted averages, grade categories, drop-lowest rules, extra-credit policies, letter grades, and the semester GPA estimate all work on the free plan. Free accounts are limited to 4 courses per semester and 5 syllabus scans per month. Pro, at $3.99 monthly or $19.99 yearly, adds editing your grade and GPA scales plus the what-if forecasting calculators."
-      },
-      {
-        "question": "My professor never published assignment weights. Does this still work?",
-        "answer": "Yes. If none of your graded assignments carry a weight, Semora falls back to a straight average of the scores you have posted rather than showing an empty card. It is less precise than a weighted calculation and it is clearly better than nothing. The moment you add weights, or set up grade categories, it switches to the weighted math automatically for that course."
-      },
-      {
-        "question": "How does drop-lowest handle a category with only one grade in it?",
-        "answer": "It refuses to drop it. The drop count is capped at one fewer than the number of graded items in that category, so a category with two grades and \"drop 2\" configured drops exactly one, and a category with a single grade drops none. The course card tells you how many items are currently being dropped, and that number changes as more work gets graded."
-      },
-      {
-        "question": "Can I enter points instead of percentages?",
-        "answer": "Both. Points mode takes points earned and total points possible, converts to a percentage to two decimals, and keeps the original numbers so the task still shows 44/50. Percentage mode takes a single number from 0 to 100. Points possible is the assignment's own total, not its weight — a 20 percent exam can still be out of 50 points, and Semora treats those as separate things."
-      },
-      {
-        "question": "What is the difference between the three extra-credit options?",
-        "answer": "Bonus points adds a flat number of percentage points on top of your course grade, scaled by your score, five points earned at 90 percent adds 4.5. Inside category folds the item into its category average and lets that category exceed 100 percent. Ignore keeps the assignment visible in your task list but leaves it out of every calculation. You pick one per course."
-      },
-      {
-        "question": "Will Semora's number match what my professor has?",
-        "answer": "Usually close, sometimes not exactly. Semora computes from what you enter and only over work that has been graded, so it will not know about a curve, a dropped assignment your professor decided on midway, or a rounding rule not stated in the syllabus. The displayed grade is also capped at 100. Treat it as an accurate estimate of your standing, not as the official record."
-      },
-      {
-        "question": "Does my grade scale match my school's plus-minus system?",
-        "answer": "It can. If your syllabus prints its grading table, the scan pulls it in with plus and minus grades intact and applies it to that course. Editing a scale by hand is a Pro feature — you set each letter and its minimum percentage, add or remove rows, and Semora sorts them on save. Free accounts cannot see or change a course's grade scale on the course screen \u2014 it appears as a locked Pro row. (The separate GPA scale in Settings is visible to everyone but editable only on Pro.)"
-      }
-    ]
+    "faq": []
   },
   "smart-plan": {
     "metaTitle": "Smart Plan: Your Study Schedule, Built",
@@ -428,36 +370,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": [
-      {
-        "question": "Is Smart Plan included in the free version?",
-        "answer": "No. Smart Plan is part of Pro, which is $3.99 per month or $19.99 per year, about $1.67 per month on the annual plan. The free tier still gives you full deadline and task tracking, grade tracking with weighted averages, same-day reminders, joining a classmate's Course Space, up to four courses per semester, and five syllabus scans per calendar month. Pro is purchased inside the iOS app and applies to your whole account, including the web app — there is no separate web checkout."
-      },
-      {
-        "question": "Does Smart Plan use AI to build the schedule?",
-        "answer": "The AI is upstream. Scanning your syllabus is what extracts the deadlines, task types, grade weights, and class meeting times. The scheduling itself is deterministic math over that data — effort estimates, urgency scoring, and slot placement, computed on your device with no model call. That is a deliberate choice: the same inputs always produce the same plan, it is instant, and every number in it traces back to something you can see and edit."
-      },
-      {
-        "question": "Will it schedule study time during my classes?",
-        "answer": "No. Every class meeting on that day's weekday is blocked before any session is placed, using the meeting times on your course schedule — extracted when you scan a syllabus, and editable on the course screen. If a meeting has no end time recorded, it is treated as one hour. Completed study sessions are blocked too. With calendar conflicts enabled on iOS, your device calendar events are also blocked, with a 10-minute buffer on each side."
-      },
-      {
-        "question": "What happens if I ignore my plan for a week?",
-        "answer": "Nothing breaks. The next time you open Smart Plan, every unfinished session is discarded and the next 14 days are rebuilt from scratch against today's date, your current deadlines, and your settings. Sessions that moved are labeled with the date they came from, and a status line tells you how many moved forward. If the remaining work no longer fits your daily capacity, the at-risk banner tells you exactly how much time is unscheduled."
-      },
-      {
-        "question": "Can I change the session length and when my evenings start?",
-        "answer": "Yes. Focus sessions can be 25, 45, or 50 minutes, and daily capacity can be 1 hour, 1.5 hours, 2 hours, or 3 hours. You set a weekday start time and a separate weekend start time, and you can turn weekends off entirely so Saturday and Sunday stay clear. Saving preferences rebuilds the plan in the same step. Because the settings live on your account, a change on your phone shows up on your iPad and on the web."
-      },
-      {
-        "question": "What if the effort estimates are wrong for my courses?",
-        "answer": "Override them. Every task has an Estimated Effort field with presets from 30 minutes to 8 hours, and any value you set of 15 minutes or more replaces the automatic estimate entirely, up to a 48-hour cap. The automatic figure is only a fallback based on task type and grade weight. Time you have already logged against a task is subtracted too, so a task you have mostly finished stops consuming your evenings."
-      },
-      {
-        "question": "Does completing a focus session update anything else?",
-        "answer": "Yes. Starting a session from the play button opens the focus timer with that block's exact length, and finishing the focus phase marks the session complete automatically. Those minutes subtract from the task's remaining effort, count against that day's capacity, and reserve their slot so the next rebuild does not schedule over them. Once completed time meets a task's estimate, that task drops out of planning entirely."
-      }
-    ]
+    "faq": []
   },
   "flashcards": {
     "metaTitle": "Semora Flashcards: AI Decks + Spaced Repetition",
@@ -566,36 +479,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": [
-      {
-        "question": "How many cards does one generation produce?",
-        "answer": "The prompt targets 10 to 20 cards, and no more than 30 are ever saved from a single run. It is instructed to generate fewer rather than pad with weak cards when the material does not support that many, so a thin syllabus with no notes attached will produce a short deck. Malformed cards are dropped individually, so a partly bad response still saves the good cards."
-      },
-      {
-        "question": "Do I have to upload anything to generate a deck?",
-        "answer": "No, as long as you scanned that course's syllabus. The scan output alone is enough to generate from. Uploading lecture slides, a reading, or a review packet makes the cards considerably more specific, since syllabus topics are usually just titles while notes contain the actual definitions and formulas. If a course has neither, generation stops and tells you to add material first."
-      },
-      {
-        "question": "Can I make a deck for just one exam instead of the whole course?",
-        "answer": "Yes. The Focus on row lists every exam, quiz, assignment, and reading you are tracking in that course. Pick one and generation narrows to it: the server sends the course work already completed or due on or before that date as evidence of what has been covered, and drops anything due after it entirely. A midterm deck does not get diluted with finals material."
-      },
-      {
-        "question": "Can I edit the cards the AI writes?",
-        "answer": "Yes, and it is worth doing. Tap any card in the deck to edit its front and back, or delete it with the trash icon. Generated and hand-typed cards are the same kind of object with the same scheduling state, so you can prune a generated deck, add five of your own, and study the whole thing as one queue."
-      },
-      {
-        "question": "What happens when I mark a card Again?",
-        "answer": "Its ease drops by 0.20, its consecutive-success count resets to zero, and it becomes due again about ten minutes later rather than tomorrow. It will not reappear in the session you are currently in, since the queue was snapshotted when you started, but it is waiting the next time you open the deck. Ease can never fall below 1.3, so a card you keep missing shows up more often without the schedule breaking."
-      },
-      {
-        "question": "Do my decks work on the web app as well as my phone?",
-        "answer": "Your decks and cards live on your account, so the same decks and the same review schedule are there whether you open Semora on an iPhone, an iPad, or in a browser. Pro itself is purchased inside the iOS app and the entitlement applies account-wide, including web. There is no separate web checkout."
-      },
-      {
-        "question": "What happens to a deck if I delete the course it belongs to?",
-        "answer": "The deck survives. Deleting a course detaches its decks rather than deleting them, and they move into the Uncategorized group on your deck list with every card and every card's review schedule untouched. This is deliberate: dropping a course from your semester should not quietly destroy weeks of spaced-repetition progress you might still want before a cumulative final."
-      }
-    ]
+    "faq": []
   },
   "focus-timer": {
     "metaTitle": "Semora Focus Timer: Pomodoro Study Blocks",
@@ -713,36 +597,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": [
-      {
-        "question": "Is the Focus Timer available on the free plan?",
-        "answer": "No. It is Pro-only in full — free accounts see a preview screen with a link to the paywall rather than a capped number of sessions. Pro is $3.99 per month or $19.99 per year, about $1.67 a month annually, and it also covers Smart Plan, flashcards, the AI tutor, calendar sync, and the rest. Free accounts still get deadlines, tasks, weighted grade averages, same-day reminders, and five syllabus scans a month."
-      },
-      {
-        "question": "Does the timer keep running if I leave the app or lock my phone?",
-        "answer": "Yes. Semora records the timestamp the phase ends at rather than counting seconds down, so the remaining time is recomputed from the clock and cannot drift while you are away. The end-of-phase alert is scheduled with the operating system, so it fires even if the app is closed. Force-quit and relaunch mid-block and you return to the correct time on the correct phase."
-      },
-      {
-        "question": "Can I use a length other than 15, 25, 45, or 50 minutes?",
-        "answer": "Not from the picker, which offers exactly those four for focus and 5, 10, or 15 for breaks. A Smart Plan session can pass its own length through, though: tap the play button on a planned block and the timer adopts that duration, adding it to the picker as an extra chip labeled \"plan\". Lengths passed this way are accepted between 15 and 180 minutes."
-      },
-      {
-        "question": "Does finishing a focus block mark my task as complete?",
-        "answer": "No. Your task stays exactly as it was, one block of work is rarely a finished assignment, and deciding it is done stays with you. What does get marked complete is the Smart Plan study session, if you started the timer from one. That feeds back into your plan, which subtracts completed minutes from a task's remaining effort when it rebuilds your schedule."
-      },
-      {
-        "question": "Does it work in the web app?",
-        "answer": "Partly. The Focus Timer appears in the web sidebar and the countdown runs while the tab is open, but two native pieces are missing: the end-of-phase notification is not scheduled, and the session is not saved, so reloading the page loses the block. Use an iPhone or iPad when you actually want to be told the block is over, and treat the web app as where you plan."
-      },
-      {
-        "question": "Does it track how many hours I have studied for each course?",
-        "answer": "No, and it is better to know that now. The timer shows completed focus blocks in the current sitting plus an all-time total held on that one device. There is no per-session history, no per-course hour breakdown, and no weekly report, and focus blocks do not feed Streaks or Progress Insights. The lasting record is the Smart Plan session you tick off by finishing a block."
-      },
-      {
-        "question": "What happens if I pause a block and forget about it?",
-        "answer": "The remaining time freezes exactly where you stopped and the scheduled notification is cancelled, so nothing fires for a block you are not running. The paused session is saved, so it is still waiting when you come back, even after a relaunch. Resume picks up at the frozen time. Reset returns you to a full focus block and clears the count for that sitting."
-      }
-    ]
+    "faq": []
   },
   "ai-tutor": {
     "metaTitle": "AI Tutor: Chat Grounded in Your Syllabus",
@@ -870,36 +725,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": [
-      {
-        "question": "Does the AI Tutor actually read my syllabus, or just the course name?",
-        "answer": "It reads the structured results of your most recent syllabus scan for that course, every extracted item with its title, type, weight, and due date, up to 60 of them, plus your class meeting times, your instructor, and your grade scale if you set one. That block is capped at 8,000 characters, and if your syllabus is long enough to be cut, the truncation is marked so the model knows it is working from an abridged copy."
-      },
-      {
-        "question": "Can it tell me when my exam is?",
-        "answer": "Yes, and it answers from your tracked tasks rather than from memory. Its instructions say to use the deadlines section for any date question and never to invent a date. Because that section is built from your live task list, an edit you made after importing wins over whatever the original PDF said. The flip side is that if a deadline is not in your task list, the tutor does not have it either."
-      },
-      {
-        "question": "What file types can I upload as notes, and how many?",
-        "answer": "PDFs and images. The grounding pass reads the 10 most recent files attached to a course, newest first, sharing a 24,000-character budget of extracted text. The server transcribes each file once and caches the text, so later questions do not re-read it. Files larger than roughly 6 MB are skipped during extraction rather than sent to the model, so split an oversized scan before uploading it."
-      },
-      {
-        "question": "Is there a message limit?",
-        "answer": "Yes. 50 messages per rolling 24 hours per account, applied even on Pro to keep what the model costs to run bounded, and 4,000 characters per individual message. The slot is reserved before the model is called, so on the rare occasion a request fails upstream it still counts against the fifty. When you hit the cap, the error names the number and tells you to try again in 24 hours."
-      },
-      {
-        "question": "Will it write my essay or do my problem set?",
-        "answer": "No, by design. The tutor is instructed to be a tutor and not an answer key: explain concepts, walk through the reasoning, check understanding, and for graded work guide you toward the answer instead of handing it over. It will work a comparable example, explain why a method applies, or take apart a concept your notes glossed over in one line."
-      },
-      {
-        "question": "What happens if I ask about something my course material does not cover?",
-        "answer": "It says so briefly, then helps using general knowledge. That is an explicit instruction rather than a hope. The model is told to prefer your material, to cite it naturally when it uses it — phrasing like \"your syllabus lists\" or \"from your Week 3 notes\", and to flag when it is stepping outside what you gave it. You get a straight answer either way, with a clear sense of which kind you got."
-      },
-      {
-        "question": "Do I need an iPhone to use it?",
-        "answer": "No. Pro is purchased in the iOS app and the entitlement applies to your whole account, so the tutor is available on iPhone, iPad, and the web app once you are signed in. There is no separate web checkout. Your conversations and your uploaded notes live in your account rather than on one device, so a thread you started on your phone is the same thread you find later."
-      }
-    ]
+    "faq": []
   },
   "collaboration": {
     "metaTitle": "Course Spaces: Share a Course in Semora",
@@ -1016,36 +842,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": [
-      {
-        "question": "Can my classmates see my grades?",
-        "answer": "No. A Course Space shares exactly three things: the member list, the deadlines the owner published, and the group's assignments. Your scores, your weighted average, your grade forecasts, your reminder settings, your notes, your flashcards, and your AI Tutor conversations are never part of it. This is enforced in the database, not just hidden in the interface, so there is no view anywhere that shows another member your marks."
-      },
-      {
-        "question": "Do I need to pay to use Course Spaces?",
-        "answer": "Joining is free and always will be. You can accept an invite, see every shared deadline and group assignment, sync all of it into your planner, and take on group work without paying anything. Creating and hosting your own space is a Pro feature, at $3.99 a month or $19.99 a year. In a normal study group that means one person subscribes and everybody else joins on the free plan."
-      },
-      {
-        "question": "How long does an invite link last, and how many people can use it?",
-        "answer": "Each link expires seven days after it is created and allows up to thirty joins by default. Tapping Invite again generates a brand-new link, and older ones keep working until they expire, run out of uses, or get revoked. Owners can see which links are still outstanding and revoke every one of them with a single tap, which is the right move if a link leaks somewhere it should not have."
-      },
-      {
-        "question": "If I check off a group assignment, does it check off for everyone?",
-        "answer": "No. There are two separate states, on purpose. The group assignment inside the space has its own shared completion, which any owner or editor can toggle for the team. Your personal copy in your planner has its own checkmark that only you control. Syncing refreshes titles, dates, and notes on your copy but deliberately never touches your checkmark, so the team's progress and your own progress cannot overwrite each other."
-      },
-      {
-        "question": "What happens to my tasks if I leave or the owner deletes the space?",
-        "answer": "You keep everything already in your planner. Leaving, being removed, archiving, and deleting all behave the same way for synced work: the tasks stay in your course, and they simply stop receiving updates from the space. Nothing reaches into your account to delete your semester. What you lose is future changes — a deadline moved after you left will not follow you."
-      },
-      {
-        "question": "Can I use Course Spaces on my iPad or on the web?",
-        "answer": "Yes. A space lives in your account rather than on one device, so it appears anywhere you sign in — iPhone, iPad, and the Semora web app all reach it from Me, under Academic tools, on the Class Collaboration row. Changes propagate over the same realtime connection everywhere. The invite link is a semora:// app link, so it only opens on an iPhone or iPad with Semora installed \u2014 it will not open the web app. Join once on your phone and the space is then reachable from any device you sign in on."
-      },
-      {
-        "question": "The owner moved a deadline. Do I have to do anything?",
-        "answer": "No. When the owner publishes again after a date change, the existing shared deadline is updated in place rather than duplicated, and the change reaches you over the live subscription. Your synced task picks up the new date automatically, even if you are somewhere else in the app at the time, and it syncs again whenever you reopen Semora. You can also force it with the My planner button inside the space."
-      }
-    ]
+    "faq": []
   },
   "canvas-sync": {
     "metaTitle": "Canvas Sync for Semora — Import Canvas Deadlines",
@@ -1165,36 +962,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": [
-      {
-        "question": "Do I need my school's IT department to approve anything?",
-        "answer": "For Canvas, no. A personal access token is something you generate yourself from your own account settings using permissions you already have as a student, so there is no developer key to request and no approval queue to sit in. Blackboard and Moodle are different: both typically require an administrator to issue a token or enable web services first. If your school runs one of those, ask your help desk before you plan around it."
-      },
-      {
-        "question": "Is Canvas Sync included in the free plan?",
-        "answer": "No. Connecting a learning platform requires Pro, which is $3.99 per month or $19.99 per year — about $1.67 a month annually — purchased in the iOS app and applied across your whole account including web. Free accounts still get full deadline tracking, grade tracking with weighted averages, same-day reminders, and five syllabus scans a month, and you can paste text copied from a Canvas page into the scanner to pull deadlines out manually."
-      },
-      {
-        "question": "Can Semora submit assignments or change anything in my Canvas account?",
-        "answer": "No. Semora only calls read endpoints — listing your courses, reading assignments, and reading gradebook data. It never posts, edits, submits, or deletes anything on your school's system, and the connect screen says so before you paste your token. Canvas stays the place where you turn work in and talk to your instructor. Semora sits alongside it as an organizing layer over the same deadlines."
-      },
-      {
-        "question": "Where does my Canvas token actually live?",
-        "answer": "On iPhone and iPad it goes into the device's secure store, keyed to that single connection. On the web it lives in your browser's local storage. It is never written to Semora's database — the server keeps only the provider, the connection name, your school URL, sync status, and timestamps. During a sync the token is sent once over HTTPS and forwarded to your school without being stored. Disconnecting erases it."
-      },
-      {
-        "question": "If I check something off in Semora, will a sync un-check it?",
-        "answer": "No. Completion is merged as a logical OR, so once a task is complete in Semora it stays complete regardless of what Canvas reports on the next refresh. The same protection applies to grades: if Canvas returns no score, Semora keeps the number you entered rather than blanking it. Nothing is ever deleted either — an assignment that disappears from Canvas stays in Semora with your completion and grade intact."
-      },
-      {
-        "question": "How often does it refresh, and can I force it?",
-        "answer": "Automatic sync runs in the foreground. Every time you open Semora or bring it back from the background, connections whose last sync is more than 30 minutes old refresh quietly, with no popups. You can also hit “Sync now” on any connection in Settings, which reports how many assignments were updated and how many were skipped. Because the token is stored per device, automatic sync runs only where that token lives."
-      },
-      {
-        "question": "What happens to an assignment that has no due date in Canvas?",
-        "answer": "It is skipped. Semora tracks deadlines, and an item without a date has nothing to schedule against, so it is not imported as a task. This is reported rather than hidden: the connection status becomes “partial,” and both the sync alert and the connection card tell you exactly how many items were skipped for lacking a usable due date. If one of those matters, add it manually with a date you choose."
-      }
-    ]
+    "faq": []
   }
 };
 

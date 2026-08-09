@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { NewPage } from './new-page-content';
 import { FEATURES_ES, type SpanishFeatureFact } from './es-facts';
+import { ES_FEATURE_CONTENT } from './es-feature-content';
 
 export type SpanishPageKind =
   | 'standard'
@@ -517,6 +518,22 @@ const FEATURE_DETAILS: Record<string, FeatureDetail> = {
 
 const FEATURE_PAGES = FEATURES_ES.map((feature) => {
   const detail = FEATURE_DETAILS[feature.englishSlug];
+  // Hand-written Spanish long form when we have it. The template below is the
+  // fallback for features not yet rewritten — it produced ~450 characters
+  // against 18-24k on the English pages, which is why these are being replaced
+  // one at a time rather than left to look translated.
+  const long = ES_FEATURE_CONTENT[feature.englishSlug];
+  if (long) {
+    return page(`/es/funciones/${feature.slug}`, `/features/${feature.englishSlug}`, 'feature', {
+      metaTitle: feature.name,
+      metaDescription: feature.shortDescription,
+      h1: feature.name,
+      lede: long.lede,
+      intro: long.intro,
+      sections: long.sections,
+      faq: [],
+    }, feature);
+  }
   return page(`/es/funciones/${feature.slug}`, `/features/${feature.englishSlug}`, 'feature', {
     metaTitle: feature.name,
     metaDescription: feature.shortDescription,
@@ -528,13 +545,7 @@ const FEATURE_PAGES = FEATURES_ES.map((feature) => {
       { heading: 'Qué obtienes', paragraphs: [detail.result] },
       { heading: feature.tier === 'pro' ? 'Incluido con Semora Pro' : 'Incluido en el plan Gratis', paragraphs: [feature.tier === 'pro' ? 'Crea una cuenta gratuita y prueba el escaneo de programas, los cursos y las calificaciones antes de pasarte a Pro.' : 'Puedes empezar sin tarjeta de crédito. El plan Gratis incluye cinco escaneos al mes y hasta cuatro cursos por semestre.'] },
     ],
-    faq: [
-      ...detail.faq,
-      // "La función" keeps the subject singular. Without it a plural feature name
-      // ("Espacios de curso", "Tarjetas de estudio") produced "¿Espacios de curso
-      // funciona…?" on every plural feature page.
-      { question: `¿La función ${feature.name} funciona en iPhone, iPad y la web?`, answer: 'Sí. La misma cuenta mantiene tus datos disponibles en las tres plataformas; algunas integraciones propias del dispositivo pueden variar.' },
-    ],
+    faq: [],
   }, feature);
 });
 
