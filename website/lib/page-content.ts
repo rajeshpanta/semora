@@ -102,7 +102,7 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
         ],
         "bullets": [
           "Free: scanning, 4 courses, unlimited deadlines and tasks, weighted grade tracking and semester GPA, same-day reminders, Today and Calendar, and joining a Course Space.",
-          "Pro capacity: unlimited courses, unlimited semesters, and no monthly cap on scans — scanning is bounded only by a fair-use ceiling of 20 in any 24 hours, which a normal term never approaches.",
+          "Pro capacity: unlimited courses, unlimited semesters, and no monthly cap on scans — the only ceiling left is fair use, 20 scans in any rolling 24 hours, which no real semester reaches.",
           "Pro decisions: Smart Plan, Workload dashboard, Academic Risk alerts, Grade Scale and Forecasting, Progress Insights with trend charts, CSV export and a print view.",
           "Pro study tools: AI flashcards with SM-2 spaced repetition, the focus timer, the AI tutor grounded in your own course.",
           "Pro connections: Canvas, Blackboard and Moodle import, hosting Course Spaces, device calendar sync with .ics export, and 1-day and 3-day reminders with quiet hours."
@@ -136,6 +136,7 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
         ],
         "bullets": [
           "Same account, same data, on iPhone, iPad and web.",
+          "No Android app and no Mac app — on those machines Semora runs in the browser.",
           "Near real-time sync of courses, deadlines and semesters between devices.",
           "Catch-up refresh on app resume, tab focus and network reconnect.",
           "Full English and Spanish, chosen on the first screen or in Settings, carried by your account to every device.",

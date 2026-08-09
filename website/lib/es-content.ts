@@ -298,7 +298,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
         ],
         bullets: [
           'Gratis: escanear, cuatro cursos, entregas y tareas ilimitadas, calificaciones ponderadas y nota media del semestre, recordatorios el mismo día, Hoy y Calendario completos.',
-          'Capacidad de Pro: cursos y semestres ilimitados, y sin tope mensual de escaneos.',
+          'Capacidad de Pro: cursos y semestres ilimitados, y sin tope mensual de escaneos — el único techo que queda es el de uso razonable, 20 escaneos en cualquier ventana de 24 horas, que ningún semestre real alcanza.',
           'Decisiones de Pro: Plan Inteligente, carga académica, revisión académica, escala de calificación propia y pronósticos, y análisis del progreso con gráficos y exportación.',
           'Estudio con Pro: tarjetas con repetición espaciada, temporizador de enfoque y el Tutor con IA anclado en tu propio curso.',
           'Conexiones de Pro: importación desde Canvas, Blackboard y Moodle, organizar espacios de curso, sincronización con el calendario del dispositivo con exportación .ics, y recordatorios con uno y tres días de antelación.',
@@ -332,6 +332,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
         ],
         bullets: [
           'La misma cuenta y los mismos datos en iPhone, iPad y la web.',
+          'No hay app para Android ni para Mac: en esos equipos Semora funciona en el navegador.',
           'Sincronización casi en tiempo real de cursos, entregas y semestres entre dispositivos.',
           'Consulta de puesta al día al volver del segundo plano, al recuperar el foco y al reconectar.',
           'Español completo en la app, elegido en la primera pantalla o en Configuración, y guardado en tu cuenta.',
