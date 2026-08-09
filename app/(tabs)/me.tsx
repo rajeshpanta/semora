@@ -6,6 +6,7 @@ import {
   ScrollView,
   Share,
   Platform,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -16,7 +17,7 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTaskStats } from '@/lib/queries';
 import { signOut } from '@/lib/auth';
 import { displayName } from '@/lib/user';
-import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import { COLORS, FONTS, SCREEN_MAX_WIDTH, APP_STORE_REVIEW_URL } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { getAppLocale } from '@/lib/i18n';
@@ -96,17 +97,21 @@ export default function MeScreen() {
   const activeSemester = semesters.find((s) => s.id === selectedSemesterId);
   const router = useRouter();
 
+  // Send the tap to the App Store review composer rather than the in-app
+  // prompt. requestReview() is throttled by Apple to roughly three prompts a
+  // year and no-ops silently past that — and Today already spends one of those
+  // on its own automatic prompt, so this button was frequently doing nothing at
+  // all. It has no web implementation either, which is why it only ever showed
+  // an apology on app.semoraai.com.
+  //
+  // Opening the store also gives the web the behaviour we want for free: a
+  // browser visitor who has never installed Semora lands on the listing.
   const handleRate = async () => {
+    track('rate_tapped', { screen: 'me' });
     try {
-      const StoreReview = await import('expo-store-review');
-      const available = await StoreReview.isAvailableAsync();
-      if (available) {
-        await StoreReview.requestReview();
-      } else {
-        Alert.alert('Rate Us', 'In-app rating is not available on this device. You can rate us directly on the App Store.');
-      }
+      await Linking.openURL(APP_STORE_REVIEW_URL);
     } catch {
-      Alert.alert('Rate Us', 'Unable to open the rating dialog. You can rate us directly on the App Store.');
+      Alert.alert('Rate Semora', 'Could not open the App Store. You can search for Semora there to leave a review.');
     }
   };
 

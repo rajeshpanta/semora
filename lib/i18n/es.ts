@@ -1817,4 +1817,5 @@ export const ES: Record<string, string> = {
   'This subscription is already linked to a different Semora account.': 'Esta suscripción ya está vinculada a otra cuenta de Semora.',
   'This subscription was previously linked to a Semora account that has been deleted.': 'Esta suscripción estaba vinculada a una cuenta de Semora que se ha eliminado.',
   'Could not save entitlement. Please try again.': 'No se pudo guardar la suscripción. Inténtalo de nuevo.',
+  'Could not open the App Store. You can search for Semora there to leave a review.': 'No se pudo abrir la App Store. Puedes buscar Semora allí para dejar tu reseña.',
 };

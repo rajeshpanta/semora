@@ -3,6 +3,18 @@
 // app/welcome.tsx, which predates semoraai.com and duplicates it.
 export const MARKETING_URL = 'https://semoraai.com';
 
+// The App Store listing, and the same listing opened straight onto the review
+// composer. `?action=write-review` is what turns a "Rate Semora" tap into a
+// star picker instead of a product page the user then has to scroll.
+//
+// This is deliberately NOT StoreReview.requestReview(). That API is for
+// unprompted moments — Apple rate-limits it to roughly three prompts a year and
+// silently does nothing once you are over, which makes it the wrong thing
+// behind a button someone deliberately pressed. It also has no web
+// implementation at all, so on app.semoraai.com it could only ever apologise.
+export const APP_STORE_URL = 'https://apps.apple.com/us/app/semora-ai-syllabus-scanner/id6762589321';
+export const APP_STORE_REVIEW_URL = `${APP_STORE_URL}?action=write-review`;
+
 import { Platform } from 'react-native';
 
 // Caps main content width so screens read well on iPad (portrait, full
