@@ -1,0 +1,191 @@
+import { enAlternates } from '@/lib/hreflang';
+export const metadata = {
+  title: 'How to Make Flashcards From Your Lecture Notes With AI',
+  description:
+    'What makes an AI-generated flashcard worth reviewing, how spaced repetition decides when you see it again, and how the tools compare on where the cards come from.',
+  alternates: enAlternates('/blog/ai-flashcards-from-lecture-notes'),
+}
+
+import { JsonLd } from '@/components/JsonLd'
+import { articleSchema } from '@/lib/schema'
+import { BlogPostHero } from '@/components/BlogPostHero'
+import { BlogTable } from '@/components/BlogTable'
+import { RelatedPosts } from '@/components/RelatedPosts'
+import { relatedPosts } from '@/lib/blog'
+import { Faq } from '@/components/Faq'
+import { faqPageSchema } from '@/lib/schema'
+
+export const faqItems = [
+  {
+    question: 'Can AI make flashcards from my lecture notes?',
+    answer:
+      'Yes. Every tool in this comparison accepts uploaded material — PDFs, slide decks, notes, and in some cases recordings and video — and returns question-and-answer cards from it. Generation takes seconds. The work that determines whether the deck is useful happens afterward: cutting the cards that test nothing, splitting any card whose answer runs longer than a sentence or two, and checking the facts against your own notes before the first review.',
+  },
+  {
+    question: 'How many flashcards should a deck have?',
+    answer:
+      'Fewer than a generator will give you. A deck of 30 well-scoped cards you review five times beats 120 cards you review once, because spaced repetition depends on repeated contact and a large deck is what makes people stop. Scope the deck to one assessment — a specific quiz or exam — rather than to a whole course, and expect to delete roughly a third of what the generator produces.',
+  },
+  {
+    question: 'Is spaced repetition actually better than cramming?',
+    answer:
+      'For long-term retention, yes: material reviewed at increasing intervals is retained substantially longer than the same total review time compressed into one session. The catch is that spacing needs room to operate. If the exam is tomorrow, there is no spacing left to exploit, and a single focused pass with self-testing is the better use of the evening than setting up a review system that will never get a second session.',
+  },
+  {
+    question: 'Are AI-generated flashcards accurate?',
+    answer:
+      'Mostly, but not reliably enough to skip checking. Generated cards inherit anything ambiguous or wrong in the source material, and they occasionally add a plausible-sounding fact that appears nowhere in your notes. That matters more with flashcards than with a summary, because a wrong card reviewed on a spaced schedule means you are systematically rehearsing an error. Verifying against your own notes takes a few minutes and is the step that separates a study aid from a memorized mistake.',
+  },
+  {
+    question: 'Are flashcards good for math and problem-solving courses?',
+    answer:
+      'Only for the memorization layer — formulas, definitions, named theorems, unit conversions. The skill a math or physics exam actually tests is choosing and executing a method, and no card can rehearse that. A card asking "how do you integrate by parts" tests recall that the technique exists, not the ability to apply it. For those courses, worked problems are the study activity, with a small deck alongside for the facts that have to be at hand.',
+  },
+]
+
+<JsonLd data={articleSchema({
+  title: metadata.title,
+  description: metadata.description,
+  slug: 'ai-flashcards-from-lecture-notes',
+  datePublished: '2026-08-07',
+})} />
+
+<JsonLd data={faqPageSchema(faqItems)} />
+
+<BlogPostHero
+  title="How to Make Flashcards From Your Lecture Notes With AI"
+  date="Published August 7, 2026"
+  image="/illustrations/flashcard-deck.svg"
+  imageAlt="A friendly character beside a deck of flashcards, the front card flipping to reveal its answer"
+/>
+
+**The short version:** AI can turn a set of lecture notes into a deck in seconds, and the generation is rarely the hard part — the hard part is that a deck of 120 undifferentiated cards is worse than 30 good ones, because you will stop reviewing it by Thursday. The four things that decide whether a generated deck is actually useful: **one idea per card** (not a paragraph on the back), **scoped to a specific exam** rather than the whole course, **checked against your own notes** before the first review, and **on a spaced-repetition schedule** so cards you know stop stealing time from cards you don't. Below: how to generate a deck, what separates a good card from a bad one, how the tools differ on where the source material comes from, and when flashcards are the wrong tool entirely.
+
+## Why flashcards work, and what that implies about the cards
+
+Flashcards are a delivery mechanism for two well-established findings, and knowing which two tells you what a good card has to look like.
+
+The first is **retrieval practice**: the act of pulling an answer out of memory strengthens that memory more than reviewing the same material does. This is why a card with the answer visible on the front is not a flashcard — it is a note. The retrieval attempt is the entire mechanism, and a card that does not force one is doing nothing.
+
+The second is the **spacing effect**: information reviewed at increasing intervals is retained substantially longer than the same total review time crammed together. This is why the schedule matters as much as the deck. Reviewing 100 cards once the night before is not the same intervention as reviewing 30 cards five times across two weeks, even if the total minutes are similar.
+
+Both findings have a practical implication that most auto-generated decks ignore. Retrieval only works if there is one specific thing to retrieve. A card whose back is four sentences long cannot be graded honestly — you will half-remember two of the sentences, call it a pass, and move on with a memory that has not actually been tested. **One idea per card** is not a style preference; it is what makes the self-grading step mean anything, and the self-grading step is what the scheduling algorithm runs on.
+
+## Step by step: from lecture notes to a deck you'll actually review
+
+The mechanics are quick. The judgment is where the time goes.
+
+1. **Gather the source, and be picky about it.** Lecture notes, slide decks, a reading, an instructor-provided review packet. Feed in the material you were actually told to know — not everything you have. A deck generated from three weeks of tangentially related material will be three weeks of tangentially related cards.
+2. **Scope it to one assessment.** "Generate cards for this course" produces a deck spanning material from a midterm you already took and a final that is nine weeks away. "Generate cards for the Thursday quiz on chapters 4–6" produces something you can finish. This single choice does more for a deck's usefulness than any prompt engineering.
+3. **Generate, then immediately cut.** Expect to delete a third of what comes back. Cards that restate a definition already trivially obvious, cards that ask about a footnote, near-duplicate pairs asking the same thing two ways — all of it is noise that costs you review time on every single pass.
+4. **Fix the backs.** Any card whose answer runs longer than a sentence or two should be split into two cards or rewritten. This is the highest-value editing you can do and it takes about a minute per ten cards.
+5. **Check the facts against your notes.** Generated cards inherit whatever was ambiguous or wrong in the source, and add the possibility of a confidently stated invention. A wrong card reviewed on a spaced schedule is not neutral — you are systematically rehearsing an error.
+6. **Review on a schedule, not in a session.** Fifteen minutes on five days beats seventy-five minutes on one, and the difference is not small.
+
+Step 5 is the one people skip, and it is the one that separates a study aid from an expensive way to memorize mistakes. It also goes faster than expected: you are checking against notes you took yourself, so the errors tend to jump out.
+
+## Where the cards come from: the tools compared
+
+The meaningful difference between flashcard tools is not the quality of the generation — it is what they are allowed to generate *from*, and whether anything ties the deck to your actual course. A deck that knows which exam it belongs to can be scoped to that exam. A deck that does not know your courses exist can only ever be scoped to the file you just uploaded.
+
+<BlogTable
+  columns={['App', 'Generates cards from', 'Knows your courses?', 'Spaced repetition', 'Price']}
+  highlightColumn={0}
+  caption="Compiled from each product's own published materials as of August 2026; figures marked as reported come from third-party review coverage. Verify current pricing with the vendor."
+  rows={[
+    [
+      'Semora',
+      'Your scanned syllabus, uploaded lecture notes, and attached review packets (PDF or photo) — plus manual cards',
+      'Yes. A deck can be scoped to the whole course or to one specific exam or quiz pulled from your tracked deadlines',
+      'Yes',
+      'Pro: $3.99/mo or $19.99/yr (free tier covers deadlines and grades, not flashcards)',
+    ],
+    [
+      'StudyFetch',
+      'Materials you upload, via the Spark.E tutor',
+      'Partly. It can extract events from a photographed syllabus, per upload rather than across all courses',
+      'Yes — spaced-repetition study plans',
+      'Reported ~$7.99–$11.99/mo; free tier reported at 1 study set',
+    ],
+    [
+      'Mindgrasp',
+      'A single uploaded document, video, or recording: PDF, DOCX, PPT, MP3/MP4, YouTube, web articles',
+      'No syllabus or deadline parsing found in its public materials',
+      'Not documented as a scheduling feature',
+      'Reported ~$5.99–$10.99/mo; no pricing on its own site',
+    ],
+    [
+      'Studley AI',
+      'Uploaded PDFs, slides, YouTube videos, article links, photos of handwritten notes',
+      'No. It tracks mastery of the uploaded set, not a course',
+      'Mastery levels from unfamiliar to mastered',
+      'Free: 1 study set/day; reported $12.88/mo or $97.76/yr',
+    ],
+    [
+      'DormWay',
+      'No flashcard generation found in its public materials',
+      'Yes, for deadlines — it parses syllabi and syncs three LMS platforms',
+      'Not applicable',
+      'Free, no paid tier',
+    ],
+    [
+      'myHomework',
+      'No flashcard feature',
+      'Deadlines only, by manual entry or LMS import',
+      'Not applicable',
+      'Free with ads; ad-free tier reported around $4.99/yr',
+    ],
+  ]}
+/>
+
+The column that changes the daily experience is the third one. With a materials-first tool, every deck starts with an upload — you find the file, upload it, wait, and get cards about that file. With a tool that already holds your course material, the source is already there, and the scoping question becomes "which exam?" instead of "which file?" Semora's decks generate from the syllabus it already scanned plus any notes you have uploaded, and can be pointed at one specific exam or quiz from your tracked deadlines, so a midterm review does not come back diluted with material from finals. The tradeoff is honest: flashcards are a Pro feature at $3.99/month or $19.99/year, while the free tier covers deadlines and grade tracking only.
+
+## How spaced repetition decides when you see a card again
+
+The scheduling is the part that does the work, and it is worth understanding because it explains behavior that otherwise looks broken.
+
+A spaced-repetition system asks you to grade your own recall after each card — roughly, did you get it, or not. Cards you get right are pushed further into the future, each success stretching the interval. Cards you miss come back quickly, sometimes within the same session. Over a couple of weeks the deck sorts itself: the material you know disappears from your daily queue, and what is left is concentrated on the things you keep failing.
+
+This produces two effects that surprise people. First, **the daily queue shrinks even as the deck grows** — you can add cards weekly and still see fewer of them per day, because the older ones have aged out to long intervals. Second, **a day off is expensive**, because everything scheduled for that day lands on top of the next day's queue. The system is built around the assumption of steady contact, which is exactly why deck size matters so much: a 300-card deck missed for four days produces a backlog most people abandon rather than clear.
+
+The honest grading is the load-bearing part. Marking a card as known because you recognized it is how a deck quietly becomes useless: the algorithm stops showing you the material you have not learned, on the strength of your own inaccurate report. This is the second reason for one-idea cards. A card with four facts on the back has no honest grade available — you knew some of it — so you round up, and the schedule drifts away from reality.
+
+If you are fitting review into gaps between classes, the [Pomodoro approach between classes](/blog/pomodoro-technique-between-classes) pairs well with this: a card queue is one of the few study tasks that genuinely works in a fifteen-minute block, because there is no warm-up cost to resuming it.
+
+## The five card-writing mistakes AI reliably makes
+
+Generated decks fail in consistent, recognizable ways. Once you know the patterns you can spot and fix them in a single pass.
+
+- **The paragraph back.** The most common failure. The model summarizes a whole concept onto one card because the source discussed it in one place. Split it: one card per claim, per step, per term.
+- **The giveaway front.** A question phrased so specifically that the answer is contained in the wording — "What is the process by which plants convert light into chemical energy called?" tests nothing. Trim the front until it genuinely requires retrieval.
+- **The trivia card.** Generation has no sense of what your instructor emphasized. It will happily produce a card about a date mentioned once in a caption alongside a card about the central mechanism of the course. Only you know which one is on the exam, which is why the cut pass in step 3 matters.
+- **The near-duplicate cluster.** Three cards asking the same thing in different words. Each one costs review time on every pass and none of them adds recall. Keep the clearest, delete the rest.
+- **The confident invention.** Rarer, and the most damaging: a plausible-sounding fact that appears nowhere in your notes. This is the specific reason for checking cards against your own source before the first review, rather than after the first bad quiz.
+
+None of these mean the generation is not worth using. Writing 40 cards by hand takes an hour; generating 60 and editing them down to 40 takes fifteen minutes and produces a better deck, because editing is easier than composing. The mistake is treating "generate" as the finished step.
+
+## When flashcards are the wrong tool
+
+Flashcards are excellent for things with a right answer that fits on a card: vocabulary, formulas, definitions, dates, mechanisms, classifications, anatomical structures, drug interactions, foreign-language forms. If your exam is largely recall of discrete facts, a well-maintained deck is close to the highest-leverage study activity available.
+
+They are a poor fit for a few things, and forcing them wastes the time you thought you were saving. **Problem-solving courses** — most math past the formula-memorization layer, physics, engineering, statistics — need worked problems, because the skill being tested is choosing and executing a method, not recalling that the method exists. A card that says "how do you integrate by parts" tests the wrong thing entirely. **Essay exams and argument-based courses** need practice constructing arguments, not retrieving components of them. **Anything you have not read yet** is not ready for cards: a deck generated from a chapter you skipped will teach you the summary and give you the confident feeling of having studied.
+
+There is also a scheduling case for not making a deck. If a quiz is tomorrow, spaced repetition has no room to operate — the spacing effect needs spacing. In that situation a single focused pass through the material with self-testing beats setting up a review system that will never get a second session.
+
+The general rule: use cards for what has to be *known*, and worked problems or practice writing for what has to be *done*. Most courses need both, in a ratio your past exams will tell you.
+
+## Fitting a deck into an actual semester
+
+The failure mode for flashcards is not bad cards. It is a good deck built in week 9 for an exam in week 10, which is precisely when spacing has run out of room to help.
+
+The version that works is unglamorous: make cards as material is covered, in small batches, and review them for a few minutes most days. A deck built in fifteen-minute increments across a semester is finished before the exam is announced, and the reviews by then are short because most of the cards have aged out to long intervals. A deck built in one panic session is 200 cards you see exactly twice.
+
+That timing is the practical argument for generating cards from material a tool already holds rather than material you have to go find. When the syllabus and notes are already in the app, "make cards for next week's quiz" is a decision rather than a project, and the batch happens instead of getting postponed. Semora's flashcards work this way — the source material is already there from the syllabus scan and any notes you uploaded, decks can be scoped to a specific tracked exam or quiz, an instructor's review packet can be attached as a PDF or photo to be generated from, and manual cards are supported for the ones you want to write yourself. Review runs on spaced repetition. It is part of Pro at $3.99/month or $19.99/year; the free tier covers syllabus scanning, deadlines, and grade tracking.
+
+Whichever tool you use, the sequence is the same and the order is not negotiable: read the material, generate from what you actually have to know, cut and fix what comes back, check it against your notes, then review on a schedule. Skip the middle three steps and the deck is a way to feel productive. Do them and it is one of the few study techniques with decades of evidence behind it.
+
+## Frequently asked questions
+
+<Faq items={faqItems} />
+
+<RelatedPosts posts={relatedPosts('ai-flashcards-from-lecture-notes')} />

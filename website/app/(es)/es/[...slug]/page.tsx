@@ -139,6 +139,22 @@ function DirectoryWidget({ config }: { config: SpanishPageConfig }) {
   return undefined;
 }
 
+/**
+ * The three posts following this one in registry order, wrapping at the end.
+ *
+ * Mirrors relatedPosts() in lib/blog.ts, and for the same reason: always taking
+ * the first three left every post from the fourth onward with a single inbound
+ * link no matter how many posts existed.
+ */
+function spanishRelatedPosts(path: string, limit = 3) {
+  const start = SPANISH_BLOG_POSTS.findIndex((b) => b.path === path);
+  const others = SPANISH_BLOG_POSTS.filter((b) => b.path !== path);
+  const ordered = start < 0 ? others : [...others.slice(start), ...others.slice(0, start)];
+  return ordered
+    .slice(0, limit)
+    .map((b) => ({ path: b.path, title: b.title, description: b.description }));
+}
+
 function getCrumb(config: SpanishPageConfig) {
   if (config.path.startsWith('/es/blog/')) return { href: '/es/blog', label: 'Blog' };
   if (config.path.startsWith('/es/funciones/')) return { href: '/es/funciones', label: 'Funciones' };
@@ -194,12 +210,7 @@ export default async function SpanishPage({ params }: { params: Params }) {
       hero={post ? { image: post.image, alt: post.imageAlt ?? '', date: post.date } : undefined}
     />
       {post ? (
-        <RelatedPosts
-          locale="es"
-          posts={SPANISH_BLOG_POSTS.filter((b) => b.path !== post.path)
-            .slice(0, 3)
-            .map((b) => ({ path: b.path, title: b.title, description: b.description }))}
-        />
+        <RelatedPosts locale="es" posts={spanishRelatedPosts(post.path)} />
       ) : null}
     </>
   );

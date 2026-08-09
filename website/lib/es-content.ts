@@ -610,6 +610,36 @@ export const SPANISH_BLOG_POSTS = [
     image: '/illustrations/book-stack.svg',
     imageAlt: 'Ilustración de una pila de libros de texto con un birrete encima',
   },
+  {
+    path: '/es/blog/mejores-apps-de-estudio-con-ia-2026',
+    englishPath: '/blog/best-ai-study-apps-for-college-2026',
+    title: 'Las mejores apps de estudio con IA para universitarios en 2026',
+    description: 'Siete apps comparadas por lo que realmente hacen: escaneo del programa, tarjetas de estudio, tutoría y seguimiento de calificaciones, y qué categoría resuelve cada problema.',
+    date: '5 de agosto de 2026',
+    isoDate: '2026-08-05',
+    image: '/illustrations/ai-study-apps.svg',
+    imageAlt: 'Ilustración de una lista corta de tres apps, con la primera marcada con una palomita',
+  },
+  {
+    path: '/es/blog/tarjetas-de-estudio-con-ia',
+    englishPath: '/blog/ai-flashcards-from-lecture-notes',
+    title: 'Cómo hacer tarjetas de estudio con IA a partir de tus apuntes',
+    description: 'Qué hace que una tarjeta generada con IA valga la pena, cómo decide la repetición espaciada cuándo vuelves a verla y en qué se diferencian las herramientas.',
+    date: '7 de agosto de 2026',
+    isoDate: '2026-08-07',
+    image: '/illustrations/flashcard-deck.svg',
+    imageAlt: 'Ilustración de un mazo de tarjetas de estudio con la primera girando para mostrar su respuesta',
+  },
+  {
+    path: '/es/blog/que-nota-necesito-en-el-examen-final',
+    englishPath: '/blog/grade-needed-on-final-exam',
+    title: '¿Qué nota necesito en el examen final?',
+    description: 'La fórmula para saber qué necesitas sacar en el final, resuelta con ponderaciones reales, y los cuatro errores que dan un resultado equivocado.',
+    date: '9 de agosto de 2026',
+    isoDate: '2026-08-09',
+    image: '/illustrations/final-grade-target.svg',
+    imageAlt: 'Ilustración de un medidor que se llena hasta la nota que necesitas en el examen final',
+  },
 ] as const;
 
 const BLOG_PAGES: SpanishPageConfig[] = [
@@ -1318,6 +1348,365 @@ const BLOG_PAGES: SpanishPageConfig[] = [
       { question: '¿Qué hago si ya no alcanza el tiempo?', answer: 'Recorta a conciencia en lugar de fingir que todo cabe. Quédate con los temas de mayor peso en el examen y con los que peor dominas, y cambia la lectura pasiva por práctica activa: resolver ejercicios en frío rinde más que releer el capítulo entero.' },
       { question: '¿Necesito Pro para organizar mis finales?', answer: 'No. Las fechas, los cursos y el seguimiento de calificaciones están en el plan Gratis, que incluye cinco escaneos de programas por mes calendario y hasta cuatro cursos. Pro agrega el panel de carga académica, el Plan Inteligente y las alertas de riesgo académico, que automatizan buena parte de los pasos 2 y 3.' },
       { question: '¿Y si el programa y el calendario oficial no coinciden?', answer: 'Rige el calendario oficial de tu institución, que se publica después del programa justamente para resolver choques entre materias. Si la diferencia es de ponderación y no de fecha, pregúntale al profesor y deja registrado el dato correcto donde lleves tus cursos.' },
+    ],
+  }),
+  page(SPANISH_BLOG_POSTS[6].path, SPANISH_BLOG_POSTS[6].englishPath, 'standard', {
+    metaTitle: SPANISH_BLOG_POSTS[6].title,
+    metaDescription: SPANISH_BLOG_POSTS[6].description,
+    h1: SPANISH_BLOG_POSTS[6].title,
+    lede: '«App de estudio con IA» describe por lo menos tres productos distintos que resuelven tres problemas distintos, y casi toda la decepción viene de comprar una categoría esperando otra.',
+    intro: [
+      'Las apps centradas en el programa (Semora, DormWay) leen los documentos de tus materias y arman un semestre de fechas de entrega. Las centradas en el material (StudyFetch, Mindgrasp, Studley AI) convierten un PDF o la grabación de una clase en tarjetas de estudio, apuntes y cuestionarios. Las centradas en la agenda (Shovel, myHomework) organizan el tiempo y las tareas que tú registras o importas.',
+      'Solo la primera categoría responde «qué se entrega y cuánto vale». Solo la segunda responde «ayúdame a aprender este capítulo». Si necesitas las dos cosas, la respuesta honesta suele ser una app de cada categoría, o una sola que cubra la estructura del semestre y genere material de estudio desde esa misma fuente.',
+      'Los precios que aparecen abajo van desde gratis hasta unos $12.88 al mes. Todo lo que sigue proviene de los materiales publicados por cada producto o, cuando se indica, de reseñas de terceros.',
+    ],
+    sections: [
+      {
+        heading: 'Las siete apps de un vistazo',
+        paragraphs: [
+          'La tabla siguiente es la forma más rápida de ver dónde está parada cada app. Los precios en particular cambian con frecuencia, así que tómalos como punto de partida y confirma en la página de precios del proveedor antes de pagar.',
+        ],
+        table: {
+          columns: ['App', 'Construida alrededor de', 'Programa → fechas de entrega', 'Seguimiento de calificaciones', 'Precio'],
+          highlightColumn: 0,
+          caption: 'Recopilado de los materiales publicados por cada producto en agosto de 2026; las cifras señaladas como reportadas provienen de reseñas de terceros. Los precios de la competencia cambian seguido: confírmalos en la página del proveedor.',
+          rows: [
+            ['Semora', 'Tu programa de clase: el documento se convierte en el semestre', 'Sí. Foto (hasta 5 páginas), PDF, arrastrar y soltar, o texto pegado', 'Sí, en el plan Gratis, con categorías ponderadas', 'Plan Gratis; Pro $3.99/mes o $19.99/año'],
+            ['DormWay', 'El programa más sincronización de solo lectura con el LMS', 'Sí. Se sube en la app o se envía por correo a su dirección de recepción', 'Sí: una calculadora de GPA y calificaciones con categorías ponderadas', 'Gratis, sin plan de pago'],
+            ['Shovel', 'Bloques de tiempo: las fechas se vuelven un calendario de estudio', 'Sí. PDF procesado con pantalla de revisión, o conectando un LMS', 'No está confirmado públicamente como función central', 'Reportado en $9.79/mes o $39/año tras una prueba de 7 días'],
+            ['StudyFetch', 'El tutor Spark.E, que responde desde tus propios materiales', 'Parcial. Fotografías el programa y extrae eventos, por cada subida', 'No es un libro de calificaciones dedicado: sus funciones de evaluación se centran en ensayos y simulacros de examen', 'Plan gratuito; reportado en ~$7.99–$11.99/mes'],
+            ['Mindgrasp', 'Un archivo subido → apuntes, tarjetas y cuestionario', 'No se encontró análisis de programas en sus materiales públicos', 'No está confirmado públicamente', 'Reportado en ~$5.99–$10.99/mes'],
+            ['Studley AI', 'PDF, diapositivas y videos subidos → conjuntos de estudio', 'No se encontró análisis de programas en sus materiales públicos', 'Mide el dominio del material, no la calificación del curso', 'Gratis: 1 conjunto al día; reportado en $12.88/mes o $97.76/año'],
+            ['myHomework', 'Una agenda clásica: registro manual más importación desde el LMS', 'No. Registro manual, o importación desde un LMS compatible', 'No se describe como función central', 'Gratis con anuncios; versión sin anuncios reportada en unos $4.99/año'],
+          ],
+        },
+      },
+      {
+        heading: 'Las tres categorías, y por qué la distinción importa',
+        paragraphs: [
+          'Casi toda reseña frustrada de una app de estudio es un error de categoría, no un producto roto. Alguien descarga un generador de tarjetas esperando que le avise cuándo es el parcial, o descarga una agenda esperando que le explique un capítulo, y concluye que la app es mala cuando simplemente está hecha para otro trabajo.',
+          'Las apps centradas en el programa tratan el documento del curso como la fuente de verdad. Lo leen, extraen cada tarea, examen, cuestionario, proyecto y lectura con su fecha, y normalmente también los datos estructurales: ponderaciones, horarios de clase, horario de atención, inicio y fin del semestre. La ventaja es que una sola subida produce un semestre completo, y las fechas llegan con contexto: no «ensayo el 14 de octubre», sino «ensayo el 14 de octubre, vale el 15 %».',
+          'Las apps centradas en el material tratan tus documentos de estudio como la fuente de verdad. Les das la grabación de una clase, unas diapositivas, un capítulo o un video, y devuelven resúmenes, tarjetas, preguntas de práctica y un tutor que responde a partir de esa subida. Son genuinamente útiles la semana previa a un examen, y estructuralmente incapaces de decirte cuándo es ese examen, porque nada en su proceso leyó nunca tu programa.',
+          'Las apps centradas en la agenda tratan lo que tú escribes como la fuente de verdad. Registras materias y tareas, o las importas de Canvas, y la app programa, recuerda y muestra. La IA en esta categoría, cuando existe, vive en la capa de planificación: estimar cuánto va a tomar algo, o reservarle tiempo.',
+          'Lo que hace práctica esta distinción es que las categorías fallan en direcciones opuestas. Una app centrada en el material te generará con gusto 60 tarjetas de una materia en la que estás a punto de perder una entrega. Una app centrada en la agenda te recordará una entrega que no tiene forma de ayudarte a cumplir. Saber cuál de las dos carencias tienes es la mayor parte de la decisión.',
+        ],
+      },
+      {
+        heading: 'Centradas en el programa: Semora y DormWay',
+        paragraphs: [
+          'Estas dos son la comparación más directa de la lista, porque parten de la misma premisa: el programa ya contiene tu semestre y transcribirlo a mano es el cuello de botella.',
+          'Semora importa un programa como foto (varias páginas, hasta cinco), PDF, archivo arrastrado en la versión web, o texto pegado. OpenAI GPT-5.6 Luna extrae el nombre del curso, el profesor, los horarios de clase, el horario de atención, las fechas del semestre, la escala de calificación y cada elemento evaluado con su fecha de entrega. Nada se guarda hasta que lo revisas en pantalla, y eso importa más de lo que parece: los programas están llenos de frases ambiguas como «se entrega el viernes anterior al receso», y una pantalla de revisión es la diferencia entre detectar una fecha mal interpretada y heredarla. El plan Gratis cubre cinco escaneos por mes calendario, hasta cuatro cursos en un semestre, seguimiento completo de entregas y de calificaciones con promedios ponderados, y recordatorios el mismo día. Pro, a $3.99 al mes o $19.99 al año, levanta los límites de escaneos y cursos y agrega importación desde Canvas, Blackboard y Moodle, el Plan Inteligente de estudio, el panel de carga académica, tarjetas de estudio con repetición espaciada, temporizador de concentración, un tutor con IA basado en tu propio material, sincronización con el calendario y exportación .ics, horarios de recordatorio personalizados y alertas de riesgo académico.',
+          'DormWay recibe programas subidos en la app o enviados por correo a su dirección de recepción, y extrae tareas, fechas de examen, desglose de calificación y políticas de entrega tardía. También ofrece sincronización de solo lectura con Canvas, Blackboard y Moodle unificadas en una sola línea de tiempo, una calculadora de GPA y calificaciones con categorías ponderadas, un asistente llamado «Ace» que responde preguntas sobre las políticas del curso citando el punto del programa de donde salió la respuesta, y una pestaña de «Intelligence» por curso con estimación de dificultad y horas semanales. Su propio sitio y su ficha en la App Store lo describen como gratuito, sin muros de pago y sin tarjeta de crédito. Funciona en web, iPhone, iPad y Mac; no tiene app para Android.',
+          'La división práctica: DormWay no cuesta nada, cubre tres plataformas LMS en modo lectura desde el inicio, y su app para Mac es algo que Semora no tiene. Las ventajas de Semora son la variedad de entrada (la foto de un programa en papel que te entregaron en clase, no solo un archivo que ya tienes), el paso de revisión antes de guardar, y la profundidad del lado del estudio: tarjetas con repetición espaciada, temporizador, tutor y un generador de horarios que se reajusta con tus fechas. Si el costo es la restricción que decide, el plan gratuito de DormWay es realmente gratuito. Si quieres la capa de fechas y la de estudio en la misma cuenta, ese es el argumento a favor de Semora Pro.',
+        ],
+      },
+      {
+        heading: 'Centradas en el material: StudyFetch, Mindgrasp y Studley AI',
+        paragraphs: [
+          'Es la categoría más concurrida y aquella donde el marketing suena más parecido. Las tres reciben contenido y devuelven material de estudio. Las diferencias están en qué aceptan, qué producen y si algo se conecta con tus cursos reales.',
+          'StudyFetch está construido alrededor de Spark.E, un tutor que responde a partir de tus propios materiales en lugar de la web abierta, una distinción con consecuencias: hace que las respuestas sean rastreables hasta algo que tu profesor efectivamente asignó. Genera tarjetas, cuestionarios y simulacros de examen a partir de lo que subes, ofrece planes de estudio con repetición espaciada y da retroalimentación sobre ensayos. Sí tiene una función de programa: fotografías un programa o un calendario y Spark.E extrae los eventos a un calendario con recordatorios. Según las descripciones disponibles, funciona por cada subida y no agregando automáticamente las fechas de todos tus cursos. StudyFetch también documenta una integración LTI 1.3 con Canvas, Blackboard, Schoology, D2L Brightspace y Google Classroom con sincronización de listas, pero esa la implementa la institución, no el estudiante, así que solo está disponible si tu universidad ya la configuró. Reseñas de terceros reportan un plan gratuito (alrededor de 10 conversaciones con el tutor, un conjunto de estudio y dos subidas), un plan Base cercano a $7.99 al mes, uno Premium cercano a $11.99, un paquete semestral cercano a $49.99 y un plan anual cercano a $99.99; nada de eso está confirmado en la propia página de precios de StudyFetch, así que conviene verificarlo antes de comprar. Funciona en web, iOS y Android.',
+          'Mindgrasp tiene el rango de entrada más amplio: PDF, DOCX, PowerPoint, MP3 y MP4, videos de YouTube y artículos web. Le das cualquiera de esos y produce apuntes, resúmenes, tarjetas y cuestionarios, con un tutor con IA para preguntas de seguimiento y un plan superior que agrega un experto en matemáticas. Declara compatibilidad con Canvas, Blackboard y Panopto, lo que parece significar importar archivos de esas plataformas y no analizar programas ni fechas. No aparece ninguna función de análisis de programas ni de extracción de fechas en sus materiales públicos, ni seguimiento de calificaciones. El precio no está listado en su propio sitio; reseñas de terceros reportan aproximadamente $5.99–$10.99 al mes según el plan, más barato con facturación anual, con una prueba corta. Se distribuye como app de iOS, app web y extensión de Chrome; la disponibilidad en Android no es clara.',
+          'Studley AI acepta PDF, diapositivas, videos de YouTube, enlaces a artículos y fotos de apuntes escritos a mano, y los convierte en tarjetas, cuestionarios y material de estudio en audio. Una función llamada «Solve» da ayuda paso a paso con tareas a partir de una foto, y un tutor con IA responde preguntas sobre lo que subiste. Mide el dominio de ese material en cuatro niveles, de desconocido a dominado, lo cual es seguimiento de progreso, pero de tu memoria, no de tu calificación. No aparecen integraciones con LMS ni análisis de programas en sus materiales disponibles. El plan gratuito cubre un conjunto de estudio al día; el plan Unlimited está reportado por reseñas de terceros en $12.88 al mes o $97.76 al año. Funciona en iOS, Android y web.',
+          'Ninguna de las tres intenta ser tu agenda, y leerlas como agendas es el error. En lo que sí son buenas es en el último tramo antes de una evaluación: ya tienes el material, tienes poco tiempo y quieres convertirlo en algo que puedas practicar activamente en vez de releer.',
+        ],
+      },
+      {
+        heading: 'Centradas en la agenda: Shovel y myHomework',
+        paragraphs: [
+          'Shovel es la app con la postura más definida de esta lista, y la postura es buena: conocer una fecha de entrega no es lo mismo que tener tiempo para cumplirla. Procesa un PDF del programa con pantalla de revisión, o se conecta en modo lectura a Canvas, Brightspace, Moodle y Google Classroom, actualizándose aproximadamente cada 24 horas, y después hace lo que las demás no hacen: compara el tiempo que van a tomar tus tareas contra el tiempo que realmente tienes, y lo reserva en el calendario. Sus alertas «Cushion» avisan cuando te comprometiste a más de lo que cabe, y estima el tiempo de lectura a partir del número de páginas. El seguimiento de calificaciones no está confirmado como función central; sus materiales públicos hablan de planificación. Su página de precios lista actualmente $9.79 al mes (con descuento desde $19.99) y $39 al año tras una prueba gratuita de 7 días, aunque otras fuentes citan cifras distintas: conviene verificarlo directamente. La configuración empieza en la app web, con iOS y Android nativos como acompañantes.',
+          'myHomework es la opción tradicional y es honesta al respecto. Registras materias y tareas a mano, o las importas de Canvas, D2L, Google Classroom, Blackboard y Schoology; una cuenta premium actualiza la agenda automáticamente con las tareas nuevas que vayan apareciendo. No hay escaneo de programas, ni tarjetas de estudio, ni tutor, y el seguimiento de calificaciones no se describe como función central. Lo que tiene, en cambio, es alcance: iOS, Android, Mac, Windows, Chrome, Kindle Fire y web, una cobertura de plataformas mayor que cualquier otra de esta lista, además de una versión gratuita con anuncios y una versión sin anuncios reportada en unos $4.99 al año. Si ya conoces tus fechas, las quieres en todos los dispositivos que usas y no te interesan las funciones de IA, es una opción razonable y muy barata.',
+        ],
+      },
+      {
+        heading: 'Cómo elegir: parte del problema, no de la lista de funciones',
+        paragraphs: [
+          'Las listas de funciones premian a quien escriba la más larga. Un método mejor es nombrar la falla concreta que te sigue pasando, porque cada categoría corresponde a una.',
+          'La mayoría de los estudiantes tiene dos de estas a la vez, y por eso la respuesta de una sola app suele estar equivocada. La combinación que cubre más terreno es una app que se haga cargo de la estructura del semestre y otra del material de estudio, o una que haga las dos cosas desde la misma fuente. Ese es el argumento de Semora: como ya tiene tu programa y los apuntes que subiste, su generador de tarjetas no necesita una subida aparte, y puede acotar un mazo a un examen concreto tomado de tus entregas registradas en vez de a todo el curso.',
+        ],
+        bullets: [
+          '«Me enteré la noche anterior de que había una entrega». Tienes un problema de captura de fechas. La solución es una app centrada en el programa, porque la fecha tiene que existir en tu sistema desde la primera semana y no desde el día que te acordaste de escribirla.',
+          '«Sé qué se entrega, pero nunca empiezo con tiempo». Tienes un problema de planificación. Shovel está hecha exactamente para eso, y el Plan Inteligente y el panel de carga académica de Semora atacan la misma carencia desde el lado del programa.',
+          '«Leí el capítulo tres veces y aun así me fue mal en el cuestionario». Tienes un problema de recuperación de memoria, y releer no lo arregla. Una app centrada en el material, o las tarjetas de Semora, convierten el material pasivo en práctica activa.',
+          '«No sé si voy bien en esta materia». Tienes un problema de visibilidad de la calificación, más acotado de lo que parece: necesitas seguimiento ponderado, que Semora incluye gratis y DormWay cubre con su calculadora.',
+          '«Canvas me avisó demasiado tarde». Ese es específicamente un problema de momento de la notificación, y tiene su propia solución.',
+        ],
+      },
+      {
+        heading: 'Qué significa realmente «IA» en cada app',
+        paragraphs: [
+          'La palabra hace trabajos muy distintos a lo largo de esta lista, y vale la pena ser concreto, porque «con IA» no te dice nada sobre si una app te va a servir.',
+          'En las apps centradas en el programa, la IA hace extracción: leer un documento sin estructura, escrito por una persona sin formato consistente, y producir datos ordenados (una fecha, un título, una ponderación, una categoría). Es el trabajo con más probabilidad de salir mal en silencio, y por eso la presencia de un paso de revisión antes de guardar importa más que el modelo que hay detrás. Semora y Shovel ponen uno en el camino.',
+          'En las apps centradas en el material, la IA hace generación: producir texto nuevo —un resumen, una pregunta, una tarjeta, una explicación— a partir del material fuente. Los fallos de generación son más visibles que los de extracción (una tarjeta absurda salta a la vista; una fecha con dos días de error, no), pero también son más frecuentes, y un mazo generado de un capítulo que no leíste es una mala forma de descubrirlo.',
+          'En las apps centradas en la agenda, la IA, cuando existe, hace estimación: adivinar cuánto va a tomar algo. Es lo más difícil de hacer bien de los tres y lo más fácil de verificar tú mismo, porque en una semana sabrás si las estimaciones coinciden con tu realidad.',
+          'Juzga una app por cuál de estos tres trabajos hace y qué tan bien lo hace, no por si la palabra aparece en su portada.',
+        ],
+      },
+      {
+        heading: 'Los planes gratuitos, comparados con honestidad',
+        paragraphs: [
+          'El plan gratuito es donde suele tomarse la decisión de verdad, porque casi ningún estudiante va a pagar por una app de estudio antes de comprobar que la va a usar. También es donde el marketing es más laxo, así que esto es lo que da cada uno en realidad.',
+          'El patrón que conviene notar: los planes gratuitos de la categoría centrada en el material son demostraciones, dimensionadas para enseñarte el producto antes del muro de pago. Los de las categorías centradas en el programa y en la agenda son utilizables: el de DormWay indefinidamente, el de Semora para un semestre de cuatro cursos, el de myHomework con anuncios. Esa diferencia es de estructura de costos, no de generosidad: generar tarjetas y respuestas de tutor le cuesta dinero al proveedor cada vez que se usa; guardar una fecha de entrega, no.',
+        ],
+        table: {
+          columns: ['App', 'Qué incluye el plan gratuito', 'El límite principal'],
+          highlightColumn: 0,
+          caption: 'Detalles de los planes gratuitos según lo publicado por cada proveedor, agosto de 2026. Los planes gratuitos cambian más seguido que los de pago.',
+          rows: [
+            ['Semora', '5 escaneos de programas por mes calendario, hasta 4 cursos, seguimiento completo de entregas y de calificaciones con promedios ponderados, recordatorios el mismo día y unirte a un curso que comparta un compañero', 'Cuatro cursos en un solo semestre: una cuenta gratuita no puede abrir un segundo periodo'],
+            ['DormWay', 'Todo. El producto es gratuito y no tiene plan de pago, incluidas la sincronización con el LMS y la calculadora de calificaciones', 'No hay app para Android, y la sincronización con las tres plataformas LMS es de solo lectura'],
+            ['Shovel', 'Una prueba de 7 días en lugar de un plan gratuito permanente, según su propia página de precios', 'Es una prueba: después la app es solo por suscripción'],
+            ['StudyFetch', 'Reportado en unas 10 conversaciones con el tutor, 1 conjunto de estudio y 2 subidas', 'Lo bastante pequeño como para funcionar como demostración y no como un plan de uso continuo'],
+            ['Mindgrasp', 'Una prueba corta, según reseñas de terceros; no se documenta un plan gratuito permanente', 'El precio no está publicado en su propio sitio'],
+            ['Studley AI', 'Un conjunto de estudio al día', 'Suficiente para una materia, restrictivo para una carga completa de cursos'],
+            ['myHomework', 'La agenda completa, sostenida con anuncios', 'La importación desde el LMS y los archivos adjuntos quedan detrás del plan de pago'],
+          ],
+        },
+      },
+      {
+        heading: 'Los límites que conviene conocer antes de decidir',
+        paragraphs: [
+          'Hay cosas que son ciertas para todas las apps de esta lista, y ninguna comparación de funciones las cambia.',
+          'La extracción no es perfecta y el paso de revisión no es opcional. Los programas traen exámenes «por definir», entregas semanales comprimidas en una sola línea y fechas escritas en relación con la sesión de clase. Todo analizador con IA hereda esas ambigüedades. Las apps que te muestran lo que extrajeron antes de guardarlo —Semora y Shovel, entre ellas— no están siendo cautelosas por gusto: están poniendo el paso de corrección donde te cuesta treinta segundos en lugar de una entrega perdida.',
+          'Una app no puede ver los cursos que nunca le diste. Suena obvio y es la falla más común en la práctica. Un panel de carga académica que señala una semana pesada solo puede señalarla entre los cursos que efectivamente importaste. Si dos de tus cinco materias nunca entraron, el panorama está equivocado con toda seguridad, en vez de verse incompleto.',
+          'El material de estudio generado es un punto de partida, no un sustituto de la lectura. Unas tarjetas hechas de un capítulo que no abriste van a evaluar tu memoria de un resumen, que no es lo mismo que entender el capítulo. El consenso de la investigación sobre práctica de recuperación es que rinde más que releer, pero ese hallazgo asume que aprendiste el material una primera vez.',
+          'Los precios de esta categoría se mueven. Varias de las cifras de arriba provienen de reseñas de terceros porque los proveedores no publican precios en sus propios sitios, y los que sí lo hacen aplican promociones. Cada número de aquí es el punto de partida de tu propia verificación, no una cotización.',
+          'Si quieres probar el enfoque centrado en el programa sin gastar nada, el plan Gratis de Semora cubre un semestre de cuatro cursos con seguimiento completo de entregas y de calificaciones, y basta con una foto de un programa para ver si la extracción aguanta con tus propios documentos, que es la única prueba que importa.',
+        ],
+      },
+    ],
+    faq: [
+      { question: '¿Cuál es la mejor app de estudio con IA para universitarios?', answer: 'No hay una sola respuesta, porque las apps resuelven tres problemas distintos. Si tu problema es que se te pasan las entregas, la solución es una app centrada en el programa como Semora o DormWay. Si tu problema es aprender el material antes de un examen, una app centrada en el material como StudyFetch, Mindgrasp o Studley AI genera tarjetas, apuntes y cuestionarios de lo que subes. Si tu problema es no empezar con tiempo, una app centrada en la agenda como Shovel te reserva las horas. Elige de la categoría que corresponda a la falla que te sigue pasando.' },
+      { question: '¿Hay alguna app gratuita con IA que escanee programas de clase?', answer: 'Sí. DormWay es gratuita, no tiene plan de pago y analiza programas subidos en la app o enviados por correo a su dirección de recepción. Semora tiene un plan Gratis con cinco escaneos por mes calendario, hasta cuatro cursos en un semestre, seguimiento completo de entregas y de calificaciones con promedios ponderados, y recordatorios el mismo día. Las dos te dejan comprobar si la extracción funciona con tus propios programas antes de pagar nada.' },
+      { question: '¿Una app con IA puede leer mi programa y agregar todas las fechas automáticamente?', answer: 'Las apps centradas en el programa hacen exactamente eso: extraen cada tarea, examen, cuestionario, proyecto y lectura con su fecha, y normalmente también las ponderaciones, los horarios de clase y las fechas del semestre. Lo que no pueden es resolver toda ambigüedad a la perfección. Los programas traen exámenes «por definir», entregas semanales escritas en una sola línea y fechas relativas a la sesión de clase. Por eso un paso de revisión antes de guardar importa más que el modelo que haya detrás.' },
+      { question: '¿Necesito más de una app de estudio?', answer: 'A menudo sí, porque las categorías fallan en direcciones opuestas. Un generador de tarjetas no puede decirte cuándo es tu parcial, y una agenda no puede ayudarte a aprender el capítulo. La combinación habitual es una app que se haga cargo de la estructura del semestre y otra del material de estudio, o una sola que haga ambas desde la misma fuente, que es lo que hace Semora al generar tarjetas del programa y los apuntes que ya tiene.' },
+      { question: '¿Cuánto cuestan las apps de estudio con IA?', answer: 'El rango de esta comparación va de gratis a unos $12.88 al mes. DormWay es gratuita sin plan de pago y myHomework es gratuita con anuncios. Semora Pro cuesta $3.99 al mes o $19.99 al año. Reseñas de terceros reportan Mindgrasp en aproximadamente $5.99–$10.99 al mes, StudyFetch en aproximadamente $7.99–$11.99 al mes, Shovel en $9.79 al mes o $39 al año, y Studley AI en $12.88 al mes o $97.76 al año. Varios proveedores no publican precios en sus propios sitios, así que confírmalo antes de comprar.' },
+    ],
+  }),
+  page(SPANISH_BLOG_POSTS[7].path, SPANISH_BLOG_POSTS[7].englishPath, 'standard', {
+    metaTitle: SPANISH_BLOG_POSTS[7].title,
+    metaDescription: SPANISH_BLOG_POSTS[7].description,
+    h1: SPANISH_BLOG_POSTS[7].title,
+    lede: 'La IA convierte tus apuntes en un mazo de tarjetas en segundos, y generar rara vez es la parte difícil: lo difícil es que un mazo de 120 tarjetas indiferenciadas es peor que 30 buenas, porque para el jueves habrás dejado de repasarlo.',
+    intro: [
+      'Cuatro cosas deciden si un mazo generado sirve de verdad: una idea por tarjeta (no un párrafo en el reverso), acotado a un examen concreto en vez de a todo el curso, verificado contra tus propios apuntes antes del primer repaso, y con un calendario de repetición espaciada para que las tarjetas que ya sabes dejen de robarle tiempo a las que no.',
+      'Abajo está cómo generar un mazo, qué separa a una tarjeta buena de una mala, en qué se diferencian las herramientas según de dónde sale el material fuente, y cuándo las tarjetas de estudio son directamente la herramienta equivocada.',
+    ],
+    sections: [
+      {
+        heading: 'Por qué funcionan las tarjetas, y qué implica eso sobre cómo deben ser',
+        paragraphs: [
+          'Las tarjetas de estudio son un mecanismo de entrega de dos hallazgos bien establecidos, y saber cuáles son te dice cómo tiene que ser una tarjeta buena.',
+          'El primero es la práctica de recuperación: el acto de sacar una respuesta de la memoria refuerza ese recuerdo más que volver a revisar el mismo material. Por eso una tarjeta con la respuesta visible en el anverso no es una tarjeta de estudio: es un apunte. El intento de recuperación es todo el mecanismo, y una tarjeta que no lo obliga no está haciendo nada.',
+          'El segundo es el efecto de espaciamiento: la información repasada en intervalos crecientes se retiene bastante más tiempo que el mismo total de repaso concentrado de golpe. Por eso el calendario importa tanto como el mazo. Repasar 100 tarjetas una vez la noche anterior no es la misma intervención que repasar 30 tarjetas cinco veces a lo largo de dos semanas, aunque los minutos totales se parezcan.',
+          'Los dos hallazgos tienen una consecuencia práctica que la mayoría de los mazos generados ignora. La recuperación solo funciona si hay una cosa específica que recuperar. Una tarjeta cuyo reverso tiene cuatro oraciones no se puede calificar con honestidad: vas a recordar a medias dos de ellas, te vas a dar por aprobado y vas a seguir adelante con un recuerdo que en realidad nunca se puso a prueba. Una idea por tarjeta no es una preferencia de estilo: es lo que hace que el paso de autocalificación signifique algo, y la autocalificación es lo que alimenta al algoritmo de programación.',
+        ],
+      },
+      {
+        heading: 'Paso a paso: de los apuntes a un mazo que sí vas a repasar',
+        paragraphs: [
+          'La mecánica es rápida. El criterio es donde se va el tiempo.',
+          'El paso 5 es el que la gente se salta, y es el que separa un apoyo de estudio de una forma cara de memorizar errores. También va más rápido de lo esperado: estás verificando contra apuntes que tomaste tú, así que los errores tienden a saltar a la vista.',
+        ],
+        bullets: [
+          'Reúne la fuente, y sé exigente con ella. Apuntes de clase, diapositivas, una lectura, un paquete de repaso del profesor. Mete el material que efectivamente te dijeron que había que saber, no todo lo que tienes. Un mazo generado de tres semanas de material tangencial serán tres semanas de tarjetas tangenciales.',
+          'Acótalo a una sola evaluación. «Genera tarjetas de este curso» produce un mazo con material de un parcial que ya presentaste y de un final que está a nueve semanas. «Genera tarjetas para el cuestionario del jueves sobre los capítulos 4 a 6» produce algo que puedes terminar. Esta única decisión hace más por la utilidad de un mazo que cualquier ajuste de la instrucción.',
+          'Genera y recorta de inmediato. Cuenta con borrar un tercio de lo que vuelva. Tarjetas que repiten una definición ya obvia, tarjetas sobre una nota al pie, pares casi idénticos que preguntan lo mismo de dos formas: todo eso es ruido que te cuesta tiempo de repaso en cada pasada.',
+          'Arregla los reversos. Cualquier tarjeta cuya respuesta ocupe más de una o dos oraciones debería partirse en dos o reescribirse. Es la edición de mayor valor que puedes hacer y toma alrededor de un minuto por cada diez tarjetas.',
+          'Verifica los datos contra tus apuntes. Las tarjetas generadas heredan lo que estuviera ambiguo o mal en la fuente, y agregan la posibilidad de una invención dicha con seguridad. Una tarjeta equivocada repasada en un calendario espaciado no es neutral: estás ensayando un error de forma sistemática.',
+          'Repasa con un calendario, no en una sesión. Quince minutos en cinco días rinden más que setenta y cinco minutos en uno, y la diferencia no es pequeña.',
+        ],
+      },
+      {
+        heading: 'De dónde salen las tarjetas: las herramientas comparadas',
+        paragraphs: [
+          'La diferencia relevante entre herramientas de tarjetas no es la calidad de la generación: es a partir de qué se les permite generar, y si algo ata el mazo a tu curso real. Un mazo que sabe a qué examen pertenece puede acotarse a ese examen. Un mazo que no sabe que tus cursos existen solo puede acotarse al archivo que acabas de subir.',
+          'La columna que cambia la experiencia diaria es la tercera. Con una herramienta centrada en el material, cada mazo empieza con una subida: buscas el archivo, lo subes, esperas y recibes tarjetas sobre ese archivo. Con una herramienta que ya tiene tu material de curso, la fuente ya está ahí, y la pregunta pasa a ser «¿qué examen?» en lugar de «¿qué archivo?». Los mazos de Semora se generan del programa que ya escaneó más los apuntes que hayas subido, y pueden apuntarse a un examen o cuestionario concreto de tus entregas registradas, para que un repaso de parcial no vuelva diluido con material del final. La contrapartida es honesta: las tarjetas son una función de Pro, a $3.99 al mes o $19.99 al año, mientras que el plan Gratis cubre solo las entregas y el seguimiento de calificaciones.',
+        ],
+        table: {
+          columns: ['App', 'Genera tarjetas a partir de', '¿Conoce tus cursos?', 'Repetición espaciada', 'Precio'],
+          highlightColumn: 0,
+          caption: 'Recopilado de los materiales publicados por cada producto en agosto de 2026; las cifras señaladas como reportadas provienen de reseñas de terceros. Verifica el precio vigente con el proveedor.',
+          rows: [
+            ['Semora', 'Tu programa escaneado, los apuntes que subas y los paquetes de repaso adjuntos (PDF o foto), además de tarjetas manuales', 'Sí. Un mazo puede acotarse a todo el curso o a un examen o cuestionario concreto de tus entregas registradas', 'Sí', 'Pro: $3.99/mes o $19.99/año (el plan Gratis cubre entregas y calificaciones, no tarjetas)'],
+            ['StudyFetch', 'Los materiales que subes, a través del tutor Spark.E', 'En parte. Puede extraer eventos de un programa fotografiado, por cada subida y no en todos los cursos a la vez', 'Sí: planes de estudio con repetición espaciada', 'Reportado en ~$7.99–$11.99/mes; plan gratuito reportado con 1 conjunto de estudio'],
+            ['Mindgrasp', 'Un solo archivo subido: PDF, DOCX, PPT, MP3/MP4, YouTube o artículos web', 'No se encontró análisis de programas ni de fechas en sus materiales públicos', 'No está documentada como función de calendario', 'Reportado en ~$5.99–$10.99/mes; sin precios en su propio sitio'],
+            ['Studley AI', 'PDF, diapositivas, videos de YouTube, enlaces a artículos y fotos de apuntes a mano', 'No. Mide el dominio del conjunto subido, no de un curso', 'Niveles de dominio, de desconocido a dominado', 'Gratis: 1 conjunto al día; reportado en $12.88/mes o $97.76/año'],
+            ['DormWay', 'No se encontró generación de tarjetas en sus materiales públicos', 'Sí, para las fechas: analiza programas y sincroniza tres plataformas LMS', 'No aplica', 'Gratis, sin plan de pago'],
+            ['myHomework', 'No tiene función de tarjetas', 'Solo fechas, por registro manual o importación desde el LMS', 'No aplica', 'Gratis con anuncios; versión sin anuncios reportada en unos $4.99/año'],
+          ],
+        },
+      },
+      {
+        heading: 'Cómo decide la repetición espaciada cuándo vuelves a ver una tarjeta',
+        paragraphs: [
+          'La programación es la parte que hace el trabajo, y vale la pena entenderla porque explica comportamientos que de otro modo parecen fallas.',
+          'Un sistema de repetición espaciada te pide calificar tu propio recuerdo después de cada tarjeta: a grandes rasgos, si la sacaste o no. Las que aciertas se empujan más hacia el futuro, y cada acierto estira el intervalo. Las que fallas vuelven pronto, a veces dentro de la misma sesión. En un par de semanas el mazo se ordena solo: el material que ya sabes desaparece de tu cola diaria y lo que queda se concentra en lo que sigues fallando.',
+          'Esto produce dos efectos que sorprenden. Primero, la cola diaria se encoge aunque el mazo crezca, porque las tarjetas viejas ya se fueron a intervalos largos. Segundo, un día sin repasar sale caro, porque todo lo programado para ese día cae encima de la cola del día siguiente. El sistema está construido sobre el supuesto de contacto constante, que es justamente por lo que el tamaño del mazo importa tanto: un mazo de 300 tarjetas abandonado cuatro días produce un atraso que la mayoría prefiere abandonar antes que vaciar.',
+          'La calificación honesta es la parte que sostiene todo. Marcar una tarjeta como sabida porque la reconociste es la forma en que un mazo se vuelve inútil en silencio: el algoritmo deja de mostrarte el material que no aprendiste, por tu propio reporte inexacto. Esta es la segunda razón para las tarjetas de una sola idea. Una tarjeta con cuatro datos en el reverso no tiene ninguna calificación honesta disponible —sabías una parte—, así que redondeas hacia arriba y el calendario se aleja de la realidad.',
+          'Si estás encajando el repaso en los huecos entre clases, la técnica Pomodoro combina bien con esto: una cola de tarjetas es una de las pocas tareas de estudio que de verdad funciona en un bloque de quince minutos, porque retomarla no tiene costo de arranque.',
+        ],
+      },
+      {
+        heading: 'Los cinco errores de redacción que la IA comete de forma predecible',
+        paragraphs: [
+          'Los mazos generados fallan de maneras consistentes y reconocibles. Una vez que conoces los patrones, los detectas y los arreglas en una sola pasada.',
+          'Ninguno de estos errores significa que no valga la pena usar la generación. Escribir 40 tarjetas a mano toma una hora; generar 60 y editarlas hasta dejar 40 toma quince minutos y produce un mazo mejor, porque editar es más fácil que redactar. El error es tratar el paso de «generar» como el paso final.',
+        ],
+        bullets: [
+          'El reverso con párrafo. El fallo más común. El modelo resume un concepto entero en una tarjeta porque la fuente lo trataba en un solo lugar. Divídela: una tarjeta por afirmación, por paso, por término.',
+          'El anverso que regala la respuesta. Una pregunta formulada con tanto detalle que la respuesta está contenida en el enunciado —«¿cómo se llama el proceso por el que las plantas convierten la luz en energía química?»— no evalúa nada. Recorta el anverso hasta que exija recuperar de verdad.',
+          'La tarjeta de dato curioso. La generación no tiene forma de saber qué enfatizó tu profesor. Va a producir con gusto una tarjeta sobre una fecha mencionada una vez en un pie de imagen junto a otra sobre el mecanismo central del curso. Solo tú sabes cuál entra en el examen, y por eso importa la pasada de recorte del paso 3.',
+          'El racimo de casi duplicados. Tres tarjetas que preguntan lo mismo con otras palabras. Cada una cuesta tiempo de repaso en cada pasada y ninguna agrega memoria. Quédate con la más clara y borra el resto.',
+          'La invención dicha con seguridad. Más rara, y la más dañina: un dato verosímil que no aparece en ningún lugar de tus apuntes. Esta es la razón concreta para verificar las tarjetas contra tu propia fuente antes del primer repaso, y no después del primer mal cuestionario.',
+        ],
+      },
+      {
+        heading: 'Cuándo las tarjetas son la herramienta equivocada',
+        paragraphs: [
+          'Las tarjetas son excelentes para cosas con una respuesta correcta que cabe en una tarjeta: vocabulario, fórmulas, definiciones, fechas, mecanismos, clasificaciones, estructuras anatómicas, interacciones farmacológicas, formas de un idioma extranjero. Si tu examen consiste en buena medida en recordar datos discretos, un mazo bien mantenido está cerca de ser la actividad de estudio de mayor rendimiento disponible.',
+          'Encajan mal en algunos casos, y forzarlas desperdicia el tiempo que creías estar ahorrando. Las materias de resolución de problemas —casi todas las matemáticas más allá de memorizar fórmulas, física, ingeniería, estadística— necesitan ejercicios resueltos, porque la habilidad que se evalúa es elegir y ejecutar un método, no recordar que el método existe. Una tarjeta que dice «¿cómo se integra por partes?» evalúa exactamente lo que no es. Los exámenes de ensayo y las materias basadas en argumentación necesitan práctica de construir argumentos, no de recuperar sus componentes. Y cualquier cosa que todavía no has leído no está lista para tarjetas: un mazo generado de un capítulo que te saltaste te va a enseñar el resumen y a darte la sensación segura de haber estudiado.',
+          'También hay un argumento de calendario para no hacer un mazo. Si el cuestionario es mañana, la repetición espaciada no tiene espacio para operar: el efecto de espaciamiento necesita espaciamiento. En esa situación, una sola pasada concentrada por el material, autoevaluándote, rinde más que montar un sistema de repaso que nunca va a tener una segunda sesión.',
+          'La regla general: usa tarjetas para lo que hay que saber, y ejercicios resueltos o práctica de escritura para lo que hay que hacer. La mayoría de las materias necesita las dos cosas, en una proporción que tus exámenes anteriores te van a indicar.',
+        ],
+      },
+      {
+        heading: 'Cómo encaja un mazo en un semestre real',
+        paragraphs: [
+          'La forma en que fracasan las tarjetas no son las tarjetas malas. Es un buen mazo armado en la semana 9 para un examen de la semana 10, que es exactamente cuando el espaciamiento se quedó sin margen para ayudar.',
+          'La versión que funciona no es lucida: haz tarjetas a medida que se ve el material, en tandas pequeñas, y repásalas unos minutos casi todos los días. Un mazo armado en incrementos de quince minutos a lo largo del semestre está terminado antes de que anuncien el examen, y para entonces los repasos son cortos porque la mayoría de las tarjetas ya envejeció a intervalos largos. Un mazo armado en una sola sesión de pánico son 200 tarjetas que vas a ver exactamente dos veces.',
+          'Ese calendario es el argumento práctico para generar tarjetas de material que la herramienta ya tiene, en vez de material que tienes que ir a buscar. Cuando el programa y los apuntes ya están en la app, «hacer tarjetas para el cuestionario de la próxima semana» es una decisión y no un proyecto, y la tanda ocurre en lugar de posponerse. Las tarjetas de Semora funcionan así: el material fuente ya está ahí desde el escaneo del programa y desde cualquier apunte que hayas subido, los mazos pueden acotarse a un examen o cuestionario concreto que tengas registrado, un paquete de repaso del profesor puede adjuntarse como PDF o foto para generar a partir de él, y las tarjetas manuales están soportadas para las que quieras escribir tú. El repaso funciona con repetición espaciada. Forma parte de Pro, a $3.99 al mes o $19.99 al año; el plan Gratis cubre el escaneo de programas, las entregas y el seguimiento de calificaciones.',
+          'Sea cual sea la herramienta, la secuencia es la misma y el orden no es negociable: lee el material, genera a partir de lo que de verdad hay que saber, recorta y arregla lo que vuelva, verifícalo contra tus apuntes y repasa con un calendario. Sáltate los tres pasos del medio y el mazo es una forma de sentirte productivo. Hazlos y es una de las pocas técnicas de estudio con décadas de evidencia detrás.',
+        ],
+      },
+    ],
+    faq: [
+      { question: '¿La IA puede hacer tarjetas de estudio a partir de mis apuntes de clase?', answer: 'Sí. Todas las herramientas de esta comparación aceptan material subido —PDF, diapositivas, apuntes y, en algunos casos, grabaciones y video— y devuelven tarjetas de pregunta y respuesta. Generar toma segundos. El trabajo que decide si el mazo sirve viene después: recortar las tarjetas que no evalúan nada, dividir cualquier tarjeta cuya respuesta ocupe más de una o dos oraciones, y verificar los datos contra tus propios apuntes antes del primer repaso.' },
+      { question: '¿Cuántas tarjetas debería tener un mazo?', answer: 'Menos de las que te dará un generador. Un mazo de 30 tarjetas bien acotadas que repasas cinco veces rinde más que 120 tarjetas que repasas una, porque la repetición espaciada depende del contacto repetido y un mazo grande es lo que hace que la gente lo abandone. Acota el mazo a una sola evaluación —un cuestionario o examen concreto— en lugar de a todo un curso, y cuenta con borrar cerca de un tercio de lo que produzca el generador.' },
+      { question: '¿La repetición espaciada de verdad rinde más que estudiar de golpe?', answer: 'Para retención a largo plazo, sí: el material repasado en intervalos crecientes se retiene bastante más tiempo que el mismo total de repaso comprimido en una sesión. El detalle es que el espaciamiento necesita margen. Si el examen es mañana, no queda espaciamiento que aprovechar, y una sola pasada concentrada con autoevaluación es mejor uso de la noche que montar un sistema de repaso que nunca tendrá una segunda sesión.' },
+      { question: '¿Son precisas las tarjetas generadas con IA?', answer: 'En general sí, pero no lo bastante como para saltarse la verificación. Las tarjetas generadas heredan cualquier cosa ambigua o equivocada del material fuente, y de vez en cuando agregan un dato verosímil que no aparece en ningún lugar de tus apuntes. Eso importa más con tarjetas que con un resumen, porque una tarjeta equivocada repasada en un calendario espaciado significa que estás ensayando un error de forma sistemática. Verificar contra tus propios apuntes toma unos minutos y es el paso que separa un apoyo de estudio de un error memorizado.' },
+      { question: '¿Sirven las tarjetas para matemáticas y materias de resolución de problemas?', answer: 'Solo para la capa de memorización: fórmulas, definiciones, teoremas con nombre, conversiones de unidades. La habilidad que evalúa de verdad un examen de matemáticas o física es elegir y ejecutar un método, y ninguna tarjeta puede ensayar eso. Una tarjeta que pregunta «¿cómo se integra por partes?» evalúa recordar que la técnica existe, no la capacidad de aplicarla. Para esas materias, los ejercicios resueltos son la actividad de estudio, con un mazo pequeño al lado para los datos que hay que tener a mano.' },
+    ],
+  }),
+  page(SPANISH_BLOG_POSTS[8].path, SPANISH_BLOG_POSTS[8].englishPath, 'standard', {
+    metaTitle: SPANISH_BLOG_POSTS[8].title,
+    metaDescription: SPANISH_BLOG_POSTS[8].description,
+    h1: SPANISH_BLOG_POSTS[8].title,
+    lede: 'La nota que necesitas en un final es (objetivo − calificación actual × (1 − peso del final)) ÷ peso del final, donde cada número es un porcentaje y el peso del final sale de tu programa, no de una suposición.',
+    intro: [
+      'Si tu calificación actual es 88 %, el final vale 30 % y quieres terminar en 90 %, necesitas 94.7 %.',
+      'La fórmula en sí es una línea. Los errores vienen de los datos que le metes: usar el promedio del sistema del curso cuando parte de la materia sigue sin calificar, olvidar que una categoría sin notas todavía no es un cero, ignorar el redondeo y los umbrales entre letras, y dar por hecha una curva que quizá no exista.',
+      'Abajo están los ejemplos resueltos, una tabla de referencia y los cuatro fallos, en ese orden.',
+    ],
+    sections: [
+      {
+        heading: 'La fórmula',
+        paragraphs: [
+          'Llamemos T al porcentaje total con el que quieres terminar, C a tu calificación actual en la parte del curso que ya está calificada, y w al peso del examen final en decimal (30 % = 0.30).',
+          'Nota que necesitas = (T − C × (1 − w)) ÷ w.',
+          'La lógica es más simple que la notación. Todo lo que no es el final —es decir, (1 − w) del curso— ya está resuelto y aporta C × (1 − w) puntos a tu total. Réstalo de tu objetivo y te quedan los puntos que el final todavía tiene que aportar. Divide entre el peso del final para convertir esos puntos en un porcentaje sobre el examen mismo.',
+          'El peso del final es una palanca en las dos direcciones. Un final más pesado hace más recuperable una calificación baja, y más fácil de perder una alta. Muchos estudiantes ven un final del 40 % como una amenaza; es igualmente una oportunidad, y la misma aritmética produce las dos lecturas.',
+          'El resultado a menudo queda por encima de 100 o por debajo de 0, y ambos casos informan. Un resultado de 104 significa que el objetivo no es alcanzable, y es mejor saberlo una semana antes del examen que después. Un resultado de 12 significa que tu calificación está prácticamente asegurada y que tus horas de estudio rinden más en otra materia. Ninguno de los dos es un error de cálculo.',
+        ],
+      },
+      {
+        heading: 'Ejemplo 1: el caso directo',
+        paragraphs: [
+          'Tu programa dice que el final vale 30 % de la calificación del curso. Todo lo demás —tareas, dos parciales, participación— ya está calificado, y tu promedio en ese conjunto es 88 %. Quieres terminar el curso en 90 %.',
+          'Sustituye: T = 90, C = 88, w = 0.30. El 70 % ya calificado aporta 88 × 0.70 = 61.6 puntos a tu total. Tu objetivo de 90 menos 61.6 deja 28.4 puntos que el final tiene que aportar. Y 28.4 ÷ 0.30 = 94.7 % en el examen final.',
+          'Ahora corre los mismos números con objetivos menos ambiciosos. Para terminar en 80 %: (80 − 61.6) ÷ 0.30 = 18.4 ÷ 0.30 = 61.3 %. Para simplemente aprobar con 70: (70 − 61.6) ÷ 0.30 = 28 %.',
+          'Ese rango —94.7 para sostener el nivel más alto, 61.3 para el intermedio, 28 para aprobar— es la información que de verdad sirve para decidir, y por eso calcular un solo objetivo suele ser un error. La distancia entre la nota que necesitas para la calificación que quieres y la que necesitas para la calificación con la que puedes vivir te dice cuánto de tu semana le corresponde a este examen frente a todo lo demás que tienes encima.',
+        ],
+      },
+      {
+        heading: 'Ejemplo 2: cuando parte del curso sigue sin calificar',
+        paragraphs: [
+          'Este es el caso que produce respuestas equivocadas, porque la fórmula simple asume que C cubre todo excepto el final. Normalmente no es así.',
+          'Supón que el programa reparte el curso en tareas 20 %, parciales 30 %, participación 10 % y final 40 %. Llevas 92 % de promedio en tareas y 81 % en parciales. La participación todavía no se asigna. Quieres un 90 general.',
+          'Trabaja en puntos y no en porcentajes, porque no todas las categorías están cerradas. Tareas: 92 × 0.20 = 18.4 puntos guardados. Parciales: 81 × 0.30 = 24.3 puntos guardados. Total guardado: 42.7 puntos de 100 posibles.',
+          'La participación es el problema. Vale 10 puntos y no sabes cuántos vas a obtener. Tienes que suponer algo, y la suposición mueve la respuesta. Si supones el crédito completo (10 puntos): (90 − 42.7 − 10) ÷ 0.40 = 37.3 ÷ 0.40 = 93.3 %. Si supones 85 % de participación (8.5 puntos): (90 − 42.7 − 8.5) ÷ 0.40 = 38.8 ÷ 0.40 = 97.0 %.',
+          'Una sola suposición sobre una categoría del 10 % movió la nota requerida casi cuatro puntos. La lección no es que una suposición sea la correcta: es que conviene correr la versión pesimista y planear contra ella, porque la optimista es la que produce sorpresas.',
+          'Fíjate además en lo que no pasó: la participación nunca se trató como un cero. Una categoría sin calificar no es un cero, y meterla al cálculo como si lo fuera te habría dicho que necesitabas 118 % y que el curso ya estaba perdido. Tu calificación en curso a lo largo del semestre se calcula sobre los pesos que efectivamente ya se calificaron.',
+        ],
+      },
+      {
+        heading: 'Tabla de referencia: qué necesitas, según el peso del final',
+        paragraphs: [
+          'La tabla siguiente asume que llegas al final con un 85 % en la parte ya calificada del curso, y muestra qué tiene que ser el examen para tres objetivos habituales. Existe para hacer visible la forma de la relación: un final más pesado es a la vez más recuperable y más peligroso.',
+          'Lee la primera columna de resultados y el punto salta a la vista: con un 85 de entrada, un final que vale 20 % no puede llevarte a un 90 por bien que te vaya, mientras que uno que vale 50 % sí puede, exigiendo un 95, es decir, exigiendo algo en lugar de algo imposible. Lee la última columna y el mismo peso que te rescataba se convierte en el riesgo: un final del 20 % pide un 10 para mantenerte sobre 70, mientras que uno del 50 % pide un 55. Los finales pesados amplifican lo que ocurra en esa sala.',
+          'La consecuencia práctica: el momento de mirar esta tabla es la semana 3, no la semana 15. El peso del final está impreso en el programa desde el primer día y determina si tu calificación en esa materia se va a decidir de forma gradual o de un solo golpe. Eso cambia cuánto te cuesta realmente un mal parcial, y se puede saber meses antes de que importe.',
+        ],
+        table: {
+          columns: ['Peso del examen final', 'Para terminar en 90 %', 'Para terminar en 80 %', 'Para terminar en 70 %'],
+          highlightColumn: 1,
+          caption: 'Asume un 85 % de promedio en la parte ya calificada del curso. Un resultado por encima de 100 % significa que el objetivo no es alcanzable solo con el final.',
+          rows: [
+            ['20 % de la calificación', '110 %: no alcanzable', '60 %', '10 %'],
+            ['25 % de la calificación', '105 %: no alcanzable', '65 %', '25 %'],
+            ['30 % de la calificación', '101.7 %: no alcanzable', '68.3 %', '35 %'],
+            ['40 % de la calificación', '97.5 %', '72.5 %', '47.5 %'],
+            ['50 % de la calificación', '95 %', '75 %', '55 %'],
+          ],
+        },
+      },
+      {
+        heading: 'Las cuatro formas de equivocarse en este cálculo',
+        paragraphs: [
+          'Cada uno de estos errores produce un número que parece razonable y no lo es.',
+        ],
+        bullets: [
+          'Usar el porcentaje de la plataforma del curso como C. El número que te muestra Canvas o Blackboard se calcula solo sobre el trabajo calificado y, según cómo lo haya configurado tu profesor, las tareas sin calificar pueden quedar excluidas, contarse como cero o tratarse de forma distinta entre dos materias. Si metes ese porcentaje en la fórmula sin saber qué convención lo produjo, estás calculando a partir de una incógnita. Vuelve a calcular desde las ponderaciones del programa y tus notas reales.',
+          'Tratar los puntos extra como peso normal. Los puntos extra suman a lo que ganaste sin sumar al denominador: eso es lo que los hace extra. Cinco puntos extra sobre una categoría del 10 % no equivalen a una categoría del 10 % calificada en 150. Agrégalos como puntos de bonificación a tu total guardado, no como otra categoría ponderada.',
+          'Ignorar el umbral y el redondeo. Un 89.5 que redondea a 90 en una materia es la letra inferior en otra, porque la política de redondeo la fija el profesor y suele estar en el programa en una línea que nadie lee. Si tu resultado cae a menos de un punto de un límite entre letras, busca esa línea antes de decidir cuánto vas a estudiar. La diferencia entre «necesito un 89» y «necesito un 89.5 sin redondear» es una diferencia real de preparación.',
+          'Dar por hecha una curva. Las curvas son comunes en algunos departamentos e inexistentes en otros, y un profesor que la aplicó el semestre pasado no tiene ninguna obligación de repetirla. Calcula el número que necesitas sin curva. Si aparece una, es una ganancia inesperada; si planeaste con ella y no llega, en diciembre ya no hay paso de recuperación disponible.',
+        ],
+      },
+      {
+        heading: 'Qué apps calculan esto por ti',
+        paragraphs: [
+          'La aritmética cabe en una línea, así que el valor que agrega una app no es el cálculo: es conocer las ponderaciones y tus notas sin que las vuelvas a escribir, y actualizar la respuesta conforme llegan las calificaciones. Ahí es donde las herramientas realmente se diferencian.',
+          'Una calculadora web suelta es perfectamente adecuada para responder la pregunta una vez. Lo que no puede hacer es responderla otra vez la semana próxima sin que vuelvas a escribir todo, ni responderla para cinco materias a la vez, que es la versión de la pregunta que de verdad decide cómo pasas la semana de finales. El seguimiento de calificaciones de Semora está en el plan Gratis, con las categorías ponderadas extraídas del programa por el mismo escaneo que produjo tus fechas de entrega, así que la calificación en curso existe sin configuración manual. La capa de proyección —calculadoras de escenarios para tu calificación final y una escala de calificación personalizable, por si los umbrales de tu profesor no coinciden con los predeterminados— forma parte de Pro, a $3.99 al mes o $19.99 al año. La calculadora de GPA gratuita del sitio resuelve la parte del semestre en el navegador si es todo lo que necesitas.',
+        ],
+        table: {
+          columns: ['App', 'Lleva la calificación ponderada del curso', '¿Responde «qué necesito en el final»?', 'De dónde salen las ponderaciones', 'Precio'],
+          highlightColumn: 0,
+          caption: 'Recopilado de los materiales publicados por cada producto en agosto de 2026; las cifras señaladas como reportadas provienen de reseñas de terceros.',
+          rows: [
+            ['Semora', 'Sí, en el plan Gratis, con categorías ponderadas', 'Sí: Pro agrega escala de calificación y proyección, con calculadoras de escenarios para tu calificación final', 'Se extraen automáticamente del programa escaneado, junto con las fechas de entrega', 'Plan Gratis; Pro $3.99/mes o $19.99/año'],
+            ['DormWay', 'Sí: una calculadora de GPA y calificaciones con categorías ponderadas', 'Sí: puedes ajustar las ponderaciones y probar escenarios', 'Su propio análisis del programa, más sincronización de solo lectura con Canvas, Blackboard y Moodle', 'Gratis, sin plan de pago'],
+            ['Shovel', 'No está confirmado públicamente como función central', 'No está documentado: sus materiales públicos tratan de bloques de tiempo y planificación', 'No aplica', 'Reportado en $9.79/mes o $39/año'],
+            ['StudyFetch', 'No es un libro de calificaciones dedicado', 'No: sus funciones de evaluación se centran en retroalimentación de ensayos y puntaje de simulacros', 'No aplica', 'Reportado en ~$7.99–$11.99/mes'],
+            ['myHomework', 'No se describe como función central', 'No', 'No aplica', 'Gratis con anuncios; versión sin anuncios reportada en unos $4.99/año'],
+            ['Una calculadora web suelta', 'No: olvida todo al cerrar la pestaña', 'Sí, para el único escenario que escribiste', 'Las escribes tú desde el programa, cada vez', 'Gratis'],
+          ],
+        },
+      },
+      {
+        heading: 'Casos especiales que la fórmula no cubre',
+        paragraphs: [
+          'Cuatro situaciones habituales necesitan un ajuste antes de aplicar la fórmula.',
+        ],
+        bullets: [
+          'Se elimina la nota más baja. Si tu programa descarta el cuestionario o la tarea con peor nota, recalcula el promedio de esa categoría sin ese puntaje antes de usarlo como C. Esto mueve el promedio de una categoría varios puntos con frecuencia, y en la dirección favorable.',
+          'Cursos por puntos. Algunas materias se califican sobre un total de puntos en lugar de porcentajes ponderados: 1000 puntos en el semestre, con el final valiendo 250. Aplica la misma lógica en puntos: resta los puntos que ya ganaste de los que exige tu calificación objetivo, y el resto es lo que el final tiene que aportar de esos 250. Si el programa te da un total de puntos, úsalo directamente; convertir a porcentajes primero introduce redondeo sin ningún beneficio.',
+          'Un final que puede reemplazar un parcial. Algunos profesores permiten que un buen final sustituya la nota de un parcial flojo. Eso cambia w y C al mismo tiempo y no se resuelve con una sola pasada por la fórmula: calcúlalo de las dos maneras, con y sin la sustitución, y usa el resultado más pesimista para planear.',
+          'Mínimos obligatorios. Algunas materias exigen aprobar el examen final por separado para aprobar el curso, sin importar tu porcentaje general. Esto invalida todo lo anterior. Aparece en el programa, normalmente una sola vez, y conviene buscarlo expresamente, porque la fórmula te dirá con toda tranquilidad que un 28 alcanza cuando el piso real es un 60.',
+        ],
+      },
+      {
+        heading: 'Qué hacer cuando el número es imposible',
+        paragraphs: [
+          'Si la aritmética dice que necesitas un 104, el objetivo se acabó. Esa información sirve de verdad, y vale la pena actuar sobre ella en lugar de quedarse con ella encima.',
+          'Corre la fórmula otra vez para la letra siguiente hacia abajo, y para la que sigue. Casi siempre hay un objetivo cómodamente alcanzable, y saber dónde está el límite real convierte una angustia difusa en un número concreto, que es más fácil de preparar y bastante más fácil de dejar de rumiar. Después revisa si queda algo abierto: puntos extra pendientes, una política de reescritura en un trabajo, una componente de participación que aún se está evaluando. Son cosas pequeñas, pero mueven el total de puntos guardados, que es la única parte de la ecuación que sigue bajo tu control antes del examen.',
+          'Luego recalcula en tus otras materias, porque el sentido de saber que en una clase el objetivo alto quedó fuera de alcance es que las horas que ibas a gastar ahí ahora están disponibles donde el número sigue en juego. Esa reasignación es todo el valor práctico de hacer esta cuenta con tiempo, y es la razón para correrla en todas las materias a la vez y no solo en la que más ansiedad te da.',
+        ],
+      },
+    ],
+    faq: [
+      { question: '¿Qué nota necesito en el final para sacar la calificación más alta?', answer: 'Usa (objetivo − calificación actual × (1 − peso del final)) ÷ peso del final, con todos los valores como porcentajes. Para un 90 %, con un 88 % de entrada y un final que vale 30 % del curso: (90 − 88 × 0.70) ÷ 0.30 = 94.7 %. Toma el peso del final de tu programa en lugar de suponerlo, porque ese número cambia la respuesta más que cualquier otro de la fórmula.' },
+      { question: '¿Y si la fórmula dice que necesito más de 100 %?', answer: 'El objetivo está fuera de alcance solo con el final, y conviene saberlo temprano y no tarde. Corre la fórmula de nuevo para la calificación siguiente hacia abajo hasta encontrar una cómodamente alcanzable. Después revisa si queda algo abierto —puntos extra pendientes, una política de reescritura, una participación que aún se evalúa—, porque eso cambia tus puntos guardados, que son la única parte de la ecuación bajo tu control antes del examen.' },
+      { question: '¿Puedo usar directamente el porcentaje que me muestra Canvas?', answer: 'No sin saber cómo está configurado. El porcentaje de una plataforma se calcula solo sobre el trabajo calificado y, según los ajustes de tu profesor, las tareas sin calificar pueden quedar excluidas, contarse como cero o tratarse de forma distinta entre materias. Meter ese número sin saber qué convención lo produjo es calcular a partir de una incógnita. Vuelve a calcular desde las ponderaciones del programa y tus notas reales.' },
+      { question: '¿Cómo hago el cálculo si una categoría todavía no está calificada?', answer: 'Trabaja en puntos y no en porcentajes. Multiplica el promedio de cada categoría calificada por su peso para obtener los puntos guardados, después supón un valor para la categoría sin calificar y réstalo también. Corre la suposición pesimista, no la optimista: en un curso donde la participación vale 10 %, suponer crédito completo en vez de 85 % movió la nota requerida casi cuatro puntos. Y algo decisivo: una categoría sin calificar no es un cero; tratarla así te dirá que el curso está perdido cuando no lo está.' },
+      { question: '¿Y si mi final puede reemplazar la nota de un parcial bajo?', answer: 'Eso cambia a la vez el peso del final y tu calificación actual, así que una sola pasada por la fórmula no lo resuelve. Calcúlalo dos veces, con y sin la sustitución, y planea contra el resultado más pesimista. Revisa además si el programa exige un mínimo obligatorio en el final, algo que algunas materias piden con independencia de tu porcentaje general y que invalida por completo la aritmética.' },
     ],
   }),
 ];

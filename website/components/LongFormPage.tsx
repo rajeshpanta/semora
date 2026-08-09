@@ -7,6 +7,7 @@ import { faqPageSchema } from '@/lib/schema';
 import { Breadcrumb } from './Breadcrumb';
 import { BlogPostHero } from './BlogPostHero';
 import { CollapsibleSection } from './CollapsibleSection';
+import { BlogTable } from './BlogTable';
 import type { NewPage } from '@/lib/new-page-content';
 import type { SiteLocale } from '@/lib/i18n';
 
@@ -83,6 +84,7 @@ export function LongFormPage({
                 ))}
               </ul>
             ) : null}
+            {s.table ? <BlogTable {...s.table} /> : null}
           </CollapsibleSection>
         ))}
 

@@ -1,0 +1,147 @@
+/* Blog comparison tables. Borrows the shape and tokens of CompareTable so a
+   table inside an article reads as the same object as one on a /compare page. */
+
+.wrap {
+  /* Must be allowed to shrink below the table's intrinsic width, or it pushes
+     the article column wider instead of scrolling inside it. */
+  min-width: 0;
+  overflow-x: auto;
+  margin: 28px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table caption {
+  caption-side: bottom;
+  text-align: left;
+  color: var(--ink3);
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 10px 14px;
+}
+
+.table th,
+.table td {
+  padding: 12px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  line-height: 1.5;
+}
+
+.table thead th {
+  background: var(--brand-50);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink2);
+  white-space: nowrap;
+}
+
+.table tbody th {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.highlight {
+  background: var(--brand-50);
+  font-weight: 500;
+}
+
+.table tr:last-child th,
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+/* ── Phones: one stacked card per row ──────────────────────────
+   Five columns at 350px is unreadable at any font size. Same markup, re-laid
+   as cards: the row header becomes the card title, each cell carries its
+   column name from data-label. */
+@media (max-width: 719px) {
+  .wrap {
+    overflow-x: visible;
+    border: none;
+    border-radius: 0;
+    margin: 22px 0;
+  }
+
+  .table,
+  .table tbody,
+  .table tr,
+  .table th,
+  .table td {
+    display: block;
+    width: auto;
+  }
+
+  /* The table is a flex column here purely so the caption can stay last.
+     `caption-side: bottom` only works on a real table box; once the table is
+     display:block the caption keeps `display: table-caption` and collapses to
+     a shrink-to-fit sliver a few words wide. Ordering flex items puts it back
+     below the cards at full width. */
+  .table {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .table caption {
+    display: block;
+    order: 2;
+    padding: 8px 2px 0;
+  }
+
+  .table tbody {
+    order: 1;
+  }
+
+  .table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .table tbody tr {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 4px 0;
+    margin-bottom: 12px;
+  }
+
+  .table tbody th {
+    border-bottom: 1px solid var(--border);
+    font-size: 15px;
+  }
+
+  .table tbody td {
+    border-bottom: none;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .table tbody td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink3);
+    margin-bottom: 2px;
+  }
+
+  .highlight {
+    background: none;
+  }
+
+  .table tbody td.highlight::before {
+    color: var(--brand);
+  }
+}

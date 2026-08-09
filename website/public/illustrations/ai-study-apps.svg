@@ -1,0 +1,95 @@
+<svg width="320" height="200" viewBox="0 0 320 200" fill="none" xmlns="http://www.w3.org/2000/svg" role="img">
+  <defs>
+    <linearGradient id="g7" x1="0" y1="0" x2="320" y2="200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3B0764"/><stop offset="1" stop-color="#4C1D95"/>
+    </linearGradient>
+    <radialGradient id="o7" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse"
+      gradientTransform="translate(250 20) scale(180)">
+      <stop stop-color="#C084FC" stop-opacity="0.5"/><stop offset="1" stop-color="#C084FC" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="s7" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff" stop-opacity="0.22"/><stop offset="1" stop-color="#fff" stop-opacity="0.06"/>
+    </linearGradient>
+    <filter id="b7" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="10"/></filter>
+    <clipPath id="c7"><rect width="320" height="200" rx="12"/></clipPath>
+  </defs>
+    <style>
+      .fl7 { transform-box: fill-box; transform-origin: center bottom;
+             animation: f7 2.6s ease-in-out 0.5s infinite; }
+      @keyframes f7 {
+        0%,100% { transform: translateY(0) scale(1,1) }
+        30%     { transform: translateY(-7px) scale(0.98,1.03) }
+        60%     { transform: translateY(0) scale(1.03,0.97) }
+        80%     { transform: translateY(-2px) scale(1,1) }
+      }
+      .wv7 { transform-box: fill-box; transform-origin: 0% 100%;
+             animation: w7 1.1s ease-in-out 0.5s infinite; }
+      @keyframes w7 { 0%,100% { transform: rotate(-4deg) } 50% { transform: rotate(20deg) } }
+      .ey7 { transform-box: fill-box; transform-origin: center;
+             animation: e7 4.2s ease-in-out 0.4s infinite; }
+      @keyframes e7 { 0%,90%,100% { transform: scaleY(1) } 94% { transform: scaleY(0.1) } }
+      /* Each tile lands in turn, so the eye reads them as a ranked shortlist
+         rather than three things that appeared at once. */
+      .tile7 { transform-box: fill-box; transform-origin: center;
+               animation: t7 4s cubic-bezier(.34,1.5,.5,1) infinite; }
+      .tile7.d1 { animation-delay: .18s }
+      .tile7.d2 { animation-delay: .36s }
+      @keyframes t7 { 0%,6% { transform: translateY(10px); opacity: 0 } 26%,100% { transform: translateY(0); opacity: 1 } }
+      .spk7 { transform-box: fill-box; transform-origin: center;
+              animation: k7 2.4s ease-in-out infinite; }
+      @keyframes k7 { 0%,100% { transform: scale(.7) rotate(0deg); opacity: .45 } 50% { transform: scale(1.15) rotate(45deg); opacity: 1 } }
+      .chk7 { animation: h7 4s ease-in-out infinite; }
+      @keyframes h7 { 0%,30% { stroke-dashoffset: 26 } 48%,100% { stroke-dashoffset: 0 } }
+      .bar7 { transform-box: fill-box; transform-origin: 0% 50%;
+              animation: r7 4s cubic-bezier(.34,1.3,.5,1) infinite; }
+      @keyframes r7 { 0%,14% { transform: scaleX(.15) } 40%,100% { transform: scaleX(1) } }
+      @media (prefers-reduced-motion: reduce) {
+        .fl7, .wv7, .ey7, .tile7, .spk7, .chk7, .bar7 {
+          animation: none; stroke-dashoffset: 0; opacity: 1; transform: none;
+        }
+      }
+    </style>
+  <g clip-path="url(#c7)">
+    <rect width="320" height="200" fill="url(#g7)"/>
+    <rect width="320" height="200" fill="url(#o7)"/>
+    <circle cx="214" cy="100" r="62" fill="#A78BFA" fill-opacity="0.24" filter="url(#b7)"/>
+
+    <g class="tile7">
+      <rect x="152" y="34" width="136" height="38" rx="12" fill="url(#s7)" stroke="#fff" stroke-opacity="0.34"/>
+      <rect x="162" y="45" width="16" height="16" rx="5" fill="#FBBF24" fill-opacity="0.85"/>
+      <rect x="188" y="46" width="56" height="5" rx="2.5" fill="#fff" fill-opacity="0.55"/>
+      <rect class="bar7" x="188" y="57" width="80" height="5" rx="2.5" fill="#fff" fill-opacity="0.28"/>
+      <circle cx="274" cy="53" r="9" fill="#FBBF24"/>
+      <path class="chk7" d="M269.5 53 l3.5 3.5 6 -7" stroke="#2A1259" stroke-width="2.4"
+        stroke-dasharray="26" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </g>
+
+    <g class="tile7 d1">
+      <rect x="152" y="82" width="136" height="38" rx="12" fill="#fff" fill-opacity="0.09" stroke="#fff" stroke-opacity="0.18"/>
+      <rect x="162" y="93" width="16" height="16" rx="5" fill="#fff" fill-opacity="0.28"/>
+      <rect x="188" y="94" width="46" height="5" rx="2.5" fill="#fff" fill-opacity="0.34"/>
+      <rect x="188" y="105" width="62" height="5" rx="2.5" fill="#fff" fill-opacity="0.18"/>
+    </g>
+
+    <g class="tile7 d2">
+      <rect x="152" y="130" width="136" height="38" rx="12" fill="#fff" fill-opacity="0.09" stroke="#fff" stroke-opacity="0.18"/>
+      <rect x="162" y="141" width="16" height="16" rx="5" fill="#fff" fill-opacity="0.28"/>
+      <rect x="188" y="142" width="52" height="5" rx="2.5" fill="#fff" fill-opacity="0.34"/>
+      <rect x="188" y="153" width="38" height="5" rx="2.5" fill="#fff" fill-opacity="0.18"/>
+    </g>
+
+    <path class="spk7" d="M118 40 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4 z" fill="#FBBF24" fill-opacity="0.9"/>
+
+    <g transform="translate(74 104) scale(0.86)"><g class="fl7">
+      <ellipse cx="0" cy="34" rx="24" ry="4.5" fill="#000" fill-opacity="0.13"/>
+      <path d="M-24 -2 L-34 -20" stroke="#FFF6E6" stroke-width="7" stroke-linecap="round"/>
+      <path class="wv7" d="M24 -2 L34 -20" stroke="#FFF6E6" stroke-width="7" stroke-linecap="round"/>
+      <rect x="-26" y="-28" width="52" height="58" rx="24" fill="#FFF6E6"/>
+      <ellipse cx="-16" cy="4" rx="6" ry="4" fill="#FBBF24" fill-opacity="0.5"/>
+      <ellipse cx="16" cy="4" rx="6" ry="4" fill="#FBBF24" fill-opacity="0.5"/>
+      <ellipse class="ey7" cx="-9" cy="-7" rx="4.2" ry="5.4" fill="#2A1259"/>
+      <ellipse class="ey7" cx="9" cy="-7" rx="4.2" ry="5.4" fill="#2A1259"/>
+      <path d="M-6 8 q6 6 12 0" stroke="#2A1259" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+    </g></g>
+  </g>
+</svg>

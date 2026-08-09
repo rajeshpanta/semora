@@ -9,6 +9,20 @@ export interface NewPageSection {
   heading: string;
   paragraphs: string[];
   bullets?: string[];
+  /**
+   * An optional comparison table, rendered under the bullets by LongFormPage.
+   *
+   * The English blog posts are MDX and can import <BlogTable /> directly. The
+   * Spanish ones are data, rendered through this shell, so without a slot here
+   * a table could only ever exist in one of the two locales — and EN/ES are
+   * meant to carry identical information.
+   */
+  table?: {
+    columns: string[];
+    rows: string[][];
+    caption?: string;
+    highlightColumn?: number;
+  };
 }
 
 export interface NewPage {

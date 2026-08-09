@@ -67,6 +67,33 @@ export const BLOG_POSTS: BlogPostMeta[] = [
     image: '/illustrations/book-stack.svg',
     imageAlt: 'A friendly character beside a week of study blocks, with one exam block highlighted',
   },
+  {
+    slug: 'best-ai-study-apps-for-college-2026',
+    title: 'The Best AI Study Apps for College Students in 2026',
+    description:
+      'Six AI study apps compared on what they actually do — syllabus scanning, flashcards, tutoring, grade tracking — plus which category fits which problem.',
+    date: '2026-08-05',
+    image: '/illustrations/ai-study-apps.svg',
+    imageAlt: 'A friendly character beside a shortlist of three app cards, the top one marked with a check',
+  },
+  {
+    slug: 'ai-flashcards-from-lecture-notes',
+    title: 'How to Make Flashcards From Your Lecture Notes With AI',
+    description:
+      'What makes an AI-generated flashcard worth reviewing, how spaced repetition decides when you see it again, and how the tools compare on where the cards come from.',
+    date: '2026-08-07',
+    image: '/illustrations/flashcard-deck.svg',
+    imageAlt: 'A friendly character beside a deck of flashcards, the front card flipping to reveal its answer',
+  },
+  {
+    slug: 'grade-needed-on-final-exam',
+    title: 'What Grade Do I Need on My Final Exam?',
+    description:
+      'The formula for the score you need on a final, worked through with real weightings, plus the four ways students get the answer wrong.',
+    date: '2026-08-09',
+    image: '/illustrations/final-grade-target.svg',
+    imageAlt: 'A friendly character beside a gauge filling toward the score needed on a final exam',
+  },
 ];
 
 export function getBlogPost(slug: string): BlogPostMeta | undefined {
@@ -92,9 +119,23 @@ export function formatBlogDate(iso: string): string {
  * Every post previously had exactly one inbound internal link — its row on the
  * /blog index — and linked to no other post, so the six sat as leaf nodes with
  * nothing connecting them as a topic cluster.
+ *
+ * The neighbours are the `limit` posts that follow this one in registry order,
+ * wrapping at the end, rather than the first three in the list. Taking the
+ * first three gave every post the same three neighbours, which left everything
+ * from the fourth entry onward with exactly one inbound link — the index row —
+ * no matter how many posts were added. Walking forward gives each post the same
+ * number of inbound links as every other.
  */
 export function relatedPosts(slug: string, limit = 3) {
-  return BLOG_POSTS.filter((p) => p.slug !== slug)
-    .slice(0, limit)
-    .map((p) => ({ path: `/blog/${p.slug}`, title: p.title, description: p.description }));
+  const start = BLOG_POSTS.findIndex((p) => p.slug === slug);
+  const others = BLOG_POSTS.filter((p) => p.slug !== slug);
+  if (start < 0) return others.slice(0, limit).map(toLink);
+  // Rotate so the walk begins at the post after this one.
+  const rotated = [...others.slice(start), ...others.slice(0, start)];
+  return rotated.slice(0, limit).map(toLink);
+}
+
+function toLink(p: BlogPostMeta) {
+  return { path: `/blog/${p.slug}`, title: p.title, description: p.description };
 }

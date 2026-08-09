@@ -1,0 +1,222 @@
+import { enAlternates } from '@/lib/hreflang';
+export const metadata = {
+  title: 'What Grade Do I Need on My Final Exam?',
+  description:
+    'The formula for the score you need on a final, worked through with real weightings, plus the four ways students get the answer wrong.',
+  alternates: enAlternates('/blog/grade-needed-on-final-exam'),
+}
+
+import { JsonLd } from '@/components/JsonLd'
+import { articleSchema } from '@/lib/schema'
+import { BlogPostHero } from '@/components/BlogPostHero'
+import { BlogTable } from '@/components/BlogTable'
+import { RelatedPosts } from '@/components/RelatedPosts'
+import { relatedPosts } from '@/lib/blog'
+import { Faq } from '@/components/Faq'
+import { faqPageSchema } from '@/lib/schema'
+
+export const faqItems = [
+  {
+    question: 'What grade do I need on my final to get an A?',
+    answer:
+      'Use (target − current grade × (1 − final weight)) ÷ final weight, with every value as a percentage. For an A at 90 percent, with an 88 percent going in and a final worth 30 percent of the course: (90 − 88 × 0.70) ÷ 0.30 = 94.7 percent. Take the final weight from your syllabus rather than guessing it, because that one number changes the answer more than anything else in the formula.',
+  },
+  {
+    question: 'What if the formula says I need more than 100 percent?',
+    answer:
+      'The target is out of reach on the final alone, and that is worth knowing early rather than late. Run the formula again for the next letter grade down until you find one that is comfortably reachable. Then check whether anything else is still open — outstanding extra credit, a paper revision policy, a participation component still being assessed — since those change your banked points, which is the only part of the equation still under your control before the exam.',
+  },
+  {
+    question: 'Can I just use the percentage Canvas shows me?',
+    answer:
+      'Not without knowing how it was configured. An LMS percentage is calculated over graded work only, and depending on your instructor\'s settings, ungraded assignments may be excluded, counted as zero, or handled inconsistently between courses. Plugging that number in without knowing which convention produced it means calculating from an unknown. Recompute from the syllabus weights and your actual scores instead.',
+  },
+  {
+    question: 'How do I calculate this if a category has not been graded yet?',
+    answer:
+      'Work in points rather than percentages. Multiply each graded category average by its weight to get points banked, then assume a value for the ungraded category and subtract that too. Run the pessimistic assumption, not the optimistic one — in a course where participation is worth 10 percent, assuming full credit rather than 85 percent moved the required final score by nearly four points. Critically, an ungraded category is not a zero; treating it as one will tell you the course is already lost when it is not.',
+  },
+  {
+    question: 'What if my final can replace a low midterm score?',
+    answer:
+      'That changes both the final\'s weight and your current grade at the same time, so a single pass through the formula cannot handle it. Calculate it twice — once with the replacement and once without — and plan against the more pessimistic result. Also check the syllabus for a mandatory minimum on the final, which some courses require independently of your overall percentage and which overrides the arithmetic entirely.',
+  },
+]
+
+<JsonLd data={articleSchema({
+  title: metadata.title,
+  description: metadata.description,
+  slug: 'grade-needed-on-final-exam',
+  datePublished: '2026-08-09',
+})} />
+
+<JsonLd data={faqPageSchema(faqItems)} />
+
+<BlogPostHero
+  title="What Grade Do I Need on My Final Exam?"
+  date="Published August 9, 2026"
+  image="/illustrations/final-grade-target.svg"
+  imageAlt="A friendly character beside a gauge filling toward the score needed on a final exam"
+/>
+
+**The short version:** the score you need on a final is **(target − current grade × (1 − final's weight)) ÷ final's weight**, where every number is a percentage and the final's weight comes from your syllabus, not from a guess. If your current grade is 88 percent, the final is worth 30 percent, and you want to finish at 90 percent, you need 94.7 percent. The formula itself is one line — the errors come from the inputs: using your gradebook average when part of the course is still ungraded, forgetting that a category with no grades yet is not a zero, ignoring rounding and letter-grade cutoffs, and assuming a curve that may not exist. Worked examples, a reference table, and the four failure modes are below.
+
+## The formula
+
+Let **T** be the overall percentage you want to end with, **C** your current grade in the portion of the course that has already been graded, and **w** the final exam's weight as a decimal (30 percent = 0.30).
+
+> Needed score = (T − C × (1 − w)) ÷ w
+
+The logic is simpler than the notation. Everything that is not the final — that is, (1 − w) of the course — has already been settled, and it contributes **C × (1 − w)** points toward your total. Subtract that from your target and you are left with the points the final still has to supply. Divide by the final's weight to convert those points into a percentage on the exam itself.
+
+Two properties of this formula are worth internalizing before you use it.
+
+**The final's weight is a lever in both directions.** A heavier final makes a low current grade more recoverable, and makes a high one easier to lose. Students often think of a 40-percent final as a threat; it is equally an opportunity, and the same arithmetic produces both readings.
+
+**The answer is frequently above 100 or below 0, and both are informative.** A needed score of 104 means the target is not reachable, and it is better to know that a week before the exam than to find out afterward. A needed score of 12 means your grade is effectively locked in and your studying time is better spent on a different course. Neither result is a calculation error.
+
+## Example 1: the straightforward case
+
+Your syllabus says the final is worth 30 percent of the course grade. Everything else — homework, two midterms, participation — has been graded, and your average across all of it is 88 percent. You want to finish the course at 90 percent.
+
+Plug it in: T = 90, C = 88, w = 0.30.
+
+- The graded 70 percent contributes 88 × 0.70 = **61.6 points** toward your final total.
+- Your target of 90 minus 61.6 leaves **28.4 points** that the final must supply.
+- 28.4 ÷ 0.30 = **94.7 percent** on the final.
+
+Now run the same numbers for a less ambitious target. To finish at 80 percent: (80 − 61.6) ÷ 0.30 = 18.4 ÷ 0.30 = **61.3 percent**. To merely pass at 70: (70 − 61.6) ÷ 0.30 = **28 percent**.
+
+That spread — 94.7 to hold an A-minus, 61.3 to hold a B-minus, 28 to pass — is the actual decision-relevant information, and it is why calculating one target is usually a mistake. The gap between the score you need for the grade you want and the score you need for the grade you can live with tells you how much of your remaining week this exam deserves compared to everything else on your plate.
+
+## Example 2: when part of the course is still ungraded
+
+This is the case that produces wrong answers, because the simple formula assumes C covers everything except the final. It usually does not.
+
+Say the syllabus splits the course as homework 20 percent, midterms 30 percent, participation 10 percent, final 40 percent. You have a 92 percent homework average and an 81 percent midterm average. Participation has not been assigned yet. You want a 90 overall.
+
+Work in points rather than percentages, because the categories are not all settled:
+
+- Homework: 92 × 0.20 = **18.4 points** banked
+- Midterms: 81 × 0.30 = **24.3 points** banked
+- Total banked: **42.7 points** out of a possible 100
+
+Participation is the problem. It is worth 10 points and you do not know how many of them you will get. You have to assume something, and the assumption moves the answer:
+
+- **Assume full participation credit (10 points):** needed = (90 − 42.7 − 10) ÷ 0.40 = 37.3 ÷ 0.40 = **93.3 percent**
+- **Assume 85 percent participation (8.5 points):** needed = (90 − 42.7 − 8.5) ÷ 0.40 = 38.8 ÷ 0.40 = **97.0 percent**
+
+A single assumption about a 10-percent category moved the required final score by nearly four points. The lesson is not that one assumption is correct — it is that you should run the pessimistic version and plan against that, because the optimistic version is the one that produces surprises.
+
+Note also what did **not** happen: participation was never treated as a zero. An ungraded category is not a zero, and dropping it into the calculation as one would have told you that you needed 118 percent and that the course was already lost. Your running grade throughout a semester is calculated over the weights that have actually been graded, which is the same principle explained at length in our [weighted GPA guide](/blog/weighted-gpa-calculator).
+
+## Reference table: what you need, by final exam weight
+
+The table below assumes you are walking into the final with an **85 percent** in the graded portion of the course, and shows what the exam has to be for three common targets. It exists to make the shape of the relationship visible — a heavier final is both more recoverable and more dangerous.
+
+<BlogTable
+  columns={['Final exam weight', 'To finish at 90% (A−)', 'To finish at 80% (B−)', 'To finish at 70% (C−)']}
+  highlightColumn={1}
+  caption="Assumes an 85% average across the already-graded portion of the course. Scores above 100% mean the target is unreachable on the final alone."
+  rows={[
+    ['20% of the grade', '110% — not reachable', '60%', '10%'],
+    ['25% of the grade', '105% — not reachable', '65%', '25%'],
+    ['30% of the grade', '101.7% — not reachable', '68.3%', '35%'],
+    ['40% of the grade', '97.5%', '72.5%', '47.5%'],
+    ['50% of the grade', '95%', '75%', '55%'],
+  ]}
+/>
+
+Read down the first column and the point is unmissable: with an 85 going in, a 20-percent final cannot get you to a 90 no matter how well you do, while a 50-percent final can — needing a 95, but needing something rather than something impossible. Read down the third column and the same weight that rescued you becomes the risk: a 20-percent final requires a 10 to keep you above 70, while a 50-percent final requires a 55. Heavy finals amplify whatever happens in that room.
+
+The practical consequence: the time to look at this table is week 3, not week 15. The weight of the final is printed in the syllabus on day one, and it determines whether your grade in this course will be decided gradually or all at once. That changes how much a bad midterm actually costs you, and it is knowable months before it matters.
+
+## The four ways students get this wrong
+
+**Using the LMS percentage as C.** The number Canvas or Blackboard shows you is calculated over graded work only, and depending on how your instructor configured it, ungraded assignments may be excluded, treated as zero, or handled inconsistently between the two. If you plug a gradebook percentage into the formula without knowing which convention produced it, you are calculating from an unknown. Recompute from the syllabus weights and your actual scores.
+
+**Treating extra credit as ordinary weight.** Extra credit adds to your earned points without adding to the denominator — that is what makes it extra. Five points of extra credit on a 10-percent category is not the same as a 10-percent category scored at 150. Add extra credit as bonus points to your banked total, not as another weighted category.
+
+**Ignoring the cutoff and the rounding.** An 89.5 that rounds to 90 in one course is a B-plus in another, because rounding policy is set by the instructor and is often stated in the syllabus in one line that nobody reads. If your calculated requirement lands within a point of a letter boundary, find that line before you decide how hard to study. The difference between "I need an 89" and "I need an 89.5, unrounded" is a real difference in preparation.
+
+**Assuming a curve.** Curves are common in some departments and nonexistent in others, and an instructor who curved last semester is under no obligation to do it again. Calculate the number you need without one. If a curve materializes, it is a windfall; if you planned around it and it does not, there is no recovery step available in December.
+
+## Which apps compute this for you
+
+The arithmetic is a one-liner, so the value an app adds is not the calculation — it is knowing the weights and your scores without you re-entering them, and updating the answer as grades come in. That is where the tools actually differ.
+
+<BlogTable
+  columns={['App', 'Tracks a weighted course grade', 'Answers "what do I need on the final?"', 'Where the weights come from', 'Price']}
+  highlightColumn={0}
+  caption="Compiled from each product's own published materials as of August 2026; figures marked as reported come from third-party review coverage."
+  rows={[
+    [
+      'Semora',
+      'Yes, on the free tier, with weighted categories',
+      'Yes — Pro adds Grade Scale & Forecasting, with what-if calculators for your final grade and a customizable grading scale',
+      'Extracted automatically from your scanned syllabus, along with the deadlines',
+      'Free tier; Pro $3.99/mo or $19.99/yr',
+    ],
+    [
+      'DormWay',
+      'Yes — a GPA and grade calculator with weighted categories',
+      'Yes — you can adjust weights and test grade scenarios',
+      'Its own syllabus parse, plus read-only Canvas, Blackboard, and Moodle sync',
+      'Free, no paid tier',
+    ],
+    [
+      'Shovel',
+      'Not publicly confirmed as a core feature',
+      'Not documented — its public materials are about time-blocking and scheduling',
+      'Not applicable',
+      'Reported $9.79/mo or $39/yr',
+    ],
+    [
+      'StudyFetch',
+      'Not a dedicated gradebook',
+      'No — its grading features center on essay feedback and exam simulation scoring',
+      'Not applicable',
+      'Reported ~$7.99–$11.99/mo',
+    ],
+    [
+      'myHomework',
+      'Not described as a core feature',
+      'No',
+      'Not applicable',
+      'Free with ads; ad-free tier reported around $4.99/yr',
+    ],
+    [
+      'A standalone web calculator',
+      'No — it forgets everything when you close the tab',
+      'Yes, for the one scenario you typed in',
+      'You type them in from the syllabus, every time',
+      'Free',
+    ],
+  ]}
+/>
+
+A standalone calculator is perfectly adequate for answering the question once. What it cannot do is answer it again next week without you re-entering everything, and it cannot answer it for five courses at once — which is the version of the question that actually decides how you spend finals week. Semora's grade tracking is on the free tier, with the weighted categories pulled out of the syllabus by the same scan that produced your deadlines, so the running grade exists without any manual setup. The forecasting layer — what-if calculators for your final grade and a customizable grading scale, in case your instructor's cutoffs differ from the default — is part of Pro at $3.99 a month or $19.99 a year. Our free [GPA calculator](/gpa-calculator) handles the semester-level math in the browser if that is all you need.
+
+## Special cases the formula does not cover
+
+**A dropped lowest score.** If your syllabus drops the lowest quiz or homework grade, recompute your category average with that score removed before using it as C. This routinely moves a category average by several points, and in the right direction.
+
+**Points-based courses.** Some courses are scored out of a total point pool rather than by weighted percentages — 1,000 points across the semester, with the final worth 250. The same logic applies, in points rather than percentages: subtract the points you have already earned from the points your target letter requires, and the remainder is what the final must deliver out of 250. If the syllabus gives you a point total, use it directly; converting to percentages first introduces rounding for no benefit.
+
+**A final that can replace a midterm.** Some instructors let a strong final replace a weak midterm score. That changes w and C simultaneously and cannot be handled by one pass through the formula — calculate it both ways, with and without the replacement, and use the more pessimistic result to plan.
+
+**Mandatory minimums.** A few courses require passing the final independently in order to pass the course, regardless of your overall percentage. This overrides everything above. It appears in the syllabus, usually once, and it is worth checking for specifically, because the formula will cheerfully tell you that a 28 is enough when a 60 is the real floor.
+
+## What to do when the number is impossible
+
+If the arithmetic says you need a 104, the target is gone. That is genuinely useful information, and it is worth acting on rather than sitting with.
+
+Run the formula again for the next letter down, and the one after that. There is almost always a target that is comfortably reachable, and knowing where the real boundary is converts a vague dread into a specific number — which is easier to prepare for and considerably easier to stop worrying about. Then check whether anything else is still open: outstanding extra credit, a revision policy on a paper, a participation component still being assessed. Those are small, but they move the banked-points total, which is the only part of the equation still under your control before the exam.
+
+Then recalculate across your other courses, because the point of knowing an A is out of reach in one class is that the hours you were going to spend there are now available somewhere the number is still in play. That reallocation is the entire practical value of doing this math early, and it is why it is worth running for every course at once rather than for the one you are most anxious about — see our [finals week study plan](/blog/finals-week-study-plan) for the version of that triage across a whole exam schedule.
+
+## Frequently asked questions
+
+<Faq items={faqItems} />
+
+<RelatedPosts posts={relatedPosts('grade-needed-on-final-exam')} />

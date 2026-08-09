@@ -1,0 +1,256 @@
+import { enAlternates } from '@/lib/hreflang';
+export const metadata = {
+  title: 'The Best AI Study Apps for College Students in 2026',
+  description:
+    'Six AI study apps compared on what they actually do — syllabus scanning, flashcards, tutoring, grade tracking — plus which category fits which problem.',
+  alternates: enAlternates('/blog/best-ai-study-apps-for-college-2026'),
+}
+
+import { JsonLd } from '@/components/JsonLd'
+import { articleSchema } from '@/lib/schema'
+import { BlogPostHero } from '@/components/BlogPostHero'
+import { BlogTable } from '@/components/BlogTable'
+import { RelatedPosts } from '@/components/RelatedPosts'
+import { relatedPosts } from '@/lib/blog'
+import { Faq } from '@/components/Faq'
+import { faqPageSchema } from '@/lib/schema'
+
+export const faqItems = [
+  {
+    question: 'What is the best AI study app for college students?',
+    answer:
+      'There is no single answer, because the apps solve three different problems. If your problem is missing deadlines, a syllabus-first app like Semora or DormWay is the fix. If your problem is learning material before an exam, a materials-first app like StudyFetch, Mindgrasp, or Studley AI generates flashcards, notes, and quizzes from what you upload. If your problem is starting work early enough, a planner-first app like Shovel schedules the time. Pick from the category that matches the failure you keep having.',
+  },
+  {
+    question: 'Is there a free AI study app that scans syllabi?',
+    answer:
+      'Yes. DormWay is free with no paid tier and parses syllabi uploaded in-app or emailed to its intake address. Semora has a free tier covering five syllabus scans per calendar month, up to four courses in one semester, full deadline and grade tracking with weighted averages, and same-day reminders. Both let you test whether AI extraction works on your own syllabi before paying anything.',
+  },
+  {
+    question: 'Can an AI app read my syllabus and add every deadline automatically?',
+    answer:
+      'Syllabus-first apps do exactly this: they extract every assignment, exam, quiz, project, and reading with its due date, and usually the grading weights, meeting times, and semester dates too. What they cannot do is resolve every ambiguity perfectly. Syllabi contain TBD exam dates, recurring weekly assignments written as one line, and dates written relative to class sessions. This is why a review-before-save step matters more than which model is behind the extraction.',
+  },
+  {
+    question: 'Do I need more than one study app?',
+    answer:
+      'Often, yes, because the categories fail in opposite directions. A flashcard generator cannot tell you when your midterm is, and a planner cannot help you learn the chapter. The common pairing is one app that owns the semester structure and one that owns the study material — or a single app that does both from the same source, which is what Semora does by generating flashcards from the syllabus and notes it already holds.',
+  },
+  {
+    question: 'How much do AI study apps cost?',
+    answer:
+      'The range in this comparison runs from free to about $12.88 a month. DormWay is free with no paid tier and myHomework is free with ads. Semora Pro is $3.99 a month or $19.99 a year. Third-party review coverage reports Mindgrasp at roughly $5.99–$10.99 a month, StudyFetch at roughly $7.99–$11.99 a month, Shovel at $9.79 a month or $39 a year, and Studley AI at $12.88 a month or $97.76 a year. Several vendors do not publish pricing on their own sites, so confirm before buying.',
+  },
+]
+
+<JsonLd data={articleSchema({
+  title: metadata.title,
+  description: metadata.description,
+  slug: 'best-ai-study-apps-for-college-2026',
+  datePublished: '2026-08-05',
+})} />
+
+<JsonLd data={faqPageSchema(faqItems)} />
+
+<BlogPostHero
+  title="The Best AI Study Apps for College Students in 2026"
+  date="Published August 5, 2026"
+  image="/illustrations/ai-study-apps.svg"
+  imageAlt="A friendly character beside a shortlist of three app cards, the top one marked with a check"
+/>
+
+**The short version:** "AI study app" describes at least three different products that solve three different problems, and most disappointment comes from buying one category expecting another. **Syllabus-first apps** (Semora, DormWay) read your course documents and build a semester of deadlines. **Materials-first apps** (StudyFetch, Mindgrasp, Studley AI) turn a PDF or lecture recording into flashcards, notes, and quizzes. **Planner-first apps** (Shovel, myHomework) organize time and tasks you enter or import. Only the first category answers "what's due and what's it worth"; only the second answers "help me learn this chapter." If you need both, the honest answer is usually one app from each — or one app that covers the semester structure and generates study material from the same source. Prices below run from free to about $12.88/month.
+
+## The seven apps at a glance
+
+The table below is the fastest way to see where each app actually sits. Everything in it comes from each product's own published materials or, where noted, from third-party review coverage — prices in particular change often, so treat them as a starting point and check the current pricing page before you buy.
+
+<BlogTable
+  columns={['App', 'Built around', 'Syllabus → deadlines', 'Grade tracking', 'Price']}
+  highlightColumn={0}
+  caption="Compiled from each product's own published materials as of August 2026, with third-party figures marked as reported. Competitor pricing changes frequently — confirm on the vendor's own page before buying."
+  rows={[
+    [
+      'Semora',
+      'Your syllabus — the document becomes the semester',
+      'Yes. Photo (up to 5 pages), PDF, drag-and-drop, or pasted text',
+      'Yes, on the free tier, with weighted categories',
+      'Free tier; Pro $3.99/mo or $19.99/yr',
+    ],
+    [
+      'DormWay',
+      'Your syllabus plus read-only LMS sync',
+      'Yes. Upload in-app or email it to their intake address',
+      'Yes — a GPA and grade calculator with weighted categories',
+      'Free, no paid tier',
+    ],
+    [
+      'Shovel',
+      'Time-blocking — deadlines become a scheduled calendar',
+      'Yes. PDF parsed with a review screen, or connect an LMS',
+      'Not publicly confirmed as a core feature',
+      'Reported $9.79/mo or $39/yr after a 7-day trial',
+    ],
+    [
+      'StudyFetch',
+      'The Spark.E tutor, answering from your own materials',
+      'Partial. Photograph a syllabus and it extracts events per upload',
+      'Not a dedicated gradebook — grading features center on essays and exam simulation',
+      'Free tier; reported ~$7.99–$11.99/mo',
+    ],
+    [
+      'Mindgrasp',
+      'One uploaded file → notes, flashcards, quiz',
+      'No syllabus parsing found in its public materials',
+      'Not publicly confirmed',
+      'Reported ~$5.99–$10.99/mo',
+    ],
+    [
+      'Studley AI',
+      'Uploaded PDFs, slides, and videos → study sets',
+      'No syllabus parsing found in its public materials',
+      'Tracks mastery of material, not a course grade',
+      'Free: 1 study set/day; reported $12.88/mo or $97.76/yr',
+    ],
+    [
+      'myHomework',
+      'A classic planner — manual entry plus LMS import',
+      'No. Manual entry, or import from a supported LMS',
+      'Not described as a core feature',
+      'Free with ads; ad-free tier reported around $4.99/yr',
+    ],
+  ]}
+/>
+
+## The three categories, and why the distinction matters
+
+Almost every frustrated review of a study app is a category mismatch rather than a broken product. Someone downloads a flashcard generator hoping it will tell them when their midterm is, or downloads a planner hoping it will explain a chapter, and concludes the app is bad when it is simply built for a different job.
+
+**Syllabus-first apps** treat the course document as the source of truth. They read it, extract every assignment, exam, quiz, project, and reading with its due date, and usually pull the structural details too — grading weights, meeting times, office hours, semester start and end. The payoff is that a single upload produces a whole semester, and the deadlines arrive with context attached: not just "essay due October 14" but "essay due October 14, worth 15 percent."
+
+**Materials-first apps** treat your study material as the source of truth. You give them a lecture recording, a slide deck, a textbook chapter, a YouTube video, and they give back summaries, flashcards, practice questions, and a tutor that will answer questions grounded in that upload. They are genuinely useful the week before an exam and structurally unable to tell you when the exam is, because nothing in the pipeline ever read your syllabus.
+
+**Planner-first apps** treat your own input as the source of truth. You type in classes and assignments, or import them from Canvas, and the app schedules, reminds, and displays. The AI in this category, where it exists at all, tends to sit in the scheduling layer: estimating how long a task will take, or blocking time for it.
+
+The reason this matters practically is that the categories fail in opposite directions. A materials-first app will happily generate 60 flashcards for a class you are about to miss a deadline in. A planner-first app will remind you about a deadline it has no way to help you actually meet. Knowing which gap you have is most of the decision.
+
+## Syllabus-first: Semora and DormWay
+
+These two are the closest direct comparison in this list, because both start from the same premise — the syllabus already contains your semester, and transcribing it by hand is the bottleneck.
+
+**Semora** imports a syllabus as a photo (multi-page, up to five pages), a PDF upload, a drag-and-drop file on web, or pasted text. OpenAI GPT-5.6 Luna extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every graded item with its due date. Nothing saves until you review it on screen, which matters more than it sounds: syllabi are full of ambiguous phrasings like "due the Friday before break," and a review step is the difference between catching a wrong date and inheriting it. The free tier covers five syllabus scans per calendar month, up to four courses in one semester, full deadline and grade tracking with weighted averages, and same-day reminders. Pro, at $3.99/month or $19.99/year, lifts the scan and course caps and adds Canvas, Blackboard, and Moodle import, a Smart Plan study schedule, a Workload dashboard, AI flashcards with spaced repetition, a focus timer, an AI tutor grounded in your own course material, calendar sync with .ics export, custom reminder timing, and Academic Risk alerts.
+
+**DormWay** ingests syllabi uploaded in-app or emailed to its intake address, and extracts assignments, exam dates, grading breakdowns, and late-work policies. It also offers read-only sync with Canvas, Blackboard, and Moodle merged into a single timeline, a GPA and grade calculator that supports weighted categories, an "Ace" assistant that answers course-policy questions with citations back to the syllabus, and a per-course "Intelligence" tab with a difficulty rating and weekly hour estimate. Its own site and App Store listing describe it as free with no paywalls and no credit card. It runs on web, iPhone, iPad, and Mac, with no Android app.
+
+The practical split: DormWay costs nothing and covers three LMS platforms read-only out of the box, and its Mac app is something Semora does not have. Semora's advantages are the import surface (a phone photo of a paper syllabus handed out in class, not just a file you already have), a review-before-save step, and the depth on the study side — spaced-repetition flashcards, a focus timer, a tutor, and a schedule generator that adapts to your deadlines. If cost is the deciding constraint, DormWay's free tier is genuinely free. If you want the deadline layer and the study layer in the same account, that is the case for Semora Pro.
+
+## Materials-first: StudyFetch, Mindgrasp, and Studley AI
+
+This is the most crowded category and the one where the marketing sounds the most alike. All three take content in and produce study aids out. The differences are in what they accept, what they produce, and whether anything connects to your actual courses.
+
+**StudyFetch** is built around Spark.E, a tutor that answers questions from your own uploaded materials rather than from the open web — a meaningful distinction, since it makes the answers traceable to something your instructor actually assigned. It generates flashcards, quizzes, and practice exam simulations from uploads, offers spaced-repetition study plans, and gives essay feedback. It does have a syllabus feature: photograph a syllabus or calendar and Spark.E extracts events into a calendar with reminders. Per available descriptions this works per upload rather than aggregating deadlines across every course automatically. StudyFetch also documents an LTI 1.3 integration with Canvas, Blackboard, Schoology, D2L Brightspace, and Google Classroom with roster sync — but that is deployed by the institution, not connected by an individual student, so it is only available to you if your school has already set it up. Third-party review sites report a free tier (roughly 10 tutor chats, one study set, two uploads), a Base tier around $7.99/month, a Premium tier around $11.99/month, a semester bundle around $49.99, and an annual plan around $99.99; these are not confirmed on StudyFetch's own pricing page, so verify before purchasing. It runs on web, iOS, and Android.
+
+**Mindgrasp** has the widest input range: PDF, DOCX, PowerPoint, MP3 and MP4, YouTube videos, web articles. Feed it any of those and it produces notes, summaries, flashcards, and quizzes, with an AI tutor chat for follow-up questions and a higher tier that adds an AI math expert. It states compatibility with Canvas, Blackboard, and Panopto, which appears to mean importing files from those platforms rather than parsing syllabi or deadlines. No syllabus-parsing or deadline-extraction feature appears in its public materials, and no grade tracking. Pricing is not listed on its own site; third-party reviews report roughly $5.99–$10.99/month across tiers, cheaper billed annually, with a short trial. It ships as an iOS app, a web app, and a Chrome extension; Android availability is unclear.
+
+**Studley AI** accepts PDFs, lecture slides, YouTube videos, article links, and photos of handwritten notes, and turns them into flashcards, quizzes, and audio study material. A "Solve" feature gives step-by-step homework help from a photo, and an AI tutor answers questions about what you uploaded. It tracks mastery of that material across four levels, from unfamiliar to mastered — which is progress tracking, but of your recall, not of your course grade. No LMS integration and no syllabus parsing appear in its available materials. Free covers one study set per day; the Unlimited plan is reported by third-party coverage at $12.88/month or $97.76/year. It runs on iOS, Android, and web.
+
+None of the three is trying to be your planner, and reading them as planners is the mistake. What they are good at is the last mile before an assessment: you have the material, you have limited time, and you want it converted into something you can actively practice with rather than passively reread.
+
+## Planner-first: Shovel and myHomework
+
+**Shovel** is the most opinionated app in this list, and the opinion is a good one: knowing a deadline is not the same as having time to meet it. It parses a syllabus PDF with a review screen or connects to Canvas, Brightspace, Moodle, and Google Classroom read-only, refreshing roughly every 24 hours, then does the thing the other apps do not — it compares the time your tasks will take against the time you actually have, and blocks it out. Its "Cushion" alerts flag when you have committed to more than fits, and it estimates reading time from page counts. Grade tracking is not publicly confirmed as a core feature; the public materials are about scheduling. Its pricing page currently lists $9.79/month (discounted from $19.99) and $39/year after a 7-day free trial, though other sources cite different figures — check directly. Setup happens on the web app first, with native iOS and Android as companions.
+
+**myHomework** is the traditional option and is honest about it. You manually enter classes and assignments, or import from Canvas, D2L, Google Classroom, Blackboard, and Schoology; a premium account auto-updates the planner with new assignments going forward. There is no syllabus scanning, no flashcards, no tutor, and grade tracking is not described as a core feature. What it has instead is reach: iOS, Android, Mac, Windows, Chrome, Kindle Fire, and web — broader platform coverage than anything else here — plus a free version with ads and an ad-free tier reported around $4.99/year. If you already know your deadlines, want them on every device you own, and have no interest in AI features, it is a reasonable and very cheap choice.
+
+## How to pick: start from the problem, not the feature list
+
+Feature lists reward whoever writes the longest one. A better approach is to name the specific failure you keep having, because each of these categories maps cleanly onto one.
+
+- **"I found out something was due the night before."** You have a deadline-capture problem. A syllabus-first app is the fix, because the deadline needs to exist in your system from week one — not from whenever you remembered to type it in. See [turning a syllabus into a semester calendar](/blog/syllabus-to-semester-calendar) for the manual version of this process.
+- **"I know what's due, I just don't start early enough."** You have a scheduling problem. Shovel is built precisely for this, and Semora's Smart Plan and Workload dashboard address the same gap from the syllabus side.
+- **"I read the chapter three times and still bombed the quiz."** You have a retrieval problem, and rereading does not fix it. A materials-first app, or Semora's flashcards, converts passive material into active recall.
+- **"I don't know if I'm doing well in this class."** You have a grade-visibility problem, which is narrower than it feels — you need weighted grade tracking, which Semora includes free and DormWay covers with its calculator. Our [weighted GPA guide](/blog/weighted-gpa-calculator) walks through the math itself.
+- **"Canvas told me too late."** That is a notification-timing problem specifically, and it has its own fix — see [Canvas deadline reminders](/blog/canvas-deadline-reminders).
+
+Most students have two of these at once, which is why the single-app answer is often wrong. The pairing that covers the most ground is one app that owns the semester structure and one that owns the study material — or one app that does both from the same source, which is the case Semora makes: because it already has your syllabus and your uploaded notes, its flashcard generator does not need a separate upload, and it can scope a deck to one specific exam pulled from your tracked deadlines rather than to the whole course.
+
+## What "AI" actually means in each app
+
+The word is doing very different work across this list, and it is worth being concrete, because "AI-powered" tells you nothing about whether an app will help you.
+
+In syllabus-first apps, the AI is doing **extraction**: reading an unstructured document written by a human with no consistent format, and producing structured data — a date, a title, a weight, a category. This is the job most likely to be quietly wrong, which is why the presence of a review step before anything saves matters more than the model behind it. Semora and Shovel both put one in the path.
+
+In materials-first apps, the AI is doing **generation**: producing new text — a summary, a question, a flashcard, an explanation — from source material. Generation failures are more visible than extraction failures (a nonsense flashcard is obvious; a date that is two days off is not), but they are also more common, and a flashcard deck generated from a chapter you have not read is a bad way to discover that.
+
+In planner-first apps, the AI, where present, is doing **estimation**: guessing how long something will take. This is the hardest of the three to do well and the easiest to sanity-check yourself, since you will know within a week whether the estimates match your reality.
+
+Judge an app by which of these three it is doing and how well, rather than by whether the phrase appears on the homepage.
+
+## The free tiers, compared honestly
+
+Free tiers are where the real decision usually happens, since most students are not going to pay for a study app before seeing whether they will use one. They are also where the marketing is loosest, so here is what each one actually gets you.
+
+<BlogTable
+  columns={['App', 'What the free tier includes', 'The main limit']}
+  highlightColumn={0}
+  caption="Free-tier details as published by each vendor, August 2026. Free tiers change more often than paid ones."
+  rows={[
+    [
+      'Semora',
+      '5 syllabus scans per calendar month, up to 4 courses, full deadline and grade tracking with weighted averages, same-day reminders, and joining a course a classmate shares',
+      'Four courses in a single semester — a free account cannot start a second term',
+    ],
+    [
+      'DormWay',
+      'Everything. The product is free with no paid tier, including LMS sync and the grade calculator',
+      'No Android app, and sync with the three LMS platforms is read-only',
+    ],
+    [
+      'Shovel',
+      'A 7-day trial rather than a standing free tier, per its own pricing page',
+      'It is a trial — the app is subscription-only afterward',
+    ],
+    [
+      'StudyFetch',
+      'Reported at roughly 10 tutor chats, 1 study set, and 2 uploads',
+      'Small enough that it functions as a demo rather than an ongoing tier',
+    ],
+    [
+      'Mindgrasp',
+      'A short trial, per third-party coverage — no standing free tier documented',
+      'Pricing is not published on its own site at all',
+    ],
+    [
+      'Studley AI',
+      'One study set per day',
+      'Fine for a single class, restrictive across a full course load',
+    ],
+    [
+      'myHomework',
+      'The full planner, supported by ads',
+      'LMS import and file attachments sit behind the paid tier',
+    ],
+  ]}
+/>
+
+The pattern worth noticing: the free tiers in the materials-first category are demos, sized to show you the product before a paywall. The free tiers in the syllabus-first and planner-first categories are usable — DormWay's indefinitely, Semora's for a four-course semester, myHomework's with ads. That difference is about cost structure, not generosity: generating flashcards and tutor answers costs the vendor money on every use, while storing a deadline does not.
+
+## The limits worth knowing before you commit
+
+A few things are true across every app on this list, and no amount of feature comparison changes them.
+
+**Extraction is not perfect, and a review step is not optional.** Syllabi contain "TBD" exam dates, recurring weekly assignments compressed into a single line, and dates written relative to class sessions. Every AI parser inherits those ambiguities. The apps that show you what they extracted before saving it — Semora and Shovel among them — are not being cautious for its own sake; they are putting the correction step where it costs you thirty seconds instead of a missed deadline.
+
+**An app cannot see the courses it was never given.** This sounds obvious and is the single most common failure in practice. A workload dashboard that flags a crunch week can only flag crunch weeks among the courses you actually imported. If two of your five classes never made it in, the picture is confidently wrong rather than incomplete-looking.
+
+**Generated study material is a starting point, not a substitute for the reading.** Flashcards produced from a chapter you have not opened will test your recall of a summary, which is not the same as understanding the chapter. The research consensus on retrieval practice is that it beats rereading — but that finding assumes you learned the material once first.
+
+**Prices in this category move.** Several of the figures above come from third-party review coverage because the vendors do not publish pricing on their own sites, and the ones that do publish it run promotions. Every number here is a starting point for your own check, not a quote.
+
+If you want to test the syllabus-first approach without spending anything, Semora's free tier covers a four-course semester with full deadline and grade tracking, and it takes one photo of one syllabus to see whether the extraction actually holds up on your own documents — which is the only test that matters.
+
+## Frequently asked questions
+
+<Faq items={faqItems} />
+
+<RelatedPosts posts={relatedPosts('best-ai-study-apps-for-college-2026')} />

@@ -133,7 +133,23 @@
     color: var(--brand);
   }
 
+  /* `caption-side: bottom` only works on a real table box. Once .table is
+     display:block the caption keeps `display: table-caption` and collapses to
+     a shrink-to-fit sliver a few words wide — which is what these long
+     sourcing captions were doing on phones. Flex ordering puts it back below
+     the cards at full width. */
+  .table {
+    display: flex;
+    flex-direction: column;
+  }
+
   .table caption {
+    display: block;
+    order: 2;
     padding: 10px 2px 0;
+  }
+
+  .table tbody {
+    order: 1;
   }
 }
