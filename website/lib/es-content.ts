@@ -222,23 +222,123 @@ const CORE_PAGES: SpanishPageConfig[] = [
 const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
   page('/es/funciones', '/features', 'features-index', {
     metaTitle: 'Funciones de Semora',
-    metaDescription: 'Análisis de programas con IA, calificaciones, Plan Inteligente, tarjetas, Tutor, Canvas y más para organizar la universidad.',
+    metaDescription: 'Escaneo de programas con IA, calificaciones ponderadas, Plan Inteligente, Tutor, tarjetas y Canvas. Lo que hace cada función y qué es gratis.',
     h1: 'Todo lo que necesitas para organizar el semestre',
     lede: 'Desde la primera foto del programa de una materia hasta la semana de finales: una sola cuenta para tus entregas, calificaciones y tiempo de estudio.',
     intro: [
-      'Empieza gratis con cinco escaneos al mes, cuatro cursos, tareas, calificaciones y recordatorios. Pro añade automatización, cursos ilimitados y herramientas de estudio basadas en tus datos reales.',
+      'Empieza gratis con cinco escaneos al mes, cuatro cursos, tareas, calificaciones y recordatorios. Pro añade automatización, cursos ilimitados y herramientas de estudio construidas sobre tus datos reales.',
     ],
     sections: [
-      { heading: 'Un sistema conectado, no ocho herramientas separadas', paragraphs: ['El escaneo crea la estructura del curso. Las fechas se incorporan al calendario y al Plan Inteligente; las calificaciones sirven para crear pronósticos y recomendaciones; y tus apuntes dan contexto a las tarjetas y al Tutor.'] },
-      { heading: 'Funciona donde estudias', paragraphs: [
-        'iPhone y iPad comparten la misma app universal. La web usa la misma cuenta para que puedas organizar un PDF desde una computadora y revisar el plan desde tu teléfono.',
-        'Y funciona en tu idioma: la app entera está en español, no solo este sitio. Puedes elegirlo en la primera pantalla de bienvenida o en Mi cuenta > Configuración > Idioma, y la elección se guarda en tu cuenta, así que se mantiene igual en el iPad y en la web.',
-        'Sin conexión también avanzas: puedes crear cursos y tareas, editarlos y marcarlos como completados. Los cambios se guardan en el dispositivo y se sincronizan solos cuando vuelve la señal, y los últimos siete días de tus datos quedan en caché para que un aula sin señal no te deje con una pantalla vacía. Eliminar es lo único que espera a tener conexión.',
-      ] },
+      {
+        heading: 'La primera semana llega en cinco PDF distintos',
+        paragraphs: [
+          'Cada profesor publica su programa a su manera. Uno lo entrega en una tabla, otro esconde los exámenes en un párrafo a mitad de página, y un tercero reparte las entregas por doce páginas de calendario. Copiar todo eso a mano es lo que hace que la mayoría de los planificadores se abandonen en la semana seis: el trabajo de mantenerlo al día pesa más que el problema que resuelven.',
+          'Semora ataca ese momento concreto. En lugar de darte una lista vacía para que la llenes tú, lee el documento que ya contiene tu curso entero y lo convierte en un semestre que puedes revisar en unos minutos.',
+        ],
+      },
+      {
+        heading: 'Un escaneo, y el resto viene detrás',
+        paragraphs: [
+          'Semora no es una carpeta de herramientas sueltas: es una cadena. El escaneo es el paso de entrada y todo lo demás lee lo que ese escaneo produjo. Por eso la lista de funciones parece larga aunque el trabajo real sea corto — cada programa se toca una vez.',
+          'El escáner extrae el curso y el profesor, los horarios de clase con sus días y aulas, el inicio y el final del semestre, la escala de calificación y cada tarea, examen, cuestionario, proyecto y lectura que encuentra, con su fecha, su hora y su ponderación. El curso, sus horarios y su escala se crean directamente. Las entregas esperan en una pantalla de revisión donde editas, descartas y apruebas.',
+          'A partir de ahí todo lo demás es análisis de esas mismas filas: el calendario, las calificaciones ponderadas, la carga académica, el Plan Inteligente, las tarjetas y el Tutor leen el mismo material. No hay que volver a subir nada.',
+        ],
+        bullets: [
+          'Foto con la cámara, hasta cinco páginas por escaneo.',
+          'PDF subido desde archivos, correo o descargas.',
+          'Arrastrar y soltar el archivo en la app web.',
+          'Pegar el texto copiado de un PDF o de la página de tu plataforma (solo en la web).',
+        ],
+      },
+      {
+        heading: 'Cómo cambia la semana',
+        paragraphs: [
+          'La diferencia no está en tener más funciones, sino en cuánto trabajo manual desaparece.',
+        ],
+        bullets: [
+          'Antes: copiar cada fecha a mano desde cinco programas. Con Semora: una foto por curso y una pantalla de revisión.',
+          'Antes: una hoja de cálculo para saber tu nota. Con Semora: introduces la puntuación y el promedio ponderado se recalcula solo.',
+          'Antes: descubrir la semana cargada cuando ya la tienes encima. Con Semora: la carga académica la señala con antelación.',
+          'Antes: recordatorios que pones tú, cuando te acuerdas. Con Semora: se programan solos al aprobar las fechas.',
+          'Antes: tres apps para calendario, notas y estudio. Con Semora: una cuenta que comparte los mismos datos.',
+        ],
+      },
+      {
+        heading: 'Qué cubren de verdad cinco escaneos y cuatro cursos',
+        paragraphs: [
+          'El plan gratuito no es una prueba y no caduca. Los límites son concretos y conviene leerlos antes de empezar, porque marcan el momento exacto en el que Pro empieza a tener sentido.',
+          'Cinco escaneos por mes natural, y el contador se reinicia el día uno. Volver a escanear un curso que ya tienes cuenta como escaneo, pero no ocupa una plaza de curso nueva: las entregas se incorporan a lo que ya existe. Cuatro cursos dentro de un semestre, y un solo semestre — ese último límite es el que más sorprende, porque significa que un segundo cuatrimestre ya necesita Pro.',
+          'Dentro de esos límites no hay nada recortado: el calendario completo, el panel, el seguimiento de entregas, las calificaciones ponderadas con sus categorías y los recordatorios del mismo día funcionan igual que en Pro.',
+        ],
+        bullets: [
+          'Cinco escaneos de programa por mes natural.',
+          'Hasta cuatro cursos, dentro de un único semestre.',
+          'Calendario, panel y seguimiento de entregas sin recortes.',
+          'Calificaciones ponderadas por categoría, con puntos extra y entregas tardías.',
+          'Recordatorios el mismo día de la entrega.',
+          'Unirte al espacio de un curso que te comparta un compañero.',
+        ],
+      },
+      {
+        heading: 'Dónde cae exactamente la línea de Pro',
+        paragraphs: [
+          'Vale la pena ser explícito, porque la frontera no siempre está donde se espera. Las calificaciones son gratis; los pronósticos sobre esas calificaciones son de Pro. Unirte a un espacio de curso es gratis y lo seguirá siendo; crear el tuyo e invitar es de Pro. Y la conexión con Canvas, Blackboard o Moodle es de Pro, aunque en el plan gratuito siempre puedes pegar el texto de una tarea en el escáner.',
+          'La sincronización con el calendario del dispositivo también es de Pro, y solo funciona en iPhone y iPad: un navegador no puede escribir en el calendario del sistema. En la web el equivalente es la exportación .ics, que sí funciona.',
+        ],
+        bullets: [
+          'Escaneos, cursos y semestres ilimitados.',
+          'Plan Inteligente: un horario de estudio construido sobre tus fechas reales, que se reajusta cuando una cambia.',
+          'Carga académica: detecta las semanas cargadas y los tramos con muchos exámenes antes de que lleguen.',
+          'Tutor con IA que responde desde tu propio programa, tus apuntes y tus entregas.',
+          'Tarjetas de estudio generadas con IA o escritas por ti, con repetición espaciada.',
+          'Temporizador de enfoque para las sesiones entre clases.',
+          'Escala de calificación propia por curso y pronósticos de nota.',
+          'Importación desde Canvas, Blackboard y Moodle con un token que generas tú.',
+          'Recordatorios con uno y tres días de antelación.',
+          'Sincronización con el calendario del iPhone y exportación .ics.',
+          'Crear tu propio espacio de curso e invitar a tus compañeros.',
+        ],
+      },
+      {
+        heading: 'Empieza por lo que se te esté rompiendo',
+        paragraphs: [
+          'Si no sabes por dónde entrar, elige la frase que más se parezca a tu semestre. Cada una lleva a la función que la resuelve, y casi todas empiezan por el mismo sitio: escanear un programa.',
+        ],
+        bullets: [
+          '«Me entero de las entregas tarde» — escanea el programa y aprueba las fechas; los recordatorios se programan solos. Gratis.',
+          '«No sé en qué punto voy» — calificaciones ponderadas y promedio del semestre, gratis; los pronósticos son de Pro.',
+          '«Pierdo los primeros veinte minutos de cada sesión» — tarjetas centradas en un examen concreto y temporizador de enfoque. Pro.',
+          '«Mis entregas ya están en Canvas» — pega el texto de la tarea en el escáner (gratis) o conecta la plataforma con tu token (Pro).',
+          '«Ya se me ha ido de las manos» — la revisión académica nombra la nota que baja, el trabajo que falta y la semana sobrecargada, y propone un orden de recuperación. Pro.',
+        ],
+      },
+      {
+        heading: 'Una cuenta en iPhone, iPad y la web',
+        paragraphs: [
+          'Una cuenta y tres superficies: una app universal que funciona igual en iPhone y en iPad, y la web en cualquier navegador. Los cursos, las entregas, las calificaciones y los ajustes viven en el servidor, así que no hay que exportar ni volver a importar nada para cambiar de dispositivo.',
+          'Los cambios se propagan por una conexión en tiempo real, no esperando a que refresques. Marcas algo en clase desde el móvil y la pestaña que dejaste abierta en la biblioteca se actualiza en segundos. Al volver del segundo plano, al recuperar el foco de una pestaña o al reconectar, Semora vuelve a consultar una vez para recoger lo que se perdiera.',
+          'Sin conexión también avanzas: puedes crear cursos y tareas, editarlos y marcarlos como completados. Los cambios se guardan en el dispositivo y se sincronizan solos cuando vuelve la señal, y los últimos siete días quedan en caché para que un aula sin cobertura no te deje con una pantalla vacía. Eliminar es lo único que espera a tener conexión.',
+          'Y funciona en tu idioma: la app entera está en español, no solo este sitio. Eliges el idioma en la primera pantalla de bienvenida o en Mi cuenta > Configuración > Idioma, y la elección se guarda en tu cuenta, así que se mantiene igual en el iPad y en la web.',
+        ],
+        bullets: [
+          'La misma cuenta y los mismos datos en iPhone, iPad y la web.',
+          'Sincronización casi en tiempo real entre dispositivos.',
+          'Español completo en la app, no solo en este sitio.',
+          'Sin conexión: crea y edita cursos y tareas; se sincroniza solo al volver la señal.',
+          'Solo en la web: arrastrar y soltar y pegar el texto del programa.',
+          'Solo en iOS: widgets en la pantalla de inicio y sincronización con el calendario del dispositivo.',
+          'No hay app para Android ni para Mac; en esos equipos se usa la web.',
+        ],
+      },
     ],
     faq: [
-      { question: '¿Qué funciones son gratis?', answer: 'Cinco escaneos al mes, hasta cuatro cursos por semestre, tareas, fechas de entrega, calificaciones y recordatorios el mismo día.' },
-      { question: '¿Qué añade Pro?', answer: 'Cursos ilimitados, sincronización con Canvas, Blackboard y Moodle, Plan Inteligente, Tutor, tarjetas, temporizador, pronósticos, alertas y sincronización de calendario.' },
+      { question: '¿Qué funciones son gratis?', answer: 'Cinco escaneos de programa al mes, hasta cuatro cursos dentro de un semestre, el calendario completo, el panel, el seguimiento de entregas, las calificaciones ponderadas y los recordatorios del mismo día. No es una prueba y no caduca.' },
+      { question: '¿Qué añade Pro?', answer: 'Escaneos, cursos y semestres ilimitados, Plan Inteligente, carga académica, Tutor con IA, tarjetas de estudio, temporizador de enfoque, pronósticos de nota, escalas propias, importación desde Canvas, Blackboard y Moodle, recordatorios con más antelación y sincronización con el calendario.' },
+      { question: '¿Necesito Canvas para usar Semora?', answer: 'No. Semora funciona solo con el programa de tus materias. La conexión con Canvas, Blackboard o Moodle es una función de Pro, y en el plan gratuito siempre puedes pegar el texto de una tarea en el escáner.' },
+      { question: '¿Qué pasa si vuelvo a escanear un curso que ya tengo?', answer: 'Las entregas nuevas se incorporan al curso existente en lugar de duplicarlo, y no ocupa una plaza de curso nueva. Sí consume uno de tus escaneos del mes. Los horarios y la escala de calificación solo se escriben al crear el curso, así que una revisión posterior no sobrescribe lo que ya corregiste.' },
+      { question: '¿Funciona sin conexión?', answer: 'Sí. Puedes crear y editar cursos y tareas y marcarlas como completadas sin cobertura; los cambios se sincronizan solos cuando vuelve la señal. Los últimos siete días quedan guardados en el dispositivo. Eliminar es lo único que necesita conexión.' },
+      { question: '¿La app está en español o solo la web?', answer: 'La app entera está en español: pantallas, recordatorios, el Tutor y la configuración. Si tu dispositivo está en español, Semora arranca en español, y puedes cambiarlo en la pantalla de bienvenida o en Mi cuenta > Configuración > Idioma.' },
+      { question: '¿Hay app para Android o Mac?', answer: 'No. Semora es una app universal para iPhone y iPad, más una app web que funciona en cualquier navegador con la misma cuenta. Desde Android o Mac se usa la web.' },
     ],
   }),
   page('/es/calculadora-gpa', '/gpa-calculator', 'gpa', {
