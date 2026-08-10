@@ -5,7 +5,6 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../../globals.css';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
-import { AuthDialogProvider } from '@/components/AuthDialog';
 import { JsonLd } from '@/components/JsonLd';
 import { organizationSchema, webSiteSchema } from '@/lib/schema';
 import { SITE_NAME } from '@/lib/semora-facts';
@@ -43,11 +42,9 @@ export default function SpanishRootLayout({ children }: Readonly<{ children: Rea
         </noscript>
         <JsonLd data={webSiteSchema()} />
         <JsonLd data={organizationSchema()} />
-        <AuthDialogProvider locale="es">
-          <Nav locale="es" />
-          <main>{children}</main>
-          <Footer locale="es" />
-        </AuthDialogProvider>
+        <Nav locale="es" />
+        <main>{children}</main>
+        <Footer locale="es" />
         <Analytics />
         <SpeedInsights />
       </body>

@@ -5,7 +5,6 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../globals.css';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
-import { AuthDialogProvider } from '@/components/AuthDialog';
 import { JsonLd } from '@/components/JsonLd';
 import { organizationSchema, webSiteSchema } from '@/lib/schema';
 import { SITE_NAME, SITE_DESCRIPTION } from '@/lib/semora-facts';
@@ -55,13 +54,9 @@ export default function RootLayout({
             here rather than being repeated per page. */}
         <JsonLd data={webSiteSchema()} />
         <JsonLd data={organizationSchema()} />
-        {/* Wraps everything so any CTA on any page can open the sign-in dialog
-            without navigating away. */}
-        <AuthDialogProvider locale="en">
-          <Nav locale="en" />
-          <main>{children}</main>
-          <Footer locale="en" />
-        </AuthDialogProvider>
+        <Nav locale="en" />
+        <main>{children}</main>
+        <Footer locale="en" />
         <Analytics />
         <SpeedInsights />
       </body>
