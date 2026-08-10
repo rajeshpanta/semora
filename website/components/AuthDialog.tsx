@@ -25,6 +25,11 @@ import type { SiteLocale } from '@/lib/i18n';
 
 type Mode = 'signup' | 'signin';
 
+// Bump only when the embedded app auth UI changes. The app is a static web
+// export, so this prevents a previously cached OAuth document from surviving
+// an otherwise successful production deployment.
+const GOOGLE_AUTH_EMBED_VERSION = '2026-08-10-1';
+
 const AuthDialogContext = createContext<{ open: (mode: Mode) => void } | null>(null);
 
 export function useAuthDialog() {
@@ -174,7 +179,7 @@ export function AuthDialogProvider({ children, locale = 'en' }: { children: Reac
                 <iframe
                   ref={googleFrameRef}
                   className={styles.googleFrame}
-                  src={`${APP_URL}/oauth?provider=google&embed=1&mode=${mode}`}
+                  src={`${APP_URL}/oauth?provider=google&embed=1&mode=${mode}&v=${GOOGLE_AUTH_EMBED_VERSION}`}
                   title={labels.google}
                   allow="identity-credentials-get"
                 />
