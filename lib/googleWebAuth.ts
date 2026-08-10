@@ -7,5 +7,23 @@ export async function signInWithGoogleWeb(): Promise<void> {
   throw new Error('Browser Google sign-in is unavailable on this platform.');
 }
 
-/** No browser prompt exists in native builds. */
-export function cancelGoogleWebSignIn(): void {}
+export interface GoogleWebButtonCallbacks {
+  onReady?: () => void;
+  onProcessingChange?: (processing: boolean) => void;
+  onSuccess: () => void;
+  onError: (error: Error) => void;
+}
+
+export interface GoogleWebButtonOptions {
+  theme?: 'outline' | 'filled_black';
+  shape?: 'pill' | 'rectangular';
+}
+
+/** No browser button exists in native builds. */
+export function mountGoogleWebSignInButton(
+  _parent: HTMLElement,
+  _callbacks: GoogleWebButtonCallbacks,
+  _options: GoogleWebButtonOptions = {},
+): () => void {
+  return () => {};
+}

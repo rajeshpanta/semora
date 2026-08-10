@@ -15,7 +15,7 @@ import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { signIn, signInWithApple, signInWithGoogle, isAppleSignInAvailable } from '@/lib/auth';
-import { cancelGoogleWebSignIn } from '@/lib/googleWebAuth';
+import { GoogleWebSignInButton } from '@/components/GoogleWebSignInButton';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
@@ -82,12 +82,6 @@ export default function SignInScreen() {
     isAppleSignInAvailable().then(setAppleAvailable);
   }, []);
 
-  // The web adapter renders its official GIS UI outside the React tree. Remove
-  // it if this screen is unmounted before the credential exchange completes.
-  useEffect(() => () => {
-    if (Platform.OS === 'web') cancelGoogleWebSignIn();
-  }, []);
-
   const handleApple = async () => {
     setError('');
     setErrorType('');
@@ -126,6 +120,16 @@ export default function SignInScreen() {
     } finally {
       setOauthLoading(null);
     }
+  };
+
+  const handleGoogleWebSuccess = () => {
+    useAppStore.getState().setPostSignupBanner(null);
+  };
+
+  const handleGoogleWebError = (err: Error & { code?: string }) => {
+    if (err.code === 'SIGN_IN_CANCELLED') return;
+    setError(err.message || 'Sign in with Google failed. Please try again.');
+    setErrorType('generic');
   };
 
   const handleResend = async () => {
@@ -207,7 +211,9 @@ export default function SignInScreen() {
             styles.inner,
             webAuthCard,
             {
-              maxWidth: isWide ? Math.min(width - 64, 560) : 440,
+              maxWidth: Platform.OS === 'web'
+                ? Math.min(width - 64, 480)
+                : isWide ? Math.min(width - 64, 560) : 440,
               paddingHorizontal: 24,
             },
           ]}
@@ -304,21 +310,32 @@ export default function SignInScreen() {
                 )
               ) : null}
 
-              <TouchableOpacity
-                style={[styles.googleButton, oauthLoading === 'google' && styles.buttonDisabled]}
-                onPress={handleGoogle}
-                disabled={oauthLoading !== null}
-                activeOpacity={0.8}
-              >
-                {oauthLoading === 'google' ? (
-                  <ActivityIndicator color="#1f1f1f" size="small" />
-                ) : (
-                  <>
-                    <FontAwesome name="google" size={16} color="#1f1f1f" />
-                    <Text style={styles.googleButtonText}>Continue with Google</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+              {Platform.OS === 'web' ? (
+                <GoogleWebSignInButton
+                  disabled={oauthLoading === 'apple'}
+                  theme="outline"
+                  shape="rectangular"
+                  onProcessingChange={(processing) => setOauthLoading(processing ? 'google' : null)}
+                  onSuccess={handleGoogleWebSuccess}
+                  onError={handleGoogleWebError}
+                />
+              ) : (
+                <TouchableOpacity
+                  style={[styles.googleButton, oauthLoading === 'google' && styles.buttonDisabled]}
+                  onPress={handleGoogle}
+                  disabled={oauthLoading !== null}
+                  activeOpacity={0.8}
+                >
+                  {oauthLoading === 'google' ? (
+                    <ActivityIndicator color="#1f1f1f" size="small" />
+                  ) : (
+                    <>
+                      <FontAwesome name="google" size={16} color="#1f1f1f" />
+                      <Text style={styles.googleButtonText}>Continue with Google</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
 
               {mode === 'signup' && (
                 <Text style={[styles.oauthHint, { color: colors.ink3 }]}>
@@ -655,6 +672,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   oauthGroup: {
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
     gap: 12,
     marginBottom: 4,
   },
@@ -678,10 +698,10 @@ const styles = StyleSheet.create({
   },
   appleWebButton: {
     flexDirection: 'row',
-    height: 56,
+    height: 44,
     width: '100%',
     backgroundColor: '#000',
-    borderRadius: 18,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 10,

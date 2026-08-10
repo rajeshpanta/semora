@@ -14,9 +14,10 @@ import type { SiteLocale } from '@/lib/i18n';
  * button. Keeping the marketing page behind a blurred backdrop means the
  * decision happens where the context is.
  *
- * The provider buttons open the app's dedicated OAuth launcher. It starts the
- * provider flow immediately and keeps the PKCE verifier on app.semoraai.com,
- * so the visitor never has to choose the same provider a second time.
+ * Apple opens the app's dedicated OAuth launcher. Google is rendered by the
+ * official GIS button inside an app.semoraai.com iframe, so the authorized
+ * origin owns the ID-token exchange without making the visitor cross an extra
+ * account page first.
  *
  * Rendered as a native <dialog>: focus trapping, Esc-to-close and inertness of
  * the page behind it are the platform's job, not ours.
@@ -44,9 +45,11 @@ const COPY: Record<Mode, { title: string; sub: string }> = {
 export function AuthDialogProvider({ children, locale = 'en' }: { children: React.ReactNode; locale?: SiteLocale }) {
   const ref = useRef<HTMLDialogElement>(null);
   const [mode, setMode] = useState<Mode>('signup');
+  const [isOpen, setIsOpen] = useState(false);
 
   const open = useCallback((next: Mode) => {
     setMode(next);
+    setIsOpen(true);
     const el = ref.current;
     if (el && !el.open) el.showModal();
   }, []);
@@ -63,6 +66,7 @@ export function AuthDialogProvider({ children, locale = 'en' }: { children: Reac
     if (!el) return;
     const sync = () => {
       document.body.style.overflow = el.open ? 'hidden' : '';
+      setIsOpen(el.open);
     };
     el.addEventListener('close', sync);
     const mo = new MutationObserver(sync);
@@ -72,6 +76,17 @@ export function AuthDialogProvider({ children, locale = 'en' }: { children: Reac
       mo.disconnect();
       document.body.style.overflow = '';
     };
+  }, []);
+
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== APP_URL) return;
+      if (!event.data || event.data.type !== 'semora-google-auth-success') return;
+      ref.current?.close();
+      window.location.assign(APP_URL);
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
   }, []);
 
   const copy = locale === 'es'
@@ -125,15 +140,14 @@ export function AuthDialogProvider({ children, locale = 'en' }: { children: Reac
             {labels.apple}
           </a>
 
-          <a className={styles.google} href={`${APP_URL}/oauth?provider=google`}>
-            <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">
-              <path fill="#4285F4" d="M23 12.27c0-.79-.07-1.54-.2-2.27H12v4.3h6.16a5.27 5.27 0 0 1-2.29 3.46v2.87h3.71C21.74 18.66 23 15.76 23 12.27" />
-              <path fill="#34A853" d="M12 23.5c3.1 0 5.7-1.03 7.6-2.79l-3.72-2.87c-1.03.69-2.35 1.1-3.88 1.1-2.99 0-5.52-2.02-6.42-4.73H1.73v2.97A11.49 11.49 0 0 0 12 23.5" />
-              <path fill="#FBBC05" d="M5.58 14.21a6.9 6.9 0 0 1 0-4.41V6.83H1.73a11.5 11.5 0 0 0 0 10.34l3.85-2.96" />
-              <path fill="#EA4335" d="M12 5.07c1.69 0 3.2.58 4.4 1.72l3.29-3.29C17.7 1.63 15.1.5 12 .5A11.49 11.49 0 0 0 1.73 6.83l3.85 2.97C6.48 7.09 9.01 5.07 12 5.07" />
-            </svg>
-            {labels.google}
-          </a>
+          {isOpen ? (
+            <iframe
+              className={styles.googleFrame}
+              src={`${APP_URL}/oauth?provider=google&embed=1`}
+              title={labels.google}
+              allow="identity-credentials-get"
+            />
+          ) : null}
 
           <p className={styles.legal}>
             {labels.prefix} <a href={labels.termsHref}>{labels.terms}</a> {labels.and}{' '}

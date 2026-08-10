@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 
-import { signInWithApple, signInWithGoogle } from '@/lib/auth';
-import { cancelGoogleWebSignIn } from '@/lib/googleWebAuth';
+import { signInWithApple } from '@/lib/auth';
+import { GoogleWebSignInButton } from '@/components/GoogleWebSignInButton';
 import { MARKETING_URL } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/lib/theme';
@@ -22,17 +22,17 @@ type Provider = 'apple' | 'google';
 
 /**
  * The marketing site sends its provider buttons here rather than to the full
- * sign-in screen. Google opens the browser-only Identity Services adapter on
- * app.semoraai.com; Apple continues through the existing Supabase PKCE redirect
- * and /callback route. There is no second provider choice or auth form for
- * visitors to work through.
+ * sign-in screen. Google renders its official Identity Services button on this
+ * page; Apple continues through the existing Supabase PKCE redirect and
+ * /callback route. There is no second provider choice or auth form.
  */
 export default function OAuthLauncherScreen() {
-  const { provider } = useLocalSearchParams<{ provider?: string }>();
+  const { provider, embed } = useLocalSearchParams<{ provider?: string; embed?: string }>();
   const [error, setError] = useState('');
   const [showExit, setShowExit] = useState(false);
   const colors = useColors();
   const selectedProvider: Provider | null = provider === 'apple' || provider === 'google' ? provider : null;
+  const embeddedGoogle = selectedProvider === 'google' && embed === '1';
   const providerWindowOpened = useRef(false);
   const returningFromProvider = useRef(false);
 
@@ -97,12 +97,12 @@ export default function OAuthLauncherScreen() {
       setError('Choose Apple or Google to continue.');
       return;
     }
+    if (selectedProvider === 'google') return;
 
     let active = true;
     const begin = async () => {
       try {
-        if (selectedProvider === 'apple') await signInWithApple();
-        else await signInWithGoogle();
+        await signInWithApple();
       } catch (cause: any) {
         if (!active) return;
         if (cause?.code === 'SIGN_IN_CANCELLED') {
@@ -115,7 +115,6 @@ export default function OAuthLauncherScreen() {
     void begin();
     return () => {
       active = false;
-      if (selectedProvider === 'google') cancelGoogleWebSignIn();
     };
   }, [goBackToPreviousPage, selectedProvider]);
 
@@ -124,14 +123,9 @@ export default function OAuthLauncherScreen() {
     setShowExit(false);
     providerWindowOpened.current = false;
     returningFromProvider.current = false;
-    if (selectedProvider === 'apple') void signInWithApple().catch((cause: any) => setError(cause?.message ?? 'Could not continue with Apple.'));
-    else if (selectedProvider === 'google') void signInWithGoogle().catch((cause: any) => {
-      if (cause?.code === 'SIGN_IN_CANCELLED') {
-        goBackToPreviousPage();
-        return;
-      }
-      setError(cause?.message ?? 'Could not continue with Google.');
-    });
+    if (selectedProvider === 'apple') {
+      void signInWithApple().catch((cause: any) => setError(cause?.message ?? 'Could not continue with Apple.'));
+    }
   };
 
   const backToMarketing = () => {
@@ -140,9 +134,58 @@ export default function OAuthLauncherScreen() {
     }
   };
 
-  // A normal OAuth launch must be visually invisible: the secure provider
-  // sheet is the next thing a visitor should see, not a Semora loading card.
-  // We only render a recovery view when a launch fails or does not open.
+  const finishGoogle = () => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    if (!embeddedGoogle || window.parent === window) return;
+
+    try {
+      const parentOrigin = new URL(document.referrer).origin;
+      if (parentOrigin === 'https://semoraai.com' || parentOrigin === 'https://www.semoraai.com') {
+        window.parent.postMessage({ type: 'semora-google-auth-success' }, parentOrigin);
+      }
+    } catch {}
+  };
+
+  if (embeddedGoogle) {
+    return (
+      <View style={styles.embedScreen}>
+        <GoogleWebSignInButton
+          theme="filled_black"
+          shape="rectangular"
+          onSuccess={finishGoogle}
+          onError={(cause) => setError(cause.message || 'Could not continue with Google.')}
+        />
+        {error ? <Text style={styles.embedError}>{error}</Text> : null}
+      </View>
+    );
+  }
+
+  if (selectedProvider === 'google') {
+    return (
+      <View style={styles.googleScreen}>
+        <View style={styles.googleCard}>
+          <Text style={styles.googleTitle}>Continue with Google</Text>
+          <Text style={styles.googleCopy}>
+            {error || 'Choose your Google account to continue to Semora.'}
+          </Text>
+          <View style={styles.googleButtonHost}>
+            <GoogleWebSignInButton
+              theme="filled_black"
+              shape="rectangular"
+              onSuccess={finishGoogle}
+              onError={(cause) => setError(cause.message || 'Could not continue with Google.')}
+            />
+          </View>
+          <TouchableOpacity style={styles.secondary} onPress={backToMarketing}>
+            <Text style={styles.googleBack}>Back to Semora</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // Apple launches immediately and only needs a recovery view when its
+  // existing redirect flow fails or does not open.
   if (!error && !showExit) return null;
 
   return (
@@ -186,4 +229,36 @@ const styles = StyleSheet.create({
   primaryText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   secondary: { marginTop: 18, padding: 8 },
   secondaryText: { fontSize: 14, fontWeight: '700' },
+  googleButtonHost: { alignSelf: 'stretch', marginTop: 24 },
+  embedScreen: {
+    minHeight: 54,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#111',
+  },
+  embedError: { color: '#fca5a5', fontSize: 11, lineHeight: 14, marginTop: 5, textAlign: 'center' },
+  googleScreen: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: '#0e0b18',
+  },
+  googleCard: {
+    width: '100%',
+    maxWidth: 420,
+    paddingHorizontal: 30,
+    paddingVertical: 32,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: '#1a142d',
+    shadowColor: '#000',
+    shadowOpacity: 0.38,
+    shadowRadius: 30,
+  },
+  googleTitle: { color: '#fff', fontSize: 26, lineHeight: 32, fontWeight: '700' },
+  googleCopy: { color: 'rgba(255,255,255,0.68)', fontSize: 14, lineHeight: 21, marginTop: 8 },
+  googleBack: { color: '#c4b5fd', fontSize: 14, fontWeight: '700' },
 });
