@@ -12,12 +12,50 @@ import { BlogPostHero } from '@/components/BlogPostHero'
 import { RelatedPosts } from '@/components/RelatedPosts'
 import { relatedPosts } from '@/lib/blog'
 
+import { Faq } from '@/components/Faq'
+import { faqPageSchema } from '@/lib/schema'
+
+export const faqItems = [
+  {
+    question: 'When should I build the plan?',
+    answer:
+      'As soon as your institution publishes the official finals schedule, which comes out well before the week itself. Even if you can plan nothing else that day, writing every exam\'s date, time, and weight into a single list already settles the hard part — the rest is allocation, and allocation is easy once the inventory exists.',
+  },
+  {
+    question: 'How do I prioritize two exams on the same day?',
+    answer:
+      "Don't split the time evenly by default. Compare the weight of each exam against the grade you're currently carrying in that course, and remember the afternoon exam has less usable runway than it looks — the hours before it get consumed by the morning exam. That usually means front-loading review for the later exam into the days before, not the morning of.",
+  },
+  {
+    question: 'Is an all-nighter really that bad?',
+    answer:
+      'It helps less than it costs. The same hours spread across several days retain better, and arriving without sleep degrades exactly what the exam measures: retrieving information under pressure. Set a fixed hour to close the notes the night before and hold to it — that decision is easier to make in advance than at 1 a.m.',
+  },
+  {
+    question: "What if there genuinely isn't enough time left?",
+    answer:
+      'Cut deliberately rather than pretending everything fits. Keep the topics that carry the most weight on the exam and the ones you know least well, and switch passive rereading for active practice — working problems cold returns more per hour than rereading the whole chapter. A conscious cut you chose beats an unconscious one that happens when you run out of hours.',
+  },
+  {
+    question: 'Do I need Pro to plan finals?',
+    answer:
+      'No. Dates, courses, and grade tracking are all on the free tier, which covers 5 syllabus scans per calendar month and up to 4 courses. Pro adds the Workload dashboard, Smart Plan, and Academic Risk alerts, which automate much of steps 2 and 3 by surfacing crunch weeks and exam density across every course at once.',
+  },
+  {
+    question: "What if the syllabus and the official calendar disagree?",
+    answer:
+      "Your institution's official finals calendar wins — it's published after the syllabus precisely to resolve conflicts between courses. If the disagreement is about weighting rather than dates, ask the instructor and record the correct figure wherever you track your courses, because that number drives every prioritization decision that follows.",
+  },
+]
+
 <JsonLd data={articleSchema({
   title: metadata.title,
   description: metadata.description,
   slug: 'finals-week-study-plan',
   datePublished: '2026-07-25',
 })} />
+
+<JsonLd data={faqPageSchema(faqItems)} />
 
 <BlogPostHero
   title="How to Build a Study Plan for Finals Week"
@@ -74,6 +112,16 @@ Spacing works in a similar way. For the same total number of hours, retention ge
 
 Practically, this means a review session should look less like reading and more like a quiz: working practice problems from scratch, running through flashcards, or summarizing a topic from memory before checking notes to see what got missed. Applied to the schedule above, a Calculus session would mean closing the textbook and working problem sets cold, not re-reading worked examples; a History session would mean writing out an answer to a likely essay prompt from memory and only then checking it against notes; a Spanish session would mean producing vocabulary and verb conjugations aloud rather than reading a list and recognizing them as correct.
 
+## What that looks like course by course
+
+In practical terms, a review session should look more like an exam than like a reading: work problems from scratch, run a flashcard queue, or reconstruct a topic from memory, and only then check your notes. Applied to the schedule above, that looks different in each course.
+
+- **Calculus** — close the book and work problem sets cold, rather than rereading examples that have already been solved for you.
+- **History** — write out an answer to a likely essay question from memory first, and only then compare it against your notes.
+- **Spanish** — produce vocabulary and conjugations aloud or in writing, rather than reading a list and recognizing each item as correct.
+
+The test for whether a block was well spent is simple: if you can say what you got wrong at the end of it, you were retrieving. If you can only say how many pages you covered, you were reading.
+
 ## Exam-day logistics
 
 A few practical details are worth confirming a day ahead rather than the morning of. Many schools publish a separate master final exam schedule that overrides the class's regular meeting time and room, precisely so exams from different courses don't collide — that master schedule, not the syllabus written in the first week of the semester, is the one to trust once it's out. Some finals move to a different room than the one the class normally meets in, especially in courses that combine several sections into one shared exam block, so checking the room is as important as checking the date and time. Confirm what's actually allowed during the exam too: a calculator, a single-page notes sheet, a specific scratch-paper policy — these vary by professor even within the same department, and finding out at the door is the wrong time to learn the answer. Eat something substantial before a multi-hour exam block; running a long exam on an empty stomach is a self-inflicted disadvantage that has nothing to do with how well the material is actually known.
@@ -85,5 +133,9 @@ None of this makes finals week effortless, and it isn't meant to. The goal is na
 ## Where this gets easier with the right visibility
 
 Building this plan by hand means manually cross-referencing every course's exam date, weight, and your current grade. Semora surfaces this automatically: grade tracking (free tier) keeps a running weighted average per course as work gets graded, and Pro's ($3.99/month or $19.99/year) Workload dashboard gives a crunch-week and exam-density view across every course at once — the exact clustering that step 3 above depends on spotting early. Smart Plan (Pro) then builds an AI-generated study schedule from those deadlines and adapts it as dates shift, and Academic Risk alerts flag a course where a grade is slipping or work is missing, with a recovery-step plan, well before finals week arrives.
+
+## Frequently asked questions
+
+<Faq items={faqItems} />
 
 <RelatedPosts posts={relatedPosts('finals-week-study-plan')} />

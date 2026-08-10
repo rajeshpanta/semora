@@ -11,6 +11,41 @@ import { articleSchema } from '@/lib/schema'
 import { BlogPostHero } from '@/components/BlogPostHero'
 import { RelatedPosts } from '@/components/RelatedPosts'
 import { relatedPosts } from '@/lib/blog'
+import { Faq } from '@/components/Faq'
+import { faqPageSchema } from '@/lib/schema'
+
+export const faqItems = [
+  {
+    question: 'How long does it take to move a syllabus into a calendar by hand?',
+    answer:
+      'It depends heavily on the document. A syllabus with a clean table of dates goes quickly; one with recurring deadlines, a separate lab schedule, and dates written relative to class sessions takes considerably longer, because each line has to be resolved against the academic calendar before you can write it down. The first pass is rarely what fails, though. What fails is the maintenance mid-semester, once the document is closed and the dates start moving.',
+  },
+  {
+    question: 'What do I do with a "TBD" date?',
+    answer:
+      'Create the item anyway, without inventing a date, and mark it as pending so you remember to check back. An exam with no date still needs tracking, and seeing a pending item in your list is far better than the exam simply not existing in your calendar. Giving it a tentative date is worse than leaving it pending: the moment you forget the date was a guess, the guess starts behaving like it was official.',
+  },
+  {
+    question: 'Should I put readings in the calendar?',
+    answer:
+      'Yes, when they have a discussion, quiz, or submission attached. Open-ended readings with no fixed date work better as tasks without a specific time, so they do not compete visually with the deadlines that actually carry consequences for your grade.',
+  },
+  {
+    question: "If the syllabus and the course site disagree, which one wins?",
+    answer:
+      'The most recent official source, which in practice is usually the announcement or the LMS rather than the PDF from week one. When you change a date, note where the change came from — otherwise you end up with two versions of the same assignment and no way to tell which is current.',
+  },
+  {
+    question: 'Is it worth scanning the syllabus if my course is already connected to Canvas?',
+    answer:
+      "Yes, because they don't carry the same information. Canvas carries assignments and their due dates; office hours, meeting times, the grading scale, and category weights normally live only in the syllabus. With both sources you get dates that stay current and the context that explains how much each one is worth.",
+  },
+  {
+    question: 'Do I need Pro to organize a semester this way?',
+    answer:
+      'No. The free tier covers up to 5 syllabus scans per calendar month and up to 4 courses in one semester, with full deadline and grade tracking and same-day reminders. Pro adds device calendar sync and .ics export, and costs $3.99 a month or $19.99 a year, purchased in the app.',
+  },
+]
 
 <JsonLd data={articleSchema({
   title: metadata.title,
@@ -18,6 +53,8 @@ import { relatedPosts } from '@/lib/blog'
   slug: 'syllabus-to-semester-calendar',
   datePublished: '2026-07-20',
 })} />
+
+<JsonLd data={faqPageSchema(faqItems)} />
 
 <BlogPostHero
   title="How to Turn a Syllabus Into a Semester Calendar"
@@ -35,6 +72,8 @@ It's tempting to start copying dates the moment you open a syllabus PDF, but a f
 
 This first pass is also when to note anything unusual about how the course runs: a professor who drops the lowest quiz grade, a participation policy tied to attendance, or a late-work policy that docks a fixed percentage per day. None of that shows up as a "date," but all of it changes how you should treat the dates once you have them.
 
+It changes specific decisions later, too. If the course drops your lowest quiz score, a quiz falling in the same week as a midterm stops being urgent. If late work loses a fixed percentage per day, turning in a low-weight assignment late costs far less than being late on the one that decides your grade for the term. Without that first read, those two dates look identical on the calendar grid and the decision gets made blind.
+
 ## Step 2: List the recurring structure first
 
 Before individual assignments, capture the things that repeat all semester:
@@ -44,15 +83,21 @@ Before individual assignments, capture the things that repeat all semester:
 - Semester start and end dates
 - The grading scale or category weights (for example, homework 20%, midterms 30%, final 30%, participation 20%)
 
-This recurring structure is what turns a list of due dates into an actual calendar — it's the difference between "essay due October 14" and knowing that essay is worth 15% of your grade in a class that meets Tuesday and Thursday at 11 a.m.
+This recurring structure is what turns a list of due dates into an actual calendar — it's the difference between "essay due October 14" and knowing that essay is worth 15% of your grade in a class that meets Tuesday and Thursday at 11 a.m. The first tells you something is coming; the second lets you decide how many days it deserves.
+
+Class times belong in the calendar even though you have them memorized. They are what define the gaps you actually have free between one course and another, and they are also what later lets you translate a phrase like "due at the start of class 14" into a specific day. Semester start and end dates do the same job: without them, "week 6" is a label that does not point at any date on the calendar.
 
 ## Step 3: Extract every graded item and its due date
 
 Go section by section and list every assignment, quiz, exam, project, and required reading, each with its specific due date. Syllabi vary in how due dates are formatted — some list a single date, others reference "the Friday before spring break" or a rolling schedule — so resolve each one to an actual calendar date as you go, rather than leaving it as a note to interpret later.
 
-### Common formatting quirks that trip people up
+Resolving them in the moment is the part almost everyone postpones, and it is worth being stubborn about. A note you leave for later will mean something different in October than it meant in August, and by then you will not have the syllabus open beside you. The work itself is small and entirely mechanical: if the syllabus says "the Friday before break," open your institution's academic calendar, find the first day of the break, count back to the Friday before it, and write that day down as the due date with the assignment's name. Next to it, note where the date came from. If the break moves, you know exactly which entry to correct instead of redoing the reasoning from scratch.
 
-A few patterns show up often enough to call out specifically:
+Record the type and the weight alongside each item wherever the document gives one. A date without a weight tells you when, but not how much it matters, and those two questions get answered together or not at all.
+
+## Four formats that make you miss something
+
+A few patterns show up often enough to call out specifically, because they are the ones that leave a calendar looking complete when it is actually missing entries:
 
 - **"TBD" or "see course site."** Some syllabi deliberately leave exam dates or project deadlines unset at the start of the term, to be announced later. Flag these rather than skipping them, so you remember to check back — an item that's silently missing from your calendar is worse than one marked as pending.
 - **Rolling or recurring deadlines.** "Reading response due every Friday by 11:59pm" is one line in a syllabus but represents 12–15 actual deadlines across a semester. These need to be expanded into individual calendar entries, not left as a single recurring note you have to remember to apply.
@@ -63,9 +108,15 @@ A few patterns show up often enough to call out specifically:
 
 A list of dates is easy to lose track of. Moving everything into an actual calendar — one that shows a week or month at a glance — is what makes it possible to see when three exams are about to land in the same week, before that week arrives. Include class meeting times too, not just deadlines, so free study blocks are visible alongside the graded work competing for them.
 
+The difference is purely visual, which is exactly why it works. A list sorts by date but shows you nothing about the space between one date and the next. On a month grid, a week loaded with deadlines looks different from a quiet one, even though in a list they occupy identical rows. That contrast is the information you use to decide what to start early.
+
+Including class hours rather than only deadlines matters for the same reason. A gap between two courses is real study time; a gap that actually collides with a lab is not. Once the calendar holds both layers, planning a week stops being a mental calculation you redo every Sunday.
+
 ## Step 5: Repeat for every course, then look across all of them together
 
-The real value shows up once every course is in the same calendar. A single syllabus rarely looks overwhelming on its own; four of them stacked into the same week sometimes does. Seeing that in advance is what makes it possible to start an assignment early instead of discovering the collision the night before.
+The real value shows up once every course is in the same calendar. A single syllabus rarely looks overwhelming on its own; four of them stacked into the same week sometimes does. And the collision is not written down in any one syllabus — it only appears when all four schedules share a view.
+
+So the final step is not "finish the last course," it is looking at the whole semester at once and marking the weeks that matter: the ones where several heavily weighted deadlines converge, or where a midterm lands next to a major project. Those are the weeks you will want to have started early on, and the only way to know which they are is to see them before they arrive. Discovering the collision the night before leaves you no options; discovering it in week one leaves you several.
 
 ## A worked mini-example
 
@@ -80,11 +131,15 @@ Turning that into calendar entries means:
 3. **Flagging the final exam date as pending** if the syllabus doesn't give an exact date yet — finals schedules are often published separately, partway through the term.
 4. **Recording the weights** (20/20/20/40) alongside the categories, not just the dates, since that's what makes grade tracking possible later.
 
-That's four categories and roughly fifteen individual dates extracted from three sentences of syllabus text — which is exactly why doing this by hand for four or five courses at once gets tedious fast.
+That's four categories and roughly fifteen individual dates extracted from three sentences of syllabus text — which is exactly why doing this by hand for four or five courses at once gets tedious fast, and why the people who finish it rarely go back and update it.
+
+Notice that none of the operations that passage demands is hard on its own. What costs you is doing all of them without skipping any, with the syllabus open beside you, and then doing them again every time something moves. The typical mistake is not getting a day wrong either — it is leaving the problem-set line unexpanded and discovering late in the term that your calendar never held most of that course's deadlines.
 
 ## Keeping the calendar accurate as the semester moves
 
-A syllabus is a snapshot from the first week of class, and professors change dates — a midterm moves, a reading gets swapped, a deadline slips because of a snow day. Whatever system holds your calendar needs a way to handle that without you manually re-auditing every entry:
+A syllabus is a snapshot from the first week of class, and professors change dates — a midterm moves, a reading gets swapped, a deadline slips because of a snow day. Whatever system holds your calendar needs a way to handle that without you manually re-auditing every entry.
+
+It is also worth keeping the original syllabus rather than discarding it once you have emptied it into a calendar. When a date changes, the question that comes up almost immediately is what the document said before, and that is the one answer that does not depend on your memory or on what the person next to you remembers.
 
 - If you're maintaining a spreadsheet or paper planner, cross out and rewrite the specific entry that changed, and note the date you made the change (so if there's ever a dispute about which version was current, you have a record).
 - If your school uses an LMS like Canvas, changes to assignment due dates there usually update automatically for anyone synced to it — which is one real advantage of connecting a course to its LMS rather than relying purely on a one-time syllabus scan.
@@ -92,12 +147,20 @@ A syllabus is a snapshot from the first week of class, and professors change dat
 
 ## How this compares to just using a generic calendar app
 
-A calendar app like the default one on your phone can hold every date above just fine once you've entered it — the limitation isn't storage, it's the labor of getting the syllabus into that format in the first place, and keeping it there as things change. A generic calendar also has no concept of grading weight, so "Essay 2" and "Final Exam" look identical in the calendar even though one is worth ten times more to your final grade.
+A calendar app like the default one on your phone can hold every date above just fine once you've entered it — the limitation isn't storage, it's the labor of getting the syllabus into that format in the first place, and keeping it there as things change.
+
+There's a second, less obvious difference. A generic calendar has no concept of grading weight, so "Essay 2" and "Final Exam" look identical in the grid even though one is worth ten times more to your final grade. And when two things land on the same day and you have to decide which one gets what's left of the evening, the calendar can't help you decide — it can only remind you that both exist.
 
 ## Doing this automatically
 
 That five-step process is exactly what Semora's AI syllabus scanner does in one pass. You import a syllabus by camera photo (multi-page, up to 5 pages), PDF upload, drag-and-drop on the web, or by pasting raw text copied from a PDF or your school's LMS page. OpenAI GPT-5.6 Luna then reads the document and extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading along with its due date — populating your calendar, task list, and grade tracker automatically, with nothing added until you've reviewed it.
 
+That review screen exists precisely because of the odd formats in step 3. The scan inherits the same ambiguities that make this hard by hand: if the syllabus left an exam without a day, you'll see it flagged as pending rather than converted into an invented date, and if a recurring deadline came back short, you fix it before it enters your calendar instead of after you've assumed it was right.
+
 The free tier includes 5 syllabus scans per calendar month across up to 4 courses per semester, with full deadline and grade tracking and same-day reminders included. Calendar sync (device + .ics export) is a Pro feature. If your school uses Canvas, you can also connect it using a personal access token you generate yourself — no OAuth app-review process to wait on — so Canvas assignments and syllabus-derived details (office hours, grading scale, meeting times) show up together, and stay current as due dates change on Canvas's end.
+
+## Frequently asked questions
+
+<Faq items={faqItems} />
 
 <RelatedPosts posts={relatedPosts('syllabus-to-semester-calendar')} />

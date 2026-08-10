@@ -11,6 +11,41 @@ import { articleSchema } from '@/lib/schema'
 import { BlogPostHero } from '@/components/BlogPostHero'
 import { RelatedPosts } from '@/components/RelatedPosts'
 import { relatedPosts } from '@/lib/blog'
+import { Faq } from '@/components/Faq'
+import { faqPageSchema } from '@/lib/schema'
+
+export const faqItems = [
+  {
+    question: 'Does an assignment that has not been graded yet count as a zero?',
+    answer:
+      'No. A category enters the calculation only once it has a score in it, which is why an ungraded final worth 30 percent does not drag your current average toward zero — it simply is not part of the math yet. This is also why your running grade can move sharply when a large category is graded for the first time: the denominator grows at the same moment the numerator does.',
+  },
+  {
+    question: 'How do I work out what I need on the final?',
+    answer:
+      'Subtract what the already-graded portion contributes to your target, then divide the remainder by the final\'s weight: (target − current grade × (1 − final weight)) ÷ final weight. With an 88 going in and a final worth 30 percent, reaching 90 needs (90 − 88 × 0.70) ÷ 0.30 = 94.7 percent. Our guide on the grade you need on a final walks through the cases where a category has not been graded yet, which is where the answer usually goes wrong.',
+  },
+  {
+    question: 'What if the professor changes the weights partway through the semester?',
+    answer:
+      'Recalculate from the new weights rather than trying to blend the old and new schemes — the weights describe how the final grade will be computed at the end of the term, not how it was computed along the way, so the latest published version is the one that applies to everything. Keep the original syllabus, though: if there is ever a disagreement about what was announced and when, that document is the record.',
+  },
+  {
+    question: 'Can I average letter grades instead of percentages?',
+    answer:
+      'Not within a single course, no. Letter grades are buckets — a B covers everything from 80 to 89 — so averaging them throws away the information that decides borderline cases. Average the percentages inside a course and convert to a letter only at the end. Averaging grade points is correct at the other level: a semester GPA is built by converting each finished course grade to points and weighting by credit hours.',
+  },
+  {
+    question: 'Does Semora calculate my cumulative GPA?',
+    answer:
+      'No. It calculates the per-course weighted percentage and a credit-hour-weighted semester GPA estimate on the Courses tab, both on the free tier. Cumulative GPA needs final letter grades and credit hours from every term already on your transcript, which lives with your registrar rather than in any syllabus. Pro adds an editable grade-point scale if your school\'s letter-to-points conversion is not the standard one.',
+  },
+  {
+    question: 'Do I need Pro to track my grades?',
+    answer:
+      'No. Grade tracking with weighted categories is on the free tier, along with the semester GPA estimate, up to 4 courses in one semester, and 5 syllabus scans per calendar month. Pro at $3.99 a month or $19.99 a year adds Progress Insights (trend charts, CSV export, a print view on web), Academic Risk alerts, and Grade Scale and Forecasting for what-if calculations on the work still ahead.',
+  },
+]
 
 <JsonLd data={articleSchema({
   title: metadata.title,
@@ -18,6 +53,8 @@ import { relatedPosts } from '@/lib/blog'
   slug: 'weighted-gpa-calculator',
   datePublished: '2026-07-21',
 })} />
+
+<JsonLd data={faqPageSchema(faqItems)} />
 
 <BlogPostHero
   title="How to Calculate a Weighted GPA (With Real Examples)"
@@ -78,7 +115,15 @@ Homework is averaging 94%, and Midterm 1 came back at 81%. Midterm 2 and the fin
 
 Weighted grade = (89.8 × 15 + 94 × 15 + 81 × 15) divided by (15 + 15 + 15) = (1,347 + 1,410 + 1,215) divided by 45 = 3,972 divided by 45 = **88.3%**
 
-It's worth seeing what happens if you skip the drop rule and just average all six quizzes: (88 + 95 + 72 + 90 + 85 + 91) divided by 6 = 521 divided by 6 = 86.8%, which is a full three points lower than the 89.8% that comes from dropping the 72 first. Run that lower number through the same weighted formula and the overall grade comes out to roughly 87.3% instead of 88.3% — a one-point difference in the final answer, caused entirely by doing the "drop the lowest" step at the wrong point in the calculation. The rule has to be applied inside the category, before that category's average is computed, not to the finished weighted grade at the end.
+One thing worth noticing before moving on: the three categories that currently count all carry the same 15% weight, which is why the weighted result here happens to match a simple average of the three. That's a coincidence of timing, not a rule — the moment Midterm 2 arrives with its 20%, it stops holding.
+
+## The order you apply the drop rule changes the answer
+
+The expensive mistake with drop-the-lowest policies isn't forgetting them. It's applying them at the wrong moment. The tempting version is to average all six quizzes and then "make up for" the lowest one somewhere later in the overall calculation.
+
+Average all six and you get (88 + 95 + 72 + 90 + 85 + 91) divided by 6 = 521 divided by 6 = 86.8%. That's a full three points below the correct 89.8%, because a single 72 drags hard on a small set of scores. Run that lower number through the same weighted formula: (86.8 × 15 + 94 × 15 + 81 × 15) = 3,927, divided by 45 = **87.3% instead of 88.3%**.
+
+A full point of difference, with no score changed and no multiplication error — purely from the ordering. The rule states cleanly: the drop happens inside the category and before that category's average is computed, never against a finished weighted grade. And if your syllabus drops the lowest score in two different categories, each one drops its own separately.
 
 ## What a borderline grade like 89.5% actually means
 
@@ -118,5 +163,9 @@ Semora extracts each course's grading scale directly from the syllabus during th
 Grade tracking like this is included on Semora's free tier. Pro ($3.99/month or $19.99/year) adds Progress Insights — trend charts, CSV export, and a print view on web — plus Academic Risk alerts if a grade starts slipping or work goes missing. It's available on iPhone and web, syncing on one account, so a grade entered on one shows up on the other in near real time.
 
 One limitation worth stating plainly: Semora calculates the per-course weighted grade covered throughout this guide, and rolls those course grades up into a credit-hour-weighted semester GPA estimate on the Courses tab — both on the free tier. It does not calculate cumulative GPA. That one still means converting every completed term's final letter grades to 4.0-scale point values and running the credit-hour-weighted average described above, whether by hand or through whatever system your registrar uses. (Pro adds an editable grade-point scale, under Settings, if your school's letter-to-points conversion differs from the standard one.)
+
+## Frequently asked questions
+
+<Faq items={faqItems} />
 
 <RelatedPosts posts={relatedPosts('weighted-gpa-calculator')} />

@@ -12,12 +12,50 @@ import { BlogPostHero } from '@/components/BlogPostHero'
 import { RelatedPosts } from '@/components/RelatedPosts'
 import { relatedPosts } from '@/lib/blog'
 
+import { Faq } from '@/components/Faq'
+import { faqPageSchema } from '@/lib/schema'
+
+export const faqItems = [
+  {
+    question: 'Does Semora replace Canvas notifications?',
+    answer:
+      "No, and it isn't meant to. Canvas stays the source of truth for your course — it's where instructors post assignments and where due-date changes originate. What Semora adds is the layer Canvas doesn't have: advance reminders on a timing you choose, and a deadline that arrives attached to what it's actually worth toward your grade. Leaving your Canvas notifications configured sensibly and layering on top is better than swapping one for the other.",
+  },
+  {
+    question: 'How far in advance can I get a reminder?',
+    answer:
+      'Same-day reminders are on by default on every tier, including free. Pro adds custom reminder timing — a 1-day or 3-day advance notice, set once and applied automatically — plus quiet hours, so an alert does not fire at 2 a.m. when there is nothing you can do with it.',
+  },
+  {
+    question: "Do I need my university's permission to connect Canvas?",
+    answer:
+      'No. Semora connects using a personal access token you generate yourself inside Canvas account settings, so there is no OAuth app-review step and nothing for your IT department to approve or deploy. It takes about five minutes rather than a wait on a ticket. Connecting an LMS is a Pro feature; on the free tier you can copy your Canvas assignment list as text and paste it into the syllabus scanner instead.',
+  },
+  {
+    question: 'What happens if the professor changes a date in Canvas?',
+    answer:
+      "Once a course is connected, changes on the Canvas side flow through rather than leaving you with a stale copy — that's the main practical advantage of syncing over a one-time import. It's also the reason to connect the LMS *and* scan the syllabus: Canvas keeps the dates current, and the syllabus supplies the weights, office hours, and meeting times that Canvas assignments never carried in the first place.",
+  },
+  {
+    question: 'How many courses can I track without paying?',
+    answer:
+      'Up to 4 courses in one semester, with 5 syllabus scans per calendar month, full deadline and task tracking, grade tracking with weighted averages, and same-day reminders. The one hard edge is semesters — a free account covers a single term, so starting a second one is the point where Pro becomes necessary.',
+  },
+  {
+    question: 'Should I set every Canvas notification to arrive immediately?',
+    answer:
+      'Usually not. Past a certain volume, extra alerts compete with each other rather than adding safety — once your phone buzzes for every quiz score and syllabus edit across six courses, the one genuinely time-sensitive message gets the same half-second dismissal as everything else. Set Due Date, and Assignment Changes if your school relies on it, to arrive immediately, and let the rest sit in a digest.',
+  },
+]
+
 <JsonLd data={articleSchema({
   title: metadata.title,
   description: metadata.description,
   slug: 'canvas-deadline-reminders',
   datePublished: '2026-07-23',
 })} />
+
+<JsonLd data={faqPageSchema(faqItems)} />
 
 <BlogPostHero
   title="Canvas Doesn't Remind You Before Deadlines — Here's How to Fix That"
@@ -52,6 +90,8 @@ The exact wording and layout can vary by institution and change as Canvas update
 - **Assignment Changes** — the assignment itself is edited after the fact
 - **Late Grades or submission status** — something related to a missed or late submission
 
+## Which categories are worth prioritizing
+
 Because each of these is typically independent, it's worth walking through them one at a time rather than assuming they're all aligned: go to Account, then Notifications, inside Canvas, and look down the list checking whether the categories that matter most to you — usually Due Date, and, if your school relies on it, Assignment Changes — are set to arrive immediately rather than "never" or a digest you don't check every day. A notification that was technically sent but is sitting unread in a weekly digest email is functionally identical to no notification at all.
 
 It's also worth knowing that this settings page is generally a global, account-level setting rather than something configured separately per course. Checking it once tends to apply across every class you're enrolled in, now and later, which makes the five minutes a one-time cost rather than a chore to repeat each semester.
@@ -62,6 +102,8 @@ Once you've found that settings page, the instinct is often to set every categor
 
 Once a phone is buzzing for every quiz score, every syllabus edit, and every discussion-board reply across five or six courses, the sheer volume becomes its own problem: it trains you to treat notifications as background noise rather than signal worth acting on. The one alert that's genuinely time-sensitive — a due date that just moved up by two days — gets the same half-second glance and dismissal as everything else in the stream. This pattern is sometimes called notification fatigue, and it isn't unique to Canvas; it shows up in any system that treats "more alerts" as inherently safer, when past a certain point each additional alert doesn't add safety — it competes with the ones before it for the same sliver of attention, and often loses.
 
+## Why three days out changes a decision and the morning of doesn't
+
 What actually determines whether a reminder is useful isn't how many arrive, it's when the important ones arrive relative to the deadline. A single, well-timed reminder three days out is worth more than ten same-day pings spread across ten different assignments, because three days out is when there's still something to do about it — start the reading, ask a clarifying question over email, rearrange a weekend that was about to fill up with something else. A reminder that lands the morning something is due can only confirm what you already suspected; it can't undo a week of not knowing.
 
 That's the actual argument for reminders that are fewer and better-timed, rather than simply turned up to maximum. Semora's same-day reminders, on by default on every tier, cover the baseline case — don't let today's deadline slip past unnoticed. Pro's custom reminder timing adds the earlier warning that same-day-only systems structurally can't provide: a 1-day or 3-day advance notice, set once and applied automatically rather than something you have to remember to check for manually. Quiet hours, also on Pro, address the other half of the same problem — a reminder that fires at 2 a.m. doesn't help anyone plan a day differently, so quiet hours push it to a point where it's actually actionable instead of just another buzz to dismiss half-asleep and forget by morning.
@@ -69,6 +111,8 @@ That's the actual argument for reminders that are fewer and better-timed, rather
 ## What Canvas notifications can't do
 
 Even a perfectly configured Canvas notification setup has a ceiling on what it's able to tell you, because Canvas notifications are built around events — an assignment was posted, a due date was set, a grade was entered — not around judgment calls about what those events actually mean for you.
+
+## No course can see any other course's calendar
 
 Canvas can tell you a paper is due Friday. It can't tell you that this particular paper is worth 30 percent of your final grade in a class where your average currently sits at a B-minus, while a problem set due that same week in a different class is worth 2 percent. Both show up in the notification feed looking about the same — an assignment, a due date — even though one deserves a Saturday and the other really doesn't. Canvas also has no visibility into your other courses at the same time; it won't tell you that Friday's paper, a midterm elsewhere, and a lab report are all landing in the same seven-day window, because no single course's notification feed can see into any other course's calendar.
 
@@ -79,6 +123,8 @@ That's the gap between an assignment feed and an actual workload picture, and it
 The fix isn't to abandon Canvas — it's still where the source-of-truth assignments live — but to add a layer that actually pushes reminders with real advance notice, and ties deadlines to grades.
 
 Semora connects to Canvas using a personal access token you generate yourself in Canvas account settings — there's no third-party OAuth approval step, so it's a five-minute setup rather than a wait on IT. Once connected, every tier gets same-day reminders by default. Pro ($3.99/month or $19.99/year) adds custom reminder timing with quiet hours, so you can set a 1-day or 3-day advance warning instead of a same-day one, and choose when notifications are allowed to reach you.
+
+## The syllabus carries context Canvas assignments don't
 
 On top of the reminder timing, Semora also reads the syllabus itself — as a photo, PDF, drag-and-drop file, or pasted text — to pull in the details Canvas assignments alone don't carry: the instructor's grading scale, semester dates, office hours, and exact meeting times. Used together, Canvas sync and syllabus import give a fuller picture than either source alone: Canvas for the day-to-day assignment feed, the syllabus scan for the structure around it.
 
@@ -91,5 +137,9 @@ Semora runs on iPhone and web, sharing one account so a reminder acknowledged or
 None of this — Canvas's own notifications, Semora's reminders, or any other system — replaces the basic habit of occasionally opening a calendar and looking a week or two ahead on your own. Reminders are good at catching the specific thing you'd otherwise forget entirely: the paper that slipped your mind because it was assigned in week two and due in week eleven, the office hours that only happen on a day you don't normally have class. They're less good as a complete substitute for keeping your own general sense of where the semester stands, because a reminder only fires for things a system already knows about, on a schedule someone configured in advance — it can't tell you "you're falling behind in this class overall" the way glancing at your own calendar and noticing three assignments clustered together in the same week can.
 
 The realistic version of a good system, then, is reminders plus a habit, not reminders instead of one. Let same-day and advance reminders handle the specific dates so nothing slips through unnoticed, but keep the once-a-week or once-every-two-weeks habit of opening the calendar and looking ahead anyway — not because the reminders are likely to fail, but because a periodic look at the whole picture catches things no single reminder was ever built to catch: a slow buildup of small assignments, a stretch of the semester that's noticeably heavier than the rest, or a deadline worth starting on today even though nothing is telling you to yet.
+
+## Frequently asked questions
+
+<Faq items={faqItems} />
 
 <RelatedPosts posts={relatedPosts('canvas-deadline-reminders')} />

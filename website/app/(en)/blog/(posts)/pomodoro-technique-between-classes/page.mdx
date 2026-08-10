@@ -12,12 +12,50 @@ import { BlogPostHero } from '@/components/BlogPostHero'
 import { RelatedPosts } from '@/components/RelatedPosts'
 import { relatedPosts } from '@/lib/blog'
 
+import { Faq } from '@/components/Faq'
+import { faqPageSchema } from '@/lib/schema'
+
+export const faqItems = [
+  {
+    question: 'Do I have to use exactly 25 minutes?',
+    answer:
+      "No. Twenty-five is where Cirillo landed, not a number the research singles out. What matters is that the block is long enough to get somewhere and short enough that you'll actually start it. If twenty-five minutes leaves you cut off mid-thought on problem sets, try forty-five with a longer break; if you're struggling to begin at all, fifteen is a legitimate block. Pick a length and keep it consistent for a week before judging it.",
+  },
+  {
+    question: "What if the gap isn't long enough for two blocks?",
+    answer:
+      "Do one complete block rather than two compressed ones. A cycle that reaches its goal leaves you with finished work and a clear stopping point; two rushed halves leave you with two things to re-enter later, and re-entry is the expensive part. If the gap is genuinely short — fifteen or twenty minutes — pick a task sized for it, like a flashcard queue, rather than shrinking a task that needed longer.",
+  },
+  {
+    question: 'Can I use my phone during the break?',
+    answer:
+      "You can, and it's the most common way a five-minute break becomes fifteen. A feed has no natural stopping point, which is exactly the property you don't want in something you've given five minutes to. Standing up and walking is a better default: it's easier to stop on schedule and it gives your eyes a genuine change of distance.",
+  },
+  {
+    question: 'What should I do if I get interrupted mid-block?',
+    answer:
+      'If it is brief, pause the timer and resume — the cycle still counts. If the interruption cost you the thread, end the cycle, take the break properly, and restart with a smaller target. Trying to recover a broken block by pushing through usually produces the vague, unmeasurable kind of progress the technique exists to prevent.',
+  },
+  {
+    question: 'Does Pomodoro work for long readings?',
+    answer:
+      "It works if you give the block a finish line the reading itself doesn't have. \"Read chapter 7\" is not a block; \"read to the end of the second section and write two sentences on the argument\" is. The writing step matters more than it looks — it forces retrieval at the end of the block, which is what separates having read a chapter from being able to use it.",
+  },
+  {
+    question: 'Do I need Pro to use the focus timer?',
+    answer:
+      "Yes — the Focus timer is a Pro feature, at $3.99 a month or $19.99 a year, alongside Flashcards and the AI Tutor. Any free timer will run the cycles described here perfectly well. What the built-in one adds is context: the session attaches to a course or assignment Semora is already tracking, so study time is recorded against real coursework rather than running in a disconnected app, next to the Workload dashboard that tells you which course's session to prioritize today.",
+  },
+]
+
 <JsonLd data={articleSchema({
   title: metadata.title,
   description: metadata.description,
   slug: 'pomodoro-technique-between-classes',
   datePublished: '2026-07-24',
 })} />
+
+<JsonLd data={faqPageSchema(faqItems)} />
 
 <BlogPostHero
   title="The Pomodoro Technique Between Classes: A Real Schedule for College Students"
@@ -81,8 +119,24 @@ The break between cycles matters as much as the focus block. Five minutes is eno
 
 None of these mistakes are exotic — they're the obvious shortcuts a deadline makes tempting. The technique works because of its structure, not despite it, so a version of Pomodoro that skips breaks or leaves tasks undefined isn't really the technique anymore — it's just work with a timer running next to it.
 
+## When the gap breaks
+
+A college schedule also includes everything that isn't on the schedule: a classmate who sits down to ask you something, a room that moved to another building, a line that moves slower than you planned for. If the interruption is short, pause the timer and pick the block back up — the cycle still counts. If you've lost the thread entirely, close the cycle out, take the break, and come back with a smaller target than the one you started with.
+
+It's also worth deciding in advance what you do when the gap itself shrinks. If the class before runs long and your fifty minutes turns into thirty-five, don't force two compressed blocks into it. Do one, complete, with its goal intact. One finished cycle leaves you more than two half-finished ones.
+
+## Count what you finished, not just the minutes
+
+The timer measures minutes, not learning. At the end of each block, write one line covering what got done and where you got stuck: "flashcards for unit 3, vocabulary came back fine, dates didn't," or "problems 1 through 5, stalled before the end." It takes seconds and turns the session into information you can use.
+
+That information does two jobs. The first is calibration: if a study guide you'd planned as one block turned out to take three, you plan it as three next time, and your schedule stops lying to you. The second is spotting when the problem stopped being about time at all — if you come back block after block to the same point and stay stuck, accumulating minutes won't fix it, and it's time to change methods or ask the instructor.
+
 ## A built-in timer, tied to what you're actually studying for
 
 Semora's Focus timer (Pro) is a Pomodoro-style timer built into the same app where your deadlines and grades already live, so a study session ties directly to a specific course or assignment rather than existing as a separate, disconnected timer. It sits alongside Smart Plan, which builds an AI-generated study schedule from your actual deadlines and adapts as they change, and the Workload dashboard, which shows crunch weeks and exam-dense stretches across all your courses at once — useful context for deciding which course's Pomodoro session to prioritize on a given day. Pro is $3.99 a month or $19.99 a year.
+
+## Frequently asked questions
+
+<Faq items={faqItems} />
 
 <RelatedPosts posts={relatedPosts('pomodoro-technique-between-classes')} />
