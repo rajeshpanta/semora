@@ -17,7 +17,7 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTaskStats } from '@/lib/queries';
 import { signOut } from '@/lib/auth';
 import { displayName } from '@/lib/user';
-import { COLORS, FONTS, SCREEN_MAX_WIDTH, APP_STORE_REVIEW_URL } from '@/lib/constants';
+import { COLORS, FONTS, SCREEN_MAX_WIDTH, APP_STORE_REVIEW_URL, MARKETING_URL } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { getAppLocale } from '@/lib/i18n';
@@ -70,9 +70,15 @@ export default function MeScreen() {
             setSigningOut(true);
             try {
               await signOut();
+              if (Platform.OS === 'web') {
+                // Logging out is an exit from the web app, not a request to
+                // create another account. Replace prevents Back from
+                // restoring the just-signed-out authenticated screen.
+                window.location.replace(MARKETING_URL);
+              }
             } finally {
-              // Don't reset on success — the screen unmounts when the
-              // session clears and AuthGate redirects to sign-in.
+              // Don't reset on success — native unmounts when AuthGate sees
+              // the cleared session, while web leaves for the marketing site.
               // Reset only matters if signOut throws.
               setSigningOut(false);
             }

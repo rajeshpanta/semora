@@ -656,7 +656,17 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         // so send them straight to the auth screen — its logo links back to
         // semoraai.com. (app/welcome.tsx was the stand-in marketing page from
         // before that site existed; it now just bounces to it.)
-        if (!inAuthGroup && !onWelcome) router.replace('/(auth)/sign-in');
+        if (!inAuthGroup && !onWelcome) {
+          // A generic signed-out app route is a returning-user path. Keep the
+          // intent explicit so an early AuthGate redirect cannot turn a
+          // marketing-site "Sign in" visit into the default signup framing.
+          // The marketing site's "Try it for free" URL already lands inside
+          // the auth group without this parameter and remains signup mode.
+          router.replace({
+            pathname: '/(auth)/sign-in',
+            params: { mode: 'signin' },
+          } as any);
+        }
       } else if (!hasOnboarded) {
         // First launch on this device: sell the value before the sign-up
         // wall. Once onboarded, fall through to the normal sign-in redirect.
