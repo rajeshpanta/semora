@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
+import Link from 'next/link';
 import styles from '@/app/(en)/page.module.css';
 import { SignupButton } from '@/components/SignupButton';
 import { HeroDemo } from '@/components/HeroDemo';
@@ -7,7 +8,6 @@ import { Faq } from '@/components/Faq';
 import { Cta } from '@/components/Cta';
 import { JsonLd } from '@/components/JsonLd';
 import { Reveal } from '@/components/Reveal';
-import { PricingCards } from '@/components/PricingCards';
 import { softwareApplicationSchema, faqPageSchema } from '@/lib/schema';
 import { APP_STORE_URL } from '@/lib/semora-facts';
 import { OG_IMAGE_ES } from '@/lib/og';
@@ -52,6 +52,41 @@ const STEPS = [
     body: 'Controla fechas, calificaciones y tiempo de estudio desde una sola vista.',
   },
 ];
+
+const CAPABILITIES = [
+  {
+    n: '01',
+    eyebrow: 'Materias al día',
+    title: 'Tus cursos cambian. Semora se actualiza contigo.',
+    body: 'Importa el programa o, si tu institución lo permite, conecta Canvas, Blackboard o Moodle. El historial y la hora de la última actualización dejan claro qué cambió.',
+    href: '/es/funciones/sincronizacion-canvas',
+    linkLabel: 'Conocer la sincronización LMS',
+  },
+  {
+    n: '02',
+    eyebrow: 'Plan adaptable',
+    title: 'Ocúpate primero de lo que más puede cambiar tu resultado.',
+    body: 'El Plan inteligente tiene en cuenta cambios de fecha, sesiones pendientes, exámenes cercanos y riesgo académico, y te explica cada ajuste.',
+    href: '/es/funciones/plan-inteligente',
+    linkLabel: 'Conocer el Plan inteligente',
+  },
+  {
+    n: '03',
+    eyebrow: 'Tu materia, con contexto',
+    title: 'Estudia con el contenido que realmente usa tu clase.',
+    body: 'El Tutor cita las fuentes de tu curso, y los ejercicios, cuestionarios y tarjetas convierten apuntes y tareas en repaso activo.',
+    href: '/es/funciones/tutor-con-ia',
+    linkLabel: 'Conocer el Tutor con IA',
+  },
+  {
+    n: '04',
+    eyebrow: 'Una cuenta, en todas partes',
+    title: 'Continúa en iPhone, iPad o la web.',
+    body: 'Los cambios sin conexión quedan guardados y se sincronizan al volver. Toda la app está disponible en español y en inglés.',
+    href: '/es/funciones',
+    linkLabel: 'Ver todas las funciones',
+  },
+] as const;
 
 type SpanishHomeDetail = {
   key: string;
@@ -111,9 +146,9 @@ const FAQ = [
       'Sí. El plan gratuito incluye cinco escaneos al mes, hasta cuatro cursos por semestre, seguimiento de entregas, promedios ponderados y recordatorios. No necesitas tarjeta de crédito.',
   },
   {
-    question: '¿Cuánto cuesta Pro?',
+    question: '¿Qué añade Pro?',
     answer:
-      'Pro cuesta $3.99 al mes o $19.99 al año. Puedes contratarlo desde la app de iOS y usarlo con la misma cuenta en iPhone, iPad y la web.',
+      'Pro añade cursos y escaneos ilimitados, conexiones LMS, planificación adaptable, herramientas de estudio basadas en tus materias y análisis avanzados de calificaciones. Las opciones vigentes están en la página de Precios y se aplican a la misma cuenta en iPhone, iPad y la web.',
   },
   {
     question: '¿Qué tipos de archivo puedo añadir?',
@@ -140,7 +175,7 @@ const FAQ = [
 export default function SpanishHome() {
   return (
     <>
-      <JsonLd data={softwareApplicationSchema()} />
+      <JsonLd data={softwareApplicationSchema({ includeOffers: false })} />
       <JsonLd data={faqPageSchema(FAQ)} />
 
       <section className={styles.hero}>
@@ -152,8 +187,8 @@ export default function SpanishHome() {
               <span className={styles.gradient}>Ten todo el semestre bajo control.</span>
             </h1>
             <p className={styles.sub}>
-              Toma una foto, sube un PDF o pega el texto. Semora encuentra tareas, exámenes,
-              lecturas, horarios y criterios de evaluación. Tú revisas todo antes de guardarlo.
+              Convierte una foto o PDF del programa en un plan revisable para todo el semestre:
+              fechas, horarios, calificaciones y herramientas de estudio, todo conectado.
             </p>
             <div className={styles.heroActions}>
               <SignupButton className={styles.primaryBtn}>Empezar gratis</SignupButton>
@@ -217,12 +252,29 @@ export default function SpanishHome() {
       <section className={styles.inner}>
         <Reveal>
           <div className={styles.sectionHead}>
-            <span className={styles.label}>Precios</span>
-            <h2>Empieza gratis. Pásate a Pro cuando lo necesites.</h2>
-            <p>Organiza fechas, calificaciones y recordatorios sin pagar. Añade planificación avanzada cuando te haga falta.</p>
+            <span className={styles.label}>Un semestre conectado</span>
+            <h2>Tu planificación, tus calificaciones y tu estudio avanzan juntos.</h2>
+            <p>Semora conecta el trabajo de tus materias para que cualquier cambio te ayude a decidir qué hacer después.</p>
           </div>
         </Reveal>
-        <PricingCards locale="es" />
+        <ol className={styles.capabilityGrid}>
+          {CAPABILITIES.map((capability, index) => (
+            <li key={capability.n} className={styles.capabilityCell}>
+              <Reveal delay={index * 70}>
+                <Link href={capability.href} className={styles.capabilityCard}>
+                  <div className={styles.capabilityTop}>
+                    <span className={styles.capabilityNum}>{capability.n}</span>
+                    <span className={styles.capabilityArrow} aria-hidden="true">↗</span>
+                  </div>
+                  <span className={styles.capabilityEyebrow}>{capability.eyebrow}</span>
+                  <h3>{capability.title}</h3>
+                  <p>{capability.body}</p>
+                  <span className={styles.capabilityLink}>{capability.linkLabel} →</span>
+                </Link>
+              </Reveal>
+            </li>
+          ))}
+        </ol>
       </section>
 
       <section className={styles.band}>

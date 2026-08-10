@@ -65,7 +65,9 @@ export function organizationSchema(): WithContext<Organization> {
  * an entity description tying the app to the organisation — revisit the rich
  * result only once there are real ratings shown on the page.
  */
-export function softwareApplicationSchema(): WithContext<SoftwareApplication> {
+export function softwareApplicationSchema(
+  { includeOffers = true }: { includeOffers?: boolean } = {},
+): WithContext<SoftwareApplication> {
   return {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
@@ -78,26 +80,30 @@ export function softwareApplicationSchema(): WithContext<SoftwareApplication> {
     sameAs: [APP_STORE_URL],
     publisher: { '@id': ORGANIZATION_ID },
     description: SITE_DESCRIPTION,
-    offers: [
-      {
-        '@type': 'Offer',
-        name: PRICING.free.name,
-        price: '0',
-        priceCurrency: 'USD',
-      },
-      {
-        '@type': 'Offer',
-        name: `${PRICING.pro.name} (monthly)`,
-        price: String(PRICING.pro.monthly.price),
-        priceCurrency: 'USD',
-      },
-      {
-        '@type': 'Offer',
-        name: `${PRICING.pro.name} (annual)`,
-        price: String(PRICING.pro.annual.price),
-        priceCurrency: 'USD',
-      },
-    ],
+    ...(includeOffers
+      ? {
+          offers: [
+            {
+              '@type': 'Offer' as const,
+              name: PRICING.free.name,
+              price: '0',
+              priceCurrency: 'USD',
+            },
+            {
+              '@type': 'Offer' as const,
+              name: `${PRICING.pro.name} (monthly)`,
+              price: String(PRICING.pro.monthly.price),
+              priceCurrency: 'USD',
+            },
+            {
+              '@type': 'Offer' as const,
+              name: `${PRICING.pro.name} (annual)`,
+              price: String(PRICING.pro.annual.price),
+              priceCurrency: 'USD',
+            },
+          ],
+        }
+      : {}),
   };
 }
 

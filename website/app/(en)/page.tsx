@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 import { SignupButton } from '@/components/SignupButton';
 import Image from 'next/image';
+import Link from 'next/link';
 import styles from './page.module.css';
 import { HeroDemo } from '@/components/HeroDemo';
 import { Faq } from '@/components/Faq';
 import { Cta } from '@/components/Cta';
 import { JsonLd } from '@/components/JsonLd';
 import { Reveal } from '@/components/Reveal';
-import { PricingCards } from '@/components/PricingCards';
 import { softwareApplicationSchema, faqPageSchema } from '@/lib/schema';
 import { APP_STORE_URL } from '@/lib/semora-facts';
 import { OG_IMAGE } from '@/lib/og';
@@ -47,6 +47,41 @@ const STEPS = [
     body: 'Track deadlines, grades and study time from one calm, connected view.',
   },
 ];
+
+const CAPABILITIES = [
+  {
+    n: '01',
+    eyebrow: 'Coursework in sync',
+    title: 'Your courses change. Semora keeps up.',
+    body: 'Import a syllabus or, where your school allows it, connect Canvas, Blackboard or Moodle. Sync history and last-updated details make every change visible.',
+    href: '/features/canvas-sync',
+    linkLabel: 'Explore LMS sync',
+  },
+  {
+    n: '02',
+    eyebrow: 'Adaptive planning',
+    title: 'Do the work that can change your outcome first.',
+    body: 'Smart Plan responds to moved deadlines, missed sessions, approaching exams and grade risk—and explains why your plan changed.',
+    href: '/features/smart-plan',
+    linkLabel: 'Explore Smart Plan',
+  },
+  {
+    n: '03',
+    eyebrow: 'Course intelligence',
+    title: 'Study from the material your class actually uses.',
+    body: 'Tutor answers cite your course sources, while practice, quizzes and flashcards turn notes and assignments into active review.',
+    href: '/features/ai-tutor',
+    linkLabel: 'Explore AI Tutor',
+  },
+  {
+    n: '04',
+    eyebrow: 'One account, everywhere',
+    title: 'Keep going on iPhone, iPad or the web.',
+    body: 'Offline changes wait safely and sync when you reconnect. The complete app is available in both English and Spanish.',
+    href: '/features',
+    linkLabel: 'See every feature',
+  },
+] as const;
 
 type DeepDive = {
   key: string;
@@ -108,9 +143,9 @@ const HOME_FAQ = [
       'Yes. The free plan includes five scans a month, four courses per semester, deadline tracking, weighted grades and reminders—no credit card required.',
   },
   {
-    question: 'What does Pro cost, and where do I buy it?',
+    question: 'What does Pro add?',
     answer:
-      'Pro is $3.99 monthly or $19.99 yearly and is purchased in the iOS app. It applies to the same account on iPhone, iPad and the web.',
+      'Pro adds unlimited courses and scans, LMS connections, adaptive planning, course-aware study tools and advanced grade insights. The current options are listed on the Pricing page and apply to the same account on iPhone, iPad and the web.',
   },
   {
     question: 'What can I feed the scanner?',
@@ -132,7 +167,7 @@ const HOME_FAQ = [
 export default function Home() {
   return (
     <>
-      <JsonLd data={softwareApplicationSchema()} />
+      <JsonLd data={softwareApplicationSchema({ includeOffers: false })} />
       <JsonLd data={faqPageSchema(HOME_FAQ)} />
 
       {/* ── Hero ─────────────────────────────────────────── */}
@@ -145,9 +180,8 @@ export default function Home() {
               <span className={styles.gradient}>Never miss a deadline.</span>
             </h1>
             <p className={styles.sub}>
-              Take a photo, upload a PDF, or paste the text. Semora pulls out every assignment, exam
-              and reading with its due date, plus your class times and grading scale. Nothing saves
-              until you approve it.
+              Turn a syllabus photo or PDF into a reviewed semester plan—deadlines, class times,
+              grade weights and study tools, all connected.
             </p>
             <div className={styles.heroActions}>
               <SignupButton className={styles.primaryBtn}>
@@ -250,19 +284,36 @@ export default function Home() {
         );
       })}
 
-      {/* ── Pricing ──────────────────────────────────────── */}
+      {/* ── Connected product story ─────────────────────── */}
       <section className={styles.inner}>
         <Reveal>
           <div className={styles.sectionHead}>
-            <span className={styles.label}>Pricing</span>
-            <h2>Free covers a real semester.</h2>
+            <span className={styles.label}>One connected semester</span>
+            <h2>Your plan, grades and study tools stay in step.</h2>
             <p>
-              Start with five scans a month, four courses, deadlines, grades and reminders.
-              Upgrade when you want the full planning layer.
+              Semora connects the work around your courses, so a change in one place helps you
+              decide what to do next everywhere else.
             </p>
           </div>
         </Reveal>
-        <PricingCards />
+        <ol className={styles.capabilityGrid}>
+          {CAPABILITIES.map((capability, index) => (
+            <li key={capability.n} className={styles.capabilityCell}>
+              <Reveal delay={index * 70}>
+                <Link href={capability.href} className={styles.capabilityCard}>
+                  <div className={styles.capabilityTop}>
+                    <span className={styles.capabilityNum}>{capability.n}</span>
+                    <span className={styles.capabilityArrow} aria-hidden="true">↗</span>
+                  </div>
+                  <span className={styles.capabilityEyebrow}>{capability.eyebrow}</span>
+                  <h3>{capability.title}</h3>
+                  <p>{capability.body}</p>
+                  <span className={styles.capabilityLink}>{capability.linkLabel} →</span>
+                </Link>
+              </Reveal>
+            </li>
+          ))}
+        </ol>
       </section>
 
       {/* ── FAQ ──────────────────────────────────────────── */}
