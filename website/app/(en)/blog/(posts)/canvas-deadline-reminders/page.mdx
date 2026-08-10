@@ -1,9 +1,11 @@
 import { enAlternates } from '@/lib/hreflang';
+import { OG_DEFAULTS } from '@/lib/og';
 export const metadata = {
-  title: "Canvas Doesn't Remind You Before Deadlines — Here's How to Fix That",
+  title: 'Canvas Deadline Reminders: Get Advance Alerts',
   description:
     "Why Canvas notifications are easy to miss, and how to layer real advance reminders and grade tracking on top of your existing Canvas assignments.",
   alternates: enAlternates('/blog/canvas-deadline-reminders'),
+  openGraph: { url: '/blog/canvas-deadline-reminders', ...OG_DEFAULTS, type: 'article', publishedTime: '2026-07-23' },
 }
 
 import { JsonLd } from '@/components/JsonLd'
@@ -29,7 +31,7 @@ export const faqItems = [
   {
     question: "Do I need my university's permission to connect Canvas?",
     answer:
-      'No. Semora connects using a personal access token you generate yourself inside Canvas account settings, so there is no OAuth app-review step and nothing for your IT department to approve or deploy. It takes about five minutes rather than a wait on a ticket. Connecting an LMS is a Pro feature; on the free tier you can copy your Canvas assignment list as text and paste it into the syllabus scanner instead.',
+      'Possibly. Canvas administrators can restrict student API access, so direct connection is not available at every institution. If your school does not allow it, scan the syllabus or paste your Canvas assignment list into Semora instead. Canvas import is a Pro feature.',
   },
   {
     question: 'What happens if the professor changes a date in Canvas?',
@@ -53,6 +55,8 @@ export const faqItems = [
   description: metadata.description,
   slug: 'canvas-deadline-reminders',
   datePublished: '2026-07-23',
+  dateModified: '2026-08-09',
+  image: '/illustrations/bell-reminder.svg',
 })} />
 
 <JsonLd data={faqPageSchema(faqItems)} />
@@ -65,16 +69,16 @@ export const faqItems = [
 />
 
 
-Canvas is where instructors post assignments, but it isn't built to make sure you notice a deadline before it arrives. Notifications are opt-in per event type, configured in account settings rather than turned on by default, and even with them enabled, Canvas doesn't offer a built-in way to say "remind me three days before this is due" — you get a notification close to (or after) the fact, not a heads-up with enough runway to actually plan around it. Below is what actually causes deadlines to slip through, how to audit the notification settings you already have, and what it takes to close the gap Canvas leaves open.
+Canvas is where instructors post assignments, and its global Calendar and Dashboard List View can bring work from multiple courses together. Its notification controls still do not provide a configurable rule such as "remind me three days before this is due," and an all-course agenda does not rank work by grade weight, current standing, or effort. Below is how to audit the notification settings you already have and add an earlier, grade-aware planning layer when you need one.
 
 ## Why deadlines slip through
 
 A few reasons this happens more than students expect:
 
-- **Notification preferences are per-category and easy to under-configure.** It's common to have due-date notifications quietly turned off, or set to a digest that arrives once a day rather than in the moment.
-- **There's no advance-warning system.** Even a fully configured Canvas notification tends to fire close to the deadline, not days ahead, so there's little room to start something you'd forgotten about.
-- **Canvas shows assignments per course, not workload across all of them.** A single course's assignment list looks manageable in isolation; it's only when several courses' deadlines land in the same week that the real crunch becomes visible, and Canvas doesn't surface that view proactively.
-- **Grades and deadlines live separately.** Canvas can show you a due date or a grade, but it doesn't combine the two into a running sense of "how much is this assignment actually worth to my grade, and is it worth the time crunch."
+- **Notification preferences are per category and easy to under-configure.** A due-date notification can be turned off or routed to a digest, and a course-level override can differ from the account default.
+- **There is no configurable days-before reminder.** Canvas reports events such as a new or changed due date, but it does not let a student define a reusable rule such as a 3-day warning for every assignment.
+- **A global view is not a priority plan.** Canvas's global Calendar and Dashboard List View can show assignments and events across courses, but they do not rank that work by percentage weight, current grade, or estimated effort.
+- **Point value is not grade impact.** List View can show an item's points, but that does not by itself say how much the item contributes to a weighted final grade or which same-week task deserves the most time.
 
 ## How to actually check your Canvas notification settings
 
@@ -94,7 +98,7 @@ The exact wording and layout can vary by institution and change as Canvas update
 
 Because each of these is typically independent, it's worth walking through them one at a time rather than assuming they're all aligned: go to Account, then Notifications, inside Canvas, and look down the list checking whether the categories that matter most to you — usually Due Date, and, if your school relies on it, Assignment Changes — are set to arrive immediately rather than "never" or a digest you don't check every day. A notification that was technically sent but is sitting unread in a weekly digest email is functionally identical to no notification at all.
 
-It's also worth knowing that this settings page is generally a global, account-level setting rather than something configured separately per course. Checking it once tends to apply across every class you're enrolled in, now and later, which makes the five minutes a one-time cost rather than a chore to repeat each semester.
+Account-level notification settings provide a default across courses, but Canvas also supports course-level overrides. In Account → Notifications, choose a course from the "Settings for" menu, or open View Course Notifications from that course's home page. Once changed, a course-level setting overrides the account-level setting for that notification type.
 
 ## Notification fatigue: why turning on everything isn't the fix
 
@@ -112,17 +116,19 @@ That's the actual argument for reminders that are fewer and better-timed, rather
 
 Even a perfectly configured Canvas notification setup has a ceiling on what it's able to tell you, because Canvas notifications are built around events — an assignment was posted, a due date was set, a grade was entered — not around judgment calls about what those events actually mean for you.
 
-## No course can see any other course's calendar
+## A global calendar is not a workload plan
 
-Canvas can tell you a paper is due Friday. It can't tell you that this particular paper is worth 30 percent of your final grade in a class where your average currently sits at a B-minus, while a problem set due that same week in a different class is worth 2 percent. Both show up in the notification feed looking about the same — an assignment, a due date — even though one deserves a Saturday and the other really doesn't. Canvas also has no visibility into your other courses at the same time; it won't tell you that Friday's paper, a midterm elsewhere, and a lab report are all landing in the same seven-day window, because no single course's notification feed can see into any other course's calendar.
+[Canvas does provide cross-course views](https://community.instructure.com/en/kb/articles/662819-how-do-i-use-the-to-do-list-for-all-my-courses-in-the-list-view-dashboard-as-a-student). Its global Calendar brings assignments and events from selected courses into one place, and the Dashboard List View shows To Do items from all courses in an agenda. Those views are useful for spotting that a paper, a midterm, and a lab report all land in the same week.
 
-That's the gap between an assignment feed and an actual workload picture, and it's exactly where a grade-aware tool adds something a due-date notification structurally cannot. Semora's grade tracking, included on the free tier, keeps a running sense of what each assignment is actually worth, so a due-date reminder can sit next to a "this is 30 percent of your grade" fact instead of next to nothing. On Pro, Academic Risk alerts go a step further, flagging the compound situations Canvas notifications have no mechanism to surface on their own — a falling grade, a piece of missing work, or a week where several courses' deadlines have quietly stacked on top of each other — along with a specific recovery-step plan, rather than leaving it to you to notice the pattern by cross-referencing five different Canvas course pages yourself.
+What they do not do is rank those items by percentage weight, current standing, and estimated effort. A paper worth 30 percent of a course and a 2-percent problem set may share a date, but Canvas still leaves the priority decision to you.
+
+Semora's grade tracking, included on the free tier, keeps weighted course context with your deadlines. On Pro, the Workload dashboard and Academic Risk alerts add a planning layer for overloaded weeks, falling grades, and missing work.
 
 ## What to layer on top
 
 The fix isn't to abandon Canvas — it's still where the source-of-truth assignments live — but to add a layer that actually pushes reminders with real advance notice, and ties deadlines to grades.
 
-Semora connects to Canvas using a personal access token you generate yourself in Canvas account settings — there's no third-party OAuth approval step, so it's a five-minute setup rather than a wait on IT. Once connected, every tier gets same-day reminders by default. Pro ($3.99/month or $19.99/year) adds custom reminder timing with quiet hours, so you can set a 1-day or 3-day advance warning instead of a same-day one, and choose when notifications are allowed to reach you.
+Semora's Canvas import is a Pro feature. The shipping connector currently uses a personal access token generated inside your Canvas account; Semora does not yet provide its own OAuth flow. Some institutions disable token creation or prohibit third-party token use, so confirm your school's policy before connecting. If the connector is unavailable or not permitted, you can still scan a syllabus or paste your Canvas assignment list into Semora. Every tier gets same-day reminders by default; Pro ($3.99/month or $19.99/year) adds custom 1-day or 3-day reminders and quiet hours.
 
 ## The syllabus carries context Canvas assignments don't
 

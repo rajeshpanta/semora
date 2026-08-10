@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import styles from './BlogPostHero.module.css';
 import type { SiteLocale } from '@/lib/i18n';
 
@@ -18,12 +19,23 @@ export function BlogPostHero({
    *  put "Semora Blog" at the top of every one of them. */
   locale?: SiteLocale;
 }) {
+  const byline = locale === 'es'
+    ? { prefix: 'Por', href: '/es/acerca-de' }
+    : { prefix: 'By', href: '/about' };
+
   return (
     <div className={styles.band}>
       <div className={styles.text}>
         <span className={styles.eyebrow}>{locale === 'es' ? 'El blog de Semora' : 'Semora Blog'}</span>
         <h1 className={styles.title}>{title}</h1>
-        <p className={styles.date}>{date}</p>
+        <p className={styles.date}>
+          <span>
+            {byline.prefix}{' '}
+            <Link href={byline.href} className={styles.byline}>Semora</Link>
+          </span>
+          <span className={styles.separator} aria-hidden="true">·</span>
+          <span>{date}</span>
+        </p>
       </div>
       {image && (
         <div className={styles.imageWrap}>

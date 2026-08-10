@@ -1,4 +1,5 @@
 import { SPANISH_PAGES } from '@/lib/es-content';
+import { isSpanishNoindexPath } from '@/lib/i18n';
 
 /**
  * Reciprocal hreflang for the English pages.
@@ -17,7 +18,12 @@ import { SPANISH_PAGES } from '@/lib/es-content';
  * own page.tsx rather than coming from the catch-all.
  */
 const EN_TO_ES = new Map<string, string>([['/', '/es']]);
-for (const page of SPANISH_PAGES) EN_TO_ES.set(page.englishPath, page.path);
+for (const page of SPANISH_PAGES) {
+  // A noindex URL must not be advertised as an alternate of an indexable URL.
+  // It remains in the navigation map in lib/i18n.ts so readers can switch
+  // languages while the Spanish page is being rewritten.
+  if (!isSpanishNoindexPath(page.path)) EN_TO_ES.set(page.englishPath, page.path);
+}
 
 /** English paths that have a Spanish counterpart — useful for tests/audits. */
 export function englishPathsWithSpanish(): string[] {

@@ -32,18 +32,19 @@ const FAQ = [
   {
     question: "Is Semora free, and what's included in Pro?",
     answer:
-      "Semora's free tier includes 5 syllabus scans per calendar month, up to 4 courses in one semester, full deadline and grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no monthly scan cap,, Smart Plan, the Workload dashboard, Grade Scale & Forecasting, calendar sync with .ics export, Flashcards, a Focus timer, an AI tutor, Academic Risk alerts, Progress Insights, and Share & Streaks.",
+      "Semora's free tier includes 5 syllabus scans per calendar month, up to 4 courses within one semester, one semester total, full deadline and grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no monthly scan cap, Smart Plan, the Workload dashboard, Grade Scale & Forecasting, calendar sync with .ics export, Flashcards, a Focus timer, an AI tutor, Academic Risk alerts, Progress Insights, and Share & Streaks.",
   },
   {
     question: 'Does Semora sync with Canvas or other tools?',
     answer:
-      "Semora connects to Canvas LMS using a personal access token you generate yourself in Canvas, so there's no OAuth app-review wait. Semora also supports course collaboration through Course Spaces, where classmates share deadlines and group assignments via an invite link, and it syncs across iPhone, iPad, and web on one account.",
+      "Canvas, Blackboard, and Moodle import are Pro features. The current Canvas connector uses a personal access token generated in Canvas. Some institutions disable or prohibit third-party token use, so confirm your school's policy. If the connector is unavailable or not permitted, scan the syllabus or paste the assignment list instead. Semora also supports Course Spaces and syncs across iPhone, iPad, and web on one account.",
   },
 ];
 
 const TABLE_ROWS = [
   { feature: 'Syllabus scans', free: '5 per calendar month', pro: 'Unlimited' },
-  { feature: 'Courses per semester', free: 'Up to 4', pro: 'Unlimited' },
+  { feature: 'Courses', free: 'Up to 4 within one semester', pro: 'Unlimited' },
+  { feature: 'Semesters', free: '1 total', pro: 'Unlimited' },
   { feature: 'Task, deadline & grade tracking', free: 'Included', pro: 'Included' },
   { feature: 'Reminders', free: 'Same-day reminders', pro: 'Custom timing + quiet hours' },
   { feature: 'Calendar sync + .ics export', free: '—', pro: 'Included', proOnly: true },
@@ -155,8 +156,10 @@ export default function AiStudyPlannerPage() {
 
       <h3>Canvas sync</h3>
       <p>
-        If your school uses Canvas, you can connect it using a personal access token you generate
-        yourself inside Canvas. There is no OAuth app-review process to wait on.
+        Canvas import is a Pro feature. The current connector uses a personal access token generated
+        in Canvas. Some institutions disable or prohibit third-party token use, so confirm your
+        school&apos;s policy. If it is unavailable or not permitted, scan the syllabus or paste the
+        assignment list instead.
       </p>
 
       <h3>Course Spaces (collaboration)</h3>

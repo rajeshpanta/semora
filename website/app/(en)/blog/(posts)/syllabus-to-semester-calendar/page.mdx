@@ -1,9 +1,11 @@
 import { enAlternates } from '@/lib/hreflang';
+import { OG_DEFAULTS } from '@/lib/og';
 export const metadata = {
   title: 'How to Turn a Syllabus Into a Semester Calendar',
   description:
     'A step-by-step guide to converting a course syllabus into a working semester calendar, plus how Semora automates the whole process.',
   alternates: enAlternates('/blog/syllabus-to-semester-calendar'),
+  openGraph: { url: '/blog/syllabus-to-semester-calendar', ...OG_DEFAULTS, type: 'article', publishedTime: '2026-07-20' },
 }
 
 import { JsonLd } from '@/components/JsonLd'
@@ -52,6 +54,8 @@ export const faqItems = [
   description: metadata.description,
   slug: 'syllabus-to-semester-calendar',
   datePublished: '2026-07-20',
+  dateModified: '2026-08-09',
+  image: '/illustrations/syllabus-calendar.svg',
 })} />
 
 <JsonLd data={faqPageSchema(faqItems)} />
@@ -157,7 +161,7 @@ That five-step process is exactly what Semora's AI syllabus scanner does in one 
 
 That review screen exists precisely because of the odd formats in step 3. The scan inherits the same ambiguities that make this hard by hand: if the syllabus left an exam without a day, you'll see it flagged as pending rather than converted into an invented date, and if a recurring deadline came back short, you fix it before it enters your calendar instead of after you've assumed it was right.
 
-The free tier includes 5 syllabus scans per calendar month across up to 4 courses per semester, with full deadline and grade tracking and same-day reminders included. Calendar sync (device + .ics export) is a Pro feature. If your school uses Canvas, you can also connect it using a personal access token you generate yourself — no OAuth app-review process to wait on — so Canvas assignments and syllabus-derived details (office hours, grading scale, meeting times) show up together, and stay current as due dates change on Canvas's end.
+The free tier includes 5 syllabus scans per calendar month across up to 4 courses in one semester, with full deadline and grade tracking and same-day reminders included. Calendar sync (device + .ics export) is a Pro feature. Canvas import is also a Pro feature, and availability depends on your institution's Canvas configuration. If direct connection is unavailable, scan the syllabus or paste your Canvas assignment list instead.
 
 ## Frequently asked questions
 

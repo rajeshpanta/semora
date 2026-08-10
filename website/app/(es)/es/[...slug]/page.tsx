@@ -18,13 +18,16 @@ import { SUPPORT_EMAIL } from '@/lib/semora-facts';
 import { FEATURES_ES, SHOWCASE_ES } from '@/lib/es-facts';
 import {
   getSpanishPage,
-  SPANISH_BLOG_INDEX_BODY,
+  SPANISH_BLOG_INDEX_SUMMARY,
   SPANISH_BLOG_POSTS,
   SPANISH_COMPARISONS,
   SPANISH_PAGES,
   type SpanishPageConfig,
 } from '@/lib/es-content';
 import { OG_IMAGE_ES } from '@/lib/og';
+import { pageTitle } from '@/lib/title';
+import { isSpanishNoindexPath } from '@/lib/i18n';
+import { relatedPostSlugs } from '@/lib/blog';
 
 type Params = Promise<{ slug: string[] }>;
 
@@ -40,24 +43,36 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const { slug } = await params;
   const config = getSpanishPage(pathFromSlug(slug));
   if (!config) return {};
+  const post = SPANISH_BLOG_POSTS.find((item) => item.path === config.path);
+  const noindex = isSpanishNoindexPath(config.path);
 
   return {
-    title: config.content.metaTitle,
+    title: pageTitle(config.content.metaTitle),
     description: config.content.metaDescription,
-    alternates: {
-      canonical: config.path,
-      languages: {
-        'en-US': config.englishPath,
-        es: config.path,
-        'x-default': config.englishPath,
-      },
-    },
+    alternates: noindex
+      ? { canonical: config.path }
+      : {
+          canonical: config.path,
+          languages: {
+            'en-US': config.englishPath,
+            es: config.path,
+            'x-default': config.englishPath,
+          },
+        },
+    ...(noindex ? { robots: { index: false, follow: true } } : {}),
     openGraph: {
       url: config.path,
       title: config.content.metaTitle,
       description: config.content.metaDescription,
       locale: 'es_US',
       ...OG_IMAGE_ES,
+      ...(post
+        ? {
+            type: 'article' as const,
+            publishedTime: post.isoDate,
+            modifiedTime: post.modifiedDate ?? post.isoDate,
+          }
+        : {}),
     },
   };
 }
@@ -135,12 +150,15 @@ function DirectoryWidget({ config }: { config: SpanishPageConfig }) {
  * link no matter how many posts existed.
  */
 function spanishRelatedPosts(path: string, limit = 3) {
-  const start = SPANISH_BLOG_POSTS.findIndex((b) => b.path === path);
-  const others = SPANISH_BLOG_POSTS.filter((b) => b.path !== path);
-  const ordered = start < 0 ? others : [...others.slice(start), ...others.slice(0, start)];
-  return ordered
-    .slice(0, limit)
-    .map((b) => ({ path: b.path, title: b.title, description: b.description }));
+  const current = SPANISH_BLOG_POSTS.find((post) => post.path === path);
+  if (!current) return [];
+  const slug = current.englishPath.split('/').at(-1) ?? '';
+  return relatedPostSlugs(slug, limit)
+    .map((relatedSlug) =>
+      SPANISH_BLOG_POSTS.find((post) => post.englishPath === `/blog/${relatedSlug}`),
+    )
+    .filter((post): post is (typeof SPANISH_BLOG_POSTS)[number] => Boolean(post))
+    .map((post) => ({ path: post.path, title: post.title, description: post.description }));
 }
 
 function getCrumb(config: SpanishPageConfig) {
@@ -170,6 +188,8 @@ export default async function SpanishPage({ params }: { params: Params }) {
         description: post.description,
         path: post.path,
         datePublished: post.isoDate,
+        dateModified: post.modifiedDate,
+        image: post.image,
         inLanguage: 'es',
       })
     : null;
@@ -200,7 +220,7 @@ export default async function SpanishPage({ params }: { params: Params }) {
             dateLabel: b.date,
           }))}
         >
-          <PageSections locale="es" content={SPANISH_BLOG_INDEX_BODY} withRail />
+          <PageSections locale="es" content={SPANISH_BLOG_INDEX_SUMMARY} withRail />
         </BlogIndex>
       </>
     );

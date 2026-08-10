@@ -13,7 +13,7 @@ import { APP_STORE_URL } from '@/lib/semora-facts';
 import { OG_IMAGE_ES } from '@/lib/og';
 
 export const metadata: Metadata = {
-  title: 'Organiza tu semestre con IA',
+  title: { absolute: 'Organiza tu semestre con IA | Semora' },
   description:
     'Convierte una foto o PDF del programa de tu materia en tareas, exámenes, horarios y calificaciones organizadas. Empieza gratis con Semora.',
   alternates: {
@@ -44,7 +44,7 @@ const STEPS = [
   {
     n: '02',
     title: 'Revísalo',
-    body: 'Confirma las fechas, los horarios y las ponderaciones antes de guardar cualquier dato.',
+    body: 'Revisa y corrige cada entrega antes de añadirla al calendario.',
   },
   {
     n: '03',
@@ -58,7 +58,7 @@ const CAPABILITIES = [
     n: '01',
     eyebrow: 'Materias al día',
     title: 'Tus cursos cambian. Semora se actualiza contigo.',
-    body: 'Importa el programa o, si tu institución lo permite, conecta Canvas, Blackboard o Moodle. El historial y la hora de la última actualización dejan claro qué cambió.',
+    body: 'Importa el programa o conecta Canvas, Blackboard o Moodle con Pro. El conector actual de Canvas usa un token personal y algunas instituciones desactivan o prohíben su uso con servicios externos. Confirma la política de tu universidad; si no está permitido, escanea el programa o pega la lista de tareas.',
     href: '/es/funciones/sincronizacion-canvas',
     linkLabel: 'Conocer la sincronización LMS',
   },
@@ -143,7 +143,7 @@ const FAQ = [
   {
     question: '¿Semora es realmente gratis?',
     answer:
-      'Sí. El plan gratuito incluye cinco escaneos al mes, hasta cuatro cursos por semestre, seguimiento de entregas, promedios ponderados y recordatorios. No necesitas tarjeta de crédito.',
+      'Sí. El plan gratuito incluye cinco escaneos al mes, hasta cuatro cursos dentro de un solo semestre, seguimiento de entregas, promedios ponderados y recordatorios. No necesitas tarjeta de crédito.',
   },
   {
     question: '¿Qué añade Pro?',

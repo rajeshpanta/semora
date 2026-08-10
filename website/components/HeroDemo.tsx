@@ -23,7 +23,7 @@ import type { SiteLocale } from '@/lib/i18n';
 const STAGES = [
   { key: 'scan', label: 'Drop in your syllabus', hint: 'Photo, PDF, or pasted text' },
   { key: 'extract', label: 'Every deadline, pulled out', hint: 'Dates, weights, class times' },
-  { key: 'organized', label: 'Your semester, organized', hint: 'Nothing saved until you say so' },
+  { key: 'organized', label: 'Your semester, organized', hint: 'Review every deadline before adding it' },
 ] as const;
 
 const ROWS = [
@@ -45,7 +45,7 @@ export function HeroDemo({ locale = 'en' }: { locale?: SiteLocale }) {
     ? [
         { key: 'scan', label: 'Añade el programa de la materia', hint: 'Foto, PDF o texto copiado' },
         { key: 'extract', label: 'Semora encuentra cada fecha', hint: 'Entregas, criterios de evaluación y horarios' },
-        { key: 'organized', label: 'Tu semestre queda organizado', hint: 'Tú decides qué información guardar' },
+        { key: 'organized', label: 'Tu semestre queda organizado', hint: 'Revisa cada entrega antes de añadirla' },
       ] as const
     : STAGES;
   const rows = es
@@ -107,7 +107,7 @@ export function HeroDemo({ locale = 'en' }: { locale?: SiteLocale }) {
             ))}
           </aside>
 
-          <main className={styles.main}>
+          <div className={styles.main}>
             {/* Stage 1 — the syllabus, being read. */}
             <div className={styles.doc}>
               <div className={styles.docHead}>
@@ -154,7 +154,7 @@ export function HeroDemo({ locale = 'en' }: { locale?: SiteLocale }) {
                 </div>
               ))}
             </div>
-          </main>
+          </div>
         </div>
       </div>
 

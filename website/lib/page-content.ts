@@ -121,7 +121,7 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
           "\"Two exams landed in the same week and I never saw it coming\" — Workload dashboard. Pro.",
           "\"I do not know where I stand\" — Grade tracking and semester GPA (free), then Forecasting (Pro).",
           "\"I waste the first twenty minutes of every session\" — Flashcards scoped to one exam, plus the focus timer. Pro.",
-          "\"My deadlines already live in Canvas\" — paste the assignment text into the scanner on the web app (free), or connect the LMS with a token you generate yourself (Pro).",
+          "\"My deadlines already live in Canvas\" — paste the assignment text into the scanner on the web app (free), or use the current token-based Canvas import only where your institution permits it (Pro).",
           "\"It is already on fire\" — Academic Risk, which names the failing grade, the missing work or the overloaded week and gives you a recovery order. Pro."
         ]
       },
@@ -173,7 +173,7 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
       {
         "heading": "Exactly what Pro adds",
         "paragraphs": [
-          "Pro removes all three ceilings (unlimited courses, unlimited semesters, and no monthly scan counter) and opens four groups of features. The first is import automation: Canvas, Blackboard, and Moodle assignment import using a personal access token you generate yourself in the platform's own settings, plus device calendar sync and .ics export so your deadlines land in Apple Calendar or Outlook alongside everything else in your life. The second is planning: Smart Plan builds a study schedule around your real deadlines and adjusts when they move, and the Workload dashboard shows crunch weeks and exam-dense stretches before you walk into them.",
+          "Pro removes all three ceilings (unlimited courses, unlimited semesters, and no monthly scan counter) and opens four groups of features. The first is import automation: Canvas, Blackboard, and Moodle assignment import, with the current Canvas token connector usable only where the institution permits it, plus device calendar sync and .ics export so your deadlines land in Apple Calendar or Outlook alongside everything else in your life. The second is planning: Smart Plan builds a study schedule around your real deadlines and adjusts when they move, and the Workload dashboard shows crunch weeks and exam-dense stretches before you walk into them.",
           "The third group is studying: AI-generated flashcards drawn from the syllabus you already scanned and any notes you upload, on a spaced-repetition schedule; a Pomodoro-style focus timer; and an AI tutor scoped to one course that answers from that course's syllabus, your tracked deadlines, and your uploaded notes rather than from generic knowledge. The fourth is control: custom reminder timing, a grading scale you can edit to match what your school actually uses, and forecasting that tells you what you need on the work that is left, plus Academic Risk alerts and Progress Insights.",
           "One qualifier on scanning, because \"unlimited\" is doing narrower work than it sounds like. Pro removes the five-per-month counter entirely — that is the ceiling that actually shapes a semester. What remains is an anti-abuse ceiling of twenty scans in a rolling day, applied to every account including subscribers, enforced by the extraction function itself. Twenty syllabi in one day is not a workload, it is a script, so in practice you will not meet it; we would rather name the number than let \"unlimited\" quietly mean something else.",
           "The reminder difference is worth stating precisely, because it is the gate people notice first. Free accounts get same-day reminders. Pro adds one-day and three-day advance notice and quiet hours, so a 3 a.m. push gets held until the window ends. The two halves are enforced in different places, and the honest version is this: quiet hours has a server backstop as well as the in-app gate — the database coerces the setting back to off for any account that is not Pro, so a patched or lapsed client cannot keep it. The one-day and three-day reminders are local notifications the iPhone schedules on the device itself, so that gate lives in the app, which is where scheduling happens."
@@ -296,7 +296,7 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
         "paragraphs": [
           "There are only three intake paths, and they are not interchangeable. A tool can read a syllabus document, connect to your school's learning platform, or make you type everything yourself. Which one a product supports shapes everything downstream, because whatever never gets in never gets tracked.",
           "A learning-platform connection mirrors what an instructor publishes in the platform. That is genuinely useful for assignments added mid-semester, but a syllabus is the authoritative document for the things that decide your grade: the weight percentage attached to each category, the exam dates set in week one, the reading schedule, the office hours, the letter-grade scale, and the late-work policy. A large share of that never becomes an entry in a learning platform. A tool that only syncs an LMS inherits every gap in how your instructors use it. A tool that only reads syllabi will not see the assignment your professor invents in week nine. Ask which paths a product supports, and which of them are included on the tier you would actually pay for.",
-          "Semora's scanner is on the free tier and takes four paths: a camera photo of up to five pages per scan, budgeted at 10 MB combined; a PDF upload; drag-and-drop on the web app; and pasted raw text on web, up to 60,000 characters at a time. From those it extracts the course name and code, the instructor, class meeting blocks with days, start and end times, kind and room, office hours, the semester start and end dates, the letter-grade scale, and every assignment, quiz, exam, project, and reading with a due date, due time, percentage weight, and a confidence score. Importing from Canvas, Blackboard, or Moodle is a Pro feature and uses a personal access token you generate yourself in the platform's own settings, so it does not depend on your school's IT department approving a third-party app. On the free tier, the workable substitute is pasting Canvas assignment text straight into the scanner."
+          "Semora's scanner is on the free tier and takes four paths: a camera photo of up to five pages per scan, budgeted at 10 MB combined; a PDF upload; drag-and-drop on the web app; and pasted raw text on web, up to 60,000 characters at a time. From those it extracts the course name and code, the instructor, class meeting blocks with days, start and end times, kind and room, office hours, the semester start and end dates, the letter-grade scale, and every assignment, quiz, exam, project, and reading with a due date, due time, percentage weight, and a confidence score. Importing from Canvas, Blackboard, or Moodle is a Pro feature. The current Canvas connector uses a personal access token generated in Canvas and may be disabled or prohibited by your institution. If token use is unavailable or not permitted, paste Canvas assignment text straight into the scanner."
         ],
         "bullets": [
           "Does it read a syllabus at all, or does it require an LMS connection or manual entry to get anything in?",
@@ -481,9 +481,9 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
         "heading": "Getting a deadline reminder early enough to act on it",
         "paragraphs": [
           "Canvas is where instructors post assignments, and it is a perfectly good system of record. It is not built to make sure you notice a deadline in advance. Notification preferences are opt-in per category and configured at the account level, which means a student can be entirely convinced notifications are on while the one category that matters — due dates — sits on \"never\" or inside a daily digest they do not open. That is worth five minutes to audit before concluding that notifications are broken.",
-          "Even a perfectly configured setup has a ceiling, though, and it is structural rather than a bug. Canvas notifications are built around events: an assignment was posted, a due date changed, a grade was entered. There is no built-in way to say \"remind me three days before this is due.\" Each course's feed can also only see its own course, so nothing tells you that Friday's paper, a midterm in another class, and a lab report are all landing in the same week. And because grades and deadlines live separately, a paper worth thirty percent in a class where you are sitting at a B-minus looks identical in the feed to a two-percent problem set.",
+          "Even a perfectly configured setup has a ceiling, though, and it is structural rather than a bug. Canvas notifications are built around events: an assignment was posted, a due date changed, a grade was entered. There is no built-in reusable rule that says \"remind me three days before every due date.\" Canvas does provide a global Calendar and Dashboard List View across courses, but those views do not rank same-week work by grade weight, current standing, or estimated effort. And because grades and deadlines live separately, a paper worth thirty percent in a class where you are sitting at a B-minus looks identical in the feed to a two-percent problem set.",
           "The instinct — turn every category to \"immediately\", usually backfires. Once a phone buzzes for every quiz score and every syllabus edit across six courses, the volume trains you to treat alerts as background noise, and the one genuinely time-sensitive message gets the same half-second dismissal as everything else. What determines whether a reminder is useful is not how many arrive but when the important ones do. Three days out you can still start the reading, email a clarifying question, or move something off the weekend. The morning something is due, a reminder can only confirm what you already suspected.",
-          "Semora's same-day reminders are on by default on every tier, including free, which covers the baseline case. Pro adds custom reminder timing  (a one-day or three-day advance notice, set once and applied automatically) plus quiet hours, so an alert does not fire at 2 a.m. when there is nothing you can do with it. Connecting Canvas, Blackboard, or Moodle is a Pro feature, done with a personal access token you generate yourself rather than an OAuth integration that waits on your school's IT department. On the free tier the workable substitute is real: copy your Canvas assignment text and paste it into the scanner. The post ends on an honest note worth repeating here — reminders plus a weekly look at the calendar, not reminders instead of one."
+          "Semora's same-day reminders are on by default on every tier, including free, which covers the baseline case. Pro adds custom reminder timing (a one-day or three-day advance notice, set once and applied automatically) plus quiet hours, so an alert does not fire at 2 a.m. when there is nothing you can do with it. Canvas, Blackboard, and Moodle import are Pro features. The current Canvas connector uses a personal access token generated in Canvas; use it only if your institution permits third-party token connections. The workable fallback is real: scan the syllabus, or copy your Canvas assignment text and paste it into the web scanner. The post ends on an honest note worth repeating here — reminders plus a weekly look at the calendar, not reminders instead of one."
         ],
         "bullets": [
           "Audit Account, then Notifications, in Canvas: each category has its own delivery setting",
@@ -694,7 +694,7 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
       {
         "heading": "Canceling, and what canceling does not do",
         "paragraphs": [
-          "Semora cannot cancel your subscription, and neither can we — Apple owns the billing relationship. Cancel on your iPhone under Settings, your Apple Account, then Subscriptions. The app links straight there from Settings, Manage Subscription. Canceling stops the next renewal; Pro features keep working until the period you already paid for ends, at which point the account reverts to free limits  (5 scans a month, 4 courses, one semester) with all of your data intact.",
+          "Semora cannot cancel your subscription, and neither can we — Apple owns the billing relationship. Cancel on your iPhone under Settings, your Apple Account, then Subscriptions. The app links straight there from Settings, Manage Subscription. Canceling stops the next renewal; Pro features keep working until the period you already paid for ends, at which point the account reverts to free limits (5 scans a month, 4 courses, one semester) with all of your data intact.",
           "The trap worth naming: deleting your Semora account does not cancel your subscription. Apple keeps billing until you cancel it in your Apple Account settings. The delete-account screen warns Pro users about this, but do it in this order — cancel with Apple first, then delete the account. Refunds are Apple's too, requested through reportaproblem.apple.com."
         ]
       },
@@ -957,11 +957,11 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
         ]
       },
       {
-        "heading": "Why a personal access token instead of a \"Connect with Canvas\" button",
+        "heading": "Why Canvas connection availability varies by institution",
         "paragraphs": [
-          "Most LMS integrations run on OAuth. The vendor registers a developer key with each institution, your school's Canvas administrator reviews and approves it, and until that happens you cannot connect at all. It is a queue you do not control, it has to be repeated per institution, and smaller schools often never reach the front of it.",
-          "Semora skips that path entirely. You generate a personal access token inside your own Canvas account. It is scoped to your own enrollments, it belongs to you rather than to a third-party app installed on your school's instance, and you can delete it from the same page at any time. No administrator has to approve anything, and there is nothing for your school's IT office to review.",
-          "The token then stays on your device — the iOS Keychain via SecureStore on iPhone and iPad, browser storage on web. It is sent to Semora's sync function only for the length of a single request and is never written to the database. What the server does keep is connection metadata: which provider, your school's Canvas URL, which Canvas course maps to which Semora course, when the last sync ran, and whether it worked. Because the credential never lives server-side, there is no server cron either — sync runs from your device."
+          "Canvas documents OAuth as the approved authorization route for applications used by multiple people. Administrators can also restrict student API access, so direct connection cannot be promised for every Canvas account.",
+          "Semora's shipping clients currently use a personal access token generated inside the student's Canvas account; they do not yet provide a Semora OAuth flow. Some institutions prohibit third-party token use, so confirm your school's policy before connecting and do not treat the connector as permissionless.",
+          "If a direct connection is unavailable, scan the syllabus or copy the text of the Canvas assignment list into Semora's web scanner. That fallback creates a snapshot rather than a live sync, so Canvas remains the source of truth and changed dates must be checked again."
         ]
       },
       {
@@ -1069,6 +1069,108 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
   }
 };
 
+/**
+ * A blog index should help readers choose a guide, not reproduce every guide.
+ * Keep this summary deliberately shorter than an article and let the card grid
+ * above it carry the navigation.
+ */
+const BLOG_INDEX_SUMMARY: PageLongForm = {
+  sections: [
+    {
+      heading: 'Practical guides for a semester that stays manageable',
+      paragraphs: [
+        'Semora’s blog is for students trying to solve a concrete semester problem: dates buried in a syllabus, a weighted grade that does not match a simple average, an overloaded finals week, or study material that never becomes a repeatable practice routine. Each guide is written to work on its own, whether you use Semora, a spreadsheet, a paper planner, or another app.',
+        'Start with the problem that is costing you time now. The syllabus guide turns a course document into a checked calendar. The grade and final-exam guides show the formulas line by line. The Canvas guide explains what Canvas already provides and where an earlier, grade-aware reminder can help. The Pomodoro and finals guides turn a real class schedule into study blocks that actually fit.',
+      ],
+      bullets: [
+        'Semester setup: syllabus extraction, recurring dates, grading weights, and calendar checks',
+        'Grade decisions: weighted course averages and the score needed on a final',
+        'Deadline planning: all-course views, advance reminders, and finals-week clusters',
+        'Study methods: focused sessions, AI flashcards, active recall, and spaced review',
+        'Tool comparisons: what each app is built to do, what it does not do, and which claims need verification',
+      ],
+    },
+    {
+      heading: 'Useful length comes from the question, not a word target',
+      paragraphs: [
+        'The guides are intentionally detailed because the underlying questions need examples, edge cases, and a method a student can repeat. A formula article should show the arithmetic. A comparison should explain its criteria and limitations. A planning guide should include a schedule that adds up. Length is useful only while it is doing one of those jobs; repeated summaries and filler do not make a page more authoritative.',
+        'For a quick answer, use the opening summary and the table or worked example. For the full method, continue through the checks and common mistakes. The related-guide cards at the end of each article are selected as the next useful step, not as a reason to publish another version of the same keyword.',
+      ],
+    },
+    {
+      heading: 'How comparisons and product claims are handled',
+      paragraphs: [
+        'Semora publishes this site and is included in some comparisons, so that conflict should be visible. Comparison articles are desk research based on public product pages, pricing pages, documentation, and store listings checked on the date stated in the article. They do not imply hands-on testing unless the article explicitly says so. Prices and integrations change; confirm a vendor’s current documentation before paying or relying on a connection.',
+        'Learning advice is framed as a method to test, not a promise that one technique works for everyone. Product limits are stated with their real boundaries: the free account covers five syllabus scans per calendar month, four courses within one semester, and one semester total. Extracted deadlines remain editable and require review before they enter the calendar.',
+      ],
+    },
+  ],
+  faq: [
+    {
+      question: 'Are these articles written by Semora?',
+      answer: 'Yes. The visible byline links to Semora’s About page. Comparisons also disclose that Semora is the publisher and, when relevant, one of the products being compared.',
+    },
+    {
+      question: 'Are the comparison articles hands-on reviews?',
+      answer: 'They are desk reviews of public product pages, documentation, pricing pages, and store listings unless an article explicitly says otherwise. Check the vendor’s current materials before buying because prices and features change.',
+    },
+    {
+      question: 'Which guide should I read first?',
+      answer: 'Begin with the failure you are seeing now: syllabus-to-calendar for missing dates, weighted grades for unclear standing, the final-exam formula for a target score, Canvas reminders for late notice, or the finals plan for a crowded exam window.',
+    },
+    {
+      question: 'Do I need Semora to use the advice?',
+      answer: 'No. The methods can be followed with a spreadsheet, a calendar, or a paper planner. When Semora automates a step, the article identifies the relevant tier and a manual alternative where one exists.',
+    },
+  ],
+};
+
+const CANVAS_TRACKER_SUMMARY: PageLongForm = {
+  sections: [
+    {
+      heading: 'Start with the Canvas views you already have',
+      paragraphs: [
+        'Canvas already provides a global Calendar and a Dashboard List View that can show assignments and events from multiple courses. Check those views first, then audit both the account-level notification defaults and any course-level overrides. A due-date category set to never, or routed to a digest you do not read, can look like a missing notification even when Canvas behaved as configured.',
+        'Those views are useful agendas, but they are not a workload forecast. They do not rank two same-week assignments by percentage weight, your current grade, and estimated effort, and Canvas does not provide a reusable student rule such as “remind me three days before every due date.” That is the narrower planning gap Semora is designed to address.',
+      ],
+    },
+    {
+      heading: 'What Semora adds',
+      paragraphs: [
+        'Semora keeps deadlines beside weighted grade context and sends same-day reminders on the free tier. Pro adds one-day and three-day reminder timing, quiet hours, a Workload dashboard, and Academic Risk alerts. The syllabus scanner can also capture context that may not be present on an assignment row, including meeting times, office hours, grading weights, and the instructor’s letter-grade scale.',
+        'Review still matters. A syllabus can contain recurring tasks, dates written relative to class meetings, and exams marked TBA. Semora lets you edit each extracted deadline before adding it to the calendar; undated or low-confidence items should be checked against the source document rather than accepted as guesses.',
+      ],
+    },
+    {
+      heading: 'Connection availability depends on your institution',
+      paragraphs: [
+        'Canvas import is a Pro feature. The shipping connector currently uses a personal access token generated inside the student’s Canvas account; Semora does not yet provide its own OAuth flow. Canvas documents OAuth as the approved route for multi-user applications, and some institutions disable or prohibit third-party token use. Confirm your school’s policy before connecting.',
+        'If direct connection is unavailable, the reliable fallback is the syllabus scanner. On the web, you can also copy the text of a Canvas assignment list and paste it into the scanner. That is a snapshot rather than a live sync, so re-check Canvas after an instructor changes a date. Canvas remains the source of truth for submissions and official course updates.',
+      ],
+    },
+  ],
+  faq: [
+    {
+      question: 'Does Canvas show work from all my courses?',
+      answer: 'Yes. The global Calendar and Dashboard List View can combine items from multiple courses. They do not automatically rank those items by grade impact or estimated effort.',
+    },
+    {
+      question: 'Can I ask Canvas to remind me three days before every deadline?',
+      answer: 'Canvas notification settings report course events and can be adjusted by category, with course-level overrides, but they do not provide a reusable relative reminder rule for every assignment.',
+    },
+    {
+      question: 'Can every student connect Semora directly to Canvas?',
+      answer: 'No. The current connector uses a personal access token, and administrators can disable token creation or prohibit third-party token use. If it is unavailable or not permitted, scan the syllabus or paste the assignment-list text into Semora instead.',
+    },
+    {
+      question: 'Does Semora replace Canvas?',
+      answer: 'No. Canvas remains the official source for assignments, submissions, and instructor changes. Semora adds planning, grade context, and configurable advance reminders around that source.',
+    },
+  ],
+};
+
 export function getPageContent(key: PageKey): PageLongForm | undefined {
+  if (key === 'blog') return BLOG_INDEX_SUMMARY;
+  if (key === 'canvas-deadline-tracker') return CANVAS_TRACKER_SUMMARY;
   return PAGE_CONTENT[key];
 }

@@ -1,9 +1,11 @@
 import { enAlternates } from '@/lib/hreflang';
+import { OG_DEFAULTS } from '@/lib/og';
 export const metadata = {
   title: 'What Grade Do I Need on My Final Exam?',
   description:
     'The formula for the score you need on a final, worked through with real weightings, plus the four ways students get the answer wrong.',
   alternates: enAlternates('/blog/grade-needed-on-final-exam'),
+  openGraph: { url: '/blog/grade-needed-on-final-exam', ...OG_DEFAULTS, type: 'article', publishedTime: '2026-08-09' },
 }
 
 import { JsonLd } from '@/components/JsonLd'
@@ -48,6 +50,7 @@ export const faqItems = [
   description: metadata.description,
   slug: 'grade-needed-on-final-exam',
   datePublished: '2026-08-09',
+  image: '/illustrations/final-grade-target.svg',
 })} />
 
 <JsonLd data={faqPageSchema(faqItems)} />

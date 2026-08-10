@@ -79,7 +79,7 @@ export const PRO_ANNUAL_SAVINGS_PCT = Math.round(
 // over — they do not. Do not drop this line.
 export const FREE_FEATURES = [
   '5 syllabus scans per calendar month',
-  'Up to 4 courses, in one semester',
+  'Up to 4 courses within one semester; one semester total on free',
   'Full deadline and task tracking',
   'Grade tracking with weighted averages',
   'Same-day reminders',
@@ -194,7 +194,7 @@ export const FEATURES: FeatureFact[] = [
     slug: 'canvas-sync',
     name: 'Canvas Sync',
     shortDescription:
-      'Import assignments from Canvas, Blackboard, or Moodle with a token you generate yourself. No OAuth app review.',
+      'Import assignments from Canvas, Blackboard, or Moodle when your institution permits the connection.',
     // Pro, NOT free. Gated in three places in the shipping app: a server-side
     // is_pro() check in supabase/functions/lms-sync (402 PRO_REQUIRED), the
     // provider list in app/settings/lms.tsx, and a paywall bounce in
@@ -202,7 +202,7 @@ export const FEATURES: FeatureFact[] = [
     // user who installs on that promise hits a paywall at the first tap.
     tier: 'pro',
     description:
-      "Semora imports assignments from Canvas, and from Blackboard or Moodle, using a personal access token you generate yourself in the platform's own settings, rather than an OAuth connection that depends on your school's IT department approving a third-party app review. Connecting a learning platform is part of Pro; on the free tier you can still get Canvas coursework in by pasting the assignment text straight into the syllabus scanner.",
+      "Learning-platform import is part of Pro. The shipping Canvas connector currently uses a personal access token generated in Canvas. Some institutions disable token creation or prohibit third-party token use, so confirm your school's policy before connecting. If the connector is unavailable or not permitted, scan the syllabus or paste the assignment list into Semora's scanner instead. Blackboard and Moodle setup can also vary by school.",
   },
 ];
 

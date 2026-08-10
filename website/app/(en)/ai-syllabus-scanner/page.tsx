@@ -12,7 +12,7 @@ import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
 
 export const metadata: Metadata = {
-  title: 'AI Syllabus Scanner: Turn a Syllabus Photo into a Semester Calendar',
+  title: 'AI Syllabus Scanner: Photo or PDF to Calendar',
   description:
     'Semora is an AI syllabus scanner that automatically turns a syllabus photo or PDF into a full calendar of deadlines, grades, and class times.',
   alternates: enAlternates('/ai-syllabus-scanner'),
@@ -27,12 +27,12 @@ const FAQ = [
   {
     question: 'How many syllabi can I scan for free?',
     answer:
-      'The free tier includes 5 syllabus scans per calendar month and supports up to 4 courses in one semester, with full task tracking and grade tracking included. Calendar sync (device + .ics export) is a Pro feature.',
+      'The free tier includes 5 syllabus scans per calendar month and supports up to 4 courses within one semester, with one semester total on free. Full task tracking and grade tracking are included. Calendar sync (device + .ics export) is a Pro feature.',
   },
   {
     question: 'Does Semora sync with Canvas?',
     answer:
-      'Yes. You connect Canvas by generating a personal access token yourself inside Canvas. Semora does not require a separate OAuth app approval for this to work.',
+      "Canvas import is a Pro feature. The current connector uses a personal access token generated in Canvas. Some institutions disable or prohibit third-party token use, so confirm your school's policy. If it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list instead.",
   },
   {
     question: 'Does scanning a syllabus also track my grades, not just deadlines?',
@@ -43,7 +43,8 @@ const FAQ = [
 
 const TABLE_ROWS = [
   { feature: 'Syllabus scans', free: '5 per calendar month', pro: 'Unlimited' },
-  { feature: 'Courses per semester', free: 'Up to 4', pro: 'Unlimited' },
+  { feature: 'Courses', free: 'Up to 4 within one semester', pro: 'Unlimited' },
+  { feature: 'Semesters', free: '1 total', pro: 'Unlimited' },
   { feature: 'Task & deadline tracking', free: 'Full', pro: 'Full' },
   { feature: 'Grade tracking', free: 'Included', pro: 'Included' },
   { feature: 'Reminders', free: 'Same-day', pro: 'Custom timing (1-day / 3-day)' },
@@ -137,8 +138,10 @@ export default function AiSyllabusScannerPage() {
       <h2>Beyond the Scan: Canvas Sync and Shared Courses</h2>
       <h3>Canvas LMS Sync</h3>
       <p>
-        If your school uses Canvas, you can connect it directly by generating a personal access
-        token yourself inside Canvas. No institutional app approval required.
+        Canvas import is available on Pro through the current personal-access-token connector. Some
+        institutions disable or prohibit third-party token use, so confirm your school&apos;s policy.
+        If it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list
+        into the scanner instead.
       </p>
       <h3>Course Collaboration (&quot;Course Spaces&quot;)</h3>
       <p>

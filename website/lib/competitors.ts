@@ -63,7 +63,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Canvas / LMS sync',
         semora:
-          'Canvas, Blackboard and Moodle import via a personal-access token you generate yourself — no OAuth app-review dependency. Connecting a platform is a Pro feature.',
+          'Canvas, Blackboard, and Moodle import is a Pro feature. The current Canvas connector uses a personal access token generated in Canvas and should be used only where the institution permits third-party token connections. If it is unavailable or not permitted, scan the syllabus or paste the assignment list into Semora.',
         competitor: 'Read-only sync with Canvas, Blackboard, and Moodle, merged into one timeline.',
       },
       {
@@ -83,7 +83,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Pricing',
         semora:
-          'Free: 5 scans/month, up to 4 courses, full deadline & grade tracking, same-day reminders. Pro: $3.99/month or $19.99/year for unlimited scans/courses plus calendar sync, Smart Plan, and other study tools.',
+          'Free: 5 scans/month, up to 4 courses within one semester, one semester total, full deadline & grade tracking, and same-day reminders. Pro: $3.99/month or $19.99/year for unlimited scans/courses plus calendar sync, Smart Plan, and other study tools.',
         competitor:
           'Currently free with no paid tier — site and App Store listing state "no paywalls" and "no credit card."',
       },
@@ -97,7 +97,7 @@ export const COMPETITORS: CompetitorFact[] = [
       'You want Progress Insights (trend charts and CSV export) layered on top of your grade tracking.',
       'You want an AI-generated study schedule (Smart Plan) or a workload dashboard that flags crunch weeks and exam-heavy stretches.',
       "You'd use flashcards, a Pomodoro-style focus timer, or an AI tutor chat that already knows your syllabus.",
-      'You want Canvas sync without waiting on an OAuth app-review process — Semora connects with a personal-access token you generate yourself (Pro).',
+      'You want Pro Canvas import through the current token connector, your institution permits it, and syllabus scanning or pasted assignment text as the fallback.',
       'You want to share a course with classmates (Course Spaces) with deadlines and group assignments syncing in real time.',
     ],
     whereCompetitorFits: [
@@ -111,12 +111,12 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Does Semora or DormWay sync with Canvas?',
         answer:
-          "Both do. Semora connects via a personal-access token you generate yourself inside Canvas, so there's no OAuth app-review wait. DormWay offers read-only sync with Canvas, Blackboard, and Moodle, merged into one timeline.",
+          "Semora's current Pro Canvas connector uses a personal access token generated in Canvas and may be disabled or prohibited by the institution. Confirm your school's policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora. DormWay offers read-only sync with Canvas, Blackboard, and Moodle, merged into one timeline.",
       },
       {
         question: 'Is Semora or DormWay free?',
         answer:
-          "Semora's free tier includes 5 syllabus scans per month, up to 4 courses per semester, full task/deadline tracking, grade tracking, and same-day reminders; Pro is $3.99/month or $19.99/year for unlimited scans and courses plus calendar sync and study-planning tools. DormWay is currently free with no paid tier, per its own pricing page and App Store listing.",
+          "Semora's free tier includes 5 syllabus scans per month, up to 4 courses within one semester, one semester total, full task/deadline tracking, grade tracking, and same-day reminders; Pro is $3.99/month or $19.99/year for unlimited scans and courses plus calendar sync and study-planning tools. DormWay is currently free with no paid tier, per its own pricing page and App Store listing.",
       },
       {
         question: 'How do Semora and DormWay handle grade tracking?',
@@ -145,7 +145,8 @@ export const COMPETITORS: CompetitorFact[] = [
       'Semora turns a photographed, uploaded, or pasted syllabus into an organized semester. You can import it by camera (multi-page, up to 5 pages), PDF upload, drag-and-drop on web, or by pasting raw text copied from a PDF or LMS page. OpenAI GPT-5.6 Luna reads the document and extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading along with its due date. From there, Semora tracks deadlines and grades on the free tier, and — on the Pro tier — adds device calendar sync (with .ics export), an adaptive study schedule, academic-risk alerts, flashcards, a focus timer, and an AI tutor that knows your syllabus.',
     competitorParagraph:
       'Shovel is a study-planning and scheduling app. You either upload a PDF syllabus for AI parsing, with a review/confirmation screen, or connect a school LMS (Canvas, Brightspace, Moodle, or Google Classroom) for read-only sync that auto-refreshes roughly every 24 hours. From there, Shovel builds a time-blocked study schedule across the whole semester, weighing available time against estimated time-per-task. Distinct features include "The Cushion™" predictive conflict alerts, reading-time estimators, streak-based motivation tracking, and free supplementary "how to study" courses.',
-    comparisonCaption: 'Comparison based on verified product details as of July 2026.',
+    comparisonCaption:
+      "Comparison based on verified product details checked August 9, 2026. Shovel's official Pricing and Buy pages showed conflicting prices on that date.",
     comparisonRows: [
       {
         feature: 'Syllabus & deadline handling',
@@ -156,7 +157,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Canvas / LMS sync',
         semora:
-          'Connects to Canvas via a personal-access-token you generate yourself in Canvas — no OAuth app-review dependency. (Google Classroom/Calendar exist in the codebase but are not currently shipped.)',
+          "Canvas import is a Pro feature. The current connector uses a personal access token generated in Canvas and may be disabled or prohibited by your institution. Confirm your school's policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora. Google Classroom and Google Calendar are not currently shipped.",
         competitor:
           'Read-only sync across Canvas, Brightspace, Moodle, and Google Classroom simultaneously, auto-refreshing roughly every 24 hours.',
       },
@@ -176,9 +177,9 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Pricing',
         semora:
-          'Free tier (5 scans/month, 4 courses); Pro is $3.99/month or $19.99/year, purchased as a subscription in the app and applied account-wide.',
+          'Free tier (5 scans/month, up to 4 courses within one semester, one semester total); Pro is $3.99/month or $19.99/year, purchased as a subscription in the app and applied account-wide.',
         competitor:
-          "Not consistently verifiable. Shovel's pricing page currently lists $9.79/month (discounted from $19.99) and $39/year after a 7-day free trial; other sources cite different figures. Check shovelapp.io/pricing directly.",
+          "Official pages conflicted when checked August 9, 2026. The Pricing page showed a 7-day free trial followed by $9.79/month (with $19.99 also displayed) or $39/year; the navigation-linked Buy page showed $33/month paid monthly or $16/month paid annually. Confirm the checkout amount.",
       },
       {
         feature: 'Platforms',
@@ -188,19 +189,19 @@ export const COMPETITORS: CompetitorFact[] = [
       },
     ],
     pricingWin:
-      "Semora Pro is $3.99/month or $19.99/year, less than half of Shovel's reported $9.79/month, and about half of Shovel's own $39/year plan.",
+      "Semora Pro is $3.99/month or $19.99/year. Shovel's conflicting official pages showed either a 7-day trial followed by $9.79/month or $39/year, or $33/month paid monthly and $16/month paid annually; confirm the checkout amount.",
     extraSections: [
       {
         heading: 'Syllabus import, in detail',
         body: [
-          'Semora accepts four import paths (camera photo (up to 5 pages per scan), PDF upload, drag-and-drop on web, or pasted raw text copied from a PDF or LMS page) and uses OpenAI GPT-5.6 Luna to extract structured course data: name, instructor, meeting times, office hours, semester dates, grading scale, and every graded item with its due date. The free tier includes 5 syllabus scans per calendar month across up to 4 courses per semester.',
+          'Semora accepts four import paths (camera photo (up to 5 pages per scan), PDF upload, drag-and-drop on web, or pasted raw text copied from a PDF or LMS page) and uses OpenAI GPT-5.6 Luna to extract structured course data: name, instructor, meeting times, office hours, semester dates, grading scale, and every graded item with its due date. The free tier includes 5 syllabus scans per calendar month across up to 4 courses within one semester, with one semester total on free.',
           "Shovel's stated import path is a PDF upload that AI parses, followed by a review/confirmation step before the schedule is built, or connecting an LMS directly so assignments come in via sync rather than a scan.",
         ],
       },
       {
         heading: 'Canvas & LMS sync, in detail',
         body: [
-          "Semora's Canvas connection uses a personal-access-token that you generate yourself inside Canvas, which means it doesn't depend on Canvas or Google OAuth app review to function. Google Classroom and Google Calendar sync exist in Semora's codebase but are not currently enabled or shipped — they should not be treated as available features today.",
+          "Semora's current Pro Canvas connector uses a personal access token generated in Canvas and may be disabled or prohibited by the institution. Confirm your school's policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora. Google Classroom and Google Calendar sync exist in Semora's codebase but are not currently enabled or shipped — they should not be treated as available features today.",
           'Shovel advertises read-only sync across four LMS platforms at once — Canvas, Brightspace, Moodle, and Google Classroom — auto-refreshing roughly every 24 hours to reflect due-date changes or new assignments.',
         ],
       },
@@ -227,10 +228,10 @@ export const COMPETITORS: CompetitorFact[] = [
       },
     ],
     whereSemoraFits: [
-      'You want a genuine, ongoing free tier (5 scans/month, up to 4 courses) rather than a subscription-gated planner.',
+      'You want a genuine free tier for one semester (5 scans/month and up to 4 courses within that single term) rather than a subscription-gated planner.',
       'You want grade tracking as a first-class feature, not a scheduling tool with no gradebook.',
       'You want to share a course with classmates via Course Spaces, with deadlines and group assignments syncing in real time.',
-      'You want Canvas sync without an OAuth dependency — Semora connects via a personal-access token you generate yourself (Pro).',
+      'You want Pro Canvas import through the current token connector, your institution permits it, and syllabus scanning or pasted assignment text as the fallback.',
     ],
     whereCompetitorFits: [
       'You want time-blocked scheduling — weighing available time against estimated time-per-task — as the core product, not an add-on.',
@@ -239,17 +240,17 @@ export const COMPETITORS: CompetitorFact[] = [
       'Features like "The Cushion™" conflict alerts, reading-time estimators, or free supplementary study courses matter to you.',
     ],
     extraNote:
-      "Semora launched recently and does not yet have a public rating history to report — we're not going to invent one. Shovel is subscription-based with pricing that varies by source; check its current App Store rating and pricing page directly before deciding.",
+      "Semora launched recently and does not yet have a public rating history to report — we're not going to invent one. Shovel is subscription-based, and its official Pricing and navigation-linked Buy pages showed conflicting prices when checked August 9, 2026; confirm the checkout amount before deciding.",
     faq: [
       {
         question: 'Does Semora sync with Canvas the same way Shovel does?',
         answer:
-          "Not quite. Semora connects to Canvas using a personal-access-token you generate yourself inside Canvas, so it doesn't depend on Canvas or Google OAuth app review. Shovel connects via a read-only sync that covers Canvas alongside Brightspace, Moodle, and Google Classroom, auto-refreshing roughly every 24 hours. Semora does not currently offer live Google Classroom or Google Calendar sync — that code exists internally but isn't shipped.",
+          "Not quite. Semora's current Pro Canvas connector uses a personal access token generated in Canvas and may be disabled or prohibited by the institution. Confirm your school's policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora. Shovel connects via a read-only sync that covers Canvas alongside Brightspace, Moodle, and Google Classroom, auto-refreshing roughly every 24 hours. Semora does not currently offer live Google Classroom or Google Calendar sync — that code exists internally but isn't shipped.",
       },
       {
         question: 'Is Semora or Shovel free to use?',
         answer:
-          "Semora has an ongoing free tier: 5 syllabus scans per month, up to 4 courses per semester, full deadline and grade tracking, and same-day reminders, with no time limit on how long you can use it (calendar sync with .ics export is a Pro feature). Shovel's core planner is subscription-gated; the most consistent detail across sources is a 7-day free trial before billing starts, though reported prices vary by source.",
+          "Semora has a free tier for one semester total: 5 syllabus scans per month, up to 4 courses within that semester, full deadline and grade tracking, and same-day reminders, with no countdown timer (calendar sync with .ics export is a Pro feature). Shovel's core planner is subscription-gated. Its official Pricing page advertised a 7-day free trial when checked August 9, 2026, while its navigation-linked Buy page did not mention a trial; confirm the offer at checkout.",
       },
       {
         question: 'Does Semora build a study schedule like Shovel does?',
@@ -259,7 +260,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'What does Semora cost compared to Shovel?',
         answer:
-          "Semora Pro is $3.99/month or $19.99/year, purchased as a subscription inside the app and applied account-wide, including on web. Shovel's own pricing page currently lists $9.79/month (discounted from $19.99) and $39/year after a 7-day free trial, but other sources cite different figures (around $20/month, roughly $200/year, or a separate lifetime tier), so treat any single number as unverified and check Shovel's current pricing page directly.",
+          "Semora Pro is $3.99/month or $19.99/year, purchased as a subscription inside the app and applied account-wide, including on web. Shovel's official pages conflicted when checked August 9, 2026: the Pricing page showed a 7-day free trial followed by $9.79/month (with $19.99 also displayed) or $39/year, while the navigation-linked Buy page showed $33/month paid monthly or $16/month paid annually. Confirm the checkout amount.",
       },
     ],
   },
@@ -291,7 +292,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Canvas LMS sync',
         semora:
-          'Yes. Connects via a personal-access-token the student generates themselves in Canvas, so it does not depend on Google/Canvas OAuth app review or on the school setting anything up.',
+          "Canvas import is a Pro feature. The current connector uses a personal access token generated in Canvas and may be disabled or prohibited by your institution. Confirm your school's policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora.",
         competitor:
           'Yes, but a different integration model. StudyFetch documents an LTI 1.3 integration with Canvas (also Blackboard, Schoology, D2L Brightspace, and Google Classroom) with roster sync, deployed by the institution rather than connected by an individual student.',
       },
@@ -312,7 +313,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Pricing',
         semora:
-          'Free: 5 syllabus scans/month, up to 4 courses, full deadline and grade tracking, same-day reminders. Pro: $3.99/month or $19.99/year for unlimited scans/courses plus calendar sync (device + .ics export) and other study tools, purchased in the app and applied account-wide.',
+          'Free: 5 syllabus scans/month, up to 4 courses within one semester, one semester total, full deadline and grade tracking, and same-day reminders. Pro: $3.99/month or $19.99/year for unlimited scans/courses plus calendar sync (device + .ics export) and other study tools, purchased in the app and applied account-wide.',
         competitor:
           "Reported by third-party review sites, not confirmed directly on StudyFetch's own pricing page: a free tier (10 Spark.E chats, 1 study set, 2 uploads), a Base tier around $7.99/month, a Premium tier around $11.99/month, a semester bundle around $49.99, and an annual plan around $99.99. Check StudyFetch's current pricing page for exact figures.",
       },
@@ -345,7 +346,7 @@ export const COMPETITORS: CompetitorFact[] = [
       },
     ],
     verdict: [
-      "Choose Semora if your main problem is turning a stack of course syllabi into one organized semester — deadlines, grades, and a schedule you can trust — especially if your school uses Canvas and you want a token-based connection without an OAuth app-review dependency.",
+      "Choose Semora if your main problem is turning a stack of course syllabi into one organized semester — deadlines, grades, and a schedule you can trust. If your school uses Canvas, Semora's current Pro connector uses a personal access token and should be used only where your institution permits it; otherwise, scan the syllabus or paste the assignment list.",
       'Choose StudyFetch if you want a single tool to also ingest lecture recordings, slides, and notes, and generate flashcards, quizzes, exam simulations, and tutoring chat directly from that material, with syllabus-to-calendar scanning as a secondary convenience rather than the main workflow.',
       'Some students may reasonably use both: Semora for the semester-wide deadline and grade picture, StudyFetch for deep, material-specific study help on individual courses.',
     ],
@@ -358,12 +359,12 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Does StudyFetch sync with Canvas?',
         answer:
-          "Yes — StudyFetch documents an LTI 1.3 integration with Canvas (as well as Blackboard, Schoology, D2L Brightspace, and Google Classroom), including roster sync. It's deployed at the institution level, though, so a school sets it up rather than an individual student connecting their own account. Semora's Canvas connection works differently: a student generates a personal-access-token themselves in Canvas, which avoids any Google/Canvas OAuth app-review dependency and doesn't require the school to enable anything.",
+          "Yes — StudyFetch documents an LTI 1.3 integration with Canvas (as well as Blackboard, Schoology, D2L Brightspace, and Google Classroom), including roster sync. It's deployed at the institution level, though, so a school sets it up rather than an individual student connecting their own account. Semora's current Pro Canvas connector instead uses a personal access token generated in Canvas and may be disabled or prohibited by the institution. Confirm your school's policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora.",
       },
       {
         question: 'Can I use Semora or StudyFetch for free?',
         answer:
-          "Semora's free tier includes 5 syllabus scans per calendar month, up to 4 courses per semester, full task/deadline tracking, grade tracking, and same-day reminders (calendar sync with .ics export is a Pro feature). StudyFetch is reported (via third-party review sites, not confirmed on StudyFetch's own site) to offer a free tier limited to 10 Spark.E chats, 1 study set, and 2 uploads — check StudyFetch's current pricing page to confirm exact free-tier limits.",
+          "Semora's free tier includes 5 syllabus scans per calendar month, up to 4 courses within one semester, one semester total, full task/deadline tracking, grade tracking, and same-day reminders (calendar sync with .ics export is a Pro feature). StudyFetch is reported (via third-party review sites, not confirmed on StudyFetch's own site) to offer a free tier limited to 10 Spark.E chats, 1 study set, and 2 uploads — check StudyFetch's current pricing page to confirm exact free-tier limits.",
       },
       {
         question: 'Which app has an AI tutor?',
@@ -382,13 +383,13 @@ export const COMPETITORS: CompetitorFact[] = [
       'Compare Semora and Mindgrasp: syllabus deadline tracking and Canvas sync vs. AI notes and flashcards from any file. Features, pricing, platforms.',
     lede: 'Semora turns a course syllabus into an organized, deadline-tracked semester with grades and a calendar, while Mindgrasp turns any single document, video, or lecture recording you upload into notes, flashcards, and quizzes — they solve different problems and can be used alongside each other.',
     intro:
-      "If you're comparing the two, the short version is this: Semora is built around your syllabus — it reads the PDF or photo you give it and builds your semester calendar, task list, and grade tracker from it. Mindgrasp is built around your study material  (lecture recordings, PDFs, slides, videos) and turns whatever you feed it into notes, flashcards, and a quiz. Read on for how each one actually works, a side-by-side feature table, and honest guidance on which fits your situation.",
+      "If you're comparing the two, the short version is this: Semora is built around your syllabus — it reads the PDF or photo you give it and builds your semester calendar, task list, and grade tracker from it. Mindgrasp is built around your study material (lecture recordings, PDFs, slides, videos) and turns whatever you feed it into notes, flashcards, and a quiz. Read on for how each one actually works, a side-by-side feature table, and honest guidance on which fits your situation.",
     semoraParagraph:
-      'Semora (iPhone, iPad, and web) starts with your syllabus. You can import it by taking a photo (including multi-page scans, up to 5 pages), uploading a PDF, dragging a file onto the web app, or pasting raw text copied from a PDF or your school\'s LMS page. OpenAI GPT-5.6 Luna then extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading, each with its due date, and builds them into your semester automatically. The free tier includes 5 syllabus scans per calendar month, up to 4 courses per semester, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited scans and courses, Smart Plan, a Workload dashboard, Grade Scale & Forecasting, spaced-repetition Flashcards, a Focus timer, an AI tutor, custom reminder timing, calendar sync (device + .ics export), Academic Risk alerts, Progress Insights, and Share & Streaks. Semora also connects to Canvas using a personal-access-token you generate yourself inside Canvas , no OAuth app-review process involved, and supports Course Spaces, where you can share a course with classmates via an invite link so shared deadlines and group assignments sync in real time (hosting a space is Pro; joining one is free). Web, iPhone, and iPad share one account and sync in near real time. (Google Classroom and Google Calendar sync exist in Semora\'s codebase but are not currently enabled or shipped — they aren\'t live features today.)',
+      'Semora (iPhone, iPad, and web) starts with your syllabus. You can import it by taking a photo (including multi-page scans, up to 5 pages), uploading a PDF, dragging a file onto the web app, or pasting raw text copied from a PDF or your school\'s LMS page. OpenAI GPT-5.6 Luna then extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading, each with its due date, and builds them into your semester automatically. The free tier includes 5 syllabus scans per calendar month, up to 4 courses within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited scans and courses, Smart Plan, a Workload dashboard, Grade Scale & Forecasting, spaced-repetition Flashcards, a Focus timer, an AI tutor, custom reminder timing, calendar sync (device + .ics export), Academic Risk alerts, Progress Insights, and Share & Streaks. The current Pro Canvas connector uses a personal access token generated in Canvas and may be disabled or prohibited by the institution. Confirm your school\'s policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora. Course Spaces let you share a course with classmates via an invite link so shared deadlines and group assignments sync in real time (hosting a space is Pro; joining one is free). Web, iPhone, and iPad share one account and sync in near real time. (Google Classroom and Google Calendar sync exist in Semora\'s codebase but are not currently enabled or shipped — they aren\'t live features today.)',
     competitorParagraph:
       'Mindgrasp takes a different starting point: you upload or link a piece of content — a PDF, DOCX, PowerPoint, MP3/MP4, YouTube video, web article, or a lecture you record live, and it generates a linked bundle of AI notes, a summary, flashcards, a quiz, and an "AI Tutor" chat for asking questions about that content. A higher Scholar/Premium tier adds an "AI math expert" for step-by-step math help, and there\'s a Chrome extension for capturing content from the browser. Mindgrasp also states compatibility with Canvas, Blackboard, and Panopto, though this appears to be for importing or processing files from those platforms rather than parsing a syllabus for deadlines. Mindgrasp\'s marketing targets a broad range of learners — high school through graduate students, self-learners, professionals, and exam-prep candidates.',
     comparisonCaption:
-      "Based on Semora's shipped features and Mindgrasp's publicly available materials as of this writing.",
+      "Based on Semora's shipped features and Mindgrasp's public materials checked August 9, 2026. Mindgrasp pricing uses the official plan picker's Yearly selector.",
     comparisonRows: [
       {
         feature: 'Syllabus & deadline handling',
@@ -400,7 +401,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Canvas sync',
         semora:
-          'Connects via a personal-access-token you generate yourself in Canvas — no OAuth app-review dependency.',
+          "Canvas import is a Pro feature. The current connector uses a personal access token generated in Canvas and may be disabled or prohibited by your institution. Confirm your school's policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora.",
         competitor:
           'States compatibility with Canvas (along with Blackboard and Panopto), appearing to support importing/processing files from those platforms rather than syllabus or deadline parsing.',
       },
@@ -421,9 +422,9 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Pricing',
         semora:
-          'Free tier available (5 scans/month, 4 courses). Pro is $3.99/month or $19.99/year, purchased in the app, applying account-wide including on web.',
+          'Free tier available (5 scans/month, up to 4 courses within one semester, one semester total). Pro is $3.99/month or $19.99/year, purchased in the app, applying account-wide including on web.',
         competitor:
-          "Not listed on Mindgrasp's own site at the time of this writing. Third-party review sites report roughly $5.99–$10.99/month across tiers (cheaper billed annually) with a short free trial — check Mindgrasp's current pricing directly to confirm.",
+          "The official plan picker, with Yearly selected on August 9, 2026, showed Basic at $5.99/month billed $71.88 once per year, Scholar at $8.99/month billed $107.88 once per year, and Premium at $10.99/month billed $131.88 once per year. The official site advertises a free trial; confirm the offer and any monthly-billing prices at checkout.",
       },
       {
         feature: 'Platform availability',
@@ -433,11 +434,11 @@ export const COMPETITORS: CompetitorFact[] = [
       },
     ],
     pricingWin:
-      "Semora Pro at $3.99/month undercuts even the low end of Mindgrasp's reported $5.99–$10.99/month range, per third-party review coverage.",
+      "Semora Pro is $3.99/month or $19.99/year. Mindgrasp's official Yearly view starts at $5.99/month billed $71.88 once per year, so Semora's listed monthly and annual prices are lower; checked August 9, 2026.",
     whereSemoraFits: [
       'Want your syllabus turned into a calendar of deadlines automatically, instead of copying dates by hand',
       'Want grades, assignments, and class schedule tracked in one place all semester',
-      'Use Canvas and want a simple, self-service way to connect it',
+      'Want Pro Canvas import through the current token connector, your institution permits it, and syllabus scanning or pasted assignment text as the fallback',
       'Want an AI-generated study schedule that adapts as deadlines change',
       'Want to share a course and its deadlines with classmates',
     ],
@@ -458,17 +459,17 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Is Semora free to use?',
         answer:
-          'Yes. Semora\'s free tier includes 5 syllabus scans per calendar month, up to 4 courses per semester, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) unlocks unlimited scans and courses plus additional features like Smart Plan, calendar sync, Flashcards, and an AI tutor.',
+          'Yes. Semora\'s free tier includes 5 syllabus scans per calendar month, up to 4 courses within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) unlocks unlimited scans and courses plus additional features like Smart Plan, calendar sync, Flashcards, and an AI tutor.',
       },
       {
         question: 'Does Semora sync with Canvas?',
         answer:
-          "Yes. You connect Canvas using a personal-access-token you generate yourself inside Canvas, so there's no OAuth app-review process to wait on. Google Classroom and Google Calendar sync exist in Semora's codebase but are not currently enabled or shipped as live features.",
+          "Semora's current Pro Canvas connector uses a personal access token generated in Canvas and may be disabled or prohibited by the institution. Confirm your school's policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora. Google Classroom and Google Calendar sync exist in Semora's codebase but are not currently enabled or shipped as live features.",
       },
       {
         question: 'Which is cheaper, Semora or Mindgrasp?',
         answer:
-          "Semora's pricing is confirmed directly: free, or Pro at $3.99/month or $19.99/year. Mindgrasp doesn't publish pricing on its own site as of this writing; third-party review sites report tiers of roughly $5.99–$10.99/month (less if billed annually), but that figure isn't confirmed by Mindgrasp itself, so it's worth checking their current pricing before comparing directly.",
+          "Semora's pricing is confirmed directly: free, or Pro at $3.99/month or $19.99/year. Mindgrasp's official plan picker, with Yearly selected on August 9, 2026, showed Basic at $5.99/month billed $71.88 once per year, Scholar at $8.99/month billed $107.88 once per year, and Premium at $10.99/month billed $131.88 once per year. Semora's listed monthly and annual prices are lower, but confirm Mindgrasp's current offer and billing cadence at checkout.",
       },
     ],
   },
@@ -499,7 +500,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Canvas LMS sync',
         semora:
-          'Connects to Canvas via a personal-access token you generate yourself inside Canvas — no OAuth app-review dependency. Pro feature.',
+          "Canvas import is a Pro feature. The current connector uses a personal access token generated in Canvas and may be disabled or prohibited by your institution. Confirm your school's policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora.",
         competitor: 'No LMS integrations (Canvas, Blackboard, etc.) evident in its public feature set.',
       },
       {
@@ -518,7 +519,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Pricing',
         semora:
-          'Free: 5 syllabus scans/month, up to 4 courses, full task and grade tracking, same-day reminders. Pro: $3.99/month or $19.99/year for unlimited scans and courses plus calendar sync and all other Pro features.',
+          'Free: 5 syllabus scans/month, up to 4 courses within one semester, one semester total, full task and grade tracking, and same-day reminders. Pro: $3.99/month or $19.99/year for unlimited scans and courses plus calendar sync and all other Pro features.',
         competitor:
           "Free: 1 user, 3 apps, one-time AI credits. Taskade's own pricing page lists Pro at $10/month billed annually; Business at $25/month billed annually; Max at $100/month billed annually. Non-annual (monthly-billed) rates are not publicly confirmed, and third-party sites report inconsistent numbers — check Taskade's current pricing page directly.",
       },
@@ -535,7 +536,7 @@ export const COMPETITORS: CompetitorFact[] = [
       "Semora Pro is $3.99/month or $19.99/year. Taskade's own pricing page lists Pro at $10/month billed annually (about $120/year), though Taskade is priced and built for teams, not individual students, so the two aren't a direct apples-to-apples comparison.",
     whereSemoraFits: [
       'You want deadlines and grades populated automatically from a syllabus photo or PDF instead of typing them in by hand.',
-      "You use Canvas and want a sync option that doesn't depend on an OAuth app-review process.",
+      'You want Pro Canvas import through the current token connector, your institution permits it, and syllabus scanning or pasted assignment text as the fallback.',
       'You want study tools built specifically around your own material — flashcards from your syllabus, a Pomodoro timer, an AI tutor that already knows your assignments, and alerts when a grade slips or a week is overloaded.',
       'You want to split a course with classmates — Course Spaces lets you share a course via an invite link with deadlines and group assignments syncing in real time.',
       'You move between an iPhone, an iPad, and a browser and want one account that stays in sync in near real time.',
@@ -555,12 +556,12 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Does Semora integrate with Canvas?',
         answer:
-          "Yes. You connect Canvas using a personal-access token you generate yourself inside Canvas, which avoids any dependency on Canvas's OAuth app-review process.",
+          "Semora's current Pro Canvas connector uses a personal access token generated in Canvas and may be disabled or prohibited by the institution. Confirm your school's policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora.",
       },
       {
         question: 'Which is cheaper for a student?',
         answer:
-          "Semora's free tier includes 5 syllabus scans a month across up to 4 courses with full deadline and grade tracking, and Pro is $3.99/month or $19.99/year. Taskade's free tier gives one user 3 apps and one-time AI credits, and Taskade's own pricing page lists Pro at $10/month billed annually — its plans and pricing are structured more around teams and seat counts than individual student use.",
+          "Semora's free tier includes 5 syllabus scans a month across up to 4 courses within one semester, with one semester total, plus full deadline and grade tracking; Pro is $3.99/month or $19.99/year. Taskade's free tier gives one user 3 apps and one-time AI credits, and Taskade's own pricing page lists Pro at $10/month billed annually — its plans and pricing are structured more around teams and seat counts than individual student use.",
       },
       {
         question: 'Can I use either one on iPhone, iPad, and web with the same account?',
@@ -595,7 +596,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Canvas sync',
         semora:
-          'Connects via a personal-access token you generate yourself in Canvas — no OAuth app-review dependency. Pro feature.',
+          "Canvas import is a Pro feature. The current connector uses a personal access token generated in Canvas and may be disabled or prohibited by your institution. Confirm your school's policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora.",
         competitor: "Not publicly described. No LMS integration is mentioned in Studley AI's available materials.",
       },
       {
@@ -615,7 +616,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Pricing',
         semora:
-          'Free tier available (5 scans/month, 4 courses). Pro is $3.99/month or $19.99/year, purchased in the app, applying account-wide including on web.',
+          'Free tier available (5 scans/month, up to 4 courses within one semester, one semester total). Pro is $3.99/month or $19.99/year, purchased in the app, applying account-wide including on web.',
         competitor:
           'Free: 1 study set per day. Unlimited: reported at $12.88/month or $97.76/year, per third-party review coverage of the app — check Studley AI\'s current pricing directly to confirm.',
       },
@@ -630,7 +631,7 @@ export const COMPETITORS: CompetitorFact[] = [
     whereSemoraFits: [
       'Want your syllabus turned into a calendar of deadlines automatically, instead of typing them in by hand',
       'Want grades, assignments, and class schedule tracked in one place all semester, included free',
-      'Use Canvas and want a simple, self-service way to connect it',
+      'Want Pro Canvas import through the current token connector, your institution permits it, and syllabus scanning or pasted assignment text as the fallback',
       'Want an AI-generated study schedule that adapts as deadlines change',
     ],
     whereCompetitorFits: [
@@ -650,12 +651,12 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Is Semora or Studley AI free to use?',
         answer:
-          "Semora's free tier includes 5 syllabus scans per calendar month, up to 4 courses per semester, full task and deadline tracking, grade tracking, and same-day reminders (calendar sync with .ics export is a Pro feature). Studley AI's free tier is reported as 1 study set per day, with an Unlimited plan around $12.88/month or $97.76/year per third-party review coverage.",
+          "Semora's free tier includes 5 syllabus scans per calendar month, up to 4 courses within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders (calendar sync with .ics export is a Pro feature). Studley AI's free tier is reported as 1 study set per day, with an Unlimited plan around $12.88/month or $97.76/year per third-party review coverage.",
       },
       {
         question: 'Does Studley AI sync with Canvas?',
         answer:
-          "Not publicly described. No Canvas or other LMS integration is mentioned in Studley AI's available materials. Semora connects to Canvas using a personal-access token you generate yourself, with no OAuth app-review wait.",
+          "Not publicly described. No Canvas or other LMS integration is mentioned in Studley AI's available materials. Semora's current Pro Canvas connector uses a personal access token generated in Canvas and may be disabled or prohibited by the institution. Confirm your school's policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora.",
       },
       {
         question: 'Which is cheaper, Semora or Studley AI?',
@@ -690,7 +691,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Canvas / LMS sync',
         semora:
-          'Connects to Canvas via a personal-access token you generate yourself — no OAuth app-review dependency.',
+          "Canvas import is a Pro feature. The current connector uses a personal access token generated in Canvas and may be disabled or prohibited by your institution. Confirm your school's policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora.",
         competitor:
           'Imports from Canvas, D2L, Google Classroom, Blackboard, and Schoology; a premium account auto-updates the planner with new assignments going forward, per the app\'s own help documentation.',
       },
@@ -711,7 +712,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Pricing',
         semora:
-          'Free tier available (5 scans/month, 4 courses). Pro is $3.99/month or $19.99/year, purchased in the app, applying account-wide including on web.',
+          'Free tier available (5 scans/month, up to 4 courses within one semester, one semester total). Pro is $3.99/month or $19.99/year, purchased in the app, applying account-wide including on web.',
         competitor:
           'Free version with ads. An ad-free premium tier is reported around $4.99/year via third-party reviews (not confirmed on myHomework\'s current site), adding file attachments, external calendar access, planner sharing, and LMS imports.',
       },
@@ -724,7 +725,7 @@ export const COMPETITORS: CompetitorFact[] = [
     whereSemoraFits: [
       'Want deadlines and grades extracted automatically from a syllabus instead of typing every assignment in by hand',
       'Want grade tracking with a weighted average included free',
-      'Want Canvas sync via a personal access token you generate yourself, with no OAuth wait (Pro)',
+      'Want Pro Canvas import through the current token connector, your institution permits it, and syllabus scanning or pasted assignment text as the fallback',
       'Want study tools — Smart Plan, Flashcards, a Focus timer, an AI tutor — built around your own courses',
     ],
     whereCompetitorFits: [
@@ -746,7 +747,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Does myHomework sync with Canvas?',
         answer:
-          "Yes. myHomework can import assignments from Canvas along with D2L, Google Classroom, Blackboard, and Schoology, and a premium account auto-updates the planner with new assignments going forward. Semora's Canvas connection instead uses a personal-access token generated inside Canvas, with no OAuth app-review wait.",
+          "Yes. myHomework can import assignments from Canvas along with D2L, Google Classroom, Blackboard, and Schoology, and a premium account auto-updates the planner with new assignments going forward. Semora's current Pro Canvas connector uses a personal access token generated in Canvas and may be disabled or prohibited by the institution. Confirm your school's policy; if it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list into Semora.",
       },
       {
         question: 'Which has more study tools beyond a calendar?',

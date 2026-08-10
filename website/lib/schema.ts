@@ -133,17 +133,27 @@ export function articleSchema(post: {
   path?: string;
   datePublished: string;
   dateModified?: string;
+  /** Article image, as either an absolute URL or a site-relative path. */
+  image?: string;
   /** 'en' | 'es'. Emitted so each locale's article is described in its own
    *  language rather than inheriting the site default. */
   inLanguage?: string;
 }): WithContext<Article> {
   const url = post.path ? `${SITE_URL}${post.path}` : `${SITE_URL}/blog/${post.slug}`;
+  const image = post.image
+    ? new URL(post.image, `${SITE_URL}/`).toString()
+    : undefined;
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.title,
     description: post.description,
     url,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': url,
+    },
+    ...(image ? { image } : {}),
     datePublished: post.datePublished,
     dateModified: post.dateModified ?? post.datePublished,
     inLanguage: post.inLanguage ?? 'en',

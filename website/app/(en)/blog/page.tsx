@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   // none of the terms these posts are actually about.
   title: 'College Study & Semester Planning Guides',
   description:
-    'Guides for college students on turning a syllabus into a semester calendar, calculating a weighted GPA, getting Canvas deadline reminders, and building a study plan that holds.',
+    'College guides for turning syllabi into calendars, calculating weighted grades, improving Canvas reminders, planning finals, and studying effectively.',
   alternates: enAlternates('/blog'),
 };
 

@@ -61,13 +61,13 @@ const SHOWCASE: ShowcaseItem[] = [
   {
     image: '/screenshots/canvas-sync.png',
     alt: 'Semora Canvas sync settings screen showing connected courses and auto-sync status',
-    tier: 'free',
-    title: 'Sync with Canvas, without OAuth',
-    body: 'Connect Canvas using a personal access token you generate yourself inside Canvas. There is no OAuth app-review process to wait on. Once connected, assignments and grades import automatically, and reminders reschedule themselves when a deadline moves.',
+    tier: 'pro',
+    title: 'Import coursework from Canvas',
+    body: "Canvas import is a Pro feature. The current connector uses a personal access token generated in Canvas, and some institutions disable or prohibit third-party token use. Confirm your school's policy before connecting. When permitted, assignments and grades import automatically, and reminders reschedule themselves when a deadline moves.",
     bullets: [
-      'Personal access token, no OAuth wait',
+      'Personal-access-token connector on Pro',
       'Assignments and grades import automatically',
-      'Access tokens stay on your device',
+      'Syllabus scan or pasted assignment list when token use is unavailable or not permitted',
     ],
     href: '/features/canvas-sync',
   },

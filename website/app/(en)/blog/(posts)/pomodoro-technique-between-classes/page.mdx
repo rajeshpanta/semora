@@ -1,9 +1,11 @@
 import { enAlternates } from '@/lib/hreflang';
+import { OG_DEFAULTS } from '@/lib/og';
 export const metadata = {
-  title: 'The Pomodoro Technique Between Classes: A Real Schedule for College Students',
+  title: 'Pomodoro Between Classes: A College Schedule',
   description:
     'How to adapt the Pomodoro technique to the actual gaps in a college schedule, instead of the idealized unbroken hours it assumes.',
   alternates: enAlternates('/blog/pomodoro-technique-between-classes'),
+  openGraph: { url: '/blog/pomodoro-technique-between-classes', ...OG_DEFAULTS, type: 'article', publishedTime: '2026-07-24' },
 }
 
 import { JsonLd } from '@/components/JsonLd'
@@ -53,6 +55,8 @@ export const faqItems = [
   description: metadata.description,
   slug: 'pomodoro-technique-between-classes',
   datePublished: '2026-07-24',
+  dateModified: '2026-08-09',
+  image: '/illustrations/tomato-timer.svg',
 })} />
 
 <JsonLd data={faqPageSchema(faqItems)} />
@@ -71,6 +75,8 @@ The Pomodoro technique, developed by Francesco Cirillo, breaks work into focused
 
 Francesco Cirillo developed the Pomodoro technique in the late 1980s, as a university student looking for a way to actually get through his coursework instead of feeling permanently behind on it. He used a kitchen timer shaped like a tomato to track his work intervals — pomodoro is Italian for tomato — and the name stuck long after the technique itself started circulating well beyond the desk it was invented at. The mechanics are almost aggressively simple: 25 minutes of focused work, a 5-minute break, repeated four times, then a longer break. That simplicity is a large part of why it has outlasted plenty of more elaborate productivity systems — there's nothing to set up beyond a timer and a willingness to stop when it goes off.
 
+Cirillo's [official account of the technique's history](https://www.pomodorotechnique.com/francesco-cirillo/) confirms the student-era tomato timer; his [original guide](https://www.faasafety.gov/files/events/SO/SO15/2024/SO15134204/Cirillo_--_Pomodoro_Technique.pdf) defines the classic unit as 25 minutes of work plus a five-minute break.
+
 ## Why it works
 
 Sustained, undistracted focus is hard to maintain over long unbroken stretches. Attention naturally drifts, and pretending otherwise usually just means more time spent re-reading the same paragraph than actually absorbing it. Breaking a task into a defined 25-minute window doesn't eliminate that drift, but it gives it somewhere to land: the next lapse in focus is only a few minutes from a scheduled break, not an indefinite distance from the end of "studying for a while."
@@ -79,15 +85,15 @@ The defined end point matters on the front end too. "Study for a while" is vague
 
 The breaks matter as much as the work blocks. Pushing through fatigue without a break tends to produce diminishing returns: the fourth half hour of continuous work rarely produces as much as the first, even when the clock time is identical. A short break every 25 minutes resets the attention budget before it's fully spent, so the next block starts closer to full effectiveness instead of picking up wherever the previous one trailed off.
 
-None of this requires a specific study to make sense of — it matches what most people notice about their own attention once they pay attention to it: focus isn't a constant resource, starting is often the hardest part of a task, and short breaks feel disproportionately restorative relative to how brief they are.
+The timer is a structure for starting and pausing, not a guarantee that every learner or task will respond the same way. Treat 25 minutes as a starting point, keep the task and setting consistent for a week, and adjust the interval if your notes show that a different length helps you finish more meaningful work.
 
 ## The gap you actually have
 
-A more realistic version of a college day looks like this: fifty minutes between a 10 a.m. and a 11 a.m. class, an hour and a half over lunch, ninety minutes before a study group meets at 4. None of those are the clear, uninterrupted stretch a textbook description of Pomodoro assumes — but each one fits a Pomodoro cycle or two if you plan for the gap you actually have instead of the gap you wish you had.
+A more realistic version of a college day looks like this: fifty minutes between a 10 a.m. and an 11 a.m. class, an hour and a half over lunch, ninety minutes before a study group meets at 4. None of those are the clear, uninterrupted stretch a textbook description of Pomodoro assumes — but each one can hold useful work if you plan for the gap you actually have instead of the gap you wish you had.
 
 ## Matching cycles to real gaps
 
-- **A 50-minute gap between classes:** one 25-minute focus block, a 5-minute break, and a second 25-minute block — that's the whole gap, with no time left to also pack a bag and walk to the next room, so budget for that separately.
+- **A 50-minute gap between classes:** one 25-minute focus block, leaving roughly 25 minutes for packing up, walking, and settling into the next room. If the two classes are next door and you want more work time, use two 20-minute blocks with a 5-minute break and keep the last 5 minutes as a buffer.
 - **A 90-minute gap:** two full cycles (25 on, 5 off, 25 on, 5 off), leaving roughly 30 minutes as a buffer — useful for the walk to your next class, a snack, or simply not starting the next commitment already behind.
 - **A 3-hour block** (an evening with no class): the traditional four-cycle set — four 25-minute blocks with short breaks, then a longer 15–30 minute break — fits naturally, and is closer to what most Pomodoro guides are actually describing.
 
@@ -99,13 +105,13 @@ Not every task suits a 25-minute block equally well. Short, well-defined tasks �
 
 Take a fairly ordinary Tuesday: a 9 a.m. class, a gap from 10 to 10:50 a.m. before an 11 a.m. class, a lunch and gap window from noon to 1:30 p.m., a 2 p.m. class, and then a free evening. Mapped onto the cycle guidance above, that one day contains three different kinds of Pomodoro opportunity, each suited to a different kind of task.
 
-The 10-to-10:50 gap is the 50-minute case: one 25-minute block, a 5-minute break, and a second 25-minute block, with nothing left over. That's a good window for reviewing flashcards from the 9 a.m. class while the material is still fresh, or knocking out a short reading response due later in the week — something with a clear, self-contained scope that doesn't need the full block just to get started.
+The 10-to-10:50 gap is the 50-minute case: one 25-minute block, with the rest protected for packing up, walking, and arriving without a sprint. That's a good window for reviewing flashcards from the 9 a.m. class while the material is still fresh, or knocking out a short reading response due later in the week — something with a clear, self-contained scope that doesn't need the full block just to get started.
 
 The noon-to-1:30 window is the 90-minute case: two full cycles with roughly 30 minutes left as a buffer for actually eating lunch, rather than eating while also trying to work. Because there's more room here, it's a better fit for something with a bit more depth — drafting the introduction and first section of an essay due later in the week, or working through the harder half of a problem set. The buffer at the end matters too: it's what keeps the 2 p.m. class from starting already rushed.
 
 The free evening is the 3-hour case: a full four-cycle set, with the longer break after the fourth cycle spent on dinner or a walk rather than skipped. That's the natural place for something that genuinely needs sustained attention across multiple sessions — continuing that essay past the introduction, working through a full problem set instead of half of one, or catching up on a reading that got pushed back earlier in the day.
 
-Stacked across the day, that's roughly six Pomodoro cycles total, spread across three windows that were already sitting in the schedule rather than blocked out separately. The point isn't to add study time that wasn't there before — it's to use the gaps that already exist more deliberately than "I'll get to it eventually."
+Stacked across the day, that's seven Pomodoro cycles total — one in the morning gap, two at lunch, and four in the evening — spread across windows that were already sitting in the schedule rather than blocked out separately. The point isn't to add study time that wasn't there before — it's to use the gaps that already exist more deliberately than "I'll get to it eventually."
 
 ## Making the breaks count
 

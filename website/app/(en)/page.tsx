@@ -39,7 +39,7 @@ const STEPS = [
   {
     n: '02',
     title: 'Review it',
-    body: 'Confirm the extracted dates, class times and grading details before anything is saved.',
+    body: 'Review and correct every extracted deadline before adding it to your calendar.',
   },
   {
     n: '03',
@@ -140,7 +140,7 @@ const HOME_FAQ = [
   {
     question: 'Is Semora actually free?',
     answer:
-      'Yes. The free plan includes five scans a month, four courses per semester, deadline tracking, weighted grades and reminders—no credit card required.',
+      'Yes. The free plan includes five scans a month, up to four courses within one semester, deadline tracking, weighted grades and reminders—no credit card required.',
   },
   {
     question: 'What does Pro add?',
@@ -155,7 +155,7 @@ const HOME_FAQ = [
   {
     question: 'Do I need Canvas for this to work?',
     answer:
-      'No. Semora works from your syllabus alone. Canvas, Blackboard and Moodle connections are optional Pro features, using the access your school provides.',
+      'No. Semora works from your syllabus alone. Canvas, Blackboard and Moodle connections are optional Pro features. The current Canvas connector uses a personal access token you generate in Canvas and should be used only if your school permits third-party token connections.',
   },
   {
     question: 'Does it work on iPad?',

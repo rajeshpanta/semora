@@ -1,9 +1,11 @@
 import { enAlternates } from '@/lib/hreflang';
+import { OG_DEFAULTS } from '@/lib/og';
 export const metadata = {
-  title: 'How to Calculate a Weighted GPA (With Real Examples)',
+  title: 'How to Calculate a Weighted Course Grade',
   description:
-    'The formula behind a weighted GPA, worked examples for common grading scales, rounding rules, and how Semora tracks it automatically as grades come in.',
+    'Calculate a weighted course grade with worked category examples, drop-the-lowest rules, rounding policies, and current-grade math.',
   alternates: enAlternates('/blog/weighted-gpa-calculator'),
+  openGraph: { url: '/blog/weighted-gpa-calculator', ...OG_DEFAULTS, type: 'article', publishedTime: '2026-07-21' },
 }
 
 import { JsonLd } from '@/components/JsonLd'
@@ -52,12 +54,14 @@ export const faqItems = [
   description: metadata.description,
   slug: 'weighted-gpa-calculator',
   datePublished: '2026-07-21',
+  dateModified: '2026-08-09',
+  image: '/illustrations/grade-card.svg',
 })} />
 
 <JsonLd data={faqPageSchema(faqItems)} />
 
 <BlogPostHero
-  title="How to Calculate a Weighted GPA (With Real Examples)"
+  title="How to Calculate a Weighted Course Grade"
   date="Published July 21, 2026"
   image="/illustrations/grade-card.svg"
   imageAlt="Illustration of a report card showing an A- grade with a star badge"

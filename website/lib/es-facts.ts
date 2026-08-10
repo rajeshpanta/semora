@@ -7,7 +7,7 @@ export const SITE_DESCRIPTION_ES =
 
 export const FREE_FEATURES_ES = [
   '5 escaneos de programas al mes',
-  'Hasta 4 cursos por semestre',
+  'Hasta 4 cursos dentro de un único semestre; una cuenta gratis admite un semestre en total',
   'Seguimiento de tareas y fechas de entrega',
   'Calificaciones con promedios ponderados',
   'Recordatorios el mismo día',
@@ -55,7 +55,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     name: 'Seguimiento de calificaciones',
     shortDescription: 'Conoce tu promedio ponderado y qué calificación necesitas en lo que queda del semestre.',
     tier: 'free',
-    description: 'Registra cada calificación y su peso. Registra cada calificación y su peso. Semora calcula tu promedio con lo que ya está calificado y Pro añade pronósticos para explorar distintos escenarios.',
+    description: 'Registra cada calificación y su peso. Semora calcula tu promedio con lo que ya está calificado y Pro añade pronósticos para explorar distintos escenarios.',
   },
   {
     slug: 'plan-inteligente',
@@ -103,7 +103,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     name: 'Sincronización con Canvas',
     shortDescription: 'Importa tus tareas de Canvas, Blackboard o Moodle y mantenlas al día cuando cambien.',
     tier: 'pro',
-    description: 'Conecta Semora mediante el método que permita tu institución, consulta el historial de sincronización y resuelve errores sin duplicar tareas.',
+    description: 'El conector actual de Canvas usa un token personal en Pro. Confirma que tu institución permite usarlo con servicios externos; si no, escanea el programa o pega la lista de tareas.',
   },
 ];
 
@@ -163,13 +163,13 @@ export const SHOWCASE_ES = [
   {
     image: '/screenshots/es/canvas-sync.png',
     alt: 'Pantalla de plataformas educativas de Semora con los cursos conectados y el estado de sincronización',
-    tier: 'free' as const,
-    title: 'Conecta Canvas sin esperar a OAuth',
-    body: 'Conecta Canvas con un token de acceso personal que generas tú mismo dentro de Canvas, sin depender de una revisión de OAuth. Una vez conectado, las tareas y calificaciones se importan solas, y los recordatorios se reprograman cuando el profesor cambia una fecha.',
+    tier: 'pro' as const,
+    title: 'Importa tareas desde Canvas',
+    body: 'La importación desde Canvas forma parte de Pro. El conector actual usa un token de acceso personal generado en Canvas; algunas instituciones desactivan esos tokens o prohíben usarlos con servicios externos. Confirma la política de tu universidad antes de conectarlo. Cuando está permitido, las tareas y calificaciones se importan y los recordatorios se reprograman cuando cambia una fecha.',
     bullets: [
-      'Token personal, sin esperar a OAuth',
+      'Uso sujeto a la política de tokens de tu institución',
       'Tareas y calificaciones se importan solas',
-      'El token no sale de tu dispositivo',
+      'Si no está disponible, escanea el programa o pega la lista de tareas',
     ],
     href: '/es/funciones/sincronizacion-canvas',
   },

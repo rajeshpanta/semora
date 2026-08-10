@@ -14,6 +14,7 @@ import type { SiteLocale } from '@/lib/i18n';
 const COPY = {
   en: {
     crumb: 'Blog',
+    sourcesHeading: 'Sources and methodology',
     faqHeading: 'Frequently asked questions',
     railHeading: 'Ready to get organized?',
     railSub: 'Turn your syllabus into a full semester plan in under a minute.',
@@ -23,6 +24,7 @@ const COPY = {
   },
   es: {
     crumb: 'Blog',
+    sourcesHeading: 'Fuentes y metodología',
     faqHeading: 'Preguntas frecuentes',
     railHeading: 'Organízate desde el primer día',
     railSub: 'Convierte el programa de tu materia en un plan del semestre en menos de un minuto.',
@@ -65,6 +67,7 @@ export function BlogPostArticle({
   children?: ReactNode;
 }) {
   const copy = COPY[locale === 'es' ? 'es' : 'en'];
+  const sources = content.sources ?? [];
   const showFaq = !!content.faq?.length;
 
   return (
@@ -117,6 +120,20 @@ export function BlogPostArticle({
             {s.table ? <BlogTable {...s.table} /> : null}
           </section>
         ))}
+
+        {sources.length ? (
+          <section>
+            <h2>{copy.sourcesHeading}</h2>
+            {content.sourceNote ? <p>{content.sourceNote}</p> : null}
+            <ul>
+              {sources.map((source) => (
+                <li key={`${source.href}-${source.label}`}>
+                  <a href={source.href}>{source.label}</a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
         {showFaq ? (
           <section>

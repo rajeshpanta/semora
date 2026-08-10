@@ -6,10 +6,10 @@ export interface LocaleRoutePair {
 }
 
 /**
- * One canonical translation map for navigation, hreflang metadata, the
- * sitemap, and the language switcher. Keeping those four consumers on the
- * same list prevents a translated page from being indexable but unreachable
- * (or reachable but missing its English counterpart).
+ * One canonical translation map for navigation and locale routing. SEO
+ * consumers use the indexable subset exported below: a translated route can
+ * remain useful to readers and the language switcher without being advertised
+ * as an indexable hreflang alternate before its content is ready.
  */
 export const LOCALE_ROUTE_PAIRS: LocaleRoutePair[] = [
   { en: '/', es: '/es' },
@@ -42,6 +42,9 @@ export const LOCALE_ROUTE_PAIRS: LocaleRoutePair[] = [
   { en: '/blog/canvas-deadline-reminders', es: '/es/blog/recordatorios-fechas-canvas' },
   { en: '/blog/pomodoro-technique-between-classes', es: '/es/blog/tecnica-pomodoro-entre-clases' },
   { en: '/blog/finals-week-study-plan', es: '/es/blog/plan-de-estudio-para-finales' },
+  { en: '/blog/best-ai-study-apps-for-college-2026', es: '/es/blog/mejores-apps-de-estudio-con-ia-2026' },
+  { en: '/blog/ai-flashcards-from-lecture-notes', es: '/es/blog/tarjetas-de-estudio-con-ia' },
+  { en: '/blog/grade-needed-on-final-exam', es: '/es/blog/que-nota-necesito-en-el-examen-final' },
 
   { en: '/compare/dormway', es: '/es/comparar/dormway' },
   { en: '/compare/shovel', es: '/es/comparar/shovel' },
@@ -58,6 +61,31 @@ export const LOCALE_ROUTE_PAIRS: LocaleRoutePair[] = [
   { en: '/myhomework-alternative', es: '/es/alternativa-a-myhomework' },
 ];
 
+/**
+ * Accessible Spanish translations that are intentionally excluded from search
+ * until they have substantive, independently useful Spanish copy.
+ *
+ * Keep these as exact paths rather than prefix rules: /es/comparar itself is a
+ * useful index page, and future comparison pages should not silently inherit
+ * noindex without an explicit content review.
+ */
+export const SPANISH_NOINDEX_PATHS = [
+  '/es/comparar/dormway',
+  '/es/comparar/shovel',
+  '/es/comparar/studyfetch',
+  '/es/comparar/mindgrasp',
+  '/es/comparar/taskade',
+  '/es/comparar/studley-ai',
+  '/es/comparar/myhomework',
+  '/es/alternativa-a-dormway',
+  '/es/alternativa-a-shovel',
+  '/es/alternativa-a-studyfetch',
+  '/es/alternativa-a-mindgrasp',
+  '/es/alternativa-a-myhomework',
+] as const;
+
+const SPANISH_NOINDEX_PATH_SET = new Set<string>(SPANISH_NOINDEX_PATHS);
+
 const EN_TO_ES = new Map(LOCALE_ROUTE_PAIRS.map((pair) => [pair.en, pair.es]));
 const ES_TO_EN = new Map(LOCALE_ROUTE_PAIRS.map((pair) => [pair.es, pair.en]));
 
@@ -65,6 +93,15 @@ function normalizePath(pathname: string): string {
   if (!pathname || pathname === '/') return '/';
   return pathname.replace(/\/+$/, '') || '/';
 }
+
+export function isSpanishNoindexPath(pathname: string): boolean {
+  return SPANISH_NOINDEX_PATH_SET.has(normalizePath(pathname));
+}
+
+/** Route pairs safe to publish in hreflang metadata and the sitemap. */
+export const INDEXABLE_LOCALE_ROUTE_PAIRS = LOCALE_ROUTE_PAIRS.filter(
+  (pair) => !isSpanishNoindexPath(pair.es),
+);
 
 export function englishToSpanishPath(pathname: string): string {
   return EN_TO_ES.get(normalizePath(pathname)) ?? '/es';

@@ -1,9 +1,11 @@
 import { enAlternates } from '@/lib/hreflang';
+import { OG_DEFAULTS } from '@/lib/og';
 export const metadata = {
   title: 'How to Build a Study Plan for Finals Week',
   description:
     'A framework for planning finals week around exam density and weighting, and how Semora surfaces the weeks that need the plan most.',
   alternates: enAlternates('/blog/finals-week-study-plan'),
+  openGraph: { url: '/blog/finals-week-study-plan', ...OG_DEFAULTS, type: 'article', publishedTime: '2026-07-25' },
 }
 
 import { JsonLd } from '@/components/JsonLd'
@@ -53,6 +55,7 @@ export const faqItems = [
   description: metadata.description,
   slug: 'finals-week-study-plan',
   datePublished: '2026-07-25',
+  image: '/illustrations/book-stack.svg',
 })} />
 
 <JsonLd data={faqPageSchema(faqItems)} />

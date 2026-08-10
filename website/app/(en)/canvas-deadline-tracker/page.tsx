@@ -12,7 +12,7 @@ import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
 
 export const metadata: Metadata = {
-  title: 'Canvas Deadline Tracker App: Grades, Reminders & Study Planning',
+  title: 'Canvas Deadline Tracker: Grades and Reminders',
   description:
     'Semora is a Canvas deadline tracker app. Import Canvas assignments on Pro, or scan your syllabus free, with grade tracking, reminders, and a real study plan.',
   alternates: enAlternates('/canvas-deadline-tracker'),
@@ -27,12 +27,12 @@ const FAQ = [
   {
     question: 'How do I connect Canvas to Semora?',
     answer:
-      "Generate a personal access token from your own Canvas account settings and enter it into Semora. Because it uses a personal token rather than an OAuth app integration, there's no third-party review process to wait through.",
+      "Canvas import is a Pro feature. The current connector uses a personal access token generated in Canvas. Some institutions disable or prohibit third-party token use, so confirm your school's policy. If it is unavailable or not permitted, scan your syllabus or paste the Canvas assignment list into Semora instead.",
   },
   {
     question: 'Is Semora free to use alongside Canvas?',
     answer:
-      'Partly. Importing assignments from Canvas is a Pro feature, but the free tier covers the syllabus side of the same job, and you can paste Canvas assignment text straight into the scanner. The free tier includes 5 syllabus scans per calendar month, up to 4 courses in one semester, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no monthly scan cap, plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
+      'Partly. Importing assignments from Canvas is a Pro feature, but the free tier covers the syllabus side of the same job, and you can paste Canvas assignment text straight into the scanner. The free tier includes 5 syllabus scans per calendar month, up to 4 courses within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no monthly scan cap, plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
   },
   {
     question: 'Does Semora work on iPhone, iPad, and web?',
@@ -43,7 +43,8 @@ const FAQ = [
 
 const TABLE_ROWS = [
   { feature: 'Syllabus scans', free: '5 per calendar month', pro: 'Unlimited' },
-  { feature: 'Courses per semester', free: 'Up to 4', pro: 'Unlimited' },
+  { feature: 'Courses', free: 'Up to 4 within one semester', pro: 'Unlimited' },
+  { feature: 'Semesters', free: '1 total', pro: 'Unlimited' },
   { feature: 'Task & deadline tracking', free: 'Full', pro: 'Full' },
   { feature: 'Grade tracking', free: 'Included', pro: 'Included' },
   { feature: 'Same-day reminders', free: 'Included', pro: 'Included' },
@@ -77,7 +78,7 @@ export default function CanvasDeadlineTrackerPage() {
   return (
     <ArticleShell
       ctaHeading="Bring Canvas into one view"
-      ctaSubheading="No OAuth wait, just a personal access token you generate yourself."
+      ctaSubheading="Canvas import on Pro, with a syllabus-scan fallback."
     >
     <article className={styles.prose}>
       <JsonLd data={faqPageSchema(FAQ_ALL)} />
@@ -85,10 +86,10 @@ export default function CanvasDeadlineTrackerPage() {
 
       <h1>A Canvas Deadline Tracker App That Adds Grades, Reminders, and an Actual Study Plan</h1>
       <p className={styles.lede}>
-        Semora is a Canvas deadline tracker app that connects to your Canvas account with a
-        personal access token and layers grade tracking, same-day reminders, and (on Pro) an
-        AI-generated study schedule on top of your existing Canvas assignments, on iPhone, iPad,
-        and web, kept in sync.
+        Semora is a Canvas deadline tracker app with a token-based Canvas connector on Pro. Some
+        institutions disable or prohibit third-party token use, so confirm your school&apos;s policy.
+        Semora layers grade tracking, same-day reminders, and an AI-generated study schedule on top
+        of your assignments across iPhone, iPad, and web.
       </p>
 
       <p>
@@ -158,9 +159,11 @@ export default function CanvasDeadlineTrackerPage() {
 
       <h2>How Canvas sync works</h2>
       <p>
-        Semora connects to Canvas using a personal access token that you generate yourself from
-        your Canvas account settings. There&apos;s no third-party OAuth approval step to wait on. You
-        paste in your token and your Canvas assignments start flowing into Semora.
+        Canvas import is part of Pro. The current connector uses a personal access token generated
+        in Canvas. Some institutions disable or prohibit third-party token use, so confirm your
+        school&apos;s policy before connecting. When it is permitted, you can choose courses and bring
+        their assignments into Semora. Otherwise, scan the syllabus or paste the Canvas assignment
+        list into the scanner.
       </p>
       <p>
         Canvas sync covers your assignments. Semora adds a syllabus-derived view alongside it,
@@ -198,8 +201,8 @@ export default function CanvasDeadlineTrackerPage() {
       <p>
         Semora is built specifically around a syllabus and a Canvas course, not a generic task list:
         it imports the whole structure at once (course, instructor, meeting times, grading scale,
-        and every deadline) from either a syllabus or a Canvas token, then tracks grades and
-        workload against that structure automatically.
+        and every deadline) from either a syllabus or the token-based Canvas connector when permitted,
+        then tracks grades and workload against that structure automatically.
       </p>
 
       <h2>FAQ</h2>

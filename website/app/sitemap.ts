@@ -4,15 +4,7 @@ import { FEATURES } from '@/lib/semora-facts';
 import { COMPARE_SLUGS, KEYWORD_PAGE_SLUGS } from '@/lib/routes';
 import { BLOG_POSTS } from '@/lib/blog';
 import { ALTERNATIVE_SLUGS } from '@/lib/new-page-content';
-import { LOCALE_ROUTE_PAIRS } from '@/lib/i18n';
-
-// Every non-blog route is generated from source that changes when the site is
-// rebuilt, so the deploy time is the honest "last modified". Without it 34 of
-// the 40 URLs carried no <lastmod> at all, leaving Google no signal that they
-// had ever changed — one of the inputs into how eagerly it re-crawls.
-// Evaluated once per render so a single sitemap cannot hand out 34 slightly
-// different timestamps.
-const BUILT_AT = new Date();
+import { INDEXABLE_LOCALE_ROUTE_PAIRS } from '@/lib/i18n';
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes: MetadataRoute.Sitemap = [
@@ -50,11 +42,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
-  // Blog posts keep their real publication date — it is the one honest
-  // lastmod on the site and must not be overwritten with the build time.
+  // Blog posts use a reviewed modification date when one exists; otherwise
+  // their publication date is the only dated source event we can verify.
   const blogRoutes: MetadataRoute.Sitemap = BLOG_POSTS.map((post) => ({
     url: `${SITE_URL}/blog/${post.slug}`,
-    lastModified: post.date,
+    lastModified: post.modified ?? post.date,
     changeFrequency: 'monthly',
     priority: 0.6,
   }));
@@ -73,10 +65,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...featureRoutes,
     ...keywordRoutes,
     ...compareRoutes,
-  ].map((route) => ({ lastModified: BUILT_AT, ...route }));
+  ];
 
   const englishRoutes = [...routes, ...blogRoutes];
-  const pairByEnglish = new Map(LOCALE_ROUTE_PAIRS.map((pair) => [pair.en, pair]));
+  const pairByEnglish = new Map(INDEXABLE_LOCALE_ROUTE_PAIRS.map((pair) => [pair.en, pair]));
   const englishByPath = new Map(
     englishRoutes.map((route) => [route.url.replace(SITE_URL, '') || '/', route]),
   );
@@ -92,7 +84,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       ...route,
       alternates: {
         languages: {
-          en: `${SITE_URL}${pair.en === '/' ? '' : pair.en}`,
+          'en-US': `${SITE_URL}${pair.en === '/' ? '' : pair.en}`,
           es: `${SITE_URL}${pair.es}`,
           'x-default': `${SITE_URL}${pair.en === '/' ? '' : pair.en}`,
         },
@@ -100,16 +92,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     };
   });
 
-  const spanishRoutes: MetadataRoute.Sitemap = LOCALE_ROUTE_PAIRS.map((pair) => {
+  const spanishRoutes: MetadataRoute.Sitemap = INDEXABLE_LOCALE_ROUTE_PAIRS.map((pair) => {
     const english = englishByPath.get(pair.en);
     return {
       url: `${SITE_URL}${pair.es}`,
-      lastModified: english?.lastModified ?? BUILT_AT,
+      ...(english?.lastModified ? { lastModified: english.lastModified } : {}),
       changeFrequency: english?.changeFrequency ?? 'monthly',
       priority: english?.priority ?? (pair.es === '/es' ? 1 : 0.7),
       alternates: {
         languages: {
-          en: `${SITE_URL}${pair.en === '/' ? '' : pair.en}`,
+          'en-US': `${SITE_URL}${pair.en === '/' ? '' : pair.en}`,
           es: `${SITE_URL}${pair.es}`,
           'x-default': `${SITE_URL}${pair.en === '/' ? '' : pair.en}`,
         },

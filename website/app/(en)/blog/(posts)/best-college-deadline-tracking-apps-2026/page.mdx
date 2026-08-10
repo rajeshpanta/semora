@@ -1,9 +1,11 @@
 import { enAlternates } from '@/lib/hreflang';
+import { OG_DEFAULTS } from '@/lib/og';
 export const metadata = {
   title: 'Best Apps for Tracking College Deadlines in 2026',
   description:
     'A practical look at how different deadline-tracking approaches — paper planners, generic to-do apps, and syllabus-aware tools — hold up for a full course load.',
   alternates: enAlternates('/blog/best-college-deadline-tracking-apps-2026'),
+  openGraph: { url: '/blog/best-college-deadline-tracking-apps-2026', ...OG_DEFAULTS, type: 'article', publishedTime: '2026-07-22' },
 }
 
 import { JsonLd } from '@/components/JsonLd'
@@ -53,6 +55,8 @@ export const faqItems = [
   description: metadata.description,
   slug: 'best-college-deadline-tracking-apps-2026',
   datePublished: '2026-07-22',
+  dateModified: '2026-08-09',
+  image: '/illustrations/trophy-compare.svg',
 })} />
 
 <JsonLd data={faqPageSchema(faqItems)} />
@@ -77,20 +81,22 @@ A generic to-do app removes the paper but not the labor — it can hold a due da
 
 ## The four questions we measured against
 
-A newer category of app reads the syllabus, or connects to the school's LMS, and builds the deadline list for you rather than asking you to type it in. Seven of them are covered below, and none of them work identically.
+A newer category of app reads the syllabus, or connects to the school's LMS, and builds the deadline list for you rather than asking you to type it in. Eight of them are covered below, and none of them work identically.
 
-Rather than judging these apps on marketing copy or star ratings alone, we compared all seven against four questions that predict whether an app holds up across a full semester rather than just a demo:
+This comparison is published by Semora, one of the products included. It is a desk review of public product pages, pricing pages, help documentation, and store listings checked in August 2026; it is not a claim that we hands-on tested every product. Features and prices change, so verify a vendor's current documentation before choosing.
+
+We compared all eight against four questions that predict whether an app holds up across a full semester rather than just a demo:
 
 1. **Does it read a syllabus, or does it require an LMS connection (or manual entry) to get deadlines in at all?** Semora, DormWay, Shovel, and StudyFetch all do some form of AI syllabus parsing. Mindgrasp and Studley AI process uploaded material but don't parse a syllabus for deadlines. Taskade has no document-parsing pipeline for this. myHomework relies on manual entry or LMS import only.
-2. **Is grade tracking included, or just a deadline list?** Semora and DormWay both include it — DormWay via a GPA/grade calculator with adjustable weighted categories — while the other five don't describe grade tracking as a core, confirmed feature.
-3. **Is there a real, ongoing free tier, or just a trial before a subscription starts?** DormWay is entirely free with no paid tier. Semora's free tier (5 scans/month, 4 courses) has no time limit. Shovel points most consistently toward a 7-day trial before billing starts. StudyFetch, Mindgrasp, and Studley AI report free tiers with meaningful caps rather than full functionality; myHomework's free version is ad-supported instead.
+2. **Is grade tracking included, or just a deadline list?** Semora and DormWay both include it — DormWay via a GPA/grade calculator with adjustable weighted categories — while the other six don't describe grade tracking as a core, confirmed feature.
+3. **Is there a real, ongoing free tier, or just a trial before a subscription starts?** DormWay is entirely free with no paid tier. Semora's free tier (5 scans/month, 4 courses) has no time limit. Shovel's pricing page advertises a 7-day trial before billing starts, and Mindgrasp's official site advertises a trial rather than a standing free tier. StudyFetch and Studley AI report free tiers with meaningful caps rather than full functionality; myHomework's free version is ad-supported instead.
 4. **Does it sync across your phone and a browser without extra setup?** Coverage varies widely — from Semora and StudyFetch's phone-plus-web setups, to DormWay and myHomework's broader multi-platform reach, to Shovel and Taskade's native iOS/Android apps alongside a web app.
 
 The sections that follow take each app in turn, grouped by how it answers question one, because that is the answer that decides whether an app can do this job at all.
 
 ## Semora: the syllabus as the starting point
 
-[Semora](/features) scans a syllabus by photo, PDF, drag-and-drop, or pasted text and extracts every assignment, exam, quiz, project, and reading with its due date, along with the grading scale, meeting times, and office hours — turning deadline tracking and grade tracking into the same free-tier feature. The free tier includes 5 syllabus scans per calendar month across up to 4 courses in one semester, with full deadline and grade tracking and same-day reminders included at no cost; calendar sync with .ics export is a Pro feature. It also connects to Canvas via a personal access token you generate yourself, with no OAuth app-review wait. See the full [Semora vs DormWay](/compare/dormway) and [Semora vs Taskade](/compare/taskade) comparisons for more detail.
+[Semora](/features) scans a syllabus by photo, PDF, drag-and-drop, or pasted text and extracts every assignment, exam, quiz, project, and reading with its due date, along with the grading scale, meeting times, and office hours — turning deadline tracking and grade tracking into the same free-tier feature. The free tier includes 5 syllabus scans per calendar month across up to 4 courses in one semester, with full deadline and grade tracking and same-day reminders included at no cost; calendar sync with .ics export is a Pro feature. The current Canvas connector uses a personal access token and should be used only where an institution permits third-party token connections. See the full [Semora vs DormWay](/compare/dormway) and [Semora vs Taskade](/compare/taskade) comparisons for more detail.
 
 ## DormWay: free, across three LMS platforms
 
@@ -98,7 +104,7 @@ The sections that follow take each app in turn, grouped by how it answers questi
 
 ## Shovel: available time as the constraint
 
-[Shovel](/compare/shovel) turns a PDF syllabus or a direct LMS connection (Canvas, Brightspace, Moodle, or Google Classroom) into a time-blocked study schedule, weighing available time against estimated time per task. Distinct features include "The Cushion™" predictive conflict alerts, reading-time estimators, streak-based motivation tracking, and free supplementary "how to study" courses. LMS sync auto-refreshes roughly every 24 hours, and it has native iOS and Android apps. Shovel's own pricing page currently lists $9.79/month (discounted from $19.99) and $39/year after a 7-day free trial, though other sources cite different figures — check its current pricing page directly.
+[Shovel](/compare/shovel) turns a PDF syllabus or a direct LMS connection (Canvas, Brightspace, Moodle, or Google Classroom) into a time-blocked study schedule, weighing available time against estimated time per task. Distinct features include "The Cushion™" predictive conflict alerts, reading-time estimators, streak-based motivation tracking, and free supplementary "how to study" courses. LMS sync auto-refreshes roughly every 24 hours, and it has native iOS and Android apps. Shovel's official pages did not agree when checked August 9, 2026: its [pricing page](https://shovelapp.io/pricing/) showed a 7-day trial followed by $9.79/month (with $19.99 also displayed) or $39/year, while its navigation-linked [buy page](https://shovelapp.io/buy/) showed $33/month paid monthly or $16/month paid annually. Confirm the price at checkout.
 
 ## StudyFetch: an AI tutor that wants your material first
 
@@ -108,7 +114,7 @@ The sections that follow take each app in turn, grouped by how it answers questi
 
 Neither of these parses a syllabus, which is not a failing so much as a different product. Both sit downstream of the deadline problem: you already know what is coming, and you want the material turned into something you can practice with.
 
-[Mindgrasp](/compare/mindgrasp) doesn't parse a syllabus for deadlines — it turns an uploaded document, video, or lecture recording into notes, flashcards, and a quiz, making it a complement to a deadline tracker rather than a replacement for one. You can upload or link a PDF, DOCX, PowerPoint, MP3/MP4, YouTube video, or web article, or record a lecture live, and Mindgrasp generates AI notes, a summary, flashcards, a quiz, and an "AI Tutor" chat for that content. A higher Scholar/Premium tier adds an "AI math expert," and there's a Chrome extension for capturing content from the browser. Mindgrasp states compatibility with Canvas, Blackboard, and Panopto, though that appears to cover importing files rather than parsing a syllabus for deadlines. Pricing isn't listed on its own site as of this writing; third-party sites report roughly $5.99–$10.99/month across tiers, cheaper billed annually, with a short free trial.
+[Mindgrasp](/compare/mindgrasp) doesn't parse a syllabus for deadlines — it turns an uploaded document, video, or lecture recording into notes, flashcards, and a quiz, making it a complement to a deadline tracker rather than a replacement for one. You can upload or link a PDF, DOCX, PowerPoint, MP3/MP4, YouTube video, or web article, or record a lecture live, and Mindgrasp generates AI notes, a summary, flashcards, a quiz, and an "AI Tutor" chat for that content. A higher Scholar/Premium tier adds an "AI math expert," and there's a Chrome extension for capturing content from the browser. Mindgrasp states compatibility with Canvas, Blackboard, and Panopto, though that appears to cover importing files rather than parsing a syllabus for deadlines. With the Yearly selector active on Mindgrasp's [official plan picker](https://app.mindgrasp.ai/pick-plan) on August 9, 2026, Basic showed $5.99/month billed $71.88 once per year, Scholar $8.99/month billed $107.88 once per year, and Premium $10.99/month billed $131.88 once per year. The official site also advertises a free trial; confirm the offer and any monthly-billing prices at checkout.
 
 [Studley AI](/compare/studley-ai) is a materials-first app similar in spirit to Mindgrasp: you upload PDFs, lecture slides, YouTube videos, article links, or a photo of handwritten notes, and its AI converts that into flashcards, multiple-choice quizzes, fill-in-the-blank exercises, written-response tests, and an AI tutor. A "Solve" feature lets you photograph a homework problem for a step-by-step explanation, and a podcast feature turns material into AI-narrated audio, with progress tracked across four mastery levels. No syllabus-parsing or LMS integration appears anywhere in its public materials. Per its own App Store listing, Studley AI has been downloaded 460,000+ times with a 4.74/5 rating from 31,000+ reviews, and the company states over 1,000,000 users — self-reported figures, not independently verified. Its free tier is 1 study set per day, with an Unlimited plan reported at $12.88/month or $97.76/year via third-party review coverage.
 
@@ -130,9 +136,11 @@ These two bracket the category from either end — one a general-purpose workspa
 - If you're managing a team or project outside of coursework entirely → [Taskade](/compare/taskade)'s general-purpose views and custom AI agents are built for that, not for a syllabus specifically.
 - If you want the syllabus-to-calendar step done automatically, with grade tracking in the same free tier → that's the gap Semora is built to fill, detailed below.
 
-## Where these details come from
+## Sources and methodology
 
-One honest caveat: these comparisons rest on each product's own publicly stated features, pricing pages, and App Store listings as of this writing, not hands-on testing of every app across a full semester. Anything not confirmed directly on a competitor's own site is flagged as such rather than stated as fact, and pricing especially is worth double-checking directly before subscribing.
+Semora publishes this comparison and is one of the products listed. This is a desk review, not hands-on testing, based on official pages checked August 9, 2026: [Semora features](/features) and [pricing](/pricing); [DormWay for students](https://dormway.app/for-students) and [pricing](https://dormway.app/pricing); [Shovel's help center](https://help.shovelapp.io/en), [pricing page](https://shovelapp.io/pricing/), and [buy page](https://shovelapp.io/buy/); the [StudyFetch product site](https://www.studyfetch.com/) and [App Store listing](https://apps.apple.com/us/app/studyfetch-make-learning-easy/id6663574866); the [Mindgrasp product site](https://www.mindgrasp.ai/) and [plan picker](https://app.mindgrasp.ai/pick-plan); the [Studley product site](https://www.studley.ai/) and [Google Play listing](https://play.google.com/store/apps/details?id=ai.studley.app); [Taskade pricing](https://www.taskade.com/pricing); and the [myHomework App Store listing](https://apps.apple.com/us/app/myhomework-student-planner/id303490844).
+
+Any price or free-tier limit described above as "reported" came only from third-party coverage and remains unverified. Treat the official vendor pages and store listings as the current source of truth, and confirm details before buying.
 
 ## Where Semora fits
 

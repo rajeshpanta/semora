@@ -1,9 +1,11 @@
 import { enAlternates } from '@/lib/hreflang';
+import { OG_DEFAULTS } from '@/lib/og';
 export const metadata = {
   title: 'How to Make Flashcards From Your Lecture Notes With AI',
   description:
     'What makes an AI-generated flashcard worth reviewing, how spaced repetition decides when you see it again, and how the tools compare on where the cards come from.',
   alternates: enAlternates('/blog/ai-flashcards-from-lecture-notes'),
+  openGraph: { url: '/blog/ai-flashcards-from-lecture-notes', ...OG_DEFAULTS, type: 'article', publishedTime: '2026-08-07' },
 }
 
 import { JsonLd } from '@/components/JsonLd'
@@ -19,7 +21,7 @@ export const faqItems = [
   {
     question: 'Can AI make flashcards from my lecture notes?',
     answer:
-      'Yes. Every tool in this comparison accepts uploaded material — PDFs, slide decks, notes, and in some cases recordings and video — and returns question-and-answer cards from it. Generation takes seconds. The work that determines whether the deck is useful happens afterward: cutting the cards that test nothing, splitting any card whose answer runs longer than a sentence or two, and checking the facts against your own notes before the first review.',
+      'Yes. The AI flashcard generators in this comparison accept uploaded material — PDFs, slide decks, notes, and in some cases recordings and video — and return question-and-answer cards from it. DormWay and myHomework are included as planning contrasts and do not generate flashcards. The work that determines whether an AI-generated deck is useful happens afterward: cut cards that test nothing, split cards with overlong answers, and check every fact against your own notes before the first review.',
   },
   {
     question: 'How many flashcards should a deck have?',
@@ -48,6 +50,8 @@ export const faqItems = [
   description: metadata.description,
   slug: 'ai-flashcards-from-lecture-notes',
   datePublished: '2026-08-07',
+  dateModified: '2026-08-09',
+  image: '/illustrations/flashcard-deck.svg',
 })} />
 
 <JsonLd data={faqPageSchema(faqItems)} />
@@ -65,9 +69,9 @@ export const faqItems = [
 
 Flashcards are a delivery mechanism for two well-established findings, and knowing which two tells you what a good card has to look like.
 
-The first is **retrieval practice**: the act of pulling an answer out of memory strengthens that memory more than reviewing the same material does. This is why a card with the answer visible on the front is not a flashcard — it is a note. The retrieval attempt is the entire mechanism, and a card that does not force one is doing nothing.
+The first is **retrieval practice**: the act of pulling an answer out of memory strengthens that memory more than reviewing the same material does. In [Roediger and Karpicke's controlled experiments](https://pubmed.ncbi.nlm.nih.gov/16507066/), students who retrieved prose passages retained more on delayed tests than students who repeatedly restudied them. This is why a card with the answer visible on the front is not a flashcard — it is a note. The retrieval attempt is the entire mechanism, and a card that does not force one is doing nothing.
 
-The second is the **spacing effect**: information reviewed at increasing intervals is retained substantially longer than the same total review time crammed together. This is why the schedule matters as much as the deck. Reviewing 100 cards once the night before is not the same intervention as reviewing 30 cards five times across two weeks, even if the total minutes are similar.
+The second is the **spacing effect**: information reviewed across separated sessions is generally retained better than the same practice massed together. A [quantitative synthesis by Cepeda and colleagues](https://pubmed.ncbi.nlm.nih.gov/16719566/) analyzed 839 assessments from 317 experiments and found that the useful spacing interval depends partly on how long the material needs to be retained. This is why the schedule matters as much as the deck. Reviewing 100 cards once the night before is not the same intervention as reviewing 30 cards five times across two weeks, even if the total minutes are similar.
 
 Both findings have a practical implication that most auto-generated decks ignore. Retrieval only works if there is one specific thing to retrieve. A card whose back is four sentences long cannot be graded honestly — you will half-remember two of the sentences, call it a pass, and move on with a memory that has not actually been tested. **One idea per card** is not a style preference; it is what makes the self-grading step mean anything, and the self-grading step is what the scheduling algorithm runs on.
 

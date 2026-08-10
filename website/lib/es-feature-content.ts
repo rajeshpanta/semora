@@ -92,7 +92,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         paragraphs: [
           'Escanear es una función gratuita con un número real detrás: cinco escaneos por mes natural. La ventana es el mes natural en UTC, así que la cuenta se reinicia el día 1, y ese mismo límite lo aplican la app, el servidor antes de gastar nada en la extracción, y un disparador de la base de datos.',
           'No te quedas adivinando en qué punto estás. La pestaña de escaneo muestra una etiqueta del tipo «Te quedan 3 de 5 escaneos gratis este mes», que se pone en rojo al llegar a cero. Antes de gastar el último, Semora te interrumpe para avisarte de que es el último.',
-          'Hay otros dos límites que conviene conocer porque son independientes del recuento de escaneos: una cuenta gratuita admite hasta cuatro cursos por semestre y un semestre a la vez. Importa aquí porque un escaneo que crearía un quinto curso topa con el límite de cursos aunque te sobren escaneos.',
+          'Hay otros dos límites que conviene conocer porque son independientes del recuento de escaneos: una cuenta gratuita admite hasta cuatro cursos dentro de un único semestre, y un semestre en total. Importa aquí porque un escaneo que crearía un quinto curso topa con el límite de cursos aunque te sobren escaneos.',
           'Pro elimina por completo los topes de escaneos y de cursos, por 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes en el plan anual. Pro se compra dentro de la app de iOS y la suscripción se aplica a toda la cuenta, incluida la web. Lo único que queda por encima es un techo de uso razonable: 20 escaneos en cualquier ventana de 24 horas.',
         ],
       },
@@ -125,7 +125,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'Para quién es de verdad, y cuándo usar otra cosa',
         paragraphs: [
           'Está pensado para un estudiante con un programa que contiene un calendario: una tabla de semanas y fechas, una lista de exámenes, un desglose de la calificación. Si tu profesor escribe un programa de verdad, esto convierte media hora de tecleo en un par de minutos de revisión.',
-          'Encaja peor en unos cuantos casos, y conviene decirlos. Si tu programa no trae ninguna fecha porque todo vive en la plataforma académica, no hay nada en la página que extraer: ahí la vía es la sincronización con Canvas. Si lo que tienes es una foto borrosa o torcida de una fotocopia, el resultado será peor que el de un PDF nítido.',
+          'Encaja peor en unos cuantos casos, y conviene decirlos. Si tu programa no trae ninguna fecha porque todo vive en la plataforma académica, usa el conector actual de Canvas solo si tu institución permite tokens personales en servicios externos; si no está disponible o permitido, pega la lista de tareas en el escáner de la web. Si lo que tienes es una foto borrosa o torcida de una fotocopia, el resultado será peor que el de un PDF nítido.',
           'Una expectativa más que conviene dejar clara: el escaneo se cuenta cuando la extracción sale bien, no cuando guardas. Si los resultados vuelven y cierras la app sin guardar nada, el trabajo ya se hizo y el escaneo ya se contó.',
         ],
       },
@@ -154,7 +154,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Los porcentajes se guardan con dos decimales; los puntos originales se conservan y se muestran al lado.',
           'Puntos obtenidos por encima de los posibles se bloquean salvo que la tarea esté marcada como crédito extra.',
           'Las entregas sin ponderación muestran un aviso visible en lugar de desviar tu promedio en silencio.',
-          'Las tareas sincronizadas desde Canvas llegan con su nota ya rellenada, calculada de la misma forma.',
+          'Cuando tu institución permite el conector actual de Canvas con token personal en Pro, las tareas importadas pueden llegar con su nota ya rellenada, calculada de la misma forma.',
         ],
       },
       {
@@ -224,7 +224,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'Cómo se conecta con el resto de Semora',
         paragraphs: [
           'Las calificaciones no son una pantalla aislada. Las notas que introduces alimentan el resto de la app.',
-          'Tu pestaña de Cursos muestra la letra y el porcentaje de cada asignatura bajo su nombre, junto a lo siguiente que vence. Si conectas Canvas, que forma parte de Pro, las notas de las tareas llegan con sus puntos obtenidos y posibles y se convierten igual.',
+          'Tu pestaña de Cursos muestra la letra y el porcentaje de cada asignatura bajo su nombre, junto a lo siguiente que vence. Cuando tu institución permite el conector actual de Canvas con token personal en Pro, las notas de las tareas pueden llegar con sus puntos obtenidos y posibles y se convierten igual.',
           'Del lado de Pro, la revisión académica lee tu historial de notas directamente. Una asignatura necesita al menos dos elementos corregidos; Semora compara entonces el promedio de tus tres notas más recientes con el de las tres anteriores, ordenadas por cuándo se calificaron.',
           'Todo eso es una sola cuenta en iPhone, iPad y la web, sincronizada casi en tiempo real, así que una nota que introduces saliendo de clase ya está en tu portátil cuando lo abres.',
         ],
@@ -550,11 +550,11 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'Gratis frente a Pro',
         paragraphs: [
           'El temporizador de concentración es una función de Pro por completo. Las cuentas gratuitas que lo tocan ven una pantalla de presentación con el icono, una descripción corta y un botón hacia la suscripción, en lugar de una versión recortada.',
-          'Conviene decirlo claro, porque casi todo el núcleo de Semora es gratis y seguirá siéndolo. En una cuenta gratuita tienes cinco escaneos de programa por mes natural, hasta cuatro asignaturas por semestre, entregas y tareas, promedios ponderados y recordatorios el mismo día.',
+          'Conviene decirlo claro, porque casi todo el núcleo de Semora es gratis y seguirá siéndolo. En una cuenta gratuita tienes cinco escaneos de programa por mes natural, hasta cuatro asignaturas dentro de un único semestre, un semestre en total, entregas y tareas, promedios ponderados y recordatorios el mismo día.',
           'Pro cuesta 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes en el plan anual. Se compra dentro de la app de iOS y la suscripción se aplica a toda tu cuenta, la web incluida.',
         ],
         bullets: [
-          'Gratis: 5 escaneos por mes natural, 4 asignaturas por semestre, entregas y tareas, promedios ponderados y recordatorios el mismo día.',
+          'Gratis: 5 escaneos por mes natural, hasta 4 asignaturas dentro de un único semestre, un semestre en total, entregas y tareas, promedios ponderados y recordatorios el mismo día.',
           'Pro: 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual.',
           'Pro se compra en la app de iOS y se aplica a toda la cuenta, incluida la web.',
           'Las cuentas gratuitas ven una presentación del temporizador con enlace a la suscripción, no una versión reducida.',
@@ -825,35 +825,34 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
   },
 
   'canvas-sync': {
-    lede: 'Conecta Canvas con un token de acceso que generas tú, elige tus asignaturas y cada tarea con fecha de entrega se convierte en una entrega registrada en Semora.',
+    lede: 'En Pro, la importación de Canvas usa actualmente un token de acceso personal generado en Canvas. Conéctalo solo si tu institución permite usar ese token con servicios externos.',
     intro: [
       'Canvas ya sabe todas las tareas que publicaron tus profesores. Lo que no hace es decirte que tres de ellas caen en las mismas 48 horas, ni avisarte la noche anterior, ni enseñarte cómo va tu nota si entregas tarde una de ellas.',
       'Así que la mayoría acaba copiando a mano. Abres cada asignatura en Canvas, recorres la pestaña de tareas y vuelves a teclear las fechas en una agenda o en el calendario del móvil. Cuesta una hora al principio del semestre y se queda desactualizado en la segunda semana.',
-      'La sincronización con Canvas es la forma de saltarse eso. Generas un token de acceso dentro de tu propia cuenta de Canvas, lo pegas en Semora una vez, eliges qué asignaturas quieres, y cada tarea con fecha entra.',
+      'La sincronización con Canvas evita esa copia. El conector actual pide la dirección de Canvas de tu universidad y un token de acceso personal generado en Canvas. Algunas instituciones desactivan esos tokens o prohíben usarlos con servicios externos; confirma la política de tu universidad antes de conectarlo. Si no está disponible o permitido, escanea el programa o pega la lista de tareas en Semora.',
     ],
     sections: [
       {
-        heading: 'Por qué un token y no un botón de «Iniciar sesión con Canvas»',
+        heading: 'El conector actual de Canvas y sus límites',
         paragraphs: [
-          'Casi todas las apps que conectan con Canvas lo hacen con OAuth, el flujo en el que tocas un botón, te manda a la página de acceso de tu universidad y apruebas el permiso. Parece más limpio. El problema es que ese flujo necesita que tu institución haya registrado y aprobado la app.',
-          'Eso significa que una app de Canvas basada en OAuth funciona en las universidades que ya dijeron que sí y en ninguna otra. Si la tuya no la ha aprobado, tu única opción es abrir una incidencia y esperar.',
-          'Un token de acceso personal se salta todo eso. Es una credencial que te emites a ti mismo, desde los ajustes de tu propia cuenta de Canvas, con permisos que ya tienes como estudiante. No hace falta que nadie apruebe nada.',
-          'La contrapartida honesta es que copias una cadena una vez en lugar de tocar un botón. Y como el token lleva los permisos de tu propia cuenta, deberías tratarlo como una contraseña.',
+          'Los clientes actuales de Semora se conectan a Canvas mediante un token de acceso personal generado dentro de la cuenta del estudiante. Semora todavía no ofrece un inicio de sesión OAuth propio ni una integración gestionada por la institución.',
+          'Los administradores pueden desactivar la creación de tokens y una universidad puede prohibir que se introduzcan credenciales académicas en un servicio externo. Canvas documenta OAuth como la vía aprobada para aplicaciones de varios usuarios. No uses el conector si tu institución no lo permite.',
+          'Si el conector no está disponible o permitido, todavía puedes escanear el programa o copiar la lista de tareas de Canvas y pegarla en el escáner de la web. Ambos caminos incluyen una revisión antes de añadir las fechas.',
         ],
       },
       {
-        heading: 'Cómo conseguir tu token de Canvas, paso a paso',
+        heading: 'Comprobar la disponibilidad e importar asignaturas',
         paragraphs: [
-          'Semora imprime estas instrucciones en la propia pantalla de conexión, así que no tienes que mantener una pestaña abierta al lado de la app. Haz esta parte en un ordenador o en el navegador del móvil.',
-          'Necesitas dos cosas. La primera es la dirección web de Canvas de tu universidad, normalmente tuuniversidad.instructure.com. Semora quiere la dirección HTTPS completa y te recorta la barra final.',
-          'La segunda es el token. Cuando Canvas te pida una fecha de caducidad, déjala en blanco a propósito. Si pones una, la sincronización funciona bien hasta esa fecha y después empieza a fallar en silencio.',
+          'La importación desde plataformas académicas forma parte de Pro. Abre la pantalla de conexiones y elige Canvas solo después de confirmar que tu institución permite usar un token personal con servicios externos.',
+          'Puede que te pida la dirección de Canvas de tu universidad, que suele ser una URL específica de la institución. Semora exige una dirección HTTPS válida y avisa antes de intentar una conexión con una dirección incorrecta.',
+          'Cuando se acepte el token, elige las asignaturas activas y el semestre de Semora donde deben entrar. Si el uso del token no está disponible o permitido, usa el escáner del programa o pega la lista de tareas.',
         ],
         bullets: [
-          'Inicia sesión en Canvas desde un navegador.',
-          'Abre Cuenta y después Configuración.',
-          'Baja hasta «Integraciones aprobadas» y toca «+ Nuevo token de acceso».',
-          'Ponle de nombre «Semora», deja la caducidad en blanco y genera el token.',
-          'Copia el token y pégalo en el campo correspondiente de Semora.',
+          'Abre las conexiones de plataformas académicas en Semora y elige Canvas.',
+          'Introduce la dirección HTTPS de Canvas de tu universidad si se solicita.',
+          'Introduce un token de Canvas solo si tu institución permite usarlo con servicios externos.',
+          'Elige las asignaturas activas y el semestre que quieres importar.',
+          'Si no hay conexión directa, escanea el programa o pega la lista de tareas.',
         ],
       },
       {
@@ -862,7 +861,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Toca «Buscar mis asignaturas» y Semora pide a Canvas solo tus matrículas activas. Las asignaturas abandonadas y los semestres terminados que siguen en tu cuenta de Canvas no aparecen.',
           'Todo lo que vuelve viene preseleccionado. Toca cualquier asignatura para quitarla, o usa limpiar y seleccionar todo para cambiar la lista entera de golpe. También le pones nombre a la conexión.',
           'Cada asignatura que conservas se convierte en una asignatura real de Semora, no en un espejo de solo lectura. Recibe un color de un juego rotatorio de seis, un icono de libro y un enlace permanente a su equivalente en Canvas.',
-          'La importación es todo o nada. Si algo falla a mitad —un corte de red, un token rechazado— Semora borra la conexión que estaba construyendo y las asignaturas que ya había creado, en lugar de dejarte a medias.',
+          'La importación es todo o nada. Si algo falla a mitad —un corte de red o un error de autorización— Semora revierte la conexión y las asignaturas que había empezado a crear, en lugar de dejarte a medias.',
         ],
       },
       {
@@ -883,20 +882,20 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Cómo funciona la actualización después de la primera importación',
         paragraphs: [
-          'No hay ninguna tarea programada en el servidor que descargue tus datos de Canvas cada cierto tiempo, y eso es consecuencia directa de dónde vive el token: como tu credencial se guarda solo en tu dispositivo, el servidor no puede usarla por su cuenta.',
-          'Así que la sincronización va guiada por el primer plano. Cuando abres Semora, y cada vez que la traes de vuelta al primer plano, comprueba cada conexión y actualiza las que lleven más de 30 minutos sin sincronizar.',
+          'Las actualizaciones usan el mismo token personal que la importación inicial de Canvas. Semora muestra el estado actual para que sepas si el contenido importado está al día o necesita atención.',
+          'Cuando el token es válido y el dispositivo tiene acceso a internet, Semora puede actualizar las tareas durante el uso normal de la app. Si algo falla, registra el estado en lugar de presentar la importación como actual.',
           'También puedes forzarla. Cada conexión en Ajustes tiene un botón de «Sincronizar ahora», y te informa exactamente de lo que pasó: cuántas tareas se actualizaron y cuántas se saltaron.',
           'Después de cada sincronización correcta, Semora reprograma los recordatorios de tus tareas. Esa es la parte que hace útil una fecha movida: cuando un profesor pasa un trabajo del martes al viernes, tus avisos se mueven con él.',
-          'Hay una consecuencia que conviene planificar. Como el token se guarda por dispositivo, la sincronización automática solo corre donde vive ese token. Si conectas Canvas en tu iPhone, la conexión es de ese iPhone.',
+          'Si el token caduca o se revoca, Semora marca la conexión como pendiente. Vuelve a conectar solo si tu institución permite usar tokens personales con servicios externos; de lo contrario, usa un programa escaneado o una lista de tareas pegada.',
         ],
       },
       {
-        heading: 'Dónde se guarda tu token y qué puede hacer Semora con él',
+        heading: 'Qué puede hacer Semora con una conexión de Canvas',
         paragraphs: [
-          'En iPhone y iPad el token va al almacén seguro del sistema, ligado a esa conexión concreta. En la web va al almacenamiento local de tu navegador bajo la misma clave.',
-          'Lo que los servidores de Semora guardan sobre una conexión es deliberadamente escaso: qué proveedor es, el nombre que elegiste, la URL de tu universidad, el estado de la sincronización y la última fecha.',
-          'Semora solo llama a puntos de lectura. Lista tus asignaturas y lee tareas y datos del boletín. Nunca publica, entrega, edita ni borra nada en Canvas, y la pantalla de conexión lo dice.',
+          'El conector actual de Canvas usa un token de acceso personal generado en Canvas. Confirma que tu institución permite usarlo con servicios externos antes de conectarte.',
+          'Semora usa la conexión para listar asignaturas y leer tareas y datos del boletín. No publica, entrega, edita ni borra nada en Canvas.',
           'También hay protecciones sobre la dirección que escribes. La URL tiene que ser HTTPS. Las direcciones que apuntan a localhost, a nombres .local o a rangos de red privada se rechazan de plano.',
+          'Al desconectar se elimina la conexión de Semora. Las tareas ya importadas, tu historial de completado y tus notas permanecen hasta que decidas borrarlos por separado.',
         ],
       },
       {
@@ -916,16 +915,16 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Blackboard y Moodle, con honestidad',
         paragraphs: [
-          'Semora lista tres plataformas, y no son igual de fáciles. Canvas es la que puedes configurar tú en unos dos minutos. Las otras dos suelen implicar pedirle algo a alguien.',
-          'Blackboard usa un token de acceso OAuth emitido por la universidad, y la mayoría de las instituciones exigen que un administrador apruebe el acceso de lectura antes de que exista uno que puedas pegar.',
-          'Moodle necesita que tu administrador habilite los servicios web y te emita un token con permiso de lectura de asignaturas y tareas.',
-          'Si tu universidad usa Canvas, empieza por ahí. Si usa Blackboard o Moodle, la expectativa honesta es que quizá tengas que preguntar en tu servicio de soporte si hay un token disponible para ti.',
+          'Semora lista Canvas, Blackboard y Moodle. El conector actual de Canvas usa un token personal generado por el usuario y puede estar desactivado o prohibido por tu institución; Blackboard y Moodle también dependen de la configuración de cada universidad.',
+          'Cuando Blackboard está disponible, Semora puede leer la lista de asignaturas y columnas del boletín para obtener títulos, fechas y puntos. Según la configuración de la universidad, los detalles de notas o entregas pueden ser más limitados que en Canvas.',
+          'Cuando Moodle está disponible, Semora puede leer asignaturas matriculadas y actividades de tareas. Los cuestionarios configurados como actividades aparte pueden quedar fuera, y las escalas no numéricas se ignoran en lugar de tratarlas como puntos negativos.',
+          'Para Canvas, la pantalla de conexión usa un token personal. Si tu institución desactiva o prohíbe ese uso, escanea el programa o pega una lista de tareas.',
         ],
       },
       {
         heading: 'Qué cuesta, para quién es y dónde se pone incómodo',
         paragraphs: [
-          'Conectar una plataforma académica es una función de Pro. Pro cuesta 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual. Se compra dentro de la app de iOS.',
+          'Conectar una plataforma académica es una función de Pro. El conector actual de Canvas usa un token personal y puede estar desactivado o prohibido por una institución; la configuración de Blackboard y Moodle también varía según la universidad. Pro cuesta 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual. Se compra dentro de la app de iOS.',
           'Sigues teniendo el seguimiento completo de entregas y tareas, las calificaciones con promedios ponderados, los recordatorios el mismo día, unirte al espacio de un compañero y cinco escaneos de programa al mes.',
           'La sincronización con Canvas no es para todo el mundo. Si tu profesor no publica nunca tareas en Canvas y lo deja todo en el programa, escanear el programa es el mejor camino y además es gratis.',
         ],
@@ -935,7 +934,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Semora no trae los nombres de los profesores de la lista de asignaturas de Canvas, así que llegan sin ese dato.',
           'Una sincronización cubre hasta 50 asignaturas de una vez, y la paginación de las tareas de cada una se detiene en un límite.',
           'No hay un interruptor por asignatura después de importar. Para cambiar cuáles se sincronizan, desconecta y vuelve a conectar.',
-          'Si tu token caduca o lo revocas, la conexión muestra «se requieren credenciales» y ofrece volver a conectar.',
+          'Si el token de Canvas caduca o se revoca, la conexión muestra «se requieren credenciales». Vuelve a conectar solo si tu institución permite usar tokens personales con servicios externos.',
         ],
       },
     ],
