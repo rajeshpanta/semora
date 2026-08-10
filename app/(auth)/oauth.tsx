@@ -134,7 +134,7 @@ export default function OAuthLauncherScreen() {
     }
   };
 
-  const finishGoogle = () => {
+  const finishGoogle = useCallback(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
     if (!embeddedGoogle || window.parent === window) return;
 
@@ -144,7 +144,21 @@ export default function OAuthLauncherScreen() {
         window.parent.postMessage({ type: 'semora-google-auth-success' }, parentOrigin);
       }
     } catch {}
-  };
+  }, [embeddedGoogle]);
+
+  useEffect(() => {
+    if (!embeddedGoogle) return;
+    let active = true;
+
+    // A returning user may already have a valid app.semoraai.com session.
+    // Hand that session back to the marketing dialog immediately instead of
+    // rendering the signed-in app inside this intentionally tiny iframe.
+    void supabase.auth.getSession().then(({ data: { session } }) => {
+      if (active && session) finishGoogle();
+    }).catch(() => {});
+
+    return () => { active = false; };
+  }, [embeddedGoogle, finishGoogle]);
 
   if (embeddedGoogle) {
     return (

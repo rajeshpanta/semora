@@ -640,6 +640,14 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     const inAuthGroup = segments[0] === '(auth)';
     const onOnboarding = (segments[0] as string) === 'onboarding';
     const onWelcome = (segments[0] as string) === 'welcome';
+    const onEmbeddedGoogleAuth =
+      Platform.OS === 'web' &&
+      segments[0] === '(auth)' &&
+      segments[1] === 'oauth' &&
+      typeof window !== 'undefined' &&
+      window.parent !== window &&
+      new URLSearchParams(window.location.search).get('provider') === 'google' &&
+      new URLSearchParams(window.location.search).get('embed') === '1';
 
     if (!session) {
       if (Platform.OS === 'web') {
@@ -657,6 +665,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         router.replace('/(auth)/sign-in');
       }
     } else if (session && (inAuthGroup || onOnboarding || onWelcome)) {
+      // The marketing site's Google button lives in a same-site iframe. If an
+      // app session already exists, OAuthLauncherScreen notifies the parent to
+      // enter the app. Redirecting this frame to /(tabs) squeezes the signed-in
+      // navigation into the 54px button slot.
+      if (onEmbeddedGoogleAuth) return;
+
       // Freshly authenticated. Two deep-link flows may have parked intent while
       // the user was signed out — resume them now instead of dropping the user
       // on the tabs with nothing happening:
