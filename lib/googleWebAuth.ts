@@ -17,6 +17,7 @@ export interface GoogleWebButtonCallbacks {
 export interface GoogleWebButtonOptions {
   theme?: 'outline' | 'filled_black';
   shape?: 'pill' | 'rectangular';
+  text?: 'continue_with' | 'signin_with' | 'signup_with';
 }
 
 /** No browser button exists in native builds. */

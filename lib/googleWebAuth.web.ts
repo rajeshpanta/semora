@@ -27,7 +27,7 @@ interface GisIdApi {
       type: 'standard';
       theme: 'outline' | 'filled_black';
       size: 'large';
-      text: 'continue_with';
+      text: 'continue_with' | 'signin_with' | 'signup_with';
       shape: 'pill' | 'rectangular';
       logo_alignment: 'left';
       width: number;
@@ -50,6 +50,7 @@ export interface GoogleWebButtonCallbacks {
 export interface GoogleWebButtonOptions {
   theme?: 'outline' | 'filled_black';
   shape?: 'pill' | 'rectangular';
+  text?: 'continue_with' | 'signin_with' | 'signup_with';
 }
 
 let gisLoadPromise: Promise<GisNamespace> | null = null;
@@ -224,7 +225,7 @@ export function mountGoogleWebSignInButton(
         type: 'standard',
         theme: options.theme ?? 'filled_black',
         size: 'large',
-        text: 'continue_with',
+        text: options.text ?? 'continue_with',
         shape: options.shape ?? 'rectangular',
         logo_alignment: 'left',
         width: Math.max(240, Math.min(400, measuredWidth || 320)),

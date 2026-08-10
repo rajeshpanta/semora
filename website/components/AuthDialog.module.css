@@ -119,11 +119,43 @@
 .googleFrame {
   display: block;
   width: 100%;
-  height: 54px;
+  height: 44px;
   border: 0;
-  border-radius: 10px;
-  background: #111;
-  color-scheme: dark;
+  border-radius: 4px;
+  background: transparent;
+  color-scheme: light;
+}
+
+.googleError {
+  margin: 9px 2px 0;
+  color: #fca5a5;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.finishing {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 108px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.spinner {
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(255, 255, 255, 0.24);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: authSpin 0.7s linear infinite;
+}
+
+@keyframes authSpin {
+  to { transform: rotate(360deg); }
 }
 
 .or {
@@ -172,6 +204,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .dialog[open] { animation: none; }
+  .spinner { animation-duration: 1.4s; }
   .apple:hover,
   .google:hover,
   .email:hover { transform: none; }

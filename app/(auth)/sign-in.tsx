@@ -69,6 +69,13 @@ export default function SignInScreen() {
     : painPoint === 'grades' ? 'Know your grade in every class'
     : null;
 
+  // Expo Router can retain this screen while only its query string changes.
+  // Keep the visible intent in sync so /sign-in?mode=signin can never retain
+  // a previously-rendered "Create your account" state.
+  useEffect(() => {
+    setMode(banner || params.mode === 'signin' ? 'signin' : 'signup');
+  }, [banner, params.mode]);
+
   // Pre-fill email from the banner whenever it arrives (after fresh signup).
   useEffect(() => {
     if (banner?.email) {
@@ -315,6 +322,7 @@ export default function SignInScreen() {
                   disabled={oauthLoading === 'apple'}
                   theme="outline"
                   shape="rectangular"
+                  text={mode === 'signin' ? 'signin_with' : 'signup_with'}
                   onProcessingChange={(processing) => setOauthLoading(processing ? 'google' : null)}
                   onSuccess={handleGoogleWebSuccess}
                   onError={handleGoogleWebError}

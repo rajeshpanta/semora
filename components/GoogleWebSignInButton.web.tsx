@@ -7,6 +7,7 @@ export interface GoogleWebSignInButtonProps {
   disabled?: boolean;
   theme?: 'outline' | 'filled_black';
   shape?: 'pill' | 'rectangular';
+  text?: 'continue_with' | 'signin_with' | 'signup_with';
   onProcessingChange?: (processing: boolean) => void;
   onSuccess: () => void;
   onError: (error: Error) => void;
@@ -16,6 +17,7 @@ export function GoogleWebSignInButton({
   disabled = false,
   theme = 'filled_black',
   shape = 'rectangular',
+  text = 'continue_with',
   onProcessingChange,
   onSuccess,
   onError,
@@ -38,8 +40,8 @@ export function GoogleWebSignInButton({
       },
       onSuccess: () => callbacksRef.current.onSuccess(),
       onError: (error) => callbacksRef.current.onError(error),
-    }, { theme, shape });
-  }, [shape, theme]);
+    }, { theme, shape, text });
+  }, [shape, text, theme]);
 
   return (
     <View
@@ -53,7 +55,11 @@ export function GoogleWebSignInButton({
       {!ready || processing ? (
         <View
           pointerEvents="none"
-          style={[styles.activity, theme === 'filled_black' && styles.activityDark]}
+          style={[
+            styles.activity,
+            shape === 'rectangular' ? styles.activityRectangular : styles.activityPill,
+            theme === 'filled_black' && styles.activityDark,
+          ]}
         >
           <ActivityIndicator color={theme === 'filled_black' ? '#fff' : '#1f1f1f'} size="small" />
         </View>
@@ -85,8 +91,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#fff',
     borderColor: '#dadce0',
-    borderRadius: 20,
     borderWidth: 1,
+  },
+  activityRectangular: {
+    borderRadius: 4,
+  },
+  activityPill: {
+    borderRadius: 20,
   },
   activityDark: {
     backgroundColor: '#111',

@@ -27,7 +27,11 @@ type Provider = 'apple' | 'google';
  * /callback route. There is no second provider choice or auth form.
  */
 export default function OAuthLauncherScreen() {
-  const { provider, embed } = useLocalSearchParams<{ provider?: string; embed?: string }>();
+  const { provider, embed, mode } = useLocalSearchParams<{
+    provider?: string;
+    embed?: string;
+    mode?: string;
+  }>();
   const [error, setError] = useState('');
   const [showExit, setShowExit] = useState(false);
   const colors = useColors();
@@ -35,6 +39,7 @@ export default function OAuthLauncherScreen() {
   const embeddedGoogle = selectedProvider === 'google' && embed === '1';
   const providerWindowOpened = useRef(false);
   const returningFromProvider = useRef(false);
+  const googleCompletionSent = useRef(false);
 
   const goBackToPreviousPage = useCallback(() => {
     if (returningFromProvider.current) return;
@@ -134,17 +139,36 @@ export default function OAuthLauncherScreen() {
     }
   };
 
-  const finishGoogle = useCallback(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
-    if (!embeddedGoogle || window.parent === window) return;
+  const postGoogleResult = useCallback((payload: { type: string }) => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return false;
+    if (!embeddedGoogle || window.parent === window) return false;
 
     try {
       const parentOrigin = new URL(document.referrer).origin;
       if (parentOrigin === 'https://semoraai.com' || parentOrigin === 'https://www.semoraai.com') {
-        window.parent.postMessage({ type: 'semora-google-auth-success' }, parentOrigin);
+        window.parent.postMessage(payload, parentOrigin);
+        return true;
       }
     } catch {}
+    return false;
   }, [embeddedGoogle]);
+
+  const finishGoogle = useCallback(() => {
+    if (googleCompletionSent.current) return;
+    googleCompletionSent.current = postGoogleResult({ type: 'semora-google-auth-success' });
+  }, [postGoogleResult]);
+
+  const handleGoogleError = useCallback((cause: Error) => {
+    if (googleCompletionSent.current) return;
+    const message = cause.message || 'Could not continue with Google.';
+    setError(message);
+    // Keep provider/Supabase diagnostics inside the app. The marketing dialog
+    // receives only a typed failure signal and renders localized public copy.
+    postGoogleResult({ type: 'semora-google-auth-error' });
+  }, [postGoogleResult]);
+
+  const googleButtonText =
+    mode === 'signin' ? 'signin_with' : mode === 'signup' ? 'signup_with' : 'continue_with';
 
   useEffect(() => {
     if (!embeddedGoogle) return;
@@ -164,10 +188,11 @@ export default function OAuthLauncherScreen() {
     return (
       <View style={styles.embedScreen}>
         <GoogleWebSignInButton
-          theme="filled_black"
+          theme="outline"
           shape="rectangular"
+          text={googleButtonText}
           onSuccess={finishGoogle}
-          onError={(cause) => setError(cause.message || 'Could not continue with Google.')}
+          onError={handleGoogleError}
         />
         {error ? <Text style={styles.embedError}>{error}</Text> : null}
       </View>
@@ -186,8 +211,9 @@ export default function OAuthLauncherScreen() {
             <GoogleWebSignInButton
               theme="filled_black"
               shape="rectangular"
+              text={googleButtonText}
               onSuccess={finishGoogle}
-              onError={(cause) => setError(cause.message || 'Could not continue with Google.')}
+              onError={handleGoogleError}
             />
           </View>
           <TouchableOpacity style={styles.secondary} onPress={backToMarketing}>
@@ -245,11 +271,12 @@ const styles = StyleSheet.create({
   secondaryText: { fontSize: 14, fontWeight: '700' },
   googleButtonHost: { alignSelf: 'stretch', marginTop: 24 },
   embedScreen: {
-    minHeight: 54,
+    minHeight: 44,
     width: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#111',
+    paddingHorizontal: 2,
+    backgroundColor: '#fff',
   },
   embedError: { color: '#fca5a5', fontSize: 11, lineHeight: 14, marginTop: 5, textAlign: 'center' },
   googleScreen: {
