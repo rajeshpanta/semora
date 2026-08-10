@@ -4,15 +4,14 @@ import type * as GoogleSigninModule from '@react-native-google-signin/google-sig
 // cannot be imported in a browser bundle. Metro resolves `.web.ts` first, so
 // iOS never loads this.
 //
-// The native SDK is meaningless on web: browser Google auth goes through
-// supabase.auth.signInWithOAuth() instead (Phase 3), which needs no native
-// module. Methods that a shared code path may still call during sign-out or
-// setup are harmless no-ops; the interactive ones throw a clear error rather
-// than failing silently, so a missed call site surfaces immediately in dev
-// instead of hanging a button forever.
+// The native SDK is meaningless on web: browser Google auth goes through the
+// Google Identity Services adapter in lib/googleWebAuth.web.ts instead. Methods
+// that a shared code path may still call during sign-out or setup are harmless
+// no-ops; the interactive ones throw a clear error rather than failing silently,
+// so a missed call site surfaces immediately in dev instead of hanging a button.
 
 const WEB_UNSUPPORTED =
-  'Native Google Sign-In is unavailable on web. Use supabase.auth.signInWithOAuth({ provider: "google" }) instead.';
+  'Native Google Sign-In is unavailable on web. Use signInWithGoogle() from lib/auth instead.';
 
 // Cast because a hand-written stub can't structurally satisfy the SDK's full
 // generated types, and pretending otherwise would only add noise — the seam

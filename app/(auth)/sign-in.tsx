@@ -15,6 +15,7 @@ import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { signIn, signInWithApple, signInWithGoogle, isAppleSignInAvailable } from '@/lib/auth';
+import { cancelGoogleWebSignIn } from '@/lib/googleWebAuth';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { useColors } from '@/lib/theme';
@@ -79,6 +80,12 @@ export default function SignInScreen() {
   // Android, on iOS sims without an Apple ID, and on devices below iOS 13.
   useEffect(() => {
     isAppleSignInAvailable().then(setAppleAvailable);
+  }, []);
+
+  // The web adapter renders its official GIS UI outside the React tree. Remove
+  // it if this screen is unmounted before the credential exchange completes.
+  useEffect(() => () => {
+    if (Platform.OS === 'web') cancelGoogleWebSignIn();
   }, []);
 
   const handleApple = async () => {

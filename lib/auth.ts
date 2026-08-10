@@ -1,5 +1,6 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { GoogleSignin } from '@/lib/googleSignin';
+import { signInWithGoogleWeb } from '@/lib/googleWebAuth';
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
@@ -118,6 +119,7 @@ export async function signInWithApple() {
 /**
  * Sign in with Google.
  *
+ * Web: official Google Identity Services UI → ID token → Supabase session.
  * Native Google sheet → returns idToken → handed to Supabase which
  * verifies it against Google's public keys (using the Web Client ID
  * registered in the Supabase dashboard) and creates/finds the user.
@@ -127,22 +129,7 @@ export async function signInWithApple() {
  */
 export async function signInWithGoogle() {
   if (Platform.OS === 'web') {
-    const redirectTo =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}/callback`
-        : undefined;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'select_account',
-        },
-      },
-    });
-    if (error) throw error;
-    return;
+    return signInWithGoogleWeb();
   }
 
   configureGoogleOnce();

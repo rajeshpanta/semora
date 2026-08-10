@@ -13,6 +13,7 @@ import {
 import { useLocalSearchParams } from 'expo-router';
 
 import { signInWithApple, signInWithGoogle } from '@/lib/auth';
+import { cancelGoogleWebSignIn } from '@/lib/googleWebAuth';
 import { MARKETING_URL } from '@/lib/constants';
 import { supabase } from '@/lib/supabase';
 import { useColors } from '@/lib/theme';
@@ -21,10 +22,10 @@ type Provider = 'apple' | 'google';
 
 /**
  * The marketing site sends its provider buttons here rather than to the full
- * sign-in screen. This route immediately begins OAuth on app.semoraai.com,
- * which is important because the PKCE verifier must be stored on the same
- * origin that receives /callback. There is no second provider choice or auth
- * form for visitors to work through.
+ * sign-in screen. Google opens the browser-only Identity Services adapter on
+ * app.semoraai.com; Apple continues through the existing Supabase PKCE redirect
+ * and /callback route. There is no second provider choice or auth form for
+ * visitors to work through.
  */
 export default function OAuthLauncherScreen() {
   const { provider } = useLocalSearchParams<{ provider?: string }>();
@@ -47,11 +48,9 @@ export default function OAuthLauncherScreen() {
     }
   }, []);
 
-  // OAuth is allowed to use a browser-managed popup. Closing that popup does
-  // not reject Supabase's initial `signInWithOAuth` promise, so without this
-  // listener the launcher would spin forever. When focus returns to this page
-  // after a provider window was open, confirm that a session did not arrive
-  // and restore the page the visitor came from.
+  // Apple remains on the existing Supabase browser OAuth flow. Keep its legacy
+  // focus recovery isolated here; Google popup/One Tap lifecycle is owned by
+  // googleWebAuth.web.ts instead.
   const returnAfterDismissal = useCallback(async () => {
     if (returningFromProvider.current || !providerWindowOpened.current) return;
     const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
@@ -60,7 +59,10 @@ export default function OAuthLauncherScreen() {
   }, [goBackToPreviousPage]);
 
   useEffect(() => {
-    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+    // Google Identity Services owns its modal, One Tap prompt, popup lifecycle,
+    // and cancellation. This legacy focus detector remains Apple-only so it
+    // cannot race the Google ID-token exchange and navigate back too early.
+    if (selectedProvider !== 'apple' || Platform.OS !== 'web' || typeof window === 'undefined') return;
     let returnTimer: number | null = null;
 
     const onBlur = () => {
@@ -88,7 +90,7 @@ export default function OAuthLauncherScreen() {
       window.clearTimeout(exitTimer);
       if (returnTimer != null) window.clearTimeout(returnTimer);
     };
-  }, [returnAfterDismissal]);
+  }, [returnAfterDismissal, selectedProvider]);
 
   useEffect(() => {
     if (!selectedProvider) {
@@ -103,14 +105,19 @@ export default function OAuthLauncherScreen() {
         else await signInWithGoogle();
       } catch (cause: any) {
         if (!active) return;
+        if (cause?.code === 'SIGN_IN_CANCELLED') {
+          goBackToPreviousPage();
+          return;
+        }
         setError(cause?.message ?? `Could not continue with ${selectedProvider}. Please try again.`);
       }
     };
     void begin();
     return () => {
       active = false;
+      if (selectedProvider === 'google') cancelGoogleWebSignIn();
     };
-  }, [selectedProvider]);
+  }, [goBackToPreviousPage, selectedProvider]);
 
   const tryAgain = () => {
     setError('');
@@ -118,7 +125,13 @@ export default function OAuthLauncherScreen() {
     providerWindowOpened.current = false;
     returningFromProvider.current = false;
     if (selectedProvider === 'apple') void signInWithApple().catch((cause: any) => setError(cause?.message ?? 'Could not continue with Apple.'));
-    else if (selectedProvider === 'google') void signInWithGoogle().catch((cause: any) => setError(cause?.message ?? 'Could not continue with Google.'));
+    else if (selectedProvider === 'google') void signInWithGoogle().catch((cause: any) => {
+      if (cause?.code === 'SIGN_IN_CANCELLED') {
+        goBackToPreviousPage();
+        return;
+      }
+      setError(cause?.message ?? 'Could not continue with Google.');
+    });
   };
 
   const backToMarketing = () => {
