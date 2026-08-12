@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { normalizeSupportedDocument } from '../_shared/document-files.ts';
 
 // AI flashcard generation. Structured on tutor-chat/index.ts (CORS, JWT
 // verification, service-role client, OpenAI call with retries,
@@ -552,21 +553,41 @@ async function extractNoteText(
     console.warn('[generate-flashcards] note too large to extract inline, skipping');
     return null;
   }
+  const document = normalizeSupportedDocument(note.filename, note.mime_type);
+  if (!document) {
+    console.warn('[generate-flashcards] unsupported note type, skipping', note.filename, note.mime_type);
+    return null;
+  }
+
+  // Text/code/transcript files need no model extraction. Decode and cache
+  // them losslessly, matching tutor-chat's fast path.
+  if (document.mimeType.startsWith('text/') || document.mimeType === 'application/json') {
+    const decoded = new TextDecoder().decode(buf).trim();
+    if (!decoded) return null;
+    await adminClient
+      .from('course_notes')
+      .update({ extracted_text: decoded })
+      .eq('id', note.id)
+      .eq('user_id', userId)
+      .then(undefined, (e: unknown) => console.warn('[generate-flashcards] cache extracted_text failed:', e));
+    return decoded;
+  }
+
   let binary = '';
   const CHUNK = 0x8000;
   for (let i = 0; i < buf.length; i += CHUNK) {
     binary += String.fromCharCode(...buf.subarray(i, i + CHUNK));
   }
   const base64 = btoa(binary);
-  const mimeType = note.mime_type || 'application/pdf';
+  const mimeType = document.mimeType;
 
-  const attachment = mimeType.startsWith('image/')
+  const attachment = document.isImage
     ? { type: 'input_image', image_url: `data:${mimeType};base64,${base64}`, detail: 'high' }
     : {
       type: 'input_file',
-      filename: note.filename || 'course-note.pdf',
+      filename: document.fileName,
       file_data: `data:${mimeType};base64,${base64}`,
-      detail: 'high',
+      ...(document.isPdf ? { detail: 'high' } : {}),
     };
   const result = await callOpenAIResponses({
     model: OPENAI_MODEL,

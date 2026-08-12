@@ -1,5 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import {
+  normalizeSupportedDocument,
+  SUPPORTED_DOCUMENT_ERROR,
+  type NormalizedDocument,
+} from '../_shared/document-files.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const OPENAI_MODEL = Deno.env.get('SYLLABUS_OPENAI_MODEL')?.trim() || 'gpt-5.6-luna'; // $0.20/$1.20 per 1M — 10x cheaper than terra ($2/$12) and verified sufficient for this task; override per function with the *_OPENAI_MODEL secret
@@ -28,17 +33,6 @@ const FREE_SCAN_LIMIT = 5;
 // phone photos (~2-4MB base64 each) stays comfortably under the body cap
 // while covering effectively every paper syllabus.
 const MAX_PAGES = 5;
-
-const ALLOWED_MIME_TYPES = [
-  'application/pdf',
-  'image/png',
-  'image/jpeg',
-  'image/webp',
-];
-
-// The multi-page `pages` shape is images-only: PDFs are inherently
-// multi-page already, so the client keeps them single-file.
-const ALLOWED_PAGE_MIME_TYPES = ALLOWED_MIME_TYPES.filter((t) => t !== 'application/pdf');
 
 const EXTRACTION_PROMPT = `You are analyzing a document that is supposed to be an academic course syllabus. FIRST classify whether it actually is one, THEN extract the course information AND all deadlines.
 
@@ -391,6 +385,7 @@ serve(async (req) => {
     let body: {
       base64?: unknown;
       mimeType?: unknown;
+      fileName?: unknown;
       pages?: { base64?: unknown; mimeType?: unknown }[];
       text?: unknown;
       apiVersion?: unknown;
@@ -428,6 +423,7 @@ serve(async (req) => {
     }
 
     let pages: { base64: string; mimeType: string }[] = [];
+    let singleDocument: NormalizedDocument | null = null;
     if (pastedText != null) {
       // No file pages in the text path.
     } else if (Array.isArray(body.pages) && body.pages.length > 0) {
@@ -438,11 +434,17 @@ serve(async (req) => {
         if (!page || typeof page.base64 !== 'string' || !page.base64) {
           return jsonResponse({ error: 'Each page needs a base64 string' }, 400);
         }
-        if (typeof page.mimeType !== 'string' || !ALLOWED_PAGE_MIME_TYPES.includes(page.mimeType)) {
+        const normalizedPage = typeof page.mimeType === 'string'
+          ? normalizeSupportedDocument(null, page.mimeType)
+          : null;
+        if (!normalizedPage?.isImage) {
           return jsonResponse({ error: `Unsupported page type: ${page.mimeType}. Pages must be images; send PDFs as a single file.` }, 400);
         }
       }
-      pages = body.pages as { base64: string; mimeType: string }[];
+      pages = body.pages.map((page) => ({
+        base64: page.base64 as string,
+        mimeType: normalizeSupportedDocument(null, page.mimeType as string)!.mimeType,
+      }));
     } else {
       const { base64, mimeType } = body;
       if (!base64 || !mimeType) {
@@ -451,10 +453,14 @@ serve(async (req) => {
       if (typeof base64 !== 'string') {
         return jsonResponse({ error: 'base64 must be a string' }, 400);
       }
-      if (typeof mimeType !== 'string' || !ALLOWED_MIME_TYPES.includes(mimeType)) {
-        return jsonResponse({ error: `Unsupported file type: ${mimeType}` }, 400);
+      singleDocument = normalizeSupportedDocument(
+        typeof body.fileName === 'string' ? body.fileName : null,
+        typeof mimeType === 'string' ? mimeType : null,
+      );
+      if (!singleDocument) {
+        return jsonResponse({ error: SUPPORTED_DOCUMENT_ERROR }, 400);
       }
-      pages = [{ base64, mimeType }];
+      pages = [{ base64, mimeType: singleDocument.mimeType }];
     }
 
     // Same total-payload ceiling regardless of shape — 5 pages share the
@@ -482,18 +488,26 @@ serve(async (req) => {
     };
     const inputContent = [jsonDirective, ...(pastedText != null
       ? [{ type: 'input_text', text: pastedText }]
-      : pages.map((page, index) => page.mimeType === 'application/pdf'
-        ? {
-          type: 'input_file',
-          filename: `syllabus-${index + 1}.pdf`,
-          file_data: `data:${page.mimeType};base64,${page.base64}`,
-          detail: 'high',
+      : pages.map((page, index) => {
+        const document = index === 0 && singleDocument
+          ? singleDocument
+          : normalizeSupportedDocument(null, page.mimeType)!;
+        if (document.isImage) {
+          return {
+            type: 'input_image',
+            image_url: `data:${page.mimeType};base64,${page.base64}`,
+            detail: 'high',
+          };
         }
-        : {
-          type: 'input_image',
-          image_url: `data:${page.mimeType};base64,${page.base64}`,
-          detail: 'high',
-        }))];
+        return {
+          type: 'input_file',
+          filename: document.fileName,
+          file_data: `data:${page.mimeType};base64,${page.base64}`,
+          // `detail` affects PDF page images only. Office/text files are
+          // text-extracted by the Responses API and should omit it.
+          ...(document.isPdf ? { detail: 'high' } : {}),
+        };
+      }))];
 
     const openAIResult = await callOpenAIResponses({
       model: OPENAI_MODEL,

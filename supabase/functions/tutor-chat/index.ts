@@ -16,6 +16,7 @@ import {
   modelFor, openAIText, providerFor, usageFromGemini, usageFromOpenAI,
   asUntrustedDocument, OPENAI_API_KEY, GEMINI_API_KEY,
 } from '../_shared/ai.ts';
+import { normalizeSupportedDocument } from '../_shared/document-files.ts';
 
 // This endpoint serves two distinct product surfaces, so the task is fixed by
 // the MODE the client requested — a structural property of which control was
@@ -677,13 +678,18 @@ async function extractNoteTextOpenAI(
   base64: string,
   mimeType: string,
 ): Promise<string | null> {
-  const attachment = mimeType.startsWith('image/')
+  const document = normalizeSupportedDocument(note.filename, mimeType);
+  if (!document) {
+    console.warn('[tutor-chat] unsupported note type, skipping', note.filename, mimeType);
+    return null;
+  }
+  const attachment = document.isImage
     ? { type: 'input_image', image_url: `data:${mimeType};base64,${base64}`, detail: 'high' }
     : {
       type: 'input_file',
-      filename: note.filename || 'course-note.pdf',
+      filename: document.fileName,
       file_data: `data:${mimeType};base64,${base64}`,
-      detail: 'high',
+      ...(document.isPdf ? { detail: 'high' } : {}),
     };
   const result = await callOpenAIResponses({
     model: MODELS.tutor,
@@ -744,12 +750,14 @@ async function extractNoteText(
 
   const buf = new Uint8Array(await file.arrayBuffer());
 
-  // A plain-text note is already text. Sending it to a vision model to be
-  // "extracted" costs a request, adds latency, and — with OpenAI, whose
-  // input_file part accepts PDFs — simply fails, so the note was dropped.
-  // Decode it here instead: free, instant and lossless.
-  const declaredMime = note.mime_type || 'application/pdf';
-  if (declaredMime.startsWith('text/') || declaredMime === 'application/json') {
+  // A text/code/transcript note is already text. Although OpenAI accepts it as
+  // input_file, decoding it here is free, instant, and lossless.
+  const document = normalizeSupportedDocument(note.filename, note.mime_type);
+  if (!document) {
+    console.warn('[tutor-chat] unsupported note type, skipping', note.filename, note.mime_type);
+    return null;
+  }
+  if (document.mimeType.startsWith('text/') || document.mimeType === 'application/json') {
     const decoded = new TextDecoder().decode(buf).trim();
     if (!decoded) return null;
     await adminClient
@@ -774,7 +782,7 @@ async function extractNoteText(
     binary += String.fromCharCode(...buf.subarray(i, i + CHUNK));
   }
   const base64 = btoa(binary);
-  const mimeType = note.mime_type || 'application/pdf';
+  const mimeType = document.mimeType;
 
   // Reading an attached note is documentExtraction, NOT tutoring — so by the
   // routing table it belongs to Gemini even inside the tutor endpoint. But
@@ -785,7 +793,7 @@ async function extractNoteText(
   // turn as grounded. generate-flashcards does the same job on OpenAI, so the
   // capability exists — tutor-chat was simply left pointing at the unconfigured
   // provider. Use whichever provider this environment actually has.
-  if (!isProviderConfigured('gemini')) {
+  if (!isProviderConfigured('gemini') || (!document.isImage && !document.isPdf)) {
     return await extractNoteTextOpenAI(adminClient, note, userId, base64, mimeType);
   }
   const result = await callGemini({

@@ -24,6 +24,7 @@ import { track } from '@/lib/analytics';
 import { COLORS, FONTS, COURSE_COLORS, COURSE_ICONS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
+import { normalizeSupportedDocument } from '@/lib/documentFiles';
 
 const TYPE_SINGULAR: Record<string, string> = {
   assignment: 'assignment', quiz: 'quiz', exam: 'exam',
@@ -93,6 +94,18 @@ async function createDuplicateCourse(result: ProcessResult, userId: string): Pro
 export default function SyllabusUploadScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ fileUri?: string; fileName?: string; mimeType?: string; pages?: string }>();
+  const displayDocument = normalizeSupportedDocument(params.fileName, params.mimeType);
+  const fileIcon = displayDocument?.category === 'image'
+    ? 'image'
+    : displayDocument?.category === 'spreadsheet'
+      ? 'file-excel-o'
+      : displayDocument?.category === 'presentation'
+        ? 'file-powerpoint-o'
+        : displayDocument?.category === 'document'
+          ? 'file-word-o'
+          : displayDocument?.category === 'pdf'
+            ? 'file-pdf-o'
+            : 'file-text-o';
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
   const colors = useColors();
   const { isWide } = useResponsive();
@@ -356,11 +369,7 @@ export default function SyllabusUploadScreen() {
         {/* File info */}
         <View style={[styles.fileChip, { backgroundColor: colors.brand50 }]}>
           <FontAwesome
-            name={
-              params.mimeType === 'text/plain'
-                ? 'align-left'
-                : params.mimeType?.includes('image') ? 'image' : 'file-pdf-o'
-            }
+            name={fileIcon}
             size={14}
             color={colors.brand}
           />

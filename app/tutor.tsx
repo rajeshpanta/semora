@@ -31,6 +31,11 @@ import {
   useCourseNotes, useUploadCourseNote, useDeleteCourseNote, useGenerateTutorPractice,
   useEvaluateTutorPractice, useCourseTopicMastery, type TutorPracticeQuestion,
 } from '@/lib/tutor';
+import {
+  normalizeSupportedDocument,
+  SUPPORTED_DOCUMENT_PICKER_TYPE,
+  unsupportedDocumentMessage,
+} from '@/lib/documentFiles';
 
 export default function TutorScreen() {
   const router = useRouter();
@@ -230,17 +235,21 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
     }
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const result = await DocumentPicker.getDocumentAsync({
-      // OpenAI accepts PDFs plus JPEG, PNG, and WEBP image inputs.
-      type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
+      type: SUPPORTED_DOCUMENT_PICKER_TYPE,
       copyToCacheDirectory: true,
     });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
+    const document = normalizeSupportedDocument(asset.name, asset.mimeType);
+    if (!document) {
+      Alert.alert('Unsupported file', unsupportedDocumentMessage(asset.name));
+      return;
+    }
     try {
       await uploadNote.mutateAsync({
         uri: asset.uri,
-        filename: asset.name || 'notes',
-        mimeType: asset.mimeType || 'application/pdf',
+        filename: document.fileName,
+        mimeType: document.mimeType,
       });
       track('tutor_note_uploaded', { screen: 'tutor' });
       if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

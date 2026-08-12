@@ -84,7 +84,7 @@ export async function processSyllabus(
     : await getFileSize(fileUri);
   const extraction = pastedText != null
     ? await extractFromText(pastedText, signal)
-    : await extractFromPages(pageList, signal);
+    : await extractFromPages(pageList, signal, fileName);
 
   // Bail BEFORE any DB writes if the caller aborted (e.g. the 120s timeout):
   // otherwise we create an orphan semester/course/upload the user never sees

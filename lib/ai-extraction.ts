@@ -90,13 +90,15 @@ export async function extractFromFile(
   fileUri: string,
   mimeType: string,
   signal?: AbortSignal,
+  fileName?: string,
 ): Promise<SyllabusExtraction> {
-  return extractFromPages([{ uri: fileUri, mimeType }], signal);
+  return extractFromPages([{ uri: fileUri, mimeType }], signal, fileName);
 }
 
 export async function extractFromPages(
   pages: SyllabusPage[],
   signal?: AbortSignal,
+  fileName?: string,
 ): Promise<SyllabusExtraction> {
   if (pages.length === 0) {
     throw new Error('No pages to scan');
@@ -151,7 +153,12 @@ export async function extractFromPages(
   // apiVersion at all — so BOTH shapes must carry the marker. Older Edge
   // Function deployments simply ignore the extra field.
   const body = encoded.length === 1
-    ? JSON.stringify({ base64: encoded[0].base64, mimeType: encoded[0].mimeType, apiVersion: 2 })
+    ? JSON.stringify({
+      base64: encoded[0].base64,
+      mimeType: encoded[0].mimeType,
+      fileName,
+      apiVersion: 2,
+    })
     : JSON.stringify({ pages: encoded, apiVersion: 2 });
 
   const response = await fetch(`${supabaseUrl}/functions/v1/parse-syllabus`, {

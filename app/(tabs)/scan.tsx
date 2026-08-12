@@ -31,6 +31,11 @@ import { useSemesters, useCourses, useScanCount, FREE_SCAN_LIMIT } from '@/lib/q
 import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
 import { MAX_SCAN_PAGES, MAX_SCAN_RAW_BYTES, scanTooLargeMessage, type SyllabusPage } from '@/lib/ai-extraction';
 import { getFileSize } from '@/lib/readFileBase64';
+import {
+  normalizeSupportedDocument,
+  SUPPORTED_DOCUMENT_PICKER_TYPE,
+  unsupportedDocumentMessage,
+} from '@/lib/documentFiles';
 import { GlobalSearchButton } from '@/components/GlobalSearchButton';
 
 // Best-effort raw file size for the multi-page upload budget. Returns 0 when
@@ -256,22 +261,23 @@ export default function ScanScreen() {
     navigateToUploadPages(pages);
   };
 
-  const handleUploadPDF = async () => {
+  const handleUploadDocument = async () => {
     if (!(await checkScanLimit())) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const result = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf'],
+      type: SUPPORTED_DOCUMENT_PICKER_TYPE,
       copyToCacheDirectory: true,
     });
 
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      navigateToUpload(
-        asset.uri,
-        asset.name || 'syllabus.pdf',
-        asset.mimeType || 'application/pdf',
-      );
+      const document = normalizeSupportedDocument(asset.name, asset.mimeType);
+      if (!document) {
+        Alert.alert('Unsupported file', unsupportedDocumentMessage(asset.name));
+        return;
+      }
+      navigateToUpload(asset.uri, document.fileName, document.mimeType);
     }
   };
 
@@ -351,44 +357,23 @@ export default function ScanScreen() {
     }
   };
 
-  // Mirrors OpenAI's supported image-input types and ALLOWED_MIME_TYPES in
-  // parse-syllabus. The Photos flow above asks iOS for a compressed image;
-  // raw HEIC/HEIF files from Files must first be exported as JPG, PNG, or PDF.
-  const FILE_PICKER_MIME = [
-    'application/pdf',
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-  ];
-
-  // Some Files-app providers omit mimeType. Falling back to PDF for an
-  // image mislabels the bytes sent to the parser — infer from extension.
-  const inferMimeFromName = (name?: string | null): string => {
-    const ext = (name ?? '').split('.').pop()?.toLowerCase();
-    switch (ext) {
-      case 'jpg': case 'jpeg': return 'image/jpeg';
-      case 'png': return 'image/png';
-      case 'webp': return 'image/webp';
-      default: return 'application/pdf';
-    }
-  };
-
   const handlePickFromFiles = async () => {
     if (!(await checkScanLimit())) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const result = await DocumentPicker.getDocumentAsync({
-      type: FILE_PICKER_MIME,
+      type: SUPPORTED_DOCUMENT_PICKER_TYPE,
       copyToCacheDirectory: true,
     });
 
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
-      navigateToUpload(
-        asset.uri,
-        asset.name || 'syllabus',
-        asset.mimeType || inferMimeFromName(asset.name),
-      );
+      const document = normalizeSupportedDocument(asset.name, asset.mimeType);
+      if (!document) {
+        Alert.alert('Unsupported file', unsupportedDocumentMessage(asset.name));
+        return;
+      }
+      navigateToUpload(asset.uri, document.fileName, document.mimeType);
     }
   };
 
@@ -400,12 +385,12 @@ export default function ScanScreen() {
   // navigateToUpload -> /syllabus/upload pipeline, no new code downstream.
   const handleDroppedFile = async (file: File) => {
     if (!(await checkScanLimit())) return;
-    const mimeType = file.type || inferMimeFromName(file.name);
-    if (!FILE_PICKER_MIME.includes(mimeType)) {
-      Alert.alert('Unsupported file', 'Drop a PDF, JPG, PNG, or WEBP file.');
+    const document = normalizeSupportedDocument(file.name, file.type);
+    if (!document) {
+      Alert.alert('Unsupported file', unsupportedDocumentMessage(file.name));
       return;
     }
-    navigateToUpload(URL.createObjectURL(file), file.name || 'syllabus', mimeType);
+    navigateToUpload(URL.createObjectURL(file), document.fileName, document.mimeType);
   };
 
   const dropZoneRef = useRef<View>(null);
@@ -512,7 +497,7 @@ export default function ScanScreen() {
             </View>
             <View style={styles.scanLine} />
           </View>
-          <Text style={styles.frameLabel}>{isDraggingOver ? 'Drop it here' : 'PDF & Photo supported'}</Text>
+          <Text style={styles.frameLabel}>{isDraggingOver ? 'Drop it here' : 'Documents & photos supported'}</Text>
         </View>
 
         {/* Actions */}
@@ -536,17 +521,17 @@ export default function ScanScreen() {
 
           <TouchableOpacity
             style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]}
-            onPress={handleUploadPDF}
+            onPress={handleUploadDocument}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel="Upload a PDF from an email attachment or download"
+            accessibilityLabel="Upload a syllabus document from an email attachment or download"
           >
             <View style={[styles.actionIcon, { backgroundColor: colors.coral50 }]}>
-              <FontAwesome name="file-pdf-o" size={18} color={colors.coral} />
+              <FontAwesome name="file-text-o" size={18} color={colors.coral} />
             </View>
             <View style={styles.actionContent}>
-              <Text style={[styles.actionTitle, { color: colors.ink }]}>Upload PDF</Text>
-              <Text style={[styles.actionSub, { color: colors.ink3 }]}>Email attachment or download</Text>
+              <Text style={[styles.actionTitle, { color: colors.ink }]}>Upload a document</Text>
+              <Text style={[styles.actionSub, { color: colors.ink3 }]}>PDF, Word, slides, spreadsheet...</Text>
             </View>
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>
@@ -608,13 +593,13 @@ export default function ScanScreen() {
           )}
         </View>
 
-        {/* Photo/camera scans support multiple pages per scan; PDFs are read
-            in full. Heads-up so users know a stapled syllabus doesn't need
-            to be converted to a PDF first. */}
+        {/* Photo/camera scans support multiple pages per scan; documents are
+            read in full. PDF remains best when visual charts matter because
+            non-PDF document inputs are text-extracted by the model API. */}
         <View style={styles.multiPageNote}>
           <FontAwesome name="info-circle" size={13} color={colors.ink3} style={styles.multiPageNoteIcon} />
           <Text style={[styles.multiPageNoteText, { color: colors.ink3 }]}>
-            Photo scans support up to {MAX_SCAN_PAGES} pages per scan — snap page after page, or multi-select from your library. Longer syllabus? Upload a PDF.
+            Photo scans support up to {MAX_SCAN_PAGES} pages per scan. Documents are read in full; use PDF when charts or diagrams matter.
           </Text>
         </View>
       </ScrollView>

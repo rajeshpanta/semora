@@ -1,8 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as FileSystem from 'expo-file-system/legacy';
-import { readFileAsBase64 } from '@/lib/readFileBase64';
+import { getFileSize, readFileAsBase64 } from '@/lib/readFileBase64';
 import { supabase } from '@/lib/supabase';
 import { getAppLocale } from '@/lib/i18n';
+import {
+  courseNoteTooLargeMessage,
+  MAX_COURSE_NOTE_BYTES,
+  normalizeSupportedDocument,
+  unsupportedDocumentMessage,
+} from '@/lib/documentFiles';
 
 // ── AI Tutor client ─────────────────────────────────────────
 // Talks to the tutor-chat edge function (Pro-gated, grounded on the course's
@@ -14,7 +20,7 @@ import { getAppLocale } from '@/lib/i18n';
 // uploads the raw file to the private course-notes bucket + inserts a
 // course_notes row. The edge function extracts the file with OpenAI Luna on
 // first use and caches extracted_text. This keeps note upload dumb and cheap
-// on-device (no client-side PDF/image parsing) and is the simpler robust path.
+// on-device (no client-side document/image parsing) and is the simpler robust path.
 
 export interface TutorMessage {
   id: string;
@@ -279,7 +285,7 @@ function decode(base64: string): Uint8Array {
   return bytes;
 }
 
-// Upload a lecture-note file (PDF or image) for a course. Uploads the raw
+// Upload a supported course-material file for a course. Uploads the raw
 // bytes to the private course-notes bucket (path `${uid}/${ts}_${name}` so
 // the storage RLS owner check passes), then inserts a course_notes row. Text
 // extraction is deferred to tutor-chat (it OCRs on first grounding use), so
@@ -292,16 +298,24 @@ export function useUploadCourseNote(courseId?: string | null) {
       const session = await getSession();
       const userId = session.user.id;
 
+      // Validate again at the shared mutation boundary so future upload UIs
+      // cannot bypass the picker-level guard or silently store unreadable
+      // files. The 6 MB cap matches both note-extraction Edge Functions.
+      const document = normalizeSupportedDocument(file.filename, file.mimeType);
+      if (!document) throw new Error(unsupportedDocumentMessage(file.filename));
+      const fileSize = await getFileSize(file.uri);
+      if (fileSize > MAX_COURSE_NOTE_BYTES) throw new Error(courseNoteTooLargeMessage());
+
       const base64 = await readFileAsBase64(file.uri);
       // Sanitize the filename for the storage key — spaces/slashes in the
       // path segment break the folder convention the RLS check relies on.
-      const safeName = file.filename.replace(/[^\w.\-]+/g, '_');
+      const safeName = document.fileName.replace(/[^\w.\-]+/g, '_');
       const storagePath = `${userId}/${Date.now()}_${safeName}`;
 
       const { error: upErr } = await supabase.storage
         .from('course-notes')
         .upload(storagePath, decode(base64), {
-          contentType: file.mimeType,
+          contentType: document.mimeType,
           upsert: true,
         });
       if (upErr) throw upErr;
@@ -312,8 +326,8 @@ export function useUploadCourseNote(courseId?: string | null) {
           user_id: userId,
           course_id: courseId,
           storage_path: storagePath,
-          filename: file.filename,
-          mime_type: file.mimeType,
+          filename: document.fileName,
+          mime_type: document.mimeType,
         })
         .select('id, course_id, storage_path, filename, mime_type, created_at')
         .single();

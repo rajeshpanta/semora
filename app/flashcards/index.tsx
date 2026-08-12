@@ -28,6 +28,11 @@ import {
   type DeckWithCounts, type CourseLite,
 } from '@/lib/flashcards';
 import { useCourseNotes, useUploadCourseNote, type CourseNote } from '@/lib/tutor';
+import {
+  normalizeSupportedDocument,
+  SUPPORTED_DOCUMENT_PICKER_TYPE,
+  unsupportedDocumentMessage,
+} from '@/lib/documentFiles';
 
 /**
  * Shared empty default for the notes query.
@@ -89,16 +94,21 @@ export default function FlashcardsScreen() {
     if (!courseId) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const result = await DocumentPicker.getDocumentAsync({
-      type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
+      type: SUPPORTED_DOCUMENT_PICKER_TYPE,
       copyToCacheDirectory: true,
     });
     if (result.canceled || !result.assets?.[0]) return;
     const asset = result.assets[0];
+    const document = normalizeSupportedDocument(asset.name, asset.mimeType);
+    if (!document) {
+      Alert.alert('Unsupported file', unsupportedDocumentMessage(asset.name));
+      return;
+    }
     try {
       await uploadNote.mutateAsync({
         uri: asset.uri,
-        filename: asset.name || 'material',
-        mimeType: asset.mimeType || 'application/pdf',
+        filename: document.fileName,
+        mimeType: document.mimeType,
       });
       track('flashcards_material_uploaded', { screen: 'flashcards', courseId });
       if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -294,7 +304,7 @@ export default function FlashcardsScreen() {
                   ? 'Uploading…'
                   : courseNotes.length > 0
                     ? `${courseNotes.length} file${courseNotes.length !== 1 ? 's' : ''} added — add another`
-                    : "Add a PDF or photo (e.g. the teacher's review packet)"}
+                    : "Add notes, slides, a spreadsheet, PDF, or photo"}
               </Text>
             </TouchableOpacity>
             {courseNotes.length > 0 && (
