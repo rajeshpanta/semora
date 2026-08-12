@@ -19,7 +19,6 @@ import { useRouter,
 import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import * as Haptics from 'expo-haptics';
 import {
   Platform,
@@ -31,16 +30,16 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useScanCount, FREE_SCAN_LIMIT } from '@/lib/queries';
 import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
 import { MAX_SCAN_PAGES, MAX_SCAN_RAW_BYTES, scanTooLargeMessage, type SyllabusPage } from '@/lib/ai-extraction';
+import { getFileSize } from '@/lib/readFileBase64';
 import { GlobalSearchButton } from '@/components/GlobalSearchButton';
 
 // Best-effort raw file size for the multi-page upload budget. Returns 0 when
 // the size can't be read (rare — picker URIs are local files), so the budget
 // check fails open; the pre-flight in extractFromPages is the final gate for
 // anything that slips through.
-const getFileSize = async (uri: string): Promise<number> => {
+const getFileSizeBestEffort = async (uri: string): Promise<number> => {
   try {
-    const info = await FileSystem.getInfoAsync(uri);
-    return info.exists && typeof info.size === 'number' ? info.size : 0;
+    return await getFileSize(uri);
   } catch {
     return 0;
   }
@@ -207,7 +206,7 @@ export default function ScanScreen() {
       }
 
       const asset = result.assets[0];
-      const size = await getFileSize(asset.uri);
+      const size = await getFileSizeBestEffort(asset.uri);
       // Size budget at add time (never applied to the FIRST page — a lone
       // photo is always attemptable, and the extractFromPages pre-flight
       // backstops pathological cases). If this page would push the total
@@ -332,7 +331,7 @@ export default function ScanScreen() {
       const fitted: SyllabusPage[] = [];
       let totalBytes = 0;
       for (const a of assets) {
-        const size = await getFileSize(a.uri);
+        const size = await getFileSizeBestEffort(a.uri);
         if (fitted.length > 0 && totalBytes + size > MAX_SCAN_RAW_BYTES) break;
         totalBytes += size;
         fitted.push({ uri: a.uri, mimeType: a.mimeType || 'image/jpeg' });

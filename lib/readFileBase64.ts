@@ -32,3 +32,21 @@ export async function readFileAsBase64(uri: string): Promise<string> {
   }
   return btoa(binary);
 }
+
+/**
+ * Return the byte size of a picked file on every platform.
+ *
+ * Browser picker URIs are blob:/data: URLs, so Expo FileSystem cannot inspect
+ * them. Fetching the URL yields the same bytes read by readFileAsBase64 and
+ * keeps native file:// handling on Expo's filesystem implementation.
+ */
+export async function getFileSize(uri: string): Promise<number> {
+  if (Platform.OS !== 'web') {
+    const info = await FileSystem.getInfoAsync(uri);
+    return info.exists && typeof info.size === 'number' ? info.size : 0;
+  }
+
+  const response = await fetch(uri);
+  if (!response.ok) throw new Error('Could not read the selected file.');
+  return (await response.blob()).size;
+}

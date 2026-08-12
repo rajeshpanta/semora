@@ -1,7 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { extractFromPages, extractFromText, type SyllabusExtraction, type SyllabusPage } from '@/lib/ai-extraction';
-import * as FileSystem from 'expo-file-system/legacy';
-import { readFileAsBase64 } from '@/lib/readFileBase64';
+import { getFileSize, readFileAsBase64 } from '@/lib/readFileBase64';
 import { isMeetingSyncEnabled, syncMeetingToCalendar } from '@/lib/calendarSync';
 import type { CourseMeeting } from '@/types/database';
 import { COURSE_COLORS, COURSE_ICONS, DEFAULT_GRADE_SCALE } from '@/lib/constants';
@@ -77,6 +76,12 @@ export async function processSyllabus(
 
   // 1. Extract with Luna (abortable — the caller's timeout aborts the fetch)
   const pageList: SyllabusPage[] = pages && pages.length > 0 ? pages : [{ uri: fileUri, mimeType }];
+  // Read metadata before AI work or database writes. On web, picker files use
+  // blob: URLs that expo-file-system cannot inspect; getFileSize uses fetch
+  // there and retains native FileSystem behavior on iOS/Android.
+  const fileSize = pastedText != null
+    ? new TextEncoder().encode(pastedText).length
+    : await getFileSize(fileUri);
   const extraction = pastedText != null
     ? await extractFromText(pastedText, signal)
     : await extractFromPages(pageList, signal);
@@ -189,10 +194,6 @@ export async function processSyllabus(
   const storagePath = pastedText != null
     ? `${userId}/${Date.now()}_pasted-syllabus.txt`
     : `${userId}/${Date.now()}_${fileName}`;
-  const fileSize = pastedText != null
-    ? new TextEncoder().encode(pastedText).length
-    : ((await FileSystem.getInfoAsync(fileUri)) as any).size || 0;
-
   const { data: upload, error: uploadError } = await supabase
     .from('syllabus_uploads')
     .insert({

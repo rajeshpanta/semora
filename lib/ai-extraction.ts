@@ -1,4 +1,3 @@
-import * as FileSystem from 'expo-file-system/legacy';
 import { readFileAsBase64 } from '@/lib/readFileBase64';
 import { supabase } from '@/lib/supabase';
 import type { GradeThreshold, CourseMeetingKind } from '@/types/database';
