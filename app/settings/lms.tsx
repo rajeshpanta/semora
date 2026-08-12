@@ -50,7 +50,7 @@ function syncTimeLabel(value: string | null) {
 // block — a dead-end. Re-add this entry once that verification is complete:
 //   { id: 'google_classroom', icon: 'google', detail: 'Classwork, submissions and posted grades' },
 const PROVIDERS: Array<{ id: LmsProvider; icon: string; detail: string }> = [
-  { id: 'canvas', icon: 'circle-o-notch', detail: 'Courses, assignments, due dates and points' },
+  { id: 'canvas', icon: 'calendar', detail: 'Official Calendar Feed · automatic deadline updates' },
   { id: 'blackboard', icon: 'black-tie', detail: 'Courses and gradebook assignments' },
   { id: 'moodle', icon: 'graduation-cap', detail: 'Enrolled courses and assignments' },
 ];
@@ -168,7 +168,7 @@ export default function LmsSettingsScreen() {
         <View style={[styles.notice, { backgroundColor: colors.brand50 }]}>
           <FontAwesome name="shield" size={16} color={colors.brand} />
           <Text style={[styles.noticeText, { color: colors.ink2 }]}>
-            Sync on this device is private by default. Turn on automatic sync only if you want Semora to keep an encrypted credential in its secure server vault for background updates.
+            Canvas Calendar Feed subscriptions are encrypted and checked automatically. Other platform credentials stay on this device unless you turn on automatic sync.
           </Text>
         </View>
 
@@ -191,7 +191,9 @@ export default function LmsSettingsScreen() {
                       </Text>
                       <Text style={[styles.syncMeta, { color: colors.ink3 }]}>
                         {syncTimeLabel(connection.last_successful_sync_at ?? connection.last_synced_at)}
-                        {connection.background_sync_enabled ? ' · Automatic sync on' : ' · Device sync only'}
+                        {connection.connection_method === 'calendar_feed'
+                          ? connection.background_sync_enabled ? ' · Canvas checks about hourly' : ' · Reconnect required'
+                          : connection.background_sync_enabled ? ' · Automatic sync on' : ' · Device sync only'}
                       </Text>
                     </View>
                     <Text style={[styles.status, { color: needsAttention ? colors.coral : '#0F766E' }]}>
@@ -217,18 +219,37 @@ export default function LmsSettingsScreen() {
                         {sync.isPending && sync.variables === connection.id ? 'Syncing…' : 'Sync now'}
                       </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => toggleAutomatic(connection)}
-                      disabled={automatic.isPending}
-                      style={styles.textButton}
-                    >
-                      <FontAwesome name={connection.background_sync_enabled ? 'clock-o' : 'bolt'} size={13} color={colors.brand} />
-                      <Text style={[styles.textButtonLabel, { color: colors.brand }]}>
-                        {automatic.isPending && automatic.variables?.connectionId === connection.id
-                          ? 'Saving…'
-                          : connection.background_sync_enabled ? 'Automatic on' : 'Automatic'}
-                      </Text>
-                    </TouchableOpacity>
+                    {connection.connection_method === 'calendar_feed' ? (connection.background_sync_enabled ? (
+                        <View style={styles.textButton}>
+                          <FontAwesome name="clock-o" size={13} color={colors.brand} />
+                          <Text style={[styles.textButtonLabel, { color: colors.brand }]}>Automatic updates</Text>
+                        </View>
+                      ) : (
+                        <TouchableOpacity
+                          onPress={() => router.push({
+                            pathname: '/settings/lms-connect',
+                            params: { provider: connection.provider, connectionId: connection.id, baseUrl: connection.base_url ?? '' },
+                          } as any)}
+                          style={styles.textButton}
+                        >
+                          <FontAwesome name="link" size={13} color={colors.coral} />
+                          <Text style={[styles.textButtonLabel, { color: colors.coral }]}>Reconnect</Text>
+                        </TouchableOpacity>
+                      )
+                    ) : (
+                      <TouchableOpacity
+                        onPress={() => toggleAutomatic(connection)}
+                        disabled={automatic.isPending}
+                        style={styles.textButton}
+                      >
+                        <FontAwesome name={connection.background_sync_enabled ? 'clock-o' : 'bolt'} size={13} color={colors.brand} />
+                        <Text style={[styles.textButtonLabel, { color: colors.brand }]}>
+                          {automatic.isPending && automatic.variables?.connectionId === connection.id
+                            ? 'Saving…'
+                            : connection.background_sync_enabled ? 'Automatic on' : 'Automatic'}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                   <View style={[styles.connectionActions, { borderTopColor: colors.line, marginTop: 8, paddingTop: 8 }]}>
                     <TouchableOpacity

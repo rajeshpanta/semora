@@ -12,6 +12,7 @@ import { useCallback,
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -21,10 +22,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSession } from '@/app/_layout';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import {
+  canvasCalendarOrigin,
   connectLms,
   discoverLmsCourses,
   DiscoveredLmsCourse,
   LMS_PROVIDER_LABELS,
+  normalizeCanvasCalendarFeedUrl,
   reconnectLmsConnection,
   requestGoogleClassroomCredential,
   syncLmsConnection,
@@ -37,19 +40,7 @@ import { useColors } from '@/lib/theme';
 import { useAppStore } from '@/store/appStore';
 import type { LmsProvider } from '@/types/database';
 
-const HELP: Record<Exclude<LmsProvider, 'google_classroom'>, { url: string; token: string; note: string }> = {
-  canvas: {
-    url: 'https://school.instructure.com',
-    token: 'Canvas access token',
-    note:
-      'Get your token from Canvas on the web (not the mobile app):\n' +
-      '1. Sign in to Canvas in a browser.\n' +
-      '2. Open Account → Settings.\n' +
-      '3. Under “Approved Integrations,” tap “+ New Access Token.”\n' +
-      '4. Name it “Semora,” leave the expiry blank, then Generate Token.\n' +
-      '5. Copy the token and paste it above.\n' +
-      'For the URL, use your school’s Canvas web address — often yourschool.instructure.com.',
-  },
+const HELP: Record<Exclude<LmsProvider, 'google_classroom' | 'canvas'>, { url: string; token: string; note: string }> = {
   blackboard: {
     url: 'https://learn.school.edu',
     token: 'School-issued OAuth access token',
@@ -75,6 +66,7 @@ export default function LmsConnectScreen() {
     ? params.provider
     : 'canvas') as LmsProvider;
   const reconnecting = !!params.connectionId;
+  const isCanvasCalendar = provider === 'canvas';
   const { data: semesters = [] } = useSemesters();
   const isPro = useAppStore((state) => state.isPro);
   const selectedSemesterId = useAppStore((state) => state.selectedSemesterId);
@@ -102,6 +94,7 @@ export default function LmsConnectScreen() {
   const [courses, setCourses] = useState<DiscoveredLmsCourse[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [working, setWorking] = useState(false);
+  const [showPrivateUrl, setShowPrivateUrl] = useState(false);
 
   useEffect(() => {
     if (!semesterId && semesters.length) {
@@ -109,11 +102,20 @@ export default function LmsConnectScreen() {
     }
   }, [semesterId, semesters]);
 
-  const normalizedBase = useMemo(() => baseUrl.trim().replace(/\/+$/, ''), [baseUrl]);
-  const manualCredential = (): LmsCredential => ({ accessToken: token.trim() });
+  const normalizedBase = useMemo(() => {
+    if (isCanvasCalendar) {
+      try { return canvasCalendarOrigin(token); } catch { return ''; }
+    }
+    return baseUrl.trim().replace(/\/+$/, '');
+  }, [baseUrl, isCanvasCalendar, token]);
+  const connectionMethod = isCanvasCalendar ? 'calendar_feed' as const : 'legacy_token' as const;
+  const manualCredential = (): LmsCredential => ({
+    accessToken: isCanvasCalendar ? normalizeCanvasCalendarFeedUrl(token) : token.trim(),
+  });
 
   const obtainCredential = async () => {
     if (provider === 'google_classroom') return requestGoogleClassroomCredential();
+    if (isCanvasCalendar) return manualCredential();
     if (!normalizedBase) throw new Error('Enter your school LMS URL.');
     try {
       const parsed = new URL(normalizedBase);
@@ -127,25 +129,31 @@ export default function LmsConnectScreen() {
 
   const discover = async () => {
     if (working) return;
+    if (!reconnecting && semesters.length === 0) {
+      Alert.alert('Semester needed', 'Create a semester before connecting Canvas so Semora knows where to add your courses.');
+      return;
+    }
     setWorking(true);
     try {
       const nextCredential = await obtainCredential();
+      const found = await discoverLmsCourses({
+        provider,
+        connectionMethod,
+        baseUrl: normalizedBase || null,
+        credential: nextCredential,
+      });
       if (reconnecting) {
         await reconnectLmsConnection(
           params.connectionId!,
           nextCredential,
           provider === 'google_classroom' ? null : normalizedBase,
+          connectionMethod,
         );
         const result = await syncLmsConnection(params.connectionId!);
         Alert.alert('Reconnected', `${result.processed} assignments updated.`);
         router.back();
         return;
       }
-      const found = await discoverLmsCourses({
-        provider,
-        baseUrl: normalizedBase || null,
-        credential: nextCredential,
-      });
       setCredential(nextCredential);
       setCourses(found);
       setSelected(new Set(found.map((course) => course.id)));
@@ -183,6 +191,7 @@ export default function LmsConnectScreen() {
         userId: session.user.id,
         semesterId,
         provider,
+        connectionMethod,
         displayName,
         baseUrl: normalizedBase || null,
         credential,
@@ -190,7 +199,7 @@ export default function LmsConnectScreen() {
       });
       Alert.alert(
         'Connected',
-        `${chosen.length} ${chosen.length === 1 ? 'course' : 'courses'} and ${result.processed} assignments imported.`,
+        `${chosen.length} ${chosen.length === 1 ? 'course' : 'courses'} and ${result.processed} deadlines imported.${isCanvasCalendar ? ' Semora will keep checking Canvas about hourly.' : ''}`,
         [{ text: 'Done', onPress: () => router.replace('/settings/lms' as any) }],
       );
     } catch (error) {
@@ -229,10 +238,53 @@ export default function LmsConnectScreen() {
                 {provider === 'google_classroom' ? 'Sign in to Google Classroom' : `Connect your ${LMS_PROVIDER_LABELS[provider]} account`}
               </Text>
               <Text style={[styles.subtitle, { color: colors.ink3 }]}>
-                Read-only access imports classes, deadlines, points, and available submission status. Semora never changes your LMS.
+                {isCanvasCalendar
+                  ? 'Subscribe to Canvas’s official read-only Calendar Feed. Semora imports dated assignments and events, then checks for deadline changes about hourly.'
+                  : 'Semora makes read-only requests to import classes, deadlines, points, and available submission status. It never changes your LMS.'}
               </Text>
 
-              {provider !== 'google_classroom' && (
+              {isCanvasCalendar && (
+                <>
+                  <Text style={[styles.label, { color: colors.ink2 }]}>Canvas Calendar Feed URL</Text>
+                  <View style={styles.secretField}>
+                    <TextInput
+                      value={token}
+                      onChangeText={setToken}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      keyboardType="url"
+                      secureTextEntry={!showPrivateUrl}
+                      placeholder="webcal://…/feeds/calendars/user_….ics"
+                      placeholderTextColor={colors.ink3}
+                      style={[styles.input, styles.secretInput, { color: colors.ink, backgroundColor: colors.card, borderColor: colors.line }]}
+                    />
+                    <TouchableOpacity
+                      accessibilityLabel={showPrivateUrl ? 'Hide Calendar Feed URL' : 'Show Calendar Feed URL'}
+                      onPress={() => setShowPrivateUrl((current) => !current)}
+                      style={styles.secretToggle}
+                    >
+                      <FontAwesome name={showPrivateUrl ? 'eye-slash' : 'eye'} size={15} color={colors.ink3} />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={[styles.help, { backgroundColor: colors.card, borderColor: colors.line }]}>
+                    <FontAwesome name="calendar" size={14} color={colors.brand} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.helpText, { color: colors.ink3 }]}>
+                        {'In Canvas on the web:\n1. Open Calendar.\n2. Select Calendar Feed in the sidebar.\n3. Copy the full URL and paste it above.\n\nThe URL is private, like a password. Semora encrypts it for automatic syncing. Canvas feeds do not include grades, submission status, or undated To-Do items. When you add a new Canvas course, reconnect once so it can be selected.'}
+                      </Text>
+                      <TouchableOpacity
+                        onPress={() => Linking.openURL('https://community.instructure.com/en/kb/articles/662804-unknown').catch(() => {})}
+                        style={styles.helpLinkButton}
+                      >
+                        <FontAwesome name="external-link" size={11} color={colors.brand} />
+                        <Text style={[styles.link, { color: colors.brand }]}>View Canvas’s instructions</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </>
+              )}
+
+              {provider !== 'google_classroom' && !isCanvasCalendar && (
                 <>
                   <Text style={[styles.label, { color: colors.ink2 }]}>School LMS URL</Text>
                   <TextInput
@@ -263,6 +315,18 @@ export default function LmsConnectScreen() {
                 </>
               )}
 
+              {!reconnecting && semesters.length === 0 && (
+                <View style={[styles.help, { backgroundColor: colors.brand50, borderColor: colors.line }]}>
+                  <FontAwesome name="info-circle" size={14} color={colors.brand} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.helpText, { color: colors.ink2 }]}>Create a semester before connecting so imported courses have a home.</Text>
+                    <TouchableOpacity onPress={() => router.push('/semester/new')} style={styles.helpLinkButton}>
+                      <Text style={[styles.link, { color: colors.brand }]}>Create semester →</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
               <TouchableOpacity
                 onPress={discover}
                 disabled={working}
@@ -270,8 +334,8 @@ export default function LmsConnectScreen() {
               >
                 {working ? <ActivityIndicator color="#fff" /> : (
                   <>
-                    <FontAwesome name={provider === 'google_classroom' ? 'google' : 'search'} size={14} color="#fff" />
-                    <Text style={styles.primaryText}>{reconnecting ? 'Reconnect and sync' : provider === 'google_classroom' ? 'Continue with Google' : 'Find my courses'}</Text>
+                    <FontAwesome name={provider === 'google_classroom' ? 'google' : isCanvasCalendar ? 'calendar' : 'search'} size={14} color="#fff" />
+                    <Text style={styles.primaryText}>{reconnecting ? 'Reconnect and sync' : provider === 'google_classroom' ? 'Continue with Google' : isCanvasCalendar ? 'Preview Canvas courses' : 'Find my courses'}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -280,7 +344,9 @@ export default function LmsConnectScreen() {
             <>
               <Text style={[styles.title, { color: colors.ink }]}>Choose courses</Text>
               <Text style={[styles.subtitle, { color: colors.ink3 }]}>
-                Semora creates a local course for each selection and keeps its assignments refreshed.
+                {isCanvasCalendar
+                  ? 'Choose the Canvas courses to add. Semora will keep their dated assignments and events refreshed automatically.'
+                  : 'Semora creates a local course for each selection and keeps its assignments refreshed.'}
               </Text>
               <Text style={[styles.label, { color: colors.ink2 }]}>Connection name</Text>
               <TextInput
@@ -346,8 +412,12 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, lineHeight: 21, marginTop: 7, marginBottom: 15 },
   label: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.45, marginTop: 14, marginBottom: 7 },
   input: { minHeight: 50, borderRadius: 13, borderWidth: 1.2, paddingHorizontal: 14, fontSize: 15 },
+  secretField: { position: 'relative' },
+  secretInput: { paddingRight: 48 },
+  secretToggle: { position: 'absolute', right: 4, top: 4, width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
   help: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 13, padding: 12, flexDirection: 'row', gap: 9, marginTop: 12 },
   helpText: { flex: 1, fontSize: 12, lineHeight: 18 },
+  helpLinkButton: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 9, minHeight: 24 },
   primary: { minHeight: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', gap: 9, marginTop: 22 },
   primaryText: { color: '#fff', fontSize: 15, fontWeight: '800' },
   chips: { gap: 8, paddingVertical: 2 },

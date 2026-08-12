@@ -216,6 +216,7 @@ export interface GradeCategory {
 }
 
 export type LmsProvider = 'canvas' | 'blackboard' | 'moodle' | 'google_classroom';
+export type LmsConnectionMethod = 'legacy_token' | 'calendar_feed' | 'oauth';
 export type LmsSyncStatus =
   | 'never'
   | 'syncing'
@@ -228,6 +229,7 @@ export interface LmsConnection {
   id: string;
   user_id: string;
   provider: LmsProvider;
+  connection_method: LmsConnectionMethod;
   display_name: string;
   base_url: string | null;
   account_label: string | null;

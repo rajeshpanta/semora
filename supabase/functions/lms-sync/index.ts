@@ -1,5 +1,9 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import {
+  normalizeCanvasCalendarFeedUrl,
+  parseCanvasCalendarFeed,
+} from '../_shared/canvas-calendar.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -13,6 +17,11 @@ const corsHeaders = {
 };
 
 type Provider = 'canvas' | 'blackboard' | 'moodle' | 'google_classroom';
+type ConnectionMethod = 'legacy_token' | 'calendar_feed' | 'oauth';
+// The Edge worker intentionally operates on several dynamic PostgREST rows.
+// Keep its service client type local instead of coupling this function to a
+// generated database schema that is not bundled into Supabase deployments.
+type AdminClient = any;
 type LmsCourse = { id: string; name: string; code?: string; instructor?: string };
 type LmsAssignment = {
   external_id: string;
@@ -38,6 +47,7 @@ type SyncConnection = {
   id: string;
   user_id: string;
   provider: Provider;
+  connection_method: ConnectionMethod;
   base_url: string | null;
   display_name: string;
   sync_enabled: boolean;
@@ -165,6 +175,94 @@ function nextLink(link: string | null): string | null {
     }
   }
   return null;
+}
+
+function privateResolvedAddress(value: string): boolean {
+  const address = value.toLowerCase();
+  return /^127\./.test(address) ||
+    /^10\./.test(address) ||
+    /^192\.168\./.test(address) ||
+    /^169\.254\./.test(address) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(address) ||
+    address === '::' ||
+    address === '::1' ||
+    address.startsWith('fc') ||
+    address.startsWith('fd') ||
+    /^fe[89ab]/.test(address) ||
+    /^::ffff:(127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.)/.test(address);
+}
+
+async function assertPublicCalendarHost(url: URL) {
+  // Resolve before fetching as defense in depth for custom Canvas vanity
+  // domains. The URL validator already rejects literal local/private hosts.
+  try {
+    const [ipv4, ipv6] = await Promise.all([
+      Deno.resolveDns(url.hostname, 'A').catch(() => [] as string[]),
+      Deno.resolveDns(url.hostname, 'AAAA').catch(() => [] as string[]),
+    ]);
+    const addresses = [...ipv4, ...ipv6];
+    if (!addresses.length) throw new Error('unresolved');
+    if (addresses.some(privateResolvedAddress)) {
+      const denied: any = new Error('Private network calendar feeds are not supported.');
+      denied.status = 400;
+      throw denied;
+    }
+  } catch (error) {
+    if ((error as any)?.status === 400) throw error;
+    const unavailable: any = new Error('Semora could not reach that Canvas school address. Check the Calendar Feed URL and try again.');
+    unavailable.status = 400;
+    throw unavailable;
+  }
+}
+
+async function fetchCanvasCalendar(rawUrl: string) {
+  const normalized = normalizeCanvasCalendarFeedUrl(rawUrl);
+  const expectedOrigin = new URL(normalized).origin;
+  let current = new URL(normalized);
+  await assertPublicCalendarHost(current);
+
+  for (let redirects = 0; redirects <= 3; redirects++) {
+    let response: Response;
+    try {
+      response = await fetch(current, {
+        redirect: 'manual',
+        signal: AbortSignal.timeout(20_000),
+        headers: {
+          Accept: 'text/calendar, text/plain;q=0.9',
+          'User-Agent': 'Semora-Canvas-Calendar/1.0',
+        },
+      });
+    } catch {
+      throw new Error('Canvas did not respond. Check your school connection and try again.');
+    }
+
+    if (response.status >= 300 && response.status < 400) {
+      if (redirects === 3) throw new Error('Canvas returned too many redirects.');
+      const location = response.headers.get('location');
+      if (!location) throw new Error('Canvas returned an invalid redirect.');
+      const next = new URL(location, current);
+      if (next.origin !== expectedOrigin) throw new Error('Canvas redirected the calendar feed to an untrusted host.');
+      current = next;
+      continue;
+    }
+
+    if ([401, 403, 404, 410].includes(response.status)) {
+      const expired: any = new Error('This Canvas Calendar Feed is no longer available. Copy a fresh Calendar Feed URL from Canvas and reconnect.');
+      expired.status = 401;
+      throw expired;
+    }
+    if (!response.ok) throw new Error(`Canvas Calendar Feed request failed (${response.status}).`);
+    const declaredSize = Number(response.headers.get('content-length'));
+    if (Number.isFinite(declaredSize) && declaredSize > 5 * 1024 * 1024) {
+      throw new Error('This Canvas Calendar Feed is too large to import safely.');
+    }
+    const body = await response.text();
+    if (new TextEncoder().encode(body).byteLength > 5 * 1024 * 1024) {
+      throw new Error('This Canvas Calendar Feed is too large to import safely.');
+    }
+    return parseCanvasCalendarFeed(body);
+  }
+  throw new Error('Canvas Calendar Feed could not be loaded.');
 }
 
 async function canvasPages(base: string, path: string, token: string): Promise<any[]> {
@@ -551,7 +649,7 @@ async function requireUser(req: Request) {
   return data.user;
 }
 
-async function requirePro(admin: ReturnType<typeof createClient>, userId: string) {
+async function requirePro(admin: AdminClient, userId: string) {
   const { data, error } = await admin.rpc('is_pro', { uid: userId });
   if (error) {
     console.error('[lms-sync] is_pro check failed:', error);
@@ -568,7 +666,7 @@ async function requirePro(admin: ReturnType<typeof createClient>, userId: string
 }
 
 async function loadConnection(
-  admin: ReturnType<typeof createClient>,
+  admin: AdminClient,
   connectionId: string,
   expectedUserId?: string,
 ): Promise<SyncConnection> {
@@ -593,6 +691,18 @@ async function fetchAssignmentsForConnection(
   const links = connection.links.filter((link) => link.sync_enabled);
   if (!links.length) throw new Error('This LMS connection has no enabled courses.');
   const courseIds = links.map((link) => link.external_course_id);
+  if (connection.provider === 'canvas' && connection.connection_method === 'calendar_feed') {
+    const feed = await fetchCanvasCalendar(token);
+    const selected = new Set(courseIds);
+    const assignments = feed.assignments.filter((assignment) => selected.has(assignment.external_course_id));
+    return {
+      assignments,
+      // Canvas bounds feeds to 1,000 items, and an empty response can be
+      // transient. Reconcile missing in-window items only from a clearly
+      // complete response containing work for at least one selected course.
+      removalSafe: assignments.length > 0 && feed.assignments.length < 1000,
+    };
+  }
   const base = safeBaseUrl(connection.base_url, connection.provider);
   let assignments: LmsAssignment[];
   if (connection.provider === 'canvas') assignments = await canvasAssignments(base, token, courseIds);
@@ -605,27 +715,46 @@ async function fetchAssignmentsForConnection(
   return { assignments: assignments.slice(0, 5000), removalSafe: false };
 }
 
-function normalizeAssignments(connection: SyncConnection, assignments: LmsAssignment[]) {
+function timeZoneParts(value: string, timeZone: string): { due_date: string; due_time: string } | null {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+      hourCycle: 'h23',
+    }).formatToParts(date);
+    const part = (type: Intl.DateTimeFormatPartTypes) => parts.find((item) => item.type === type)?.value ?? '';
+    const year = part('year');
+    const month = part('month');
+    const day = part('day');
+    const hour = part('hour');
+    const minute = part('minute');
+    const second = part('second');
+    return year && month && day && hour && minute && second
+      ? { due_date: `${year}-${month}-${day}`, due_time: `${hour}:${minute}:${second}` }
+      : null;
+  } catch {
+    return timeZone === 'UTC' ? null : timeZoneParts(value, 'UTC');
+  }
+}
+
+function normalizeAssignments(connection: SyncConnection, assignments: LmsAssignment[], timeZone: string) {
   const localByExternal = new Map(
     connection.links.map((link) => [link.external_course_id, link.local_course_id]),
   );
   return assignments.map((item) => {
     let localDue: { due_date?: string | null; due_time?: string | null } = {};
     if (item.due_at) {
-      const date = new Date(item.due_at);
-      if (Number.isFinite(date.getTime())) {
-        localDue = {
-          due_date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
-          due_time: `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`,
-        };
-      }
+      localDue = timeZoneParts(item.due_at, timeZone) ?? {};
     }
     return { ...item, ...localDue, local_course_id: localByExternal.get(item.external_course_id) ?? null };
   });
 }
 
 async function createRun(
-  admin: ReturnType<typeof createClient>,
+  admin: AdminClient,
   connection: SyncConnection,
   trigger: SyncTrigger,
 ) {
@@ -639,7 +768,7 @@ async function createRun(
 }
 
 async function performConnectionSync(
-  admin: ReturnType<typeof createClient>,
+  admin: AdminClient,
   connection: SyncConnection,
   token: string,
   trigger: SyncTrigger,
@@ -651,7 +780,16 @@ async function performConnectionSync(
 
   try {
     const { assignments, removalSafe } = await fetchAssignmentsForConnection(connection, token);
-    const items = normalizeAssignments(connection, assignments);
+    let timeZone = 'UTC';
+    if (connection.provider === 'canvas' && connection.connection_method === 'calendar_feed') {
+      const { data: profile } = await admin
+        .from('profiles')
+        .select('timezone')
+        .eq('id', connection.user_id)
+        .maybeSingle();
+      if (typeof profile?.timezone === 'string' && profile.timezone) timeZone = profile.timezone;
+    }
+    const items = normalizeAssignments(connection, assignments, timeZone);
     const { data: applied, error: applyError } = await admin.rpc('apply_lms_assignment_sync_service', {
       p_user_id: connection.user_id,
       p_connection_id: connection.id,
@@ -661,6 +799,14 @@ async function performConnectionSync(
         : [],
     });
     if (applyError) throw applyError;
+    if (connection.provider === 'canvas' && connection.connection_method === 'calendar_feed' && removalSafe) {
+      const { error: removalError } = await admin.rpc('mark_canvas_calendar_feed_removed', {
+        p_user_id: connection.user_id,
+        p_connection_id: connection.id,
+        p_received_ids: assignments.map((assignment) => assignment.external_id),
+      });
+      if (removalError) throw removalError;
+    }
     const processed = Number((applied as any)?.processed ?? 0);
     const skipped = Number((applied as any)?.skipped ?? 0);
     const status = skipped > 0 ? 'partial' : 'success';
@@ -668,7 +814,7 @@ async function performConnectionSync(
       admin.from('lms_sync_runs').update({ status, processed, skipped, finished_at: new Date().toISOString() }).eq('id', runId),
       admin.from('lms_connections').update({
         next_background_sync_at: connection.background_sync_enabled
-          ? new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString()
+          ? new Date(Date.now() + (connection.connection_method === 'calendar_feed' ? 1 : 4) * 60 * 60 * 1000).toISOString()
           : null,
         background_sync_paused_at: null,
       }).eq('id', connection.id),
@@ -714,7 +860,7 @@ async function performConnectionSync(
   }
 }
 
-async function backgroundCredential(admin: ReturnType<typeof createClient>, connectionId: string) {
+async function backgroundCredential(admin: AdminClient, connectionId: string) {
   const { data, error } = await admin.rpc('read_lms_background_credential', { p_connection_id: connectionId });
   if (error) throw error;
   const row = Array.isArray(data) ? data[0] : data;
@@ -727,7 +873,7 @@ async function backgroundCredential(admin: ReturnType<typeof createClient>, conn
   return token;
 }
 
-async function verifyCron(req: Request, admin: ReturnType<typeof createClient>) {
+async function verifyCron(req: Request, admin: AdminClient) {
   const supplied = req.headers.get('x-semora-lms-cron-secret') ?? '';
   const { data, error } = await admin.rpc('read_lms_cron_secret');
   if (error || typeof data !== 'string' || !supplied || supplied !== data) {
@@ -808,7 +954,10 @@ serve(async (req) => {
       if (!token || token.length > 8192) return json({ error: 'A valid LMS access token is required' }, 400);
       const base = safeBaseUrl(body?.base_url, provider);
       let courses: LmsCourse[];
-      if (provider === 'canvas') courses = await canvasDiscover(base, token);
+      if (provider === 'canvas' && body?.connection_method === 'calendar_feed') {
+        const feed = await fetchCanvasCalendar(token);
+        courses = feed.courses;
+      } else if (provider === 'canvas') courses = await canvasDiscover(base, token);
       else if (provider === 'blackboard') courses = await blackboardDiscover(base, token);
       else if (provider === 'moodle') courses = await moodleDiscover(base, token);
       else courses = await googleDiscover(token);

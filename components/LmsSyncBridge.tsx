@@ -11,9 +11,9 @@ import { isDeviceOnline } from '@/lib/offlineSync';
 const AUTO_SYNC_INTERVAL_MS = 30 * 60 * 1000;
 
 /**
- * LMS credentials intentionally never leave the device, so automatic sync is
- * foreground-based rather than a server cron. It stays silent: connections
- * needing a renewed school login are marked for attention in Settings.
+ * Device-only LMS connections get a silent foreground refresh. Connections
+ * explicitly authorized for encrypted server sync (including Canvas Calendar
+ * Feed subscriptions) are also covered by the scheduled worker.
  */
 export function LmsSyncBridge({ userId }: { userId: string | null }) {
   const queryClient = useQueryClient();

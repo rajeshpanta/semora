@@ -226,7 +226,7 @@ export default function SettingsScreen() {
           <SettingsRow
             icon="university"
             label="Learning Platforms"
-            value="LMS import"
+            value="Canvas & LMS sync"
             pro
             isPro={isPro}
             onPress={() => router.push('/settings/lms' as any)}

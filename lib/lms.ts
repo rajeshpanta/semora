@@ -11,6 +11,7 @@ import {
 } from '@/lib/lmsCredentialStore';
 import type {
   LmsConnection,
+  LmsConnectionMethod,
   LmsCourseLink,
   LmsProvider,
 } from '@/types/database';
@@ -71,6 +72,36 @@ export const LMS_PROVIDER_LABELS: Record<LmsProvider, string> = {
   google_classroom: 'Google Classroom',
 };
 
+/** Canvas exposes webcal://, while Edge fetch supports HTTPS. Keep the feed
+ * secret out of logs and reject anything except Canvas's user feed path. */
+export function normalizeCanvasCalendarFeedUrl(raw: string): string {
+  let candidate = raw.trim();
+  if (!candidate) throw new Error('Paste your Canvas Calendar Feed URL.');
+  if (candidate.length > 4096) throw new Error('The Canvas Calendar Feed URL is too long.');
+  if (/^webcal:\/\//i.test(candidate)) candidate = `https://${candidate.slice(candidate.indexOf('//') + 2)}`;
+  let url: URL;
+  try {
+    url = new URL(candidate);
+  } catch {
+    throw new Error('Paste the complete Calendar Feed URL copied from Canvas.');
+  }
+  if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) {
+    throw new Error('Canvas Calendar Feed URLs must use secure HTTPS.');
+  }
+  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(url.hostname) || url.hostname.includes(':')) {
+    throw new Error('Canvas Calendar Feed URLs must use your school’s Canvas hostname.');
+  }
+  if (!/\/feeds\/calendars\/user_[^/]+\.ics$/i.test(url.pathname)) {
+    throw new Error('This is not a Canvas user Calendar Feed URL. In Canvas, open Calendar → Calendar Feed and copy the URL shown there.');
+  }
+  url.hash = '';
+  return url.toString();
+}
+
+export function canvasCalendarOrigin(raw: string): string {
+  return new URL(normalizeCanvasCalendarFeedUrl(raw)).origin;
+}
+
 export async function getLmsCredential(connectionId: string): Promise<LmsCredential | null> {
   return readLmsCredential(connectionId);
 }
@@ -97,12 +128,14 @@ export async function requestGoogleClassroomCredential(): Promise<LmsCredential>
 
 export async function discoverLmsCourses(input: {
   provider: LmsProvider;
+  connectionMethod?: LmsConnectionMethod;
   baseUrl?: string | null;
   credential: LmsCredential;
 }): Promise<DiscoveredLmsCourse[]> {
   const data = await invokeLms<{ courses: DiscoveredLmsCourse[] }>({
     action: 'discover',
     provider: input.provider,
+    connection_method: input.connectionMethod ?? 'legacy_token',
     base_url: input.baseUrl ?? null,
     access_token: input.credential.accessToken,
   });
@@ -124,6 +157,7 @@ export async function connectLms(input: {
   userId: string;
   semesterId: string;
   provider: LmsProvider;
+  connectionMethod?: LmsConnectionMethod;
   displayName: string;
   baseUrl?: string | null;
   credential: LmsCredential;
@@ -136,6 +170,7 @@ export async function connectLms(input: {
     .insert({
       user_id: input.userId,
       provider: input.provider,
+      connection_method: input.connectionMethod ?? 'legacy_token',
       display_name: input.displayName.trim() || LMS_PROVIDER_LABELS[input.provider],
       base_url: input.provider === 'google_classroom' ? null : input.baseUrl?.trim() || null,
       account_label: input.credential.accountLabel ?? null,
@@ -147,7 +182,9 @@ export async function connectLms(input: {
 
   const createdCourseIds: string[] = [];
   try {
-    await storeLmsCredential(connection.id, input.credential);
+    if ((input.connectionMethod ?? 'legacy_token') !== 'calendar_feed') {
+      await storeLmsCredential(connection.id, input.credential);
+    }
     for (let index = 0; index < input.courses.length; index++) {
       const external = input.courses[index];
       const { data: course, error: courseError } = await supabase
@@ -173,6 +210,13 @@ export async function connectLms(input: {
         local_course_id: course.id,
       });
       if (linkError) throw linkError;
+    }
+    if (input.connectionMethod === 'calendar_feed') {
+      await invokeLms({
+        action: 'enable_background',
+        connection_id: connection.id,
+        access_token: input.credential.accessToken,
+      });
     }
     const result = await syncLmsConnection(connection.id, 'initial');
     return { connectionId: connection.id, ...result };
@@ -205,7 +249,9 @@ export async function syncLmsConnection(
   if (!links.length) throw new Error('This LMS connection has no enabled courses.');
 
   try {
-    let credential = await getLmsCredential(connectionId);
+    let credential = connection.connection_method === 'calendar_feed'
+      ? null
+      : await getLmsCredential(connectionId);
     if (connection.provider === 'google_classroom') {
       try {
         credential = await refreshGoogleClassroomAccessToken(connection.account_label);
@@ -215,7 +261,7 @@ export async function syncLmsConnection(
         // provider request below records credentials_required for the user.
       }
     }
-    if (!credential) {
+    if (!credential && connection.connection_method !== 'calendar_feed') {
       await supabase
         .from('lms_connections')
         .update({
@@ -229,7 +275,7 @@ export async function syncLmsConnection(
     const data = await invokeLms<{ processed: number; skipped: number }>({
       action: 'sync',
       connection_id: connectionId,
-      access_token: credential.accessToken,
+      ...(credential?.accessToken ? { access_token: credential.accessToken } : {}),
       trigger,
     });
     rescheduleAllTaskReminders(connection.user_id).catch(() => {});
@@ -319,17 +365,29 @@ export async function reconnectLmsConnection(
   connectionId: string,
   credential: LmsCredential,
   baseUrl?: string | null,
+  connectionMethod?: LmsConnectionMethod,
 ): Promise<void> {
-  await storeLmsCredential(connectionId, credential);
-  await supabase
+  const method = connectionMethod ?? 'legacy_token';
+  if (method !== 'calendar_feed') await storeLmsCredential(connectionId, credential);
+  const { error } = await supabase
     .from('lms_connections')
     .update({
       ...(baseUrl !== undefined ? { base_url: baseUrl?.trim() || null } : {}),
+      connection_method: method,
       account_label: credential.accountLabel ?? null,
       last_sync_status: 'never',
       last_error: null,
     })
     .eq('id', connectionId);
+  if (error) throw error;
+  if (method === 'calendar_feed') {
+    await invokeLms({
+      action: 'enable_background',
+      connection_id: connectionId,
+      access_token: credential.accessToken,
+    });
+    await removeLmsCredential(connectionId);
+  }
 }
 
 export async function disconnectLms(connectionId: string): Promise<void> {

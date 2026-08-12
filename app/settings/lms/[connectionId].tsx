@@ -155,7 +155,9 @@ export default function LmsConnectionDetailScreen() {
             <Text style={[styles.heroTitle, { color: colors.ink }]}>{LMS_PROVIDER_LABELS[connection.provider]}</Text>
             <Text style={[styles.heroText, { color: colors.ink2 }]}>
               {connection.background_sync_enabled
-                ? 'Automatic background sync is on. Semora checks this connection every few hours.'
+                ? connection.connection_method === 'calendar_feed'
+                  ? 'Automatic Canvas Calendar Feed sync is on. Semora checks for dated assignment and event changes about hourly.'
+                  : 'Automatic background sync is on. Semora checks this connection every few hours.'
                 : needsReconnect
                   ? 'Your school needs you to reconnect before Semora can continue syncing.'
                   : 'This connection updates while you use Semora on this device.'}
