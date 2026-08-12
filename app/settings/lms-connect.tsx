@@ -157,7 +157,14 @@ export default function LmsConnectScreen() {
       setCredential(nextCredential);
       setCourses(found);
       setSelected(new Set(found.map((course) => course.id)));
-      if (!found.length) Alert.alert('No active courses found', 'This account returned no courses Semora can import.');
+      if (!found.length) {
+        Alert.alert(
+          isCanvasCalendar ? 'No dated Canvas work found' : 'No active courses found',
+          isCanvasCalendar
+            ? 'Semora could open the feed, but Canvas did not list any dated course assignments or events yet. Check that your course calendars are available in Canvas, then try again.'
+            : 'This account returned no courses Semora can import.',
+        );
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'The learning platform could not be connected.';
       // Pro lapsed mid-session (or a patched client hit the server gate): the
@@ -198,7 +205,7 @@ export default function LmsConnectScreen() {
         courses: chosen,
       });
       Alert.alert(
-        'Connected',
+        isCanvasCalendar ? 'Canvas connected' : 'Connected',
         `${chosen.length} ${chosen.length === 1 ? 'course' : 'courses'} and ${result.processed} deadlines imported.${isCanvasCalendar ? ' Semora will keep checking Canvas about hourly.' : ''}`,
         [{ text: 'Done', onPress: () => router.replace('/settings/lms' as any) }],
       );
@@ -232,20 +239,72 @@ export default function LmsConnectScreen() {
           {courses.length === 0 ? (
             <>
               <View style={[styles.heroIcon, { backgroundColor: colors.brand50 }]}>
-                <FontAwesome name={provider === 'google_classroom' ? 'google' : 'university'} size={22} color={colors.brand} />
+                <FontAwesome name={provider === 'google_classroom' ? 'google' : isCanvasCalendar ? 'refresh' : 'university'} size={22} color={colors.brand} />
               </View>
+              {isCanvasCalendar && <Text style={[styles.eyebrow, { color: colors.brand }]}>CANVAS SETUP · STEP 1 OF 2</Text>}
               <Text style={[styles.title, { color: colors.ink }]}>
-                {provider === 'google_classroom' ? 'Sign in to Google Classroom' : `Connect your ${LMS_PROVIDER_LABELS[provider]} account`}
+                {provider === 'google_classroom'
+                  ? 'Sign in to Google Classroom'
+                  : isCanvasCalendar
+                    ? 'Connect Canvas to Semora'
+                    : `Connect your ${LMS_PROVIDER_LABELS[provider]} account`}
               </Text>
               <Text style={[styles.subtitle, { color: colors.ink3 }]}>
                 {isCanvasCalendar
-                  ? 'Subscribe to Canvas’s official read-only Calendar Feed. Semora imports dated assignments and events, then checks for deadline changes about hourly.'
+                  ? 'Set this up once. Semora will keep your dated Canvas assignments and events updated when an instructor changes a deadline.'
                   : 'Semora makes read-only requests to import classes, deadlines, points, and available submission status. It never changes your LMS.'}
               </Text>
 
               {isCanvasCalendar && (
                 <>
-                  <Text style={[styles.label, { color: colors.ink2 }]}>Canvas Calendar Feed URL</Text>
+                  <View style={[styles.guideCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+                    <View style={styles.guideHeading}>
+                      <FontAwesome name="desktop" size={15} color={colors.brand} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.guideTitle, { color: colors.ink }]}>First, open Canvas in a web browser</Text>
+                        <Text style={[styles.guideIntro, { color: colors.ink3 }]}>Use your school’s Canvas website—the place where you normally see courses and assignments. The Canvas Student app does not show this private feed link.</Text>
+                      </View>
+                    </View>
+                    <View style={[styles.guideDivider, { backgroundColor: colors.line }]} />
+                    <View style={styles.setupStep}>
+                      <View style={[styles.stepNumber, { backgroundColor: colors.brand50 }]}><Text style={[styles.stepNumberText, { color: colors.brand }]}>1</Text></View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.stepTitle, { color: colors.ink }]}>Open Calendar</Text>
+                        <Text style={[styles.stepText, { color: colors.ink3 }]}>In Canvas, choose Calendar from the main navigation.</Text>
+                      </View>
+                    </View>
+                    <View style={styles.setupStep}>
+                      <View style={[styles.stepNumber, { backgroundColor: colors.brand50 }]}><Text style={[styles.stepNumberText, { color: colors.brand }]}>2</Text></View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.stepTitle, { color: colors.ink }]}>Choose Calendar Feed</Text>
+                        <Text style={[styles.stepText, { color: colors.ink3 }]}>Find Calendar Feed in the Calendar sidebar and open it.</Text>
+                      </View>
+                    </View>
+                    <View style={styles.setupStep}>
+                      <View style={[styles.stepNumber, { backgroundColor: colors.brand50 }]}><Text style={[styles.stepNumberText, { color: colors.brand }]}>3</Text></View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.stepTitle, { color: colors.ink }]}>Copy the complete link</Text>
+                        <Text style={[styles.stepText, { color: colors.ink3 }]}>Copy the URL Canvas displays. It usually starts with webcal:// and contains /feeds/calendars/user_.</Text>
+                      </View>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => Linking.openURL('https://community.instructure.com/en/kb/articles/662804-unknown').catch(() => {})}
+                      style={styles.officialHelp}
+                    >
+                      <FontAwesome name="external-link" size={11} color={colors.brand} />
+                      <Text style={[styles.link, { color: colors.brand }]}>See Canvas’s illustrated instructions</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={[styles.syncExplainer, { backgroundColor: colors.brand50 }]}>
+                    <FontAwesome name="refresh" size={15} color={colors.brand} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.syncTitle, { color: colors.ink }]}>How automatic sync works</Text>
+                      <Text style={[styles.syncText, { color: colors.ink2 }]}>Semora securely checks your private Canvas link about hourly—even when the app is closed. If a dated assignment or event changes, Semora updates the same task instead of creating a duplicate. Semora never changes anything in Canvas.</Text>
+                    </View>
+                  </View>
+
+                  <Text style={[styles.label, { color: colors.ink2 }]}>Paste your private Calendar Feed link</Text>
                   <View style={styles.secretField}>
                     <TextInput
                       value={token}
@@ -266,20 +325,13 @@ export default function LmsConnectScreen() {
                       <FontAwesome name={showPrivateUrl ? 'eye-slash' : 'eye'} size={15} color={colors.ink3} />
                     </TouchableOpacity>
                   </View>
-                  <View style={[styles.help, { backgroundColor: colors.card, borderColor: colors.line }]}>
-                    <FontAwesome name="calendar" size={14} color={colors.brand} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.helpText, { color: colors.ink3 }]}>
-                        {'In Canvas on the web:\n1. Open Calendar.\n2. Select Calendar Feed in the sidebar.\n3. Copy the full URL and paste it above.\n\nThe URL is private, like a password. Semora encrypts it for automatic syncing. Canvas feeds do not include grades, submission status, or undated To-Do items. When you add a new Canvas course, reconnect once so it can be selected.'}
-                      </Text>
-                      <TouchableOpacity
-                        onPress={() => Linking.openURL('https://community.instructure.com/en/kb/articles/662804-unknown').catch(() => {})}
-                        style={styles.helpLinkButton}
-                      >
-                        <FontAwesome name="external-link" size={11} color={colors.brand} />
-                        <Text style={[styles.link, { color: colors.brand }]}>View Canvas’s instructions</Text>
-                      </TouchableOpacity>
-                    </View>
+                  <View style={styles.privateNote}>
+                    <FontAwesome name="lock" size={12} color={colors.ink3} />
+                    <Text style={[styles.privateNoteText, { color: colors.ink3 }]}>Treat this link like a password. Semora encrypts it and never displays it after setup.</Text>
+                  </View>
+                  <View style={[styles.limitNote, { borderColor: colors.line }]}>
+                    <Text style={[styles.limitTitle, { color: colors.ink2 }]}>What Canvas includes</Text>
+                    <Text style={[styles.limitText, { color: colors.ink3 }]}>Dated assignments and calendar events. It does not import grades, whether work was submitted, or To-Do items without dates.</Text>
                   </View>
                 </>
               )}
@@ -335,17 +387,18 @@ export default function LmsConnectScreen() {
                 {working ? <ActivityIndicator color="#fff" /> : (
                   <>
                     <FontAwesome name={provider === 'google_classroom' ? 'google' : isCanvasCalendar ? 'calendar' : 'search'} size={14} color="#fff" />
-                    <Text style={styles.primaryText}>{reconnecting ? 'Reconnect and sync' : provider === 'google_classroom' ? 'Continue with Google' : isCanvasCalendar ? 'Preview Canvas courses' : 'Find my courses'}</Text>
+                    <Text style={styles.primaryText}>{reconnecting ? 'Reconnect and sync' : provider === 'google_classroom' ? 'Continue with Google' : isCanvasCalendar ? 'Check link and choose courses' : 'Find my courses'}</Text>
                   </>
                 )}
               </TouchableOpacity>
             </>
           ) : (
             <>
-              <Text style={[styles.title, { color: colors.ink }]}>Choose courses</Text>
+              {isCanvasCalendar && <Text style={[styles.eyebrow, { color: colors.brand }]}>CANVAS SETUP · STEP 2 OF 2</Text>}
+              <Text style={[styles.title, { color: colors.ink }]}>{isCanvasCalendar ? 'Choose courses to sync' : 'Choose courses'}</Text>
               <Text style={[styles.subtitle, { color: colors.ink3 }]}>
                 {isCanvasCalendar
-                  ? 'Choose the Canvas courses to add. Semora will keep their dated assignments and events refreshed automatically.'
+                  ? 'Select the courses you want in Semora and choose the semester where they belong. Semora creates each course and imports its current deadlines.'
                   : 'Semora creates a local course for each selection and keeps its assignments refreshed.'}
               </Text>
               <Text style={[styles.label, { color: colors.ink2 }]}>Connection name</Text>
@@ -393,8 +446,14 @@ export default function LmsConnectScreen() {
                   </View>
                 </TouchableOpacity>
               ))}
+              {isCanvasCalendar && (
+                <View style={[styles.afterConnect, { backgroundColor: colors.brand50 }]}>
+                  <FontAwesome name="check-circle" size={14} color={colors.brand} />
+                  <Text style={[styles.afterConnectText, { color: colors.ink2 }]}>After connecting, you can see the last update time or run Sync now from Settings → Connect Canvas.</Text>
+                </View>
+              )}
               <TouchableOpacity onPress={save} disabled={working} style={[styles.primary, { backgroundColor: colors.brand }]}>
-                {working ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Import and sync</Text>}
+                {working ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{isCanvasCalendar ? 'Connect Canvas and start syncing' : 'Import and sync'}</Text>}
               </TouchableOpacity>
             </>
           )}
@@ -409,12 +468,32 @@ const styles = StyleSheet.create({
   content: { width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center', padding: 22, paddingBottom: 45 },
   heroIcon: { width: 52, height: 52, borderRadius: 17, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
   title: { fontSize: 25, fontFamily: 'Fraunces_700Bold' },
+  eyebrow: { fontSize: 11, fontWeight: '900', letterSpacing: 0.8, marginBottom: 7 },
   subtitle: { fontSize: 14, lineHeight: 21, marginTop: 7, marginBottom: 15 },
   label: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.45, marginTop: 14, marginBottom: 7 },
   input: { minHeight: 50, borderRadius: 13, borderWidth: 1.2, paddingHorizontal: 14, fontSize: 15 },
   secretField: { position: 'relative' },
   secretInput: { paddingRight: 48 },
   secretToggle: { position: 'absolute', right: 4, top: 4, width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
+  guideCard: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 16, padding: 14, marginBottom: 14 },
+  guideHeading: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  guideTitle: { fontSize: 14, fontWeight: '800' },
+  guideIntro: { fontSize: 12, lineHeight: 18, marginTop: 3 },
+  guideDivider: { height: StyleSheet.hairlineWidth, marginVertical: 13 },
+  setupStep: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
+  stepNumber: { width: 25, height: 25, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  stepNumberText: { fontSize: 12, fontWeight: '900' },
+  stepTitle: { fontSize: 13, fontWeight: '800' },
+  stepText: { fontSize: 12, lineHeight: 17, marginTop: 2 },
+  officialHelp: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  syncExplainer: { borderRadius: 15, padding: 13, flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 5 },
+  syncTitle: { fontSize: 13, fontWeight: '800' },
+  syncText: { fontSize: 12, lineHeight: 18, marginTop: 3 },
+  privateNote: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 8, paddingHorizontal: 2 },
+  privateNoteText: { flex: 1, fontSize: 11, lineHeight: 16 },
+  limitNote: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 14, paddingTop: 12 },
+  limitTitle: { fontSize: 12, fontWeight: '800' },
+  limitText: { fontSize: 11, lineHeight: 17, marginTop: 3 },
   help: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 13, padding: 12, flexDirection: 'row', gap: 9, marginTop: 12 },
   helpText: { flex: 1, fontSize: 12, lineHeight: 18 },
   helpLinkButton: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', marginTop: 9, minHeight: 24 },
@@ -429,4 +508,6 @@ const styles = StyleSheet.create({
   checkbox: { width: 23, height: 23, borderRadius: 7, borderWidth: 1.3, alignItems: 'center', justifyContent: 'center' },
   courseName: { fontSize: 14, fontWeight: '700' },
   courseCode: { fontSize: 11, marginTop: 3 },
+  afterConnect: { borderRadius: 13, padding: 12, flexDirection: 'row', gap: 8, alignItems: 'flex-start', marginTop: 14 },
+  afterConnectText: { flex: 1, fontSize: 12, lineHeight: 18 },
 });

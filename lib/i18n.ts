@@ -446,6 +446,8 @@ function spanishPattern(input: string): string | null {
     if (match) return `${match[1] === '1' ? 'Se actualizó 1 tarea' : `Se actualizaron ${match[1]} tareas`}${match[2] ? ` · ${match[2]} ${match[2] === '1' ? 'requiere' : 'requieren'} atención` : ''}.`;
   match = input.match(/^(\d+) (course|courses) and (\d+) assignments imported\.$/i);
     if (match) return `Se importaron ${match[1]} ${match[1] === '1' ? 'curso' : 'cursos'} y ${match[3]} ${match[3] === '1' ? 'tarea' : 'tareas'}.`;
+  match = input.match(/^(\d+) (course|courses) and (\d+) deadlines imported\. Semora will keep checking Canvas about hourly\.$/i);
+    if (match) return `Se importaron ${match[1]} ${match[1] === '1' ? 'curso' : 'cursos'} y ${match[3]} ${match[3] === '1' ? 'entrega' : 'entregas'}. Semora seguirá revisando Canvas aproximadamente cada hora.`;
   match = input.match(/^Connect your (.+?) account$/i);
     if (match) return `Conecta tu cuenta de ${match[1]}`;
   match = input.match(/^Updated (\d+)m ago$/i);

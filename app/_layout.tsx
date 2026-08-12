@@ -932,8 +932,8 @@ function RootLayoutNav() {
               <Stack.Screen name="settings/language" options={{ title: t('Language') }} />
               <Stack.Screen name="settings/help" options={{ title: t('Help & FAQ') }} />
               <Stack.Screen name="settings/calendar" options={{ title: t('Calendar Sync') }} />
-              <Stack.Screen name="settings/lms" options={{ title: t('Learning Platforms') }} />
-              <Stack.Screen name="settings/lms-connect" options={{ title: t('Connect Learning Platform') }} />
+              <Stack.Screen name="settings/lms" options={{ title: t('Canvas & LMS') }} />
+              <Stack.Screen name="settings/lms-connect" options={{ title: t('Connect Canvas') }} />
               <Stack.Screen name="settings/sync" options={{ title: t('Offline & Sync') }} />
               <Stack.Screen name="settings/widgets" options={{ title: t('Widgets') }} />
               <Stack.Screen name="dashboard" options={{ title: t('Workload') }} />

@@ -224,9 +224,9 @@ export default function SettingsScreen() {
             onPress={() => router.push('/settings/calendar')}
           />
           <SettingsRow
-            icon="university"
-            label="Learning Platforms"
-            value="Canvas & LMS sync"
+            icon="refresh"
+            label="Connect Canvas"
+            value="Automatic deadline sync"
             pro
             isPro={isPro}
             onPress={() => router.push('/settings/lms' as any)}
