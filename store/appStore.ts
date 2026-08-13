@@ -20,6 +20,18 @@ const RESET_KEY = 'semora_reset_in_progress';
 const ONBOARDED_KEY = 'semora_onboarded';
 const AHA_PAYWALL_KEY = 'semora_aha_paywall';
 const REVIEW_REQUESTED_KEY = 'semora_review_requested';
+// "This device has completed a syllabus import at least once" — the happy
+// moment the review prompt's primary trigger keys off.
+//
+// It used to key off AHA_PAYWALL_KEY instead, which is set only inside the
+// `!isPro` branch of the review screen. So a user who was already Pro when
+// they first imported never set it, and the primary trigger could never fire
+// for them — they could only reach the prompt through the 10-completion
+// fallback. That is exactly backwards: a paying user who just watched a
+// semester import correctly is the likeliest person on the device to leave a
+// good rating. Separating the two means the paywall flag goes on describing
+// the paywall and this one describes the import.
+const IMPORTED_SYLLABUS_KEY = 'semora_imported_syllabus';
 // Lifetime count of task completions on this device — the fallback trigger
 // for the review prompt (10th completion). Device-level like the flags
 // above: the rating prompt is once-per-device regardless of account, so
@@ -81,6 +93,12 @@ const initialInPasswordReset = getItem(RESET_KEY) === 'true';
 const initialOnboarded = getItem(ONBOARDED_KEY) === 'true';
 const initialAhaPaywallShown = getItem(AHA_PAYWALL_KEY) === 'true';
 const initialReviewRequested = getItem(REVIEW_REQUESTED_KEY) === 'true';
+// Backfill: a device that already has AHA_PAYWALL_KEY set completed an import
+// before IMPORTED_SYLLABUS_KEY existed. Without this, upgrading would read the
+// new key as false and silently re-arm a once-ever prompt for people who have
+// already been through it.
+const initialImportedSyllabus =
+  getItem(IMPORTED_SYLLABUS_KEY) === 'true' || initialAhaPaywallShown;
 const initialTasksCompleted = (() => {
   const n = parseInt(getItem(TASKS_COMPLETED_KEY) ?? '', 10);
   // Corrupt/missing value degrades to 0 — worst case the milestone prompt
@@ -112,6 +130,9 @@ interface AppState {
   setHasOnboarded: (v: boolean) => void;
   ahaPaywallShown: boolean;
   setAhaPaywallShown: (v: boolean) => void;
+  /** Set on the first fully successful syllabus import, Pro or free. */
+  hasImportedSyllabus: boolean;
+  setHasImportedSyllabus: (v: boolean) => void;
   reviewRequested: boolean;
   setReviewRequested: (v: boolean) => void;
   /**
@@ -196,6 +217,11 @@ export const useAppStore = create<AppState>((set) => ({
     set({ ahaPaywallShown: v });
     if (v) { setItem(AHA_PAYWALL_KEY, 'true'); } else { deleteItem(AHA_PAYWALL_KEY); }
   },
+  hasImportedSyllabus: initialImportedSyllabus,
+  setHasImportedSyllabus: (v) => {
+    set({ hasImportedSyllabus: v });
+    if (v) { setItem(IMPORTED_SYLLABUS_KEY, 'true'); } else { deleteItem(IMPORTED_SYLLABUS_KEY); }
+  },
   reviewRequested: initialReviewRequested,
   setReviewRequested: (v) => {
     set({ reviewRequested: v });
@@ -231,7 +257,8 @@ export const useAppStore = create<AppState>((set) => ({
       inPasswordReset: false,
       // Onboarding personalization is user-scoped — clear it so the next
       // account on this device isn't greeted with the previous user's name
-      // or term. (hasOnboarded/ahaPaywallShown/reviewRequested stay:
+      // or term. (hasOnboarded/ahaPaywallShown/hasImportedSyllabus/
+      // reviewRequested stay:
       // those are genuinely device-level one-time flags.)
       userName: null,
       defaultTerm: null,

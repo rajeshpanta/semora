@@ -23,7 +23,20 @@ export interface Crumb {
  * The final item is the current page: rendered as plain text (it is not a link
  * to itself) but still included in the markup, which is what the spec expects.
  */
-export function Breadcrumb({ trail, locale = 'en' }: { trail: Crumb[]; locale?: SiteLocale }) {
+export function Breadcrumb({
+  trail,
+  locale = 'en',
+  align = 'start',
+}: {
+  trail: Crumb[];
+  locale?: SiteLocale;
+  /**
+   * `center` for the hub pages whose hero is centered (/features, /compare and
+   * their Spanish counterparts). A left-aligned trail above a centered eyebrow
+   * reads as a stray line rather than part of the hero.
+   */
+  align?: 'start' | 'center';
+}) {
   if (trail.length === 0) return null;
   const parents = trail.slice(0, -1);
   const current = trail[trail.length - 1];
@@ -31,7 +44,10 @@ export function Breadcrumb({ trail, locale = 'en' }: { trail: Crumb[]; locale?: 
   return (
     <>
       <JsonLd data={breadcrumbListSchema(trail)} />
-      <nav className={styles.crumbs} aria-label={locale === 'es' ? 'Ruta de navegación' : 'Breadcrumb'}>
+      <nav
+        className={align === 'center' ? `${styles.crumbs} ${styles.centered}` : styles.crumbs}
+        aria-label={locale === 'es' ? 'Ruta de navegación' : 'Breadcrumb'}
+      >
         {parents.map((crumb) => (
           <span key={crumb.path}>
             <Link href={crumb.path}>{crumb.name}</Link>

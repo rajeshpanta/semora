@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './PomodoroTimer.module.css';
 import type { SiteLocale } from '@/lib/i18n';
+import { report, TELEMETRY_EVENTS } from '@/lib/telemetry';
 
 /**
  * Working Pomodoro timer.
@@ -39,16 +40,20 @@ export function PomodoroTimer({ locale = 'en' }: { locale?: SiteLocale }) {
   const phaseLength = (p: Phase) => (p === 'focus' ? focusMin : breakMin) * 60;
 
   // Advance to the other phase. Focus -> break increments the session count.
+  //
+  // Every state change is made from out here, not from inside a setState
+  // updater. The updater form is allowed to run more than once for a single
+  // logical update (StrictMode does exactly that in development), so the
+  // earlier version — which called setCompleted and reassigned deadlineRef
+  // from inside setPhase — counted one finished focus block as two.
   const advance = useCallback(() => {
-    setPhase((prev) => {
-      const next: Phase = prev === 'focus' ? 'break' : 'focus';
-      if (prev === 'focus') setCompleted((c) => c + 1);
-      const len = (next === 'focus' ? focusMin : breakMin) * 60;
-      deadlineRef.current = Date.now() + len * 1000;
-      setRemaining(len);
-      return next;
-    });
-  }, [focusMin, breakMin]);
+    const next: Phase = phase === 'focus' ? 'break' : 'focus';
+    const len = (next === 'focus' ? focusMin : breakMin) * 60;
+    deadlineRef.current = Date.now() + len * 1000;
+    setPhase(next);
+    setRemaining(len);
+    if (phase === 'focus') setCompleted((c) => c + 1);
+  }, [phase, focusMin, breakMin]);
 
   useEffect(() => {
     if (!running) return;
@@ -69,7 +74,14 @@ export function PomodoroTimer({ locale = 'en' }: { locale?: SiteLocale }) {
     };
   }, [running, advance]);
 
+  // One event per visit, on the first start. Reporting every start would
+  // count each pause-and-resume as another use.
+  const reportedUse = useRef(false);
   const start = () => {
+    if (!reportedUse.current) {
+      reportedUse.current = true;
+      report(TELEMETRY_EVENTS.toolUsed, { tool: 'pomodoro-timer', locale });
+    }
     deadlineRef.current = Date.now() + remaining * 1000;
     setRunning(true);
   };

@@ -10,6 +10,7 @@ import {
 } from '@/lib/semora-facts';
 import { COMPETITORS } from '@/lib/competitors';
 import { ALTERNATIVE_SLUGS } from '@/lib/new-page-content';
+import { KEYWORD_PAGE_SLUGS } from '@/lib/routes';
 import { FEATURES_ES, TAGLINE_ES } from '@/lib/es-facts';
 import { englishToSpanishPath, type SiteLocale } from '@/lib/i18n';
 
@@ -20,17 +21,30 @@ export function Footer({ locale = 'en' }: { locale?: SiteLocale }) {
         tagline: TAGLINE_ES, features: 'Funciones', compare: 'Comparar', tools: 'Herramientas gratis',
         gpa: 'Calculadora de GPA', pomodoro: 'Temporizador Pomodoro', get: 'Empieza con Semora',
         tryFree: 'Empezar gratis', download: 'Descargar en el App Store', pricing: 'Precios', blog: 'Blog',
-        company: 'Empresa', about: 'Acerca de', support: 'Ayuda', privacy: 'Privacidad', terms: 'Términos',
+        guides: 'Guías', company: 'Empresa', about: 'Acerca de', support: 'Ayuda', privacy: 'Privacidad', terms: 'Términos',
         alternative: 'alternativa', featureBase: '/es/funciones', compareBase: '/es/comparar',
       }
     : {
         tagline: TAGLINE, features: 'Features', compare: 'Compare', tools: 'Free tools',
         gpa: 'GPA calculator', pomodoro: 'Pomodoro timer', get: 'Get Semora',
         tryFree: 'Try it for free', download: 'Download on the App Store', pricing: 'Pricing', blog: 'Blog',
-        company: 'Company', about: 'About', support: 'Support', privacy: 'Privacy', terms: 'Terms',
+        guides: 'Guides', company: 'Company', about: 'About', support: 'Support', privacy: 'Privacy', terms: 'Terms',
         alternative: 'alternative', featureBase: '/features', compareBase: '/compare',
       };
   const path = (englishPath: string) => locale === 'es' ? englishToSpanishPath(englishPath) : englishPath;
+
+  // Driven off KEYWORD_PAGE_SLUGS rather than hand-written, for the same
+  // reason the alternative column below is: two of these landers previously
+  // existed in the sitemap with no internal link pointing at them at all.
+  const KEYWORD_LABELS: Record<string, { en: string; es: string }> = {
+    'ai-syllabus-scanner': { en: 'AI syllabus scanner', es: 'Escáner de programas' },
+    'ai-study-planner-for-college': { en: 'AI study planner', es: 'Planificador de estudio' },
+    'canvas-deadline-tracker': { en: 'Canvas deadline tracker', es: 'Fechas de Canvas' },
+    'assignment-tracker-app': { en: 'Assignment tracker', es: 'Seguimiento de tareas' },
+    'blackboard-assignment-tracker': { en: 'Blackboard tracker', es: 'Tareas de Blackboard' },
+    'ai-flashcard-generator': { en: 'AI flashcard generator', es: 'Generador de tarjetas' },
+    'ai-tutor-for-college-students': { en: 'AI tutor', es: 'Tutor con IA' },
+  };
 
   return (
     <footer className={styles.footer}>
@@ -71,6 +85,14 @@ export function Footer({ locale = 'en' }: { locale?: SiteLocale }) {
                 {locale === 'es'
                   ? `${copy.alternative} a ${ALTERNATIVE_BRANDS[slug] ?? slug.replace('-alternative', '')}`
                   : alternativeLinkLabel(slug)}
+              </Link>
+            ))}
+          </div>
+          <div>
+            <p className={styles.heading}>{copy.guides}</p>
+            {KEYWORD_PAGE_SLUGS.map((slug) => (
+              <Link key={slug} href={path(`/${slug}`)}>
+                {KEYWORD_LABELS[slug]?.[locale] ?? slug}
               </Link>
             ))}
           </div>

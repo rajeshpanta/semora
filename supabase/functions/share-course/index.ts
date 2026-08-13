@@ -22,6 +22,7 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { withRequestLogging, errorFields, type EdgeLogger } from '../_shared/log.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -62,7 +63,7 @@ function generateToken(): string {
   return `${a}${b}`;
 }
 
-serve(async (req) => {
+serve(withRequestLogging('share-course', async (req, log) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -217,7 +218,7 @@ serve(async (req) => {
     const url = `${SHARE_LINK_BASE}/${encodeURIComponent(token)}`;
     return jsonResponse({ token, url }, 200);
   } catch (err) {
-    console.error('[share-course] Unhandled error:', err);
+    log.error('handler_error', errorFields(err));
     return jsonResponse({ error: 'An unexpected error occurred. Please try again.' }, 500);
   }
-});
+}));

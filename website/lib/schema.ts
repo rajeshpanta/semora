@@ -2,6 +2,7 @@ import type {
   Article,
   BreadcrumbList,
   FAQPage,
+  ItemList,
   Organization,
   SoftwareApplication,
   WebSite,
@@ -173,6 +174,39 @@ export function breadcrumbListSchema(
       position: index + 1,
       name: item.name,
       item: `${SITE_URL}${item.path}`,
+    })),
+  };
+}
+
+/**
+ * ItemList for a hub page whose whole job is to point at its children.
+ *
+ * /features and /compare each render a grid of cards and said nothing about
+ * what the grid held, so the only way to learn either hub had children was to
+ * follow every card. The blog indexes already describe their contents through
+ * Blog/blogPost below, which is why they do not come through here — two lists
+ * of the same posts would be a duplicate, not a second signal.
+ *
+ * No `inLanguage`: ItemList is an Intangible, not a CreativeWork, so the
+ * property is not valid on it. Each locale's list is distinguished by its own
+ * @id, item names and URLs instead.
+ */
+export function itemListSchema(
+  items: { name: string; path: string; description?: string }[],
+  meta: { path: string; name: string },
+): WithContext<ItemList> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    '@id': `${SITE_URL}${meta.path}#list`,
+    name: meta.name,
+    numberOfItems: items.length,
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      ...(item.description ? { description: item.description } : {}),
+      url: `${SITE_URL}${item.path}`,
     })),
   };
 }

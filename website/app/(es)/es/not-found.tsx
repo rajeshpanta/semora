@@ -1,9 +1,22 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
+import { RouteReporter } from '@/components/RouteReporter';
 
 /** 404 con marca para el árbol en español — véase app/(en)/not-found.tsx. */
+
+/** Same reason as the English tree: without this, /es/<anything-unknown> served
+ *  a 404 titled with the Spanish homepage's own title. */
+export const metadata: Metadata = {
+  title: 'Página no encontrada',
+  description: 'Esta página no existe.',
+};
+
 export default function NotFound() {
   return (
     <div style={{ maxWidth: 560, margin: '0 auto', padding: '96px 24px', textAlign: 'center' }}>
+      {/* Names the URLs people actually reach that do not exist —
+          dead inbound links, stale share URLs, our own typos. */}
+      <RouteReporter event="not_found" props={{ locale: 'es' }} />
       <p style={{ fontSize: 13, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--brand)' }}>
         404
       </p>

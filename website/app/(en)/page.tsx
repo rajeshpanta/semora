@@ -11,6 +11,8 @@ import { Reveal } from '@/components/Reveal';
 import { softwareApplicationSchema, faqPageSchema } from '@/lib/schema';
 import { APP_STORE_URL } from '@/lib/semora-facts';
 import { OG_IMAGE } from '@/lib/og';
+import { PageSections } from '@/components/PageSections';
+import { getPageContent } from '@/lib/page-content';
 
 // The apex and www hostnames both serve this page, so without an explicit
 // self-canonical the highest-value URL on the site is the only one without a
@@ -164,11 +166,15 @@ const HOME_FAQ = [
   },
 ];
 
+// The long-form body below the fold adds more questions; merge them so the page
+// renders one list and emits a single FAQPage block rather than two.
+const HOME_FAQ_ALL = [...HOME_FAQ, ...(getPageContent('home')?.faq ?? [])];
+
 export default function Home() {
   return (
     <>
       <JsonLd data={softwareApplicationSchema({ includeOffers: false })} />
-      <JsonLd data={faqPageSchema(HOME_FAQ)} />
+      <JsonLd data={faqPageSchema(HOME_FAQ_ALL)} />
 
       {/* ── Hero ─────────────────────────────────────────── */}
       <section className={styles.hero}>
@@ -316,6 +322,13 @@ export default function Home() {
         </ol>
       </section>
 
+      {/* ── Long-form body ───────────────────────────────
+          The homepage carried 977 words against 4,000-5,000 on every other
+          page on the site, which left the highest-priority URL the thinnest
+          one. Same treatment the hub pages get: the designed sections above
+          stay as they are, and the depth goes underneath them. */}
+      <PageSections content={getPageContent('home')} withRail emitFaq={false} />
+
       {/* ── FAQ ──────────────────────────────────────────── */}
       <section className={styles.band}>
         <div className={styles.inner}>
@@ -328,7 +341,7 @@ export default function Home() {
               </p>
             </div>
             <div className={styles.faqBody}>
-              <Faq items={HOME_FAQ} />
+              <Faq items={HOME_FAQ_ALL} />
             </div>
           </div>
         </div>

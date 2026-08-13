@@ -10,6 +10,9 @@ import { FlashcardIcon, TimerIcon, ChatIcon, PeopleIcon, SparkleIcon } from '@/c
 import { FEATURES, APP_URL, PRICING, getFeature } from '@/lib/semora-facts';
 import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
+import { Breadcrumb } from '@/components/Breadcrumb';
+import { JsonLd } from '@/components/JsonLd';
+import { itemListSchema } from '@/lib/schema';
 
 export const metadata: Metadata = {
   title: 'Features',
@@ -101,8 +104,25 @@ const REMAINING = Object.keys(REMAINING_ICONS)
 export default function FeaturesPage() {
   return (
     <>
+      <JsonLd
+        data={itemListSchema(
+          FEATURES.map((f) => ({
+            name: f.name,
+            path: `/features/${f.slug}`,
+            description: f.shortDescription,
+          })),
+          { path: '/features', name: 'Semora features' },
+        )}
+      />
       <section className={styles.hero}>
         <div className={styles.heroInner}>
+          <Breadcrumb
+            align="center"
+            trail={[
+              { name: 'Home', path: '/' },
+              { name: 'Features', path: '/features' },
+            ]}
+          />
           <span className={styles.eyebrow}>Features</span>
           <h1 className={styles.h1}>
             Everything you need for <span className={styles.gradient}>the semester</span>

@@ -99,6 +99,7 @@ export default function SyllabusReviewScreen() {
   const isPro = useAppStore((s) => s.isPro);
   const ahaPaywallShown = useAppStore((s) => s.ahaPaywallShown);
   const setAhaPaywallShown = useAppStore((s) => s.setAhaPaywallShown);
+  const setHasImportedSyllabus = useAppStore((s) => s.setHasImportedSyllabus);
 
   const acceptedCount = items.filter((i) => i.accepted).length;
 
@@ -297,14 +298,22 @@ export default function SyllabusReviewScreen() {
 
       if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+      // A FULLY successful save is the bar for both of the things below. On a
+      // partial failure the user must see the "Saved! (N failed)" alert rather
+      // than a paywall that hides it, and neither one-time flag should burn on
+      // a save that half-worked — both fire on the next complete save instead.
+      const fullySaved = savedCount > 0 && savedCount === accepted.length;
+
+      // Record the import itself before branching on tier. This is the signal
+      // the review prompt's primary trigger reads, and it must be set for Pro
+      // users too — they never enter the paywall branch below, so keying the
+      // prompt off that branch's flag meant they could never qualify for it.
+      if (fullySaved) setHasImportedSyllabus(true);
+
       // Reverse trial: at the peak of value (deadlines just imported), offer
       // Pro once, framed as momentum rather than a block. Only for free users
-      // who haven't seen this prompt yet; `replace` so Back doesn't return
-      // here. Requires a FULLY successful save — on partial failure the user
-      // must see the "Saved! (N failed)" alert below, not a paywall that
-      // hides it; the aha flag stays unset so the trial offer fires on the
-      // next complete save instead.
-      if (!isPro && !ahaPaywallShown && savedCount > 0 && savedCount === accepted.length) {
+      // who haven't seen this prompt yet; `replace` so Back doesn't return here.
+      if (!isPro && !ahaPaywallShown && fullySaved) {
         setAhaPaywallShown(true);
         router.replace({
           pathname: '/paywall',

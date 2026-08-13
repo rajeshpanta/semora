@@ -11,6 +11,8 @@ import { Reveal } from '@/components/Reveal';
 import { softwareApplicationSchema, faqPageSchema } from '@/lib/schema';
 import { APP_STORE_URL } from '@/lib/semora-facts';
 import { OG_IMAGE_ES } from '@/lib/og';
+import { PageSections } from '@/components/PageSections';
+import { SPANISH_HOME_SUMMARY } from '@/lib/es-content';
 
 export const metadata: Metadata = {
   title: { absolute: 'Organiza tu semestre con IA | Semora' },
@@ -172,11 +174,15 @@ const FAQ = [
   },
 ];
 
+// El cuerpo largo de abajo aporta más preguntas; se fusionan para que la
+// página muestre una sola lista y emita un único bloque FAQPage, no dos.
+const FAQ_ALL = [...FAQ, ...SPANISH_HOME_SUMMARY.faq];
+
 export default function SpanishHome() {
   return (
     <>
       <JsonLd data={softwareApplicationSchema({ includeOffers: false })} />
-      <JsonLd data={faqPageSchema(FAQ)} />
+      <JsonLd data={faqPageSchema(FAQ_ALL)} />
 
       <section className={styles.hero}>
         <div className={styles.heroInner}>
@@ -277,6 +283,10 @@ export default function SpanishHome() {
         </ol>
       </section>
 
+      {/* Cuerpo largo: mismo tratamiento que las páginas índice. Las
+          secciones diseñadas de arriba se quedan como están. */}
+      <PageSections locale="es" content={SPANISH_HOME_SUMMARY} withRail emitFaq={false} />
+
       <section className={styles.band}>
         <div className={styles.inner}>
           <div className={styles.faqLayout}>
@@ -285,7 +295,7 @@ export default function SpanishHome() {
               <h2>Lo esencial.</h2>
               <p>Lo que debes saber antes de comenzar.</p>
             </div>
-            <div className={styles.faqBody}><Faq items={FAQ} /></div>
+            <div className={styles.faqBody}><Faq items={FAQ_ALL} /></div>
           </div>
         </div>
       </section>

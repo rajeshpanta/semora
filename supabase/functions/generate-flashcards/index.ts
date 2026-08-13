@@ -5,6 +5,7 @@ import {
   documentExtractionFailedMessage,
   normalizeSupportedDocument,
 } from '../_shared/document-files.ts';
+import { withRequestLogging, errorFields, type EdgeLogger } from '../_shared/log.ts';
 
 // AI flashcard generation. Structured on tutor-chat/index.ts (CORS, JWT
 // verification, service-role client, OpenAI call with retries,
@@ -159,7 +160,7 @@ async function makeSafetyIdentifier(userId: string): Promise<string> {
   return `semora_${hex.slice(0, 32)}`;
 }
 
-serve(async (req) => {
+serve(withRequestLogging('generate-flashcards', async (req, log) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -544,10 +545,10 @@ serve(async (req) => {
       200,
     );
   } catch (err) {
-    console.error('[generate-flashcards] Unhandled error:', err);
+    log.error('handler_error', errorFields(err));
     return jsonResponse({ error: 'An unexpected error occurred. Please try again.' }, 500);
   }
-});
+}));
 
 // Identical in behavior to tutor-chat's note extraction. Kept local so each
 // deployed Edge Function remains self-contained.

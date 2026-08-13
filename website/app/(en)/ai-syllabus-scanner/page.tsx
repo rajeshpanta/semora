@@ -6,6 +6,7 @@ import { Faq } from '@/components/Faq';
 import { Cta } from '@/components/Cta';
 import { JsonLd } from '@/components/JsonLd';
 import { ArticleShell } from '@/components/ArticleShell';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import { faqPageSchema } from '@/lib/schema';
 import { PRO_LABEL } from '@/lib/semora-facts';
 import { PageSections } from '@/components/PageSections';
@@ -73,6 +74,12 @@ export default function AiSyllabusScannerPage() {
     >
     <article className={styles.prose}>
       <JsonLd data={faqPageSchema(FAQ_ALL)} />
+      <Breadcrumb
+        trail={[
+          { name: 'Home', path: '/' },
+          { name: 'AI Syllabus Scanner', path: '/ai-syllabus-scanner' },
+        ]}
+      />
 
       <h1>AI Syllabus Scanner: Turn a Syllabus Photo into a Full Semester Calendar</h1>
       <p className={styles.lede}>

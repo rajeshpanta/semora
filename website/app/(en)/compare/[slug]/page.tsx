@@ -24,6 +24,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const competitor = getCompetitor(slug);
+  // Unknown slug → notFound() below, which discards whatever is returned here.
+  // The 404's own title lives in app/(en)/not-found.tsx.
   if (!competitor) return {};
   return {
     title: pageTitle(competitor.title),

@@ -8,7 +8,7 @@ import { BlogPostArticle } from '@/components/BlogPostArticle';
 import { PageSections } from '@/components/PageSections';
 import { JsonLd } from '@/components/JsonLd';
 import { RelatedPosts } from '@/components/RelatedPosts';
-import { articleSchema, blogIndexSchema } from '@/lib/schema';
+import { articleSchema, blogIndexSchema, itemListSchema } from '@/lib/schema';
 import { PricingCards } from '@/components/PricingCards';
 import { FeatureShowcase } from '@/components/FeatureShowcase';
 import { GpaCalculator } from '@/components/GpaCalculator';
@@ -42,6 +42,8 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { slug } = await params;
   const config = getSpanishPage(pathFromSlug(slug));
+  // Unmatched slug → notFound() below, which discards whatever is returned
+  // here. The 404's own title lives in app/(es)/es/not-found.tsx.
   if (!config) return {};
   const post = SPANISH_BLOG_POSTS.find((item) => item.path === config.path);
   const noindex = isSpanishNoindexPath(config.path);
@@ -161,6 +163,38 @@ function spanishRelatedPosts(path: string, limit = 3) {
     .map((post) => ({ path: post.path, title: post.title, description: post.description }));
 }
 
+/**
+ * ItemList for the two hub pages that are only a grid of links.
+ *
+ * Mirrors what /features and /compare emit in English. The blog index is
+ * excluded on purpose — it already describes its contents through
+ * blogIndexSchema, and a second list of the same posts is a duplicate rather
+ * than an extra signal.
+ */
+function hubListSchema(config: SpanishPageConfig) {
+  if (config.kind === 'features-index') {
+    return itemListSchema(
+      FEATURES_ES.map((f) => ({
+        name: f.name,
+        path: `/es/funciones/${f.slug}`,
+        description: f.shortDescription,
+      })),
+      { path: '/es/funciones', name: 'Funciones de Semora' },
+    );
+  }
+  if (config.kind === 'compare-index') {
+    return itemListSchema(
+      SPANISH_COMPARISONS.map((c) => ({
+        name: `Semora vs ${c.name}`,
+        path: `/es/comparar/${c.slug}`,
+        description: `Semora frente a ${c.name}, centrado en ${c.focus}.`,
+      })),
+      { path: '/es/comparar', name: 'Semora comparado con otras apps de estudio' },
+    );
+  }
+  return null;
+}
+
 function getCrumb(config: SpanishPageConfig) {
   if (config.path.startsWith('/es/blog/')) return { href: '/es/blog', label: 'Blog' };
   if (config.path.startsWith('/es/funciones/')) return { href: '/es/funciones', label: 'Funciones' };
@@ -243,13 +277,18 @@ export default async function SpanishPage({ params }: { params: Params }) {
     );
   }
 
+  const hubList = hubListSchema(config);
+
   return (
-    <LongFormPage
-      locale="es"
-      path={config.path}
-      content={config.content}
-      crumb={getCrumb(config)}
-      widget={widget}
-    />
+    <>
+      {hubList ? <JsonLd data={hubList} /> : null}
+      <LongFormPage
+        locale="es"
+        path={config.path}
+        content={config.content}
+        crumb={getCrumb(config)}
+        widget={widget}
+      />
+    </>
   );
 }

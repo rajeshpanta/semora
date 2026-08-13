@@ -1,6 +1,7 @@
 'use client';
 
 import { APP_SIGNIN_URL, APP_SIGNUP_URL } from '@/lib/semora-facts';
+import { report, TELEMETRY_EVENTS } from '@/lib/telemetry';
 
 /**
  * A direct link to the app's single authentication screen. Sign-in and signup
@@ -25,7 +26,13 @@ export function SignupButton({
     <a
       href={href}
       className={className}
-      onClick={onClick}
+      onClick={() => {
+        // Every CTA on the site funnels through here, so this one call answers
+        // which page actually drives signups. Reported before the caller's own
+        // handler so a handler that throws cannot swallow the event.
+        report(TELEMETRY_EVENTS.signupClick, { mode });
+        onClick?.();
+      }}
     >
       {children}
     </a>

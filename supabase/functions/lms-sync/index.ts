@@ -4,6 +4,7 @@ import {
   normalizeCanvasCalendarFeedUrl,
   parseCanvasCalendarFeed,
 } from '../_shared/canvas-calendar.ts';
+import { withRequestLogging, errorFields, type EdgeLogger } from '../_shared/log.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -883,7 +884,7 @@ async function verifyCron(req: Request, admin: AdminClient) {
   }
 }
 
-serve(async (req) => {
+serve(withRequestLogging('lms-sync', async (req, log) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
   if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
@@ -1004,4 +1005,4 @@ serve(async (req) => {
     console.error('[lms-sync] request failed:', message);
     return json({ error: message, code }, status >= 400 && status < 500 ? status : 400);
   }
-});
+}));

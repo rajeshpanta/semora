@@ -131,7 +131,28 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": []
+    "faq": [
+      {
+        "question": "How many syllabi can I scan for free?",
+        "answer": "Five scans per calendar month. A photo scan of up to five pages counts as one scan, not five. The free plan also holds up to four courses within one semester, and one semester in total. Pro removes the monthly scan cap and both of those limits."
+      },
+      {
+        "question": "What can I actually feed the scanner?",
+        "answer": "On iPhone and iPad: a camera photo of up to five pages, an uploaded PDF with no page cap, a multi-select of up to five images from your library, or a file from the Files app (PDF, JPG, PNG, HEIC, HEIF, or WEBP). On the web you can also drag a file onto the scan frame, or paste raw text between 20 and 60,000 characters, which is the fastest and most accurate route when you can select the syllabus text directly."
+      },
+      {
+        "question": "Does anything get added to my calendar without me seeing it first?",
+        "answer": "No. The course, its meeting times and its grading scale are filed for you, but not one deadline is saved until you read the extracted list and approve it. Nothing the AI pulled out is stored on your behalf before that."
+      },
+      {
+        "question": "What does a scan actually pull off the page?",
+        "answer": "The course name and instructor, class meeting times and office hours, semester start and end dates, the grading scale your professor printed, and every assignment, quiz, exam, project and reading it can find, each with its due date, its due time if one was stated, and its weight toward your final grade."
+      },
+      {
+        "question": "Is there a size limit on a photo scan?",
+        "answer": "Yes, and Semora enforces it while you are still capturing rather than after you finish. A photo scan is budgeted at 10 MB of combined raw image data. The first page always goes through; if a later page would push the scan past the budget, that page is dropped and you are told exactly how many pages the scan will proceed with."
+      }
+    ]
   },
   "grade-tracking": {
     "metaTitle": "Grade Tracking in Semora — Weighted Averages, Free",
@@ -260,7 +281,32 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": []
+    "faq": [
+      {
+        "question": "Is grade tracking free?",
+        "answer": "Yes, and that means the whole engine: points or percentage entry, per-assignment weights, categories, drop-lowest rules, all three extra-credit policies, letter grades from your course's scale, and the semester GPA estimate. Pro adds editing your course grade scale and your GPA scale, both what-if calculators, Academic Risk alerts, and Progress Insights."
+      },
+      {
+        "question": "How is my current grade calculated?",
+        "answer": "It is the weighted sum of your scores divided by the weight you have actually attempted, not by the full semester's weight. That one choice is what keeps the number honest early on: three graded assignments covering 45 percent of the course produce a grade based on that 45 percent, and an unscored final worth 30 percent never drags your October grade toward zero."
+      },
+      {
+        "question": "Can Semora drop the lowest quiz the way my syllabus says?",
+        "answer": "Yes. Drop-lowest is set per category, anywhere from 0 to 20, and drops the lowest scores by percentage. It has one safety rule: it will never drop your only graded item, so the drop count is capped at one fewer than the number of graded candidates."
+      },
+      {
+        "question": "What if my professor never publishes weights?",
+        "answer": "If none of your graded assignments carry a weight but some of them have scores, Semora falls back to a straight average of the posted grades rather than showing you nothing. It is less precise than a weighted figure, and it is the honest answer when the syllabus does not give you one."
+      },
+      {
+        "question": "Can I use my school's grading scale instead of the default?",
+        "answer": "Semora ships with the plain scale \u2014 A at 90, B at 80, C at 70, D at 60, F at 0 \u2014 and every free account gets letter grades from it. Editing the cutoffs to match what your school actually uses is the Pro line, as is editing the grade-point table behind the GPA estimate."
+      },
+      {
+        "question": "Does it calculate my GPA?",
+        "answer": "It gives a semester estimate. Each course has a credit-hours field, editable from 0.5 to 12 and defaulting to 3, and the estimate multiplies each course's grade points by its credit hours, sums that, and divides by total credits. Courses without a letter yet are excluded rather than counted as zero. It is your estimate, not a transcript."
+      }
+    ]
   },
   "smart-plan": {
     "metaTitle": "Smart Plan: Your Study Schedule, Built",
@@ -370,7 +416,28 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": []
+    "faq": [
+      {
+        "question": "How far ahead does Smart Plan schedule?",
+        "answer": "Fourteen days, starting today, and it rebuilds the whole thing every time you open it. A plan you ignored yesterday does not sit there as a stale to-do list; it is recomputed against where you actually are."
+      },
+      {
+        "question": "How does it know how long something will take?",
+        "answer": "Every task carries an Estimated Effort field with presets of Smart estimate, 30m, 1h, 2h, 3h, 4h and 8h. If you set a real number of 15 minutes or more, that number wins outright. On Smart estimate it falls back to a base for the task type \u2014 45 minutes for a reading, 60 for other, 75 for a quiz, 90 for an assignment, 240 for an exam, 360 for a project \u2014 and scales it by the grade weight the scan pulled off your syllabus."
+      },
+      {
+        "question": "What happens if the work does not fit in the time I have?",
+        "answer": "It is surfaced rather than hidden. If work due inside the 14-day window cannot fit in your capacity, an amber banner states exactly how much time is unscheduled and names the two real fixes: raise your daily capacity, or lower your task estimates."
+      },
+      {
+        "question": "Can I control when it puts sessions?",
+        "answer": "Yes. Daily study capacity is 1h, 1h 30m, 2h or 3h, defaulting to 1h 30m. Weekday sessions start at 5:00 PM by default and weekend sessions at 10:00 AM, both adjustable, and weekends can be turned off entirely. Avoiding device-calendar conflicts is on by default, with a 10-minute buffer on either side of each event."
+      },
+      {
+        "question": "Is Smart Plan included on the free plan?",
+        "answer": "No, it is part of Pro, which is $3.99 a month or $19.99 a year. Pro is purchased in the iOS app and the entitlement applies to your whole account, including the web app."
+      }
+    ]
   },
   "flashcards": {
     "metaTitle": "Semora Flashcards: AI Decks + Spaced Repetition",
@@ -479,7 +546,32 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": []
+    "faq": [
+      {
+        "question": "Where do the generated cards come from?",
+        "answer": "From material Semora already holds for that course: the most recent syllabus parse, up to 60 extracted items trimmed to 8,000 characters, plus up to the 10 most recently uploaded note files for that course sharing a 24,000-character budget. There is nothing new to type or upload."
+      },
+      {
+        "question": "Can I make a deck for one specific exam instead of the whole course?",
+        "answer": "Yes. The generate panel asks what to focus on: the whole course, or one specific item you are already tracking as a deadline. That is what keeps a midterm review from being diluted with material from finals."
+      },
+      {
+        "question": "How many cards does a generation produce?",
+        "answer": "It targets between 10 and 20, with an explicit instruction that fewer good cards beat padding. No more than 30 are inserted from a single run. Each side is capped at 300 characters, and any card missing a front or a back is dropped rather than failing the whole batch \u2014 if fourteen of sixteen came back clean, you get the fourteen."
+      },
+      {
+        "question": "How does the review schedule decide what to show me?",
+        "answer": "A compact SM-2 variant. Again drops ease by 0.20 and brings the card back in about ten minutes. Hard drops ease by 0.15. Good runs the standard ladder \u2014 one day, then six, then multiplied by the card's own ease. Easy raises ease by 0.15 and adds a further 1.3 bonus. Ease is floored at 1.3, so a bad week cannot trap a card in a permanent loop."
+      },
+      {
+        "question": "Can I write my own cards instead of generating them?",
+        "answer": "Yes. New Deck creates an empty deck with a title of up to 80 characters, and Add Card gives you front and back fields, both required. One difference worth knowing: the 300-character cap per side is a defensive clamp on model output, so cards you type yourself are not truncated."
+      },
+      {
+        "question": "Can I add a review packet my professor handed out?",
+        "answer": "Yes. Attach it as a PDF or a photo in the generate panel and it becomes part of what the deck is built from, alongside the syllabus and any notes already on the course."
+      }
+    ]
   },
   "focus-timer": {
     "metaTitle": "Semora Focus Timer: Pomodoro Study Blocks",
@@ -597,7 +689,28 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": []
+    "faq": [
+      {
+        "question": "What lengths does the timer offer?",
+        "answer": "Focus blocks of 15, 25, 45 or 50 minutes, and breaks of 5, 10 or 15. A fresh session opens on the classic Pomodoro pairing of 25 and 5. The lengths were picked against a college timetable rather than an office day \u2014 15 minutes is what a real between-class gap gives you once you have walked across campus and sat down."
+      },
+      {
+        "question": "Does it keep time if I leave the app?",
+        "answer": "Yes. The timer keeps time in the background and alerts you when each phase ends, so the clock stays honest whether or not the app is in front of you."
+      },
+      {
+        "question": "Can I change the length in the middle of a block?",
+        "answer": "The pickers disappear the moment a block is running, on purpose \u2014 a timer you can renegotiate at minute 22 is a countdown that stops meaning anything. Pause first if you genuinely need to. One consequence: changing a length while paused resets that phase to the full new length, so pausing 12 minutes into a 25 and tapping 45 gives you a full 45:00, not 33 minutes of remainder."
+      },
+      {
+        "question": "Can I start a timer straight from a planned study session?",
+        "answer": "Yes. Opening the timer from a Smart Plan session passes that block's own duration through. Smart Plan schedules in 15-minute increments, so if the length is not one of the four standard options the picker grows an extra chip for it \u2014 a 30-minute planned session opens as a 30-minute block rather than being rounded. Lengths passed this way are accepted between 15 and 180 minutes."
+      },
+      {
+        "question": "Is the Focus Timer free?",
+        "answer": "No, it is part of Pro at $3.99 a month or $19.99 a year, which works out to about $1.67 a month on the annual plan. Pro is bought inside the iOS app and applies account-wide, so the timer is available in the web app too."
+      }
+    ]
   },
   "ai-tutor": {
     "metaTitle": "AI Tutor: Chat Grounded in Your Syllabus",
@@ -725,7 +838,28 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": []
+    "faq": [
+      {
+        "question": "What does the tutor actually know about my course?",
+        "answer": "Before it sees your question, the server assembles your real course material: your class meetings including labs and discussion sections, your grading scale, the structured items from your most recent syllabus scan (capped at 8,000 characters and up to 60 items), your currently tracked deadlines (also 8,000 characters and up to 60 tasks), and the extracted text of your uploaded notes. A block that had to be cut is explicitly marked as truncated so the model knows it is working from an abridged source."
+      },
+      {
+        "question": "Can it tell me when something is due?",
+        "answer": "Yes, and deadline answers come strictly from your actual tracked task list rather than from the model's memory. It never invents a date. Ask about something outside what you have given it and it says so plainly instead of making something up."
+      },
+      {
+        "question": "Does the tutor know my grades?",
+        "answer": "No, and this is worth stating plainly. The deadlines block carries titles, types, due dates, due times, weights, and whether you have checked something off. It does not carry your scores. The tutor knows the final is worth 30 percent and that you have not done it yet; it does not know what you got on the midterm."
+      },
+      {
+        "question": "Is there a limit on how much I can ask?",
+        "answer": "Fifty tutor messages per rolling 24 hours per account \u2014 rolling, not a midnight reset \u2014 and 4,000 characters per message. The last 12 messages of a conversation are replayed each turn, which is roughly six exchanges of working memory."
+      },
+      {
+        "question": "Can I upload lecture notes for it to read?",
+        "answer": "Yes, as a PDF or a photo. Notes attach to a course, so open the tutor from a course first rather than on its own. The 10 most recent files for that course are read newest first, sharing a 24,000-character budget of extracted text. A file over roughly 6 MB is skipped at extraction rather than sent to the model."
+      }
+    ]
   },
   "collaboration": {
     "metaTitle": "Course Spaces: Share a Course in Semora",
@@ -842,7 +976,28 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": []
+    "faq": [
+      {
+        "question": "Do I need Pro to join a classmate's course?",
+        "answer": "No. Joining a Course Space is free and always will be \u2014 no time limit, no Pro required to accept an invite, see shared deadlines, or take on group work. You can sync all of it into your planner as long as you have room under the free plan's four-courses-per-semester cap. Hosting your own space is the Pro half, so in practice one person in the group needs Pro and everyone else joins free."
+      },
+      {
+        "question": "How does the invite link work?",
+        "answer": "The server generates 24 random bytes and renders them as a 48-character hex token, then stores it with an expiry and a use counter \u2014 it is not a guessable code. A link is good for up to 30 joins by default. Owners and editors can create invites; viewers cannot. Every tap of Invite mints a fresh link, and invite links are readable only by the person who created them."
+      },
+      {
+        "question": "Can my classmates see my grades?",
+        "answer": "No. Exactly three things sync: members, deadlines the course owner publishes, and group assignments. Your completion state is yours specifically \u2014 a re-sync refreshes a task's title and dates but deliberately never touches your checkmarks \u2014 and any score you enter counts toward your weighted average privately. Comparing grades with the group is not something a Course Space does, and that is intentional."
+      },
+      {
+        "question": "What are the roles, and can a space end up with nobody in charge?",
+        "answer": "There are owners, editors and viewers. Owners manage roles from the member list and can promote anyone, which is how a sole owner hands off a space. The database refuses to leave a space unowned: the last owner cannot leave, cannot be demoted, and cannot be removed, and any attempt comes back as an instruction to promote someone else or delete the space first."
+      },
+      {
+        "question": "What happens to a space I host if my Pro lapses?",
+        "answer": "The spaces you already own do not vanish, and the deadlines you already published stay published."
+      }
+    ]
   },
   "canvas-sync": {
     "metaTitle": "Canvas Sync for Semora — Import Canvas Deadlines",
@@ -961,7 +1116,32 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       }
     ],
-    "faq": []
+    "faq": [
+      {
+        "question": "Is Canvas import free?",
+        "answer": "No. Learning-platform import is a Pro feature, at $3.99 a month or $19.99 a year. The free plan still covers the same job from the syllabus side: five scans per calendar month, up to four courses within one semester, full deadline and task tracking, grade tracking with weighted averages, and same-day reminders."
+      },
+      {
+        "question": "How does Semora connect to Canvas?",
+        "answer": "The shipping connector uses a personal access token you generate in Canvas yourself. Some institutions disable token creation or prohibit third-party token use, so confirm your school's policy and connect only if it is permitted."
+      },
+      {
+        "question": "What if my school does not allow token access?",
+        "answer": "Scan the syllabus, or paste the Canvas assignment list straight into the scanner. Both routes work on the free plan, and if your professor keeps everything in the syllabus rather than posting to Canvas, scanning is the better path anyway."
+      },
+      {
+        "question": "What actually gets imported?",
+        "answer": "Your active enrollments only, so dropped courses and finished semesters do not show up. For each assignment you get the title, the due date and time converted to your device's local clock from the absolute timestamp Canvas returns, the points, and a guessed type so your calendar is not one undifferentiated wall of \u201cassignment\u201d \u2014 a Canvas quiz becomes a quiz, and titles containing midterm, final, exam or test become exams."
+      },
+      {
+        "question": "Will a sync overwrite work I have already done?",
+        "answer": "No. A re-sync refreshes titles and dates but leaves your own state alone. If Canvas cannot supply a trustworthy submission timestamp, Semora leaves the completion time unknown rather than stamping the sync time, because using sync time could make on-time work look late."
+      },
+      {
+        "question": "Does it work with Blackboard and Moodle?",
+        "answer": "Both are part of the same Pro learning-platform import, and setup varies by school. A sync covers up to 50 courses at a time, and pagination through each course's assignments stops at a bounded number of pages \u2014 generous for a normal course load, but not unlimited."
+      }
+    ]
   }
 };
 

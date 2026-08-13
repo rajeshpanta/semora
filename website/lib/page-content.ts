@@ -20,6 +20,7 @@ export interface PageLongForm {
 }
 
 export type PageKey =
+  | 'home'
   | 'features'
   | 'pricing'
   | 'compare'
@@ -31,6 +32,111 @@ export type PageKey =
 
 export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
 {
+  "home": {
+    "sections": [
+      {
+        "heading": "The first week of a semester arrives as four PDFs",
+        "paragraphs": [
+          "Every instructor writes a syllabus their own way. One hands you a clean table of dates. Another buries the midterm in a paragraph on page six, between the attendance policy and the academic-integrity statement. A third spreads the whole term across twelve pages of calendar. All four of them contain the same thing \u2014 your entire semester \u2014 and none of them are in a format you can act on.",
+          "So the documents sit in an email attachment, the dates live in your head, and the first real surprise arrives in week six when two exams land in the same 48 hours and a project you had forgotten about turns out to be worth a quarter of the grade. It is not a discipline problem. The information was scattered across four documents nobody had time to transcribe.",
+          "Semora starts at that specific moment. Instead of handing you an empty planner to fill in, it reads the document that already holds your term and turns it into a semester you can check over in a few minutes. What comes out is not a summary \u2014 it is real courses, real deadlines, real grade weights and real class times that the rest of the app can then do arithmetic with."
+        ],
+        "bullets": [
+          "Four syllabi is roughly an hour of retyping, which is why most planners get abandoned by week six",
+          "The syllabus is where weights, exam dates, office hours and the grading scale live \u2014 much of that never becomes an LMS entry",
+          "Semora reads the document instead of asking you to re-enter it"
+        ]
+      },
+      {
+        "heading": "What actually happens when you scan a syllabus",
+        "paragraphs": [
+          "On iPhone or iPad you can photograph up to five pages in one scan, upload a PDF with no page cap, multi-select up to five images from your library, or pull a file out of the Files app. On the web you can drag a file onto the scan frame, or paste raw text between 20 and 60,000 characters \u2014 the fastest and most accurate route when you are on a laptop and can select the syllabus text directly.",
+          "About ten to thirty seconds later you get a course with an instructor, a class schedule with days and rooms, the letter-grade cutoffs your professor printed, and a list of every assignment, quiz, exam, project and reading it could find, each with a due date, a due time if one was stated, and its weight toward your final grade.",
+          "Then it stops. The course, its meeting times and its grading scale are filed for you, but not one deadline is saved until you read the list and approve it. Anything the scanner was less sure about is flagged for you to verify, dates that fall outside the semester are called out, and items that came through with no date at all are separated rather than quietly assigned one. That review screen is the point: an AI that files dates on your behalf without showing you is a worse problem than the retyping it replaced."
+        ],
+        "bullets": [
+          "Photo (up to 5 pages, counting as one scan), PDF, photo library, Files, drag-and-drop, or pasted text",
+          "Extracts course, instructor, meeting times, office hours, semester dates, grading scale and every dated item with its weight",
+          "Low-confidence items are flagged, out-of-range dates are called out, undated items are held back",
+          "Nothing reaches your calendar until you approve it"
+        ]
+      },
+      {
+        "heading": "What the free plan covers, and exactly where the limits sit",
+        "paragraphs": [
+          "The free tier is not a trial that expires. It is five syllabus scans per calendar month, up to four courses within one semester, and one semester in total. Inside those limits you get the whole organizing layer: full deadline and task tracking, grade tracking with weighted averages, same-day reminders, and the ability to join a Course Space a classmate invites you to.",
+          "The two limits worth understanding before you start are the course cap and the semester cap, and they work differently. Four courses is a ceiling on how much of one term you can hold. One semester is a harder line: a free account cannot start a second term at all, so the cap is not something that quietly rolls over in January. Pro removes both, along with the monthly scan cap.",
+          "Pro is $3.99 a month or $19.99 a year, which works out to about $1.67 a month annually. It is purchased inside the iOS app through the App Store and the entitlement applies to your whole account, including the web app \u2014 there is no separate web checkout, and no version of Semora you have to buy twice."
+        ],
+        "bullets": [
+          "Free: 5 scans per calendar month, up to 4 courses within one semester, one semester total",
+          "Free includes deadlines, tasks, weighted grade tracking and same-day reminders in full",
+          "Pro ($3.99/month or $19.99/year) removes all three caps and adds the planning and study tools",
+          "Pro is bought in the app and applies account-wide, web included"
+        ]
+      },
+      {
+        "heading": "The pieces are connected, which is the whole point",
+        "paragraphs": [
+          "A scan is not the product. What makes the scan worth doing is that four other things read from it afterward, without you entering anything twice.",
+          "Grade tracking uses the weights the scan pulled off your syllabus, and calculates your running average over the work that has actually been graded \u2014 the weighted sum of your scores divided by the weight you have attempted, not by the full semester's weight. That single choice is what keeps the number honest in October, when an unscored final worth 30 percent would otherwise drag it toward zero.",
+          "The workload view scores each dated task by its weight multiplied by an effort factor \u2014 an exam counts triple, a project 2.5, a quiz 1.5, an assignment 1.2, a reading 1 \u2014 so a week holding two exams reads as heavy even if your professor never printed a percentage next to them. Smart Plan takes those same tasks and lays timed study sessions across the next fourteen days, working around the class meetings the scan already knows about. And the AI tutor answers from that course's real syllabus, your tracked deadlines and any lecture notes you have uploaded, rather than guessing.",
+          "The practical consequence is worth stating plainly: every planning and study feature is worth exactly as much of the semester as you have entered. Two half-filled courses give the planner almost nothing to reason about. Four scanned courses with real weights and a few scores sharpen all of it within a week."
+        ],
+        "bullets": [
+          "Grades read the weights the scan extracted",
+          "The workload view flags exam-dense and crunch weeks before they arrive",
+          "Smart Plan schedules around the class times already on file",
+          "The tutor answers from your syllabus, deadlines and notes, and never invents a date"
+        ]
+      },
+      {
+        "heading": "You do not have to scan anything",
+        "paragraphs": [
+          "It is worth saying, because the name suggests otherwise. You can create a course by hand and add the deadlines, subtasks and scores yourself, and grade calculation, the calendar, the Today view and reminders behave identically on hand-entered data. Nothing downstream checks whether a course arrived by scan.",
+          "The same applies to Canvas. Semora works from your syllabus alone, and learning-platform import is an optional Pro feature rather than a requirement. The shipping Canvas connector uses a personal access token you generate yourself, and some institutions disable token creation or prohibit third-party token use \u2014 so confirm your school's policy, and if it is not permitted, scanning the syllabus or pasting the assignment list covers the same job on the free plan.",
+          "Re-scanning behaves deliberately, too. Scanning a revised syllabus onto a course you already have brings in the new deadlines, but it will not rewrite a schedule you have already corrected: class and office-hour rows are written when the course is created, and the grading scale is replaced only if you left it at the default. It is a deliberate trade \u2014 the app would rather keep your corrections than overwrite them with a fresh guess."
+        ],
+        "bullets": [
+          "Manual course creation is fully supported and behaves the same downstream",
+          "Canvas, Blackboard and Moodle import is optional, Pro, and subject to your institution's policy",
+          "A re-scan adds new deadlines without overwriting a schedule you have already fixed"
+        ]
+      },
+      {
+        "heading": "Who this fits, and who should use something else",
+        "paragraphs": [
+          "Semora is a good fit if your deadlines arrive as documents rather than as a tidy feed, if you have ever rebuilt the same grade spreadsheet in October, or if your school's platform does not show a live weighted grade you actually trust. It is a good fit if the thing that goes wrong for you is not forgetting a deadline but discovering three of them at once.",
+          "It is a worse fit in a few honest cases. If every one of your courses is fully managed in your LMS and your instructors post everything there, a sync may be all you need. If you want to submit work or message an instructor, that stays in Canvas \u2014 Semora is a layer on top, not a replacement. And it is not a gradebook of record: the number it shows is your estimate built from what you entered, and your instructor's number is the one that goes on the transcript.",
+          "The realistic way to start is one syllabus, not four. Scan the course whose dates you are least sure about, look at what came off the page, and decide from there whether the rest of the term is worth twenty more minutes."
+        ],
+        "bullets": [
+          "Best when deadlines arrive as syllabi and your grade math is genuinely weighted",
+          "Less useful when your LMS already publishes a weighted grade you check and trust",
+          "Not a submission tool and not a gradebook of record",
+          "Start with one course, not the whole term"
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "question": "How long does it take to set up a full semester?",
+        "answer": "Realistically about twenty minutes for four courses, and most of that is you reading the review screen rather than waiting on anything. Each scan takes roughly ten to thirty seconds; the reviewing is the part that takes real attention, and it is the part worth not rushing."
+      },
+      {
+        "question": "Does a five-page photo scan use five of my five free scans?",
+        "answer": "No. A photo scan of up to five pages counts as one scan. The free allowance is five completed scans per calendar month, so a normal course load of four syllabi fits inside a single month with one to spare."
+      },
+      {
+        "question": "What happens to my data if I stop paying for Pro?",
+        "answer": "Your account and academic data stay intact and you keep everything on the free tier. Device calendar sync pauses rather than deleting the events it already created, and Course Spaces you host do not vanish \u2014 deadlines you already published stay published."
+      },
+      {
+        "question": "Is my syllabus used to train an AI model?",
+        "answer": "Uploaded files go to a private storage bucket filed under your own user ID, and are read on the server only when a scan, a flashcard generation or a tutor request needs them. The privacy policy is the authoritative statement on data handling, and it is linked in the footer of every page."
+      }
+    ]
+  },
   "features": {
     "sections": [
       {
@@ -147,7 +253,32 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
         ]
       }
     ],
-    "faq": []
+    "faq": [
+      {
+        "question": "What do I actually get on the free plan?",
+        "answer": "Five syllabus scans per calendar month, up to four courses within one semester and one semester in total, full deadline and task tracking, grade tracking with weighted averages, same-day reminders, and joining a Course Space a classmate invites you to. No credit card, and the free tier is not a trial that expires."
+      },
+      {
+        "question": "Which features are Pro?",
+        "answer": "Unlimited courses and semesters with no monthly scan cap; Canvas, Blackboard and Moodle import; hosting your own Course Space; Smart Plan and the Workload dashboard; Flashcards; the Focus Timer; the AI tutor; Grade Scale & Forecasting; device calendar sync with .ics export; custom reminder timing; Academic Risk alerts; Progress Insights; and Share & Streaks."
+      },
+      {
+        "question": "Do I have to scan a syllabus to use the rest of it?",
+        "answer": "No. You can create a course by hand and add deadlines, subtasks and scores yourself, and grade calculation, the calendar, the Today view and reminders all behave identically on hand-entered data. The scanner is a shortcut for the tedious part, not an entry requirement \u2014 it just happens that the tedious part is four syllabi at once in week one."
+      },
+      {
+        "question": "Which feature should I set up first?",
+        "answer": "The scanner, because every planning and study feature is worth exactly as much of the semester as you have entered. Two half-filled courses give Smart Plan and the Workload dashboard almost nothing to reason about; four scanned courses with real weights and a few scores sharpen both within a week."
+      },
+      {
+        "question": "Does everything work on iPhone, iPad and the web?",
+        "answer": "Yes. All three share one account and one database and sync in near real time, so an edit on your phone shows up in the browser. Pro is purchased inside the iOS app and the entitlement applies account-wide, including web \u2014 there is no separate web checkout."
+      },
+      {
+        "question": "How much is Pro?",
+        "answer": "$3.99 a month or $19.99 a year, which is about $1.67 a month on the annual plan. It is bought in the app through the App Store and managed through your Apple ID, and it applies to your whole account."
+      }
+    ]
   },
   "pricing": {
     "sections": [

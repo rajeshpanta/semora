@@ -10,6 +10,7 @@ import { getPageContent } from '@/lib/page-content';
 import { OG_IMAGE } from '@/lib/og';
 import { ArticleShell } from '@/components/ArticleShell';
 import { SupportForm } from '@/components/SupportForm';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import heroStyles from './support.module.css';
 
 export const metadata: Metadata = {
@@ -67,6 +68,12 @@ export default function SupportPage() {
       <JsonLd data={faqPageSchema(SUPPORT_FAQ_ALL)} />
       <section className={heroStyles.hero} aria-labelledby="support-heading">
         <div className={heroStyles.inner}>
+          <Breadcrumb
+            trail={[
+              { name: 'Home', path: '/' },
+              { name: 'Support', path: '/support' },
+            ]}
+          />
           <header className={heroStyles.intro}>
             <span className={heroStyles.eyebrow}>Semora support</span>
             <h1 id="support-heading">How can we help?</h1>

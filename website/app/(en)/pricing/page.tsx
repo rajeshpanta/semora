@@ -8,6 +8,8 @@ import { PricingCards } from '@/components/PricingCards';
 import { softwareApplicationSchema, faqPageSchema } from '@/lib/schema';
 import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
+import { Breadcrumb } from '@/components/Breadcrumb';
+import { RouteReporter } from '@/components/RouteReporter';
 
 export const metadata: Metadata = {
   title: 'Pricing',
@@ -46,10 +48,18 @@ const PRICING_FAQ_ALL = [...PRICING_FAQ, ...(getPageContent('pricing')?.faq ?? [
 export default function PricingPage() {
   return (
     <div className={styles.wrap}>
+      <RouteReporter event="pricing_view" />
       <JsonLd data={softwareApplicationSchema()} />
       <JsonLd data={faqPageSchema(PRICING_FAQ_ALL)} />
 
       <header className={styles.head}>
+        <Breadcrumb
+          align="center"
+          trail={[
+            { name: 'Home', path: '/' },
+            { name: 'Pricing', path: '/pricing' },
+          ]}
+        />
         <h1>Simple pricing</h1>
         <p>Start free. Upgrade only if you want more.</p>
       </header>

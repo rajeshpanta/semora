@@ -2,6 +2,7 @@ import { readFileAsBase64 } from '@/lib/readFileBase64';
 import { parseUploadJson, requestWithUploadProgress } from '@/lib/httpUpload';
 import { supabase } from '@/lib/supabase';
 import type { GradeThreshold, CourseMeetingKind } from '@/types/database';
+import { getAppLocale } from '@/lib/i18n';
 
 export interface ExtractedItem {
   title: string;
@@ -161,14 +162,19 @@ export async function extractFromPages(
   // legacy clients that would break on them — legacy builds send no
   // apiVersion at all — so BOTH shapes must carry the marker. Older Edge
   // Function deployments simply ignore the extra field.
+  // locale: scan errors are the most likely wall a user hits, and they were
+  // English-only while the rest of the app ships Spanish. Older Edge Function
+  // deployments ignore the extra field.
+  const locale = getAppLocale();
   const body = encoded.length === 1
     ? JSON.stringify({
       base64: encoded[0].base64,
       mimeType: encoded[0].mimeType,
       fileName,
       apiVersion: 2,
+      locale,
     })
-    : JSON.stringify({ pages: encoded, apiVersion: 2 });
+    : JSON.stringify({ pages: encoded, apiVersion: 2, locale });
 
   const response = await requestWithUploadProgress({
     url: `${supabaseUrl}/functions/v1/parse-syllabus`,
@@ -230,7 +236,7 @@ export async function extractFromText(
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`,
     },
-    body: JSON.stringify({ text: trimmed, apiVersion: 2 }),
+    body: JSON.stringify({ text: trimmed, apiVersion: 2, locale: getAppLocale() }),
     signal,
     onProgress: (percent) => onProgress?.({ stage: 'uploading', percent }),
     onUploadComplete: () => onProgress?.({ stage: 'reading' }),

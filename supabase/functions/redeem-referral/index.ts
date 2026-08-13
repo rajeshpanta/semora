@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { withRequestLogging, errorFields, type EdgeLogger } from '../_shared/log.ts';
 
 // Referral redemption endpoint. Structured on parse-syllabus/tutor-chat
 // (CORS, Content-Length guard, JWT verification of the caller, service-role
@@ -51,7 +52,7 @@ function jsonResponse(body: unknown, status: number) {
   });
 }
 
-serve(async (req) => {
+serve(withRequestLogging('redeem-referral', async (req, log) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -154,7 +155,7 @@ serve(async (req) => {
         return jsonResponse({ error: 'An unexpected error occurred. Please try again.' }, 500);
     }
   } catch (err) {
-    console.error('[redeem-referral] Unhandled error:', err);
+    log.error('handler_error', errorFields(err));
     return jsonResponse({ error: 'An unexpected error occurred. Please try again.' }, 500);
   }
-});
+}));

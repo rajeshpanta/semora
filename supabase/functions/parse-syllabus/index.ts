@@ -5,6 +5,7 @@ import {
   SUPPORTED_DOCUMENT_ERROR,
   type NormalizedDocument,
 } from '../_shared/document-files.ts';
+import { createLogger, errorFields, type EdgeLogger } from '../_shared/log.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
 const OPENAI_MODEL = Deno.env.get('SYLLABUS_OPENAI_MODEL')?.trim() || 'gpt-5.6-luna'; // $0.20/$1.20 per 1M — 10x cheaper than terra ($2/$12) and verified sufficient for this task; override per function with the *_OPENAI_MODEL secret
@@ -119,7 +120,7 @@ function readOpenAIOutputText(data: any): string | null {
   return joined || null;
 }
 
-async function callOpenAIResponses(payload: Record<string, unknown>): Promise<OpenAIResult> {
+async function callOpenAIResponses(payload: Record<string, unknown>, log: EdgeLogger): Promise<OpenAIResult> {
   if (!OPENAI_API_KEY) return { data: null, status: 0, networkError: false };
 
   let lastStatus = 0;
@@ -137,7 +138,7 @@ async function callOpenAIResponses(payload: Record<string, unknown>): Promise<Op
       });
     } catch (error) {
       networkError = true;
-      console.warn(`[parse-syllabus] OpenAI network error (attempt ${attempt}/${OPENAI_MAX_ATTEMPTS}):`, error);
+      log.warn('openai_network_error', { attempt, max_attempts: OPENAI_MAX_ATTEMPTS, ...errorFields(error) });
       if (attempt < OPENAI_MAX_ATTEMPTS) {
         await sleep(600 * attempt);
         continue;
@@ -151,16 +152,20 @@ async function callOpenAIResponses(payload: Record<string, unknown>): Promise<Op
       try {
         return { data: await response.json(), status: response.status, networkError: false };
       } catch (error) {
-        console.error('[parse-syllabus] OpenAI returned invalid JSON:', error);
+        log.error('openai_invalid_json', errorFields(error));
         return { data: null, status: response.status, networkError: false };
       }
     }
 
     const errorBody = await response.text().catch(() => '');
-    console.warn(
-      `[parse-syllabus] OpenAI HTTP ${response.status} (attempt ${attempt}/${OPENAI_MAX_ATTEMPTS}):`,
-      errorBody.slice(0, 300),
-    );
+    log.warn('openai_http_error', {
+      status: response.status,
+      attempt,
+      max_attempts: OPENAI_MAX_ATTEMPTS,
+      // The provider's own error envelope, not the document — safe and the
+      // fastest way to tell a quota error from a malformed request.
+      provider_error: errorBody.slice(0, 200),
+    });
     if (OPENAI_RETRYABLE.has(response.status) && attempt < OPENAI_MAX_ATTEMPTS) {
       await sleep(600 * attempt);
       continue;
@@ -196,17 +201,11 @@ async function logCall(
       duration_ms: durationMs,
     });
   } catch (err) {
-    console.error('[parse-syllabus] Failed to log call:', err);
+    console.error(JSON.stringify({ lvl: 'error', fn: 'parse-syllabus', evt: 'log_call_failed', err_message: String(err).slice(0, 200) }));
   }
 }
 
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
-
-  const startTime = Date.now();
-
+async function handleRequest(req: Request, log: EdgeLogger, startTime: number): Promise<Response> {
   try {
     // 0. Bound the request body before req.json() buffers it.
     //    Base64-encoded PDFs are checked at 10M chars after parse; the
@@ -248,6 +247,7 @@ serve(async (req) => {
       return jsonResponse({ error: 'Invalid or expired session' }, 401);
     }
     const userId = userData.user.id;
+    log.setUser(userId);
 
     if (!OPENAI_API_KEY) {
       return jsonResponse({ error: 'OpenAI API key not configured on server' }, 500);
@@ -282,11 +282,11 @@ serve(async (req) => {
       .gte('created_at', oneDayAgo);
 
     if (globalErr) {
-      console.error('[parse-syllabus] Global cap check failed:', globalErr);
+      log.error('global_cap_check_failed', errorFields(globalErr));
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
     if ((globalCount ?? 0) >= GLOBAL_DAILY_CAP) {
-      console.error(`[parse-syllabus] GLOBAL_DAILY_CAP hit: ${globalCount}/${GLOBAL_DAILY_CAP}`);
+      log.error('global_daily_cap_hit', { count: globalCount, cap: GLOBAL_DAILY_CAP });
       return jsonResponse(
         { error: "We're seeing unusually high demand right now — please try again shortly." },
         503,
@@ -304,7 +304,7 @@ serve(async (req) => {
       .gte('created_at', oneDayAgo);
 
     if (countError) {
-      console.error('[parse-syllabus] Rate limit check failed:', countError);
+      log.error('rate_limit_check_failed', errorFields(countError));
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
 
@@ -327,7 +327,7 @@ serve(async (req) => {
     if (proErr) {
       // Fail closed AS TRANSIENT (503) — never demote a paying user to the
       // free cap on an RPC blip.
-      console.error('[parse-syllabus] is_pro check failed:', proErr);
+      log.error('is_pro_check_failed', errorFields(proErr));
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
     if (proResult !== true) {
@@ -362,7 +362,7 @@ serve(async (req) => {
           .gte('created_at', monthStartIso),
       ]);
       if (successRes.error || uploadRes.error) {
-        console.error('[parse-syllabus] scan count failed:', successRes.error ?? uploadRes.error);
+        log.error('scan_count_failed', errorFields(successRes.error ?? uploadRes.error));
         return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
       }
       const scanCount = Math.max(successRes.count ?? 0, uploadRes.count ?? 0);
@@ -389,12 +389,19 @@ serve(async (req) => {
       pages?: { base64?: unknown; mimeType?: unknown }[];
       text?: unknown;
       apiVersion?: unknown;
+      locale?: unknown;
     };
     try {
       body = await req.json();
     } catch {
       return jsonResponse({ error: 'Invalid request body' }, 400);
     }
+
+    // Scan errors were English-only while the rest of the app ships Spanish,
+    // so a Spanish user hit an English wall at the one step most likely to
+    // fail. Defaults to 'en' for older clients that send no locale.
+    const locale = body.locale === 'es' ? 'es' : 'en';
+    const localized = (english: string, spanish: string) => (locale === 'es' ? spanish : english);
 
     // Dateless items (due_date: null) are a v2 response feature: shipped
     // 1.2/1.3 review screens default-accept every item and then hard-block
@@ -518,11 +525,11 @@ serve(async (req) => {
       max_output_tokens: 24576,
       store: false,
       safety_identifier: await makeSafetyIdentifier(userId),
-    });
+    }, log);
 
     if (!openAIResult.data) {
       const code = openAIResult.networkError ? 'fetch_error' : `http_${openAIResult.status || 0}`;
-      console.error(`[parse-syllabus] OpenAI failed after retries: ${code}`);
+      log.error('openai_failed_after_retries', { code });
       await logCall(adminClient, userId, 'failed', Date.now() - startTime, code);
       const msg = openAIResult.networkError
         ? 'AI service unreachable. Please try again.'
@@ -541,7 +548,7 @@ serve(async (req) => {
     // Detect it explicitly so the user gets an actionable message instead of
     // an opaque parse_error, and so it's diagnosable separately in the logs.
     if (data.status === 'incomplete' && data.incomplete_details?.reason === 'max_output_tokens') {
-      console.error('[parse-syllabus] OpenAI hit max_output_tokens — output truncated');
+      log.error('openai_max_output_tokens');
       await logCall(adminClient, userId, 'failed', Date.now() - startTime, 'max_tokens');
       return jsonResponse(
         { error: 'This syllabus is very dense and the response was cut off. Try scanning one course (or fewer pages) at a time.' },
@@ -550,7 +557,7 @@ serve(async (req) => {
     }
 
     if (!text) {
-      console.error('[parse-syllabus] OpenAI empty response:', JSON.stringify(data).slice(0, 500));
+      log.error('openai_empty_response', { response_keys: Object.keys(data ?? {}).join(','), response_bytes: JSON.stringify(data ?? {}).length });
       await logCall(adminClient, userId, 'failed', Date.now() - startTime, 'empty_response');
       return jsonResponse({ error: 'No response from the AI service' }, 502);
     }
@@ -561,7 +568,7 @@ serve(async (req) => {
     try {
       result = JSON.parse(cleaned);
     } catch (parseErr) {
-      console.error('[parse-syllabus] JSON parse failed:', parseErr, 'text:', cleaned.slice(0, 500));
+      log.error('model_json_parse_failed', { ...errorFields(parseErr), output_chars: cleaned.length, starts_with: cleaned.slice(0, 24) });
       await logCall(adminClient, userId, 'failed', Date.now() - startTime, 'parse_error');
       return jsonResponse(
         { error: 'Failed to parse AI response. Please try again with a clearer document.' },
@@ -580,11 +587,41 @@ serve(async (req) => {
       !result.course_name &&
       (!Array.isArray(result.items) || result.items.length === 0) &&
       (!Array.isArray(result.meetings) || result.meetings.length === 0);
-    if (result.is_syllabus === false || nothingExtracted) {
-      console.warn(`[parse-syllabus] Rejected non-syllabus (is_syllabus=${result.is_syllabus}, empty=${nothingExtracted})`);
-      await logCall(adminClient, userId, 'failed', Date.now() - startTime, result.is_syllabus === false ? 'not_syllabus' : 'empty_extraction');
+    // These are two different failures and they need two different answers.
+    // An explicit is_syllabus===false is the model saying "wrong document" —
+    // the right advice is to go find the syllabus. An empty extraction with no
+    // such verdict is far more often a REAL syllabus the model could not read:
+    // a dark or skewed photo, an image-only PDF. Telling that student the
+    // document "doesn't look like a syllabus" sends them hunting for a
+    // different file when the fix is to retake the photo or upload the PDF.
+    // The ledger already separated these (not_syllabus vs empty_extraction);
+    // only the user-facing message was collapsing them.
+    const explicitlyNotSyllabus = result.is_syllabus === false;
+    if (explicitlyNotSyllabus || nothingExtracted) {
+      const errorCode = explicitlyNotSyllabus ? 'not_syllabus' : 'empty_extraction';
+      log.warn('document_rejected', {
+        reason: errorCode,
+        is_syllabus: result.is_syllabus ?? null,
+        empty: nothingExtracted,
+        source: pastedText ? 'text' : 'file',
+      });
+      await logCall(adminClient, userId, 'failed', Date.now() - startTime, errorCode);
       return jsonResponse(
-        { error: "This doesn't look like a course syllabus. Try scanning your syllabus, course outline, or class schedule.", code: 'NOT_SYLLABUS' },
+        explicitlyNotSyllabus
+          ? {
+              error: localized(
+                "This doesn't look like a course syllabus. Try scanning your syllabus, course outline, or class schedule.",
+                'Esto no parece el programa de una materia. Prueba a escanear el programa, el temario o el horario de clases.',
+              ),
+              code: 'NOT_SYLLABUS',
+            }
+          : {
+              error: localized(
+                "Semora couldn't read anything from this. Retake the photo with the page flat, fully in frame and well lit, or upload the syllabus as a PDF instead.",
+                'Semora no pudo leer nada de esto. Repite la foto con la hoja plana, completa dentro del encuadre y bien iluminada, o sube el programa en PDF.',
+              ),
+              code: 'UNREADABLE_DOCUMENT',
+            },
         422,
       );
     }
@@ -723,12 +760,47 @@ serve(async (req) => {
       gemini_model: servedModel || null,
     };
 
-    // 6. Log success and return
+    // 6. Log success and return.
+    // The counts are the extraction-quality signal: a run that returns a course
+    // but zero items is technically a success and a bad outcome for the
+    // student, and without this it is indistinguishable from a good one.
+    log.info('extraction_ok', {
+      source: pastedText ? 'text' : 'file',
+      items: items.length,
+      meetings: Array.isArray(result.meetings) ? result.meetings.length : 0,
+      has_course_name: Boolean(result.course_name),
+      has_grading_scale: Boolean(result.grading_scale),
+      dateless_items: items.filter((i: any) => !i.due_date).length,
+      suspect_dates: items.filter((i: any) => i.date_suspect).length,
+      model: servedModel || null,
+    });
     await logCall(adminClient, userId, 'success', Date.now() - startTime);
 
     return jsonResponse(extraction, 200);
   } catch (err) {
-    console.error('[parse-syllabus] Unhandled error:', err);
+    log.error('unhandled_error', errorFields(err));
     return jsonResponse({ error: 'An unexpected error occurred. Please try again.' }, 500);
   }
+}
+
+/**
+ * The handler is wrapped rather than logging at each `return` because this
+ * function has ~30 exit points and any one of them added later would silently
+ * skip the terminal line. Wrapping means `request_done` is emitted exactly once
+ * per invocation no matter which branch answered, which is what makes error
+ * rate and latency queryable rather than approximate.
+ */
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  const log = createLogger('parse-syllabus', req);
+  const startTime = Date.now();
+  const response = await handleRequest(req, log, startTime);
+  log.done(
+    response.status < 400 ? 'ok' : response.status < 500 ? 'client_error' : 'server_error',
+    response.status,
+  );
+  return response;
 });

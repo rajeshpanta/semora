@@ -51,10 +51,431 @@ export type NewPageKey =
   | 'studyfetch-alternative'
   | 'dormway-alternative'
   | 'mindgrasp-alternative'
+  | 'assignment-tracker-app'
+  | 'blackboard-assignment-tracker'
+  | 'ai-flashcard-generator'
+  | 'ai-tutor-for-college-students'
   | 'about';
 
 export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
 {
+  "ai-flashcard-generator": {
+    "metaTitle": "AI Flashcard Generator From Your Syllabus and Notes",
+    "metaDescription": "Generate a flashcard deck from a course's own syllabus and lecture notes, focused on one exam if you want, then review it on a spaced-repetition schedule.",
+    "h1": "An AI Flashcard Generator That Already Has Your Material",
+    "lede": "Most generators ask you to paste something in. This one builds from the syllabus and lecture notes already attached to the course, and can focus a deck on one specific exam you are tracking.",
+    "intro": [
+      "The tedious part of flashcards has never been the reviewing. It is the making \u2014 reading back through a chapter deciding what deserves a card, then typing both sides, at exactly the moment you least want another task.",
+      "AI generators fix the typing and usually introduce a new chore in its place: finding the source material, pasting it in, doing it again for the next chapter. If the tool has no memory of your course, every deck starts from nothing.",
+      "This page describes a generator with the opposite starting position \u2014 one that already holds the course's syllabus and your uploaded notes \u2014 what it does with that material, exactly how much of it it reads, and how the review schedule decides what to put in front of you."
+    ],
+    "sections": [
+      {
+        "heading": "What the deck is actually built from",
+        "paragraphs": [
+          "When you generate, the request carries the course's own material rather than whatever you happened to paste. Three sources go in.",
+          "The most recent syllabus parse for that course: up to 60 extracted items, each as its title and type, trimmed to 8,000 characters. That is what gives a deck the shape of the course \u2014 its topics, its units, what the instructor said it would cover.",
+          "Up to the 10 most recently uploaded note files for that course, sharing a combined 24,000-character budget of extracted text, each labelled with its filename. Notes are read newest first, on the reasonable assumption that recent material is what you are studying.",
+          "And a list built from the course's other tracked tasks \u2014 up to 60 of them, ordered by date \u2014 so the generator knows what the term contains around the thing you are studying."
+        ],
+        "bullets": [
+          "Syllabus: up to 60 items, 8,000 characters",
+          "Notes: 10 newest files, sharing 24,000 characters of extracted text",
+          "Tracked tasks: up to 60, ordered by date"
+        ]
+      },
+      {
+        "heading": "Focusing a deck on one exam instead of the whole course",
+        "paragraphs": [
+          "The generate panel asks two things and then confirms. The first is what to focus on: the whole course, or one specific item you are already tracking as a deadline.",
+          "That second option is the one that earns its place. A deck generated for the whole course is diluted by definition \u2014 a midterm review that includes material from finals is a worse deck for the midterm, no matter how good the individual cards are. Pointing it at a tracked exam narrows the source material to what that exam is about.",
+          "It works because the exams are already in the app as real dated items with types, extracted from the syllabus. A generator with no knowledge of your term cannot offer this, because it has no idea what your midterm covers or when it is."
+        ]
+      },
+      {
+        "heading": "Adding a review packet the instructor handed out",
+        "paragraphs": [
+          "The second question in the panel is optional study material: attach a PDF or a photo and it becomes part of what the deck is generated from, alongside the syllabus and notes.",
+          "This is the highest-signal input available, and it is worth using when it exists. A review sheet is the instructor telling you what the exam covers, in their own words, with their own emphasis.",
+          "The file goes to a private storage bucket, filed under your own user ID. Nothing is parsed on your phone: the first time a generation or a tutor request needs that file, the server reads it, extracts the readable text while preserving structure, and caches the result."
+        ]
+      },
+      {
+        "heading": "What comes back, and what gets thrown away",
+        "paragraphs": [
+          "The shape of the output is fixed rather than left to the model. The front is a short question or a term. The back is a concise answer or definition, one to three sentences.",
+          "The target is between 10 and 20 cards, with an explicit instruction that fewer good cards beat padding \u2014 if the material genuinely does not support twenty, it should not invent them.",
+          "Then everything is validated before it is saved. Both faces are trimmed and each is capped at 300 characters. Any entry missing a front or a back is dropped rather than failing the whole batch, so if fourteen of sixteen came back clean you get the fourteen. No more than 30 cards are inserted from a single run.",
+          "The 300-character cap is a defensive clamp on model output specifically. Cards you type yourself are not truncated."
+        ]
+      },
+      {
+        "heading": "The review schedule, in actual numbers",
+        "paragraphs": [
+          "Every card carries four values: an ease factor, an interval in days, a due date, and a count of consecutive successes. A brand-new card starts at ease 2.5, interval 0, due now \u2014 so anything you generate is due in your very next session, with no waiting.",
+          "Grading a revealed card runs a compact SM-2 variant. Again drops ease by 0.20, resets the success count, and brings the card back in about ten minutes rather than tomorrow. Hard drops ease by 0.15; a new card graduates to one day, an established one gets its interval multiplied by 1.2. Good is the standard ladder: one day, then six, then multiplied by the card's own ease. Easy raises ease by 0.15 and multiplies by that ease plus a further 1.3 bonus, so a new card graded Easy jumps straight to six days.",
+          "Ease is floored at 1.3 \u2014 the SM-2 floor \u2014 both in the scheduler and by a database constraint, so a bad week of Again and Hard cannot drive a card into a permanent loop.",
+          "In practice a card you keep getting right goes one day, then six, then fifteen, then about thirty-eight, then roughly three months. A card you keep missing stays in front of you."
+        ],
+        "bullets": [
+          "New card: ease 2.5, due immediately",
+          "Again \u2248 10 minutes; Good ladder 1 day \u2192 6 days \u2192 \u00d7 ease",
+          "Easy multiplies by ease and a further 1.3",
+          "Ease never falls below 1.3"
+        ]
+      },
+      {
+        "heading": "A session, and cards you write yourself",
+        "paragraphs": [
+          "Starting a session snapshots the due queue at that moment. Grading a card pushes its due date forward, and without the snapshot the list would reshuffle underneath you mid-session. A counter shows your position, like 4 / 12, with an exit beside it.",
+          "Generation is entirely optional. New Deck creates an empty deck with a title of up to 80 characters, scoped to the course you came from or left uncategorized if you opened Flashcards on its own. Add Card gives you two multi-line fields, front and back, both required \u2014 a card with a blank side is not saved.",
+          "Hand-written and generated cards live in the same deck and are scheduled by the same algorithm. There is no second-class citizen here."
+        ]
+      },
+      {
+        "heading": "What it costs and when to use something else",
+        "paragraphs": [
+          "Flashcards are part of Pro, at $3.99 a month or $19.99 a year \u2014 about $1.67 a month annually \u2014 purchased in the iOS app and applied account-wide including the web.",
+          "The honest limitation is the source material. This generator is strong when a course has a scanned syllabus and uploaded notes, and weak when it has neither, because there is nothing to build from. If you want to turn an arbitrary PDF or a YouTube lecture into a deck with no course attached, a general-purpose generator is a better fit and you should use one.",
+          "It is also not a shared deck library. There is no browsing other students' decks; everything here is generated from your own course's material or written by you."
+        ]
+      },
+    ],
+    "faq": [
+      {
+        "question": "Do I need to upload anything to generate a deck?",
+        "answer": "Not if the course has a scanned syllabus \u2014 that alone is enough to generate from. Uploaded lecture notes and an attached review packet make the deck sharper, and a course with none of the three has nothing to build from."
+      },
+      {
+        "question": "How many cards will it make?",
+        "answer": "It targets 10 to 20, with an instruction that fewer good cards beat padding, and inserts no more than 30 from a single run. Cards missing a front or back are dropped rather than failing the batch."
+      },
+      {
+        "question": "Can I generate a deck for just my midterm?",
+        "answer": "Yes. The generate panel lets you focus on one specific item you are already tracking as a deadline, rather than the whole course, which is what keeps a midterm review from being diluted with material from finals."
+      },
+      {
+        "question": "What spaced-repetition algorithm does it use?",
+        "answer": "A compact SM-2 variant. New cards start at ease 2.5 and are due immediately; Again returns a card in about ten minutes, Good runs a one-day then six-day then multiply-by-ease ladder, and ease is floored at 1.3 so a bad week cannot trap a card."
+      },
+      {
+        "question": "Are my own cards treated differently from generated ones?",
+        "answer": "They share a deck and the same schedule. The one difference is the 300-character-per-side cap, which is a defensive clamp on model output \u2014 cards you type yourself are not truncated."
+      },
+      {
+        "question": "Is the flashcard generator free?",
+        "answer": "No, it is part of Pro at $3.99 a month or $19.99 a year. The free plan covers syllabus scanning, deadline tracking, weighted grade tracking and same-day reminders."
+      },
+    ]
+  },
+  "ai-tutor-for-college-students": {
+    "metaTitle": "AI Tutor for College Students, Grounded in Your Course",
+    "metaDescription": "An AI tutor that answers from your own syllabus, tracked deadlines and uploaded lecture notes, cites what it used, and never invents a due date.",
+    "h1": "An AI Tutor That Knows Which Course You Are In",
+    "lede": "General chatbots explain concepts well and know nothing about your situation. This one is handed your syllabus, your tracked deadlines and your lecture notes before it sees the question.",
+    "intro": [
+      "Ask a general chatbot when your final is and it will either decline or, worse, guess plausibly. It does not know your professor said the midterm covers chapters one through six and not seven. It does not know your essay moved from the 14th to the 21st. The model is capable; it simply has no access to your term.",
+      "That gap is not fixed by a better model. It is fixed by giving the model the right material before it answers, and by constraining what it is allowed to answer from.",
+      "This page describes exactly what gets assembled before a question is sent, how deadline answers are handled differently from everything else, what the tutor deliberately does not know, and the real limits in numbers."
+    ],
+    "sections": [
+      {
+        "heading": "What gets assembled before it sees your question",
+        "paragraphs": [
+          "The server builds a packet of your real course material and instructs the model to answer from it. Four things go in.",
+          "Your class meetings, labs and discussion sections included, since those are stored as their own meeting kinds. Your grading scale, as plain text \u2014 A at 93 percent and up, B at 83 and up, or whatever your school actually uses, if you have customized it.",
+          "The structured items from your most recent syllabus scan: capped at 8,000 characters and up to 60 items. And your currently tracked deadlines: also capped at 8,000 characters and up to 60 tasks.",
+          "Notes are read newest first \u2014 the 10 most recent files for that course, sharing a 24,000-character budget of extracted text. A syllabus or deadlines block that has to be cut is explicitly marked as truncated, so the model knows it is working from an abridged source rather than treating a partial list as complete."
+        ],
+        "bullets": [
+          "Class meetings, including labs and discussion sections",
+          "Your grading scale, customized cutoffs included",
+          "Syllabus: 8,000 characters, up to 60 items",
+          "Deadlines: 8,000 characters, up to 60 tasks",
+          "Notes: 10 newest files, 24,000 characters shared"
+        ]
+      },
+      {
+        "heading": "Deadline answers come from your task list, not the model",
+        "paragraphs": [
+          "This is the constraint that matters most, because it is the one where a confident wrong answer does real damage.",
+          "For questions about what is due and when, the tutor answers strictly from your actual tracked tasks. It does not reason its way to a date, and it does not fill a gap with something plausible. If the information is not in what you have given it, it says so plainly and offers general help instead of inventing a specific.",
+          "It cites what it used in ordinary language rather than footnotes \u2014 \"your syllabus lists\u2026\", \"from your Week 3 notes\u2026\" \u2014 which is enough to tell you whether an answer came from your material or from general knowledge. That distinction is the whole point."
+        ]
+      },
+      {
+        "heading": "What it deliberately does not know",
+        "paragraphs": [
+          "The deadlines block carries titles, types, due dates, due times, weights, and whether you have checked something off. It does not carry your scores.",
+          "So the tutor knows the final is worth 30 percent of your grade and that you have not done it yet. It does not know what you got on the midterm, and it cannot tell you what you need on the final \u2014 that is what the forecasting calculators in grade tracking are for.",
+          "This is a design decision rather than an oversight, and it is worth knowing so you do not ask it a question it will answer badly. A tutor that had your scores could be more helpful and would also be holding more of your record than a chat feature needs."
+        ]
+      },
+      {
+        "heading": "Uploading lecture notes",
+        "paragraphs": [
+          "Notes attach to a course, so open the tutor from a course rather than on its own \u2014 if you have not, the app tells you to instead of accepting an orphan file. PDFs and photos both work.",
+          "Extraction happens on the server, not on your phone. The file goes to a private storage bucket filed under your own user ID, and the first time a request needs it the server reads it, extracts the readable text preserving structure, and caches the result so the next question does not pay the cost again.",
+          "One limit worth stating: a file over roughly 6 MB is skipped at extraction time rather than sent to the model. If a scanned lecture set is not showing up in answers, size is the first thing to check."
+        ]
+      },
+      {
+        "heading": "One thread per course, plus a general one",
+        "paragraphs": [
+          "Conversations are scoped to a course, which is what makes the grounding coherent \u2014 a thread for organic chemistry is not carrying context from your literature seminar.",
+          "The last 12 messages of a conversation are replayed each turn, roughly six exchanges of working memory. That is enough to follow up on an explanation without the thread quietly dragging an hour of unrelated context into every request.",
+          "There is also a general thread for questions that are not about a specific course, where it behaves like a competent general assistant with none of the course grounding."
+        ]
+      },
+      {
+        "heading": "The limits, in real numbers",
+        "paragraphs": [
+          "Fifty tutor messages per rolling 24 hours per account \u2014 rolling, not a reset at midnight \u2014 and 4,000 characters per message, enforced in the composer and checked again on the server.",
+          "The model call goes to OpenAI GPT-5.6 Luna with low reasoning and an output ceiling of 2,048 tokens: enough for a worked explanation without inviting an essay. If the provider returns a retryable error the function backs off and retries up to three times, so you see one spinner rather than a failure.",
+          "Replies are plain text by instruction \u2014 short paragraphs and bullets, no markdown headers \u2014 which is a deliberate trade. If what you want is a long formatted document, this is the wrong surface.",
+          "The tutor is part of Pro, at $3.99 a month or $19.99 a year, bought in the iOS app and applied account-wide including the web."
+        ],
+        "bullets": [
+          "50 messages per rolling 24 hours, per account",
+          "4,000 characters per message",
+          "12 previous messages replayed per turn",
+          "Replies capped at 2,048 tokens, plain text"
+        ]
+      },
+      {
+        "heading": "Who this is genuinely for",
+        "paragraphs": [
+          "It is for the questions that need your context to answer: what does my syllabus say the exam covers, what did my Week 3 notes call this, what is actually due before Friday, how does my grading scale treat an 88.",
+          "It is a poor fit if what you want is a general tutor for a subject you are studying outside a tracked course, because the grounding has nothing to work with. It is also a poor fit if you want long formatted output.",
+          "And the same rule applies here as everywhere else in the app: it is worth exactly as much of your semester as you have entered. A course with a scanned syllabus, real deadlines and a few uploaded notes gets useful answers. An empty course gets a general chatbot."
+        ]
+      },
+    ],
+    "faq": [
+      {
+        "question": "Does the AI tutor know my actual due dates?",
+        "answer": "Yes, and it answers those strictly from your tracked task list rather than from the model's own reasoning. It never invents a date, and if something is not in what you have given it, it says so instead of guessing."
+      },
+      {
+        "question": "Does it know my grades?",
+        "answer": "No. The deadlines it receives carry titles, types, dates, weights and completion status, but not your scores. For what you need on the final, use the forecasting calculators in grade tracking."
+      },
+      {
+        "question": "How many questions can I ask?",
+        "answer": "Fifty messages per rolling 24 hours per account, with a 4,000-character limit per message. The limit is rolling rather than resetting at midnight."
+      },
+      {
+        "question": "Can it read my lecture notes?",
+        "answer": "Yes, as PDFs or photos, attached to a course. The 10 most recent files per course are read newest first, sharing a 24,000-character budget of extracted text. Files over roughly 6 MB are skipped at extraction."
+      },
+      {
+        "question": "Which model does it use?",
+        "answer": "OpenAI GPT-5.6 Luna, with low reasoning and a 2,048-token output ceiling. Replies are plain text by instruction \u2014 short paragraphs and bullets rather than long formatted documents."
+      },
+      {
+        "question": "Is the AI tutor free?",
+        "answer": "No, it is part of Pro at $3.99 a month or $19.99 a year, purchased in the iOS app and applied to your whole account including the web app."
+      },
+    ]
+  },
+  "assignment-tracker-app": {
+    "metaTitle": "Assignment Tracker App for College Students",
+    "metaDescription": "An assignment tracker that fills itself from your syllabus: every deadline, its weight, and a running grade. Free tier, no credit card, iPhone, iPad and web.",
+    "h1": "An Assignment Tracker That Fills Itself In",
+    "lede": "Most assignment trackers are an empty list you have to feed. This one reads your syllabus, extracts every deadline with its weight, and shows you what it found before saving anything.",
+    "intro": [
+      "Every assignment tracker does the same three things on paper: hold a list of what is due, sort it by date, and remind you. The difference between the ones people still use in November and the ones abandoned in week six is not the feature list. It is how the assignments get in.",
+      "A tracker you fill by hand starts empty and stays accurate only as long as you keep feeding it. That is roughly an hour of typing at the start of every term, plus a correction every time an instructor moves a date. The maintenance costs more than the problem it solves, so it stops getting done, and a half-maintained tracker is worse than none because you trust it.",
+      "This page is about what changes when the tracker fills itself from the document that already contains your term, what that makes possible downstream, and where it is honestly the wrong tool."
+    ],
+    "sections": [
+      {
+        "heading": "Three ways assignments get into a tracker",
+        "paragraphs": [
+          "Manual entry works everywhere and needs no setup. It is also the reason most planners get abandoned: it is recurring work with no end, and it competes with the actual coursework for the same hours.",
+          "Learning-platform import removes that work when it is available. It mirrors what an instructor actually posts inside the platform, which is excellent when your courses are fully managed there \u2014 and silent about everything that is not. Weight percentages, exam dates, reading schedules and grading scales frequently never become platform entries.",
+          "Syllabus extraction reads the document that already holds all of it. One scan per course, one review screen, and the term is in. It is the only one of the three that captures weights, which is what makes a grade calculation possible later."
+        ],
+        "bullets": [
+          "Manual: works anywhere, costs an hour a term plus every correction",
+          "Platform import: removes the typing, limited to what instructors post there",
+          "Syllabus extraction: one pass per course, and the only route that captures weights"
+        ]
+      },
+      {
+        "heading": "What a scan actually puts in the list",
+        "paragraphs": [
+          "Photograph the syllabus, upload the PDF, drag it onto the web app, or paste the text. Ten to thirty seconds later you get the course and instructor, class meeting times and office hours, the semester's start and end dates, the grading scale, and every assignment, quiz, exam, project and reading it could find.",
+          "Each item arrives with three things a hand-typed entry usually lacks: a due date, a due time if the syllabus stated one, and its weight toward the final grade. The weight is the part that matters most and the part nobody enters by hand, because typing twenty due dates is tedious but typing twenty weights alongside them is worse.",
+          "Then it stops. Nothing is saved to your list until you look at what came out and approve it. Low-confidence extractions are flagged for you to check, dates falling outside the semester are called out, and items that arrived without a date are held separately rather than quietly assigned one."
+        ]
+      },
+      {
+        "heading": "Sorting by date is not the same as sorting by what matters",
+        "paragraphs": [
+          "A plain tracker sorts by due date, which is the correct default and an incomplete answer. Two items due Thursday are not equally urgent if one is a five-percent reading and the other is a quarter of your grade.",
+          "Because the weights came off the syllabus, Semora can score each dated item as its weight multiplied by a per-type effort factor \u2014 an exam counts triple, a project 2.5, a quiz 1.5, an assignment 1.2, a reading 1. That is what turns a list into a workload view that can tell you a week is heavy before you are inside it.",
+          "This is the practical payoff of capturing weights at intake. A tracker that only knows dates can only ever tell you what is next. One that knows weights can tell you what is worth your evening."
+        ]
+      },
+      {
+        "heading": "Reminders that are set for you",
+        "paragraphs": [
+          "Same-day reminders are scheduled automatically the moment you approve the extracted dates, on the free plan. There is no per-item reminder to configure, which matters because the reminders people configure by hand are the ones they stop configuring by week four.",
+          "Pro adds one-day and three-day advance notice. The distinction is about the size of the work rather than a preference: for a short submission, a morning-of reminder is enough; for a project that needs six hours, learning about it that day changes nothing. Three days is the window where the information is still actionable.",
+          "If a date moves and you edit it, the reminder moves with it. That sounds obvious and is one of the things worth actually testing in any tracker you are considering."
+        ]
+      },
+      {
+        "heading": "The tracker and the gradebook are the same data",
+        "paragraphs": [
+          "This is where an assignment tracker stops being a to-do list. Each item already carries its weight, so entering a score turns the same list into a running weighted average with no second screen to maintain.",
+          "The arithmetic divides by the weight you have attempted rather than the full semester's weight, which is what keeps the figure honest in October. Three graded items covering 45 percent of the course produce a grade based on that 45 percent, and an unscored final worth 30 percent never drags the number toward zero.",
+          "Categories work the way syllabi actually describe them \u2014 Homework 25 percent, Quizzes 15, Exams 45, Project 15 \u2014 with drop-lowest rules per category and letter grades from your course's scale. All of that is on the free plan."
+        ],
+        "bullets": [
+          "Enter a score on a tracked item; the weighted average updates",
+          "Divides by weight attempted, not weight total",
+          "Categories, drop-lowest and letter grades included free"
+        ]
+      },
+      {
+        "heading": "What the free plan holds, precisely",
+        "paragraphs": [
+          "Full deadline and task tracking, with no cap on how many assignments a course holds. Grade tracking with weighted averages, complete. Same-day reminders. Joining a Course Space a classmate shares with you. Five syllabus scans per calendar month.",
+          "The two limits are on courses and terms, and they behave differently. Four courses is a ceiling on how much of one term you can hold at once. One semester is a harder line \u2014 a free account cannot start a second term at all, so it does not roll over in January.",
+          "Pro removes all three at $3.99 a month or $19.99 a year, bought in the iOS app and applied account-wide including the web. But if you carry four courses or fewer in a single term and what you need is to stop missing deadlines and know your grade, the free plan does that job completely."
+        ]
+      },
+      {
+        "heading": "Where this is the wrong tool",
+        "paragraphs": [
+          "If every one of your courses is fully managed in your learning platform and your instructors post everything there with dates, platform import may be all you need, and that is a Pro feature subject to your institution's policy. Scanning would be solving a problem you do not have.",
+          "If you want a general task manager for work, errands and coursework in one place, a tracker built around courses, semesters and grade weights will feel narrow. That narrowness is what makes the grade math possible, and it is a real trade.",
+          "And this is not a submission tool. Turning work in and messaging instructors stays in your school's platform; this is the layer that tells you what is coming and what it is worth."
+        ]
+      },
+    ],
+    "faq": [
+      {
+        "question": "Do I have to scan anything to use it as a tracker?",
+        "answer": "No. You can create a course by hand and add assignments, subtasks and scores yourself, and the calendar, the Today view, reminders and grade calculation all behave identically on hand-entered data. Scanning is a shortcut for the tedious part, not a requirement."
+      },
+      {
+        "question": "Is there a limit on how many assignments I can track?",
+        "answer": "No. The free plan's limits are on syllabus scans (five per calendar month), courses (up to four within one semester) and terms (one total). A course can hold as many assignments as it actually has."
+      },
+      {
+        "question": "Does it work on iPhone, iPad and the web?",
+        "answer": "Yes, on one account and one database that sync in near real time. Pro is purchased in the iOS app and applies account-wide, including the web app \u2014 there is no separate web checkout."
+      },
+      {
+        "question": "What happens when an instructor moves a due date?",
+        "answer": "Edit the item and the date, its reminder and its place in the workload scoring all move with it. If the date came from a learning-platform import, a re-sync updates the title and dates in place without touching anything you had already marked complete."
+      },
+      {
+        "question": "Can I track assignments for a class that has no syllabus dates?",
+        "answer": "Yes. Some courses only announce work in class. Scan what the syllabus does have \u2014 the course, the schedule, the grading scale \u2014 and add the assignments as they are announced. Nothing downstream cares whether an item arrived by scan or by hand."
+      },
+    ]
+  },
+  "blackboard-assignment-tracker": {
+    "metaTitle": "Blackboard Assignment Tracker: Deadlines and Grades",
+    "metaDescription": "Track Blackboard coursework with real reminders and weighted grades. Import on Pro where your institution permits it, or scan your syllabus free.",
+    "h1": "A Blackboard Assignment Tracker With Reminders and a Real Grade",
+    "lede": "Blackboard holds your coursework. It does not tell you that three items land in the same 48 hours, remind you the night before, or show what your grade does if you skip one.",
+    "intro": [
+      "Blackboard is where your instructors publish and where you submit. Those are the two jobs it is built for, and it does them. What it leaves to you is the synthesis: gathering several course pages into one list, ordering that list by what actually matters rather than by date alone, and knowing which item moves your grade.",
+      "That synthesis is the work. It is also the work that gets skipped in a busy week, which is how three deadlines end up discovered together instead of separately.",
+      "This page covers what a tracking layer on top of Blackboard adds, how importing works and when you should not use it, and what the free path covers for students whose institutions do not permit third-party connections."
+    ],
+    "sections": [
+      {
+        "heading": "What Blackboard gives you and what it leaves out",
+        "paragraphs": [
+          "Course pages, announcements, submission, and grades your instructor chooses to publish. Notifications exist, but they are built to tell you something changed in the platform rather than to prepare your week.",
+          "The gaps that matter for planning are consistent across institutions. There is usually no single cross-course view ordered by urgency, no advance reminder you control, and no running weighted grade you can trust unless your instructor configured the gradebook carefully \u2014 and many do not.",
+          "The grade point deserves emphasis. Whether a Blackboard grade means anything depends on whether categories and weights were set up, whether ungraded work counts as zero, and whether grades are published or hidden. Two courses in the same term routinely differ on all three."
+        ]
+      },
+      {
+        "heading": "Importing from Blackboard, and when not to",
+        "paragraphs": [
+          "Learning-platform import is a Pro feature covering Blackboard, Canvas and Moodle. Setup varies meaningfully by institution: Blackboard deployments differ in version, configuration and what integrations the school allows.",
+          "Before connecting anything, confirm your institution's policy on third-party access. Some schools permit it, some restrict it, and some prohibit it outright in their acceptable-use terms. If it is not permitted, do not connect \u2014 and you have not lost anything, because the free path below covers the same job.",
+          "This is stated plainly rather than buried because it is the honest position: the connector's availability is not entirely in the app's control, and a tracker that only works if your school cooperates is not a tracker you should have to gamble on."
+        ],
+        "bullets": [
+          "Blackboard, Canvas and Moodle import are all part of Pro",
+          "Setup varies by institution and version",
+          "Confirm your school's policy before connecting; if unclear, use the free path"
+        ]
+      },
+      {
+        "heading": "The free path: scan the syllabus or paste the list",
+        "paragraphs": [
+          "The syllabus usually contains more of what you need for planning than the platform does. Weight percentages, exam dates, the reading schedule and the grading scale live there, and much of that never becomes a Blackboard entry.",
+          "Photograph it, upload the PDF, drag it onto the web app, or paste the text \u2014 up to 60,000 characters, which is the fastest and most accurate route when you can select the syllabus text on a laptop. You get the course, instructor, meeting times, semester dates, grading scale, and every dated item with its weight.",
+          "You can also paste a Blackboard assignment list straight into the same scanner. If you can select the text, it can be read, and no connection or token is involved.",
+          "The free plan includes five scans per calendar month, up to four courses within one semester, one semester total, full deadline tracking, weighted grade tracking and same-day reminders."
+        ]
+      },
+      {
+        "heading": "Reminders you actually control",
+        "paragraphs": [
+          "Same-day reminders schedule themselves as soon as you approve the extracted dates, at no cost. Pro adds one-day and three-day advance notice.",
+          "The reason to care about advance notice is the size of the work, not preference. A short discussion post is fine with a morning-of nudge. A paper that needs six hours is not \u2014 by the time you are reminded, the only available response is to start late.",
+          "Because reminders are derived from the dates rather than configured per item, they survive the thing that kills hand-built reminder systems: nobody has to remember to set them."
+        ]
+      },
+      {
+        "heading": "A grade you can check against the syllabus",
+        "paragraphs": [
+          "Semora computes the weighted sum of your scores divided by the weight you have attempted, not by the full semester's weight. That keeps the number meaningful mid-term, when an ungraded final worth 30 percent would otherwise drag it toward zero.",
+          "It supports the structure syllabi actually use: categories with their own percentages, drop-lowest rules per category from 0 to 20 that never remove your last remaining grade, three different extra-credit policies, and letter grades from your course's scale. All of that is on the free plan.",
+          "Editing the letter cutoffs to match your institution's scale, and the what-if calculators that tell you what you need on the rest, are Pro."
+        ]
+      },
+      {
+        "heading": "What a re-sync will and will not touch",
+        "paragraphs": [
+          "If you do connect, the behaviour on refresh matters more than the behaviour on first import, because that is where trackers quietly corrupt a semester.",
+          "A re-sync refreshes an item's title and dates in place. It does not touch your completion state, the scores you entered, or subtasks you added. Something you marked done stays done.",
+          "That is the single most useful thing to test in any tool you are evaluating: move a date, re-sync, and check that the item updated rather than duplicating, that the reminder follows the new date, and that your completions survived."
+        ]
+      },
+      {
+        "heading": "Who should skip this",
+        "paragraphs": [
+          "If your instructors post everything to Blackboard with accurate dates and your institution publishes a weighted grade you check and trust, a tracking layer is redundant. Use the platform.",
+          "If you need to submit work or message an instructor, that stays in Blackboard regardless. This is an organizing layer on top, not a replacement for the LMS.",
+          "And if your institution prohibits third-party connections and you would rather not scan syllabi either, then the honest answer is that this is not for you \u2014 the value here depends on the data getting in by one route or the other."
+        ]
+      },
+    ],
+    "faq": [
+      {
+        "question": "Is Blackboard import free?",
+        "answer": "No. Learning-platform import \u2014 Blackboard, Canvas and Moodle \u2014 is part of Pro at $3.99 a month or $19.99 a year. The free plan covers the same job from the syllabus side, including pasting a Blackboard assignment list into the scanner."
+      },
+      {
+        "question": "Will connecting Blackboard work at my school?",
+        "answer": "It depends on your institution. Blackboard deployments vary by version and configuration, and schools differ on whether they permit third-party access at all. Confirm your school's policy first, and use the syllabus path if it is not permitted."
+      },
+      {
+        "question": "Can I use it without connecting anything?",
+        "answer": "Yes, and most of the value does not require a connection. Scan the syllabus or paste your assignment list, and you get deadlines, weights, reminders and grade tracking on the free plan."
+      },
+      {
+        "question": "Does it replace Blackboard?",
+        "answer": "No. Submission, instructor messaging and course materials stay in Blackboard. Semora adds the cross-course deadline view, reminders you control, and a weighted grade calculated from the weights your syllabus states."
+      },
+      {
+        "question": "Does it work on iPhone, iPad and the web?",
+        "answer": "Yes, on one account that syncs across all three. Pro is bought in the iOS app and applies to the whole account, web included."
+      },
+    ]
+  },
   "gpa-calculator": {
     "metaTitle": "Free GPA Calculator: Semester & Cumulative GPA",
     "metaDescription": "A free GPA calculator plus the math behind it: quality points, credit hours, semester vs cumulative GPA, plus/minus scales, and the GPA you need.",

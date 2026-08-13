@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next';
-import { SITE_URL } from '@/lib/site';
+import { CONTENT_LAST_REVIEWED, SITE_URL } from '@/lib/site';
 import { FEATURES } from '@/lib/semora-facts';
 import { COMPARE_SLUGS, KEYWORD_PAGE_SLUGS } from '@/lib/routes';
 import { BLOG_POSTS } from '@/lib/blog';
@@ -7,37 +7,44 @@ import { ALTERNATIVE_SLUGS } from '@/lib/new-page-content';
 import { INDEXABLE_LOCALE_ROUTE_PAIRS } from '@/lib/i18n';
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  // Every non-blog route shares one revision date — see CONTENT_LAST_REVIEWED
+  // for why that is the honest answer here rather than a per-route guess.
+  const reviewed = CONTENT_LAST_REVIEWED;
+
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: SITE_URL, changeFrequency: 'weekly', priority: 1 },
-    { url: `${SITE_URL}/features`, changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${SITE_URL}/compare`, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${SITE_URL}/pricing`, changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${SITE_URL}/blog`, changeFrequency: 'weekly', priority: 0.7 },
-    { url: `${SITE_URL}/privacy`, changeFrequency: 'yearly', priority: 0.3 },
-    { url: `${SITE_URL}/terms`, changeFrequency: 'yearly', priority: 0.3 },
-    { url: `${SITE_URL}/support`, changeFrequency: 'monthly', priority: 0.4 },
-    { url: `${SITE_URL}/about`, changeFrequency: 'yearly', priority: 0.4 },
+    { url: SITE_URL, lastModified: reviewed, changeFrequency: 'weekly', priority: 1 },
+    { url: `${SITE_URL}/features`, lastModified: reviewed, changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${SITE_URL}/compare`, lastModified: reviewed, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${SITE_URL}/pricing`, lastModified: reviewed, changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${SITE_URL}/blog`, lastModified: reviewed, changeFrequency: 'weekly', priority: 0.7 },
+    { url: `${SITE_URL}/privacy`, lastModified: reviewed, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${SITE_URL}/terms`, lastModified: reviewed, changeFrequency: 'yearly', priority: 0.3 },
+    { url: `${SITE_URL}/support`, lastModified: reviewed, changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${SITE_URL}/about`, lastModified: reviewed, changeFrequency: 'yearly', priority: 0.4 },
     // Free tools. These are the only pages on the site that do a job for the
     // reader without asking for anything, which makes them the realistic
     // link targets for a domain with no press.
-    { url: `${SITE_URL}/gpa-calculator`, changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${SITE_URL}/pomodoro-timer`, changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${SITE_URL}/gpa-calculator`, lastModified: reviewed, changeFrequency: 'monthly', priority: 0.9 },
+    { url: `${SITE_URL}/pomodoro-timer`, lastModified: reviewed, changeFrequency: 'monthly', priority: 0.9 },
   ];
 
   const featureRoutes: MetadataRoute.Sitemap = FEATURES.map((f) => ({
     url: `${SITE_URL}/features/${f.slug}`,
+    lastModified: reviewed,
     changeFrequency: 'monthly',
     priority: 0.7,
   }));
 
   const keywordRoutes: MetadataRoute.Sitemap = KEYWORD_PAGE_SLUGS.map((slug) => ({
     url: `${SITE_URL}/${slug}`,
+    lastModified: reviewed,
     changeFrequency: 'monthly',
     priority: 0.8,
   }));
 
   const compareRoutes: MetadataRoute.Sitemap = COMPARE_SLUGS.map((slug) => ({
     url: `${SITE_URL}/compare/${slug}`,
+    lastModified: reviewed,
     changeFrequency: 'monthly',
     priority: 0.8,
   }));
@@ -55,6 +62,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // already leaving a tool, who does not yet know Semora exists.
   const alternativeRoutes: MetadataRoute.Sitemap = ALTERNATIVE_SLUGS.map((slug) => ({
     url: `${SITE_URL}/${slug}`,
+    lastModified: reviewed,
     changeFrequency: 'monthly',
     priority: 0.8,
   }));
@@ -96,7 +104,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     const english = englishByPath.get(pair.en);
     return {
       url: `${SITE_URL}${pair.es}`,
-      ...(english?.lastModified ? { lastModified: english.lastModified } : {}),
+      // A Spanish page is a translation of its English counterpart, so it
+      // inherits that page's revision date. The fallback covers a pair whose
+      // English side is not itself in the sitemap.
+      lastModified: english?.lastModified ?? reviewed,
       changeFrequency: english?.changeFrequency ?? 'monthly',
       priority: english?.priority ?? (pair.es === '/es' ? 1 : 0.7),
       alternates: {

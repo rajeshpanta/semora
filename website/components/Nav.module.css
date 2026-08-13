@@ -47,52 +47,65 @@
   gap: 10px;
 }
 
-.languageDropdown {
-  position: relative;
+/* Two-letter segmented switch. Replaced a <select> whose onChange pushed a
+   route — see LanguageSwitcher for why an anchor was the only version of this
+   that a crawler (or a visitor without JS) could use. Same pill silhouette as
+   before, so the header layout is unchanged. */
+.languageToggle {
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  gap: 2px;
+  padding: 2px;
   border: 1px solid var(--border);
   border-radius: 999px;
   background: var(--card);
   min-height: 38px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.languageDropdown:focus-within {
-  border-color: var(--brand);
-  box-shadow: 0 0 0 3px var(--brand-50);
-}
-
-.languageSelect {
-  appearance: none;
-  min-height: 36px;
-  padding: 7px 32px 7px 13px;
-  border: 0;
-  border-radius: inherit;
-  outline: 0;
-  background: transparent;
-  color: var(--ink2);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 650;
-  cursor: pointer;
-}
-
-.languageSelect option {
-  color: var(--ink);
-  background: var(--card);
-}
-
-.languageCaret {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-58%);
+.languageOption {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  min-height: 32px;
+  padding: 0 9px;
+  border-radius: 999px;
   color: var(--ink-muted);
-  font-size: 15px;
-  line-height: 1;
-  pointer-events: none;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+a.languageOption:hover {
+  background: var(--brand-50, rgba(166, 133, 244, 0.18));
+  color: var(--ink);
+}
+
+a.languageOption:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+/* The page you are already on: text, not a link. */
+.languageOptionActive {
+  background: var(--ink);
+  color: #fff;
+  cursor: default;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
 }
 
 .languageSlot {

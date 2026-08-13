@@ -26,6 +26,10 @@ export const LOCALE_ROUTE_PAIRS: LocaleRoutePair[] = [
   { en: '/ai-syllabus-scanner', es: '/es/escaner-de-programa-de-estudios' },
   { en: '/ai-study-planner-for-college', es: '/es/planificador-de-estudio-con-ia' },
   { en: '/canvas-deadline-tracker', es: '/es/seguimiento-de-fechas-de-canvas' },
+  { en: '/assignment-tracker-app', es: '/es/app-para-seguir-tareas' },
+  { en: '/blackboard-assignment-tracker', es: '/es/seguimiento-de-tareas-de-blackboard' },
+  { en: '/ai-flashcard-generator', es: '/es/generador-de-tarjetas-con-ia' },
+  { en: '/ai-tutor-for-college-students', es: '/es/tutor-con-ia-para-universitarios' },
 
   { en: '/features/syllabus-scanner', es: '/es/funciones/escaner-de-programas' },
   { en: '/features/grade-tracking', es: '/es/funciones/calificaciones' },
@@ -102,6 +106,22 @@ export function isSpanishNoindexPath(pathname: string): boolean {
 export const INDEXABLE_LOCALE_ROUTE_PAIRS = LOCALE_ROUTE_PAIRS.filter(
   (pair) => !isSpanishNoindexPath(pair.es),
 );
+
+/**
+ * Does this exact page exist in the other language?
+ *
+ * The switcher falls back to the other locale's homepage for anything
+ * unmapped, which is right for a stray URL and wrong for the share landings:
+ * /join/[token], /invite/[code] and /collaborate/[token] are English-only by
+ * design, so switching there silently threw away the token the recipient
+ * arrived with and dropped them on a homepage. A control that discards what
+ * you came for is worse than no control, so the switcher hides itself instead
+ * — see LanguageSwitcher.
+ */
+export function hasLocalePair(locale: SiteLocale, pathname: string): boolean {
+  const normalized = normalizePath(pathname);
+  return locale === 'es' ? ES_TO_EN.has(normalized) : EN_TO_ES.has(normalized);
+}
 
 export function englishToSpanishPath(pathname: string): string {
   return EN_TO_ES.get(normalizePath(pathname)) ?? '/es';

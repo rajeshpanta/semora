@@ -25,6 +25,8 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const feature = getFeature(slug);
+  // Unknown slug → notFound() below, which discards whatever is returned here.
+  // The 404's own title lives in app/(en)/not-found.tsx.
   if (!feature) return {};
   const long = getFeatureContent(slug);
   return {

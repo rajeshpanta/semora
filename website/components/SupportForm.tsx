@@ -4,70 +4,230 @@ import { FormEvent, useState } from 'react';
 import styles from '@/app/(en)/support/support.module.css';
 import type { SiteLocale } from '@/lib/i18n';
 
+/**
+ * The support form.
+ *
+ * It used to hand the visitor off to `mailto:` — which opens nothing at all on
+ * a browser with no OS mail handler (Gmail in a tab, which is most students),
+ * while the page cheerfully reported "Your email app is ready with your
+ * message." Nothing was captured server-side either, so those messages were
+ * simply gone.
+ *
+ * Now it POSTs to /api/support → the `submit-support` Supabase edge function,
+ * which stores the request and then emails it on. Sending happens on this
+ * screen; nothing navigates away.
+ *
+ * The failure path still matters: if the request cannot get through, the
+ * visitor is told plainly and handed the support address as a mailto fallback
+ * — the old behaviour, but only when it is genuinely the last resort and never
+ * dressed up as success.
+ */
+
+type Status = 'idle' | 'sending' | 'sent' | 'error';
+type ErrorCode = 'invalid' | 'rate_limited' | 'unavailable';
+
 interface SupportFormProps {
   supportEmail: string;
   locale?: SiteLocale;
 }
 
+const COPY = {
+  en: {
+    heading: 'Send us a message',
+    sub: "Include as much detail as you can, and we'll help you from there.",
+    name: 'Name',
+    namePlaceholder: 'Your name',
+    email: 'Email',
+    emailPlaceholder: 'you@example.com',
+    topic: 'Topic',
+    topicPlaceholder: 'Select a topic',
+    message: 'Message',
+    messagePlaceholder: 'Describe your issue or question…',
+    send: 'Send message',
+    sending: 'Sending…',
+    idleNote: 'We only use your email to reply to this message.',
+    sentNote:
+      'Your message has been emailed to our support team. Someone will get back to you within 24 hours.',
+    errors: {
+      invalid: 'Please check your name, email address, and message, then try again. Or email us at',
+      rate_limited: 'That is a lot of messages in one hour. Please email us directly at',
+      unavailable: 'We could not send that just now. You can email us directly at',
+    },
+    topics: [
+      'Account or sign-in',
+      'Syllabus scan',
+      'Subscription or billing',
+      'Canvas or LMS sync',
+      'Bug report',
+      'Something else',
+    ],
+  },
+  es: {
+    heading: 'Envíanos un mensaje',
+    sub: 'Cuéntanos qué ocurrió y añade todos los detalles que puedas.',
+    name: 'Nombre',
+    namePlaceholder: 'Tu nombre',
+    email: 'Correo electrónico',
+    emailPlaceholder: 'tu@ejemplo.com',
+    topic: 'Tema',
+    topicPlaceholder: 'Selecciona un tema',
+    message: 'Mensaje',
+    messagePlaceholder: 'Describe tu problema o pregunta…',
+    send: 'Enviar mensaje',
+    sending: 'Enviando…',
+    idleNote: 'Solo usamos tu correo para responder a este mensaje.',
+    sentNote:
+      'Tu mensaje se envió por correo a nuestro equipo de ayuda. Te responderemos en menos de 24 horas.',
+    errors: {
+      invalid: 'Revisa tu nombre, correo y mensaje, e inténtalo de nuevo. O escríbenos a',
+      rate_limited: 'Son muchos mensajes en una hora. Escríbenos directamente a',
+      unavailable: 'No pudimos enviarlo en este momento. Puedes escribirnos directamente a',
+    },
+    topics: [
+      'Cuenta o inicio de sesión',
+      'Análisis del programa de una materia',
+      'Suscripción o facturación',
+      'Sincronización con Canvas o LMS',
+      'Reporte de error',
+      'Otro tema',
+    ],
+  },
+} as const;
+
 export function SupportForm({ supportEmail, locale = 'en' }: SupportFormProps) {
-  const [status, setStatus] = useState('');
-  const es = locale === 'es';
+  const [status, setStatus] = useState<Status>('idle');
+  const [errorCode, setErrorCode] = useState<ErrorCode>('unavailable');
+  const copy = COPY[locale];
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const values = new FormData(event.currentTarget);
-    const name = String(values.get('name') ?? '').trim();
-    const email = String(values.get('email') ?? '').trim();
-    const topic = String(values.get('topic') ?? '').trim();
-    const message = String(values.get('message') ?? '').trim();
-    const subject = topic
-      ? `${es ? 'Ayuda de Semora' : 'Semora support'} — ${topic}`
-      : es ? 'Solicitud de ayuda de Semora' : 'Semora support request';
-    const body = [es ? `Nombre: ${name}` : `Name: ${name}`, `Email: ${email}`, '', message].join('\n');
+    if (status === 'sending') return;
 
-    window.location.href = `mailto:${supportEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    setStatus(es
-      ? 'Hemos preparado el mensaje en tu aplicación de correo. Solo falta enviarlo.'
-      : 'Your email app is ready with your message. Send it there to reach us.');
+    const form = event.currentTarget;
+    const values = new FormData(form);
+    setStatus('sending');
+
+    try {
+      const response = await fetch('/api/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: values.get('name'),
+          email: values.get('email'),
+          topic: values.get('topic'),
+          message: values.get('message'),
+          company: values.get('company'),
+          locale,
+          page: window.location.pathname,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = (await response.json().catch(() => ({}))) as { code?: string };
+        setErrorCode(
+          data.code === 'invalid' || data.code === 'rate_limited' ? data.code : 'unavailable',
+        );
+        setStatus('error');
+        return;
+      }
+
+      // Clearing only on success means a failed send never costs anyone the
+      // message they just typed — they can retry, or copy it into an email.
+      form.reset();
+      setStatus('sent');
+    } catch {
+      setErrorCode('unavailable');
+      setStatus('error');
+    }
   }
 
+  const sending = status === 'sending';
+
+  // Native validation stays on (no noValidate): `required` and type="email"
+  // catch an empty or malformed field inline, before the round trip. The server
+  // checks again — that is the boundary — but the browser is the faster teacher.
   return (
     <form className={styles.form} onSubmit={handleSubmit}>
       <div className={styles.formHeading}>
-        <h2>{es ? 'Envíanos un mensaje' : 'Send us a message'}</h2>
-        <p>{es ? 'Cuéntanos qué ocurrió y añade todos los detalles que puedas.' : <>Include as much detail as you can, and we&apos;ll help you from there.</>}</p>
+        <h2>{copy.heading}</h2>
+        <p>{copy.sub}</p>
       </div>
 
       <div className={styles.twoColumns}>
         <label>
-          {es ? 'Nombre' : 'Name'}
-          <input name="name" autoComplete="name" placeholder={es ? 'Tu nombre' : 'Your name'} required />
+          {copy.name}
+          <input
+            name="name"
+            autoComplete="name"
+            placeholder={copy.namePlaceholder}
+            maxLength={120}
+            required
+          />
         </label>
         <label>
-          {es ? 'Correo electrónico' : 'Email'}
-          <input name="email" type="email" autoComplete="email" placeholder={es ? 'tu@ejemplo.com' : 'you@example.com'} required />
+          {copy.email}
+          <input
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder={copy.emailPlaceholder}
+            maxLength={254}
+            required
+          />
         </label>
       </div>
       <label>
-        {es ? 'Tema' : 'Topic'}
+        {copy.topic}
         <select name="topic" defaultValue="">
-          <option value="" disabled>{es ? 'Selecciona un tema' : 'Select a topic'}</option>
-          <option>{es ? 'Cuenta o inicio de sesión' : 'Account or sign-in'}</option>
-          <option>{es ? 'Análisis del programa de una materia' : 'Syllabus scan'}</option>
-          <option>{es ? 'Suscripción o facturación' : 'Subscription or billing'}</option>
-          <option>{es ? 'Sincronización con Canvas o LMS' : 'Canvas or LMS sync'}</option>
-          <option>{es ? 'Reporte de error' : 'Bug report'}</option>
-          <option>{es ? 'Otro tema' : 'Something else'}</option>
+          <option value="" disabled>
+            {copy.topicPlaceholder}
+          </option>
+          {copy.topics.map((topic) => (
+            <option key={topic}>{topic}</option>
+          ))}
         </select>
       </label>
       <label>
-        {es ? 'Mensaje' : 'Message'}
-        <textarea name="message" placeholder={es ? 'Describe tu problema o pregunta…' : 'Describe your issue or question…'} required rows={3} />
+        {copy.message}
+        <textarea
+          name="message"
+          placeholder={copy.messagePlaceholder}
+          maxLength={5000}
+          required
+          rows={3}
+        />
       </label>
-      <button type="submit">{es ? 'Enviar mensaje' : 'Send message'} <span aria-hidden="true">→</span></button>
-      <p className={styles.formNote} aria-live="polite">{status || (es
-        ? 'Al enviar el formulario, se abrirá tu app de correo con el mensaje listo.'
-        : 'Sending opens your email app with this message addressed to us.')}</p>
+
+      {/* Honeypot. Hidden from people, irresistible to form bots; anything that
+          fills it in is discarded server-side. aria-hidden + tabIndex keep it
+          out of the way of screen readers and keyboard navigation, and
+          autoComplete="off" stops a browser helpfully filling it for a human. */}
+      <div className={styles.honeypot} aria-hidden="true">
+        <label>
+          Company
+          <input name="company" type="text" tabIndex={-1} autoComplete="off" />
+        </label>
+      </div>
+
+      <button type="submit" disabled={sending}>
+        {sending ? copy.sending : copy.send}
+        {!sending && <span aria-hidden="true">→</span>}
+      </button>
+
+      <p
+        className={`${styles.formNote} ${status === 'sent' ? styles.formNoteOk : ''} ${
+          status === 'error' ? styles.formNoteError : ''
+        }`}
+        aria-live="polite"
+      >
+        {status === 'sent' && copy.sentNote}
+        {status === 'error' && (
+          <>
+            {copy.errors[errorCode]} <a href={`mailto:${supportEmail}`}>{supportEmail}</a>.
+          </>
+        )}
+        {(status === 'idle' || sending) && copy.idleNote}
+      </p>
     </form>
   );
 }

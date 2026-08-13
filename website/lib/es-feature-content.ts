@@ -26,6 +26,12 @@ export interface EsFeatureLongForm {
   lede: string;
   intro: string[];
   sections: EsFeatureSection[];
+  /**
+   * Las ocho páginas de función en español salían sin FAQ ninguna, así que no
+   * emitían FAQPage mientras sus equivalentes inglesas sí. Escritas en español
+   * contra los mismos hechos, no traducidas frase a frase.
+   */
+  faq: { question: string; answer: string }[];
 }
 
 export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
@@ -128,6 +134,33 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Encaja peor en unos cuantos casos, y conviene decirlos. Si tu programa no trae ninguna fecha porque todo vive en la plataforma académica, usa el conector actual de Canvas solo si tu institución permite tokens personales en servicios externos; si no está disponible o permitido, pega la lista de tareas en el escáner de la web. Si lo que tienes es una foto borrosa o torcida de una fotocopia, el resultado será peor que el de un PDF nítido.',
           'Una expectativa más que conviene dejar clara: el escaneo se cuenta cuando la extracción sale bien, no cuando guardas. Si los resultados vuelven y cierras la app sin guardar nada, el trabajo ya se hizo y el escaneo ya se contó.',
         ],
+      },
+    ],
+    faq: [
+      {
+        question: '¿Cuántos programas puedo escanear gratis?',
+        answer:
+          'Cinco escaneos por mes natural. Un escaneo con foto de hasta cinco páginas cuenta como uno solo, no como cinco. El plan Gratis también admite hasta cuatro cursos dentro de un semestre, y un semestre en total. Pro elimina el tope mensual y esos dos límites.',
+      },
+      {
+        question: '¿Qué puedo darle al escáner?',
+        answer:
+          'En iPhone y iPad: una foto de hasta cinco páginas, un PDF sin tope de páginas, una selección múltiple de hasta cinco imágenes de tu fototeca, o un archivo desde la app Archivos (PDF, JPG, PNG, HEIC, HEIF o WEBP). En la web puedes además arrastrar un archivo sobre el marco de escaneo, o pegar texto de entre 20 y 60.000 caracteres, que es la vía más rápida y precisa cuando puedes seleccionar el texto del programa directamente.',
+      },
+      {
+        question: '¿Se guarda algo en mi calendario sin que yo lo vea antes?',
+        answer:
+          'No. El curso, sus horarios y su escala de calificación quedan archivados, pero no se guarda ni una sola fecha hasta que revisas la lista extraída y la apruebas. Nada de lo que sacó la IA se almacena en tu nombre antes de eso.',
+      },
+      {
+        question: '¿Qué extrae exactamente de un programa?',
+        answer:
+          'El nombre del curso y el profesor, los horarios de clase y de tutorías, las fechas de inicio y fin del semestre, la escala de calificación que imprimió tu profesor, y cada tarea, cuestionario, examen, proyecto y lectura que encuentre, con su fecha, su hora si estaba indicada, y su peso sobre la nota final.',
+      },
+      {
+        question: '¿Hay un límite de tamaño en un escaneo con fotos?',
+        answer:
+          'Sí, y Semora lo aplica mientras capturas, no después de que hayas terminado. Un escaneo con fotos se presupuesta en 10 MB de imagen en bruto. La primera página siempre entra; si una página posterior fuera a superar el presupuesto, se descarta y se te dice con cuántas páginas continuará el escaneo.',
       },
     ],
   },
@@ -256,6 +289,38 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         ],
       },
     ],
+    faq: [
+      {
+        question: '¿El seguimiento de calificaciones es gratis?',
+        answer:
+          'Sí, y eso incluye el motor completo: entrada por puntos o por porcentaje, pesos por tarea, categorías, reglas para descartar la nota más baja, las tres políticas de crédito extra, letras a partir de la escala de tu curso y la estimación de GPA del semestre. Pro añade editar la escala de tu curso y la de GPA, las dos calculadoras de hipótesis, las alertas de riesgo académico y las tendencias de progreso.',
+      },
+      {
+        question: '¿Cómo se calcula mi nota actual?',
+        answer:
+          'Es la suma ponderada de tus notas dividida entre el peso que realmente has cursado, no entre el peso total del semestre. Esa decisión es lo que mantiene el número honesto al principio del curso: tres tareas calificadas que cubren el 45 % de la materia dan una nota basada en ese 45 %, y un examen final sin calificar que vale el 30 % nunca arrastra tu nota de octubre hacia cero.',
+      },
+      {
+        question: '¿Puede descartar la peor nota como dice mi programa?',
+        answer:
+          'Sí. El descarte se configura por categoría, de 0 a 20, y elimina las notas más bajas por porcentaje. Tiene una regla de seguridad: nunca descarta tu única nota registrada, así que el número de descartes se limita a uno menos que la cantidad de trabajos calificados.',
+      },
+      {
+        question: '¿Y si mi profesor nunca publica los pesos?',
+        answer:
+          'Si ninguna de tus tareas calificadas tiene peso pero algunas tienen nota, Semora usa un promedio simple de las notas registradas en lugar de no mostrarte nada. Es menos preciso que una media ponderada, y es la respuesta honesta cuando el programa no te da una.',
+      },
+      {
+        question: '¿Puedo usar la escala de calificación de mi universidad?',
+        answer:
+          'Semora trae la escala estándar —A desde 90, B desde 80, C desde 70, D desde 60, F desde 0— y toda cuenta gratuita obtiene letras a partir de ella. Editar esos cortes para que coincidan con los de tu institución es la parte Pro, igual que editar la tabla de puntos que hay detrás de la estimación de GPA.',
+      },
+      {
+        question: '¿Calcula mi GPA?',
+        answer:
+          'Da una estimación del semestre. Cada curso tiene un campo de créditos, editable de 0,5 a 12 y con valor predeterminado 3, y la estimación multiplica los puntos de cada curso por sus créditos, los suma y divide entre el total de créditos. Los cursos que todavía no tienen letra se excluyen en lugar de contarse como cero. Es tu estimación, no un expediente oficial.',
+      },
+    ],
   },
 
   'smart-plan': {
@@ -363,6 +428,33 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         ],
       },
     ],
+    faq: [
+      {
+        question: '¿Con cuánta antelación planifica el Plan Inteligente?',
+        answer:
+          'Catorce días a partir de hoy, y lo reconstruye entero cada vez que lo abres. Un plan que ignoraste ayer no se queda ahí como una lista de pendientes caducada: se recalcula según dónde estás realmente.',
+      },
+      {
+        question: '¿Cómo sabe cuánto tiempo me llevará cada cosa?',
+        answer:
+          'Cada tarea lleva un campo de esfuerzo estimado con opciones de estimación automática, 30 m, 1 h, 2 h, 3 h, 4 h y 8 h. Si pones un número real de 15 minutos o más, ese número manda. Con la estimación automática recurre a una base según el tipo de tarea —45 minutos para una lectura, 60 para otras, 75 para un cuestionario, 90 para una tarea, 240 para un examen, 360 para un proyecto— y la escala según el peso que el escaneo sacó de tu programa.',
+      },
+      {
+        question: '¿Qué pasa si el trabajo no cabe en el tiempo que tengo?',
+        answer:
+          'Se te dice, no se esconde. Si el trabajo que vence dentro de la ventana de 14 días no cabe en tu capacidad, un aviso ámbar indica exactamente cuánto tiempo queda sin programar y nombra las dos soluciones reales: subir tu capacidad diaria o bajar tus estimaciones.',
+      },
+      {
+        question: '¿Puedo controlar cuándo coloca las sesiones?',
+        answer:
+          'Sí. La capacidad diaria de estudio es de 1 h, 1 h 30 m, 2 h o 3 h, con 1 h 30 m por defecto. Entre semana las sesiones empiezan a las 17:00 por defecto y los fines de semana a las 10:00, ambas ajustables, y los fines de semana se pueden desactivar por completo. Evitar conflictos con el calendario del dispositivo está activado por defecto, con un margen de 10 minutos a cada lado de cada evento.',
+      },
+      {
+        question: '¿El Plan Inteligente está en el plan Gratis?',
+        answer:
+          'No, forma parte de Pro, que cuesta 3,99 USD al mes o 19,99 USD al año. Pro se compra dentro de la app de iOS y se aplica a toda tu cuenta, incluida la versión web.',
+      },
+    ],
   },
 
   'flashcards': {
@@ -467,6 +559,38 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Un archivo de apuntes falla al extraerse: ese archivo se salta y la generación continúa con lo demás.',
           'La comprobación de la suscripción falla: recibes una respuesta de no disponible temporalmente en lugar de que se te trate como cuenta gratuita en silencio.',
         ],
+      },
+    ],
+    faq: [
+      {
+        question: '¿De dónde salen las tarjetas generadas?',
+        answer:
+          'De material que Semora ya tiene de ese curso: el análisis más reciente del programa, hasta 60 elementos extraídos y recortados a 8.000 caracteres, más hasta los 10 archivos de apuntes más recientes de ese curso, que comparten un presupuesto de 24.000 caracteres. No hay nada nuevo que teclear ni que subir.',
+      },
+      {
+        question: '¿Puedo hacer un mazo solo para un examen concreto?',
+        answer:
+          'Sí. El panel de generación pregunta en qué enfocarse: el curso entero, o un elemento concreto que ya estés siguiendo como fecha de entrega. Eso es lo que evita que un repaso de parcial se diluya con material del examen final.',
+      },
+      {
+        question: '¿Cuántas tarjetas produce una generación?',
+        answer:
+          'Apunta a entre 10 y 20, con la instrucción explícita de que pocas tarjetas buenas valen más que rellenar. No se insertan más de 30 por ejecución. Cada cara se limita a 300 caracteres, y cualquier tarjeta a la que le falte el anverso o el reverso se descarta en lugar de tumbar el lote entero: si catorce de dieciséis salieron bien, te quedas con las catorce.',
+      },
+      {
+        question: '¿Cómo decide el repaso qué mostrarme?',
+        answer:
+          'Una variante compacta de SM-2. «Otra vez» baja la facilidad 0,20 y devuelve la tarjeta en unos diez minutos. «Difícil» baja la facilidad 0,15. «Bien» sigue la escalera estándar: un día, luego seis, y a partir de ahí multiplicado por la facilidad de la propia tarjeta. «Fácil» sube la facilidad 0,15 y añade un extra de 1,3. La facilidad tiene un suelo de 1,3, así que una mala semana no puede dejar una tarjeta atrapada en un bucle permanente.',
+      },
+      {
+        question: '¿Puedo escribir mis propias tarjetas?',
+        answer:
+          'Sí. «Nuevo mazo» crea un mazo vacío con un título de hasta 80 caracteres, y «Añadir tarjeta» te da los campos de anverso y reverso, ambos obligatorios. Una diferencia que conviene saber: el tope de 300 caracteres por cara es un límite defensivo sobre lo que devuelve el modelo, así que las tarjetas que escribes tú no se recortan.',
+      },
+      {
+        question: '¿Puedo añadir el material de repaso que dio mi profesor?',
+        answer:
+          'Sí. Adjúntalo como PDF o foto en el panel de generación y pasa a formar parte de aquello con lo que se construye el mazo, junto al programa y a los apuntes que ya tenga el curso.',
       },
     ],
   },
@@ -582,6 +706,33 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'En la web, sin notificación de fin de fase y sin sesión guardada tras recargar.',
           'Un permiso de notificaciones denegado se omite en silencio; la cuenta atrás no se ve afectada.',
         ],
+      },
+    ],
+    faq: [
+      {
+        question: '¿Qué duraciones ofrece el temporizador?',
+        answer:
+          'Bloques de enfoque de 15, 25, 45 o 50 minutos, y descansos de 5, 10 o 15. Una sesión nueva se abre con la pareja Pomodoro clásica de 25 y 5. Las duraciones se eligieron pensando en un horario universitario y no en una jornada de oficina: 15 minutos es lo que da un hueco real entre clases una vez que has cruzado el campus y te has sentado.',
+      },
+      {
+        question: '¿Sigue contando si salgo de la app?',
+        answer:
+          'Sí. El temporizador mantiene la cuenta en segundo plano y te avisa cuando termina cada fase, así que el reloj sigue siendo fiel tengas o no la app delante.',
+      },
+      {
+        question: '¿Puedo cambiar la duración a mitad de un bloque?',
+        answer:
+          'Los selectores desaparecen en cuanto un bloque está corriendo, y es a propósito: un temporizador que puedes renegociar en el minuto 22 es una cuenta atrás que deja de significar algo. Pausa primero si de verdad lo necesitas. Una consecuencia: cambiar la duración en pausa reinicia esa fase a la nueva duración completa, así que pausar en el minuto 12 de un bloque de 25 y tocar 45 te da 45:00 enteros, no 33 minutos restantes.',
+      },
+      {
+        question: '¿Puedo lanzar el temporizador desde una sesión planificada?',
+        answer:
+          'Sí. Abrirlo desde una sesión del Plan Inteligente pasa la duración de ese bloque. El Plan Inteligente programa en incrementos de 15 minutos, así que si la duración no es una de las cuatro estándar el selector añade un chip extra para ella: una sesión planificada de 30 minutos se abre como un bloque de 30 y no se redondea. Las duraciones pasadas así se aceptan entre 15 y 180 minutos.',
+      },
+      {
+        question: '¿El temporizador de enfoque es gratis?',
+        answer:
+          'No, forma parte de Pro, a 3,99 USD al mes o 19,99 USD al año, que sale a unos 1,67 USD al mes en el plan anual. Pro se compra dentro de la app de iOS y se aplica a toda la cuenta, así que el temporizador también está disponible en la web.',
       },
     ],
   },
@@ -708,6 +859,33 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         ],
       },
     ],
+    faq: [
+      {
+        question: '¿Qué sabe realmente el tutor sobre mi curso?',
+        answer:
+          'Antes de ver tu pregunta, el servidor reúne tu material real: tus clases, incluidos laboratorios y sesiones de discusión, tu escala de calificación, los elementos estructurados de tu escaneo más reciente del programa (con un tope de 8.000 caracteres y hasta 60 elementos), tus fechas de entrega actuales (también 8.000 caracteres y hasta 60 tareas), y el texto extraído de los apuntes que hayas subido. Un bloque que haya tenido que recortarse se marca explícitamente como truncado, para que el modelo sepa que trabaja con una fuente abreviada.',
+      },
+      {
+        question: '¿Puede decirme cuándo vence algo?',
+        answer:
+          'Sí, y las respuestas sobre fechas salen estrictamente de tu lista real de tareas, no de la memoria del modelo. Nunca se inventa una fecha. Si preguntas por algo que queda fuera de lo que le has dado, lo dice con claridad en lugar de improvisar.',
+      },
+      {
+        question: '¿El tutor conoce mis calificaciones?',
+        answer:
+          'No, y conviene decirlo sin rodeos. El bloque de fechas lleva títulos, tipos, fechas, horas, pesos y si has marcado algo como hecho. No lleva tus notas. El tutor sabe que el examen final vale el 30 % y que aún no lo has hecho; no sabe qué sacaste en el parcial.',
+      },
+      {
+        question: '¿Hay un límite de cuánto puedo preguntar?',
+        answer:
+          'Cincuenta mensajes al tutor por cada 24 horas móviles y por cuenta —móviles, no un reinicio a medianoche— y 4.000 caracteres por mensaje. En cada turno se reproducen los últimos 12 mensajes de la conversación, que son unos seis intercambios de memoria de trabajo.',
+      },
+      {
+        question: '¿Puedo subir apuntes de clase para que los lea?',
+        answer:
+          'Sí, como PDF o como foto. Los apuntes se asocian a un curso, así que abre el tutor desde un curso y no por su cuenta. Se leen los 10 archivos más recientes de ese curso, empezando por el más nuevo, compartiendo un presupuesto de 24.000 caracteres de texto extraído. Un archivo de más de unos 6 MB se omite en la extracción en lugar de enviarse al modelo.',
+      },
+    ],
   },
 
   'collaboration': {
@@ -820,6 +998,33 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Es realmente útil para un grupo de laboratorio que comparte calendario de entregas, un equipo de proyecto que reparte un trabajo entre cuatro personas, o un grupo de estudio al que se le escapan siempre las mismas fechas.',
           'No es la herramienta adecuada para unas cuantas cosas, y conviene decirlo. No es una app de mensajería: no hay chat, solo títulos, notas, fechas y responsables.',
         ],
+      },
+    ],
+    faq: [
+      {
+        question: '¿Necesito Pro para unirme al curso de un compañero?',
+        answer:
+          'No. Unirse a un Espacio de curso es gratis y siempre lo será: sin límite de tiempo y sin Pro para aceptar una invitación, ver las fechas compartidas o encargarte de trabajo en grupo. Puedes sincronizarlo todo con tu planificador mientras te quede sitio bajo el tope de cuatro cursos por semestre del plan Gratis. Alojar tu propio espacio es la mitad Pro, así que en la práctica una persona del grupo necesita Pro y el resto entra gratis.',
+      },
+      {
+        question: '¿Cómo funciona el enlace de invitación?',
+        answer:
+          'El servidor genera 24 bytes aleatorios y los representa como un token hexadecimal de 48 caracteres, y lo guarda con una caducidad y un contador de usos: no es un código adivinable. Un enlace sirve para hasta 30 incorporaciones por defecto. Los propietarios y los editores pueden crear invitaciones; los lectores no. Cada vez que tocas Invitar se acuña un enlace nuevo, y solo quien lo creó puede leerlo.',
+      },
+      {
+        question: '¿Mis compañeros pueden ver mis calificaciones?',
+        answer:
+          'No. Se sincronizan exactamente tres cosas: los miembros, las fechas que publica quien administra el curso y los trabajos en grupo. Tu estado de completado es tuyo y solo tuyo —una resincronización actualiza el título y las fechas de una tarea pero nunca toca tus marcas— y cualquier nota que introduzcas cuenta hacia tu media ponderada en privado. Comparar notas con el grupo no es algo que haga un Espacio de curso, y es intencionado.',
+      },
+      {
+        question: '¿Qué roles hay, y puede un espacio quedarse sin nadie al mando?',
+        answer:
+          'Hay propietarios, editores y lectores. Los propietarios gestionan los roles desde la lista de miembros y pueden promover a cualquiera, que es como un propietario único cede un espacio. La base de datos se niega a dejar un espacio sin dueño: el último propietario no puede salir, ni ser degradado, ni ser expulsado, y cualquier intento devuelve la instrucción de promover a otra persona o borrar el espacio primero.',
+      },
+      {
+        question: '¿Qué pasa con un espacio que alojo si se me acaba Pro?',
+        answer:
+          'Los espacios que ya son tuyos no desaparecen, y las fechas que ya publicaste siguen publicadas.',
       },
     ],
   },
@@ -936,6 +1141,38 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'No hay un interruptor por asignatura después de importar. Para cambiar cuáles se sincronizan, desconecta y vuelve a conectar.',
           'Si el token de Canvas caduca o se revoca, la conexión muestra «se requieren credenciales». Vuelve a conectar solo si tu institución permite usar tokens personales con servicios externos.',
         ],
+      },
+    ],
+    faq: [
+      {
+        question: '¿La importación desde Canvas es gratis?',
+        answer:
+          'No. La importación desde plataformas académicas es una función Pro, a 3,99 USD al mes o 19,99 USD al año. El plan Gratis sigue cubriendo el mismo trabajo desde el lado del programa: cinco escaneos por mes natural, hasta cuatro cursos dentro de un semestre, seguimiento completo de tareas y fechas, calificaciones con medias ponderadas y recordatorios el mismo día.',
+      },
+      {
+        question: '¿Cómo se conecta Semora con Canvas?',
+        answer:
+          'El conector actual usa un token de acceso personal que generas tú mismo en Canvas. Algunas instituciones desactivan la creación de tokens o prohíben su uso por terceros, así que confirma la política de tu centro y conéctate solo si está permitido.',
+      },
+      {
+        question: '¿Y si mi universidad no permite el acceso por token?',
+        answer:
+          'Escanea el programa, o pega la lista de tareas de Canvas directamente en el escáner. Ambas vías funcionan en el plan Gratis, y si tu profesor lo deja todo en el programa en lugar de publicarlo en Canvas, escanear es de todos modos el mejor camino.',
+      },
+      {
+        question: '¿Qué se importa exactamente?',
+        answer:
+          'Solo tus matrículas activas, así que los cursos que abandonaste y los semestres terminados no aparecen. De cada tarea obtienes el título, la fecha y la hora convertidas al reloj local de tu dispositivo a partir de la marca de tiempo absoluta que devuelve Canvas, los puntos, y un tipo deducido para que tu calendario no sea un muro indistinto de «tarea»: un cuestionario de Canvas se convierte en cuestionario, y los títulos con parcial, final o examen se convierten en exámenes.',
+      },
+      {
+        question: '¿Una sincronización sobrescribe el trabajo que ya he hecho?',
+        answer:
+          'No. Una resincronización actualiza títulos y fechas pero deja en paz tu propio estado. Si Canvas no puede aportar una marca de entrega fiable, Semora deja la hora de completado como desconocida en lugar de estampar la hora de sincronización, porque usar esa hora podría hacer que un trabajo entregado a tiempo pareciera tardío.',
+      },
+      {
+        question: '¿Funciona con Blackboard y Moodle?',
+        answer:
+          'Ambas forman parte de la misma importación Pro, y la configuración varía según la institución. Una sincronización cubre hasta 50 cursos a la vez, y la paginación de las tareas de cada curso se detiene en un número acotado de páginas: generoso para una carga normal, pero no ilimitado.',
       },
     ],
   },

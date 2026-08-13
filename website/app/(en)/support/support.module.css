@@ -138,12 +138,43 @@
 .form button:hover { background: #5637a4; transform: translateY(-1px); }
 .form button span { margin-left: 8px; }
 
+.form button:disabled {
+  cursor: progress;
+  opacity: 0.72;
+  transform: none;
+}
+
+/* Honeypot: off-screen rather than display:none, because some form bots skip
+   fields they can tell are hidden. Nobody sighted, keyboard-driven, or using a
+   screen reader reaches it — the input is aria-hidden and tabIndex={-1}. */
+.honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
 .formNote {
   color: var(--ink-muted);
   font-size: 13px;
   line-height: 1.45;
   margin: 10px 0 0;
 }
+
+/* Confirmation and failure are the two moments this form has to be
+   unambiguous about, so neither one stays in the muted default grey. */
+.formNoteOk {
+  color: #1f7a4d;
+  font-weight: 600;
+}
+
+.formNoteError {
+  color: #b3261e;
+  font-weight: 600;
+}
+
+.formNoteError a { color: inherit; }
 
 .details {
   display: grid;

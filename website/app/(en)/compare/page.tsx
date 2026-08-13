@@ -9,6 +9,9 @@ import { APP_URL } from '@/lib/semora-facts';
 import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
 import { pageTitle } from '@/lib/title';
+import { Breadcrumb } from '@/components/Breadcrumb';
+import { JsonLd } from '@/components/JsonLd';
+import { itemListSchema } from '@/lib/schema';
 
 export const metadata: Metadata = {
   title: pageTitle('Compare Semora'),
@@ -20,8 +23,25 @@ export const metadata: Metadata = {
 export default function CompareIndexPage() {
   return (
     <>
+      <JsonLd
+        data={itemListSchema(
+          COMPETITORS.map((c) => ({
+            name: `Semora vs ${c.name}`,
+            path: `/compare/${c.slug}`,
+            description: c.oneLiner,
+          })),
+          { path: '/compare', name: 'Semora compared with other study apps' },
+        )}
+      />
       <section className={styles.hero}>
         <div className={styles.heroInner}>
+          <Breadcrumb
+            align="center"
+            trail={[
+              { name: 'Home', path: '/' },
+              { name: 'Compare', path: '/compare' },
+            ]}
+          />
           <span className={styles.eyebrow}>Compare</span>
           <h1 className={styles.h1}>
             See exactly how Semora <span className={styles.gradient}>stacks up</span>

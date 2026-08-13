@@ -8,6 +8,12 @@
   margin-bottom: 20px;
 }
 
+/* The centered hero pages set text-align: center on the whole block, which a
+   flex container ignores — so the alignment has to be stated here. */
+.centered {
+  justify-content: center;
+}
+
 .crumbs a {
   color: var(--ink-muted);
   text-decoration: none;

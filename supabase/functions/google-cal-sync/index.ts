@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { withRequestLogging, errorFields, type EdgeLogger } from '../_shared/log.ts';
 
 // Google Calendar one-way sync endpoint (Pro). Structured on
 // parse-syllabus/index.ts + tutor-chat/index.ts (CORS, JWT verification of
@@ -545,7 +546,7 @@ async function markDisconnected(admin: AdminClient, userId: string): Promise<voi
 
 // ── Handler ─────────────────────────────────────────────────
 
-serve(async (req) => {
+serve(withRequestLogging('google-cal-sync', async (req, log) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -746,7 +747,7 @@ serve(async (req) => {
 
     return jsonResponse({ error: 'Unknown action' }, 400);
   } catch (err) {
-    console.error('[google-cal-sync] Unhandled error:', err);
+    log.error('handler_error', errorFields(err));
     return jsonResponse({ error: 'An unexpected error occurred. Please try again.' }, 500);
   }
-});
+}));

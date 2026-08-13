@@ -6,6 +6,7 @@ import { Faq } from '@/components/Faq';
 import { Cta } from '@/components/Cta';
 import { JsonLd } from '@/components/JsonLd';
 import { ArticleShell } from '@/components/ArticleShell';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import { faqPageSchema } from '@/lib/schema';
 import { PRO_LABEL } from '@/lib/semora-facts';
 import { PageSections } from '@/components/PageSections';
@@ -97,6 +98,12 @@ export default function AiStudyPlannerPage() {
     >
     <article className={styles.prose}>
       <JsonLd data={faqPageSchema(FAQ_ALL)} />
+      <Breadcrumb
+        trail={[
+          { name: 'Home', path: '/' },
+          { name: 'AI Study Planner', path: '/ai-study-planner-for-college' },
+        ]}
+      />
       <p className={styles.eyebrow}>Semora</p>
 
       <h1>An AI Study Planner for College Students, Built From Your Syllabus</h1>

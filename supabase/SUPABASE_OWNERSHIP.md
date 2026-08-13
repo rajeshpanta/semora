@@ -25,7 +25,8 @@ object belongs to the app you're working on.
 `grade_categories`, `study_blocks` (029–036),
 `lms_connections`, `lms_course_links`, `course_collaborations`,
 `course_collaboration_members`, `course_collaboration_invites`,
-`shared_deadlines`, `group_assignments` (037–039, connected learning platform)
+`shared_deadlines`, `group_assignments` (037–039, connected learning platform),
+`support_requests` (064, marketing-site contact form)
 
 ### 🟩 CITIZEN (other app) — DO NOT TOUCH from Semora
 `whisper_usage` — whisper/voice usage + rate-limit log (`client_id`-based, anonymous,
@@ -46,12 +47,27 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
   `apply_lms_assignment_sync`, `semora_collaboration_role`, `create_course_collaboration`,
   `create_course_collaboration_invite`, `join_course_collaboration`,
   `set_collaboration_local_course`, `sync_collaboration_to_planner`,
-  `publish_course_deadlines` (037)
+  `publish_course_deadlines` (037),
+  `purge_old_support_requests` (064)
 - **Citizen:** `whisper_rate_limit_ok` ← DO NOT modify from Semora
 
 ## Edge functions
 - **Semora:** `parse-syllabus`, `validate-receipt`, `send-push` (deploy `--no-verify-jwt`),
-  `tutor-chat`, `share-course`, `google-cal-sync`, `redeem-referral`, `lms-sync`
+  `tutor-chat`, `share-course`, `google-cal-sync`, `redeem-referral`, `lms-sync`,
+  `submit-support` (deploy `--no-verify-jwt`)
+
+## Support requests (migration 064) — **SEMORA only**
+- `support_requests` — every message sent from semoraai.com/support and
+  /es/ayuda. Written **only** by the `submit-support` edge function using the
+  service-role key; RLS is on with **no policies**, so no app client can read
+  or write it. The rows contain a stranger's name, email and free text.
+- The function stores the row **before** attempting the notification email, and
+  records the outcome in `email_status` — a mail outage shows up as rows marked
+  `failed`, never as a lost message.
+- Retention: `purge_old_support_requests()` deletes requests answered more than
+  180 days ago (`handled_at` set). Unanswered rows are never purged. Schedule it
+  with `supabase/cron/purge_support_requests.sql`.
+- Setup, secrets and operation: `website/SUPPORT_FORM.md`.
 
 ## Shared decks (migration 051) — **SEMORA only**
 - `shared_decks`, `shared_deck_cards` — a flashcard deck published into a course

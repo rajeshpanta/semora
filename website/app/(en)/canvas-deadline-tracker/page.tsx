@@ -6,6 +6,7 @@ import { Faq } from '@/components/Faq';
 import { Cta } from '@/components/Cta';
 import { JsonLd } from '@/components/JsonLd';
 import { ArticleShell } from '@/components/ArticleShell';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import { faqPageSchema } from '@/lib/schema';
 import { PRO_LABEL } from '@/lib/semora-facts';
 import { PageSections } from '@/components/PageSections';
@@ -82,6 +83,12 @@ export default function CanvasDeadlineTrackerPage() {
     >
     <article className={styles.prose}>
       <JsonLd data={faqPageSchema(FAQ_ALL)} />
+      <Breadcrumb
+        trail={[
+          { name: 'Home', path: '/' },
+          { name: 'Canvas Deadline Tracker', path: '/canvas-deadline-tracker' },
+        ]}
+      />
       <p className={styles.eyebrow}>Canvas + Semora</p>
 
       <h1>A Canvas Deadline Tracker App That Adds Grades, Reminders, and an Actual Study Plan</h1>

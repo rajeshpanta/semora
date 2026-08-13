@@ -1,8 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import styles from './GpaCalculator.module.css';
 import type { SiteLocale } from '@/lib/i18n';
+import { report, TELEMETRY_EVENTS } from '@/lib/telemetry';
 
 /**
  * Working GPA calculator, not a mock.
@@ -74,8 +75,17 @@ export function GpaCalculator({ locale = 'en' }: { locale?: SiteLocale }) {
     };
   }, [rows]);
 
-  const update = (id: number, patch: Partial<Row>) =>
+  // One event on the first edit of any field. The page renders with starter
+  // rows already present, so mounting proves nothing — an edit is the first
+  // moment the visitor actually used the calculator rather than scrolled past.
+  const reportedUse = useRef(false);
+  const update = (id: number, patch: Partial<Row>) => {
+    if (!reportedUse.current) {
+      reportedUse.current = true;
+      report(TELEMETRY_EVENTS.toolUsed, { tool: 'gpa-calculator', locale });
+    }
     setRows((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  };
 
   return (
     <div className={styles.wrap}>

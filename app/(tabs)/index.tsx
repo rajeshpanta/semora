@@ -112,6 +112,7 @@ export default function TodayScreen() {
   // free users see a locked teaser routing to /paywall.
   const isPro = useAppStore((s) => s.isPro);
   const ahaPaywallShown = useAppStore((s) => s.ahaPaywallShown);
+  const hasImportedSyllabus = useAppStore((s) => s.hasImportedSyllabus);
   const reviewRequested = useAppStore((s) => s.reviewRequested);
   const setReviewRequested = useAppStore((s) => s.setReviewRequested);
   const { data: semesters = [], isLoading: semestersLoading } = useSemesters();
@@ -432,13 +433,17 @@ export default function TodayScreen() {
     }
   }, [setReviewRequested]);
 
-  // Trigger 1 ('aha'): `ahaPaywallShown` is only set after a successful
-  // first import, so reaching here means the user has already felt the
-  // value. Running on mount (not focus) defers the prompt to a *later* app
-  // launch — never in the same session as the post-scan paywall, so the
-  // two never stack. Fires once, ever.
+  // Trigger 1 ('aha'): `hasImportedSyllabus` is set on any fully successful
+  // import, so reaching here means the user has already felt the value.
+  // Running on mount (not focus) defers the prompt to a *later* app launch —
+  // never in the same session as the post-scan paywall, so the two never
+  // stack. Fires once, ever.
+  //
+  // This deliberately does NOT read `ahaPaywallShown`: that flag is set only
+  // in the free-tier branch of the review screen, so gating on it meant a user
+  // who was already Pro at their first import could never reach this trigger.
   useEffect(() => {
-    if (!ahaPaywallShown || reviewRequested || Platform.OS === 'web') return;
+    if (!hasImportedSyllabus || reviewRequested || Platform.OS === 'web') return;
     const t = setTimeout(() => { maybeRequestReview('aha'); }, 1800);
     return () => clearTimeout(t);
   }, []);

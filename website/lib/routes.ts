@@ -12,6 +12,10 @@ export const KEYWORD_PAGE_SLUGS = [
   'ai-syllabus-scanner',
   'ai-study-planner-for-college',
   'canvas-deadline-tracker',
+  'assignment-tracker-app',
+  'blackboard-assignment-tracker',
+  'ai-flashcard-generator',
+  'ai-tutor-for-college-students',
 ] as const;
 
 export const BLOG_SLUGS = BLOG_POSTS.map((p) => p.slug);

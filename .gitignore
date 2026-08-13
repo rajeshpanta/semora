@@ -72,3 +72,6 @@ secrets/*
 client_secret*.json
 .vercel
 .env*
+
+# Search Console OAuth refresh token (scripts/gsc.mjs). Public repo — never commit.
+scripts/.gsc-token.json
