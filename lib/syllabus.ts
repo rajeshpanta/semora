@@ -1,5 +1,11 @@
 import { supabase } from '@/lib/supabase';
-import { extractFromPages, extractFromText, type SyllabusExtraction, type SyllabusPage } from '@/lib/ai-extraction';
+import {
+  extractFromPages,
+  extractFromText,
+  type DocumentExtractionProgress,
+  type SyllabusExtraction,
+  type SyllabusPage,
+} from '@/lib/ai-extraction';
 import { getFileSize, readFileAsBase64 } from '@/lib/readFileBase64';
 import { isMeetingSyncEnabled, syncMeetingToCalendar } from '@/lib/calendarSync';
 import type { CourseMeeting } from '@/types/database';
@@ -32,6 +38,10 @@ export interface ProcessResult {
   duration_ms: number;
 }
 
+export type SyllabusProcessProgress = DocumentExtractionProgress | {
+  stage: 'organizing' | 'ready';
+};
+
 export async function processSyllabus(
   fileUri: string,
   fileName: string,
@@ -52,6 +62,7 @@ export async function processSyllabus(
   // callers pass a fileName describing the pasted text (e.g. an
   // auto-generated 'Pasted syllabus text.txt').
   pastedText?: string,
+  onProgress?: (progress: SyllabusProcessProgress) => void,
 ): Promise<ProcessResult> {
   const startTime = Date.now();
 
@@ -83,14 +94,15 @@ export async function processSyllabus(
     ? new TextEncoder().encode(pastedText).length
     : await getFileSize(fileUri);
   const extraction = pastedText != null
-    ? await extractFromText(pastedText, signal)
-    : await extractFromPages(pageList, signal, fileName);
+    ? await extractFromText(pastedText, signal, onProgress)
+    : await extractFromPages(pageList, signal, fileName, onProgress);
 
   // Bail BEFORE any DB writes if the caller aborted (e.g. the 120s timeout):
   // otherwise we create an orphan semester/course/upload the user never sees
   // and burn a free scan. The fetch abort above covers a hung request; this
   // guards the gap between extraction returning and the first write.
   if (signal?.aborted) throw new Error('Scan cancelled — please try again.');
+  onProgress?.({ stage: 'organizing' });
 
   // 2. Find or create semester
   const { semesterId, semesterName } = await findOrCreateSemester(
@@ -275,6 +287,7 @@ export async function processSyllabus(
 
   if (parseError) throw new Error(`Failed to save parse run: ${parseError.message}`);
 
+  onProgress?.({ stage: 'ready' });
   return {
     uploadId: upload.id,
     parseRunId: parseRun.id,

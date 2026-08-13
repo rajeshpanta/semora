@@ -3,6 +3,7 @@ import { TouchableOpacity } from '@/components/LocalizedReactNative';
 import { Alert, Text, TextInput } from '@/components/LocalizedReactNative';
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState } from 'react';
@@ -30,12 +31,14 @@ import {
   useTutorConversation, useTutorMessages, useSendTutorMessage,
   useCourseNotes, useUploadCourseNote, useDeleteCourseNote, useGenerateTutorPractice,
   useEvaluateTutorPractice, useCourseTopicMastery, type TutorPracticeQuestion,
+  prepareCourseNotes, type CourseNoteReadProgress, type CourseNoteUploadProgress,
 } from '@/lib/tutor';
 import {
   normalizeSupportedDocument,
   SUPPORTED_DOCUMENT_PICKER_TYPE,
   unsupportedDocumentMessage,
 } from '@/lib/documentFiles';
+import { FileWorkProgress } from '@/components/FileWorkProgress';
 
 export default function TutorScreen() {
   const router = useRouter();
@@ -133,7 +136,20 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
   const [practice, setPractice] = useState<TutorPracticeQuestion | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [practiceFeedback, setPracticeFeedback] = useState<{ correct: boolean; feedback: string } | null>(null);
+  const [fileProgress, setFileProgress] = useState<CourseNoteUploadProgress | null>(null);
+  const [readProgress, setReadProgress] = useState<CourseNoteReadProgress | null>(null);
+  const [tutorWork, setTutorWork] = useState<{
+    kind: 'answer' | 'practice';
+    stage: 'reading' | 'creating';
+  } | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  const tutorWorkInFlightRef = useRef(false);
+  const fileProgressClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTutorWorking = tutorWork !== null || sendMessage.isPending || generatePractice.isPending;
+
+  useEffect(() => () => {
+    if (fileProgressClearRef.current) clearTimeout(fileProgressClearRef.current);
+  }, []);
 
   const scrollToEnd = useCallback(() => {
     // Defer past layout so the newest message is measured before we scroll.
@@ -150,6 +166,7 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
   );
 
   const handleGeneratePractice = async (mode: 'practice' | 'quiz') => {
+    if (tutorWorkInFlightRef.current || isTutorWorking) return;
     if (!courseId) {
       Alert.alert(
         'Pick a course first',
@@ -159,7 +176,15 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
       );
       return;
     }
+    tutorWorkInFlightRef.current = true;
     try {
+      if (notes.length > 0) {
+        await prepareCourseNotes(courseId, notes, (progress) => {
+          setTutorWork({ kind: 'practice', stage: 'reading' });
+          setReadProgress(progress);
+        });
+      }
+      setTutorWork({ kind: 'practice', stage: 'creating' });
       const next = await generatePractice.mutateAsync({ mode });
       setPractice(next);
       setSelectedAnswer(null);
@@ -172,6 +197,10 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
         return;
       }
       Alert.alert('Could not create practice', e?.message || 'Please try again.');
+    } finally {
+      tutorWorkInFlightRef.current = false;
+      setTutorWork(null);
+      setReadProgress(null);
     }
   };
 
@@ -187,24 +216,44 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
   };
 
   const handleExplainAssignment = async (task: typeof courseTasks[number]) => {
-    if (!conversationId || sendMessage.isPending) return;
+    if (!conversationId || tutorWorkInFlightRef.current || isTutorWorking) return;
+    tutorWorkInFlightRef.current = true;
     const text = `Explain the assignment “${task.title}” and help me make a plan to complete it.`;
     try {
+      if (courseId && notes.length > 0) {
+        await prepareCourseNotes(courseId, notes, (progress) => {
+          setTutorWork({ kind: 'answer', stage: 'reading' });
+          setReadProgress(progress);
+        });
+      }
+      setTutorWork({ kind: 'answer', stage: 'creating' });
       await sendMessage.mutateAsync({ message: text, mode: 'explain_assignment', assignmentId: task.id });
       track('tutor_assignment_explained', { screen: 'tutor' });
       scrollToEnd();
     } catch (e: any) {
       Alert.alert('Could not explain assignment', e?.message || 'Please try again.');
+    } finally {
+      tutorWorkInFlightRef.current = false;
+      setTutorWork(null);
+      setReadProgress(null);
     }
   };
 
   const handleSend = async () => {
     const text = draft.trim();
-    if (!text || sendMessage.isPending || !conversationId) return;
+    if (!text || tutorWorkInFlightRef.current || isTutorWorking || !conversationId) return;
+    tutorWorkInFlightRef.current = true;
     if (Platform.OS === 'ios') Haptics.selectionAsync();
     setDraft('');
     scrollToEnd();
     try {
+      if (courseId && notes.length > 0) {
+        await prepareCourseNotes(courseId, notes, (progress) => {
+          setTutorWork({ kind: 'answer', stage: 'reading' });
+          setReadProgress(progress);
+        });
+      }
+      setTutorWork({ kind: 'answer', stage: 'creating' });
       await sendMessage.mutateAsync(text);
       track('tutor_message_sent', { screen: 'tutor', scoped: !!courseId, grounded: notes.length > 0 });
       scrollToEnd();
@@ -218,6 +267,10 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
       // Restore the draft so the user doesn't lose what they typed.
       setDraft(text);
       Alert.alert('Could not send', e?.message || 'Please try again.');
+    } finally {
+      tutorWorkInFlightRef.current = false;
+      setTutorWork(null);
+      setReadProgress(null);
     }
   };
 
@@ -246,14 +299,19 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
       return;
     }
     try {
+      if (fileProgressClearRef.current) clearTimeout(fileProgressClearRef.current);
+      setFileProgress({ stage: 'validating', filename: document.fileName });
       await uploadNote.mutateAsync({
         uri: asset.uri,
         filename: document.fileName,
         mimeType: document.mimeType,
+        onProgress: setFileProgress,
       });
       track('tutor_note_uploaded', { screen: 'tutor' });
       if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      fileProgressClearRef.current = setTimeout(() => setFileProgress(null), 900);
     } catch (e: any) {
+      setFileProgress(null);
       Alert.alert('Upload failed', e?.message || 'Please try again.');
     }
   };
@@ -370,21 +428,40 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
               </TouchableOpacity>
             ))}
           </ScrollView>
+          {fileProgress && (
+            <View style={styles.fileProgressWrap}>
+              <FileWorkProgress
+                compact
+                title={fileProgress.stage === 'uploading'
+                  ? `Uploading ${fileProgress.percent ?? 0}%`
+                  : fileProgress.stage === 'reading'
+                    ? 'Reading document…'
+                    : fileProgress.stage === 'saving'
+                      ? 'Saving document…'
+                      : fileProgress.stage === 'ready'
+                        ? 'Document ready'
+                        : 'Preparing document…'}
+                detail={fileProgress.filename}
+                percent={fileProgress.stage === 'uploading' ? fileProgress.percent : undefined}
+                complete={fileProgress.stage === 'ready'}
+              />
+            </View>
+          )}
         </View>
 
         {courseId && (
           <View style={[styles.intelligencePanel, { borderBottomColor: colors.line, maxWidth: contentMaxWidth }]}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionRow}>
-              <TouchableOpacity style={[styles.actionChip, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]} onPress={() => handleGeneratePractice('practice')} disabled={generatePractice.isPending}>
+              <TouchableOpacity style={[styles.actionChip, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]} onPress={() => handleGeneratePractice('practice')} disabled={isTutorWorking}>
                 <FontAwesome name="pencil" size={12} color={colors.brand} />
-                <Text style={[styles.actionText, { color: colors.brand }]}>{generatePractice.isPending ? 'Creating…' : 'Practice me'}</Text>
+                <Text style={[styles.actionText, { color: colors.brand }]}>{tutorWork?.kind === 'practice' ? 'Creating…' : 'Practice me'}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionChip, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={() => handleGeneratePractice('quiz')} disabled={generatePractice.isPending}>
+              <TouchableOpacity style={[styles.actionChip, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={() => handleGeneratePractice('quiz')} disabled={isTutorWorking}>
                 <FontAwesome name="list-ol" size={12} color={colors.ink2} />
                 <Text style={[styles.actionText, { color: colors.ink2 }]}>Quick quiz</Text>
               </TouchableOpacity>
               {upcomingWork.filter((task) => task.type === 'assignment' || task.type === 'project').slice(0, 2).map((task) => (
-                <TouchableOpacity key={task.id} style={[styles.actionChip, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={() => handleExplainAssignment(task)} disabled={sendMessage.isPending}>
+                <TouchableOpacity key={task.id} style={[styles.actionChip, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={() => handleExplainAssignment(task)} disabled={isTutorWorking}>
                   <FontAwesome name="lightbulb-o" size={13} color={colors.ink2} />
                   <Text style={[styles.actionText, { color: colors.ink2 }]} numberOfLines={1}>Explain {task.title}</Text>
                 </TouchableOpacity>
@@ -487,10 +564,18 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
               {practice.citations?.length > 0 && <Text style={[styles.practiceSources, { color: colors.ink3 }]}>Sources: {practice.citations.map((citation) => citation.label).join(' · ')}</Text>}
             </View>
           )}
-          {sendMessage.isPending && (
-            <View style={[styles.bubble, styles.bubbleAssistant, { backgroundColor: colors.card, borderColor: colors.line }]}>
-              <ActivityIndicator size="small" color={colors.ink3} />
-            </View>
+          {isTutorWorking && (
+            <FileWorkProgress
+              compact
+              title={tutorWork?.stage === 'reading'
+                ? 'Reading your documents…'
+                : tutorWork?.kind === 'practice'
+                  ? 'Creating practice…'
+                  : 'Writing your answer…'}
+              detail={tutorWork?.stage === 'reading' && readProgress
+                ? `${readProgress.completed} of ${readProgress.total} ready · ${readProgress.filename}`
+                : course?.name ? `Grounded in ${course.name}` : undefined}
+            />
           )}
         </ScrollView>
 
@@ -508,13 +593,13 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
           <TouchableOpacity
             style={[
               styles.sendBtn,
-              { backgroundColor: draft.trim() && !sendMessage.isPending ? colors.brand : colors.line },
+              { backgroundColor: draft.trim() && !isTutorWorking ? colors.brand : colors.line },
             ]}
             onPress={handleSend}
-            disabled={!draft.trim() || sendMessage.isPending}
+            disabled={!draft.trim() || isTutorWorking}
             activeOpacity={0.85}
           >
-            {sendMessage.isPending ? (
+            {isTutorWorking ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <FontAwesome name="arrow-up" size={16} color="#fff" />
@@ -547,6 +632,7 @@ const styles = StyleSheet.create({
   scopeDot: { width: 7, height: 7, borderRadius: 999 },
   notesBar: { borderBottomWidth: 0.5, width: '100%', alignSelf: 'center' },
   notesRow: { paddingHorizontal: 14, paddingVertical: 10, gap: 8, alignItems: 'center' },
+  fileProgressWrap: { paddingHorizontal: 14, paddingBottom: 10 },
   addNoteChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   addNoteText: { fontSize: 13, fontWeight: '700' },
   noteChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20, borderWidth: 0.5, maxWidth: 180 },

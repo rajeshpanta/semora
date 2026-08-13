@@ -4,6 +4,7 @@ import { Alert, Text, TextInput } from '@/components/LocalizedReactNative';
 import {
   useEffect,
   useMemo,
+  useRef,
   useState } from 'react';
 import {
   View,
@@ -27,7 +28,15 @@ import {
   useDecks, useCreateDeck, useCourseLookup, useGenerateFlashcards, useScopeTasks,
   type DeckWithCounts, type CourseLite,
 } from '@/lib/flashcards';
-import { useCourseNotes, useUploadCourseNote, type CourseNote } from '@/lib/tutor';
+import {
+  prepareCourseNotes,
+  useCourseNotes,
+  useUploadCourseNote,
+  type CourseNote,
+  type CourseNoteReadProgress,
+  type CourseNoteUploadProgress,
+} from '@/lib/tutor';
+import { FileWorkProgress } from '@/components/FileWorkProgress';
 import {
   normalizeSupportedDocument,
   SUPPORTED_DOCUMENT_PICKER_TYPE,
@@ -72,6 +81,16 @@ export default function FlashcardsScreen() {
   const [generateOpen, setGenerateOpen] = useState(false);
   const [scopeTaskId, setScopeTaskId] = useState<string | null>(null);
   const [selectedNoteIds, setSelectedNoteIds] = useState<string[]>([]);
+  const [fileProgress, setFileProgress] = useState<CourseNoteUploadProgress | null>(null);
+  const [readProgress, setReadProgress] = useState<CourseNoteReadProgress | null>(null);
+  const [generationStage, setGenerationStage] = useState<'reading' | 'creating' | null>(null);
+  const generationInFlightRef = useRef(false);
+  const fileProgressClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isGenerating = generationStage !== null || generateFlashcards.isPending;
+
+  useEffect(() => () => {
+    if (fileProgressClearRef.current) clearTimeout(fileProgressClearRef.current);
+  }, []);
 
   useEffect(() => {
     // Newly uploaded notes join the selection automatically; students can
@@ -105,22 +124,36 @@ export default function FlashcardsScreen() {
       return;
     }
     try {
+      if (fileProgressClearRef.current) clearTimeout(fileProgressClearRef.current);
+      setFileProgress({ stage: 'validating', filename: document.fileName });
       await uploadNote.mutateAsync({
         uri: asset.uri,
         filename: document.fileName,
         mimeType: document.mimeType,
+        onProgress: setFileProgress,
       });
       track('flashcards_material_uploaded', { screen: 'flashcards', courseId });
       if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      fileProgressClearRef.current = setTimeout(() => setFileProgress(null), 900);
     } catch (e: any) {
+      setFileProgress(null);
       Alert.alert('Upload failed', e?.message || 'Please try again.');
     }
   };
 
   const handleGenerate = async () => {
-    if (!courseId || generateFlashcards.isPending) return;
+    if (!courseId || generationInFlightRef.current || isGenerating) return;
+    generationInFlightRef.current = true;
     if (Platform.OS === 'ios') Haptics.selectionAsync();
     try {
+      const selectedNotes = courseNotes.filter((note) => selectedNoteIds.includes(note.id));
+      if (selectedNotes.length > 0) {
+        await prepareCourseNotes(courseId, selectedNotes, (progress) => {
+          setGenerationStage('reading');
+          setReadProgress(progress);
+        });
+      }
+      setGenerationStage('creating');
       const result = await generateFlashcards.mutateAsync({
         courseId,
         taskId: scopeTaskId ?? undefined,
@@ -143,6 +176,10 @@ export default function FlashcardsScreen() {
         return;
       }
       Alert.alert('Could not generate flashcards', err?.message ?? 'Please try again.');
+    } finally {
+      generationInFlightRef.current = false;
+      setGenerationStage(null);
+      setReadProgress(null);
     }
   };
 
@@ -307,6 +344,23 @@ export default function FlashcardsScreen() {
                     : "Add notes, slides, a spreadsheet, PDF, or photo"}
               </Text>
             </TouchableOpacity>
+            {fileProgress && (
+              <FileWorkProgress
+                compact
+                title={fileProgress.stage === 'uploading'
+                  ? `Uploading ${fileProgress.percent ?? 0}%`
+                  : fileProgress.stage === 'reading'
+                    ? 'Reading document…'
+                    : fileProgress.stage === 'saving'
+                      ? 'Saving document…'
+                      : fileProgress.stage === 'ready'
+                        ? 'Document ready'
+                        : 'Preparing document…'}
+                detail={fileProgress.filename}
+                percent={fileProgress.stage === 'uploading' ? fileProgress.percent : undefined}
+                complete={fileProgress.stage === 'ready'}
+              />
+            )}
             {courseNotes.length > 0 && (
               <View style={styles.noteSelectWrap}>
                 <Text style={[styles.noteSelectHint, { color: colors.ink3 }]}>Choose the notes to use</Text>
@@ -329,12 +383,12 @@ export default function FlashcardsScreen() {
             )}
 
             <TouchableOpacity
-              style={[styles.generateConfirmBtn, { backgroundColor: colors.brand }, generateFlashcards.isPending && { opacity: 0.7 }]}
+              style={[styles.generateConfirmBtn, { backgroundColor: colors.brand }, isGenerating && { opacity: 0.7 }]}
               onPress={handleGenerate}
-              disabled={generateFlashcards.isPending}
+              disabled={isGenerating}
               activeOpacity={0.85}
             >
-              {generateFlashcards.isPending ? (
+              {isGenerating ? (
                 <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <Text style={styles.generateConfirmText}>
@@ -342,6 +396,15 @@ export default function FlashcardsScreen() {
                 </Text>
               )}
             </TouchableOpacity>
+            {generationStage && (
+              <FileWorkProgress
+                compact
+                title={generationStage === 'reading' ? 'Reading selected documents…' : 'Creating flashcards…'}
+                detail={generationStage === 'reading' && readProgress
+                  ? `${readProgress.completed} of ${readProgress.total} ready · ${readProgress.filename}`
+                  : 'Using your syllabus and selected course material'}
+              />
+            )}
           </View>
         )}
 

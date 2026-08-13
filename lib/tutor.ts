@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import * as FileSystem from 'expo-file-system/legacy';
 import { getFileSize, readFileAsBase64 } from '@/lib/readFileBase64';
 import { supabase } from '@/lib/supabase';
 import { getAppLocale } from '@/lib/i18n';
@@ -9,6 +8,7 @@ import {
   normalizeSupportedDocument,
   unsupportedDocumentMessage,
 } from '@/lib/documentFiles';
+import { parseUploadJson, requestWithUploadProgress } from '@/lib/httpUpload';
 
 // ── AI Tutor client ─────────────────────────────────────────
 // Talks to the tutor-chat edge function (Pro-gated, grounded on the course's
@@ -16,11 +16,10 @@ import {
 // Supabase; the edge function writes both turns server-side (so history stays
 // consistent even if the client dies mid-send) — this module reads them back.
 //
-// Note-file text extraction is done SERVER-SIDE by tutor-chat: the client only
-// uploads the raw file to the private course-notes bucket + inserts a
-// course_notes row. The edge function extracts the file with OpenAI Luna on
-// first use and caches extracted_text. This keeps note upload dumb and cheap
-// on-device (no client-side document/image parsing) and is the simpler robust path.
+// Note-file text extraction is done SERVER-SIDE by tutor-chat. The client
+// uploads the raw file to the private course-notes bucket, inserts a row, then
+// asks the function to extract and cache its text before reporting "Ready".
+// Older rows are prepared lazily before Tutor/Flashcards uses them.
 
 export interface TutorMessage {
   id: string;
@@ -77,12 +76,30 @@ export interface CourseNote {
   created_at: string;
 }
 
+export type CourseNoteUploadProgress = {
+  stage: 'validating' | 'preparing' | 'uploading' | 'saving' | 'reading' | 'ready';
+  percent?: number;
+  filename: string;
+};
+
+export type CourseNoteReadProgress = {
+  completed: number;
+  total: number;
+  filename: string;
+};
+
 export const tutorKeys = {
   conversation: (courseId?: string | null) => ['tutorConversation', courseId ?? 'general'] as const,
   messages: (conversationId: string | null) => ['tutorMessages', conversationId] as const,
   notes: (courseId?: string | null) => ['courseNotes', courseId ?? null] as const,
   mastery: (courseId?: string | null) => ['courseTopicMastery', courseId ?? null] as const,
 };
+
+// A document's extracted text is cached permanently in course_notes by the
+// server. Mirror that readiness for the lifetime of this app session so every
+// Tutor question does not make another network round-trip just to rediscover
+// the same cached state. Unknown/older rows are still checked once.
+const preparedCourseNoteIds = new Set<string>();
 
 async function getSession() {
   const { data: { session } } = await supabase.auth.getSession();
@@ -107,6 +124,21 @@ async function callTutor(payload: Record<string, unknown>) {
     throw e;
   }
   return response.json();
+}
+
+export async function prepareCourseNotes(
+  courseId: string,
+  notes: Pick<CourseNote, 'id' | 'filename'>[],
+  onProgress?: (progress: CourseNoteReadProgress) => void,
+): Promise<void> {
+  const pendingNotes = notes.filter((note) => !preparedCourseNoteIds.has(note.id));
+  for (let index = 0; index < pendingNotes.length; index++) {
+    const note = pendingNotes[index];
+    onProgress?.({ completed: index, total: pendingNotes.length, filename: note.filename });
+    await callTutor({ action: 'prepare_note', courseId, noteId: note.id });
+    preparedCourseNoteIds.add(note.id);
+    onProgress?.({ completed: index + 1, total: pendingNotes.length, filename: note.filename });
+  }
 }
 
 // ── Conversation ────────────────────────────────────────────
@@ -285,16 +317,20 @@ function decode(base64: string): Uint8Array {
   return bytes;
 }
 
-// Upload a supported course-material file for a course. Uploads the raw
-// bytes to the private course-notes bucket (path `${uid}/${ts}_${name}` so
-// the storage RLS owner check passes), then inserts a course_notes row. Text
-// extraction is deferred to tutor-chat (it OCRs on first grounding use), so
-// this stays a cheap upload with no on-device parsing.
+// Upload a supported course-material file for a course, reporting real network
+// bytes as it moves to private storage. The new row is immediately prepared by
+// tutor-chat so the UI can finish on "Ready" only after its text is cached.
 export function useUploadCourseNote(courseId?: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (file: { uri: string; filename: string; mimeType: string }) => {
+    mutationFn: async (file: {
+      uri: string;
+      filename: string;
+      mimeType: string;
+      onProgress?: (progress: CourseNoteUploadProgress) => void;
+    }) => {
       if (!courseId) throw new Error('No course');
+      file.onProgress?.({ stage: 'validating', filename: file.filename });
       const session = await getSession();
       const userId = session.user.id;
 
@@ -306,20 +342,39 @@ export function useUploadCourseNote(courseId?: string | null) {
       const fileSize = await getFileSize(file.uri);
       if (fileSize > MAX_COURSE_NOTE_BYTES) throw new Error(courseNoteTooLargeMessage());
 
+      file.onProgress?.({ stage: 'preparing', filename: document.fileName });
       const base64 = await readFileAsBase64(file.uri);
       // Sanitize the filename for the storage key — spaces/slashes in the
       // path segment break the folder convention the RLS check relies on.
       const safeName = document.fileName.replace(/[^\w.\-]+/g, '_');
       const storagePath = `${userId}/${Date.now()}_${safeName}`;
 
-      const { error: upErr } = await supabase.storage
-        .from('course-notes')
-        .upload(storagePath, decode(base64), {
-          contentType: document.mimeType,
-          upsert: true,
-        });
-      if (upErr) throw upErr;
+      const bucket = supabase.storage.from('course-notes');
+      const { data: signed, error: signedErr } = await bucket
+        .createSignedUploadUrl(storagePath, { upsert: true });
+      if (signedErr || !signed) throw signedErr ?? new Error('Could not prepare the upload.');
 
+      const bytes = decode(base64);
+      const rawBytes = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+      const uploadResponse = await requestWithUploadProgress({
+        url: signed.signedUrl,
+        method: 'PUT',
+        headers: {
+          'Content-Type': document.mimeType,
+          'cache-control': 'max-age=3600',
+          'x-upsert': 'true',
+        },
+        body: rawBytes,
+        onProgress: (percent) => file.onProgress?.({
+          stage: 'uploading', percent, filename: document.fileName,
+        }),
+      });
+      if (!uploadResponse.ok) {
+        const uploadError = parseUploadJson<{ message?: string; error?: string }>(uploadResponse);
+        throw new Error(uploadError?.message || uploadError?.error || 'The file could not be uploaded. Please try again.');
+      }
+
+      file.onProgress?.({ stage: 'saving', percent: 100, filename: document.fileName });
       const { data, error } = await supabase
         .from('course_notes')
         .insert({
@@ -331,7 +386,20 @@ export function useUploadCourseNote(courseId?: string | null) {
         })
         .select('id, course_id, storage_path, filename, mime_type, created_at')
         .single();
-      if (error) throw error;
+      if (error) {
+        bucket.remove([storagePath]).catch(() => {});
+        throw error;
+      }
+
+      file.onProgress?.({ stage: 'reading', filename: document.fileName });
+      try {
+        await prepareCourseNotes(courseId, [data as CourseNote]);
+      } catch (error) {
+        await supabase.from('course_notes').delete().eq('id', data.id);
+        await bucket.remove([storagePath]).catch(() => {});
+        throw error;
+      }
+      file.onProgress?.({ stage: 'ready', percent: 100, filename: document.fileName });
       return data as CourseNote;
     },
     onSuccess: () => {

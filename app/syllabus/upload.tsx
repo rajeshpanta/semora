@@ -15,7 +15,13 @@ import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
-import { processSyllabus, type ProcessResult, FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
+import {
+  processSyllabus,
+  type ProcessResult,
+  type SyllabusProcessProgress,
+  FREE_COURSE_LIMIT,
+  isFreeLimitError,
+} from '@/lib/syllabus';
 import { MAX_SCAN_PAGES, type SyllabusPage } from '@/lib/ai-extraction';
 import { takePendingScanText } from '@/lib/pendingScanText';
 import { supabase } from '@/lib/supabase';
@@ -138,6 +144,7 @@ export default function SyllabusUploadScreen() {
   const [processing, setProcessing] = useState(false);
   const [status, setStatus] = useState('');
   const [step, setStep] = useState(0); // 0-4 progress steps
+  const [uploadPercent, setUploadPercent] = useState<number | null>(null);
   // The "aha" payload — set once extraction succeeds for a new course so we
   // can show a celebratory summary instead of silently jumping to review.
   const [summary, setSummary] = useState<ProcessResult | null>(null);
@@ -182,21 +189,49 @@ export default function SyllabusUploadScreen() {
 
     setProcessing(true);
     setStep(1);
-    setStatus('Reading document...');
+    setUploadPercent(null);
+    setStatus('Preparing your file…');
 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      setStep(2);
-      setStatus(ANTICIPATION[0]);
-      // Cycle the anticipation copy while the (slow) extraction runs.
+      // Cycle anticipation copy only after the request body has finished
+      // uploading. Upload itself reports real byte progress below.
       let ai = 0;
+      let readingStarted = false;
       stopRotation();
-      rotateRef.current = setInterval(() => {
-        ai = (ai + 1) % ANTICIPATION.length;
-        setStatus(ANTICIPATION[ai]);
-      }, 2200);
+      const reportProgress = (progress: SyllabusProcessProgress) => {
+        if (progress.stage === 'preparing') {
+          setStep(1);
+          setUploadPercent(null);
+          setStatus('Preparing your file…');
+        } else if (progress.stage === 'uploading') {
+          setStep(1);
+          setUploadPercent(progress.percent ?? 0);
+          setStatus(`Uploading ${progress.percent ?? 0}%`);
+        } else if (progress.stage === 'reading') {
+          setStep(2);
+          setUploadPercent(null);
+          setStatus(ANTICIPATION[0]);
+          if (!readingStarted) {
+            readingStarted = true;
+            rotateRef.current = setInterval(() => {
+              ai = (ai + 1) % ANTICIPATION.length;
+              setStatus(ANTICIPATION[ai]);
+            }, 2200);
+          }
+        } else if (progress.stage === 'organizing') {
+          stopRotation();
+          setStep(3);
+          setUploadPercent(null);
+          setStatus('Organizing your semester…');
+        } else if (progress.stage === 'ready') {
+          stopRotation();
+          setStep(4);
+          setStatus('Ready to review');
+        }
+      };
 
       // Hard ceiling so the locked modal can never strand the user if the
       // pipeline hangs (network black hole, edge function stall). On
@@ -216,6 +251,7 @@ export default function SyllabusUploadScreen() {
         controller.signal,
         scanPages ?? undefined,
         pastedText ?? undefined,
+        reportProgress,
       ).catch((err) => {
         if (timedOut) throw new Error('This is taking longer than expected. Please try again.');
         throw err;
@@ -227,15 +263,10 @@ export default function SyllabusUploadScreen() {
       // free-scan count changed. Refresh it now so the scan tab shows the new
       // usage immediately instead of a stale "N free scans left".
       qc.invalidateQueries({ queryKey: ['scanCount'] });
-      setStep(3);
-      setStatus('Found deadlines!');
-
       if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // Auto-select the semester
       setSelectedSemester(result.semesterId);
-
-      setStep(4);
 
       // Re-upload of an already-imported syllabus. Two outcomes the user
       // actually wants:
@@ -420,11 +451,17 @@ export default function SyllabusUploadScreen() {
               </View>
               <Text style={[styles.statusText, { color: colors.ink }]}>{status}</Text>
 
+              {uploadPercent != null && (
+                <View style={[styles.uploadTrack, { backgroundColor: colors.brand100 }]} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: uploadPercent }}>
+                  <View style={[styles.uploadFill, { width: `${uploadPercent}%`, backgroundColor: colors.brand }]} />
+                </View>
+              )}
+
               {/* Progress steps */}
               <View style={styles.steps}>
                 <StepDot active={step >= 1} done={step > 1} label="Upload" />
                 <View style={[styles.stepLine, step >= 2 && { backgroundColor: colors.teal }]} />
-                <StepDot active={step >= 2} done={step > 2} label="AI Extract" />
+                <StepDot active={step >= 2} done={step > 2} label="Read" />
                 <View style={[styles.stepLine, step >= 3 && { backgroundColor: colors.teal }]} />
                 <StepDot active={step >= 3} done={step > 3} label="Organize" />
                 <View style={[styles.stepLine, step >= 4 && { backgroundColor: colors.teal }]} />
@@ -483,6 +520,8 @@ const styles = StyleSheet.create({
   progressContainer: { alignItems: 'center', width: '100%' },
   spinnerRing: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.brand50, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   statusText: { fontSize: 18, fontWeight: '600', color: COLORS.ink, marginBottom: 24 },
+  uploadTrack: { width: '100%', maxWidth: 320, height: 7, borderRadius: 999, overflow: 'hidden', marginTop: -12, marginBottom: 22 },
+  uploadFill: { height: '100%', borderRadius: 999 },
   steps: { flexDirection: 'row', alignItems: 'center', gap: 0, marginBottom: 20 },
   stepLine: { width: 24, height: 2, backgroundColor: '#e5e7eb', marginHorizontal: 4 },
   stepLineDone: { backgroundColor: COLORS.teal },

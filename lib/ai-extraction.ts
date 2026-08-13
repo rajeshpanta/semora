@@ -1,4 +1,5 @@
 import { readFileAsBase64 } from '@/lib/readFileBase64';
+import { parseUploadJson, requestWithUploadProgress } from '@/lib/httpUpload';
 import { supabase } from '@/lib/supabase';
 import type { GradeThreshold, CourseMeetingKind } from '@/types/database';
 
@@ -61,6 +62,11 @@ export interface SyllabusPage {
   mimeType: string;
 }
 
+export type DocumentExtractionProgress = {
+  stage: 'preparing' | 'uploading' | 'reading';
+  percent?: number;
+};
+
 // Client-side cap on photo pages per scan. Mirrors MAX_PAGES in the
 // parse-syllabus Edge Function — keep the two in sync.
 export const MAX_SCAN_PAGES = 5;
@@ -91,18 +97,21 @@ export async function extractFromFile(
   mimeType: string,
   signal?: AbortSignal,
   fileName?: string,
+  onProgress?: (progress: DocumentExtractionProgress) => void,
 ): Promise<SyllabusExtraction> {
-  return extractFromPages([{ uri: fileUri, mimeType }], signal, fileName);
+  return extractFromPages([{ uri: fileUri, mimeType }], signal, fileName, onProgress);
 }
 
 export async function extractFromPages(
   pages: SyllabusPage[],
   signal?: AbortSignal,
   fileName?: string,
+  onProgress?: (progress: DocumentExtractionProgress) => void,
 ): Promise<SyllabusExtraction> {
   if (pages.length === 0) {
     throw new Error('No pages to scan');
   }
+  onProgress?.({ stage: 'preparing' });
   const encoded = await Promise.all(
     pages.map(async (p) => ({
       base64: await readFileAsBase64(p.uri),
@@ -161,25 +170,28 @@ export async function extractFromPages(
     })
     : JSON.stringify({ pages: encoded, apiVersion: 2 });
 
-  const response = await fetch(`${supabaseUrl}/functions/v1/parse-syllabus`, {
-    method: 'POST',
+  const response = await requestWithUploadProgress({
+    url: `${supabaseUrl}/functions/v1/parse-syllabus`,
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`,
     },
     body,
     signal,
+    onProgress: (percent) => onProgress?.({ stage: 'uploading', percent }),
+    onUploadComplete: () => onProgress?.({ stage: 'reading' }),
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || `Server error: ${response.status}`);
+    const error = parseUploadJson<{ error?: string }>(response);
+    throw new Error(error?.error || `Server error: ${response.status}`);
   }
 
   // Defensive normalization: an older Edge Function deployment won't
   // include the structured arrays. Default them to [] so consumers can
   // rely on non-optional types without nil-safety boilerplate.
-  const raw = (await response.json()) as Partial<SyllabusExtraction>;
+  const raw = parseUploadJson<Partial<SyllabusExtraction>>(response);
+  if (!raw) throw new Error('The scan returned an unreadable response. Please try again.');
   return {
     ...raw,
     meetings: raw.meetings ?? [],
@@ -194,6 +206,7 @@ export async function extractFromPages(
 export async function extractFromText(
   text: string,
   signal?: AbortSignal,
+  onProgress?: (progress: DocumentExtractionProgress) => void,
 ): Promise<SyllabusExtraction> {
   const trimmed = text.trim();
   if (!trimmed) {
@@ -210,22 +223,26 @@ export async function extractFromText(
     throw new Error('Supabase URL not configured');
   }
 
-  const response = await fetch(`${supabaseUrl}/functions/v1/parse-syllabus`, {
-    method: 'POST',
+  onProgress?.({ stage: 'preparing' });
+  const response = await requestWithUploadProgress({
+    url: `${supabaseUrl}/functions/v1/parse-syllabus`,
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session.access_token}`,
     },
     body: JSON.stringify({ text: trimmed, apiVersion: 2 }),
     signal,
+    onProgress: (percent) => onProgress?.({ stage: 'uploading', percent }),
+    onUploadComplete: () => onProgress?.({ stage: 'reading' }),
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new Error(error.error || `Server error: ${response.status}`);
+    const error = parseUploadJson<{ error?: string }>(response);
+    throw new Error(error?.error || `Server error: ${response.status}`);
   }
 
-  const raw = (await response.json()) as Partial<SyllabusExtraction>;
+  const raw = parseUploadJson<Partial<SyllabusExtraction>>(response);
+  if (!raw) throw new Error('The scan returned an unreadable response. Please try again.');
   return {
     ...raw,
     meetings: raw.meetings ?? [],

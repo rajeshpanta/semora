@@ -170,6 +170,7 @@ serve(async (req) => {
     let body: {
       conversationId?: unknown; message?: unknown; courseId?: unknown; mode?: unknown;
       action?: unknown; assignmentId?: unknown; practiceId?: unknown; answer?: unknown; locale?: unknown;
+      noteId?: unknown;
     };
     try {
       body = await req.json();
@@ -196,12 +197,54 @@ serve(async (req) => {
       );
       TASK = AiTask.tutor;
     }
-    const action = body.action === 'evaluate_practice' ? 'evaluate_practice' : 'chat';
+    const action = body.action === 'evaluate_practice'
+      ? 'evaluate_practice'
+      : body.action === 'prepare_note'
+        ? 'prepare_note'
+        : 'chat';
     const assignmentId = typeof body.assignmentId === 'string' ? body.assignmentId : null;
     const practiceId = typeof body.practiceId === 'string' ? body.practiceId : null;
+    const noteId = typeof body.noteId === 'string' ? body.noteId : null;
     const submittedAnswer = typeof body.answer === 'string' ? body.answer.trim() : '';
     const locale = body.locale === 'es' ? 'es' : 'en';
     const localized = (english: string, spanish: string) => locale === 'es' ? spanish : english;
+    // Preparing a newly uploaded note is deliberately a separate request from
+    // answering/generating. That gives the client an honest request boundary:
+    // it can show "Reading document" until extraction is actually cached,
+    // then switch to "Writing answer" or "Creating flashcards". The lookup is
+    // owner + course scoped because this path does not require a conversation.
+    if (action === 'prepare_note') {
+      if (!noteId || !courseId) {
+        return jsonResponse({ error: 'noteId and courseId are required' }, 400);
+      }
+      const { data: note, error: noteErr } = await adminClient
+        .from('course_notes')
+        .select('id, course_id, storage_path, filename, mime_type, extracted_text')
+        .eq('id', noteId)
+        .eq('course_id', courseId)
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (noteErr) {
+        console.error('[tutor-chat] note lookup failed:', noteErr);
+        return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
+      }
+      if (!note) return jsonResponse({ error: 'Course material not found' }, 404);
+      if (typeof note.extracted_text === 'string' && note.extracted_text.trim()) {
+        return jsonResponse({ ready: true, cached: true }, 200);
+      }
+      const extracted = await extractNoteText(adminClient, note, userId).catch((error) => {
+        console.warn('[tutor-chat] note preparation failed:', error);
+        return null;
+      });
+      if (!extracted) {
+        return jsonResponse({
+          error: documentExtractionFailedMessage([String(note.filename || 'document')], locale),
+          code: DOCUMENT_EXTRACTION_FAILED_CODE,
+        }, 422);
+      }
+      return jsonResponse({ ready: true, cached: false }, 200);
+    }
+
     if (!conversationId) {
       return jsonResponse({ error: 'conversationId is required' }, 400);
     }
@@ -674,10 +717,11 @@ serve(async (req) => {
   }
 });
 
-// Read a note file from the private course-notes bucket and have OpenAI Luna
-// extract its text, caching the result on the row so later turns skip it.
-// Extraction is best-effort grounding, so a failure drops that note from the
-// current context rather than failing the student's Tutor message.
+// Read a note file from the private course-notes bucket and extract its text,
+// caching the result on the row so later turns skip it. Uploads call this
+// eagerly through prepare_note; old rows still reach it lazily on first use.
+// Extraction inside a Tutor request remains best-effort grounding, while the
+// explicit prepare_note action reports a readable filename-specific failure.
 /**
  * Note OCR on the tutor model's provider, for environments where Gemini has no
  * credential. Deliberately the same request shape generate-flashcards uses, so

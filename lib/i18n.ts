@@ -51,6 +51,12 @@ function spanishPattern(input: string): string | null {
   // the app after the Today tab.
   match = input.match(/^(\d+) items found$/);
   if (match) return `${match[1]} ${match[1] === '1' ? 'elemento encontrado' : 'elementos encontrados'}`;
+  match = input.match(/^Uploading (\d+)%$/i);
+  if (match) return `Subiendo ${match[1]} %`;
+  match = input.match(/^(\d+) of (\d+) ready · (.+)$/i);
+  if (match) return `${match[1]} de ${match[2]} listos · ${match[3]}`;
+  match = input.match(/^Grounded in (.+)$/i);
+  if (match) return `Basado en ${match[1]}`;
   match = input.match(/^(\d+) selected to save$/);
   if (match) return `${match[1]} ${match[1] === '1' ? 'seleccionado' : 'seleccionados'} para guardar`;
   match = input.match(/^Save (\d+) tasks?$/);
