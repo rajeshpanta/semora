@@ -101,3 +101,48 @@ export function normalizeSupportedDocument(
 
 export const SUPPORTED_DOCUMENT_ERROR =
   'Unsupported file type. Use PDF, Word, PowerPoint, Excel/CSV, Pages, Keynote, text, or JPG/PNG/WEBP.';
+
+export const DOCUMENT_EXTRACTION_FAILED_CODE = 'DOCUMENT_EXTRACTION_FAILED';
+
+/**
+ * User-facing error for a course material file that was accepted and stored,
+ * but could not be turned into readable text when Tutor/Flashcards first used
+ * it. Keep the filename in the message so the student knows exactly which
+ * attachment to retry or remove instead of silently receiving an ungrounded
+ * answer.
+ */
+export function documentExtractionFailedMessage(
+  fileNames: readonly string[],
+  locale: 'en' | 'es' = 'en',
+  recovery: 'remove' | 'deselect' = 'remove',
+): string {
+  const normalized = [...new Set(fileNames.map((name) =>
+    String(name || 'document').replace(/\s+/g, ' ').trim().slice(0, 120) || 'document'
+  ))];
+  const shown = normalized.slice(0, 3).map((name) => `“${name}”`).join(', ');
+  const remaining = Math.max(0, normalized.length - 3);
+  const displayNames = `${shown}${remaining > 0
+    ? locale === 'es' ? ` y ${remaining} más` : ` and ${remaining} more`
+    : ''}`;
+
+  if (locale === 'es') {
+    if (recovery === 'deselect') {
+      return normalized.length === 1
+        ? `Semora no pudo leer ${displayNames}. Desmarca este archivo e inténtalo de nuevo, o sube primero una versión en PDF.`
+        : `Semora no pudo leer estos archivos: ${displayNames}. Desmárcalos e inténtalo de nuevo, o sube primero versiones en PDF.`;
+    }
+    return normalized.length === 1
+      ? `Semora no pudo leer ${displayNames}. Inténtalo de nuevo. Si vuelve a fallar, elimina el archivo y súbelo otra vez, o expórtalo primero como PDF.`
+      : `Semora no pudo leer estos archivos: ${displayNames}. Inténtalo de nuevo. Si vuelve a fallar, elimínalos y súbelos otra vez, o expórtalos primero como PDF.`;
+  }
+
+  if (recovery === 'deselect') {
+    return normalized.length === 1
+      ? `Semora couldn't read ${displayNames}. Deselect this file and try again, or upload a PDF version first.`
+      : `Semora couldn't read these files: ${displayNames}. Deselect them and try again, or upload PDF versions first.`;
+  }
+
+  return normalized.length === 1
+    ? `Semora couldn't read ${displayNames}. Try again. If it still fails, remove the file and upload it again, or export it as a PDF first.`
+    : `Semora couldn't read these files: ${displayNames}. Try again. If it still fails, remove and upload them again, or export them as PDFs first.`;
+}

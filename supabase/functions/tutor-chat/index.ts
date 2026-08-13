@@ -16,7 +16,11 @@ import {
   modelFor, openAIText, providerFor, usageFromGemini, usageFromOpenAI,
   asUntrustedDocument, OPENAI_API_KEY, GEMINI_API_KEY,
 } from '../_shared/ai.ts';
-import { normalizeSupportedDocument } from '../_shared/document-files.ts';
+import {
+  DOCUMENT_EXTRACTION_FAILED_CODE,
+  documentExtractionFailedMessage,
+  normalizeSupportedDocument,
+} from '../_shared/document-files.ts';
 
 // This endpoint serves two distinct product surfaces, so the task is fixed by
 // the MODE the client requested — a structural property of which control was
@@ -410,22 +414,31 @@ serve(async (req) => {
 
       if (notes && notes.length > 0) {
         const chunks: string[] = [];
+        const failedNoteNames: string[] = [];
         let budget = MAX_NOTES_CHARS;
         for (const note of notes as any[]) {
           if (budget <= 0) break;
           let text: string | null = note.extracted_text;
           if (!text) {
             text = await extractNoteText(adminClient, note, userId).catch((e) => {
-              console.warn('[tutor-chat] note extraction failed (non-fatal):', e);
+              console.warn('[tutor-chat] note extraction failed:', e);
               return null;
             });
           }
-          if (text) {
-            const slice = text.slice(0, budget);
-            budget -= slice.length;
-            chunks.push(`### ${note.filename}\n${slice}`);
-            citations.push({ kind: 'note', label: note.filename });
+          if (!text) {
+            failedNoteNames.push(String(note.filename || 'document'));
+            continue;
           }
+          const slice = text.slice(0, budget);
+          budget -= slice.length;
+          chunks.push(`### ${note.filename}\n${slice}`);
+          citations.push({ kind: 'note', label: note.filename });
+        }
+        if (failedNoteNames.length > 0) {
+          return jsonResponse({
+            error: documentExtractionFailedMessage(failedNoteNames, locale),
+            code: DOCUMENT_EXTRACTION_FAILED_CODE,
+          }, 422);
         }
         notesText = chunks.join('\n\n');
       }

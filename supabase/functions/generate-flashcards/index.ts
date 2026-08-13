@@ -1,6 +1,10 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { normalizeSupportedDocument } from '../_shared/document-files.ts';
+import {
+  DOCUMENT_EXTRACTION_FAILED_CODE,
+  documentExtractionFailedMessage,
+  normalizeSupportedDocument,
+} from '../_shared/document-files.ts';
 
 // AI flashcard generation. Structured on tutor-chat/index.ts (CORS, JWT
 // verification, service-role client, OpenAI call with retries,
@@ -228,8 +232,10 @@ serve(async (req) => {
     const deckId = typeof body.deckId === 'string' ? body.deckId : null;
     const requestedTitle = typeof body.deckTitle === 'string' ? body.deckTitle.trim().slice(0, 80) : '';
     const taskId = typeof body.taskId === 'string' ? body.taskId : null;
-    const noteIds = Array.isArray(body.noteIds)
-      ? body.noteIds.filter((id): id is string => typeof id === 'string' && id.length > 0).slice(0, 10)
+    const requestedNoteIds = Array.isArray(body.noteIds) ? body.noteIds : null;
+    const noteIdsProvided = requestedNoteIds !== null;
+    const noteIds = requestedNoteIds
+      ? requestedNoteIds.filter((id): id is string => typeof id === 'string' && id.length > 0).slice(0, 10)
       : [];
     const locale = body.locale === 'es' ? 'es' : 'en';
     if (!courseId) {
@@ -356,26 +362,40 @@ serve(async (req) => {
       .eq('course_id', courseId)
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    if (noteIds.length > 0) notesQuery = notesQuery.in('id', noteIds);
-    const { data: notes } = await notesQuery.limit(10);
+    // `noteIds: []` is an explicit "use no attachments" selection. Treating
+    // it like an omitted field used every note instead, so deselecting a bad
+    // attachment in the UI could never recover from its extraction error.
+    if (noteIdsProvided && noteIds.length > 0) notesQuery = notesQuery.in('id', noteIds);
+    const { data: notes } = noteIdsProvided && noteIds.length === 0
+      ? { data: [] }
+      : await notesQuery.limit(10);
 
     if (notes && notes.length > 0) {
       const chunks: string[] = [];
+      const failedNoteNames: string[] = [];
       let budget = MAX_NOTES_CHARS;
       for (const note of notes as any[]) {
         if (budget <= 0) break;
         let text: string | null = note.extracted_text;
         if (!text) {
           text = await extractNoteText(adminClient, note, userId).catch((e) => {
-            console.warn('[generate-flashcards] note extraction failed (non-fatal):', e);
+            console.warn('[generate-flashcards] note extraction failed:', e);
             return null;
           });
         }
-        if (text) {
-          const slice = text.slice(0, budget);
-          budget -= slice.length;
-          chunks.push(`### ${note.filename}\n${slice}`);
+        if (!text) {
+          failedNoteNames.push(String(note.filename || 'document'));
+          continue;
         }
+        const slice = text.slice(0, budget);
+        budget -= slice.length;
+        chunks.push(`### ${note.filename}\n${slice}`);
+      }
+      if (failedNoteNames.length > 0) {
+        return jsonResponse({
+          error: documentExtractionFailedMessage(failedNoteNames, locale, 'deselect'),
+          code: DOCUMENT_EXTRACTION_FAILED_CODE,
+        }, 422);
       }
       notesText = chunks.join('\n\n');
     }
