@@ -38,22 +38,22 @@ never a success message for something that did not happen.
 | `submit-support` edge function | ✅ deployed, `verify_jwt: false` |
 | Vercel `SUPABASE_URL` | ✅ set (Production + Preview) |
 | Vercel `SUPPORT_INGEST_SECRET` | ✅ set (Production + Preview) |
-| Supabase secrets (7 of 8) | ✅ set |
-| `SMTP_PASSWORD` | ❌ **outstanding — needs a Gmail App Password** |
-| Website deploy | ❌ not yet pushed to `main` |
+| Supabase secrets (all 8) | ✅ set |
+| Website deploy | ✅ live (commit `608d95f`) |
 
-Verified against the live function on 2026-08-13: a request without the shared
-secret is rejected `401`; a valid request stores a row and returns `200`; a
-honeypot submission is discarded without storing; a malformed address is
-rejected `400`. The stored IP is a SHA-256 hash, not the address. The test row
-was deleted afterwards, so the table is empty.
+**The pipeline is complete and verified end to end on 2026-08-13.** A real
+message submitted through `https://semoraai.com/api/support` stored a row and
+came back `email_status: 'sent'` with no error — Gmail accepted it for
+delivery. Also verified: a request without the shared secret is rejected `401`;
+a honeypot submission is discarded without storing; a malformed address is
+rejected `400`; the stored IP is a SHA-256 hash, not the address. Test rows
+were deleted afterwards.
 
-Right now every message is **captured** and the visitor gets a real
-confirmation, but `email_status` is `skipped` — nothing arrives in the inbox
-until the App Password is set:
+The App Password lives in `~/Semora-Recovery/support-form-secrets.env`. To
+rotate it: delete the entry at myaccount.google.com/apppasswords, create a new
+one, update that file, and re-run
 
 ```bash
-# put the 16-char App Password in the file first (see step 2 below)
 npx supabase secrets set --env-file ~/Semora-Recovery/support-form-secrets.env
 ```
 
