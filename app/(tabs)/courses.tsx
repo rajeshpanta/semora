@@ -26,9 +26,14 @@ import type { GradeThreshold } from '@/types/database';
 import type { TaskWithCourse } from '@/lib/queries';
 import { GlobalSearchButton } from '@/components/GlobalSearchButton';
 
+// Grid geometry, shared by the tile width calculation and the container's gap
+// so the two can never drift apart. CONTENT_PADDING mirrors styles.content.
+const CONTENT_PADDING = 18;
+const GRID_GAP = 12;
+
 export default function CoursesScreen() {
   const colors = useColors();
-  const { contentMaxWidth, isWide } = useResponsive();
+  const { contentMaxWidth, isWide, width } = useResponsive();
   const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
 
@@ -37,6 +42,20 @@ export default function CoursesScreen() {
   const coursesView = useAppStore((s) => s.coursesView);
   const setCoursesView = useAppStore((s) => s.setCoursesView);
   const isGrid = coursesView === 'grid';
+
+  // Exactly two tiles per row, at a measured width rather than a percentage.
+  //
+  // flexBasis + flexGrow got this wrong in the obvious case: with three
+  // courses the lone tile on the second row stretched to fill the space and
+  // stopped matching the two above it. A computed width makes every tile
+  // identical whatever the count, and never reflows to three across on a
+  // wider phone — two is the density that keeps a course name readable.
+  const gridColumnWidth = Math.min(width, contentMaxWidth) - CONTENT_PADDING * 2;
+  const tileWidth = Math.floor((gridColumnWidth - GRID_GAP) / 2);
+  // Under ~380pt (SE, mini, a narrow Split View) a half-width tile is about
+  // 150pt across. The same type that reads comfortably on a Pro truncates a
+  // course name to two words there, so the tile tightens rather than clipping.
+  const compactTile = width < 380;
 
   const { data: semesters = [], isLoading: semestersLoading } = useSemesters();
   const deleteSemester = useDeleteSemester();
@@ -305,21 +324,27 @@ export default function CoursesScreen() {
                 return (
                   <TouchableOpacity
                     key={course.id}
-                    style={[styles.gridTile, { backgroundColor: colors.card, borderColor: colors.line }]}
+                    style={[
+                      styles.gridTile,
+                      { width: tileWidth, backgroundColor: colors.card, borderColor: colors.line },
+                    ]}
                     onPress={() => router.push(`/course/${course.id}` as any)}
                     activeOpacity={0.7}
                     accessibilityRole="button"
                     accessibilityLabel={`${course.name}, ${pendingCount} pending`}
                   >
-                    <View style={[styles.gridBanner, { backgroundColor: course.color }]}>
+                    <View style={[styles.gridBanner, compactTile && styles.gridBannerCompact, { backgroundColor: course.color }]}>
                       {needsSchedule && (
                         <View style={styles.gridBannerFlag}>
                           <FontAwesome name="calendar-o" size={11} color="#fff" />
                         </View>
                       )}
                     </View>
-                    <View style={styles.gridBody}>
-                      <Text style={[styles.gridName, { color: colors.ink }]} numberOfLines={2}>
+                    <View style={[styles.gridBody, compactTile && styles.gridBodyCompact]}>
+                      <Text
+                        style={[styles.gridName, compactTile && styles.gridNameCompact, { color: colors.ink }]}
+                        numberOfLines={2}
+                      >
                         {course.name}
                       </Text>
                       {course.instructor ? (
@@ -475,7 +500,7 @@ export default function CoursesScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
-  content: { padding: 18, paddingBottom: 120, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
+  content: { padding: CONTENT_PADDING, paddingBottom: 120, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
 
   // Header
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
@@ -499,9 +524,9 @@ const styles = StyleSheet.create({
   // Two columns on a phone, and the tiles simply wrap on wider windows —
   // `flexBasis: 47%` with wrap gives 2 up on a phone and 2 up on an iPad at
   // the capped content width, which is the density the layout is for.
-  courseGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  courseGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
+  // Width is set inline from tileWidth — see the note where it is computed.
   gridTile: {
-    flexBasis: '47%', flexGrow: 1, maxWidth: '49%',
     borderRadius: 18, borderWidth: 0.5, overflow: 'hidden',
     backgroundColor: COLORS.card, borderColor: COLORS.line,
   },
@@ -513,8 +538,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.22)',
     alignItems: 'center', justifyContent: 'center',
   },
+  gridBannerCompact: { height: 52 },
   gridBody: { padding: 12, gap: 3 },
+  gridBodyCompact: { padding: 10 },
   gridName: { fontSize: 15, fontWeight: '600', lineHeight: 19 },
+  gridNameCompact: { fontSize: 14, lineHeight: 18 },
   gridInstructor: { fontSize: 12.5 },
   gridFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
   gridPending: { fontSize: 12.5, fontWeight: '600' },
