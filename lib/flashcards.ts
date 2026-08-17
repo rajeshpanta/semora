@@ -322,6 +322,37 @@ export function useDeleteDeck() {
   });
 }
 
+/**
+ * Move a deck to a course, or off one entirely (null).
+ *
+ * decks.course_id is nullable, and a deck made from the "+" menu before the
+ * course question existed — or made deliberately without a class — sits in the
+ * Uncategorized group at the bottom of the deck list. This is how it gets
+ * filed from the deck itself, which is where someone looking at a misplaced
+ * deck actually is.
+ *
+ * Mirrors useAttachLectureCourse in lib/lectures.ts; the two should stay
+ * behaviourally identical so the same action does the same thing everywhere.
+ */
+export function useSetDeckCourse(deckId: string | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (courseId: string | null): Promise<void> => {
+      if (!deckId) throw new Error('No deck');
+      const { error } = await supabase
+        .from('decks')
+        .update({ course_id: courseId })
+        .eq('id', deckId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      // Both the detail view and the grouped list read this row.
+      qc.invalidateQueries({ queryKey: flashcardKeys.deck(deckId!) });
+      qc.invalidateQueries({ queryKey: flashcardKeys.decks });
+    },
+  });
+}
+
 export function useCreateCard() {
   const qc = useQueryClient();
   return useMutation({

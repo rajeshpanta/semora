@@ -309,17 +309,27 @@ export default function LectureDetailScreen() {
         <Text style={[styles.title, { color: colors.ink }]}>{lecture.title}</Text>
         <Text style={[styles.meta, { color: colors.ink3 }]}>{meta}</Text>
 
-        {!lecture.course_id && (
+        {/* Shown whether or not a course is attached. It used to appear only
+            while unattached, which left a lecture filed against the wrong class
+            just as stuck as one filed against none — and the recorder now
+            preselects a course, so wrong-but-set is the likelier mistake. */}
+        {(
           <TouchableOpacity
             style={[styles.attachRow, { borderColor: colors.line, backgroundColor: colors.card }]}
             onPress={() => setShowCoursePicker((v) => !v)}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel="Attach this lecture to a course"
+            accessibilityLabel={
+              lecture.courses?.name
+                ? `Class: ${lecture.courses.name}. Change it.`
+                : 'Attach this lecture to a course'
+            }
           >
             <FontAwesome name="link" size={13} color={colors.brand} />
             <Text style={[styles.attachText, { color: colors.ink2 }]}>
-              Attach a course so the AI Tutor and flashcards can use this lecture
+              {lecture.courses?.name
+                ? `Class: ${lecture.courses.name}`
+                : 'Attach a course so the AI Tutor and flashcards can use this lecture'}
             </Text>
             <FontAwesome
               name={showCoursePicker ? 'chevron-up' : 'chevron-down'}
@@ -350,6 +360,26 @@ export default function LectureDetailScreen() {
                 </Text>
               </TouchableOpacity>
             ))}
+            {/* course_id is nullable by design — a lecture for a class that is
+                not in Semora. Now that the row stays visible once attached, the
+                way back out has to exist too, or a mis-tap is permanent. */}
+            {lecture.course_id ? (
+              <TouchableOpacity
+                style={[styles.chip, { backgroundColor: colors.card, borderColor: colors.line }]}
+                onPress={() =>
+                  attachCourse.mutate(null, {
+                    onSuccess: () => setShowCoursePicker(false),
+                    onError: (e) =>
+                      Alert.alert("Couldn't detach", (e as Error)?.message || 'Please try again.'),
+                  })
+                }
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Remove from class"
+              >
+                <Text style={[styles.chipText, { color: colors.ink3 }]}>No class</Text>
+              </TouchableOpacity>
+            ) : null}
             {courses.length === 0 && (
               <Text style={[styles.hint, { color: colors.ink3 }]}>
                 No courses in this semester yet.

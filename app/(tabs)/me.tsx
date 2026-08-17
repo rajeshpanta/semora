@@ -397,10 +397,11 @@ const styles = StyleSheet.create({
   profileName: { fontFamily: FONTS.displaySemibold, fontSize: 20, color: COLORS.ink },
   profileSub: { fontSize: 14, color: COLORS.ink3, marginTop: 2 },
   // Pro card — bold premium design
-  // A pitch, not a billboard: the card was 22pt of padding around 22pt display
-  // type, a 28pt price and a full-width button — enough vertical space that it
-  // read as pressure rather than an offer.
-  proCard: { backgroundColor: COLORS.ink, borderRadius: 18, padding: 16, marginBottom: 14, overflow: 'hidden' },
+  // Full size on purpose: a free account should be in no doubt that it is on
+  // the free tier, and a small card reads as a footnote rather than a state.
+  // Only the SUBSCRIBED state shrank (proStatus below) — nothing to sell to
+  // someone who already bought.
+  proCard: { backgroundColor: COLORS.ink, borderRadius: 22, padding: 22, marginBottom: 20, overflow: 'hidden' },
   // Subscribed state: one line. Nothing to sell to someone who already bought.
   proStatus: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -409,16 +410,16 @@ const styles = StyleSheet.create({
   },
   proStatusText: { fontSize: 15, fontWeight: '700' },
   proStatusMeta: { fontSize: 13.5, marginLeft: 'auto' },
-  proGlow: { position: 'absolute', right: -26, top: -26, width: 112, height: 112, borderRadius: 56, backgroundColor: COLORS.brand, opacity: 0.32 },
+  proGlow: { position: 'absolute', right: -30, top: -30, width: 140, height: 140, borderRadius: 70, backgroundColor: COLORS.brand, opacity: 0.4 },
   proLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   proLabelText: { fontSize: 12, fontWeight: '800', letterSpacing: 1.5, color: COLORS.brand100 },
-  proTitle: { fontFamily: FONTS.display, fontSize: 17, color: '#fff', lineHeight: 23, maxWidth: 260 },
-  proPrice: { flexDirection: 'row', alignItems: 'baseline', gap: 7, marginTop: 10 },
-  proPriceAmount: { fontSize: 21, fontWeight: '800', color: '#fff' },
-  proPricePeriod: { fontSize: 13, color: 'rgba(255,255,255,0.6)' },
-  proButton: { backgroundColor: '#fff', borderRadius: 12, paddingVertical: 10, alignItems: 'center', marginTop: 11 },
-  proButtonText: { fontSize: 14.5, fontWeight: '700', color: COLORS.ink },
-  proAlt: { fontSize: 12, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 8 },
+  proTitle: { fontFamily: FONTS.display, fontSize: 22, color: '#fff', lineHeight: 28, maxWidth: 240 },
+  proPrice: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 16 },
+  proPriceAmount: { fontSize: 28, fontWeight: '800', color: '#fff' },
+  proPricePeriod: { fontSize: 14, color: 'rgba(255,255,255,0.6)' },
+  proButton: { backgroundColor: '#fff', borderRadius: 14, padding: 13, alignItems: 'center', marginTop: 14 },
+  proButtonText: { fontSize: 15, fontWeight: '700', color: COLORS.ink },
+  proAlt: { fontSize: 13, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 10 },
   // Share my semester entry
   shareCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.brand50, borderRadius: 18, padding: 14, marginBottom: 20, borderWidth: 0.5, borderColor: COLORS.brand100 },
   shareIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },

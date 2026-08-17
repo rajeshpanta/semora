@@ -25,11 +25,12 @@ import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
+import { useCourses } from '@/lib/queries';
 import { track } from '@/lib/analytics';
 import { NotFound } from '@/components/NotFound';
 import {
   useDeck, useCards, useCreateCard, useUpdateCard, useDeleteCard,
-  useDeleteDeck, useReviewCard, dueCards, type Card, type Grade,
+  useDeleteDeck, useSetDeckCourse, useReviewCard, dueCards, type Card, type Grade,
 } from '@/lib/flashcards';
 
 // Grade buttons shown under a revealed card, in ascending recall quality.
@@ -53,6 +54,11 @@ export default function DeckDetailScreen() {
   const updateCard = useUpdateCard();
   const deleteCard = useDeleteCard();
   const deleteDeck = useDeleteDeck();
+  const setDeckCourse = useSetDeckCourse(deckId);
+  const [showCoursePicker, setShowCoursePicker] = useState(false);
+  const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
+  const { data: courses = [] } = useCourses(selectedSemesterId);
+  const deckCourse = courses.find((c: { id: string }) => c.id === deck?.course_id);
   const reviewCard = useReviewCard();
 
   // 'manage' lists/edits cards; 'study' walks the due queue one card at a time.
@@ -433,6 +439,79 @@ export default function DeckDetailScreen() {
           ))
         )}
 
+        {/* Which class this deck belongs to.
+            A deck with no course sits in Uncategorized at the bottom of the
+            list, and the deck screen was the one place that could not fix it.
+            Shown whether or not a course is set, because a deck filed against
+            the wrong class is as stuck as one filed against none. */}
+        <TouchableOpacity
+          style={styles.shareDeckBtn}
+          onPress={() => setShowCoursePicker((v) => !v)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={deckCourse ? `Class: ${deckCourse.name}. Change it.` : 'Assign this deck to a class'}
+        >
+          <FontAwesome name="book" size={13} color={colors.brand} />
+          <Text style={[styles.shareDeckText, { color: colors.brand }]}>
+            {deckCourse ? `Class: ${deckCourse.name}` : 'Assign to a class'}
+          </Text>
+          <FontAwesome
+            name={showCoursePicker ? 'chevron-up' : 'chevron-down'}
+            size={10}
+            color={colors.ink3}
+          />
+        </TouchableOpacity>
+
+        {showCoursePicker && (
+          <View style={styles.coursePickWrap}>
+            {courses.map((c: { id: string; name: string; color: string | null }) => {
+              const active = deck?.course_id === c.id;
+              return (
+                <TouchableOpacity
+                  key={c.id}
+                  style={[
+                    styles.coursePick,
+                    { borderColor: active ? colors.brand : colors.line, backgroundColor: active ? colors.brand50 : colors.card },
+                  ]}
+                  onPress={() =>
+                    setDeckCourse.mutate(c.id, {
+                      onSuccess: () => setShowCoursePicker(false),
+                      onError: (e) =>
+                        Alert.alert("Couldn't move the deck", (e as Error)?.message || 'Please try again.'),
+                    })
+                  }
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={c.name}
+                >
+                  <View style={[styles.coursePickDot, { backgroundColor: c.color || colors.brand }]} />
+                  <Text style={[styles.coursePickText, { color: colors.ink2 }]} numberOfLines={1}>{c.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            {/* course_id is nullable by design — a deck can legitimately span
+                subjects, so the way back out has to exist too. */}
+            {deck?.course_id ? (
+              <TouchableOpacity
+                style={[styles.coursePick, { borderColor: colors.line, backgroundColor: colors.card }]}
+                onPress={() =>
+                  setDeckCourse.mutate(null, {
+                    onSuccess: () => setShowCoursePicker(false),
+                    onError: (e) =>
+                      Alert.alert("Couldn't move the deck", (e as Error)?.message || 'Please try again.'),
+                  })
+                }
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Remove from class"
+              >
+                <Text style={[styles.coursePickText, { color: colors.ink3 }]}>No class</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        )}
+
         {/* Publish to a course space */}
         <TouchableOpacity
           style={styles.shareDeckBtn}
@@ -488,6 +567,13 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 13.5, textAlign: 'center' },
   deleteDeckBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 12, marginTop: 20 },
   shareDeckBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 12, marginTop: 18 },
+  coursePickWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 4 },
+  coursePick: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    borderWidth: 1, borderRadius: 999, paddingVertical: 7, paddingHorizontal: 12, maxWidth: 220,
+  },
+  coursePickDot: { width: 8, height: 8, borderRadius: 4 },
+  coursePickText: { fontSize: 13.5, flexShrink: 1 },
   shareDeckText: { fontSize: 14, fontWeight: '700' },
   deleteDeckText: { fontSize: 13.5, fontWeight: '600', color: '#ef4444' },
 
