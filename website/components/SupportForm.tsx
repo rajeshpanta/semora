@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import styles from '@/app/(en)/support/support.module.css';
 import type { SiteLocale } from '@/lib/i18n';
 
@@ -59,8 +59,13 @@ const COPY = {
       'Subscription or billing',
       'Canvas or LMS sync',
       'Bug report',
+      'Feature request',
       'Something else',
     ],
+    // Named rather than indexed: the ?topic=feature preselect used to reach
+    // into topics by position, which breaks silently the moment the list is
+    // reordered. Must match one of the strings above exactly.
+    featureTopic: 'Feature request',
   },
   es: {
     heading: 'Envíanos un mensaje',
@@ -89,8 +94,10 @@ const COPY = {
       'Suscripción o facturación',
       'Sincronización con Canvas o LMS',
       'Reporte de error',
+      'Sugerencia de función',
       'Otro tema',
     ],
+    featureTopic: 'Sugerencia de función',
   },
 } as const;
 
@@ -98,6 +105,21 @@ export function SupportForm({ supportEmail, locale = 'en' }: SupportFormProps) {
   const [status, setStatus] = useState<Status>('idle');
   const [errorCode, setErrorCode] = useState<ErrorCode>('unavailable');
   const copy = COPY[locale];
+
+  // The app links here with ?topic=feature from "Request a feature" in the Me
+  // tab. Preselecting saves the one step the link exists to skip; an unknown
+  // value falls through to the placeholder rather than breaking.
+  //
+  // Read from window rather than useSearchParams: that hook opts the whole
+  // route out of static prerendering unless it is wrapped in Suspense, and
+  // /support and /es/ayuda are static pages. A query string this page reads
+  // once is not worth making both of them render on the client.
+  const [topic, setTopic] = useState('');
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('topic') === 'feature') {
+      setTopic(copy.featureTopic);
+    }
+  }, [copy.featureTopic]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -134,6 +156,7 @@ export function SupportForm({ supportEmail, locale = 'en' }: SupportFormProps) {
       // Clearing only on success means a failed send never costs anyone the
       // message they just typed — they can retry, or copy it into an email.
       form.reset();
+      setTopic('');
       setStatus('sent');
     } catch {
       setErrorCode('unavailable');
@@ -178,7 +201,7 @@ export function SupportForm({ supportEmail, locale = 'en' }: SupportFormProps) {
       </div>
       <label>
         {copy.topic}
-        <select name="topic" defaultValue="">
+        <select name="topic" value={topic} onChange={(event) => setTopic(event.target.value)}>
           <option value="" disabled>
             {copy.topicPlaceholder}
           </option>

@@ -3,6 +3,11 @@
 // app/welcome.tsx, which predates semoraai.com and duplicates it.
 export const MARKETING_URL = 'https://semoraai.com';
 
+// The one public support address. Only a fallback in the app — support goes
+// through the form at MARKETING_URL/support, which stores the message before
+// it tries to email it. This is what we show if that page cannot be opened.
+export const SUPPORT_EMAIL = 'semora365@gmail.com';
+
 // The App Store listing, and the same listing opened straight onto the review
 // composer. `?action=write-review` is what turns a "Rate Semora" tap into a
 // star picker instead of a product page the user then has to scroll.

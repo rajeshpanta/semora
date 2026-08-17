@@ -17,7 +17,7 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTaskStats } from '@/lib/queries';
 import { signOut } from '@/lib/auth';
 import { displayName } from '@/lib/user';
-import { COLORS, PROMO_SURFACE, FONTS, SCREEN_MAX_WIDTH, APP_STORE_REVIEW_URL } from '@/lib/constants';
+import { COLORS, PROMO_SURFACE, FONTS, SCREEN_MAX_WIDTH, APP_STORE_REVIEW_URL, MARKETING_URL, SUPPORT_EMAIL } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { getAppLocale } from '@/lib/i18n';
@@ -120,6 +120,28 @@ export default function MeScreen() {
     }
   };
 
+  /**
+   * Open the support form on semoraai.com, optionally with a topic chosen.
+   *
+   * Deliberately the web form rather than a `mailto:` link. A mailto opens
+   * nothing at all on a device with no mail account configured, and the app
+   * cannot tell — the tap simply appears to do nothing. The form POSTs to
+   * Supabase, so the message is stored before an email is attempted and
+   * reaches us either way (website/SUPPORT_FORM.md).
+   */
+  const openSupport = async (topic?: 'feature') => {
+    track('support_opened', { screen: 'me', topic: topic ?? 'general' });
+    const url = topic ? `${MARKETING_URL}/support?topic=${topic}` : `${MARKETING_URL}/support`;
+    try {
+      await Linking.openURL(url);
+    } catch {
+      Alert.alert(
+        'Contact support',
+        `Email us at ${SUPPORT_EMAIL} and we'll get back to you within 24 hours.`,
+      );
+    }
+  };
+
   // ── Invite friends (referral) ────────────────────────────────
   // The Me tab is the canonical place to apply a code stashed pre-signup
   // (a friend who tapped an invite link before creating an account) — it's
@@ -191,11 +213,21 @@ export default function MeScreen() {
           <GlobalSearchButton />
         </View>
 
-        {/* Premium upsell / Pro active */}
+        {/* Pro status when subscribed, a pitch when not.
+            These used to be one card, which meant a paying subscriber got a
+            full-height promo panel — glow, display type and all — to be told
+            something they already knew. Status is a line, not a billboard. */}
+        {isPro ? (
+          <View style={[styles.proStatus, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <FontAwesome name="check-circle" size={15} color={colors.teal} />
+            <Text style={[styles.proStatusText, { color: colors.ink }]}>Semora Pro</Text>
+            <Text style={[styles.proStatusMeta, { color: colors.ink3 }]}>Active</Text>
+          </View>
+        ) : (
         <TouchableOpacity
           style={[styles.proCard, { backgroundColor: PROMO_SURFACE }]}
-          activeOpacity={isPro ? 1 : 0.85}
-          onPress={() => !isPro && router.push('/paywall' as any)}
+          activeOpacity={0.85}
+          onPress={() => router.push('/paywall' as any)}
         >
           <View style={[styles.proGlow, { backgroundColor: colors.brand }]} />
           <View style={{ position: 'relative' }}>
@@ -203,15 +235,7 @@ export default function MeScreen() {
               <FontAwesome name="star" size={11} color={colors.brand100} />
               <Text style={[styles.proLabelText, { color: colors.brand100 }]}>SEMORA PRO</Text>
             </View>
-            {isPro ? (
-              <>
-                <Text style={styles.proTitle}>You have full access to all Pro features.</Text>
-                <View style={styles.proActiveBadge}>
-                  <FontAwesome name="check-circle" size={14} color={colors.teal} />
-                  <Text style={[styles.proActiveText, { color: colors.teal }]}>Active</Text>
-                </View>
-              </>
-            ) : (
+            {(
               <>
                 <Text style={styles.proTitle}>Unlimited scans, smart plans, grade forecasts.</Text>
                 <View style={styles.proPrice}>
@@ -230,6 +254,7 @@ export default function MeScreen() {
             )}
           </View>
         </TouchableOpacity>
+        )}
 
         {/* Share my semester — the organic-growth entry point. A tasteful
             card under the Pro card; the screen itself gates Pro + shows the
@@ -322,6 +347,8 @@ export default function MeScreen() {
         <View style={[styles.settingsCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <SettingsRow icon="cog" label="Settings" onPress={() => router.push('/settings')} colors={colors} />
           <SettingsRow icon="question-circle-o" label="Help & FAQ" onPress={() => router.push('/settings/help')} colors={colors} />
+          <SettingsRow icon="life-ring" label="Contact support" onPress={() => openSupport()} colors={colors} />
+          <SettingsRow icon="lightbulb-o" label="Request a feature" onPress={() => openSupport('feature')} colors={colors} />
           <SettingsRow icon="star-o" label="Rate Semora" last onPress={handleRate} colors={colors} />
         </View>
 
@@ -370,19 +397,28 @@ const styles = StyleSheet.create({
   profileName: { fontFamily: FONTS.displaySemibold, fontSize: 20, color: COLORS.ink },
   profileSub: { fontSize: 14, color: COLORS.ink3, marginTop: 2 },
   // Pro card — bold premium design
-  proCard: { backgroundColor: COLORS.ink, borderRadius: 22, padding: 22, marginBottom: 20, overflow: 'hidden' },
-  proGlow: { position: 'absolute', right: -30, top: -30, width: 140, height: 140, borderRadius: 70, backgroundColor: COLORS.brand, opacity: 0.4 },
+  // A pitch, not a billboard: the card was 22pt of padding around 22pt display
+  // type, a 28pt price and a full-width button — enough vertical space that it
+  // read as pressure rather than an offer.
+  proCard: { backgroundColor: COLORS.ink, borderRadius: 18, padding: 16, marginBottom: 14, overflow: 'hidden' },
+  // Subscribed state: one line. Nothing to sell to someone who already bought.
+  proStatus: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderRadius: 14, borderWidth: 0.5, paddingVertical: 11, paddingHorizontal: 14,
+    marginBottom: 14,
+  },
+  proStatusText: { fontSize: 15, fontWeight: '700' },
+  proStatusMeta: { fontSize: 13.5, marginLeft: 'auto' },
+  proGlow: { position: 'absolute', right: -26, top: -26, width: 112, height: 112, borderRadius: 56, backgroundColor: COLORS.brand, opacity: 0.32 },
   proLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   proLabelText: { fontSize: 12, fontWeight: '800', letterSpacing: 1.5, color: COLORS.brand100 },
-  proTitle: { fontFamily: FONTS.display, fontSize: 22, color: '#fff', lineHeight: 28, maxWidth: 240 },
-  proPrice: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 16 },
-  proPriceAmount: { fontSize: 28, fontWeight: '800', color: '#fff' },
-  proPricePeriod: { fontSize: 14, color: 'rgba(255,255,255,0.6)' },
-  proButton: { backgroundColor: '#fff', borderRadius: 14, padding: 13, alignItems: 'center', marginTop: 14 },
-  proButtonText: { fontSize: 15, fontWeight: '700', color: COLORS.ink },
-  proAlt: { fontSize: 13, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 10 },
-  proActiveBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
-  proActiveText: { fontSize: 15, fontWeight: '700', color: COLORS.teal },
+  proTitle: { fontFamily: FONTS.display, fontSize: 17, color: '#fff', lineHeight: 23, maxWidth: 260 },
+  proPrice: { flexDirection: 'row', alignItems: 'baseline', gap: 7, marginTop: 10 },
+  proPriceAmount: { fontSize: 21, fontWeight: '800', color: '#fff' },
+  proPricePeriod: { fontSize: 13, color: 'rgba(255,255,255,0.6)' },
+  proButton: { backgroundColor: '#fff', borderRadius: 12, paddingVertical: 10, alignItems: 'center', marginTop: 11 },
+  proButtonText: { fontSize: 14.5, fontWeight: '700', color: COLORS.ink },
+  proAlt: { fontSize: 12, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 8 },
   // Share my semester entry
   shareCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: COLORS.brand50, borderRadius: 18, padding: 14, marginBottom: 20, borderWidth: 0.5, borderColor: COLORS.brand100 },
   shareIcon: { width: 38, height: 38, borderRadius: 11, backgroundColor: COLORS.brand, alignItems: 'center', justifyContent: 'center' },
