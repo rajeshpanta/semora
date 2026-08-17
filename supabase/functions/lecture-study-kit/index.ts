@@ -28,7 +28,10 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '
 const MAX_TRANSCRIPT_CHARS = 80_000;
 const MAX_NOTES_CHARS = 12_000;
 const MIN_QUIZ_QUESTIONS = 3;
-const MAX_QUIZ_QUESTIONS = 10;
+// Raised from 10. A 50-minute lecture holds far more than ten testable ideas,
+// and the cap was silently discarding the tail of a good quiz — the student saw
+// a short quiz and had no way to know questions had been dropped.
+const MAX_QUIZ_QUESTIONS = 25;
 const MAX_FIELD_CHARS = 400;
 
 const NOTES_PROMPT = `You are writing study notes for a college student from a transcript of a class lecture they recorded.
@@ -79,7 +82,9 @@ Rules:
 - Each question has exactly 4 options, exactly one correct.
 - Wrong options must be plausible to someone who half-learned the material — not obviously silly.
 - explanation states, in one or two sentences, why the correct answer is correct.
-- Write between 5 and 8 questions. If the material genuinely does not support that many, write fewer rather than padding.
+- Cover the lecture. Write one question for every distinct idea worth testing — a definition, a mechanism, a formula, a cause-and-effect, a contrast between two things, a worked example's method. A full lecture usually supports 12 to 20; a short or thin one supports fewer.
+- Work through the notes in order so the quiz covers the whole lecture rather than clustering on whatever came first.
+- Never pad to reach a number. Two questions testing the same fact in different words is worse than one question, and a student notices immediately.
 
 Return ONLY valid JSON in this exact shape, no commentary, no markdown fences:
 {"questions": [{"question": "...", "choices": ["...", "...", "...", "..."], "answerIndex": 2, "explanation": "..."}]}
@@ -410,7 +415,12 @@ async function handleQuiz(
     input: [{ role: 'user', content: input }],
     reasoning: { effort: 'none' },
     text: { format: { type: 'json_object' }, verbosity: 'low' },
-    max_output_tokens: 4096,
+    // Asking for up to 20 questions inside a 4096 cap is asking for a truncated
+    // JSON object — which parses as nothing and fails the whole quiz, not just
+    // its tail. Each question is roughly 120-180 tokens with four options and
+    // an explanation, so 20 needs ~3.5k for the questions alone before any
+    // JSON overhead. Verbosity stays 'low': terse questions are good questions.
+    max_output_tokens: 10000,
     store: false,
     safety_identifier: await makeSafetyIdentifier(userId),
   }, 'lecture-quiz');

@@ -303,21 +303,36 @@ export default function DeckDetailScreen() {
                 </TouchableOpacity>
               </View>
 
+              {/* One side at a time, like a real card.
+                  It used to reveal the answer BENEATH the question, leaving
+                  both on screen — which is not a flashcard, it is a question
+                  with the answer printed under it. Recall is the entire point:
+                  if the prompt is still visible you are reading, not
+                  remembering. Tapping now turns the card over, and tapping
+                  again turns it back. */}
               <TouchableOpacity
                 style={[styles.studyCard, { backgroundColor: colors.card, borderColor: colors.line }]}
-                activeOpacity={revealed ? 1 : 0.85}
-                onPress={() => { if (!revealed) { if (Platform.OS === 'ios') Haptics.selectionAsync(); setRevealed(true); } }}
+                activeOpacity={0.85}
+                onPress={() => {
+                  if (Platform.OS === 'ios') Haptics.selectionAsync();
+                  setRevealed((v) => !v);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={revealed ? `Answer: ${card.back}. Tap to see the question.` : `Question: ${card.front}. Tap to see the answer.`}
               >
-                <Text style={[styles.cardFace, { color: colors.ink }]}>{card.front}</Text>
-                {revealed && (
-                  <>
-                    <View style={[styles.faceDivider, { backgroundColor: colors.line }]} />
-                    <Text style={[styles.cardFace, styles.cardBack, { color: colors.ink2 }]}>{card.back}</Text>
-                  </>
-                )}
-                {!revealed && (
-                  <Text style={[styles.tapHint, { color: colors.ink3 }]}>Tap to reveal</Text>
-                )}
+                {/* The only thing distinguishing the two faces once the text is
+                    alone on the card. Without it a short answer and a short
+                    question look identical and it is easy to lose track of
+                    which side is showing. */}
+                <Text style={[styles.faceLabel, { color: colors.ink3 }]}>
+                  {revealed ? 'ANSWER' : 'QUESTION'}
+                </Text>
+                <Text style={[styles.cardFace, { color: colors.ink }]}>
+                  {revealed ? card.back : card.front}
+                </Text>
+                <Text style={[styles.tapHint, { color: colors.ink3 }]}>
+                  {revealed ? 'Tap to flip back' : 'Tap to reveal'}
+                </Text>
               </TouchableOpacity>
 
               {revealed ? (
@@ -583,9 +598,12 @@ const styles = StyleSheet.create({
   progressText: { fontSize: 13, fontWeight: '600' },
   exitLink: { fontSize: 14, fontWeight: '600' },
   studyCard: { flex: 1, borderRadius: 18, borderWidth: 0.5, padding: 24, justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  cardFace: { fontFamily: FONTS.displaySemibold, fontSize: 22, textAlign: 'center', lineHeight: 30 },
-  cardBack: { fontFamily: undefined, fontSize: 17, fontWeight: '500', lineHeight: 24 },
-  faceDivider: { height: 1, alignSelf: 'stretch', marginVertical: 20 },
+  // Both faces now use the same serif at the same size — the answer used to be
+  // set smaller and in the system font, which read as a footnote to the
+  // question rather than the other half of the same card. 23/32 keeps a long
+  // answer comfortable without shrinking it.
+  cardFace: { fontFamily: FONTS.displaySemibold, fontSize: 23, textAlign: 'center', lineHeight: 32 },
+  faceLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 1.4, marginBottom: 14 },
   tapHint: { fontSize: 12.5, marginTop: 18, fontWeight: '500' },
   revealBtn: { height: 52, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
   gradeRow: { flexDirection: 'row', gap: 8 },

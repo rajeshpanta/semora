@@ -129,13 +129,22 @@ function NotesBody({
  */
 const STALE_GENERATION_MS = 4 * 60 * 1000;
 
+// Notes are read, not skimmed — a student revising sits with this screen the
+// way they would with a page of a textbook. 14pt with a 20pt line height is
+// caption sizing; it was legible only by holding the phone closer or zooming.
+// 16.5/25 is ordinary reading size, and the generous line height is what makes
+// a dense bulleted page scannable rather than a wall.
+//
+// No maximum font scale is set anywhere here: Text scales with the reader's iOS
+// text-size setting by default, and capping that is how an app becomes unusable
+// for the people who most need it larger.
 const nb = StyleSheet.create({
-  heading: { fontFamily: FONTS.displaySemibold, fontSize: 16 },
-  bulletRow: { flexDirection: 'row', gap: 8, paddingRight: 6 },
-  bulletIndent: { paddingLeft: 16 },
-  bulletDot: { fontSize: 14, lineHeight: 20 },
-  bulletText: { flex: 1, fontSize: 14, lineHeight: 20 },
-  paragraph: { fontSize: 14, lineHeight: 20 },
+  heading: { fontFamily: FONTS.displaySemibold, fontSize: 19, lineHeight: 26 },
+  bulletRow: { flexDirection: 'row', gap: 9, paddingRight: 6 },
+  bulletIndent: { paddingLeft: 18 },
+  bulletDot: { fontSize: 16.5, lineHeight: 25 },
+  bulletText: { flex: 1, fontSize: 16.5, lineHeight: 25 },
+  paragraph: { fontSize: 16.5, lineHeight: 25 },
 });
 
 export default function LectureDetailScreen() {
