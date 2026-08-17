@@ -32,6 +32,7 @@ const REVIEW_REQUESTED_KEY = 'semora_review_requested';
 // good rating. Separating the two means the paywall flag goes on describing
 // the paywall and this one describes the import.
 const IMPORTED_SYLLABUS_KEY = 'semora_imported_syllabus';
+const WIDGET_TIP_KEY = 'semora_widget_tip_seen';
 // Lifetime count of task completions on this device — the fallback trigger
 // for the review prompt (10th completion). Device-level like the flags
 // above: the rating prompt is once-per-device regardless of account, so
@@ -92,6 +93,7 @@ const initialInPasswordReset = getItem(RESET_KEY) === 'true';
 // first render without a flash (same approach as theme/semester above).
 const initialOnboarded = getItem(ONBOARDED_KEY) === 'true';
 const initialAhaPaywallShown = getItem(AHA_PAYWALL_KEY) === 'true';
+const initialWidgetTipSeen = getItem(WIDGET_TIP_KEY) === 'true';
 const initialReviewRequested = getItem(REVIEW_REQUESTED_KEY) === 'true';
 // Backfill: a device that already has AHA_PAYWALL_KEY set completed an import
 // before IMPORTED_SYLLABUS_KEY existed. Without this, upgrading would read the
@@ -135,6 +137,14 @@ interface AppState {
   setHasImportedSyllabus: (v: boolean) => void;
   reviewRequested: boolean;
   setReviewRequested: (v: boolean) => void;
+  /**
+   * The home-screen widget tip has been shown once. The app ships a widget
+   * (targets/widget) that nothing in the UI has ever mentioned, so nobody
+   * installs it — and it is the only surface that keeps working for a student
+   * who has stopped opening the app.
+   */
+  widgetTipSeen: boolean;
+  setWidgetTipSeen: (v: boolean) => void;
   /**
    * Lifetime task completions on this device (see TASKS_COMPLETED_KEY).
    * Counts completion ACTIONS across ALL screens — incremented centrally in
@@ -226,6 +236,11 @@ export const useAppStore = create<AppState>((set) => ({
   setReviewRequested: (v) => {
     set({ reviewRequested: v });
     if (v) { setItem(REVIEW_REQUESTED_KEY, 'true'); } else { deleteItem(REVIEW_REQUESTED_KEY); }
+  },
+  widgetTipSeen: initialWidgetTipSeen,
+  setWidgetTipSeen: (v) => {
+    set({ widgetTipSeen: v });
+    if (v) { setItem(WIDGET_TIP_KEY, 'true'); } else { deleteItem(WIDGET_TIP_KEY); }
   },
   tasksCompletedCount: initialTasksCompleted,
   incrementTasksCompleted: () => set((s) => {

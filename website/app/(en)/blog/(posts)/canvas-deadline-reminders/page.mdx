@@ -26,7 +26,7 @@ export const faqItems = [
   {
     question: 'How far in advance can I get a reminder?',
     answer:
-      'Reminders 3 days before, 1 day before, and on the morning of a deadline are on by default on every tier, including free — you pick which of the three you want in Settings. Pro adds per-task custom timing, for the one assignment that needs a week of warning, plus quiet hours, so an alert does not fire at 2 a.m. when there is nothing you can do with it.',
+      'Same-day reminders are on by default on every tier, including free. Pro adds custom reminder timing — a 1-day or 3-day advance notice, set once and applied automatically — plus quiet hours, so an alert does not fire at 2 a.m. when there is nothing you can do with it.',
   },
   {
     question: "Do I need my university's permission to connect Canvas?",
@@ -41,7 +41,7 @@ export const faqItems = [
   {
     question: 'How many courses can I track without paying?',
     answer:
-      'Up to 4 courses in one semester, with 5 syllabus scans per calendar month, full deadline and task tracking, grade tracking with weighted averages, and reminders 3 days, 1 day and the morning before each deadline. The one hard edge is semesters — a free account covers a single term, so starting a second one is the point where Pro becomes necessary.',
+      'Up to 4 courses in one semester, with 5 syllabus scans per calendar month, full deadline and task tracking, grade tracking with weighted averages, and same-day reminders. The one hard edge is semesters — a free account covers a single term, so starting a second one is the point where Pro becomes necessary.',
   },
   {
     question: 'Should I set every Canvas notification to arrive immediately?',
@@ -110,7 +110,7 @@ Once a phone is buzzing for every quiz score, every syllabus edit, and every dis
 
 What actually determines whether a reminder is useful isn't how many arrive, it's when the important ones arrive relative to the deadline. A single, well-timed reminder three days out is worth more than ten same-day pings spread across ten different assignments, because three days out is when there's still something to do about it — start the reading, ask a clarifying question over email, rearrange a weekend that was about to fill up with something else. A reminder that lands the morning something is due can only confirm what you already suspected; it can't undo a week of not knowing.
 
-That's the actual argument for reminders that are fewer and better-timed, rather than simply turned up to maximum. Semora's reminders — 3 days out, 1 day out, and the morning of — are on by default on every tier, including free, which is the earlier warning that same-day-only systems structurally can't provide. Pro's per-task custom timing covers the exception: the one assignment that needs a fortnight of notice rather than three days. Quiet hours, also on Pro, address the other half of the same problem — a reminder that fires at 2 a.m. doesn't help anyone plan a day differently, so quiet hours push it to a point where it's actually actionable instead of just another buzz to dismiss half-asleep and forget by morning.
+That's the actual argument for reminders that are fewer and better-timed, rather than simply turned up to maximum. Semora's same-day reminders, on by default on every tier, cover the baseline case — don't let today's deadline slip past unnoticed. Pro's custom reminder timing adds the earlier warning that same-day-only systems structurally can't provide: a 1-day or 3-day advance notice, set once and applied automatically rather than something you have to remember to check for manually. Quiet hours, also on Pro, address the other half of the same problem — a reminder that fires at 2 a.m. doesn't help anyone plan a day differently, so quiet hours push it to a point where it's actually actionable instead of just another buzz to dismiss half-asleep and forget by morning.
 
 ## What Canvas notifications can't do
 
@@ -128,7 +128,7 @@ Semora's grade tracking, included on the free tier, keeps weighted course contex
 
 The fix isn't to abandon Canvas — it's still where the source-of-truth assignments live — but to add a layer that actually pushes reminders with real advance notice, and ties deadlines to grades.
 
-Semora's Canvas import is a Pro feature. The shipping connector currently uses a personal access token generated inside your Canvas account; Semora does not yet provide its own OAuth flow. Some institutions disable token creation or prohibit third-party token use, so confirm your school's policy before connecting. If the connector is unavailable or not permitted, you can still scan a syllabus or paste your Canvas assignment list into Semora. Every tier gets reminders 3 days, 1 day and the morning before a deadline by default; Pro ($3.99/month or $19.99/year) adds per-task custom timing and quiet hours.
+Semora's Canvas import is a Pro feature. The shipping connector currently uses a personal access token generated inside your Canvas account; Semora does not yet provide its own OAuth flow. Some institutions disable token creation or prohibit third-party token use, so confirm your school's policy before connecting. If the connector is unavailable or not permitted, you can still scan a syllabus or paste your Canvas assignment list into Semora. Every tier gets same-day reminders by default; Pro ($3.99/month or $19.99/year) adds custom 1-day or 3-day reminders and quiet hours.
 
 ## The syllabus carries context Canvas assignments don't
 

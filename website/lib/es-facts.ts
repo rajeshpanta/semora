@@ -10,7 +10,7 @@ export const FREE_FEATURES_ES = [
   'Hasta 4 cursos dentro de un único semestre; una cuenta gratis admite un semestre en total',
   'Seguimiento de tareas y fechas de entrega',
   'Calificaciones con promedios ponderados',
-  'Recordatorios 3 días antes, 1 día antes y la mañana del vencimiento',
+  'Recordatorios el mismo día',
   'Espacios de curso: únete gratis al espacio que comparta un compañero',
 ] as const;
 
@@ -139,10 +139,10 @@ export const SHOWCASE_ES = [
     alt: 'Pantalla Hoy de Semora con la próxima entrega, las tareas atrasadas y el resumen de la semana',
     tier: 'free' as const,
     title: 'No se te pasa ninguna entrega',
-    body: 'Todas las fechas de todos tus cursos llegan a un mismo lugar, y lo que vence primero aparece arriba. Los recordatorios con antelación vienen activados, y un resumen semanal te muestra tareas, exámenes y cursos de un vistazo, incluido lo que quedó atrasado.',
+    body: 'Todas las fechas de todos tus cursos llegan a un mismo lugar, y lo que vence primero aparece arriba. Los recordatorios del mismo día vienen activados, y un resumen semanal te muestra tareas, exámenes y cursos de un vistazo, incluido lo que quedó atrasado.',
     bullets: [
       'Una sola lista para todos tus cursos',
-      'Recordatorios con antelación, incluidos gratis',
+      'Recordatorios el mismo día, incluidos gratis',
       'Lo atrasado se marca solo',
     ],
     href: '/es/escaner-de-programa-de-estudios',

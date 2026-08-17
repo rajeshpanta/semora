@@ -1,5 +1,5 @@
 import { Text, TouchableOpacity } from '@/components/LocalizedReactNative';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -56,6 +56,25 @@ export default function SyllabusAddedScreen() {
     track('next_class_prompt_shown', { screen: 'syllabus_added', course_count: courseCount });
   }, [coursesLoading, courseCount]);
 
+  // iOS-only and once per device. Held in local state as well as the store so
+  // dismissing it animates away immediately rather than waiting on storage.
+  const widgetTipSeen = useAppStore((s) => s.widgetTipSeen);
+  const setWidgetTipSeen = useAppStore((s) => s.setWidgetTipSeen);
+  const [widgetTipDismissed, setWidgetTipDismissed] = useState(false);
+  const showWidgetTip = Platform.OS === 'ios' && !widgetTipSeen && !widgetTipDismissed;
+
+  const dismissWidgetTip = () => {
+    setWidgetTipDismissed(true);
+    setWidgetTipSeen(true);
+    track('widget_tip_dismissed', { screen: 'syllabus_added' });
+  };
+
+  useEffect(() => {
+    if (showWidgetTip) track('widget_tip_shown', { screen: 'syllabus_added' });
+    // Once per mount, when it first becomes visible.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const goScan = () => {
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     track('next_class_started', { screen: 'syllabus_added', course_count: courseCount });
@@ -111,6 +130,28 @@ export default function SyllabusAddedScreen() {
             </View>
           )}
         </View>
+
+        {/* The widget has shipped since launch and nothing has ever mentioned
+            it, so essentially nobody has one. It is the only part of Semora
+            that keeps working for a student who has stopped opening the app —
+            which, going by the numbers, is most of them. Shown once, here,
+            because this is the first moment there is anything worth putting on
+            a home screen. iOS only: there is no such thing on the web. */}
+        {showWidgetTip && (
+          <View style={[styles.widgetTip, { backgroundColor: colors.brand50, borderColor: colors.line }]}>
+            <View style={styles.widgetTipHead}>
+              <FontAwesome name="th-large" size={14} color={colors.brand} />
+              <Text style={[styles.widgetTipTitle, { color: colors.ink }]}>Put it on your home screen</Text>
+            </View>
+            <Text style={[styles.widgetTipBody, { color: colors.ink2 }]}>
+              Semora has a widget that shows what&apos;s due next, so you see it without opening anything.
+              Touch and hold your home screen, tap Edit → Add Widget, then search Semora.
+            </Text>
+            <TouchableOpacity onPress={dismissWidgetTip} style={styles.widgetTipDismiss}>
+              <Text style={[styles.widgetTipDismissText, { color: colors.brand }]}>Got it</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <Text style={[styles.ask, { color: colors.ink }]}>What else are you taking?</Text>
         <Text style={[styles.askSub, { color: colors.ink3 }]}>
@@ -171,6 +212,16 @@ const styles = StyleSheet.create({
   },
   dot: { width: 7, height: 7, borderRadius: 4 },
   chipText: { fontSize: 12.5, flexShrink: 1 },
+
+  widgetTip: {
+    width: '100%', borderRadius: 14, borderWidth: 1,
+    paddingVertical: 14, paddingHorizontal: 16, marginTop: 22,
+  },
+  widgetTipHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  widgetTipTitle: { fontSize: 15, fontWeight: '700' },
+  widgetTipBody: { fontSize: 13.5, lineHeight: 19, marginTop: 6 },
+  widgetTipDismiss: { alignSelf: 'flex-start', paddingVertical: 8, marginTop: 2 },
+  widgetTipDismissText: { fontSize: 14, fontWeight: '600' },
 
   ask: { fontFamily: FONTS.display, fontSize: 20, textAlign: 'center', marginTop: 30 },
   askSub: { fontSize: 14.5, textAlign: 'center', marginTop: 7, maxWidth: 330, lineHeight: 21 },

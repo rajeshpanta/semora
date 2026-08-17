@@ -34,7 +34,7 @@ const SUPPORT_FAQ = [
   {
     question: 'How do reminders work?',
     answer:
-      'Every account, free included, gets reminders 3 days before, 1 day before, and on the morning of each deadline — you choose which of the three you want in Settings. Pro adds per-task custom timing and quiet hours, so nothing fires at 2 a.m.',
+      'Free users receive same-day reminders for upcoming tasks. Semora Pro users can enable 1-day and 3-day advance reminders for extra preparation time.',
   },
   {
     question: 'How is my grade calculated?',

@@ -98,7 +98,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
         heading: 'Cómo se paga Semora',
         paragraphs: [
           'Con suscripciones, y nada más. No hay publicidad, no se venden datos, y no hay una capa gratuita financiada por algo que no se ve.',
-          'El plan Gratis incluye cinco escaneos por mes natural, hasta cuatro cursos dentro de un semestre y un semestre en total, con seguimiento de entregas, calificaciones ponderadas y recordatorios con antelación. No es una prueba que caduca.',
+          'El plan Gratis incluye cinco escaneos por mes natural, hasta cuatro cursos dentro de un semestre y un semestre en total, con seguimiento de entregas, calificaciones ponderadas y recordatorios el mismo día. No es una prueba que caduca.',
           'Pro cuesta 3,99 USD al mes o 19,99 USD al año, se compra dentro de la app de iOS a través de la App Store y se aplica a toda la cuenta, incluida la web. No hay una compra web aparte ni una versión que haya que pagar dos veces.',
           'Si la suscripción caduca, la cuenta y los datos académicos se mantienen: se conserva todo lo del plan Gratis, la sincronización con el calendario se pausa en lugar de borrar los eventos que creó, y los Espacios de curso que alojas no desaparecen.',
         ],
@@ -125,7 +125,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
     h1: 'Precios simples para un semestre real',
     lede: 'Empieza gratis con lo esencial. Pásate a Pro cuando necesites cursos ilimitados, planificación adaptativa y herramientas de estudio avanzadas.',
     intro: [
-      'El plan Gratis incluye cinco escaneos al mes, hasta cuatro cursos y un semestre total, además de tareas, fechas de entrega, calificaciones ponderadas y recordatorios con antelación. No necesitas tarjeta de crédito.',
+      'El plan Gratis incluye cinco escaneos al mes, hasta cuatro cursos y un semestre total, además de tareas, fechas de entrega, calificaciones ponderadas y recordatorios el mismo día. No necesitas tarjeta de crédito.',
       'Pro cuesta $3.99 al mes o $19.99 al año. Puedes contratarlo desde la app con tu Apple ID y usarlo con la misma cuenta en iPhone, iPad y la web.',
     ],
     sections: [
@@ -133,14 +133,14 @@ const CORE_PAGES: SpanishPageConfig[] = [
         heading: 'Qué incluye el plan Gratis, sin letra pequeña',
         paragraphs: [
           'El plan Gratis no es una prueba que caduca ni una versión recortada que deja de funcionar. Es un plan permanente con tres topes concretos y todo lo demás completo.',
-          'Los topes son: cinco escaneos de programas por mes natural, hasta cuatro cursos dentro de un semestre, y un semestre en total. Dentro de eso tienes la capa de organización íntegra: seguimiento completo de entregas y tareas, calificaciones con medias ponderadas —incluidas categorías, descartes y las tres políticas de crédito extra—, recordatorios con antelación, y la posibilidad de unirte al Espacio de curso de un compañero.',
+          'Los topes son: cinco escaneos de programas por mes natural, hasta cuatro cursos dentro de un semestre, y un semestre en total. Dentro de eso tienes la capa de organización íntegra: seguimiento completo de entregas y tareas, calificaciones con medias ponderadas —incluidas categorías, descartes y las tres políticas de crédito extra—, recordatorios el mismo día, y la posibilidad de unirte al Espacio de curso de un compañero.',
           'Merece subrayarse que el motor de calificaciones entero está en el plan Gratis. No es una versión simplificada: es el mismo cálculo ponderado, con las mismas categorías y las mismas letras derivadas de la escala del curso, que usa una cuenta de pago.',
         ],
         bullets: [
           '5 escaneos por mes natural',
           'Hasta 4 cursos dentro de un semestre',
           'Un semestre en total',
-          'Entregas, tareas, calificaciones ponderadas y recordatorios con antelación, completos',
+          'Entregas, tareas, calificaciones ponderadas y recordatorios el mismo día, completos',
           'Sin tarjeta de crédito',
         ],
       },
@@ -195,7 +195,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
       },
     ],
     faq: [
-      { question: '¿Semora tiene un plan gratis?', answer: 'Sí. Incluye cinco escaneos al mes, hasta cuatro cursos y un semestre total, además de seguimiento de entregas y calificaciones y recordatorios con antelación. Una cuenta gratuita no puede iniciar un segundo periodo.' },
+      { question: '¿Semora tiene un plan gratis?', answer: 'Sí. Incluye cinco escaneos al mes, hasta cuatro cursos y un semestre total, además de seguimiento de entregas y calificaciones y recordatorios el mismo día. Una cuenta gratuita no puede iniciar un segundo periodo.' },
       { question: '¿Cómo compro Pro?', answer: 'Dentro de la app en iPhone o iPad mediante App Store. La suscripción se activa en toda tu cuenta, incluida la web.' },
       { question: '¿Puedo cancelar cuando quiera?', answer: 'Sí. Administra o cancela la suscripción desde la configuración de tu Apple ID.' },
       { question: '¿Pierdo mis datos si cancelo?', answer: 'No. Conservas tu cuenta y los datos compatibles con el plan Gratis; solo se desactivan las funciones exclusivas de Pro.' },
@@ -215,7 +215,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
         paragraphs: [
           'El recorrido de entrada tiene tres pasos y ninguno necesita configuración previa. Crea la cuenta, abre la pestaña de escaneo y añade el programa de una materia: con una foto, subiendo el PDF, arrastrándolo en la web o pegando el texto.',
           'En unos segundos verás una lista con el curso, el profesor, los horarios, la escala de calificación y cada entrega con su fecha y su ponderación. Revísala. Lo marcado para verificar es lo que el modelo devolvió con menos confianza, y los elementos sin fecha quedan aparte hasta que los completes.',
-          'Al aprobar, las entregas pasan a la vista Hoy y al Calendario, y los recordatorios con antelación se programan solos. Repite con las demás materias. Cuatro programas suelen ser unos veinte minutos, y la mayor parte de ese tiempo es la revisión, que es la parte que conviene no apurar.',
+          'Al aprobar, las entregas pasan a la vista Hoy y al Calendario, y los recordatorios del mismo día se programan solos. Repite con las demás materias. Cuatro programas suelen ser unos veinte minutos, y la mayor parte de ese tiempo es la revisión, que es la parte que conviene no apurar.',
         ],
         bullets: [
           'Empieza por la materia cuyas fechas tengas menos claras',
@@ -234,7 +234,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Recordatorios y notificaciones',
         paragraphs: [
-          'El plan Gratis programa recordatorios con antelación en cuanto apruebas las fechas. Pro añade avisos de un día y de tres días de antelación.',
+          'El plan Gratis programa recordatorios el mismo día en cuanto apruebas las fechas. Pro añade avisos de un día y de tres días de antelación.',
           'Si no te llega ninguno, la causa casi siempre está fuera de la app: comprueba los permisos de notificaciones del sistema para Semora y que el modo de concentración no las esté silenciando. Una entrega sin hora concreta se avisa según su fecha, no según una hora que nadie fijó.',
           'La diferencia entre el mismo día y tres días importa según el tamaño del trabajo. Para una entrega corta, avisar por la mañana basta. Para un proyecto de seis horas, enterarte ese día no cambia nada: los tres días son la ventana en la que todavía se puede reaccionar.',
         ],
@@ -451,7 +451,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
           'El precio es 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes y alrededor de un 58 % menos que pagando mes a mes. La compra ocurre dentro de la app de iOS a través de StoreKit, y la suscripción se aplica a toda tu cuenta, incluida la app web. No hay una caja aparte en la web ni nada que activar: la web lee la misma suscripción que ya tienes.',
         ],
         bullets: [
-          'Gratis: escanear, cuatro cursos, entregas y tareas ilimitadas, calificaciones ponderadas y nota media del semestre, recordatorios con antelación, Hoy y Calendario completos.',
+          'Gratis: escanear, cuatro cursos, entregas y tareas ilimitadas, calificaciones ponderadas y nota media del semestre, recordatorios el mismo día, Hoy y Calendario completos.',
           'Capacidad de Pro: cursos y semestres ilimitados, y sin tope mensual de escaneos — el único techo que queda es el de uso razonable, 20 escaneos en cualquier ventana de 24 horas, que ningún semestre real alcanza.',
           'Decisiones de Pro: Plan Inteligente, carga académica, revisión académica, escala de calificación propia y pronósticos, y análisis del progreso con gráficos y exportación.',
           'Estudio con Pro: tarjetas con repetición espaciada, temporizador de enfoque y el Tutor con IA anclado en tu propio curso.',
@@ -501,7 +501,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
       {
         question: '¿Qué incluye exactamente el plan Gratis?',
         answer:
-          'Cinco escaneos de programas por mes natural, hasta cuatro cursos dentro de un semestre y un semestre en total, seguimiento completo de tareas y fechas, calificaciones con medias ponderadas, recordatorios con antelación, y unirte al Espacio de curso al que te invite un compañero. Sin tarjeta de crédito, y no es una prueba que caduca.',
+          'Cinco escaneos de programas por mes natural, hasta cuatro cursos dentro de un semestre y un semestre en total, seguimiento completo de tareas y fechas, calificaciones con medias ponderadas, recordatorios el mismo día, y unirte al Espacio de curso al que te invite un compañero. Sin tarjeta de crédito, y no es una prueba que caduca.',
       },
       {
         question: '¿Qué funciones son de Pro?',
@@ -961,7 +961,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
       { question: '¿Puedo generar un mazo solo para mi parcial?', answer: 'Sí. El panel de generación permite enfocarse en un elemento concreto que ya estés siguiendo como fecha, en lugar del curso entero, que es lo que evita que un repaso de parcial se diluya con material del final.' },
       { question: '¿Qué algoritmo de repetición espaciada usa?', answer: 'Una variante compacta de SM-2. Las tarjetas nuevas empiezan con facilidad 2,5 y repaso inmediato; «otra vez» devuelve la tarjeta en unos diez minutos, «bien» sigue una escalera de un día, seis días y después multiplicar por la facilidad, y la facilidad tiene un suelo de 1,3.' },
       { question: '¿Mis tarjetas se tratan distinto que las generadas?', answer: 'Comparten mazo y el mismo calendario. La única diferencia es el tope de 300 caracteres por cara, que es un límite defensivo sobre la salida del modelo: las que escribes tú no se recortan.' },
-      { question: '¿El generador de tarjetas es gratis?', answer: 'No, forma parte de Pro, a 3,99 USD al mes o 19,99 USD al año. El plan Gratis cubre el escaneo de programas, el seguimiento de entregas, las calificaciones ponderadas y los recordatorios con antelación.' },
+      { question: '¿El generador de tarjetas es gratis?', answer: 'No, forma parte de Pro, a 3,99 USD al mes o 19,99 USD al año. El plan Gratis cubre el escaneo de programas, el seguimiento de entregas, las calificaciones ponderadas y los recordatorios el mismo día.' },
     ],
   }),
   page('/es/tutor-con-ia-para-universitarios', '/ai-tutor-for-college-students', 'standard', {
@@ -1099,7 +1099,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Recordatorios que se programan solos',
         paragraphs: [
-          'Los recordatorios con antelación se programan automáticamente en cuanto apruebas las fechas extraídas, en el plan Gratis. No hay un recordatorio por elemento que configurar, y eso importa porque los recordatorios que la gente configura a mano son justo los que deja de configurar en la semana cuatro.',
+          'Los recordatorios el mismo día se programan automáticamente en cuanto apruebas las fechas extraídas, en el plan Gratis. No hay un recordatorio por elemento que configurar, y eso importa porque los recordatorios que la gente configura a mano son justo los que deja de configurar en la semana cuatro.',
           'Pro añade avisos de un día y de tres días. La distinción tiene que ver con el tamaño del trabajo y no con la preferencia: para una entrega corta, avisar esa mañana basta; para un proyecto que necesita seis horas, enterarte ese día no cambia nada. Tres días es la ventana en la que la información todavía sirve para algo.',
           'Si una fecha se mueve y la editas, el recordatorio se mueve con ella. Suena obvio y es una de las cosas que conviene probar de verdad en cualquier app que estés valorando.',
         ],
@@ -1180,13 +1180,13 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
           'El programa suele contener más de lo que necesitas para planificar que la propia plataforma. Las ponderaciones, las fechas de examen, el calendario de lecturas y la escala de calificación viven ahí, y buena parte de eso nunca llega a ser una entrada de Blackboard.',
           'Fotografíalo, sube el PDF, arrástralo en la web o pega el texto —hasta 60.000 caracteres, que es la vía más rápida y precisa cuando puedes seleccionar el texto en un portátil. Obtienes el curso, el profesor, los horarios, las fechas del semestre, la escala y cada elemento con fecha y ponderación.',
           'También puedes pegar directamente una lista de tareas de Blackboard en el mismo escáner. Si puedes seleccionar el texto, se puede leer, y no hay ninguna conexión ni token de por medio.',
-          'El plan Gratis incluye cinco escaneos por mes natural, hasta cuatro cursos dentro de un semestre, un semestre en total, seguimiento completo de entregas, calificaciones ponderadas y recordatorios con antelación.',
+          'El plan Gratis incluye cinco escaneos por mes natural, hasta cuatro cursos dentro de un semestre, un semestre en total, seguimiento completo de entregas, calificaciones ponderadas y recordatorios el mismo día.',
         ],
       },
       {
         heading: 'Recordatorios que controlas tú',
         paragraphs: [
-          'Los recordatorios con antelación se programan solos en cuanto apruebas las fechas extraídas, sin coste. Pro añade avisos de un día y de tres.',
+          'Los recordatorios el mismo día se programan solos en cuanto apruebas las fechas extraídas, sin coste. Pro añade avisos de un día y de tres.',
           'El motivo para que te importe la antelación es el tamaño del trabajo, no la preferencia. Una intervención corta en el foro se resuelve con un aviso esa mañana. Un trabajo que necesita seis horas no: para cuando te avisan, la única respuesta posible es empezar tarde.',
           'Como los recordatorios se derivan de las fechas y no se configuran uno a uno, sobreviven a lo que mata a los sistemas hechos a mano: nadie tiene que acordarse de ponerlos.',
         ],
@@ -1275,7 +1275,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
         heading: 'Qué construye Semora a partir de la extracción',
         paragraphs: [
           'Una vez aprobadas, las fechas dejan de ser una lista y pasan a alimentar el resto de la app sin que introduzcas nada dos veces.',
-          'Aparecen en la vista Hoy, que muestra lo siguiente que vence y lo que ya está atrasado. Aparecen en el Calendario, en vista de mes o de lista, con un color por curso. Generan recordatorios con antelación de forma automática al aprobarlas. Y las ponderaciones preparan el seguimiento de calificaciones, de modo que en cuanto introduzcas una nota exista una media ponderada real.',
+          'Aparecen en la vista Hoy, que muestra lo siguiente que vence y lo que ya está atrasado. Aparecen en el Calendario, en vista de mes o de lista, con un color por curso. Generan recordatorios el mismo día de forma automática al aprobarlas. Y las ponderaciones preparan el seguimiento de calificaciones, de modo que en cuanto introduzcas una nota exista una media ponderada real.',
           'Por encima de esa capa hay análisis. El motor de carga académica puntúa cada tarea con fecha como su ponderación multiplicada por un factor de esfuerzo —un examen cuenta el triple, un proyecto 2,5, un cuestionario 1,5, una tarea 1,2 y una lectura 1— así que una semana con dos exámenes se lee como pesada aunque el profesor no imprimiera ningún porcentaje al lado. El Plan Inteligente reparte sesiones de estudio en un horizonte de catorce días esquivando las clases que el escaneo ya conoce.',
           'La consecuencia práctica: el escaneo no es el producto, es el paso de entrada. Cada función de planificación y estudio vale exactamente lo que tengas metido del semestre.',
         ],
@@ -1293,7 +1293,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
         paragraphs: [
           'El plan Gratis incluye cinco escaneos completados por mes natural. Un escaneo con foto de hasta cinco páginas cuenta como uno solo, así que una carga normal de cuatro materias cabe en un mes con uno de sobra.',
           'Los otros dos límites son los que conviene entender antes de empezar, porque funcionan distinto. Cuatro cursos es un techo sobre cuánto de un mismo periodo puedes sostener. Un semestre es una línea más dura: una cuenta gratuita no puede iniciar un segundo periodo, así que el tope no se renueva solo en enero.',
-          'Dentro de esos límites tienes la capa de organización completa: seguimiento de tareas y fechas, calificaciones con medias ponderadas, recordatorios con antelación y la posibilidad de unirte al Espacio de curso de un compañero. Pro elimina los tres topes por 3,99 USD al mes o 19,99 USD al año, se compra dentro de la app de iOS y se aplica a toda la cuenta, incluida la web.',
+          'Dentro de esos límites tienes la capa de organización completa: seguimiento de tareas y fechas, calificaciones con medias ponderadas, recordatorios el mismo día y la posibilidad de unirte al Espacio de curso de un compañero. Pro elimina los tres topes por 3,99 USD al mes o 19,99 USD al año, se compra dentro de la app de iOS y se aplica a toda la cuenta, incluida la web.',
         ],
       },
       {
@@ -1448,7 +1448,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
         heading: 'Recordatorios que Canvas no te da',
         paragraphs: [
           'Las notificaciones de Canvas están pensadas para avisar de actividad en la plataforma, no para preparar tu semana. Semora añade una capa de recordatorios sobre las mismas fechas.',
-          'El plan Gratis incluye recordatorios con antelación, que se programan solos en cuanto apruebas las fechas. Pro añade avisos con antelación personalizada, de un día y de tres días, que es la ventana en la que todavía se puede hacer algo con la información.',
+          'El plan Gratis incluye recordatorios el mismo día, que se programan solos en cuanto apruebas las fechas. Pro añade avisos con antelación personalizada, de un día y de tres días, que es la ventana en la que todavía se puede hacer algo con la información.',
           'La diferencia práctica se nota con los trabajos grandes. Un aviso el mismo día sirve para una entrega corta; para un proyecto que necesita seis horas, enterarte esa mañana no cambia nada. Los tres días son los que permiten reaccionar.',
         ],
       },
@@ -1464,7 +1464,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
         heading: 'Qué cuesta y para quién no vale la pena',
         paragraphs: [
           'La importación desde Canvas, Blackboard y Moodle es Pro: 3,99 USD al mes o 19,99 USD al año, comprado dentro de la app de iOS y aplicado a toda la cuenta, incluida la web. Una sincronización cubre hasta 50 cursos a la vez.',
-          'El plan Gratis sigue cubriendo el mismo trabajo desde el lado del programa: cinco escaneos por mes natural, hasta cuatro cursos dentro de un semestre, seguimiento completo de tareas y fechas, calificaciones con medias ponderadas y recordatorios con antelación.',
+          'El plan Gratis sigue cubriendo el mismo trabajo desde el lado del programa: cinco escaneos por mes natural, hasta cuatro cursos dentro de un semestre, seguimiento completo de tareas y fechas, calificaciones con medias ponderadas y recordatorios el mismo día.',
           'No vale la pena si tu profesor no publica en Canvas y lo mantiene todo en el programa: ahí escanear es mejor y además es gratis. Tampoco si lo que buscas es entregar trabajos o escribir a tu profesor, porque eso sigue ocurriendo en Canvas. Y si tu institución no permite el uso de tokens por terceros, la respuesta correcta es no conectarlo y usar el escáner.',
         ],
       },
@@ -1729,7 +1729,7 @@ export const SPANISH_BLOG_INDEX_BODY: PageLongForm = {
         'Canvas es donde los profesores publican las tareas, y es un sistema de registro útil. No ofrece un recordatorio relativo como «avísame tres días antes». Las preferencias se configuran por categoría a nivel de cuenta, y Canvas también permite ajustes por materia que reemplazan esos valores generales. Por eso conviene revisar ambos niveles antes de concluir que las notificaciones no funcionan.',
         'Aun así, incluso una configuración perfecta tiene un techo. El Calendario global y la vista Lista del panel ya reúnen tareas y eventos de distintos cursos, así que permiten detectar una semana cargada. Lo que no hacen es ordenar esa acumulación según el peso porcentual, tu calificación actual y el esfuerzo estimado, ni enviar un aviso integrado con el número de días de anticipación que tú elijas.',
         'El impulso de poner todas las categorías en «inmediatamente» suele salir contraproducente. En cuanto el teléfono vibra por cada nota de cuestionario y cada edición del programa en seis materias, el volumen te entrena a tratar las alertas como ruido de fondo, y el único mensaje realmente urgente recibe el mismo medio segundo de descarte que todo lo demás. Lo que determina si un recordatorio sirve no es cuántos llegan, sino cuándo llegan los importantes. Con tres días por delante todavía puedes empezar la lectura, escribir una pregunta al profesor o mover algo del fin de semana. La mañana de la entrega, un recordatorio solo puede confirmar lo que ya sospechabas.',
-        'Los recordatorios con antelación de Semora están activos por defecto en todos los planes, incluido el Gratis. Pro agrega avisos de uno o tres días de anticipación y horas de silencio. El conector actual de Canvas usa un token de acceso personal y algunas instituciones desactivan o prohíben su uso con servicios externos; confirma la política de tu universidad. Si no está disponible o permitido, copia el texto de las tareas y pégalo en el escáner. La entrada cierra con una nota honesta: recordatorios más una mirada semanal al calendario, no recordatorios en lugar de esa mirada.',
+        'Los recordatorios el mismo día de Semora están activos por defecto en todos los planes, incluido el Gratis. Pro agrega avisos de uno o tres días de anticipación y horas de silencio. El conector actual de Canvas usa un token de acceso personal y algunas instituciones desactivan o prohíben su uso con servicios externos; confirma la política de tu universidad. Si no está disponible o permitido, copia el texto de las tareas y pégalo en el escáner. La entrada cierra con una nota honesta: recordatorios más una mirada semanal al calendario, no recordatorios en lugar de esa mirada.',
       ],
       bullets: [
         'Revisa Cuenta y después Notificaciones en Canvas: cada categoría tiene su propio ajuste de entrega',
@@ -1832,7 +1832,7 @@ export const SPANISH_BLOG_INDEX_BODY: PageLongForm = {
       heading: 'Cómo están escritas estas guías',
       paragraphs: [
         'En este blog no aparece ningún número inventado. Semora se lanzó hace poco y no tiene un historial de calificaciones significativo, así que aquí no vas a encontrar cifras de descargas, totales de usuarios, valoraciones con estrellas, testimonios ni nombres de universidades, ni presentados de forma vaga ni como estimaciones. Cuando una entrada se apoya en un principio general sobre el aprendizaje, como que el repaso espaciado rinde más que una sola noche de atracón, lo dice como hallazgo general y no lo disfraza de estudio que nadie puede comprobar.',
-        'Las menciones al producto llevan indicado el plan en el punto en que aparecen, porque una guía que te empuja en silencio hacia un muro de pago no es una guía. Gratis significa gratis: cinco escaneos de programas por mes calendario, hasta cuatro cursos, seguimiento completo de entregas y tareas, seguimiento de calificaciones con promedios ponderados, una estimación del GPA del semestre ponderada por horas crédito, recordatorios con antelación y la posibilidad de unirte a un Course Space al que te invite un compañero. El único límite rígido son los semestres: una cuenta gratuita cubre un solo semestre, así que un segundo periodo es donde Pro deja de ser opcional. Pro cuesta $3.99 al mes o $19.99 al año, lo que sale alrededor de $1.67 mensuales en el plan anual, se compra dentro de la app de iOS y se aplica a toda tu cuenta, incluida la versión web; no hay un pago aparte en el navegador. Ser anfitrión de tu propio Course Space es de Pro; unirte a uno que alguien comparta contigo es gratis y sigue siéndolo.',
+        'Las menciones al producto llevan indicado el plan en el punto en que aparecen, porque una guía que te empuja en silencio hacia un muro de pago no es una guía. Gratis significa gratis: cinco escaneos de programas por mes calendario, hasta cuatro cursos, seguimiento completo de entregas y tareas, seguimiento de calificaciones con promedios ponderados, una estimación del GPA del semestre ponderada por horas crédito, recordatorios el mismo día y la posibilidad de unirte a un Course Space al que te invite un compañero. El único límite rígido son los semestres: una cuenta gratuita cubre un solo semestre, así que un segundo periodo es donde Pro deja de ser opcional. Pro cuesta $3.99 al mes o $19.99 al año, lo que sale alrededor de $1.67 mensuales en el plan anual, se compra dentro de la app de iOS y se aplica a toda tu cuenta, incluida la versión web; no hay un pago aparte en el navegador. Ser anfitrión de tu propio Course Space es de Pro; unirte a uno que alguien comparta contigo es gratis y sigue siéndolo.',
         'También conviene ser claro sobre lo que este blog no cubre. No calcula el GPA acumulado, porque Semora tampoco lo hace: calificaciones ponderadas por curso y una estimación del GPA del semestre, sí; un número de todo el expediente, no. No escribe sobre funciones que no se han lanzado, y por eso aquí no vas a encontrar nada sobre sincronización con Google Classroom o Google Calendar. Y Semora es una app universal de iOS para iPhone y iPad más una app web en una sola cuenta, sincronizadas casi en tiempo real: no hay app de Android, así que quien use Android trabaja en el navegador, donde la sincronización con el calendario del dispositivo no funciona y la exportación .ics es la forma de llevar las fechas a un calendario externo.',
       ],
     },
@@ -1856,7 +1856,7 @@ export const SPANISH_BLOG_INDEX_BODY: PageLongForm = {
     },
     {
       question: '¿Qué puedo hacer realmente sin pagar?',
-      answer: 'Cinco escaneos de programas por mes calendario, hasta cuatro cursos, seguimiento completo de entregas y tareas, seguimiento de calificaciones con promedios ponderados, una estimación del GPA del semestre, recordatorios con antelación y unirte a un Course Space al que te invite un compañero. Sin tarjeta de crédito y sin límite de tiempo sobre el plan en sí: el límite es de alcance y no de reloj, con una excepción que conviene saber desde el principio, y es que una cuenta gratuita cubre un semestre, así que empezar un segundo periodo implica Pro. Pro quita el tope mensual de escaneos (sigue habiendo un techo de uso razonable de veinte escaneos al día) y agrega cursos y semestres ilimitados, importación desde el LMS, ser anfitrión de tu propio Course Space, el Plan Inteligente, el panel de carga académica, las tarjetas de estudio, el temporizador de concentración, el tutor con IA y la sincronización de calendario con exportación .ics.',
+      answer: 'Cinco escaneos de programas por mes calendario, hasta cuatro cursos, seguimiento completo de entregas y tareas, seguimiento de calificaciones con promedios ponderados, una estimación del GPA del semestre, recordatorios el mismo día y unirte a un Course Space al que te invite un compañero. Sin tarjeta de crédito y sin límite de tiempo sobre el plan en sí: el límite es de alcance y no de reloj, con una excepción que conviene saber desde el principio, y es que una cuenta gratuita cubre un semestre, así que empezar un segundo periodo implica Pro. Pro quita el tope mensual de escaneos (sigue habiendo un techo de uso razonable de veinte escaneos al día) y agrega cursos y semestres ilimitados, importación desde el LMS, ser anfitrión de tu propio Course Space, el Plan Inteligente, el panel de carga académica, las tarjetas de estudio, el temporizador de concentración, el tutor con IA y la sincronización de calendario con exportación .ics.',
     },
     {
       question: '¿Estas entradas citan investigación o estadísticas de usuarios?',
@@ -1910,14 +1910,14 @@ export const SPANISH_HOME_SUMMARY: PageLongForm = {
     {
       heading: 'Qué cubre el plan Gratis y dónde están exactamente los límites',
       paragraphs: [
-        'El plan Gratis no es una prueba que caduca. Son cinco escaneos de programas por mes natural, hasta cuatro cursos dentro de un semestre, y un semestre en total. Dentro de esos límites tienes toda la capa de organización: seguimiento completo de tareas y fechas, calificaciones con medias ponderadas, recordatorios con antelación, y la posibilidad de unirte a un Espacio de curso al que te invite un compañero.',
+        'El plan Gratis no es una prueba que caduca. Son cinco escaneos de programas por mes natural, hasta cuatro cursos dentro de un semestre, y un semestre en total. Dentro de esos límites tienes toda la capa de organización: seguimiento completo de tareas y fechas, calificaciones con medias ponderadas, recordatorios el mismo día, y la posibilidad de unirte a un Espacio de curso al que te invite un compañero.',
         'Los dos límites que conviene entender antes de empezar son el de cursos y el de semestres, y funcionan distinto. Cuatro cursos es un techo sobre cuánto de un mismo periodo puedes sostener. Un semestre es una línea más dura: una cuenta gratuita no puede iniciar un segundo periodo, así que el tope no se renueva solo en enero. Pro elimina ambos, junto con el tope mensual de escaneos.',
         'Pro cuesta 3,99 USD al mes o 19,99 USD al año, que sale a unos 1,67 USD al mes en el plan anual. Se compra dentro de la app de iOS a través de la App Store y se aplica a toda tu cuenta, incluida la web: no hay una compra web aparte, ni una versión de Semora que tengas que pagar dos veces.',
 
       ],
       bullets: [
         'Gratis: 5 escaneos por mes natural, hasta 4 cursos dentro de un semestre, un semestre en total',
-        'Gratis incluye fechas, tareas, calificaciones ponderadas y recordatorios con antelación, completos',
+        'Gratis incluye fechas, tareas, calificaciones ponderadas y recordatorios el mismo día, completos',
         'Pro (3,99 USD al mes o 19,99 USD al año) elimina los tres topes y añade las herramientas de planificación y estudio',
         'Pro se compra en la app y se aplica a toda la cuenta, web incluida',
 
@@ -2155,7 +2155,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
         paragraphs: [
           'Ese proceso completo de cinco pasos es lo que hace el escaneo de programas de Semora. Puedes importar el programa con una foto (varias páginas, hasta 5), subirlo como PDF, arrastrarlo en la versión web o pegar el texto que copiaste del archivo o de la página de tu plataforma académica. OpenAI GPT-5.6 Luna lo lee y extrae el nombre del curso, el profesor, los horarios de clase, el horario de atención, las fechas del semestre, la escala de calificación y cada tarea, examen, cuestionario, proyecto y lectura con su fecha de entrega. Todo eso llena el calendario, la lista de tareas y el seguimiento de calificaciones al mismo tiempo, y nada se guarda hasta que lo revisas en pantalla.',
           'Esa pantalla de revisión existe justamente por los formatos raros del paso 3. El escaneo hereda las mismas ambigüedades que te complican la vida a mano: si el programa dejó un examen sin día, lo verás señalado como pendiente en vez de convertido en una fecha inventada, y si una entrega recurrente quedó corta, la corriges antes de que entre al calendario y no después de haberla dado por buena.',
-          'El plan Gratis incluye 5 escaneos de programas al mes, hasta 4 cursos y un semestre total, con seguimiento completo de entregas y calificaciones, además de recordatorios con antelación. La sincronización con el calendario del dispositivo y la exportación .ics forman parte de Pro, que cuesta $3.99 al mes o $19.99 al año y se compra dentro de la app.',
+          'El plan Gratis incluye 5 escaneos de programas al mes, hasta 4 cursos y un semestre total, con seguimiento completo de entregas y calificaciones, además de recordatorios el mismo día. La sincronización con el calendario del dispositivo y la exportación .ics forman parte de Pro, que cuesta $3.99 al mes o $19.99 al año y se compra dentro de la app.',
           'La importación desde Canvas también forma parte de Pro y el conector actual usa un token de acceso personal. Algunas instituciones desactivan o prohíben usar esos tokens con servicios externos; confirma la política de tu universidad. Si no está disponible o permitido, puedes escanear el programa o pegar la lista de tareas de Canvas; así sigues reuniendo las fechas y el contexto del programa en Semora.',
         ],
       },
@@ -2166,7 +2166,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
       { question: '¿Debo poner las lecturas en el calendario?', answer: 'Sí, cuando tienen fecha de discusión, prueba o entrega asociada. Las lecturas abiertas, sin fecha fija, funcionan mejor como tareas sin hora exacta, para que no compitan visualmente con las entregas que sí tienen consecuencias en la calificación.' },
       { question: 'Si el programa y la plataforma del curso no coinciden, ¿cuál manda?', answer: 'Manda la fuente oficial más reciente, que en la práctica suele ser el anuncio o la plataforma, no el PDF de la primera semana. Cuando cambies una fecha, deja anotado de dónde salió el cambio: así no terminas con dos versiones de la misma tarea sin saber cuál es la buena.' },
       { question: '¿Sirve escanear el programa si mi materia ya está conectada a Canvas?', answer: 'Sí, porque no traen lo mismo. Canvas trae las tareas y sus fechas; el horario de atención, los horarios de clase, la escala de calificación y las ponderaciones normalmente solo están en el programa. Con las dos fuentes juntas tienes las fechas actualizadas y el contexto que explica cuánto pesa cada una.' },
-      { question: '¿Necesito Pro para organizar el semestre así?', answer: 'No. Con el plan Gratis puedes escanear hasta 5 programas al mes y llevar hasta 4 cursos en un semestre total, con seguimiento de entregas y calificaciones, además de recordatorios con antelación. Una cuenta gratuita no puede iniciar un segundo periodo. Pro suma la sincronización con el calendario del dispositivo y la exportación .ics, y cuesta $3.99 al mes o $19.99 al año dentro de la app.' },
+      { question: '¿Necesito Pro para organizar el semestre así?', answer: 'No. Con el plan Gratis puedes escanear hasta 5 programas al mes y llevar hasta 4 cursos en un semestre total, con seguimiento de entregas y calificaciones, además de recordatorios el mismo día. Una cuenta gratuita no puede iniciar un segundo periodo. Pro suma la sincronización con el calendario del dispositivo y la exportación .ics, y cuesta $3.99 al mes o $19.99 al año dentro de la app.' },
     ],
   }),
   page(SPANISH_BLOG_POSTS[1].path, SPANISH_BLOG_POSTS[1].englishPath, 'standard', {
@@ -2393,7 +2393,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Dónde encaja Semora',
         paragraphs: [
-          'El plan Gratis de Semora incluye cinco escaneos de programa por mes calendario, hasta cuatro cursos y un semestre total, además de seguimiento completo de fechas de entrega y calificaciones y recordatorios con antelación. Es la combinación que buscábamos al empezar esta lista: el programa convertido en calendario sin trabajo manual y las calificaciones en el mismo lugar.',
+          'El plan Gratis de Semora incluye cinco escaneos de programa por mes calendario, hasta cuatro cursos y un semestre total, además de seguimiento completo de fechas de entrega y calificaciones y recordatorios el mismo día. Es la combinación que buscábamos al empezar esta lista: el programa convertido en calendario sin trabajo manual y las calificaciones en el mismo lugar.',
           'Semora Pro cuesta $3.99 al mes o $19.99 al año, se compra dentro de la app y quita el límite de cursos y de semestres, junto con el tope mensual de escaneos. Añade el Plan Inteligente, el panel de carga académica, la escala de calificaciones con pronóstico, la sincronización de calendario con exportación .ics, las tarjetas de estudio, el temporizador de concentración, el Tutor con IA, las alertas de riesgo académico, las estadísticas de progreso y las funciones de compartir y rachas.',
           'Funciona en iPhone y en la web con una sola cuenta: un cambio hecho en el teléfono aparece en el navegador casi de inmediato. Si vienes de una hoja de cálculo, el primer escaneo muestra la diferencia: el programa entra completo, con ponderaciones y horarios.',
         ],
@@ -2510,7 +2510,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
         heading: 'Qué conviene sumarle a Canvas',
         paragraphs: [
           'La importación desde Canvas forma parte de Pro y el conector actual usa un token personal. Algunas instituciones desactivan o prohíben su uso con servicios externos; confirma la política de tu universidad. Si no está disponible o permitido, puedes escanear el programa o pegar en Semora la lista de tareas de Canvas.',
-          'El plan Gratis incluye cinco escaneos de programas al mes, hasta cuatro cursos y un semestre total, además de tareas, fechas de entrega, calificaciones ponderadas y recordatorios con antelación. Con eso puedes armar ese primer periodo escaneando el programa de cada materia y comprobar cómo se comporta el sistema antes de decidir si quieres además la sincronización automática.',
+          'El plan Gratis incluye cinco escaneos de programas al mes, hasta cuatro cursos y un semestre total, además de tareas, fechas de entrega, calificaciones ponderadas y recordatorios el mismo día. Con eso puedes armar ese primer periodo escaneando el programa de cada materia y comprobar cómo se comporta el sistema antes de decidir si quieres además la sincronización automática.',
           'Pro cuesta $3.99 al mes o $19.99 al año, se contrata desde la app y, junto con la conexión con Canvas, responde directamente a los límites anteriores: puedes elegir la anticipación del aviso —uno o tres días, se configura una vez y se aplica automáticamente a las entregas siguientes—, definir horas de silencio para que un recordatorio de las dos de la madrugada se mueva a un momento en el que puedas actuar, y recibir alertas de riesgo académico que señalan calificaciones a la baja, trabajo pendiente o semanas en las que se apilan varias materias, con pasos concretos de recuperación.',
           'Todo funciona en iPhone y en la web con la misma cuenta, y los recordatorios y las tareas se sincronizan casi al instante. En la práctica significa abrir Canvas desde la laptop en el salón y revisar los recordatorios desde el teléfono entre una clase y otra, sin volver a capturar nada. El historial de sincronización deja ver cuándo se revisó la plataforma por última vez.',
         ],
@@ -2541,10 +2541,10 @@ const BLOG_PAGES: SpanishPageConfig[] = [
     ],
     faq: [
       { question: '¿Semora reemplaza las notificaciones de Canvas?', answer: 'No. Canvas sigue siendo la fuente oficial y ya ofrece un Calendario global y una vista Lista con elementos de todos tus cursos. Semora aporta recordatorios de uno o tres días y contexto de calificación ponderada.' },
-      { question: '¿Con cuánta anticipación puedo recibir un aviso?', answer: 'El plan Gratis envía recordatorios con antelación. Con Pro eliges uno o tres días de anticipación, lo configuras una vez y se aplica automáticamente a las entregas siguientes; las horas de silencio evitan además que el aviso llegue de madrugada.' },
+      { question: '¿Con cuánta anticipación puedo recibir un aviso?', answer: 'El plan Gratis envía recordatorios el mismo día. Con Pro eliges uno o tres días de anticipación, lo configuras una vez y se aplica automáticamente a las entregas siguientes; las horas de silencio evitan además que el aviso llegue de madrugada.' },
       { question: '¿Necesito permiso de mi universidad para conectar Canvas?', answer: 'En algunas instituciones, sí. El conector Pro actual usa un token de acceso personal, y los administradores pueden desactivar esos tokens o prohibir introducirlos en servicios externos. Confirma la política de tu universidad; si no está permitido, escanea el programa o pega la lista de tareas.' },
       { question: '¿Qué pasa si el profesor cambia una fecha en Canvas?', answer: 'La siguiente sincronización actualiza la tarea y reajusta los recordatorios vinculados, incluida la anticipación que hayas elegido. El historial muestra cuándo se revisó la plataforma y si alguna actualización falló.' },
-      { question: '¿Cuántos cursos puedo llevar sin pagar?', answer: 'Hasta cuatro cursos y un semestre total, con cinco escaneos de programas al mes, seguimiento de tareas y calificaciones ponderadas, y recordatorios con antelación. Una cuenta gratuita no puede iniciar un segundo periodo; Pro quita esos límites y añade el conector de Canvas con token personal, que debes usar solo si tu institución lo permite.' },
+      { question: '¿Cuántos cursos puedo llevar sin pagar?', answer: 'Hasta cuatro cursos y un semestre total, con cinco escaneos de programas al mes, seguimiento de tareas y calificaciones ponderadas, y recordatorios el mismo día. Una cuenta gratuita no puede iniciar un segundo periodo; Pro quita esos límites y añade el conector de Canvas con token personal, que debes usar solo si tu institución lo permite.' },
       { question: '¿Conviene poner todas las notificaciones de Canvas en «de inmediato»?', answer: 'No. Deja en inmediato las de fecha de entrega y cambios en tareas, y manda el resto a resumen diario. Cuando todo parece urgente, nada lo parece, y lo primero que se pierde es el aviso que sí importaba.' },
     ],
   }),
@@ -2831,7 +2831,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
         heading: 'Centradas en el programa: Semora y DormWay',
         paragraphs: [
           'Estas dos son la comparación más directa de la lista, porque parten de la misma premisa: el programa ya contiene tu semestre y transcribirlo a mano es el cuello de botella.',
-          'Semora importa un programa como foto (varias páginas, hasta cinco), PDF, archivo arrastrado en la versión web, o texto pegado. OpenAI GPT-5.6 Luna extrae el nombre del curso, el profesor, los horarios de clase, el horario de atención, las fechas del semestre, la escala de calificación y cada elemento evaluado con su fecha de entrega. Revisas y corriges cada entrega antes de añadirla al calendario, y eso importa más de lo que parece: los programas están llenos de frases ambiguas como «se entrega el viernes anterior al receso», y una pantalla de revisión es la diferencia entre detectar una fecha mal interpretada y heredarla. El plan Gratis cubre cinco escaneos por mes calendario, hasta cuatro cursos y un semestre total, además de seguimiento completo de entregas y de calificaciones con promedios ponderados y recordatorios con antelación. Pro, a $3.99 al mes o $19.99 al año, levanta los límites de escaneos, cursos y semestres y agrega importación desde Canvas, Blackboard y Moodle. El conector actual de Canvas usa un token personal y algunas instituciones desactivan o prohíben su uso con servicios externos; si no está permitido, escanea el programa o pega la lista de tareas. Pro también añade el Plan Inteligente de estudio, el panel de carga académica, tarjetas de estudio con repetición espaciada, temporizador de concentración, un tutor con IA basado en tu propio material, sincronización con el calendario y exportación .ics, horarios de recordatorio personalizados y alertas de riesgo académico.',
+          'Semora importa un programa como foto (varias páginas, hasta cinco), PDF, archivo arrastrado en la versión web, o texto pegado. OpenAI GPT-5.6 Luna extrae el nombre del curso, el profesor, los horarios de clase, el horario de atención, las fechas del semestre, la escala de calificación y cada elemento evaluado con su fecha de entrega. Revisas y corriges cada entrega antes de añadirla al calendario, y eso importa más de lo que parece: los programas están llenos de frases ambiguas como «se entrega el viernes anterior al receso», y una pantalla de revisión es la diferencia entre detectar una fecha mal interpretada y heredarla. El plan Gratis cubre cinco escaneos por mes calendario, hasta cuatro cursos y un semestre total, además de seguimiento completo de entregas y de calificaciones con promedios ponderados y recordatorios el mismo día. Pro, a $3.99 al mes o $19.99 al año, levanta los límites de escaneos, cursos y semestres y agrega importación desde Canvas, Blackboard y Moodle. El conector actual de Canvas usa un token personal y algunas instituciones desactivan o prohíben su uso con servicios externos; si no está permitido, escanea el programa o pega la lista de tareas. Pro también añade el Plan Inteligente de estudio, el panel de carga académica, tarjetas de estudio con repetición espaciada, temporizador de concentración, un tutor con IA basado en tu propio material, sincronización con el calendario y exportación .ics, horarios de recordatorio personalizados y alertas de riesgo académico.',
           'DormWay recibe programas subidos en la app o enviados por correo a su dirección de recepción, y extrae tareas, fechas de examen, desglose de calificación y políticas de entrega tardía. También ofrece sincronización de solo lectura con Canvas, Blackboard y Moodle unificadas en una sola línea de tiempo, una calculadora de GPA y calificaciones con categorías ponderadas, un asistente llamado «Ace» que responde preguntas sobre las políticas del curso citando el punto del programa de donde salió la respuesta, y una pestaña de «Intelligence» por curso con estimación de dificultad y horas semanales. Su propio sitio y su ficha en la App Store lo describen como gratuito, sin muros de pago y sin tarjeta de crédito. Funciona en web, iPhone, iPad y Mac; no tiene app para Android.',
           'La división práctica: DormWay no cuesta nada, cubre tres plataformas LMS en modo lectura desde el inicio, y su app para Mac es algo que Semora no tiene. Las ventajas de Semora son la variedad de entrada (la foto de un programa en papel que te entregaron en clase, no solo un archivo que ya tienes), el paso de revisión antes de guardar, y la profundidad del lado del estudio: tarjetas con repetición espaciada, temporizador, tutor y un generador de horarios que se reajusta con tus fechas. Si el costo es la restricción que decide, el plan gratuito de DormWay es realmente gratuito. Si quieres la capa de fechas y la de estudio en la misma cuenta, ese es el argumento a favor de Semora Pro.',
         ],
@@ -2888,7 +2888,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
           highlightColumn: 0,
           caption: 'Detalles de los planes gratuitos según lo publicado por cada proveedor, agosto de 2026. Los planes gratuitos cambian más seguido que los de pago.',
           rows: [
-            ['Semora', '5 escaneos de programas por mes calendario, hasta 4 cursos, seguimiento completo de entregas y de calificaciones con promedios ponderados, recordatorios con antelación y unirte a un curso que comparta un compañero', 'Cuatro cursos en un solo semestre: una cuenta gratuita no puede abrir un segundo periodo'],
+            ['Semora', '5 escaneos de programas por mes calendario, hasta 4 cursos, seguimiento completo de entregas y de calificaciones con promedios ponderados, recordatorios el mismo día y unirte a un curso que comparta un compañero', 'Cuatro cursos en un solo semestre: una cuenta gratuita no puede abrir un segundo periodo'],
             ['DormWay', 'Todo. El producto es gratuito y no tiene plan de pago, incluidas la sincronización con el LMS y la calculadora de calificaciones', 'No hay app para Android, y la sincronización con las tres plataformas LMS es de solo lectura'],
             ['Shovel', 'Una prueba de 7 días en lugar de un plan gratuito permanente, según su página de precios', 'Es una prueba; las dos páginas oficiales consultadas muestran precios distintos después'],
             ['StudyFetch', 'Reportado en unas 10 conversaciones con el tutor, 1 conjunto de estudio y 2 subidas', 'Lo bastante pequeño como para funcionar como demostración y no como un plan de uso continuo'],
@@ -2929,7 +2929,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
     ],
     faq: [
       { question: '¿Cuál es la mejor app de estudio con IA para universitarios?', answer: 'No hay una sola respuesta, porque las apps resuelven tres problemas distintos. Si tu problema es que se te pasan las entregas, la solución es una app centrada en el programa como Semora o DormWay. Si tu problema es aprender el material antes de un examen, una app centrada en el material como StudyFetch, Mindgrasp o Studley AI genera tarjetas, apuntes y cuestionarios de lo que subes. Si tu problema es no empezar con tiempo, una app centrada en la agenda como Shovel te reserva las horas. Elige de la categoría que corresponda a la falla que te sigue pasando.' },
-      { question: '¿Hay alguna app gratuita con IA que escanee programas de clase?', answer: 'Sí. DormWay es gratuita, no tiene plan de pago y analiza programas subidos en la app o enviados por correo a su dirección de recepción. Semora tiene un plan Gratis con cinco escaneos por mes calendario, hasta cuatro cursos y un semestre total, además de seguimiento completo de entregas y de calificaciones con promedios ponderados y recordatorios con antelación. Las dos te dejan comprobar si la extracción funciona con tus propios programas antes de pagar nada.' },
+      { question: '¿Hay alguna app gratuita con IA que escanee programas de clase?', answer: 'Sí. DormWay es gratuita, no tiene plan de pago y analiza programas subidos en la app o enviados por correo a su dirección de recepción. Semora tiene un plan Gratis con cinco escaneos por mes calendario, hasta cuatro cursos y un semestre total, además de seguimiento completo de entregas y de calificaciones con promedios ponderados y recordatorios el mismo día. Las dos te dejan comprobar si la extracción funciona con tus propios programas antes de pagar nada.' },
       { question: '¿Una app con IA puede leer mi programa y agregar todas las fechas automáticamente?', answer: 'Las apps centradas en el programa hacen exactamente eso: extraen cada tarea, examen, cuestionario, proyecto y lectura con su fecha, y normalmente también las ponderaciones, los horarios de clase y las fechas del semestre. Lo que no pueden es resolver toda ambigüedad a la perfección. Los programas traen exámenes «por definir», entregas semanales escritas en una sola línea y fechas relativas a la sesión de clase. Por eso un paso de revisión antes de guardar importa más que el modelo que haya detrás.' },
       { question: '¿Necesito más de una app de estudio?', answer: 'A menudo sí, porque las categorías fallan en direcciones opuestas. Un generador de tarjetas no puede decirte cuándo es tu parcial, y una agenda no puede ayudarte a aprender el capítulo. La combinación habitual es una app que se haga cargo de la estructura del semestre y otra del material de estudio, o una sola que haga ambas desde la misma fuente, que es lo que hace Semora al generar tarjetas del programa y los apuntes que ya tiene.' },
       { question: '¿Cuánto cuestan las apps de estudio con IA?', answer: 'Esta comparación mezcla productos gratuitos, suscripciones mensuales y equivalentes mensuales que se cobran por año. DormWay es gratuita sin plan de pago y myHomework es gratuita con anuncios. Semora Pro cuesta $3.99 al mes o $19.99 al año. Con pago anual, el selector oficial de Mindgrasp mostraba entre $5.99 y $10.99 al mes, facturados como $71.88–$131.88 al año. Las propias páginas de Shovel se contradicen: una mostraba una prueba de 7 días seguida de $9.79 al mes o $39 al año, y otra $33 al mes con pago mensual o $16 al mes con pago anual. Los precios de StudyFetch y Studley AI citados aquí proceden de cobertura externa. Confirma siempre la frecuencia y el importe en la pantalla de pago.' },
@@ -3245,7 +3245,7 @@ const ALTERNATIVE_PAGES = ALTERNATIVES.map((item) => page(`/es/${item.slug}`, it
   ],
   sections: [
     { heading: 'Por qué considerar Semora', paragraphs: ['Semora empieza con una foto, un PDF o el texto del programa de la materia. Una vez que revisas el resultado, crea las tareas, los exámenes, los horarios y la estructura de calificaciones. Las conexiones con el LMS pueden mantener esa información al día.'] },
-    { heading: 'Qué puedes probar sin pagar', paragraphs: ['Crea una cuenta sin tarjeta y obtén cinco escaneos al mes, hasta cuatro cursos y un semestre total, además de seguimiento de entregas, promedios ponderados y recordatorios con antelación.'] },
+    { heading: 'Qué puedes probar sin pagar', paragraphs: ['Crea una cuenta sin tarjeta y obtén cinco escaneos al mes, hasta cuatro cursos y un semestre total, además de seguimiento de entregas, promedios ponderados y recordatorios el mismo día.'] },
     { heading: 'Qué añade Pro', paragraphs: ['Pro elimina límites de cursos y semestres y añade Plan Inteligente, Canvas/Blackboard/Moodle, tarjetas, Tutor con IA, temporizador, pronósticos, alertas y sincronización de calendario.'] },
     { heading: 'Cómo hacer la transición', paragraphs: ['Empieza con un solo curso. Añade el programa, revisa las fechas y compara el resultado con tu sistema actual durante una semana. No dejes de usar tu herramienta anterior hasta confirmar que toda la información importante es correcta.'] },
   ],

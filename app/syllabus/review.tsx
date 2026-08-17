@@ -202,7 +202,7 @@ export default function SyllabusReviewScreen() {
     // adding a course by hand included (app/course/new.tsx).
     await primeNotificationPermission({
       title: 'Never miss these deadlines',
-      message: `Semora can warn you 3 days, 1 day and the morning before each of the ${accepted.length} deadline${accepted.length !== 1 ? 's' : ''} you're importing.`,
+      message: `Want a heads-up before each of the ${accepted.length} deadline${accepted.length !== 1 ? 's' : ''} you're importing?`,
       confirm: 'Remind me',
       decline: 'Not now',
     });

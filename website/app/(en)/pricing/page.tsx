@@ -21,7 +21,7 @@ const PRICING_FAQ = [
   {
     question: 'Is Semora free?',
     answer:
-      'Yes. The free tier includes 5 syllabus scans per calendar month, up to 4 courses in one semester, full deadline and grade tracking, and reminders 3 days, 1 day and the morning before each deadline. No credit card required. Calendar sync (device + .ics export) is a Pro feature.',
+      'Yes. The free tier includes 5 syllabus scans per calendar month, up to 4 courses in one semester, full deadline and grade tracking, and same-day reminders. No credit card required. Calendar sync (device + .ics export) is a Pro feature.',
   },
   {
     question: 'How do I upgrade to Pro?',

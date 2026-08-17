@@ -151,7 +151,7 @@ export default function NewCourseScreen() {
       // appears over this screen rather than racing the navigation away.
       await primeNotificationPermission({
         title: `Reminders for ${name.trim()}?`,
-        message: "Semora can warn you 3 days, 1 day and the morning before anything in this class is due.",
+        message: "Semora can remind you before anything in this class is due.",
         confirm: 'Yes, remind me',
         decline: 'Not now',
       });
