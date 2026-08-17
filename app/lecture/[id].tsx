@@ -10,6 +10,7 @@ import { useColors } from '@/lib/theme';
 import { useI18n } from '@/lib/i18n';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
+import { useGenerateFlashcards } from '@/lib/flashcards';
 import { useCourses } from '@/lib/queries';
 import { track } from '@/lib/analytics';
 import {
@@ -120,6 +121,7 @@ export default function LectureDetailScreen() {
   const retryNotes = useRetryLectureNotes(id);
   const deleteLecture = useDeleteLecture();
   const attachCourse = useAttachLectureCourse(id);
+  const generateCards = useGenerateFlashcards();
 
   const [showTranscript, setShowTranscript] = useState(false);
   const [showCoursePicker, setShowCoursePicker] = useState(false);
@@ -180,6 +182,13 @@ export default function LectureDetailScreen() {
       return;
     }
     generateQuiz.mutate(undefined, {
+      // Open it. Generating and then leaving the student on the same screen
+      // reads as nothing having happened — the button relabels to "Take the
+      // quiz" and they have to press it a second time to see what they just
+      // waited for.
+      onSuccess: () => {
+        router.push({ pathname: '/lecture/quiz', params: { id: lecture.id } } as any);
+      },
       onError: (err) => {
         const e = err as LectureError;
         if (e?.code === 'PRO_REQUIRED') {
@@ -209,10 +218,31 @@ export default function LectureDetailScreen() {
       router.push('/paywall' as any);
       return;
     }
+    // Generate here and open the deck, rather than handing the student off to
+    // the Flashcards tab to start again. The old behaviour routed to a scoped
+    // deck list where they still had to find the generate control and pick the
+    // same course they had already implied by pressing this button — three
+    // steps to do the thing the button says it does.
+    //
     // The lecture's notes are mirrored into this course's material, so the
     // existing generator picks them up with no lecture-specific plumbing.
-    router.push({ pathname: '/flashcards', params: { courseId: lecture.course_id } } as any);
-  }, [lecture, isPro, router]);
+    generateCards.mutate(
+      { courseId: lecture.course_id, deckTitle: lecture.title || 'Lecture' },
+      {
+        onSuccess: (result) => {
+          router.push(`/flashcards/${result.deckId}` as any);
+        },
+        onError: (err) => {
+          const e = err as LectureError;
+          if (e?.code === 'PRO_REQUIRED') {
+            router.push('/paywall' as any);
+            return;
+          }
+          Alert.alert("Couldn't make flashcards", e?.message || 'Please try again.');
+        },
+      },
+    );
+  }, [lecture, isPro, router, generateCards]);
 
   const handleDelete = useCallback(() => {
     if (!lecture) return;
@@ -421,12 +451,24 @@ export default function LectureDetailScreen() {
                 style={[styles.toolBtn, { backgroundColor: colors.card, borderColor: colors.line }]}
                 onPress={handleFlashcards}
                 activeOpacity={0.8}
+                // Generation now happens on this button rather than on the
+                // screen it used to hand off to, so the wait belongs here too:
+                // an unlabelled pause on a tap that used to navigate instantly
+                // reads as a dead button and gets pressed again.
+                disabled={generateCards.isPending}
                 accessibilityRole="button"
+                accessibilityState={{ busy: generateCards.isPending }}
                 accessibilityLabel="Make flashcards from this lecture"
               >
-                <FontAwesome name="clone" size={16} color={colors.brand} />
-                <Text style={[styles.toolText, { color: colors.ink }]}>Flashcards</Text>
-                {!isPro && (
+                {generateCards.isPending ? (
+                  <ActivityIndicator size="small" color={colors.brand} />
+                ) : (
+                  <FontAwesome name="clone" size={16} color={colors.brand} />
+                )}
+                <Text style={[styles.toolText, { color: colors.ink }]}>
+                  {generateCards.isPending ? 'Making…' : 'Flashcards'}
+                </Text>
+                {!isPro && !generateCards.isPending && (
                   <Text style={[styles.proTag, { color: colors.brand, backgroundColor: colors.brand50 }]}>
                     PRO
                   </Text>

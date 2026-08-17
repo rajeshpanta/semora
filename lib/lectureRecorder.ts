@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import {
   requestRecordingPermissionsAsync,
   setAudioModeAsync,
@@ -141,6 +142,10 @@ async function releaseRecordingSession(): Promise<void> {
   }).catch(() => {});
 }
 
+// Tagged so this lock is independent of any other keep-awake in the app: an
+// untagged release elsewhere would otherwise let the screen sleep mid-lecture.
+const KEEP_AWAKE_TAG = 'semora-lecture-recording';
+
 export function useLectureRecorder() {
   const [state, setState] = useState<LectureRecorderState>({
     phase: 'idle',
@@ -154,6 +159,44 @@ export function useLectureRecorder() {
     error: null,
     finishedLectureId: null,
   });
+
+  /**
+   * Hold the screen on for the whole recording.
+   *
+   * A lecture is the one thing this app does where the phone sits untouched
+   * for fifty minutes. The default auto-lock fires long before that, and on a
+   * locked screen iOS suspends the JS runtime — so the segment timer stops
+   * firing, the chunk being written is never closed, and uploads queue behind
+   * a runtime that is not running. The recording does not merely look paused;
+   * pieces of it genuinely stop happening.
+   *
+   * Held through every non-idle phase, not just 'recording':
+   *   starting  — the first segment is being set up
+   *   paused    — the student stepped out mid-lecture and means to come back;
+   *               locking here is how a paused recording gets abandoned
+   *   finishing — segments are still uploading, which needs the runtime alive
+   *
+   * Lives in the hook rather than the screen so it follows the recorder rather
+   * than whichever screen happens to be mounted, and releases on unmount even
+   * if that unmount is a crash or a navigation nobody predicted.
+   */
+  const phase = state.phase;
+  useEffect(() => {
+    if (phase === 'idle') return;
+    let released = false;
+    activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => {});
+    return () => {
+      if (released) return;
+      released = true;
+      // Never throws in practice, but a failure to release must not take the
+      // recorder's cleanup down with it.
+      try {
+        deactivateKeepAwake(KEEP_AWAKE_TAG);
+      } catch {
+        // ignore
+      }
+    };
+  }, [phase]);
 
   const lectureIdRef = useRef<string | null>(null);
   const seqRef = useRef(0);

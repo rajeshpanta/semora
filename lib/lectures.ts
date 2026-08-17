@@ -506,8 +506,22 @@ export function useGenerateLectureQuiz(lectureId: string | null | undefined) {
         mode: 'quiz',
       });
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       track('lecture_quiz_generated', { screen: 'lecture_detail' });
+      // Write the quiz straight into the cache before invalidating.
+      //
+      // The caller opens the quiz screen the moment this resolves, and that
+      // screen renders "This quiz is no longer available" for any lecture whose
+      // quiz array is empty. Relying on the invalidation's refetch to arrive
+      // first is a race the student loses on a slow connection — they would be
+      // shown an error for the quiz they just waited on. Seeding the cache
+      // makes the data present before navigation, and the invalidate below
+      // still reconciles anything the server changed alongside it.
+      if (result?.quiz?.length) {
+        qc.setQueryData(lectureKeys.detail(lectureId), (prev: LectureWithCourse | null | undefined) =>
+          prev ? { ...prev, quiz: result.quiz, quiz_generating: false } : prev,
+        );
+      }
       qc.invalidateQueries({ queryKey: lectureKeys.detail(lectureId) });
     },
   });
