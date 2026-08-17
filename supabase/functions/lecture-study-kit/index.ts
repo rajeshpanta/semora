@@ -35,20 +35,34 @@ const NOTES_PROMPT = `You are writing study notes for a college student from a t
 
 The transcript is raw speech-to-text: it has no punctuation reliability, contains filler words, false starts, and administrative chatter, and may have gaps.
 
-Write notes the student can revise from. Rules:
-- Lead with the actual academic content: concepts, definitions, formulas, worked examples, and the reasoning the instructor gave.
-- Capture any deadlines, exam dates, readings, or logistics the instructor mentioned in a final "Action items" section — students miss these constantly.
+These notes are what the student revises from weeks later, when they remember none of the lecture. They must be able to answer an exam question from the notes alone, without the recording. Err on the side of MORE detail, not less.
+
+Rules:
+- Lead with the actual academic content: concepts, definitions, formulas, worked examples, and the reasoning the instructor gave for each.
+- Explain, do not just name. "Covered the chain rule" is useless; state what it says, when it applies, and reproduce the example the instructor worked through, including the steps.
+- Reproduce formulas, equations and numbers exactly as given.
+- Where the instructor explained WHY something is true, or contrasted two ideas, keep that reasoning — it is the part a textbook will not give them.
+- Capture any deadlines, exam dates, readings, or logistics in the final "Action items" section — students miss these constantly.
 - Do NOT invent content. If the transcript is unclear about something, leave it out rather than guessing.
 - If a section of the transcript is marked as missing or interrupted, do not fabricate what was said there.
-- Be concise and skimmable.
+- Never pad. Length must come from real content in the transcript, never from restating the same point in different words.
 
 Return ONLY GitHub-flavored markdown using this structure, no commentary and no code fences:
 
-## Key concepts
-- bullet points
+# A specific headline naming what this lecture was actually about
 
-## Details
-- bullet points, with sub-detail where the instructor worked through something
+One or two sentences summarising the lecture as a whole, so the student knows what they are about to read.
+
+## Key points
+- The 3-6 things worth remembering if they remember nothing else. One line each.
+
+## Notes
+Organise the substance under your own H3 (###) subheadings, named after what the instructor actually covered — one per topic, in the order taught. Under each:
+- Bullets carrying the explanation, with nested sub-bullets for steps, derivations and worked examples.
+- Keep worked examples intact, showing the working rather than just the answer.
+
+## Key terms
+- **Term** — definition as the instructor gave it. Omit this heading entirely if the lecture introduced no new terminology.
 
 ## Action items
 - deadlines, readings, exam dates, logistics (omit this heading entirely if none were mentioned)`;
@@ -63,7 +77,9 @@ Rules:
 - Write between 5 and 8 questions. If the material genuinely does not support that many, write fewer rather than padding.
 
 Return ONLY valid JSON in this exact shape, no commentary, no markdown fences:
-{"questions": [{"question": "...", "choices": ["...", "...", "...", "..."], "answerIndex": 0, "explanation": "..."}]}`;
+{"questions": [{"question": "...", "choices": ["...", "...", "...", "..."], "answerIndex": 2, "explanation": "..."}]}
+
+answerIndex is 0-based and must point at the correct entry in choices. Vary which position is correct across questions — the options are re-ordered after you answer, so never assume the first option is the right one.`;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -247,8 +263,13 @@ async function handleNotes(
     model: modelFor(AiTask.contentGeneration),
     input: [{ role: 'user', content: input }],
     reasoning: { effort: 'none' },
-    text: { verbosity: 'low' },
-    max_output_tokens: 4096,
+    // Notes are the one output here meant to be LONG. 'low' verbosity plus a
+    // 4096 cap is what made them a handful of bullets: the model was being
+    // told to be terse and then given no room to be otherwise. A 50-minute
+    // lecture with real content needs the headroom, and nothing pads to fill
+    // it — the prompt forbids restating a point to reach a length.
+    text: { verbosity: 'medium' },
+    max_output_tokens: 12000,
     store: false,
     safety_identifier: await makeSafetyIdentifier(userId),
   }, 'lecture-notes');
@@ -450,7 +471,31 @@ async function handleQuiz(
       // Deduplicated choices: a repeated option means two "correct" answers.
       new Set(q.choices).size === 4 &&
       q.answerIndex >= 0 && q.answerIndex < 4)
-    .slice(0, MAX_QUIZ_QUESTIONS);
+    .slice(0, MAX_QUIZ_QUESTIONS)
+    // Shuffle every question's options.
+    //
+    // The correct answer was landing on option A in essentially every
+    // question. The cause is this file: the prompt's own example ends
+    // `"answerIndex": 0`, and a model reproducing the shape of an example
+    // reproduces its values too. A student notices that within one quiz and
+    // the whole thing stops testing anything.
+    //
+    // Fixed here rather than in the prompt on purpose. "Vary which option is
+    // correct" is an instruction a model follows unreliably and silently, and
+    // there is no way to tell from the response whether it did. Shuffling the
+    // array after the fact is deterministic, costs nothing, and holds no
+    // matter what the model returns or which model serves the request.
+    .map((q: any) => {
+      const correct = q.choices[q.answerIndex];
+      const shuffled = [...q.choices];
+      // Fisher-Yates. crypto.getRandomValues rather than Math.random so the
+      // ordering is not predictable across questions generated together.
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return { ...q, choices: shuffled, answerIndex: shuffled.indexOf(correct) };
+    });
 
   if (questions.length < MIN_QUIZ_QUESTIONS) {
     await clearFlag();
