@@ -33,6 +33,7 @@ const REVIEW_REQUESTED_KEY = 'semora_review_requested';
 // the paywall and this one describes the import.
 const IMPORTED_SYLLABUS_KEY = 'semora_imported_syllabus';
 const WIDGET_TIP_KEY = 'semora_widget_tip_seen';
+const COURSES_VIEW_KEY = 'semora_courses_view';
 // Lifetime count of task completions on this device — the fallback trigger
 // for the review prompt (10th completion). Device-level like the flags
 // above: the rating prompt is once-per-device regardless of account, so
@@ -94,6 +95,8 @@ const initialInPasswordReset = getItem(RESET_KEY) === 'true';
 const initialOnboarded = getItem(ONBOARDED_KEY) === 'true';
 const initialAhaPaywallShown = getItem(AHA_PAYWALL_KEY) === 'true';
 const initialWidgetTipSeen = getItem(WIDGET_TIP_KEY) === 'true';
+const initialCoursesView: 'list' | 'grid' =
+  getItem(COURSES_VIEW_KEY) === 'grid' ? 'grid' : 'list';
 const initialReviewRequested = getItem(REVIEW_REQUESTED_KEY) === 'true';
 // Backfill: a device that already has AHA_PAYWALL_KEY set completed an import
 // before IMPORTED_SYLLABUS_KEY existed. Without this, upgrading would read the
@@ -145,6 +148,15 @@ interface AppState {
    */
   widgetTipSeen: boolean;
   setWidgetTipSeen: (v: boolean) => void;
+  /**
+   * How the Courses tab lays out course cards. 'list' is the original
+   * information-dense row; 'grid' is the two-column tile students recognise
+   * from Canvas. A display preference, so it lives on the device rather than
+   * the account — someone using a phone and a laptop can reasonably want a
+   * different density on each.
+   */
+  coursesView: 'list' | 'grid';
+  setCoursesView: (v: 'list' | 'grid') => void;
   /**
    * Lifetime task completions on this device (see TASKS_COMPLETED_KEY).
    * Counts completion ACTIONS across ALL screens — incremented centrally in
@@ -241,6 +253,11 @@ export const useAppStore = create<AppState>((set) => ({
   setWidgetTipSeen: (v) => {
     set({ widgetTipSeen: v });
     if (v) { setItem(WIDGET_TIP_KEY, 'true'); } else { deleteItem(WIDGET_TIP_KEY); }
+  },
+  coursesView: initialCoursesView,
+  setCoursesView: (v) => {
+    set({ coursesView: v });
+    setItem(COURSES_VIEW_KEY, v);
   },
   tasksCompletedCount: initialTasksCompleted,
   incrementTasksCompleted: () => set((s) => {

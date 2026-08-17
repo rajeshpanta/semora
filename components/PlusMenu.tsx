@@ -30,6 +30,17 @@ type MenuRow = {
 };
 
 const ROOT_ACTIONS: MenuRow[] = [
+  // Moved here from the Today tab's floating "+", which sat immediately above
+  // the tab bar's "+" — same colour, same shape, same icon, different action.
+  // Adding one deadline by hand is the most ordinary thing a student does
+  // between scans, so it leads.
+  {
+    icon: 'check-square-o',
+    tint: 'blue',
+    title: 'New task',
+    sub: 'Add a single deadline yourself',
+    route: { pathname: '/task/new' },
+  },
   {
     icon: 'microphone',
     tint: 'coral',

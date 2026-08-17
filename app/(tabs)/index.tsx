@@ -66,7 +66,7 @@ const KIND_LABEL: Record<'lecture' | 'lab' | 'discussion' | 'other', string> = {
 
 export default function TodayScreen() {
   const colors = useColors();
-  const { contentMaxWidth, width, isDesktop } = useResponsive();
+  const { contentMaxWidth, width } = useResponsive();
   const { session } = useSession();
   const router = useRouter();
   const qc = useQueryClient();
@@ -1263,24 +1263,13 @@ export default function TodayScreen() {
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Quick-add FAB. Hidden when the user has no courses, since
-          /task/new requires a course selection. Position clears the
-          tab bar (~80px tall on iOS). Also hidden on the desktop web
-          shell specifically — there's no tab bar there to clear (the
-          sidebar replaces it, with its own "New task" button), so this
-          absolutely-positioned button would otherwise stay pinned
-          mid-scroll and overlap real content on a tall page. */}
-      {courses.length > 0 && !(Platform.OS === 'web' && isDesktop) && (
-        <TouchableOpacity
-          style={[styles.fab, { right: Math.max(18, (width - contentMaxWidth) / 2 + 18), backgroundColor: colors.brand }]}
-          onPress={() => router.push('/task/new?defaultDate=today' as any)}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-          accessibilityLabel="Add a new task for today"
-        >
-          <FontAwesome name="plus" size={20} color="#fff" />
-        </TouchableOpacity>
-      )}
+      {/* The quick-add FAB was removed here deliberately.
+          It was a brand-coloured circular "+" floating directly above the tab
+          bar's brand-coloured circular "+", which opens the action menu. Two
+          identical buttons a thumb's width apart, doing different things, is a
+          coin toss rather than a choice. "New task" now lives in that menu
+          (components/PlusMenu.tsx) so the action survives at the same one tap
+          from anywhere in the app, not just from Today. */}
     </SafeAreaView>
   );
 }
@@ -1405,19 +1394,4 @@ const styles = StyleSheet.create({
   weekExamBadge: { paddingHorizontal: 6, paddingVertical: 3, borderRadius: 6 },
   weekExamBadgeText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.4 },
   // Floating action button (Quick-add task)
-  fab: {
-    position: 'absolute',
-    right: 18,
-    bottom: 96,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 8,
-    elevation: 6,
-  },
 });

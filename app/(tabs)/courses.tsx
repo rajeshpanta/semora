@@ -34,6 +34,9 @@ export default function CoursesScreen() {
 
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
+  const coursesView = useAppStore((s) => s.coursesView);
+  const setCoursesView = useAppStore((s) => s.setCoursesView);
+  const isGrid = coursesView === 'grid';
 
   const { data: semesters = [], isLoading: semestersLoading } = useSemesters();
   const deleteSemester = useDeleteSemester();
@@ -219,6 +222,32 @@ export default function CoursesScreen() {
           </View>
 
           <View style={styles.headerActions}>
+            {/* Layout toggle. Only worth showing once there is something to
+                lay out — on an empty semester it is a control over nothing. */}
+            {courses.length > 0 && (
+              <View style={[styles.viewToggle, { borderColor: colors.line, backgroundColor: colors.card }]}>
+                {(['list', 'grid'] as const).map((mode) => {
+                  const active = coursesView === mode;
+                  return (
+                    <TouchableOpacity
+                      key={mode}
+                      style={[styles.viewToggleBtn, active && { backgroundColor: colors.brand50 }]}
+                      onPress={() => setCoursesView(mode)}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      accessibilityLabel={mode === 'list' ? 'List view' : 'Grid view'}
+                    >
+                      <FontAwesome
+                        name={mode === 'list' ? 'bars' : 'th-large'}
+                        size={13}
+                        color={active ? colors.brand : colors.ink3}
+                      />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
             <GlobalSearchButton />
             <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.brand }]} onPress={handleAddCourse} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Add a course">
               <FontAwesome name="plus" size={14} color="#fff" />
@@ -249,7 +278,10 @@ export default function CoursesScreen() {
 
         {/* Course cards */}
         {courses.length > 0 ? (
-          <View style={[styles.courseList, isWide && styles.courseListWide]}>
+          <View style={[
+            isGrid ? styles.courseGrid : styles.courseList,
+            !isGrid && isWide && styles.courseListWide,
+          ]}>
             {courses.map((course) => {
               const courseTasks = getCourseTasks(course.id);
               const nextTask = getNextTask(course.id);
@@ -262,6 +294,54 @@ export default function CoursesScreen() {
               // surface this class. Tapping the card goes to detail
               // where Edit is one tap away.
               const needsSchedule = (course.course_meetings ?? []).length === 0;
+
+              // Canvas-style tile: a colour block you recognise from across the
+              // room, then the name. Deliberately NOT the list card at half
+              // width — a dense row squeezed into a column reads worse than
+              // either layout done properly. The tile keeps the two numbers a
+              // student actually scans for (what's pending, where the grade is)
+              // and drops the rest; the detail screen is one tap away.
+              if (isGrid) {
+                return (
+                  <TouchableOpacity
+                    key={course.id}
+                    style={[styles.gridTile, { backgroundColor: colors.card, borderColor: colors.line }]}
+                    onPress={() => router.push(`/course/${course.id}` as any)}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${course.name}, ${pendingCount} pending`}
+                  >
+                    <View style={[styles.gridBanner, { backgroundColor: course.color }]}>
+                      {needsSchedule && (
+                        <View style={styles.gridBannerFlag}>
+                          <FontAwesome name="calendar-o" size={11} color="#fff" />
+                        </View>
+                      )}
+                    </View>
+                    <View style={styles.gridBody}>
+                      <Text style={[styles.gridName, { color: colors.ink }]} numberOfLines={2}>
+                        {course.name}
+                      </Text>
+                      {course.instructor ? (
+                        <Text style={[styles.gridInstructor, { color: colors.ink3 }]} numberOfLines={1}>
+                          {course.instructor}
+                        </Text>
+                      ) : null}
+                      <View style={styles.gridFooter}>
+                        <Text style={[styles.gridPending, { color: pendingCount > 0 ? course.color : colors.ink3 }]}>
+                          {pendingCount > 0 ? `${pendingCount} due` : 'All clear'}
+                        </Text>
+                        {percentage !== null && (
+                          <Text style={[styles.gridGrade, { color: colors.ink2 }]}>
+                            {letter ? `${letter} · ` : ''}{percentage}%
+                          </Text>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }
+
               return (
                 <TouchableOpacity
                   key={course.id}
@@ -415,6 +495,33 @@ const styles = StyleSheet.create({
 
   // Course cards
   courseList: { gap: 10 },
+
+  // Two columns on a phone, and the tiles simply wrap on wider windows —
+  // `flexBasis: 47%` with wrap gives 2 up on a phone and 2 up on an iPad at
+  // the capped content width, which is the density the layout is for.
+  courseGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  gridTile: {
+    flexBasis: '47%', flexGrow: 1, maxWidth: '49%',
+    borderRadius: 18, borderWidth: 0.5, overflow: 'hidden',
+    backgroundColor: COLORS.card, borderColor: COLORS.line,
+  },
+  // The colour block is the point of this layout: it is what makes a course
+  // identifiable at a glance without reading anything.
+  gridBanner: { height: 62, justifyContent: 'flex-start', alignItems: 'flex-end', padding: 8 },
+  gridBannerFlag: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: 'rgba(0,0,0,0.22)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  gridBody: { padding: 12, gap: 3 },
+  gridName: { fontSize: 15, fontWeight: '600', lineHeight: 19 },
+  gridInstructor: { fontSize: 12.5 },
+  gridFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
+  gridPending: { fontSize: 12.5, fontWeight: '600' },
+  gridGrade: { fontSize: 12.5, fontWeight: '500' },
+
+  viewToggle: { flexDirection: 'row', borderWidth: 1, borderRadius: 999, padding: 2, gap: 2 },
+  viewToggleBtn: { width: 30, height: 26, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   // Wide windows (iPad landscape / large Split View): 2-column grid.
   courseListWide: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   courseCardWide: { flexBasis: '47%', flexGrow: 1, maxWidth: '49%' },
