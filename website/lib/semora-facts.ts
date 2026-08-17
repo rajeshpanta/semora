@@ -82,7 +82,10 @@ export const FREE_FEATURES = [
   'Up to 4 courses within one semester; one semester total on free',
   'Full deadline and task tracking',
   'Grade tracking with weighted averages',
-  'Same-day reminders',
+  // Advance reminders moved to free on 2026-08-16: charging for the warning
+  // that arrives in time to act on meant the free tier could not deliver the
+  // product's own promise. Pro keeps per-task custom times and quiet hours.
+  'Deadline reminders 3 days, 1 day, and the morning before',
   'Course Spaces: join a course a classmate shares with you',
 ] as const;
 
@@ -100,7 +103,7 @@ export const PRO_FEATURES = [
   'AI tutor chat grounded in your syllabus, notes, and deadlines',
   'Grade Scale & Forecasting: customize your grading scale, plus what-if calculators for your final grade',
   "Calendar sync to your device's calendar app, with .ics export",
-  'Custom reminder timing (1-day and 3-day advance notice)',
+  'Custom reminder timing per task, plus quiet hours',
   'Academic Risk alerts',
   'Progress Insights: trend charts, CSV export, and a print view',
   'Share & Streaks',

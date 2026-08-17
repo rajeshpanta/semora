@@ -33,7 +33,7 @@ const FAQ = [
   {
     question: "Is Semora free, and what's included in Pro?",
     answer:
-      "Semora's free tier includes 5 syllabus scans per calendar month, up to 4 courses within one semester, one semester total, full deadline and grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no monthly scan cap, Smart Plan, the Workload dashboard, Grade Scale & Forecasting, calendar sync with .ics export, Flashcards, a Focus timer, an AI tutor, Academic Risk alerts, Progress Insights, and Share & Streaks.",
+      "Semora's free tier includes 5 syllabus scans per calendar month, up to 4 courses within one semester, one semester total, full deadline and grade tracking, and reminders 3 days, 1 day and the morning before each deadline. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no monthly scan cap, Smart Plan, the Workload dashboard, Grade Scale & Forecasting, calendar sync with .ics export, Flashcards, a Focus timer, an AI tutor, Academic Risk alerts, Progress Insights, and Share & Streaks.",
   },
   {
     question: 'Does Semora sync with Canvas or other tools?',
@@ -158,7 +158,7 @@ export default function AiStudyPlannerPage() {
       <h3>Deadline and grade tracking</h3>
       <p>
         Full task and deadline tracking, plus grade tracking, are included on the free tier along
-        with same-day reminders. Calendar sync (device + .ics export) is a Pro feature.
+        with reminders 3 days, 1 day and the morning before each deadline. Calendar sync (device + .ics export) is a Pro feature.
       </p>
 
       <h3>Canvas sync</h3>

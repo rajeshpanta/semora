@@ -193,6 +193,59 @@ async function pruneToCapIfNeeded() {
   } catch {}
 }
 
+/**
+ * Ask, in our own words, before letting iOS ask.
+ *
+ * The OS dialog is one-shot: decline it and the app can never raise it again,
+ * only send the student into Settings. So it must never be spent on a moment
+ * where the answer is obviously "no" — an empty app at launch converts at
+ * roughly half the rate of an app that has just done something useful.
+ *
+ * WHY THIS IS A HELPER and not left inline in the import flow: the ask used to
+ * live only inside a successful syllabus import, and 35 of 54 accounts have
+ * never completed one — so most students were never asked at all, and the app
+ * had no way to reach them for the rest of the term. Any moment that proves
+ * intent (a first course added, by any route) should be able to raise it.
+ *
+ * No-ops on web, and stays silent unless the permission is still
+ * `undetermined`, so a student who already answered is never nagged.
+ *
+ * @returns whether notifications are usable when this resolves.
+ */
+export async function primeNotificationPermission(copy: {
+  title: string;
+  message: string;
+  confirm: string;
+  decline: string;
+}): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status === 'granted') return true;
+    if (status !== 'undetermined') return false;
+
+    // Imported lazily: lib/ is loaded by non-UI paths (background reschedules,
+    // sign-out cleanup) that must not pull the React Native UI layer in.
+    const { Alert } = await import('@/components/LocalizedReactNative');
+    const wants = await new Promise<boolean>((resolve) => {
+      Alert.alert(
+        copy.title,
+        copy.message,
+        [
+          { text: copy.decline, style: 'cancel', onPress: () => resolve(false) },
+          { text: copy.confirm, onPress: () => resolve(true) },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) },
+      );
+    });
+    if (!wants) return false;
+    return await requestNotificationPermission().catch(() => false);
+  } catch {
+    // Never let a permission prompt break the flow that triggered it.
+    return false;
+  }
+}
+
 export async function requestNotificationPermission(): Promise<boolean> {
   if (Platform.OS === 'web') {
     // expo-notifications has no web implementation for permissions (or for
@@ -351,32 +404,37 @@ export async function scheduleTaskReminders(
   // Get user preferences and pro status. Use maybeSingle so a brand-new
   // OAuth user whose profile row hasn't propagated yet falls cleanly to
   // defaults rather than throwing.
+  // Tier is deliberately NOT read here any more — see the note below. The one
+  // remaining Pro distinction in this function is per-task custom offsets,
+  // resolved as `proForReminders` further up.
   let preferences = { reminder_same_day: true, reminder_1day: true, reminder_3day: true };
-  let isPro: boolean;
   if (prefetched) {
     preferences = {
       reminder_same_day: prefetched.reminder_same_day,
       reminder_1day: prefetched.reminder_1day,
       reminder_3day: prefetched.reminder_3day,
     };
-    isPro = prefetched.isPro;
-  } else {
-    if (userId) {
-      const { data } = await supabase
-        .from('profiles')
-        .select('reminder_same_day, reminder_1day, reminder_3day, quiet_hours_enabled, quiet_hours_start, quiet_hours_end')
-        .eq('id', userId)
-        .maybeSingle();
-      if (data) preferences = data;
-    }
-    isPro = useAppStore.getState().isPro;
+  } else if (userId) {
+    const { data } = await supabase
+      .from('profiles')
+      .select('reminder_same_day, reminder_1day, reminder_3day, quiet_hours_enabled, quiet_hours_start, quiet_hours_end')
+      .eq('id', userId)
+      .maybeSingle();
+    if (data) preferences = data;
   }
 
-  // Free users only get same-day reminders
-  if (!isPro) {
-    preferences.reminder_1day = false;
-    preferences.reminder_3day = false;
-  }
+  // Advance reminders (1-day, 3-day) are FREE, deliberately.
+  //
+  // They used to be Pro, which meant the free tier delivered a reminder on the
+  // morning of the deadline and called that "never miss a deadline". An essay
+  // due at 11:59pm produced a 9am nudge the same day — an alarm beside a fire,
+  // not a plan. Being warned early enough to act is the moment a student
+  // decides this app is worth keeping, and it was unreachable without paying;
+  // with 13% of accounts ever returning after day one, the gate was preventing
+  // the habit that would have justified it. Competitors give this away.
+  //
+  // Pro keeps what it should: per-task custom reminder times (handled above via
+  // customOffsetsMinutes), quiet hours, Smart Plan, Canvas sync and the rest.
 
   const dueDateObj = new Date(year, month - 1, day);
 
@@ -493,11 +551,15 @@ export async function cancelTaskReminders(taskId: string) {
 }
 
 /**
- * Re-schedule reminders for every incomplete task. Call this the moment Pro
- * is newly activated: scheduleTaskReminders reads isPro at schedule time, so
- * tasks created while free only ever got the same-day reminder. Without this,
- * the 1-/3-day advance reminders (a headline Pro feature) never appear for
- * existing tasks until each one is edited. Idempotent (cancel + reschedule).
+ * Re-schedule reminders for every incomplete task. Idempotent (cancel +
+ * reschedule).
+ *
+ * Originally written for the moment Pro was activated, because advance
+ * reminders used to be a Pro feature and existing tasks kept the same-day-only
+ * schedule they were created with. Advance reminders are free now, and this
+ * function is what carries that change onto tasks that already exist: it runs
+ * on every cold launch, so a free user who imported a syllabus last week starts
+ * getting 1-/3-day warnings without touching anything.
  */
 let rescheduleInFlight = false;
 // Bumped on every sign-out (via cancelAllRemindersOnSignOut). An in-flight

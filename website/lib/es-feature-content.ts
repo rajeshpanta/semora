@@ -123,7 +123,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'Dónde aparece un escaneo en el resto de Semora',
         paragraphs: [
           'El escaneo es la puerta de entrada, no una herramienta suelta. Todo lo que produce son datos normales de Semora desde el momento en que los guardas, y por eso el escáner es gratis: es lo que hace que el resto de la app funcione.',
-          'Las entregas se convierten en tareas de la pestaña Hoy —ordenadas en atrasadas, vencen hoy y esta semana— con recordatorios el mismo día en el plan gratuito. Las ponderaciones alimentan el seguimiento de calificaciones, así que un promedio ponderado aparece sin que tengas que teclear ningún porcentaje.',
+          'Las entregas se convierten en tareas de la pestaña Hoy —ordenadas en atrasadas, vencen hoy y esta semana— con recordatorios con antelación en el plan gratuito. Las ponderaciones alimentan el seguimiento de calificaciones, así que un promedio ponderado aparece sin que tengas que teclear ningún porcentaje.',
           'Del lado de Pro, esa misma extracción alimenta el horario del Plan Inteligente y la vista de semanas cargadas de la carga académica, y ambos valen exactamente lo que valgan las entregas que tengan. El Tutor con IA responde desde el programa de ese curso, y las tarjetas de estudio se generan a partir del mismo material.',
         ],
       },
@@ -674,11 +674,11 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'Gratis frente a Pro',
         paragraphs: [
           'El temporizador de concentración es una función de Pro por completo. Las cuentas gratuitas que lo tocan ven una pantalla de presentación con el icono, una descripción corta y un botón hacia la suscripción, en lugar de una versión recortada.',
-          'Conviene decirlo claro, porque casi todo el núcleo de Semora es gratis y seguirá siéndolo. En una cuenta gratuita tienes cinco escaneos de programa por mes natural, hasta cuatro asignaturas dentro de un único semestre, un semestre en total, entregas y tareas, promedios ponderados y recordatorios el mismo día.',
+          'Conviene decirlo claro, porque casi todo el núcleo de Semora es gratis y seguirá siéndolo. En una cuenta gratuita tienes cinco escaneos de programa por mes natural, hasta cuatro asignaturas dentro de un único semestre, un semestre en total, entregas y tareas, promedios ponderados y recordatorios con antelación.',
           'Pro cuesta 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes en el plan anual. Se compra dentro de la app de iOS y la suscripción se aplica a toda tu cuenta, la web incluida.',
         ],
         bullets: [
-          'Gratis: 5 escaneos por mes natural, hasta 4 asignaturas dentro de un único semestre, un semestre en total, entregas y tareas, promedios ponderados y recordatorios el mismo día.',
+          'Gratis: 5 escaneos por mes natural, hasta 4 asignaturas dentro de un único semestre, un semestre en total, entregas y tareas, promedios ponderados y recordatorios con antelación.',
           'Pro: 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual.',
           'Pro se compra en la app de iOS y se aplica a toda la cuenta, incluida la web.',
           'Las cuentas gratuitas ven una presentación del temporizador con enlace a la suscripción, no una versión reducida.',
@@ -948,7 +948,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         paragraphs: [
           'Publicar es deliberado. Quien organiza toca publicar y Semora copia al espacio las tareas todavía sin completar de su propia copia de la asignatura, como entregas compartidas.',
           'Del lado que recibe, sincronizar trae esas entregas compartidas y todos los trabajos de grupo a tu propio planificador como tareas normales.',
-          'Una vez están en tu planificador, se comportan como cualquier otra tarea. Se aplican los recordatorios del mismo día. Si tienes Pro, alimentan el Plan Inteligente y aparecen en la carga académica.',
+          'Una vez están en tu planificador, se comportan como cualquier otra tarea. Se aplican los recordatorios con antelación. Si tienes Pro, alimentan el Plan Inteligente y aparecen en la carga académica.',
           'La línea entre lo compartido y lo privado se traza estrecha y se sostiene en el propio esquema. Se sincronizan tres tablas: miembros, entregas compartidas y trabajos de grupo. Tu estado de completado no.',
         ],
         bullets: [
@@ -1130,7 +1130,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'Qué cuesta, para quién es y dónde se pone incómodo',
         paragraphs: [
           'Conectar una plataforma académica es una función de Pro. El conector actual de Canvas usa un token personal y puede estar desactivado o prohibido por una institución; la configuración de Blackboard y Moodle también varía según la universidad. Pro cuesta 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual. Se compra dentro de la app de iOS.',
-          'Sigues teniendo el seguimiento completo de entregas y tareas, las calificaciones con promedios ponderados, los recordatorios el mismo día, unirte al espacio de un compañero y cinco escaneos de programa al mes.',
+          'Sigues teniendo el seguimiento completo de entregas y tareas, las calificaciones con promedios ponderados, los recordatorios con antelación, unirte al espacio de un compañero y cinco escaneos de programa al mes.',
           'La sincronización con Canvas no es para todo el mundo. Si tu profesor no publica nunca tareas en Canvas y lo deja todo en el programa, escanear el programa es el mejor camino y además es gratis.',
         ],
         bullets: [
@@ -1147,7 +1147,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         question: '¿La importación desde Canvas es gratis?',
         answer:
-          'No. La importación desde plataformas académicas es una función Pro, a 3,99 USD al mes o 19,99 USD al año. El plan Gratis sigue cubriendo el mismo trabajo desde el lado del programa: cinco escaneos por mes natural, hasta cuatro cursos dentro de un semestre, seguimiento completo de tareas y fechas, calificaciones con medias ponderadas y recordatorios el mismo día.',
+          'No. La importación desde plataformas académicas es una función Pro, a 3,99 USD al mes o 19,99 USD al año. El plan Gratis sigue cubriendo el mismo trabajo desde el lado del programa: cinco escaneos por mes natural, hasta cuatro cursos dentro de un semestre, seguimiento completo de tareas y fechas, calificaciones con medias ponderadas y recordatorios con antelación.',
       },
       {
         question: '¿Cómo se conecta Semora con Canvas?',

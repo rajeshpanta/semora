@@ -33,7 +33,7 @@ const FAQ = [
   {
     question: 'Is Semora free to use alongside Canvas?',
     answer:
-      'Partly. Importing assignments from Canvas is a Pro feature, but the free tier covers the syllabus side of the same job, and you can paste Canvas assignment text straight into the scanner. The free tier includes 5 syllabus scans per calendar month, up to 4 courses within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no monthly scan cap, plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
+      'Partly. Importing assignments from Canvas is a Pro feature, but the free tier covers the syllabus side of the same job, and you can paste Canvas assignment text straight into the scanner. The free tier includes 5 syllabus scans per calendar month, up to 4 courses within one semester, one semester total, full task and deadline tracking, grade tracking, and reminders 3 days, 1 day and the morning before each deadline. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no monthly scan cap, plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, per-task custom reminder timing and quiet hours, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
   },
   {
     question: 'Does Semora work on iPhone, iPad, and web?',
@@ -95,13 +95,13 @@ export default function CanvasDeadlineTrackerPage() {
       <p className={styles.lede}>
         Semora is a Canvas deadline tracker app with a token-based Canvas connector on Pro. Some
         institutions disable or prohibit third-party token use, so confirm your school&apos;s policy.
-        Semora layers grade tracking, same-day reminders, and an AI-generated study schedule on top
+        Semora layers grade tracking, advance reminders, and an AI-generated study schedule on top
         of your assignments across iPhone, iPad, and web.
       </p>
 
       <p>
         Canvas is where your instructors post assignments. Semora sits alongside Canvas and adds
-        grade tracking, same-day reminders, and, on Pro, an AI-generated study plan built from
+        grade tracking, advance reminders, and, on Pro, an AI-generated study plan built from
         your actual syllabus.
       </p>
 

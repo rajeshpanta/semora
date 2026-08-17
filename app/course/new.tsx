@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { useCreateCourse, useCreateCourseMeeting, useSemesters, useCourses } from '@/lib/queries';
+import { primeNotificationPermission } from '@/lib/notifications';
 import { useAppStore } from '@/store/appStore';
 import { COURSE_COLORS, COURSE_ICONS, COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { SemesterPicker } from '@/components/SemesterPicker';
@@ -142,6 +143,19 @@ export default function NewCourseScreen() {
         );
       }
       Keyboard.dismiss();
+
+      // A student who has just added a class has shown the clearest intent
+      // they ever will, and this is the only route into the app that never
+      // asked about reminders — the ask used to live solely inside a syllabus
+      // import, which most accounts never complete. Awaited so the OS dialog
+      // appears over this screen rather than racing the navigation away.
+      await primeNotificationPermission({
+        title: `Reminders for ${name.trim()}?`,
+        message: "Semora can warn you 3 days, 1 day and the morning before anything in this class is due.",
+        confirm: 'Yes, remind me',
+        decline: 'Not now',
+      });
+
       router.back();
     } catch (err: any) {
       // The server-side trigger raises with errcode P0001 and a

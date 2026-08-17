@@ -167,19 +167,8 @@ export default function NotificationSettings() {
   };
 
   const toggle = async (key: keyof ReminderPrefs) => {
-    // 1-day and 3-day reminders are Pro only
-    if (!isPro && (key === 'reminder_1day' || key === 'reminder_3day')) {
-      Alert.alert(
-        'Pro Feature',
-        'Advance reminders are available with Semora Pro. Free users get same-day reminders.',
-        [
-          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
-          { text: 'Cancel', style: 'cancel' },
-        ],
-      );
-      return;
-    }
-
+    // Every reminder timing is free now — see lib/notifications.ts for why.
+    // Pro keeps per-task custom reminder times and quiet hours.
     const previous = { ...prefs };
     const updated = { ...prefs, [key]: !prefs[key] };
     setPrefs(updated);
@@ -271,18 +260,16 @@ export default function NotificationSettings() {
           />
           <ToggleRow
             label="1 day before"
-            subtitle={isPro ? 'The day before it\'s due' : 'Pro feature'}
-            value={isPro ? prefs.reminder_1day : false}
+            subtitle="The day before it's due"
+            value={prefs.reminder_1day}
             onToggle={() => toggle('reminder_1day')}
-            pro={!isPro}
           />
           <ToggleRow
             label="3 days before"
-            subtitle={isPro ? 'Early heads-up' : 'Pro feature'}
-            value={isPro ? prefs.reminder_3day : false}
+            subtitle="Early heads-up"
+            value={prefs.reminder_3day}
             onToggle={() => toggle('reminder_3day')}
             last
-            pro={!isPro}
           />
         </View>
 

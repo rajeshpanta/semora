@@ -161,8 +161,9 @@ export default function SettingsScreen() {
     if (!reminderPrefs) return undefined; // hide value while loading
     const parts: string[] = [];
     if (reminderPrefs.reminder_same_day) parts.push('Same day');
-    if (isPro && reminderPrefs.reminder_1day) parts.push('1 day');
-    if (isPro && reminderPrefs.reminder_3day) parts.push('3 days');
+    // No isPro check: advance reminders are free (lib/notifications.ts).
+    if (reminderPrefs.reminder_1day) parts.push('1 day');
+    if (reminderPrefs.reminder_3day) parts.push('3 days');
     return parts.length === 0 ? 'Off' : parts.join(', ');
   })();
 
