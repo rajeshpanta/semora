@@ -8,6 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
+import { useAppStore } from '@/store/appStore';
+import { useCourses } from '@/lib/queries';
 
 // Floating action menu opened by the "+" tab button. The tab press itself is
 // intercepted in app/(tabs)/_layout.tsx (preventDefault), so this menu is the
@@ -27,6 +29,16 @@ type MenuRow = {
   route?: { pathname: string; params?: Record<string, string> };
   /** Swaps the sheet to the scan methods instead of navigating. */
   expands?: 'scan';
+  /**
+   * Ask which class this belongs to before navigating.
+   *
+   * A lecture or a deck created from here used to land with no course, so it
+   * was filed nowhere and the student could not find it again from the class
+   * it belonged to. The question is asked here — at the moment of choosing the
+   * action — rather than on the destination screen, where it reads as one more
+   * field to skip.
+   */
+  needsCourse?: boolean;
 };
 
 const ROOT_ACTIONS: MenuRow[] = [
@@ -47,6 +59,7 @@ const ROOT_ACTIONS: MenuRow[] = [
     title: 'Record lecture',
     sub: 'Transcript & notes, made for you',
     route: { pathname: '/lecture/record' },
+    needsCourse: true,
   },
   {
     icon: 'camera',
@@ -94,8 +107,16 @@ const SCAN_ACTIONS: MenuRow[] = [
   },
 ];
 
-const SHORTCUTS: { icon: React.ComponentProps<typeof FontAwesome>['name']; label: string; path: string }[] = [
-  { icon: 'clone', label: 'Flashcards', path: '/flashcards' },
+const SHORTCUTS: {
+  icon: React.ComponentProps<typeof FontAwesome>['name'];
+  label: string;
+  path: string;
+  needsCourse?: boolean;
+}[] = [
+  // Flashcards is the one shortcut that CREATES something — /flashcards is both
+  // the deck library and where a new deck is made — so it asks for a class the
+  // same way Record lecture does. The other three only open a screen.
+  { icon: 'clone', label: 'Flashcards', path: '/flashcards', needsCourse: true },
   { icon: 'graduation-cap', label: 'AI Tutor', path: '/tutor' },
   { icon: 'hourglass-half', label: 'Focus', path: '/pomodoro' },
   { icon: 'microphone', label: 'Lectures', path: '/lecture' },
@@ -107,13 +128,20 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
   const insets = useSafeAreaInsets();
   const { isDesktop } = useResponsive();
   const slide = useRef(new Animated.Value(0)).current;
-  const [page, setPage] = useState<'root' | 'scan'>('root');
+  const [page, setPage] = useState<'root' | 'scan' | 'course'>('root');
+  // Where to go once a class is chosen. Held rather than passed through the
+  // page state so the course list stays a dumb list, whatever asked for it.
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
+
+  const selectedSemesterId = useAppStore((st) => st.selectedSemesterId);
+  const { data: courses = [] } = useCourses(selectedSemesterId);
 
   useEffect(() => {
     if (visible) {
       // Always reopen at the top level. Reopening on the scan sub-page would
       // leave someone who wanted the recorder staring at file pickers.
       setPage('root');
+      setPendingPath(null);
       slide.setValue(0);
       Animated.spring(slide, { toValue: 1, useNativeDriver: true, damping: 18, stiffness: 220 }).start();
     }
@@ -130,6 +158,28 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
     setPage('scan');
   };
 
+  /**
+   * Route to `path`, asking which class it belongs to first — but only when
+   * that question has more than one possible answer.
+   *
+   * With no courses there is nothing to choose. With exactly one, the answer is
+   * already known, and making someone confirm their only class is the kind of
+   * step that makes an app feel like paperwork. Two or more is the only case
+   * where asking earns its tap.
+   */
+  const goWithCourse = (path: string) => {
+    if (courses.length === 0) return go(path);
+    if (courses.length === 1) return go(path, { courseId: courses[0].id });
+    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPendingPath(path);
+    setPage('course');
+  };
+
+  const pickCourse = (courseId?: string) => {
+    if (!pendingPath) return;
+    go(pendingPath, courseId ? { courseId } : undefined);
+  };
+
   // Recording is native-only (see lib/lectureRecorder.ts), so the browser must
   // not offer a row that can only apologise.
   const rootRows = Platform.OS === 'web'
@@ -140,7 +190,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
   const scanRows = isDesktop
     ? SCAN_ACTIONS.filter((a) => a.title !== 'Take a photo')
     : SCAN_ACTIONS;
-  const rows = page === 'scan' ? scanRows : rootRows;
+  const rows = page === 'scan' ? scanRows : page === 'course' ? [] : rootRows;
 
   const tints: Record<MenuRow['tint'], { bg: string; fg: string }> = {
     brand: { bg: colors.brand50, fg: colors.brand },
@@ -172,7 +222,11 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
                 key={a.title}
                 style={styles.row}
                 activeOpacity={0.7}
-                onPress={() => (a.expands ? openScanPage() : go(a.route!.pathname, a.route!.params))}
+                onPress={() => {
+                  if (a.expands) return openScanPage();
+                  if (a.needsCourse) return goWithCourse(a.route!.pathname);
+                  return go(a.route!.pathname, a.route!.params);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={a.title}
               >
@@ -187,13 +241,58 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
               </TouchableOpacity>
             ))}
 
+            {/* Which class? Rendered in the sheet rather than as another modal —
+                the same one-step-deeper move the scan methods already make, so
+                there is one interaction to learn instead of two. */}
+            {page === 'course' && (
+              <>
+                <Text style={[styles.courseHeading, { color: colors.ink3 }]}>Which class is this for?</Text>
+                {courses.map((c) => (
+                  <TouchableOpacity
+                    key={c.id}
+                    style={styles.row}
+                    activeOpacity={0.7}
+                    onPress={() => pickCourse(c.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={c.name}
+                  >
+                    <View style={[styles.rowIcon, { backgroundColor: (c.color || colors.brand) + '22' }]}>
+                      <FontAwesome name="book" size={16} color={c.color || colors.brand} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.rowTitle, { color: colors.ink }]} numberOfLines={1}>{c.name}</Text>
+                      {c.instructor ? (
+                        <Text style={[styles.rowSub, { color: colors.ink3 }]} numberOfLines={1}>{c.instructor}</Text>
+                      ) : null}
+                    </View>
+                  </TouchableOpacity>
+                ))}
+                {/* Both course_id columns are nullable by design — a lecture for
+                    a class that isn't in Semora, a deck that spans subjects. */}
+                <TouchableOpacity
+                  style={styles.row}
+                  activeOpacity={0.7}
+                  onPress={() => pickCourse()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Not for a specific class"
+                >
+                  <View style={[styles.rowIcon, { backgroundColor: colors.line }]}>
+                    <FontAwesome name="minus" size={14} color={colors.ink3} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.rowTitle, { color: colors.ink2 }]}>Not for a specific class</Text>
+                  </View>
+                </TouchableOpacity>
+              </>
+            )}
+
             <View style={[styles.divider, { backgroundColor: colors.line }]} />
 
-            {page === 'scan' ? (
+            {page !== 'root' ? (
               <TouchableOpacity
                 style={styles.backRow}
                 activeOpacity={0.7}
-                onPress={() => setPage('root')}
+                onPress={() => { setPendingPath(null); setPage('root'); }}
                 accessibilityRole="button"
                 accessibilityLabel="Back"
               >
@@ -207,7 +306,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
                   key={s.label}
                   style={styles.shortcut}
                   activeOpacity={0.7}
-                  onPress={() => go(s.path)}
+                  onPress={() => (s.needsCourse ? goWithCourse(s.path) : go(s.path))}
                   accessibilityRole="button"
                   accessibilityLabel={s.label}
                 >
@@ -233,6 +332,7 @@ const styles = StyleSheet.create({
   sheet: { borderRadius: 24, borderWidth: 0.5, padding: 10, gap: 2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 14 },
   rowIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  courseHeading: { fontSize: 12.5, fontWeight: '600', letterSpacing: 0.3, paddingHorizontal: 10, paddingTop: 6, paddingBottom: 2 },
   rowTitle: { fontSize: 15, fontWeight: '600', fontFamily: FONTS.displaySemibold },
   rowSub: { fontSize: 12.5, marginTop: 1 },
   divider: { height: 0.5, marginVertical: 8, marginHorizontal: 6 },

@@ -4,7 +4,7 @@ import { Alert, Text, TextInput, TouchableOpacity } from '@/components/Localized
 import { Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useNavigation, useRouter } from 'expo-router';
+import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
@@ -42,6 +42,7 @@ function formatClock(totalSeconds: number): string {
 }
 
 export default function RecordLectureScreen() {
+  const params = useLocalSearchParams<{ courseId?: string }>();
   const colors = useColors();
   const router = useRouter();
   const { contentMaxWidth } = useResponsive();
@@ -54,7 +55,11 @@ export default function RecordLectureScreen() {
   const navigation = useNavigation();
   const recorder = useLectureRecorder();
   const [title, setTitle] = useState('');
-  const [courseId, setCourseId] = useState<string | null>(null);
+  // Preselected when the caller already knows the class — the "+" menu asks
+  // before it routes here, and the course screen passes its own id. Arriving
+  // with it set is what stops a recording being filed nowhere; the chips below
+  // stay editable so it can still be changed or cleared.
+  const [courseId, setCourseId] = useState<string | null>(params.courseId ?? null);
   const [consentVisible, setConsentVisible] = useState(false);
   const [starting, setStarting] = useState(false);
   const startingRef = useRef(false);

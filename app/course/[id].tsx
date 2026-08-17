@@ -754,6 +754,48 @@ export default function CourseDetailScreen() {
                 }
               }}
             />
+            {/* Reviewing works everywhere — a lecture recorded on a phone should
+                be readable on a laptop — so this row is NOT platform-gated.
+                It is also the half that makes filing worth doing: without a
+                route from the class to its recordings, attaching a course only
+                labels the lecture rather than shelving it. */}
+            <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
+            <StudyToolRow
+              icon="list-ul"
+              label="Lectures"
+              sub="Recordings and notes for this class"
+              accent={course.color}
+              locked={false}
+              onPress={() => {
+                if (Platform.OS === 'ios') Haptics.selectionAsync();
+                router.push({
+                  pathname: '/lecture',
+                  params: { courseId: course.id, courseName: course.name },
+                } as any);
+              }}
+            />
+
+            {/* Recording itself IS native-only (lib/lectureRecorder.ts), so the
+                browser gets no row rather than one that can only apologise. */}
+            {Platform.OS !== 'web' && (
+              <>
+                <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
+                <StudyToolRow
+                  icon="microphone"
+                  label="Record lecture"
+                  sub="Transcript and notes for this class"
+                  accent={course.color}
+                  // Not lock-badged: the free tier includes lectures up to a
+                  // quota, and the recorder screen is where that limit is
+                  // explained. A padlock here would claim otherwise.
+                  locked={false}
+                  onPress={() => {
+                    if (Platform.OS === 'ios') Haptics.selectionAsync();
+                    router.push({ pathname: '/lecture/record', params: { courseId: course.id } } as any);
+                  }}
+                />
+              </>
+            )}
             <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
             <StudyToolRow
               icon="magic"

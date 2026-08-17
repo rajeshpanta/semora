@@ -3,7 +3,7 @@ import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 
 import { Text, TouchableOpacity } from '@/components/LocalizedReactNative';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useI18n } from '@/lib/i18n';
@@ -101,9 +101,26 @@ export default function LecturesScreen() {
   const colors = useColors();
   const router = useRouter();
   const { contentMaxWidth } = useResponsive();
-  const { data: lectures = [], isLoading, refetch, isRefetching } = useLectures();
+  // Optional course scope: /lecture?courseId=<id> narrows the list to one
+  // class, which is how the course screen reaches the lectures recorded for
+  // it. Filtered client-side rather than in a second query — useLectures is
+  // already cached and a student's lecture count is small.
+  const { courseId: scopeCourseId, courseName: scopeCourseNameParam } =
+    useLocalSearchParams<{ courseId?: string; courseName?: string }>();
+  const { data: allLectures = [], isLoading, refetch, isRefetching } = useLectures();
+  const lectures = scopeCourseId
+    ? allLectures.filter((l) => l.course_id === scopeCourseId)
+    : allLectures;
+  // Prefer the name the caller passed: deriving it from the lectures themselves
+  // fails in exactly the case where the label matters most — a class with no
+  // recordings yet, where the list would otherwise look empty for no stated
+  // reason. The derived name is the fallback for a link that omits it.
+  const scopeCourseName = scopeCourseId
+    ? scopeCourseNameParam
+      ?? allLectures.find((l) => l.course_id === scopeCourseId)?.courses?.name
+    : undefined;
 
-  const anyInFlight = lectures.some((l) => isLectureInFlight(l.status));
+  const anyInFlight = allLectures.some((l) => isLectureInFlight(l.status));
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
@@ -114,6 +131,10 @@ export default function LecturesScreen() {
           <RefreshControl refreshing={isRefetching} onRefresh={() => refetch()} tintColor={colors.brand} />
         }
       >
+        {scopeCourseName ? (
+          <Text style={[styles.scopeLabel, { color: colors.ink3 }]}>{`Lectures for ${scopeCourseName}`}</Text>
+        ) : null}
+
         {isLoading ? (
           <View style={styles.loading}>
             <ActivityIndicator color={colors.brand} />
@@ -123,7 +144,9 @@ export default function LecturesScreen() {
             <View style={[styles.emptyIcon, { backgroundColor: colors.coral50 }]}>
               <FontAwesome name="microphone" size={26} color={colors.coral} />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.ink }]}>Record your first lecture</Text>
+            <Text style={[styles.emptyTitle, { color: colors.ink }]}>
+              {scopeCourseId ? 'No lectures for this class yet' : 'Record your first lecture'}
+            </Text>
             <Text style={[styles.emptyText, { color: colors.ink2 }]}>
               Hit record in class. Semora transcribes the audio, writes your notes, and can turn it
               all into flashcards and practice quizzes.
@@ -131,7 +154,12 @@ export default function LecturesScreen() {
             <TouchableOpacity
               style={[styles.emptyBtn, { backgroundColor: colors.coral }]}
               activeOpacity={0.85}
-              onPress={() => router.push('/lecture/record' as any)}
+              onPress={() =>
+                router.push({
+                  pathname: '/lecture/record',
+                  params: scopeCourseId ? { courseId: scopeCourseId } : undefined,
+                } as any)
+              }
               accessibilityRole="button"
               accessibilityLabel="Record a lecture"
             >
@@ -154,7 +182,12 @@ export default function LecturesScreen() {
             <TouchableOpacity
               style={[styles.newBtn, { borderColor: colors.coral }]}
               activeOpacity={0.8}
-              onPress={() => router.push('/lecture/record' as any)}
+              onPress={() =>
+                router.push({
+                  pathname: '/lecture/record',
+                  params: scopeCourseId ? { courseId: scopeCourseId } : undefined,
+                } as any)
+              }
               accessibilityRole="button"
               accessibilityLabel="Record a new lecture"
             >
@@ -201,6 +234,7 @@ const styles = StyleSheet.create({
   },
   pillSpinner: { transform: [{ scale: 0.7 }] },
   statusText: { fontSize: 11.5, fontWeight: '600' },
+  scopeLabel: { fontSize: 13, fontWeight: '600', marginBottom: 10, paddingHorizontal: 2 },
   empty: { alignItems: 'center', paddingTop: 70, paddingHorizontal: 18 },
   emptyIcon: { width: 64, height: 64, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
   emptyTitle: { fontFamily: FONTS.displaySemibold, fontSize: 21, marginTop: 18, textAlign: 'center' },
