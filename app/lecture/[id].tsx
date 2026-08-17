@@ -20,6 +20,7 @@ import {
   lectureKeys,
   retryPendingSegments,
   useAttachLectureCourse,
+  useSetLectureDeck,
   useDeleteLecture,
   useGenerateLectureQuiz,
   useLecture,
@@ -155,6 +156,7 @@ export default function LectureDetailScreen() {
   const deleteLecture = useDeleteLecture();
   const attachCourse = useAttachLectureCourse(id);
   const generateCards = useGenerateFlashcards();
+  const setLectureDeck = useSetLectureDeck(id);
 
   const [showTranscript, setShowTranscript] = useState(false);
   const [showCoursePicker, setShowCoursePicker] = useState(false);
@@ -251,6 +253,16 @@ export default function LectureDetailScreen() {
       router.push('/paywall' as any);
       return;
     }
+    // Already made once — open it. Without this the generator was handed no
+    // deckId, so every press created ANOTHER deck: three presses, three
+    // near-identical decks, and review history split across all of them.
+    // Mirrors handleQuiz, which has always opened an existing quiz rather than
+    // rebuilding it.
+    if (lecture.deck_id) {
+      router.push(`/flashcards/${lecture.deck_id}` as any);
+      return;
+    }
+
     // Generate here and open the deck, rather than handing the student off to
     // the Flashcards tab to start again. The old behaviour routed to a scoped
     // deck list where they still had to find the generate control and pick the
@@ -263,6 +275,9 @@ export default function LectureDetailScreen() {
       { courseId: lecture.course_id, deckTitle: lecture.title || 'Lecture' },
       {
         onSuccess: (result) => {
+          // Remember it before navigating, so returning to this lecture offers
+          // the deck rather than offering to build it again.
+          setLectureDeck.mutate(result.deckId);
           router.push(`/flashcards/${result.deckId}` as any);
         },
         onError: (err) => {
@@ -275,7 +290,7 @@ export default function LectureDetailScreen() {
         },
       },
     );
-  }, [lecture, isPro, router, generateCards]);
+  }, [lecture, isPro, router, generateCards, setLectureDeck]);
 
   const handleDelete = useCallback(() => {
     if (!lecture) return;
@@ -491,7 +506,11 @@ export default function LectureDetailScreen() {
                 disabled={generateCards.isPending}
                 accessibilityRole="button"
                 accessibilityState={{ busy: generateCards.isPending }}
-                accessibilityLabel="Make flashcards from this lecture"
+                accessibilityLabel={
+                  lecture.deck_id
+                    ? 'Open the flashcards made from this lecture'
+                    : 'Make flashcards from this lecture'
+                }
               >
                 {generateCards.isPending ? (
                   <ActivityIndicator size="small" color={colors.brand} />
@@ -499,7 +518,9 @@ export default function LectureDetailScreen() {
                   <FontAwesome name="clone" size={16} color={colors.brand} />
                 )}
                 <Text style={[styles.toolText, { color: colors.ink }]}>
-                  {generateCards.isPending ? 'Making…' : 'Flashcards'}
+                  {generateCards.isPending
+                    ? 'Making…'
+                    : lecture.deck_id ? 'Flashcards' : 'Make cards'}
                 </Text>
                 {!isPro && !generateCards.isPending && (
                   <Text style={[styles.proTag, { color: colors.brand, backgroundColor: colors.brand50 }]}>

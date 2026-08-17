@@ -53,6 +53,10 @@ export interface LectureRecording {
   transcript: string | null;
   notes_md: string | null;
   quiz: LectureQuizQuestion[] | null;
+  /** The deck generated from this lecture (070). Null until one is made, or
+   *  again if that deck is deleted — which is what makes the next press
+   *  generate a fresh one rather than reopening a deck that is gone. */
+  deck_id: string | null;
   quiz_generating: boolean;
   /** Claim stamps — let the UI tell "working" from "the invocation died". */
   notes_started_at: string | null;
@@ -579,6 +583,34 @@ export function useDeleteLecture() {
       track('lecture_deleted', { screen: 'lecture_detail' });
       qc.invalidateQueries({ queryKey: lectureKeys.all });
       qc.invalidateQueries({ queryKey: ['lectureFreeUsed'] });
+    },
+  });
+}
+
+/**
+ * Record which deck this lecture produced, so the Flashcards button re-opens
+ * it instead of generating another. Written once, immediately after the first
+ * successful generation.
+ */
+export function useSetLectureDeck(lectureId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (deckId: string) => {
+      if (!lectureId) throw new Error('No lecture');
+      const { error } = await supabase
+        .from('lecture_recordings')
+        .update({ deck_id: deckId })
+        .eq('id', lectureId);
+      if (error) throw error;
+    },
+    onSuccess: (_r, deckId) => {
+      // Seed rather than only invalidate: the caller navigates to the deck the
+      // moment this resolves, and coming back to a lecture whose row had not
+      // refetched yet would offer to generate all over again.
+      qc.setQueryData(lectureKeys.detail(lectureId), (prev: LectureWithCourse | null | undefined) =>
+        prev ? { ...prev, deck_id: deckId } : prev,
+      );
+      qc.invalidateQueries({ queryKey: lectureKeys.detail(lectureId) });
     },
   });
 }
