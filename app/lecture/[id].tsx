@@ -37,7 +37,38 @@ import {
 // Both run on open rather than behind a button, so the common case looks like
 // it simply worked.
 
-/** Renders the markdown subset the notes generator emits: '## ' headings and '- ' bullets. */
+/**
+ * Inline markdown inside one line.
+ *
+ * The notes prompt asks for bolded key terms, and a model writing markdown
+ * emits `**like this**` whether or not it is asked to. This renderer used to
+ * print every line verbatim, so those markers showed up as literal asterisks
+ * in the middle of the notes.
+ *
+ * Only `**bold**` is handled, deliberately. A single `*` is left exactly as it
+ * is: in lecture notes it is far more likely to be multiplication in a formula
+ * than an italic marker, and silently eating it would corrupt the maths the
+ * notes exist to record.
+ */
+function InlineText({ text }: { text: string }) {
+  if (!text.includes('**')) return <>{text}</>;
+  // Capturing split, so the delimiters' contents survive as odd-indexed parts.
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1
+          ? <Text key={i} style={{ fontWeight: '700' }}>{part}</Text>
+          // An unmatched '**' — generation cut off mid-line, say — never
+          // pairs, so it would sit in the notes as literal asterisks. It has
+          // no meaning of its own, unlike a single '*', so drop it.
+          : <Text key={i}>{part.replace(/\*\*/g, '')}</Text>,
+      )}
+    </>
+  );
+}
+
+/** Renders the markdown subset the notes generator emits: '#'/'##'/'###' headings and '- ' bullets. */
 function NotesBody({
   md,
   inkColor,
@@ -56,14 +87,14 @@ function NotesBody({
         if (trimmed.startsWith('## ')) {
           return (
             <Text key={i} style={[nb.heading, { color: inkColor }, i > 0 && { marginTop: 12 }]}>
-              {trimmed.slice(3)}
+              <InlineText text={trimmed.slice(3)} />
             </Text>
           );
         }
         if (trimmed.startsWith('#')) {
           return (
             <Text key={i} style={[nb.heading, { color: inkColor }, i > 0 && { marginTop: 12 }]}>
-              {trimmed.replace(/^#+\s*/, '')}
+              <InlineText text={trimmed.replace(/^#+\s*/, '')} />
             </Text>
           );
         }
@@ -71,14 +102,16 @@ function NotesBody({
           return (
             <View key={i} style={[nb.bulletRow, line.startsWith('  ') && nb.bulletIndent]}>
               <Text style={[nb.bulletDot, { color: brandColor }]}>•</Text>
-              <Text style={[nb.bulletText, { color: ink2Color }]}>{trimmed.slice(2)}</Text>
+              <Text style={[nb.bulletText, { color: ink2Color }]}>
+                <InlineText text={trimmed.slice(2)} />
+              </Text>
             </View>
           );
         }
         if (!trimmed) return null;
         return (
           <Text key={i} style={[nb.paragraph, { color: ink2Color }]}>
-            {trimmed}
+            <InlineText text={trimmed} />
           </Text>
         );
       })}

@@ -47,7 +47,12 @@ Rules:
 - If a section of the transcript is marked as missing or interrupted, do not fabricate what was said there.
 - Never pad. Length must come from real content in the transcript, never from restating the same point in different words.
 
-Return ONLY GitHub-flavored markdown using this structure, no commentary and no code fences:
+FORMATTING — the app renders a small subset of markdown and prints anything else literally, as the characters you typed:
+- Headings (#, ##, ###), "- " bullets (indent two spaces to nest), and **bold** are supported.
+- Do NOT use tables, code fences, links, images, blockquotes, numbered lists, or *italics* — they will appear as raw punctuation in the middle of the notes.
+- Write formulas as plain text (E = mc^2, dy/dx). A single * is read as multiplication, never as emphasis.
+
+Return ONLY markdown in the structure below, no commentary and no code fences:
 
 # A specific headline naming what this lecture was actually about
 
