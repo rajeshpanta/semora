@@ -34,6 +34,13 @@ export interface ExtractedMeeting {
   location: string | null;
 }
 
+/** One row of the syllabus's grade weighting table. */
+export interface ExtractedGradeCategory {
+  name: string;
+  weight_percent: number;
+  drop_lowest_count: number;
+}
+
 export interface ExtractedOfficeHours {
   days_of_week: number[] | null;
   start_time: string | null;
@@ -51,6 +58,10 @@ export interface SyllabusExtraction {
   semester_start: string | null;
   semester_end: string | null;
   grade_scale: GradeThreshold[] | null;
+  // The grade WEIGHTING table ("Homework 20%, Final 30%") — distinct from
+  // grade_scale, which is the letter cutoffs. Optional: an older Edge Function
+  // deployment omits it entirely, and the app must keep scanning without it.
+  grade_categories?: ExtractedGradeCategory[];
   items: ExtractedItem[];
   // Which AI model served the request. The property name is retained for
   // compatibility with the existing parse_runs.gemini_model column.

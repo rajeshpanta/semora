@@ -64,6 +64,13 @@ Return a single JSON object with this structure:
   "semester_start": "2026-08-25" (semester start date in YYYY-MM-DD if visible, or null),
   "semester_end": "2026-12-15" (semester end date in YYYY-MM-DD if visible, or null),
   "grade_scale": [{"letter":"A","min":93},{"letter":"A-","min":90},{"letter":"B+","min":87},{"letter":"B","min":83},...] (the grading scale/letter grade cutoffs if listed in the syllabus, sorted highest to lowest. Include plus/minus grades if specified. Return null if no grading scale is found),
+  "grade_categories": [
+    {
+      "name": "Problem Sets" (the category exactly as the syllabus names it),
+      "weight_percent": 20 (its share of the final grade, as a number without the % sign),
+      "drop_lowest_count": 1 (how many lowest scores are dropped, if the syllabus says so — e.g. "lowest two quiz scores dropped" is 2. Use 0 when not mentioned.)
+    }
+  ] (The GRADE WEIGHTING TABLE — the breakdown of what the final grade is made of, e.g. "Homework 20%, Midterm 25%, Final 30%, Participation 25%". This is a DIFFERENT thing from grade_scale: grade_scale is letter cutoffs, this is what the percentage is built from. Copy the category names verbatim so they match the assignment names elsewhere in the syllabus. Weights normally total 100 — return them as stated even if they do not. Return [] if the syllabus states no weighting breakdown.),
   "items": [
     {
       "title": "Homework 1",
@@ -771,6 +778,32 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
               .filter((g: any) => g.letter && typeof g.min === 'number')
               .sort((a: any, b: any) => b.min - a.min)
           : null,
+      // The grade weighting table. Every constraint on public.grade_categories
+      // (036) is enforced here rather than left to the insert, because a single
+      // bad row would 23514 the whole batch and the student would silently get
+      // no categories at all: name must be non-blank, weight must land in
+      // (0, 100], drop-count in 0..20, and names must be unique per course.
+      grade_categories: (() => {
+        if (!Array.isArray(result.grade_categories)) return [];
+        const seen = new Set<string>();
+        return result.grade_categories
+          .map((c: any) => ({
+            name: typeof c?.name === 'string' ? c.name.trim().slice(0, 80) : '',
+            weight_percent: Number(c?.weight_percent),
+            drop_lowest_count: Number.isFinite(Number(c?.drop_lowest_count))
+              ? Math.min(20, Math.max(0, Math.trunc(Number(c.drop_lowest_count))))
+              : 0,
+          }))
+          .filter((c: { name: string; weight_percent: number }) => {
+            if (!c.name) return false;
+            if (!Number.isFinite(c.weight_percent) || c.weight_percent <= 0 || c.weight_percent > 100) return false;
+            const key = c.name.toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .slice(0, 20);
+      })(),
       items,
       // Telemetry: the model that actually answered. The legacy field name is
       // retained because parse_runs.gemini_model already exists in production;

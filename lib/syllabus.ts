@@ -198,6 +198,38 @@ export async function processSyllabus(
         console.warn('[processSyllabus] course_office_hours insert failed:', ohErr.message);
       }
     }
+
+    // The grade weighting table — "Problem sets 20%, Final 25%".
+    //
+    // Until this existed the scan read the syllabus's grading breakdown and
+    // threw it away: 4 category rows existed across 46 courses in production,
+    // so grade tracking — a headline feature — started empty for essentially
+    // everyone. The student had to retype a table the app had just proved it
+    // could read.
+    //
+    // Optional chaining, not a bare access: `grade_categories` is absent from
+    // responses served by an Edge Function deployed before this change, and a
+    // client that assumed it would break every scan against an older backend.
+    const categories = extraction.grade_categories ?? [];
+    if (categories.length > 0) {
+      const { error: catErr } = await supabase
+        .from('grade_categories')
+        .insert(
+          categories.map((c, index) => ({
+            user_id: userId,
+            course_id: courseId,
+            name: c.name,
+            weight_percent: c.weight_percent,
+            drop_lowest_count: c.drop_lowest_count ?? 0,
+            // Preserve the order the syllabus lists them in — that is the
+            // order the student will be looking at on paper.
+            position: index,
+          })),
+        );
+      if (catErr) {
+        console.warn('[processSyllabus] grade_categories insert failed:', catErr.message);
+      }
+    }
   }
 
   // 4. Create upload record. A pasted-text scan has no real file — its
