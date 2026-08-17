@@ -1,6 +1,11 @@
 import { supabase } from '@/lib/supabase';
 
-const STORAGE_BUCKETS = ['syllabi', 'course-notes'] as const;
+// Every private bucket the app writes to. A bucket missing from this list is
+// storage that survives account deletion forever: delete_user_account cannot
+// touch storage.objects (migration 035), so this client-side sweep — which runs
+// while the user's own RLS still grants access — is the ONLY thing that removes
+// their files.
+const STORAGE_BUCKETS = ['syllabi', 'course-notes', 'lectures'] as const;
 const LIST_PAGE_SIZE = 100;
 const REMOVE_BATCH_SIZE = 100;
 

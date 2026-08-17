@@ -19,7 +19,7 @@ import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
-import { COLORS, FONTS, SCREEN_MAX_WIDTH, TASK_TYPE_LABELS } from '@/lib/constants';
+import { COLORS, PROMO_SURFACE, FONTS, SCREEN_MAX_WIDTH, TASK_TYPE_LABELS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
@@ -154,10 +154,18 @@ export default function FlashcardsScreen() {
         });
       }
       setGenerationStage('creating');
+      // Send noteIds ONLY when the user actually narrowed the selection.
+      // `noteIds: []` means "use no attachments" server-side, and this list is
+      // built from uploaded notes only (useCourseNotes filters source='upload')
+      // — so a student who recorded a lecture and tapped "Make flashcards from
+      // this lecture" sent an empty array, which excluded the very lecture they
+      // asked about. Omitting the field lets the server use everything it has,
+      // lecture-sourced notes included.
+      const narrowed = courseNotes.length > 0 && selectedNoteIds.length !== courseNotes.length;
       const result = await generateFlashcards.mutateAsync({
         courseId,
         taskId: scopeTaskId ?? undefined,
-        noteIds: selectedNoteIds,
+        ...(narrowed ? { noteIds: selectedNoteIds } : {}),
       });
       track('deck_generated', {
         screen: 'flashcards', courseId, cardsAdded: result.cardsAdded,
@@ -275,7 +283,7 @@ export default function FlashcardsScreen() {
             teacher's review packet. */}
         {!!courseId && !generateOpen && (
           <TouchableOpacity
-            style={[styles.generateBtn, { backgroundColor: colors.ink }]}
+            style={[styles.generateBtn, { backgroundColor: PROMO_SURFACE }]}
             onPress={() => { if (Platform.OS === 'ios') Haptics.selectionAsync(); setGenerateOpen(true); }}
             activeOpacity={0.85}
           >

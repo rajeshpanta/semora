@@ -22,7 +22,7 @@ import { useSession } from '@/app/_layout';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
-import { hasEmailPassword, primaryProvider } from '@/lib/user';
+import { accountSubtitle, hasEmailPassword, primaryProvider } from '@/lib/user';
 import { useAppStore } from '@/store/appStore';
 import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
 
@@ -207,7 +207,11 @@ export default function DeleteAccountScreen() {
       // strand the user's task titles in iOS Calendar after deletion.
       await unsyncAll().catch(() => {});
 
-      await signOut();
+      // Someone who has just deleted their account must not land on a sign-in
+      // wall asking for the credentials they deliberately got rid of. On web
+      // this leaves for semoraai.com; native falls through to the auth screen,
+      // which is the only sensible destination inside an app.
+      await signOut({ landing: 'marketing' });
     } catch (err: any) {
       Alert.alert('Could not delete account', err.message ?? 'Please try again.');
       setLoading(false);
@@ -226,7 +230,7 @@ export default function DeleteAccountScreen() {
           <View style={styles.warningTextWrap}>
             <Text style={[styles.warningTitle, { color: colors.coral }]}>This is permanent</Text>
             <Text style={[styles.warningText, { color: colors.ink2 }]}>
-              All your semesters, courses, tasks, grades, uploaded syllabi, and course notes will be deleted. This cannot be undone.
+              All your semesters, courses, tasks, grades, uploaded syllabi, course notes, and lecture recordings will be deleted. This cannot be undone.
               {isPro
                 ? '\n\nDeleting your account does NOT cancel your Pro subscription — Apple keeps billing until you cancel it in Settings → Apple Account → Subscriptions.'
                 : ''}
@@ -236,10 +240,11 @@ export default function DeleteAccountScreen() {
 
         <Text style={[styles.label, { color: colors.ink2 }]}>Account</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <Text style={[styles.emailText, { color: colors.ink }]}>{email}</Text>
+          <Text style={[styles.emailText, { color: colors.ink }]}>{accountSubtitle(user)}</Text>
         </View>
 
         {usesPassword ? (
+
           <>
             <Text style={[styles.label, { color: colors.ink2 }]}>Confirm with your password</Text>
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>

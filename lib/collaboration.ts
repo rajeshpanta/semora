@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform, Share } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { MARKETING_URL } from '@/lib/constants';
+import { shareLink } from '@/lib/shareLink';
 import { getAppLocale } from '@/lib/i18n';
 import type {
   CourseCollaboration,
@@ -129,7 +130,9 @@ export async function inviteClassmates(collaborationId: string, courseName: stri
   // on inviteLink() in lib/referral.ts. Classmates being invited to a course
   // space are precisely the people who do not have the app yet.
   const url = `${MARKETING_URL}/collaborate/${encodeURIComponent(String(token))}`;
-  await Share.share({
+  // The invite token is already created above, so this must never dead-end in
+  // a browser without a share sheet — see lib/shareLink.ts.
+  await shareLink({
     title: getAppLocale() === 'es' ? `Únete a ${courseName} en Semora` : `Join ${courseName} in Semora`,
     message: getAppLocale() === 'es'
       ? `Únete al espacio de ${courseName} en Semora para compartir entregas y trabajo grupal:\n${url}`

@@ -235,3 +235,15 @@ export function calculateSemesterGpa(
     reportingCredits: Math.round(credits * 10) / 10,
   };
 }
+
+/**
+ * Background for the "premium dark card" surfaces — the paywall hero, the Me
+ * tab's Pro card, the invite hero, the flashcard AI button.
+ *
+ * Deliberately NOT the theme's `colors.ink`. Those cards paint their text with
+ * a hardcoded white, which only works over a dark background; in dark mode
+ * `colors.ink` resolves to a near-white (#E8E6E3), and the card rendered white
+ * text on a near-white field. Pinning the surface keeps light mode byte-identical
+ * and makes the card stay dark in both themes, which is what the design intends.
+ */
+export const PROMO_SURFACE = COLORS.ink;

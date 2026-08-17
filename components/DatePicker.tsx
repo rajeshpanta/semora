@@ -10,7 +10,7 @@ import {
 import { format } from 'date-fns';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
-import { useColors } from '@/lib/theme';
+import { useColors, useResolvedScheme } from '@/lib/theme';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 interface DatePickerProps {
@@ -23,6 +23,7 @@ interface DatePickerProps {
 
 export function DatePicker({ value, onChange, onClear, mode = 'date', placeholder }: DatePickerProps) {
   const colors = useColors();
+  const scheme = useResolvedScheme();
   const [show, setShow] = useState(false);
   const [tempValue, setTempValue] = useState<Date>(value || new Date());
 
@@ -53,17 +54,24 @@ export function DatePicker({ value, onChange, onClear, mode = 'date', placeholde
               onChange(d);
             }
           }}
+          // Themed, not hardcoded. This branch called useColors() and then
+          // ignored it, so in dark mode every date and time field rendered as a
+          // bright white box in an otherwise dark form. `colorScheme` also makes
+          // the browser's OWN calendar/clock popup and its picker icon follow
+          // the theme — styling the input alone would still flash a white
+          // calendar over a dark page.
           style={{
             height: 48,
-            border: '1.5px solid #e5e7eb',
+            border: `1.5px solid ${colors.line}`,
             borderRadius: 12,
-            backgroundColor: '#fafafa',
+            backgroundColor: colors.card,
             paddingLeft: 16,
             paddingRight: 16,
             fontSize: 15,
-            color: '#111',
+            color: colors.ink,
             width: '100%',
             fontFamily: 'inherit',
+            colorScheme: scheme,
           }}
         />
       </View>

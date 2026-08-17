@@ -368,9 +368,17 @@ export function freeScanWindowStartIso(): string {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
 }
 
-export function useScanCount() {
-  return useQuery({
-    queryKey: ['scanCount'],
+/**
+ * Shared so callers can AWAIT the count instead of racing it.
+ *
+ * The scan screen's gate used to alert "Please Wait" whenever this query had
+ * not resolved yet, which broke the "+" menu's whole point: the deep-linked
+ * picker fires on the screen's very first commit, before any fetch can finish,
+ * so a user tapping "Take a photo" from a cold start got an alert instead of a
+ * camera — and nothing retried once the count arrived.
+ */
+export const scanCountQueryOptions = {
+  queryKey: ['scanCount'] as const,
     // Always treat as stale so the count is re-fetched whenever the scan tab
     // mounts/focuses (and on explicit invalidation after a scan completes).
     // A 60s-cached count let the pill claim "free scans left" right after the
@@ -408,7 +416,10 @@ export function useScanCount() {
       if (callLogRes.error) return uploads;
       return Math.max(uploads, callLogRes.count ?? 0);
     },
-  });
+};
+
+export function useScanCount() {
+  return useQuery(scanCountQueryOptions);
 }
 
 // Latest uploaded syllabus for a course. Used by the course detail

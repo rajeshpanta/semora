@@ -5,5 +5,6 @@
   "NSCalendarsFullAccessUsageDescription": "Semora necesita acceso al calendario para sincronizar las fechas de entrega de tus tareas.",
   "NSFaceIDUsageDescription": "Semora usa Face ID para verificar tu identidad antes de eliminar tu cuenta.",
   "NSRemindersUsageDescription": "Permite que Semora acceda a tus recordatorios.",
-  "NSRemindersFullAccessUsageDescription": "Permite que Semora acceda a tus recordatorios."
+  "NSRemindersFullAccessUsageDescription": "Permite que Semora acceda a tus recordatorios.",
+  "NSMicrophoneUsageDescription": "Semora usa tu micrófono para grabar las clases que decides grabar y convertirlas en transcripción, apuntes y un cuestionario de práctica de ese curso. Por ejemplo, pulsa Grabar al inicio de tu clase y Semora redactará los puntos clave por ti. Semora solo graba después de que pulsas Grabar, y la grabación continúa con la pantalla bloqueada hasta que pulsas Detener."
 }

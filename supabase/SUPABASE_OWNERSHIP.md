@@ -26,7 +26,8 @@ object belongs to the app you're working on.
 `lms_connections`, `lms_course_links`, `course_collaborations`,
 `course_collaboration_members`, `course_collaboration_invites`,
 `shared_deadlines`, `group_assignments` (037–039, connected learning platform),
-`support_requests` (064, marketing-site contact form)
+`support_requests` (064, marketing-site contact form),
+`lecture_recordings`, `lecture_segments`, `lecture_usage_log`, `lecture_quota_day` (065–067, lecture recording)
 
 ### 🟩 CITIZEN (other app) — DO NOT TOUCH from Semora
 `whisper_usage` — whisper/voice usage + rate-limit log (`client_id`-based, anonymous,
@@ -48,13 +49,46 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
   `create_course_collaboration_invite`, `join_course_collaboration`,
   `set_collaboration_local_course`, `sync_collaboration_to_planner`,
   `publish_course_deadlines` (037),
-  `purge_old_support_requests` (064)
+  `purge_old_support_requests` (064),
+  `lecture_recordings_assert_parent_owner`, `lecture_segments_assert_parent_owner`,
+  `lecture_recordings_set_updated_at` (065),
+  `reserve_lecture_for_recording`, `release_lecture_reservation`, `settle_lecture_reservation`,
+  `reclaim_stale_lecture_reservations` (066–067)
 - **Citizen:** `whisper_rate_limit_ok` ← DO NOT modify from Semora
 
 ## Edge functions
 - **Semora:** `parse-syllabus`, `validate-receipt`, `send-push` (deploy `--no-verify-jwt`),
   `tutor-chat`, `share-course`, `google-cal-sync`, `redeem-referral`, `lms-sync`,
-  `submit-support` (deploy `--no-verify-jwt`)
+  `submit-support` (deploy `--no-verify-jwt`),
+  `lecture-transcribe`, `lecture-study-kit` (065)
+
+## Lecture recording (migration 065) — **SEMORA only**
+- `lecture_recordings` / `lecture_segments` — owner-only RLS, realtime enabled.
+  Audio lives in the private `lectures` bucket at `${uid}/${lectureId}/seg_NNN.m4a`
+  and is **deleted by `lecture-transcribe` the moment the transcript is written**
+  (`audio_deleted_at` records when). A `done` segment with a null `storage_path`
+  is the normal end state.
+- `lecture_usage_log` — the free-lecture quota ledger. RLS on with **no policies**
+  and `revoke all` from `authenticated`: it must stay unwritable by clients, or
+  delete-and-retry resets the free allowance forever. Counting
+  `lecture_recordings` instead would reintroduce exactly that bug.
+  The row is written **when the first segment is transcribed**, not when the
+  lecture finalizes — finalizing depends on `segment_count`, which the CLIENT
+  sets, so charging there let a client transcribe unlimited audio for free by
+  simply never declaring itself finished. A partial unique index on
+  `(user_id, lecture_id)` makes the write idempotent.
+- **`lecture_recordings` has NO INSERT policy, deliberately.** Rows are created
+  only by the `lecture-transcribe` edge function, which is where the entitlement
+  and capacity checks live. Restoring a blanket `for all` policy re-opens the
+  bypass 066 closed. `lecture_segments` DOES keep client insert — the app
+  uploads audio and writes those rows directly.
+- `lecture_quota_day` — global per-UTC-day speech-to-text capacity. The provider
+  bills its quota per organization, so all users share one pool; the ceiling is
+  passed in by the edge function from `LECTURE_DAILY_AUDIO_SECONDS`, not stored
+  here, so it can be raised without a migration.
+- `course_notes.source` / `source_recording_id` — mirrored lecture notes. Client
+  note-picker UIs must filter `source = 'upload'`; those rows have no storage
+  object behind them.
 
 ## Support requests (migration 064) — **SEMORA only**
 - `support_requests` — every message sent from semoraai.com/support and

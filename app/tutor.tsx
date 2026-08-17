@@ -467,7 +467,11 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-            {(topicMastery.length > 0 || riskReport?.recoveryPlan.length || upcomingWork.length) && (
+            {/* Boolean, not a raw count. `a || b.length || c.length` yields the
+                NUMBER 0 when everything is empty, and `0 && <View/>` renders a
+                literal "0" on screen — which is what every brand-new user saw
+                floating under the action chips. */}
+            {(topicMastery.length > 0 || (riskReport?.recoveryPlan.length ?? 0) > 0 || upcomingWork.length > 0) && (
               <View style={[styles.coachBrief, { backgroundColor: colors.card, borderColor: colors.line }]}>
                 <View style={styles.coachBriefHead}>
                   <FontAwesome name="compass" size={13} color={colors.teal} />

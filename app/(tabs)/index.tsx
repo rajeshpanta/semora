@@ -32,7 +32,6 @@ import {
 import { COLORS, FONTS, SCREEN_MAX_WIDTH, WEB_CARD_SHADOW } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
-import { displayName } from '@/lib/user';
 import { formatTimeOfDay, classTimeStatus } from '@/lib/schedule';
 import { updateTodayWidget, type DueThisWeekItem } from '@/lib/widgetBridge';
 import { rescheduleAllTaskReminders, requestNotificationPermission } from '@/lib/notifications';
@@ -65,15 +64,6 @@ const KIND_LABEL: Record<'lecture' | 'lab' | 'discussion' | 'other', string> = {
   other: 'Meeting',
 };
 
-/** Time-of-day greeting. 0–4: "Hey" (still up); 5–11: morning;
- *  12–16: afternoon; 17–23: evening. */
-function greetingFor(hour: number): string {
-  if (hour < 5) return 'Hey';
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
 export default function TodayScreen() {
   const colors = useColors();
   const { contentMaxWidth, width, isDesktop } = useResponsive();
@@ -85,24 +75,15 @@ export default function TodayScreen() {
   // get a wall of red. Tap "Show N more" to expand inline.
   const [showAllOverdue, setShowAllOverdue] = useState(false);
 
-  // The name the user TYPED in onboarding ("What should we call you?") is
-  // their explicit preference — it beats everything, including the email
-  // local-part that displayName falls back to (nobody wants "Good morning,
-  // coollax45"). Account metadata names are the fallback; empty string as
-  // the last resort degrades to just "Good morning".
-  const onboardingName = useAppStore((s) => s.userName);
-  const userName = (onboardingName ?? '').trim() || displayName(session?.user, '');
-  // Bump every minute so `today`, `nowHHMM`, and the greeting refresh while
-  // the screen sits open — without this, the NOW badge wouldn't appear when
-  // a class actually starts and the greeting would be stuck on "Good morning"
-  // all afternoon. See ticker effect below.
+  // Bump every minute so `today` and `nowHHMM` refresh while the screen sits
+  // open — without this the NOW badge wouldn't appear when a class actually
+  // starts. See ticker effect below.
   const [, setMinuteTick] = useState(0);
   const today = new Date();
   // Diff against the start of today, not "right now". Otherwise at 11pm
   // a task due tomorrow shows as "TODAY" because differenceInDays truncates.
   const todayStart = startOfDay(today);
   const dateLabel = format(today, "EEE · MMMM d");
-  const greeting = greetingFor(today.getHours());
   // "HH:MM:SS" for comparing against start_time / end_time strings from Postgres.
   const nowHHMM = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}:${String(today.getSeconds()).padStart(2, '0')}`;
 
@@ -225,7 +206,7 @@ export default function TodayScreen() {
     }
   }, [semesters, selectedSemesterId]);
 
-  // Per-minute re-render so time-of-day UI (NOW badge, class fade, greeting)
+  // Per-minute re-render so time-of-day UI (NOW badge, class fade)
   // stays accurate while the screen is open. Aligned to the next minute
   // boundary so the badge flips at HH:MM:00, not at a random offset from when
   // the screen happened to mount. setInterval is cleared on unmount and during
@@ -613,9 +594,6 @@ export default function TodayScreen() {
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
             <Text style={[styles.eyeLabel, { color: colors.ink3 }]}>{dateLabel}</Text>
-            <Text style={[styles.greeting, { color: colors.ink }]}>
-              {userName ? `${greeting}, ${userName}` : greeting}
-            </Text>
             {activeSemester && (
               <Text style={[styles.semesterLabel, { color: colors.ink3 }]}>{activeSemester.name}</Text>
             )}
@@ -1311,8 +1289,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: COLORS.paper },
   content: { padding: 18, paddingBottom: 120, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   eyeLabel: { fontSize: 14, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.ink3 },
-  greeting: { fontFamily: FONTS.displaySemibold, fontSize: 27, color: COLORS.ink, letterSpacing: -0.5, marginTop: 4, marginBottom: 2 },
-  semesterLabel: { fontSize: 14, color: COLORS.ink3, fontWeight: '500', marginBottom: 16 },
+  semesterLabel: { fontSize: 14, color: COLORS.ink3, fontWeight: '500', marginTop: 6, marginBottom: 16 },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
   notifBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,

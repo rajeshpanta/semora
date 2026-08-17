@@ -27,15 +27,23 @@ export const MODELS = {
   general: Deno.env.get('GEMINI_MODEL')?.trim() || 'gemini-2.5-flash-lite',
   /** OpenAI Luna. Serves every task: extraction, planning, generation, tutor. */
   tutor: Deno.env.get('TUTOR_OPENAI_MODEL')?.trim() || 'gpt-5.6-luna',
+  /**
+   * Groq Whisper turbo — the ONLY task that leaves OpenAI. Speech-to-text is a
+   * different modality, not a model preference: Luna cannot accept audio, so
+   * lecture transcription has no OpenAI home in this stack.
+   */
+  transcription: Deno.env.get('TRANSCRIPTION_MODEL')?.trim() || 'whisper-large-v3-turbo',
 } as const;
 
 export const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? '';
 export const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
+export const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
 
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta';
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
+const GROQ_TRANSCRIPTIONS_URL = 'https://api.groq.com/openai/v1/audio/transcriptions';
 
-export type Provider = 'gemini' | 'openai';
+export type Provider = 'gemini' | 'openai' | 'groq';
 
 /**
  * The task an AI call belongs to. Chosen by the ENDPOINT, not by inspecting the
@@ -48,19 +56,25 @@ export enum AiTask {
   planning = 'planning',
   contentGeneration = 'contentGeneration',
   tutor = 'tutor',
+  /** Lecture audio → text. The only non-OpenAI task (see ROUTING). */
+  transcription = 'transcription',
 }
 
 /**
  * The routing table. Exhaustive and total — every task has exactly one home.
  *
- * EVERYTHING IS ON OPENAI LUNA (2026-08-08, product decision). Gemini is not in
- * use. The transport below (callGemini, geminiText, usageFromGemini) is kept
- * deliberately: routing is the ONLY thing that changed, so bringing Gemini back
- * for a task is a one-word edit on that task's line here, not a re-import.
+ * EVERY TEXT TASK IS ON OPENAI LUNA (2026-08-08, product decision). Gemini is
+ * not in use. The transport below (callGemini, geminiText, usageFromGemini) is
+ * kept deliberately: routing is the ONLY thing that changed, so bringing Gemini
+ * back for a task is a one-word edit on that task's line here, not a re-import.
  *
- * If you flip any line back to 'gemini', two things must move with it:
- *   1. the Gemini entry in the privacy policy on semoraai.com (EN + /es), since
- *      routing a task there makes Google a subprocessor for user content, and
+ * TRANSCRIPTION IS ON GROQ, and is not a preference — it is the only modality
+ * Luna cannot serve. That makes Groq a subprocessor for user audio.
+ *
+ * If you change any line here, two things must move with it:
+ *   1. the corresponding entry in the privacy policy on semoraai.com (EN + /es),
+ *      since routing a task to a provider makes it a subprocessor for user
+ *      content, and
  *   2. the fallback policy in tutor-chat/index.ts, which is currently closed.
  */
 const ROUTING: Record<AiTask, Provider> = {
@@ -69,6 +83,7 @@ const ROUTING: Record<AiTask, Provider> = {
   [AiTask.planning]: 'openai',
   [AiTask.contentGeneration]: 'openai',
   [AiTask.tutor]: 'openai',
+  [AiTask.transcription]: 'groq',
 };
 
 /**
@@ -94,7 +109,9 @@ export function tutorTaskForMode(mode: string): AiTask {
  * rather than returning 502s for a task nobody can serve.
  */
 export function isProviderConfigured(provider: Provider): boolean {
-  return provider === 'gemini' ? Boolean(GEMINI_API_KEY) : Boolean(OPENAI_API_KEY);
+  if (provider === 'gemini') return Boolean(GEMINI_API_KEY);
+  if (provider === 'groq') return Boolean(GROQ_API_KEY);
+  return Boolean(OPENAI_API_KEY);
 }
 
 export function providerFor(task: AiTask): Provider {
@@ -102,7 +119,10 @@ export function providerFor(task: AiTask): Provider {
 }
 
 export function modelFor(task: AiTask): string {
-  return providerFor(task) === 'openai' ? MODELS.tutor : MODELS.general;
+  const provider = providerFor(task);
+  if (provider === 'groq') return MODELS.transcription;
+  if (provider === 'openai') return MODELS.tutor;
+  return MODELS.general;
 }
 
 // ── Retry policy ────────────────────────────────────────────────────────────
@@ -264,6 +284,96 @@ export async function callOpenAIResponses(payload: Record<string, unknown>, labe
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
       body: JSON.stringify(payload),
     }));
+}
+
+// ── Groq (lecture transcription only) ───────────────────────────────────────
+
+/**
+ * Transcribe one audio segment with Groq Whisper.
+ *
+ * TRANSPORT: multipart upload of the actual bytes, NOT the `url` field Groq
+ * also accepts. The url form would keep the audio out of this isolate, which
+ * matters for a 25 MB file — but a lecture is captured in ~5-minute segments of
+ * roughly 1.2 MB, so the saving is noise against a 256 MB isolate, and `url`
+ * would make every transcription depend on Groq's servers being able to reach a
+ * Supabase signed URL before it expires. That is an external dependency we
+ * cannot observe when it breaks. Bytes-in-hand fails only in ways we can see.
+ * If segment size ever grows past a few MB, revisit.
+ *
+ * FILENAME IS LOAD-BEARING: a Blob appended without one serializes as "blob",
+ * and Groq infers the container from the extension — it answers 400
+ * "unsupported format" for an m4a that arrives nameless.
+ *
+ * `previousTail` is the last few hundred characters of the preceding segment's
+ * transcript. Whisper accepts it as a prompt and uses it to keep terminology
+ * consistent and to repair the word that straddles the segment boundary. Course
+ * name goes in the same channel for the same reason ("Fourier" survives, "for
+ * ye" does not).
+ */
+export async function callGroqTranscription(opts: {
+  audio: Uint8Array;
+  fileName: string;
+  mimeType: string;
+  language: 'en' | 'es';
+  /** Course name + tail of the previous segment. Whisper caps this at 224 tokens. */
+  promptHint?: string;
+  label?: string;
+}): Promise<AiResult> {
+  if (!GROQ_API_KEY) {
+    return {
+      ok: false, data: null, status: 0, networkError: false, retryable: false,
+      attempts: 0, durationMs: 0, errorBody: 'GROQ_API_KEY is not configured',
+    };
+  }
+
+  // Detach a concrete ArrayBuffer once, outside the retry loop: a Uint8Array
+  // view is not a BlobPart (its backing buffer may be shared), and re-slicing
+  // per attempt would copy the audio again on every retry.
+  const buffer = opts.audio.buffer.slice(
+    opts.audio.byteOffset,
+    opts.audio.byteOffset + opts.audio.byteLength,
+  ) as ArrayBuffer;
+
+  // Rebuilt per attempt: a FormData whose Blob has been consumed cannot be
+  // replayed, so a shared instance would make every retry fail on an empty body.
+  const buildForm = () => {
+    const form = new FormData();
+    form.append('file', new Blob([buffer], { type: opts.mimeType }), opts.fileName);
+    form.append('model', MODELS.transcription);
+    form.append('language', opts.language);
+    form.append('response_format', 'verbose_json');
+    form.append('temperature', '0');
+    if (opts.promptHint) form.append('prompt', opts.promptHint.slice(0, 800));
+    return form;
+  };
+
+  return callWithRetry(opts.label ?? 'transcription', () =>
+    fetch(GROQ_TRANSCRIPTIONS_URL, {
+      method: 'POST',
+      // Content-Type is deliberately absent — fetch must set it itself so the
+      // multipart boundary matches the body it generated.
+      headers: { Authorization: `Bearer ${GROQ_API_KEY}` },
+      body: buildForm(),
+    }));
+}
+
+/** The transcript text from a Groq response. */
+export function groqTranscriptText(data: any): string | null {
+  const text = typeof data?.text === 'string' ? data.text.trim() : '';
+  return text || null;
+}
+
+/**
+ * True audio duration in seconds, per the provider.
+ *
+ * Only `verbose_json` carries it, and Groq documents only the segment objects
+ * of that envelope — so this optional-chains rather than destructures, and the
+ * caller falls back to its own measured duration when it comes back null.
+ * Never trust it to be present.
+ */
+export function groqAudioSeconds(data: any): number | null {
+  const d = data?.duration;
+  return typeof d === 'number' && Number.isFinite(d) && d >= 0 ? d : null;
 }
 
 export function openAIText(data: any): string | null {

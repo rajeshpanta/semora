@@ -19,7 +19,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import type { ProductOrSubscription } from 'react-native-iap';
-import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import { COLORS, PROMO_SURFACE, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
@@ -28,42 +28,20 @@ import { rescheduleAllTaskReminders } from '@/lib/notifications';
 import { track } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
 
+// Titles only. With descriptions this list ran ~490pt on its own and pushed
+// the plan cards and the Subscribe button below the fold, so the screen that
+// asks for money could not be read without scrolling. Each title is written to
+// stand alone; the detail lives on the pricing page and the feature pages.
 const FEATURES = [
-  {
-    icon: 'camera' as const,
-    title: 'Unlimited Scans & Courses',
-    desc: 'Unlimited syllabus scans and courses — free includes 5 scans a month and 4 courses.',
-  },
-  {
-    icon: 'bar-chart' as const,
-    title: 'Workload Dashboard & Study Plan',
-    desc: 'See your whole semester at a glance, spot crunch weeks, and get smart “start this now” suggestions.',
-  },
-  {
-    icon: 'graduation-cap' as const,
-    title: 'Flashcards, Focus Timer & AI Tutor',
-    desc: 'Study with spaced-repetition flashcards, a Pomodoro timer, and an AI tutor that knows your syllabus.',
-  },
-  {
-    icon: 'line-chart' as const,
-    title: 'Grade Scale & Forecasting',
-    desc: 'Customize grading scales and forecast your final GPA.',
-  },
-  {
-    icon: 'bell' as const,
-    title: 'Custom Reminders & Calendar Sync',
-    desc: 'Set your own reminder times, get 1- and 3-day advance nudges, sync to Apple Calendar, and export to Google Calendar or Outlook.',
-  },
-  {
-    icon: 'life-ring' as const,
-    title: 'Academic Risk Alerts',
-    desc: 'Catch falling grades, missing work, and overloaded weeks early — with a recovery plan.',
-  },
-  {
-    icon: 'users' as const,
-    title: 'Share & Streaks',
-    desc: 'Share a course with classmates, post your semester, and keep your study streak going.',
-  },
+  // Lectures share the first row rather than taking a sixth. Free users are
+  // sent to this screen BY the one-lecture limit, so it has to name lectures —
+  // but the screen has to fit without scrolling, which five rows do and six
+  // do not.
+  { icon: 'camera' as const, title: 'Unlimited lectures, scans & courses' },
+  { icon: 'bar-chart' as const, title: 'Workload dashboard & Smart Plan' },
+  { icon: 'graduation-cap' as const, title: 'Flashcards, focus timer & AI tutor' },
+  { icon: 'line-chart' as const, title: 'Grade scale & forecasting' },
+  { icon: 'bell' as const, title: 'Custom reminders & calendar sync' },
 ];
 
 const APP_STORE_URL = 'https://apps.apple.com/us/app/semora-ai-syllabus-scanner/id6762589321';
@@ -280,11 +258,15 @@ export default function PaywallScreen() {
 
   const handleClose = () => {
     // From the post-scan reverse trial, "back" would land on the review
-    // list (which we already saved). Send the user to their new course
-    // instead — or Today if we somehow don't have the id.
+    // list (which we already saved). Send the user on to the next-class
+    // prompt instead — declining Pro must not also cost us the ask that
+    // turns a single scan into a semester (app/syllabus/added.tsx).
     if (isPostScan) {
       if (params.courseId) {
-        router.replace(`/course/${params.courseId}` as any);
+        router.replace({
+          pathname: '/syllabus/added',
+          params: { courseId: params.courseId, count: params.count ?? '' },
+        } as any);
       } else {
         router.replace('/(tabs)' as any);
       }
@@ -369,7 +351,6 @@ export default function PaywallScreen() {
       setRestoring(false);
     }
   };
-
   return (
     <View style={[styles.screen, { backgroundColor: colors.paper }]}>
       <SafeAreaView style={styles.safe} edges={[]}>
@@ -392,7 +373,7 @@ export default function PaywallScreen() {
         >
 
           {/* Hero */}
-          <View style={[styles.hero, { backgroundColor: colors.ink }]}>
+          <View style={[styles.hero, { backgroundColor: PROMO_SURFACE }]}>
             <View style={[styles.heroGlow, { backgroundColor: colors.brand }]} />
             <View style={styles.proLabel}>
               <FontAwesome name="star" size={11} color={colors.brand100} />
@@ -427,10 +408,7 @@ export default function PaywallScreen() {
                 <View style={[styles.featureIcon, { backgroundColor: colors.brand50 }]}>
                   <FontAwesome name={f.icon} size={15} color={colors.brand} />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.featureTitle, { color: colors.ink }]}>{f.title}</Text>
-                  <Text style={[styles.featureDesc, { color: colors.ink3 }]}>{f.desc}</Text>
-                </View>
+                <Text style={[styles.featureTitle, { color: colors.ink, flex: 1 }]}>{f.title}</Text>
               </View>
             ))}
           </View>
@@ -612,8 +590,8 @@ const styles = StyleSheet.create({
   // Hero — dark card matching Me tab style
   hero: {
     backgroundColor: COLORS.ink,
-    borderRadius: 22, padding: 20,
-    marginBottom: 24, marginTop: 8,
+    borderRadius: 22, padding: 16,
+    marginBottom: 14, marginTop: 4,
     overflow: 'hidden', position: 'relative',
   },
   heroGlow: {
@@ -628,51 +606,47 @@ const styles = StyleSheet.create({
     fontSize: 12, fontWeight: '800', letterSpacing: 1.5, color: COLORS.brand100,
   },
   heroTitle: {
-    fontFamily: FONTS.display, fontSize: 22, color: '#fff',
-    lineHeight: 28, maxWidth: 260,
+    fontFamily: FONTS.display, fontSize: 21, color: '#fff',
+    lineHeight: 26, maxWidth: 260,
   },
   heroSubtitle: {
-    fontSize: 14, color: 'rgba(255,255,255,0.55)',
-    marginTop: 6,
+    fontSize: 13, color: 'rgba(255,255,255,0.55)',
+    marginTop: 4,
   },
 
   // Section
   sectionLabel: {
-    fontSize: 13, fontWeight: '700', color: COLORS.ink3,
-    letterSpacing: 1.2, marginBottom: 12,
+    fontSize: 12, fontWeight: '700', color: COLORS.ink3,
+    letterSpacing: 1.2, marginBottom: 8,
   },
 
   // Features
   featureList: {
     backgroundColor: COLORS.card, borderRadius: 16,
-    paddingHorizontal: 14, marginBottom: 24,
+    paddingHorizontal: 14, marginBottom: 14,
     borderWidth: 0.5, borderColor: COLORS.line,
   },
   featureRow: {
     flexDirection: 'row', alignItems: 'center',
-    paddingVertical: 12, gap: 12,
+    paddingVertical: 8, gap: 12,
   },
   featureRowBorder: {
     borderBottomWidth: 0.5, borderBottomColor: COLORS.line,
   },
   featureIcon: {
-    width: 36, height: 36, borderRadius: 10,
+    width: 30, height: 30, borderRadius: 9,
     backgroundColor: COLORS.brand50,
     alignItems: 'center', justifyContent: 'center',
   },
   featureTitle: {
     fontSize: 14, fontWeight: '600', color: COLORS.ink,
-    marginBottom: 1,
-  },
-  featureDesc: {
-    fontSize: 12, color: COLORS.ink3, lineHeight: 16,
   },
 
   // Plans
   planCard: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.card, borderRadius: 14,
-    padding: 14, marginBottom: 8,
+    padding: 12, marginBottom: 8,
     borderWidth: 1.5, borderColor: COLORS.line,
   },
   // isXWide: two plan cards side-by-side on a big iPad.

@@ -8,6 +8,8 @@
  * and MIME validation below is the actual gate.
  */
 
+import { HEIC_HELP, isHeic } from '@/lib/heic';
+
 export type SupportedDocumentCategory =
   | 'pdf'
   | 'image'
@@ -129,7 +131,13 @@ export function normalizeSupportedDocument(
   return { fileName, mimeType: spec.mimeType, category: spec.category };
 }
 
-export function unsupportedDocumentMessage(_fileName?: string | null): string {
+export function unsupportedDocumentMessage(fileName?: string | null): string {
+  // Name the ACTUAL problem when we can. HEIC is the default iPhone format, so
+  // "choose JPG/PNG/WEBP" is advice a student cannot follow without first being
+  // told what is wrong — and it was the most likely rejection on the web app,
+  // where the natural flow is to photograph a syllabus on a phone and open
+  // Semora on a laptop. See lib/heic.ts.
+  if (isHeic(fileName)) return HEIC_HELP;
   return `Choose ${SUPPORTED_DOCUMENT_COPY}. Convert files with important charts or diagrams to PDF for best results.`;
 }
 

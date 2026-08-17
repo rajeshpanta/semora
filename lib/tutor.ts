@@ -295,10 +295,18 @@ export function useCourseNotes(courseId?: string | null) {
   return useQuery({
     queryKey: tutorKeys.notes(courseId),
     queryFn: async () => {
+      // `source = 'upload'` only. Lecture notes are mirrored into course_notes
+      // so the tutor and flashcard generator can ground on them, but they are
+      // NOT files the student uploaded: they have no storage object behind
+      // them, and every row this hook returns is rendered as a chip that
+      // deletes on tap. Showing them here would offer to delete a lecture from
+      // a screen that has no idea it is doing that — and would call
+      // storage.remove([null]). The lecture screen owns their lifecycle.
       const { data, error } = await supabase
         .from('course_notes')
         .select('id, course_id, storage_path, filename, mime_type, created_at')
         .eq('course_id', courseId!)
+        .eq('source', 'upload')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as CourseNote[];
@@ -395,8 +403,17 @@ export function useUploadCourseNote(courseId?: string | null) {
       try {
         await prepareCourseNotes(courseId, [data as CourseNote]);
       } catch (error) {
-        await supabase.from('course_notes').delete().eq('id', data.id);
-        await bucket.remove([storagePath]).catch(() => {});
+        // Roll back ONLY when the document itself is the problem. This used to
+        // delete the row and the uploaded object on ANY failure — so a network
+        // blip or a 503 while extracting text destroyed a file the student had
+        // just watched upload to 100%, and the retry they were told to attempt
+        // had nothing left to retry. Text extraction is resumable; the upload
+        // is not.
+        const code = (error as { code?: string })?.code;
+        if (code === 'DOCUMENT_EXTRACTION_FAILED' || code === 'UNSUPPORTED_DOCUMENT') {
+          await supabase.from('course_notes').delete().eq('id', data.id);
+          await bucket.remove([storagePath]).catch(() => {});
+        }
         throw error;
       }
       file.onProgress?.({ stage: 'ready', percent: 100, filename: document.fileName });

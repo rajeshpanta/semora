@@ -14,13 +14,41 @@ import * as FileSystem from 'expo-file-system/legacy';
  * On web the picker hands back a blob:/data: URL, which fetch can read, so the
  * bytes are available — they just have to be encoded here instead.
  */
+/**
+ * Fetch a picked file's bytes on web, failing with something a student can act on.
+ *
+ * A `blob:` URL only lives as long as the document that created it. Reload the
+ * upload screen, restore the tab, or come back to a backgrounded Safari tab and
+ * the URL is dead — `fetch` then rejects with the browser's own wording, and the
+ * user saw a "Scan Failed — Failed to fetch" dialog whose Try Again re-ran the
+ * same dead URL forever. The bytes are genuinely gone; the only real fix is to
+ * pick the file again, so say exactly that.
+ */
+async function fetchPickedFile(uri: string): Promise<Response> {
+  let response: Response;
+  try {
+    response = await fetch(uri);
+  } catch {
+    throw Object.assign(
+      new Error('Semora lost track of that file — this happens if the page was reloaded. Please choose it again.'),
+      { code: 'FILE_URI_EXPIRED' },
+    );
+  }
+  if (!response.ok) {
+    throw Object.assign(
+      new Error('Semora lost track of that file — this happens if the page was reloaded. Please choose it again.'),
+      { code: 'FILE_URI_EXPIRED' },
+    );
+  }
+  return response;
+}
+
 export async function readFileAsBase64(uri: string): Promise<string> {
   if (Platform.OS !== 'web') {
     return FileSystem.readAsStringAsync(uri, { encoding: 'base64' });
   }
 
-  const response = await fetch(uri);
-  if (!response.ok) throw new Error('Could not read the selected file.');
+  const response = await fetchPickedFile(uri);
   const buffer = new Uint8Array(await response.arrayBuffer());
 
   // Chunked so a large PDF doesn't blow the argument limit of String.fromCharCode
@@ -46,7 +74,6 @@ export async function getFileSize(uri: string): Promise<number> {
     return info.exists && typeof info.size === 'number' ? info.size : 0;
   }
 
-  const response = await fetch(uri);
-  if (!response.ok) throw new Error('Could not read the selected file.');
+  const response = await fetchPickedFile(uri);
   return (await response.blob()).size;
 }

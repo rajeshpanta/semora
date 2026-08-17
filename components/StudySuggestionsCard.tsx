@@ -51,36 +51,11 @@ export default function StudySuggestionsCard({ limit }: { limit?: number }) {
     [tasks, max],
   );
 
-  const openPaywall = (context: string) => {
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    router.push({ pathname: '/paywall', params: { context } } as any);
-  };
-
-  // ── Free gate: one locked teaser line routing to the paywall. ──────────
-  if (!isPro) {
-    return (
-      <TouchableOpacity
-        style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}
-        onPress={() => openPaywall('study_suggestions')}
-        activeOpacity={0.8}
-        accessibilityRole="button"
-        accessibilityLabel="Unlock Study Plan, a Pro feature"
-      >
-        <View style={styles.headRow}>
-          <Text style={[styles.title, { color: colors.ink }]}>Smart Plan</Text>
-          <View style={[styles.proPill, { backgroundColor: colors.brand }]}>
-            <Text style={styles.proPillText}>PRO</Text>
-          </View>
-        </View>
-        <View style={styles.lockedRow}>
-          <FontAwesome name="lock" size={12} color={colors.brand} />
-          <Text style={[styles.lockedLine, { color: colors.ink3 }]} numberOfLines={1}>
-            Turn deadlines into timed focus sessions that replan themselves.
-          </Text>
-        </View>
-      </TouchableOpacity>
-    );
-  }
+  // Free accounts see nothing here. The card used to render a locked teaser
+  // routing to the paywall, which put an upsell above the reader's own
+  // deadlines on the first screen they open. Pro users still get the real
+  // ranked list below — this removes the advertisement, not the feature.
+  if (!isPro) return null;
 
   // Pro but nothing to suggest (no future incomplete dated tasks). Stay quiet
   // and compact rather than showing an empty shell on the Today tab.
@@ -162,10 +137,6 @@ const styles = StyleSheet.create({
   subtle: { fontSize: 11.5, fontWeight: '600' },
   openLink: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 4 },
   openLinkText: { fontSize: 11.5, fontWeight: '700' },
-  proPill: { paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5 },
-  proPillText: { fontSize: 9, fontWeight: '800', color: '#fff', letterSpacing: 0.6 },
-  lockedRow: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  lockedLine: { flex: 1, fontSize: 13, lineHeight: 18 },
   emptyLine: { fontSize: 13, lineHeight: 18 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 7 },
   tierDot: { width: 8, height: 8, borderRadius: 4 },

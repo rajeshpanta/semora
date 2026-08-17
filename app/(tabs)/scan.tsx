@@ -15,6 +15,7 @@ import {
   SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter,
+  useLocalSearchParams,
   useFocusEffect } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
@@ -25,9 +26,10 @@ import {
 } from 'react-native';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { HEIC_HELP, isHeic, transcodeHeicToJpeg } from '@/lib/heic';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
-import { useSemesters, useCourses, useScanCount, FREE_SCAN_LIMIT } from '@/lib/queries';
+import { useSemesters, useCourses, useScanCount, scanCountQueryOptions, FREE_SCAN_LIMIT } from '@/lib/queries';
 import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
 import { MAX_SCAN_PAGES, MAX_SCAN_RAW_BYTES, scanTooLargeMessage, type SyllabusPage } from '@/lib/ai-extraction';
 import { getFileSize } from '@/lib/readFileBase64';
@@ -52,7 +54,7 @@ const getFileSizeBestEffort = async (uri: string): Promise<number> => {
 
 export default function ScanScreen() {
   const colors = useColors();
-  const { contentMaxWidth } = useResponsive();
+  const { contentMaxWidth, isDesktop } = useResponsive();
   const router = useRouter();
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
@@ -82,11 +84,26 @@ export default function ScanScreen() {
 
   const checkScanLimit = async (): Promise<boolean> => {
     if (isPro) return true;
+
+    // WAIT for the count rather than refusing on it. The "+" menu deep-links
+    // straight into a picker, which fires on this screen's first commit — long
+    // before the count can have loaded. Alerting "Please Wait" there turned the
+    // menu's whole purpose (skip the chooser, go straight to the camera) into a
+    // dead tap that never retried once the count arrived. ensureQueryData
+    // resolves immediately when the value is already cached, so the common path
+    // is unchanged.
+    let effectiveCount = scanCount;
     if (scanCountLoading) {
-      Alert.alert('Please Wait', 'Loading your scan usage. Try again in a moment.');
-      return false;
+      try {
+        effectiveCount = await qc.ensureQueryData(scanCountQueryOptions);
+      } catch {
+        // The server enforces this limit too, and refusing to open a picker
+        // because a COUNT query failed punishes the user for our outage.
+        return true;
+      }
     }
-    if (scanCount >= FREE_SCAN_LIMIT) {
+
+    if (effectiveCount >= FREE_SCAN_LIMIT) {
       Alert.alert(
         'Scan Limit Reached',
         `You've used your ${FREE_SCAN_LIMIT} free scans this month. They reset on the 1st — or upgrade to Pro for unlimited syllabus scanning.`,
@@ -134,15 +151,24 @@ export default function ScanScreen() {
   // list JSON-encoded alongside. One submission = one scan server-side.
   const navigateToUploadPages = (pages: SyllabusPage[]) => {
     if (pages.length === 0) return;
+    // Name the file after what it ACTUALLY is. This used to hardcode
+    // "syllabus_photo.jpg" for every single-page photo, which is a lie on web:
+    // the browser picker hands back the original bytes (expo-image-picker's web
+    // build ignores `quality` and never re-encodes), so a PNG screenshot
+    // arrived labelled .jpg. The server normalizes extension-first, relabelled
+    // it image/jpeg, and the model got a JPEG header wrapped around PNG bytes —
+    // a 400 whose only offered action was "Try Again", which failed identically
+    // forever.
+    const ext = (m: string) => (m === 'image/png' ? 'png' : m === 'image/webp' ? 'webp' : 'jpg');
     if (pages.length === 1) {
-      navigateToUpload(pages[0].uri, 'syllabus_photo.jpg', pages[0].mimeType);
+      navigateToUpload(pages[0].uri, `syllabus_photo.${ext(pages[0].mimeType)}`, pages[0].mimeType);
       return;
     }
     router.push({
       pathname: '/syllabus/upload',
       params: {
         fileUri: pages[0].uri,
-        fileName: `syllabus_scan_${pages.length}_pages.jpg`,
+        fileName: `syllabus_scan_${pages.length}_pages.${ext(pages[0].mimeType)}`,
         mimeType: pages[0].mimeType,
         pages: JSON.stringify(pages),
       },
@@ -152,6 +178,40 @@ export default function ScanScreen() {
   // Remaining free scans for FREE users — clamped to 0 so the copy never
   // reads "-1 left" if the server count ever overshoots the limit.
   const remainingScans = Math.max(FREE_SCAN_LIMIT - scanCount, 0);
+
+  // expo-image-picker's WEB build resolves its promise from inside a `change`
+  // listener that has no reject path: if the picked file has no MIME mapping
+  // (or the user defeats the accept filter with "All Files"), it throws in
+  // there and the promise NEVER SETTLES. The awaiting handler then hangs
+  // forever — no result, no error, no spinner — and the card looks dead.
+  // Every picker call goes through here so a hang or a throw becomes an
+  // honest message and a cancelled result instead of a stuck screen.
+  const safePick = async (work: () => Promise<any>): Promise<any> => {
+    const CANCELLED = { canceled: true, assets: [] };
+    let timer: any;
+    try {
+      const result = await Promise.race([
+        work(),
+        new Promise((resolve) => { timer = setTimeout(() => resolve('__timeout__'), 120_000); }),
+      ]);
+      if (result === '__timeout__') {
+        Alert.alert(
+          "Couldn't open that file",
+          'Semora could not read that file. Please try a different one — PDF works best.',
+        );
+        return CANCELLED;
+      }
+      return result;
+    } catch {
+      Alert.alert(
+        "Couldn't open that file",
+        'Semora could not read that file. Please try a different one — PDF works best.',
+      );
+      return CANCELLED;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
 
   const handleTakePhoto = async () => {
     if (!(await checkScanLimit())) return;
@@ -180,7 +240,7 @@ export default function ScanScreen() {
     // five and then watching the whole scan fail with "File too large".
     let totalBytes = 0;
     while (pages.length < MAX_SCAN_PAGES) {
-      const result = await ImagePicker.launchCameraAsync({
+      const result = await safePick(() => ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
         // First page keeps 0.8 for maximum OCR fidelity on single-page
         // scans. Once the user opts into multi-page, later shots drop to
@@ -189,7 +249,7 @@ export default function ScanScreen() {
         // (expo-image-manipulator broke the EAS build and was reverted in
         // ab79b84), and 0.5 JPEG is still ample for printed syllabus text.
         quality: pages.length === 0 ? 0.8 : 0.5,
-      });
+      }));
 
       if (result.canceled || !result.assets[0]) {
         // Backed out of the camera. Nothing captured yet -> plain cancel;
@@ -265,13 +325,22 @@ export default function ScanScreen() {
     if (!(await checkScanLimit())) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const result = await DocumentPicker.getDocumentAsync({
+    const result = await safePick(() => DocumentPicker.getDocumentAsync({
       type: SUPPORTED_DOCUMENT_PICKER_TYPE,
       copyToCacheDirectory: true,
-    });
+    }));
 
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
+      if (isHeic(asset.name, asset.mimeType)) {
+        const converted = await transcodeHeicToJpeg(asset.uri);
+        if (converted) {
+          navigateToUpload(converted.uri, 'syllabus_photo.jpg', converted.mimeType);
+          return;
+        }
+        Alert.alert("Can't read that photo", HEIC_HELP);
+        return;
+      }
       const document = normalizeSupportedDocument(asset.name, asset.mimeType);
       if (!document) {
         Alert.alert('Unsupported file', unsupportedDocumentMessage(asset.name));
@@ -298,7 +367,7 @@ export default function ScanScreen() {
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
+    const result = await safePick(() => ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       // 0.5 rather than the single-file 0.8: quality is fixed BEFORE we know
       // how many photos the user picks, and a multi-select of up to
@@ -313,7 +382,7 @@ export default function ScanScreen() {
       allowsMultipleSelection: true,
       orderedSelection: true,
       selectionLimit: MAX_SCAN_PAGES,
-    });
+    }));
 
     if (!result.canceled && result.assets.length > 0) {
       // selectionLimit caps the native picker, but guard anyway (Android and
@@ -357,34 +426,21 @@ export default function ScanScreen() {
     }
   };
 
-  const handlePickFromFiles = async () => {
-    if (!(await checkScanLimit())) return;
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
-    const result = await DocumentPicker.getDocumentAsync({
-      type: SUPPORTED_DOCUMENT_PICKER_TYPE,
-      copyToCacheDirectory: true,
-    });
-
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0];
-      const document = normalizeSupportedDocument(asset.name, asset.mimeType);
-      if (!document) {
-        Alert.alert('Unsupported file', unsupportedDocumentMessage(asset.name));
-        return;
-      }
-      navigateToUpload(asset.uri, document.fileName, document.mimeType);
-    }
-  };
-
-  // Real drag-and-drop for the web app — the screen's own copy already
-  // promises "drag it in". expo-document-picker's web implementation (the
-  // same one "Upload PDF"/"Pick from Files" already use successfully) hands
-  // off a blob: URL + mimeType + name from a File the same way; a dropped
-  // File is handled identically so it flows through the exact same
-  // navigateToUpload -> /syllabus/upload pipeline, no new code downstream.
   const handleDroppedFile = async (file: File) => {
     if (!(await checkScanLimit())) return;
+    // HEIC first: dragging an iPhone photo onto the web app is the single most
+    // natural web flow, and it used to be refused outright. Safari can decode
+    // it, so convert in-page and say nothing; browsers that can't get a
+    // specific instruction instead of a format list they can't act on.
+    if (isHeic(file.name, file.type)) {
+      const converted = await transcodeHeicToJpeg(URL.createObjectURL(file));
+      if (converted) {
+        navigateToUpload(converted.uri, 'syllabus_photo.jpg', converted.mimeType);
+        return;
+      }
+      Alert.alert("Can't read that photo", HEIC_HELP);
+      return;
+    }
     const document = normalizeSupportedDocument(file.name, file.type);
     if (!document) {
       Alert.alert('Unsupported file', unsupportedDocumentMessage(file.name));
@@ -393,27 +449,67 @@ export default function ScanScreen() {
     navigateToUpload(URL.createObjectURL(file), document.fileName, document.mimeType);
   };
 
+  // Deep-link actions from the "+" tab menu. The menu now presents all four
+  // capture methods itself, so arriving here always carries an intent — this
+  // screen is the landing surface the picker returns to, not a second chooser
+  // the user has to work through. The param is cleared before triggering so
+  // re-focusing the tab can't re-open a picker.
+  const { action } = useLocalSearchParams<{ action?: string }>();
+  const actionFired = useRef<string | null>(null);
+  useEffect(() => {
+    if (!action) {
+      // Param cleared — re-arm so a later menu tap with the same action fires.
+      actionFired.current = null;
+      return;
+    }
+    if (actionFired.current === action) return;
+    actionFired.current = action;
+    router.setParams({ action: '' });
+    if (action === 'document') {
+      handleUploadDocument();
+    } else if (action === 'photos') {
+      handleChooseFromPhotos();
+    } else if (action === 'camera') {
+      handleTakePhoto();
+    }
+  }, [action]);
+
   const dropZoneRef = useRef<View>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
+  // Always call the LATEST handler. This effect runs once, so a handler
+  // captured here keeps first-render state forever — checkScanLimit would read
+  // scanCount from mount, and drag-and-drop (a web-only entry point, so the
+  // path most web users take) could burn a scan past the free limit that the
+  // buttons on the very same screen correctly refuse.
+  const dropHandler = useRef(handleDroppedFile);
+  dropHandler.current = handleDroppedFile;
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    const node = dropZoneRef.current as unknown as HTMLElement | null;
-    if (!node) return;
-    // react-native-web's View doesn't forward onDrop/onDragOver props (not in
-    // its curated forwardedProps list), so this listens on the underlying DOM
-    // node directly via ref instead — the same imperative-DOM pattern already
-    // used for the ⌘K/⇧⌘A shortcuts in components/WebAppFrame.tsx.
+    // The whole scan screen is the drop target, not just the frame. Asking
+    // someone to hit a specific rectangle with a dragged file is a precision
+    // test with a punishing failure mode; the frame still lights up, but a drop
+    // anywhere on this screen means the same thing. WebAppFrame swallows drops
+    // everywhere else so the browser can never navigate away from the app.
+    const node = document.body;
     const onDragOver = (e: DragEvent) => {
       e.preventDefault();
+      (e as any).__semoraHandled = true;
       setIsDraggingOver(true);
     };
-    const onDragLeave = () => setIsDraggingOver(false);
+    const onDragLeave = (e: DragEvent) => {
+      // relatedTarget is null when the pointer actually leaves the window,
+      // rather than merely crossing between child elements.
+      if ((e as any).relatedTarget) return;
+      setIsDraggingOver(false);
+    };
     const onDrop = (e: DragEvent) => {
       e.preventDefault();
+      (e as any).__semoraHandled = true;
       setIsDraggingOver(false);
       const file = e.dataTransfer?.files?.[0];
-      if (file) handleDroppedFile(file).catch(() => {});
+      if (file) dropHandler.current(file).catch(() => {});
     };
     node.addEventListener('dragover', onDragOver);
     node.addEventListener('dragleave', onDragLeave);
@@ -502,6 +598,14 @@ export default function ScanScreen() {
 
         {/* Actions */}
         <View style={styles.actions}>
+          {/* Desktop browsers have no camera to open: expo-image-picker's web
+              build sets capture="camera" on a file input, which phones honour
+              and desktops ignore. The card therefore promised a camera, opened
+              a file dialog, and then walked the user through camera-shaped
+              "Page N captured / Add another page" prompts for files they had
+              picked. Mobile web keeps the real camera, so this gates on
+              isDesktop rather than on Platform.OS. */}
+          {!isDesktop && (
           <TouchableOpacity
             style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]}
             onPress={handleTakePhoto}
@@ -518,6 +622,7 @@ export default function ScanScreen() {
             </View>
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>
+          )}
 
           <TouchableOpacity
             style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]}
@@ -531,7 +636,7 @@ export default function ScanScreen() {
             </View>
             <View style={styles.actionContent}>
               <Text style={[styles.actionTitle, { color: colors.ink }]}>Upload a document</Text>
-              <Text style={[styles.actionSub, { color: colors.ink3 }]}>PDF, Word, slides, spreadsheet...</Text>
+              <Text style={[styles.actionSub, { color: colors.ink3 }]}>PDF or Word — Files, iCloud, Drive</Text>
             </View>
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>
@@ -549,23 +654,6 @@ export default function ScanScreen() {
             <View style={styles.actionContent}>
               <Text style={[styles.actionTitle, { color: colors.ink }]}>Choose from Photos</Text>
               <Text style={[styles.actionSub, { color: colors.ink3 }]}>Select from your photo library</Text>
-            </View>
-            <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionCard, { backgroundColor: colors.card, borderColor: colors.line }]}
-            onPress={handlePickFromFiles}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Pick a syllabus from Files, iCloud Drive, or Google Drive"
-          >
-            <View style={[styles.actionIcon, { backgroundColor: colors.blue50 }]}>
-              <FontAwesome name="folder-open-o" size={16} color={colors.blue} />
-            </View>
-            <View style={styles.actionContent}>
-              <Text style={[styles.actionTitle, { color: colors.ink }]}>Pick from Files</Text>
-              <Text style={[styles.actionSub, { color: colors.ink3 }]}>iCloud Drive, Google Drive...</Text>
             </View>
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>

@@ -74,9 +74,18 @@ export function subscribeToUserData(userId: string, queryClient: QueryClient): (
     queryClient.invalidateQueries({ queryKey: ['semesters'] });
   };
 
+  // Lecture rows change from the SERVER as transcription progresses, not from
+  // another device — so this is the one subscription that carries work the user
+  // is actively waiting on. The lecture screens also poll while a lecture is
+  // in flight; this just makes the update instant when the socket is healthy.
+  const handleLecturesEvent = () => {
+    queryClient.invalidateQueries({ queryKey: ['lectures'] });
+    queryClient.invalidateQueries({ queryKey: ['lecture'] });
+  };
+
   const connect = () => {
     if (stopped) return;
-    channel = supabase
+    const ch = supabase
       .channel(`personal:${userId}`)
       .on(
         'postgres_changes',
@@ -93,22 +102,42 @@ export function subscribeToUserData(userId: string, queryClient: QueryClient): (
         { event: '*', schema: 'public', table: 'semesters', filter: `user_id=eq.${userId}` },
         handleSemestersEvent,
       )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'lecture_recordings', filter: `user_id=eq.${userId}` },
+        handleLecturesEvent,
+      )
       .subscribe((status) => {
-        if (stopped) return;
+        // Drop events from a channel this subscription no longer owns: our own
+        // removeChannel() below emits CLOSED back into this same callback, and
+        // handling it re-entrantly is what recursed until "Maximum call stack
+        // size exceeded" whenever the socket erred.
+        if (stopped || ch !== channel) return;
         if (status === 'SUBSCRIBED') {
           backoffIndex = 0;
           clearRetryTimer();
           return;
         }
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          if (channel) supabase.removeChannel(channel);
           channel = null;
           clearRetryTimer();
           const delay = BACKOFF_MS[Math.min(backoffIndex, BACKOFF_MS.length - 1)];
           backoffIndex++;
-          retryTimer = setTimeout(connect, delay);
+          retryTimer = setTimeout(() => {
+            // Tear down OUTSIDE the socket's own event dispatch — removing the
+            // channel from inside its subscribe callback is what recursed. And
+            // reconnect only AFTER removal settles: supabase.channel(name)
+            // returns the existing instance until it's removed, and adding
+            // .on() to an already-subscribed channel throws.
+            Promise.resolve(supabase.removeChannel(ch))
+              .catch(() => {})
+              .then(() => {
+                if (!stopped) connect();
+              });
+          }, delay);
         }
       });
+    channel = ch;
   };
 
   connect();

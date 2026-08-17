@@ -26,6 +26,7 @@ import * as Notifications from 'expo-notifications';
 import { scheduleTaskReminders, requestNotificationPermission } from '@/lib/notifications';
 import { isSyncEnabled, syncTaskToCalendar } from '@/lib/calendarSync';
 import { useAppStore } from '@/store/appStore';
+import { useSession } from '@/app/_layout';
 import { track } from '@/lib/analytics';
 import type { ExtractedItem } from '@/lib/ai-extraction';
 
@@ -98,6 +99,7 @@ export default function SyllabusReviewScreen() {
   const narrow = width < 360;
   const isPro = useAppStore((s) => s.isPro);
   const ahaPaywallShown = useAppStore((s) => s.ahaPaywallShown);
+  const { session } = useSession();
   const setAhaPaywallShown = useAppStore((s) => s.setAhaPaywallShown);
   const setHasImportedSyllabus = useAppStore((s) => s.setHasImportedSyllabus);
 
@@ -322,6 +324,24 @@ export default function SyllabusReviewScreen() {
         return;
       }
 
+      // A clean import ends on the next-class prompt, not on an exit. The
+      // median account has one course, which is the shape of a to-do list
+      // rather than a semester — see app/syllabus/added.tsx for why this is
+      // the moment that decides which one this account becomes.
+      if (fullySaved) {
+        router.replace({
+          pathname: '/syllabus/added',
+          params: {
+            courseId: params.courseId,
+            courseName: params.courseName,
+            count: String(savedCount),
+          },
+        } as any);
+        return;
+      }
+
+      // Partial save keeps the explicit alert: the failure count is the most
+      // important thing on screen and must not be buried under a prompt.
       Alert.alert(
         'Saved!',
         `${savedCount} task${savedCount !== 1 ? 's' : ''} added to your course.${savedCount < accepted.length ? ` (${accepted.length - savedCount} failed)` : ''}`,

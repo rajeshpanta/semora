@@ -23,6 +23,8 @@ export function requestWithUploadProgress(options: {
   signal?: AbortSignal;
   onProgress?: UploadProgressCallback;
   onUploadComplete?: () => void;
+  /** Hard deadline for the whole request. Defaults to 90s. */
+  timeoutMs?: number;
 }): Promise<UploadResponse> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -45,6 +47,11 @@ export function requestWithUploadProgress(options: {
     const cleanup = () => options.signal?.removeEventListener('abort', abort);
 
     xhr.open(options.method ?? 'POST', options.url, true);
+    // Bound the wait. Without this the ontimeout handler below is unreachable
+    // and a lecture upload is limited only by the OS network stack — which, on
+    // campus wifi that accepts the connection and then stalls, meant the "Saving
+    // your lecture…" screen could sit there for minutes with no way out.
+    xhr.timeout = options.timeoutMs ?? 90_000;
     for (const [name, value] of Object.entries(options.headers)) {
       xhr.setRequestHeader(name, value);
     }

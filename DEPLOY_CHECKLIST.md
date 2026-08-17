@@ -30,6 +30,11 @@ supabase functions deploy share-course
 supabase functions deploy redeem-referral
 supabase functions deploy send-push --no-verify-jwt      # MUST use the flag (shared-secret auth, not JWT)
 supabase functions deploy google-cal-sync                # only needed when you enable Google Cal (see §5)
+supabase functions deploy lecture-transcribe             # 065 — lecture recording pipeline
+supabase functions deploy lecture-study-kit              # 065 — lecture notes + quiz
+supabase functions deploy generate-flashcards            # 065 — per-note context cap fix
+# 065-067 migrations MUST be applied before deploying lecture-transcribe:
+# it calls reserve_lecture_for_recording / release_lecture_reservation.
 ```
 
 ## 3. Secrets
@@ -37,6 +42,17 @@ supabase functions deploy google-cal-sync                # only needed when you 
 supabase secrets set PUSH_SEND_SECRET=<long-random-value>
 # optional Wave-1 cost guard (defaults to 1500/24h if unset):
 supabase secrets set GLOBAL_DAILY_CAP=1500
+
+# REQUIRED for lecture recording (065). Without it lecture-transcribe returns
+# 503 NOT_CONFIGURED and the app tells the user the feature is unavailable —
+# it degrades cleanly, but nothing transcribes.
+supabase secrets set GROQ_API_KEY=<key from console.groq.com>
+
+# Global daily speech-to-text ceiling, in AUDIO SECONDS, shared by ALL users.
+# The provider bills this quota per ORGANIZATION, so the free tier's 28,800/day
+# is ~5 ninety-minute lectures for the entire app. Raise this after moving to a
+# paid provider tier. Defaults to 25,000 if unset.
+supabase secrets set LECTURE_DAILY_AUDIO_SECONDS=25000
 ```
 - `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` are auto-injected into edge functions — just confirm they resolve.
 - **`BLOCK_SANDBOX_PRO` stays UNSET / false** — you test the paid tier via sandbox. (Deliberate; do not enable.)

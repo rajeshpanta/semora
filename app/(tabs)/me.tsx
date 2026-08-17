@@ -17,7 +17,7 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTaskStats } from '@/lib/queries';
 import { signOut } from '@/lib/auth';
 import { displayName } from '@/lib/user';
-import { COLORS, FONTS, SCREEN_MAX_WIDTH, APP_STORE_REVIEW_URL, MARKETING_URL } from '@/lib/constants';
+import { COLORS, PROMO_SURFACE, FONTS, SCREEN_MAX_WIDTH, APP_STORE_REVIEW_URL } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { getAppLocale } from '@/lib/i18n';
@@ -26,6 +26,7 @@ import Constants from 'expo-constants';
 import { getProducts, isEligibleForIntroOffer } from '@/lib/purchases';
 import { getMyCode, getRedemptionCount, inviteLink, applyPendingReferral, syncPromoPro } from '@/lib/referral';
 import { track } from '@/lib/analytics';
+import { shareLink, shareLinkMessage } from '@/lib/shareLink';
 import { GlobalSearchButton } from '@/components/GlobalSearchButton';
 
 export default function MeScreen() {
@@ -69,13 +70,11 @@ export default function MeScreen() {
           onPress: async () => {
             setSigningOut(true);
             try {
-              await signOut();
-              if (Platform.OS === 'web') {
-                // Logging out is an exit from the web app, not a request to
-                // create another account. Replace prevents Back from
-                // restoring the just-signed-out authenticated screen.
-                window.location.replace(MARKETING_URL);
-              }
+              // Logging out is an exit from the web app, not a request to
+              // create another account. The redirect lives inside signOut so
+              // it runs only after the storage clears have settled — doing it
+              // here raced the page unload against them.
+              await signOut({ landing: 'marketing' });
             } finally {
               // Don't reset on success — native unmounts when AuthGate sees
               // the cleared session, while web leaves for the marketing site.
@@ -161,12 +160,15 @@ export default function MeScreen() {
     }
     try {
       const link = inviteLink(code);
-      await Share.share({
+      const result = await shareLink({
+        url: link,
         message: getAppLocale() === 'es'
           ? `Acompáñame en Semora, el escáner de programas con IA que organiza todo el semestre. Usa mi enlace y ambos recibiremos un mes gratis de Pro: ${link}`
           : `Join me on Semora — the AI syllabus scanner that puts your whole semester on autopilot. Use my link and we both get a free month of Pro: ${link}`,
       });
-      track('referral_shared', { screen: 'me' });
+      const note = shareLinkMessage(result, link);
+      if (note) Alert.alert(note.title, note.body);
+      track('referral_shared', { screen: 'me', result });
     } catch (err: any) {
       // Share.share rejects only if the sheet fails to present (user-dismiss
       // doesn't reject on iOS), so anything here is a real failure.
@@ -190,7 +192,11 @@ export default function MeScreen() {
         </View>
 
         {/* Premium upsell / Pro active */}
-        <TouchableOpacity style={[styles.proCard, { backgroundColor: colors.ink }]} activeOpacity={isPro ? 1 : 0.85} onPress={() => !isPro && router.push('/paywall' as any)}>
+        <TouchableOpacity
+          style={[styles.proCard, { backgroundColor: PROMO_SURFACE }]}
+          activeOpacity={isPro ? 1 : 0.85}
+          onPress={() => !isPro && router.push('/paywall' as any)}
+        >
           <View style={[styles.proGlow, { backgroundColor: colors.brand }]} />
           <View style={{ position: 'relative' }}>
             <View style={styles.proLabel}>
@@ -213,7 +219,7 @@ export default function MeScreen() {
                   <Text style={styles.proPricePeriod}>/year · cancel any time</Text>
                 </View>
                 <View style={styles.proButton}>
-                  <Text style={[styles.proButtonText, { color: colors.ink }]}>Upgrade to Pro</Text>
+                  <Text style={styles.proButtonText}>Upgrade to Pro</Text>
                 </View>
                 <Text style={styles.proAlt}>
                   {trialEligible

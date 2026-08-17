@@ -36,6 +36,7 @@ import { useColors } from '@/lib/theme';
 import { useResponsive, gridItemBasis } from '@/lib/responsive';
 import { getAppLocale } from '@/lib/i18n';
 import { formatMeetings, formatOfficeHours } from '@/lib/schedule';
+import { shareLink, shareLinkMessage } from '@/lib/shareLink';
 import { createShareLink } from '@/lib/shareCourse';
 import { track } from '@/lib/analytics';
 
@@ -469,12 +470,17 @@ export default function CourseDetailScreen() {
     try {
       const { url } = await createShareLink(course.id);
       track('share_course_created', { screen: 'course_detail', tasks: tasks.length });
-      await Share.share({
+      const result = await shareLink({
         url,
         message: getAppLocale() === 'es'
           ? `Organicé ${course.name} en Semora. Toca para agregar todas sus entregas a tu semestre: ${url}`
           : `I set up ${course.name} in Semora — tap to add all its deadlines to your semester: ${url}`,
       });
+      // The token is already persisted by createShareLink above, so a browser
+      // without a share sheet must still hand the user the link rather than
+      // discarding one that now exists server-side.
+      const note = shareLinkMessage(result, url);
+      if (note) Alert.alert(note.title, note.body);
     } catch (err: any) {
       // Server rejected a free/stale-Pro caller — route to the paywall instead
       // of a dead-end error, matching the app's gating pattern.

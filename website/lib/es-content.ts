@@ -301,13 +301,15 @@ const CORE_PAGES: SpanishPageConfig[] = [
           'Cursos y tareas de Canvas, Blackboard, Moodle o Google Classroom cuando decides conectarlos.',
           'Zona horaria, tipo de dispositivo y versión del sistema para el funcionamiento de la app.',
           'Programas de clase y apuntes que decides subir para escanearlos, crear tarjetas o usar el Tutor con IA.',
+          'Grabaciones de clase, si decides grabar: el audio capta la voz de tu profesor y de quienes estén cerca. Se guarda en privado solo hasta transcribirse y después se elimina automáticamente. La grabación nunca empieza hasta que pulsas Grabar y confirmas que tienes permiso.',
+          'Transcripciones de clase y el material de estudio generado a partir de ellas (apuntes, cuestionarios y tarjetas), que permanecen hasta que elimines la grabación o tu cuenta.',
           'Datos de uso anónimos asociados a un identificador aleatorio de instalación, no a tu nombre ni a tu correo electrónico.',
           'Un identificador para enviar notificaciones si autorizas los recordatorios y datos de referidos si utilizas una invitación.',
         ],
       },
       {
         heading: 'Cómo usamos la información',
-        paragraphs: ['Usamos tus datos para organizar tareas, calificaciones y calendarios; extraer información de los programas de clase; enviar recordatorios; sincronizar los cursos que elijas; ofrecer tarjetas de estudio, planificación y el Tutor con IA; y aplicar recompensas por invitaciones.'],
+        paragraphs: ['Usamos tus datos para organizar tareas, calificaciones y calendarios; extraer información de los programas de clase; enviar recordatorios; sincronizar los cursos que elijas; ofrecer tarjetas de estudio, planificación y el Tutor con IA; transcribir las clases que decides grabar y generar apuntes, cuestionarios y tarjetas a partir de esas transcripciones; y aplicar recompensas por invitaciones.'],
       },
       {
         heading: 'Almacenamiento y seguridad',
@@ -318,7 +320,8 @@ const CORE_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Servicios externos',
         paragraphs: [
-          'Supabase proporciona la base de datos y la autenticación. OpenAI es el único proveedor de IA al que Semora envía tu contenido: lee los programas de clase, genera las tarjetas de estudio, las preguntas de práctica y los cuestionarios, y responde tus preguntas en el Tutor. Según la política de OpenAI, los datos enviados mediante la API no se utilizan para entrenar modelos salvo que el cliente lo autorice expresamente. Semora desactiva el almacenamiento de respuestas, aunque OpenAI puede conservar registros para detectar abusos durante un máximo de 30 días cuando no se aplique un control más estricto.',
+          'Supabase proporciona la base de datos y la autenticación. OpenAI es el proveedor de IA de texto de Semora: lee los programas de clase, genera las tarjetas de estudio, las preguntas de práctica y los cuestionarios, redacta los apuntes de tus clases y responde tus preguntas en el Tutor. Según la política de OpenAI, los datos enviados mediante la API no se utilizan para entrenar modelos salvo que el cliente lo autorice expresamente. Semora desactiva el almacenamiento de respuestas, aunque OpenAI puede conservar registros para detectar abusos durante un máximo de 30 días cuando no se aplique un control más estricto.',
+          'Groq se usa únicamente si grabas una clase: el audio de esa grabación se envía a su API de transcripción para convertirlo en texto, junto con el título que le pusiste a la grabación y las últimas frases ya transcritas, que ayudan a mantener nombres y terminología coherentes a lo largo de una clase larga. La transcripción es el único fin para el que se usa tu audio y Groq es el único servicio al que se envía. Ningún otro contenido de tu cuenta —ni programas de clase, ni apuntes, ni mensajes del Tutor— se envía a Groq.',
           'Apple StoreKit procesa las suscripciones. Expo envía las notificaciones que autorizas. Google Calendar solo recibe las fechas que eliges sincronizar; Semora no lee tus otros eventos.',
           'De forma predeterminada, las credenciales de Canvas, Blackboard, Moodle o Google Classroom permanecen en el dispositivo. Si activas la Sincronización automática, la credencial se guarda cifrada en Supabase Vault para actualizar cursos, tareas, entregas y calificaciones mientras la app está cerrada. La credencial se elimina cuando desactivas la función o desconectas la plataforma.',
         ],
@@ -327,6 +330,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
         heading: 'Retención, eliminación y tus derechos',
         paragraphs: [
           'Conservamos tus datos mientras la cuenta esté activa. Puedes acceder a ellos desde la app, solicitar una exportación o eliminar permanentemente la cuenta y sus archivos desde Mi cuenta > Eliminar cuenta.',
+          'El audio de las clases es la excepción y se elimina antes: la grabación se borra de nuestro almacenamiento en cuanto se crea su transcripción, normalmente pocos minutos después de que la detienes. Solo permanecen la transcripción y el material de estudio generado, que se eliminan cuando borras la grabación o tu cuenta.',
           'Semora está destinado a estudiantes universitarios y no recopila intencionalmente información de menores de 13 años. Podemos actualizar esta política y publicaremos los cambios en la app.',
         ],
       },

@@ -93,6 +93,26 @@ export function scanTooLargeMessage(fittedPages: number): string {
   return `These photos are too large to send together — ${fittedPages} page${fittedPages === 1 ? '' : 's'} max at this resolution. Tip: PDFs handle long syllabi best.`;
 }
 
+
+/**
+ * Turn a failed scan response into an Error that carries the server's CODE.
+ *
+ * The code is what callers should branch on. Before this, the upload screen
+ * decided whether a rejection was "not a syllabus" by string-matching the
+ * English message — which meant a Spanish student, who receives the localized
+ * message, fell through to the generic "Scan Failed" alert and lost the calm,
+ * specific guidance the server had already written for them.
+ */
+export type ScanError = Error & { code?: string; status?: number };
+
+function scanError(response: { status: number }): ScanError {
+  const body = parseUploadJson<{ error?: string; code?: string }>(response as any);
+  const err = new Error(body?.error || `Server error: ${response.status}`) as ScanError;
+  err.code = body?.code;
+  err.status = response.status;
+  return err;
+}
+
 export async function extractFromFile(
   fileUri: string,
   mimeType: string,
@@ -189,8 +209,7 @@ export async function extractFromPages(
   });
 
   if (!response.ok) {
-    const error = parseUploadJson<{ error?: string }>(response);
-    throw new Error(error?.error || `Server error: ${response.status}`);
+    throw scanError(response);
   }
 
   // Defensive normalization: an older Edge Function deployment won't
@@ -243,8 +262,7 @@ export async function extractFromText(
   });
 
   if (!response.ok) {
-    const error = parseUploadJson<{ error?: string }>(response);
-    throw new Error(error?.error || `Server error: ${response.status}`);
+    throw scanError(response);
   }
 
   const raw = parseUploadJson<Partial<SyllabusExtraction>>(response);

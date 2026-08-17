@@ -51,6 +51,17 @@ const DAILY_MESSAGE_CAP = (() => {
 // bounded size and cost. Chars, not tokens: a coarse but safe ceiling.
 const MAX_SYLLABUS_CHARS = 8000;
 const MAX_NOTES_CHARS = 24000; // shared budget across all note files
+/**
+ * Per-note ceiling inside that shared budget.
+ *
+ * Without it the loop below is first-come-take-all: notes are read newest
+ * first, so one long document (a transcript, a full slide deck) consumes all
+ * 24,000 characters on the first iteration, `budget` hits zero, and every other
+ * note for the course — including the syllabus — is dropped from the tutor's
+ * context AND from the citations list. The student sees an answer that ignores
+ * material they uploaded, with no indication why.
+ */
+const MAX_PER_NOTE_CHARS = 8000;
 const MAX_TASKS = 60;
 // Recent conversation turns replayed for continuity. Older turns are
 // dropped — a tutoring session rarely needs deep history and it bounds cost.
@@ -463,6 +474,11 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
         for (const note of notes as any[]) {
           if (budget <= 0) break;
           let text: string | null = note.extracted_text;
+          // A row with neither text nor a file is generated content (mirrored
+          // lecture notes) whose text failed to land. There is nothing to
+          // download and nothing the student could deselect, so skip it instead
+          // of 422-ing the entire conversation over it.
+          if (!text && !note.storage_path) continue;
           if (!text) {
             text = await extractNoteText(adminClient, note, userId).catch((e) => {
               console.warn('[tutor-chat] note extraction failed:', e);
@@ -473,7 +489,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
             failedNoteNames.push(String(note.filename || 'document'));
             continue;
           }
-          const slice = text.slice(0, budget);
+          const slice = text.slice(0, Math.min(budget, MAX_PER_NOTE_CHARS));
           budget -= slice.length;
           chunks.push(`### ${note.filename}\n${slice}`);
           citations.push({ kind: 'note', label: note.filename });

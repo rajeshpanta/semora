@@ -37,6 +37,13 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '
 
 const MAX_SYLLABUS_CHARS = 8000;
 const MAX_NOTES_CHARS = 24000;
+/**
+ * Per-note ceiling inside that shared budget. Without it, notes are read newest
+ * first and one long document consumes the whole 24,000 characters on the first
+ * iteration, silently starving every other note — including the syllabus — of
+ * any representation in the generated cards. Mirrors tutor-chat.
+ */
+const MAX_PER_NOTE_CHARS = 8000;
 const MAX_TASKS = 60; // syllabus items, matches tutor-chat's cap
 const MIN_CARDS = 1;
 const MAX_CARDS = 30;
@@ -378,6 +385,10 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
       for (const note of notes as any[]) {
         if (budget <= 0) break;
         let text: string | null = note.extracted_text;
+        // Generated content (mirrored lecture notes) with no file behind it and
+        // no text — nothing to download, nothing to deselect. Skip rather than
+        // failing the whole generation over it.
+        if (!text && !note.storage_path) continue;
         if (!text) {
           text = await extractNoteText(adminClient, note, userId).catch((e) => {
             console.warn('[generate-flashcards] note extraction failed:', e);
@@ -388,7 +399,7 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
           failedNoteNames.push(String(note.filename || 'document'));
           continue;
         }
-        const slice = text.slice(0, budget);
+        const slice = text.slice(0, Math.min(budget, MAX_PER_NOTE_CHARS));
         budget -= slice.length;
         chunks.push(`### ${note.filename}\n${slice}`);
       }

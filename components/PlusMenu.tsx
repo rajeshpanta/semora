@@ -1,0 +1,234 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Text, TouchableOpacity } from '@/components/LocalizedReactNative';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
+
+// Floating action menu opened by the "+" tab button. The tab press itself is
+// intercepted in app/(tabs)/_layout.tsx (preventDefault), so this menu is the
+// only thing that happens — the scan screen is reached through the menu
+// instead of being the middle tab's destination.
+
+interface PlusMenuProps {
+  visible: boolean;
+  onClose: () => void;
+}
+
+type MenuRow = {
+  icon: React.ComponentProps<typeof FontAwesome>['name'];
+  tint: 'brand' | 'coral' | 'teal' | 'blue';
+  title: string;
+  sub: string;
+  route?: { pathname: string; params?: Record<string, string> };
+  /** Swaps the sheet to the scan methods instead of navigating. */
+  expands?: 'scan';
+};
+
+const ROOT_ACTIONS: MenuRow[] = [
+  {
+    icon: 'microphone',
+    tint: 'coral',
+    title: 'Record lecture',
+    sub: 'Transcript & notes, made for you',
+    route: { pathname: '/lecture/record' },
+  },
+  {
+    icon: 'camera',
+    tint: 'brand',
+    title: 'Scan syllabus',
+    sub: 'Photo, PDF, document or file',
+    expands: 'scan',
+  },
+];
+
+// The four capture methods, shown IN the menu rather than on a screen behind it.
+//
+// These used to be a "Scan syllabus" row that opened /scan — a full screen whose
+// only job was to ask the same question again — plus two shortcut rows ("Upload
+// document" / "Upload image") that deep-linked into that screen and auto-fired a
+// picker. That split meant the menu offered two of the four methods at random
+// while burying the other two one screen down. Every method is a peer now, and
+// /scan is what the picker returns to rather than a step on the way in.
+const SCAN_ACTIONS: MenuRow[] = [
+  {
+    icon: 'camera',
+    tint: 'brand',
+    title: 'Take a photo',
+    sub: 'Printed handout or whiteboard',
+    route: { pathname: '/scan', params: { action: 'camera' } },
+  },
+  {
+    icon: 'file-text-o',
+    tint: 'coral',
+    title: 'Upload a document',
+    // One row, not two. "Upload a document" and "Pick from Files" ran
+    // byte-identical code — the same OS document picker, which already browses
+    // Files, iCloud Drive and Google Drive. Two labels for one action is a
+    // choice the user cannot get right, so the subtitle covers both mental
+    // models instead.
+    sub: 'PDF or Word — Files, iCloud, Drive',
+    route: { pathname: '/scan', params: { action: 'document' } },
+  },
+  {
+    icon: 'image',
+    tint: 'teal',
+    title: 'Choose from Photos',
+    sub: 'Select from your photo library',
+    route: { pathname: '/scan', params: { action: 'photos' } },
+  },
+];
+
+const SHORTCUTS: { icon: React.ComponentProps<typeof FontAwesome>['name']; label: string; path: string }[] = [
+  { icon: 'clone', label: 'Flashcards', path: '/flashcards' },
+  { icon: 'graduation-cap', label: 'AI Tutor', path: '/tutor' },
+  { icon: 'hourglass-half', label: 'Focus', path: '/pomodoro' },
+  { icon: 'microphone', label: 'Lectures', path: '/lecture' },
+];
+
+export function PlusMenu({ visible, onClose }: PlusMenuProps) {
+  const colors = useColors();
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { isDesktop } = useResponsive();
+  const slide = useRef(new Animated.Value(0)).current;
+  const [page, setPage] = useState<'root' | 'scan'>('root');
+
+  useEffect(() => {
+    if (visible) {
+      // Always reopen at the top level. Reopening on the scan sub-page would
+      // leave someone who wanted the recorder staring at file pickers.
+      setPage('root');
+      slide.setValue(0);
+      Animated.spring(slide, { toValue: 1, useNativeDriver: true, damping: 18, stiffness: 220 }).start();
+    }
+  }, [visible]);
+
+  const go = (pathname: string, params?: Record<string, string>) => {
+    onClose();
+    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    router.push({ pathname, params } as any);
+  };
+
+  const openScanPage = () => {
+    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setPage('scan');
+  };
+
+  // Recording is native-only (see lib/lectureRecorder.ts), so the browser must
+  // not offer a row that can only apologise.
+  const rootRows = Platform.OS === 'web'
+    ? ROOT_ACTIONS.filter((a) => a.title !== 'Record lecture')
+    : ROOT_ACTIONS;
+  // Same reason the scan screen hides its camera card on desktop: there is no
+  // camera behind it, only a file dialog wearing a camera label.
+  const scanRows = isDesktop
+    ? SCAN_ACTIONS.filter((a) => a.title !== 'Take a photo')
+    : SCAN_ACTIONS;
+  const rows = page === 'scan' ? scanRows : rootRows;
+
+  const tints: Record<MenuRow['tint'], { bg: string; fg: string }> = {
+    brand: { bg: colors.brand50, fg: colors.brand },
+    coral: { bg: colors.coral50, fg: colors.coral },
+    teal: { bg: colors.teal50, fg: colors.teal },
+    blue: { bg: colors.blue50, fg: colors.blue },
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      {/* Backdrop and sheet are SIBLINGS, not parent/child: a pressable
+          backdrop wrapping the sheet swallowed every row press under the new
+          architecture (rows never fired while the backdrop always did). */}
+      <View style={styles.host}>
+        <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close menu" />
+        <Animated.View
+          style={[
+            styles.sheetWrap,
+            { paddingBottom: insets.bottom + 84 },
+            {
+              opacity: slide,
+              transform: [{ translateY: slide.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }],
+            },
+          ]}
+        >
+          <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            {rows.map((a) => (
+              <TouchableOpacity
+                key={a.title}
+                style={styles.row}
+                activeOpacity={0.7}
+                onPress={() => (a.expands ? openScanPage() : go(a.route!.pathname, a.route!.params))}
+                accessibilityRole="button"
+                accessibilityLabel={a.title}
+              >
+                <View style={[styles.rowIcon, { backgroundColor: tints[a.tint].bg }]}>
+                  <FontAwesome name={a.icon} size={17} color={tints[a.tint].fg} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.rowTitle, { color: colors.ink }]}>{a.title}</Text>
+                  <Text style={[styles.rowSub, { color: colors.ink3 }]}>{a.sub}</Text>
+                </View>
+                <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
+              </TouchableOpacity>
+            ))}
+
+            <View style={[styles.divider, { backgroundColor: colors.line }]} />
+
+            {page === 'scan' ? (
+              <TouchableOpacity
+                style={styles.backRow}
+                activeOpacity={0.7}
+                onPress={() => setPage('root')}
+                accessibilityRole="button"
+                accessibilityLabel="Back"
+              >
+                <FontAwesome name="chevron-left" size={12} color={colors.ink3} />
+                <Text style={[styles.backText, { color: colors.ink2 }]}>Back</Text>
+              </TouchableOpacity>
+            ) : (
+            <View style={styles.shortcutRow}>
+              {SHORTCUTS.map((s) => (
+                <TouchableOpacity
+                  key={s.label}
+                  style={styles.shortcut}
+                  activeOpacity={0.7}
+                  onPress={() => go(s.path)}
+                  accessibilityRole="button"
+                  accessibilityLabel={s.label}
+                >
+                  <View style={[styles.shortcutIcon, { backgroundColor: colors.brand50 }]}>
+                    <FontAwesome name={s.icon} size={15} color={colors.brand} />
+                  </View>
+                  <Text style={[styles.shortcutLabel, { color: colors.ink2 }]}>{s.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            )}
+          </View>
+        </Animated.View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  host: { flex: 1, justifyContent: 'flex-end' },
+  backdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10,10,14,0.45)' },
+  sheetWrap: { paddingHorizontal: 14, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
+  sheet: { borderRadius: 24, borderWidth: 0.5, padding: 10, gap: 2 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 14 },
+  rowIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  rowTitle: { fontSize: 15, fontWeight: '600', fontFamily: FONTS.displaySemibold },
+  rowSub: { fontSize: 12.5, marginTop: 1 },
+  divider: { height: 0.5, marginVertical: 8, marginHorizontal: 6 },
+  shortcutRow: { flexDirection: 'row', justifyContent: 'space-around', paddingBottom: 6, paddingTop: 2 },
+  shortcut: { alignItems: 'center', gap: 5, minWidth: 62 },
+  shortcutIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+  shortcutLabel: { fontSize: 11, fontWeight: '500' },
+  backRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 10 },
+  backText: { fontSize: 14, fontWeight: '600' },
+});

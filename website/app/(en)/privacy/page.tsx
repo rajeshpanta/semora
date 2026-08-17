@@ -61,6 +61,18 @@ export default function PrivacyPage() {
           about that course.
         </li>
         <li>
+          <strong>Lecture recordings (optional):</strong> If you choose to record a class, Semora
+          captures the audio around you — which includes your instructor&apos;s voice and anyone
+          speaking nearby. The audio is stored privately in your account only until it has been
+          transcribed, and is then <strong>deleted automatically</strong>. Recording never starts
+          until you tap Record and confirm you have permission to record.
+        </li>
+        <li>
+          <strong>Lecture transcripts and generated study material:</strong> The text transcript of
+          a recording, plus the notes, quizzes, and flashcards generated from it. These stay in your
+          account until you delete the recording or your account.
+        </li>
+        <li>
           <strong>Usage analytics:</strong> Anonymous, app-level events (e.g. a scan completed, a
           paywall viewed) tied to a random per-install identifier, never to your name or email, to help us understand which features are used and improve the app.
         </li>
@@ -91,6 +103,10 @@ export default function PrivacyPage() {
           To power study tools you choose to use (flashcards, focus timer, and an AI tutor grounded
           on your syllabus and any notes you upload).
         </li>
+        <li>
+          To transcribe class lectures you choose to record, and to generate notes, quizzes, and
+          flashcards from those transcripts.
+        </li>
         <li>To apply referral rewards when you invite friends.</li>
       </ul>
 
@@ -107,13 +123,23 @@ export default function PrivacyPage() {
           <strong>Supabase:</strong> Database and authentication provider.
         </li>
         <li>
-          <strong>OpenAI GPT-5.6 Luna:</strong> The only AI provider Semora sends your content to.
-          It reads your syllabus documents, generates flashcards, practice questions and quizzes,
-          and answers your questions in the AI Tutor. Your syllabus content and any study notes you
-          choose to upload are sent to the OpenAI API for processing. OpenAI states that API data is
-          not used to train its models unless a customer explicitly opts in. Semora disables response
-          storage for these requests; OpenAI may still retain abuse-monitoring logs for up to 30
-          days unless a stricter retention control applies to the account.
+          <strong>OpenAI GPT-5.6 Luna:</strong> Semora&apos;s text AI provider. It reads your
+          syllabus documents, generates flashcards, practice questions and quizzes, writes your
+          lecture notes, and answers your questions in the AI Tutor. Your syllabus content, any
+          study notes you choose to upload, and lecture transcripts are sent to the OpenAI API for
+          processing. OpenAI states that API data is not used to train its models unless a customer
+          explicitly opts in. Semora disables response storage for these requests; OpenAI may still
+          retain abuse-monitoring logs for up to 30 days unless a stricter retention control applies
+          to the account.
+        </li>
+        <li>
+          <strong>Groq (speech-to-text):</strong> Used only if you record a lecture. The audio of
+          that recording is sent to Groq&apos;s transcription API to be converted into text, along
+          with the title you gave the recording and the last few sentences already transcribed —
+          those help the transcription keep names and terminology consistent across a long lecture.
+          Transcription is the only purpose your audio is used for, and Groq is the only service it
+          is sent to. Nothing else from your account — no syllabus, no notes, no tutor messages — is
+          sent to Groq.
         </li>
         <li>
           <strong>Apple StoreKit:</strong> For processing in-app subscription purchases.
@@ -143,6 +169,13 @@ export default function PrivacyPage() {
         Your data is retained as long as your account is active. You can delete your account and
         all associated data at any time through the app&apos;s settings (Me tab &gt; Delete
         Account).
+      </p>
+      <p>
+        <strong>Lecture audio is the exception, and is deleted sooner.</strong> The recording itself
+        is removed from our storage as soon as its transcript has been created — usually within a
+        few minutes of you stopping the recording. Only the transcript and the study material
+        generated from it remain, and those are deleted when you delete the recording or your
+        account.
       </p>
 
       <h2>Your Rights</h2>

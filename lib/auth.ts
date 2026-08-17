@@ -13,6 +13,7 @@ import { unregisterPushToken } from '@/lib/push';
 import { clearPersistedQueryCache } from '@/lib/queryPersistence';
 import { clearOfflineUserState } from '@/lib/offlineSync';
 import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
+import { MARKETING_URL } from '@/lib/constants';
 
 /**
  * Web Client ID from Google Cloud Console (Authentication → Credentials).
@@ -253,7 +254,24 @@ export async function isAppleSignInAvailable(): Promise<boolean> {
   }
 }
 
-export async function signOut() {
+/**
+ * @param options.landing Where the browser goes once this device is clean.
+ *   'marketing' sends it to semoraai.com — the right destination when someone
+ *   has *chosen* to leave (signed out, or deleted their account). The old
+ *   behaviour dropped them on app.semoraai.com's sign-in screen, which is a
+ *   dead end: a wall asking for credentials they just got rid of, with nothing
+ *   to read and nowhere to go.
+ *
+ *   The default, 'auth', is for sign-outs the user did not ask for — a revoked
+ *   or deleted session detected at launch. Those must land on the sign-in
+ *   screen, because throwing someone off the app entirely on the strength of
+ *   one failed request is a worse outcome than showing them a login box.
+ *
+ *   Native ignores this: there is no "redirect" on a phone, and bouncing a
+ *   user out to Safari after signing out would be a strange thing for an app
+ *   to do. The auth screen is the correct destination there.
+ */
+export async function signOut(options?: { landing?: 'auth' | 'marketing' }) {
   let signingOutUserId: string | null = null;
   try {
     try {
@@ -296,8 +314,11 @@ export async function signOut() {
     // go, otherwise the next person to sign in here inherits it.
     useAppStore.getState().resetUserState();
     _queryClient?.clear();
-    clearPersistedQueryCache().catch(() => {});
-    clearOfflineUserState(signingOutUserId).catch(() => {});
+    // Held rather than fired and forgotten: on web the redirect at the end of
+    // this block unloads the page, and a storage clear interrupted halfway
+    // leaves this browser holding a fragment of the departed user's cache.
+    const persistedCacheCleared = clearPersistedQueryCache().catch(() => {});
+    const offlineStateCleared = clearOfflineUserState(signingOutUserId).catch(() => {});
 
     // Cancel pending notifications so user A's reminders don't fire
     // for user B (which would also leak A's task titles via banners).
@@ -312,7 +333,7 @@ export async function signOut() {
 
     // Drop calendar-sync references — without this, B's app would
     // push events into A's "Semora" calendar.
-    clearLocalSyncState().catch(() => {});
+    const syncStateCleared = clearLocalSyncState().catch(() => {});
 
     endIAP().catch(() => {});
 
@@ -321,6 +342,16 @@ export async function signOut() {
     // No-op if Google sign-in was never used or wasn't configured.
     if (Platform.OS !== 'web') {
       GoogleSignin.signOut().catch(() => {});
+    }
+
+    // Someone who chose to leave gets the marketing site, not a login wall.
+    // Last statement in the block on purpose, and only after the storage
+    // clears above have settled — navigation unloads the page.
+    if (Platform.OS === 'web' && options?.landing === 'marketing') {
+      await Promise.allSettled([persistedCacheCleared, offlineStateCleared, syncStateCleared]);
+      // replace, not assign: Back must not restore the authenticated screen
+      // of an account that has just been signed out of or deleted.
+      window.location.replace(MARKETING_URL);
     }
   }
 }

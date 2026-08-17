@@ -246,6 +246,18 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
     if (userError || !userData.user) {
       return jsonResponse({ error: 'Invalid or expired session' }, 401);
     }
+    // Anonymous sessions are not a supported entry point: guest mode was removed
+    // and the project has anonymous sign-ins disabled. Rejected here, before any
+    // counting or model work — a session with no account behind it is free to
+    // mint, so it must never reach a paid extraction.
+    if (userData.user.is_anonymous === true) {
+      log.info('anonymous_scan_rejected', {});
+      return jsonResponse(
+        { error: 'Please sign in to scan a syllabus.', code: 'ACCOUNT_REQUIRED' },
+        401,
+      );
+    }
+
     const userId = userData.user.id;
     log.setUser(userId);
 
@@ -366,6 +378,7 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
         return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
       }
       const scanCount = Math.max(successRes.count ?? 0, uploadRes.count ?? 0);
+
       if (scanCount >= FREE_SCAN_LIMIT) {
         return jsonResponse(
           { error: `You've used your ${FREE_SCAN_LIMIT} free scans this month. Upgrade to Pro for unlimited syllabus scanning.` },
@@ -609,16 +622,21 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
       return jsonResponse(
         explicitlyNotSyllabus
           ? {
+              // Names what Semora actually needs rather than repeating the word
+              // "syllabus". The old copy told the student to "try scanning your
+              // syllabus, course outline, or class schedule" — circular advice
+              // for someone who just scanned exactly that and was rejected. What
+              // matters is the PAGE: the one listing graded work with dates.
               error: localized(
-                "This doesn't look like a course syllabus. Try scanning your syllabus, course outline, or class schedule.",
-                'Esto no parece el programa de una materia. Prueba a escanear el programa, el temario o el horario de clases.',
+                "Semora couldn't find any assignments or exam dates here. It needs the part of your syllabus that lists graded work with due dates — often a table called Course Schedule or Calendar, usually a page or two in. You can also copy that section and paste it as text.",
+                'Semora no encontró tareas ni fechas de exámenes aquí. Necesita la parte del programa que lista el trabajo evaluado con sus fechas de entrega: suele ser una tabla llamada Calendario o Cronograma, normalmente una o dos páginas más adelante. También puedes copiar esa sección y pegarla como texto.',
               ),
               code: 'NOT_SYLLABUS',
             }
           : {
               error: localized(
-                "Semora couldn't read anything from this. Retake the photo with the page flat, fully in frame and well lit, or upload the syllabus as a PDF instead.",
-                'Semora no pudo leer nada de esto. Repite la foto con la hoja plana, completa dentro del encuadre y bien iluminada, o sube el programa en PDF.',
+                "Semora couldn't read any text in this. If it's a photo, retake it with the page flat, fully in frame and well lit. If it's a scanned PDF, the text may be an image — try the original file from your course site, or paste the schedule as text.",
+                'Semora no pudo leer texto aquí. Si es una foto, repítela con la hoja plana, completa dentro del encuadre y bien iluminada. Si es un PDF escaneado, puede que el texto sea una imagen: prueba con el archivo original de tu plataforma del curso, o pega el calendario como texto.',
               ),
               code: 'UNREADABLE_DOCUMENT',
             },

@@ -47,6 +47,15 @@ function spanishPattern(input: string): string | null {
   match = input.match(/^Today · (\d+) items?$/i);
   if (match) return `Hoy · ${match[1]} ${match[1] === '1' ? 'elemento' : 'elementos'}`;
 
+  // Lecture recorder + quiz summaries — durations, counts and scores are
+  // interpolated, so the whole sentence never appears in the phrase map.
+  match = input.match(/^(\d+) of (\d+) parts uploaded$/);
+  if (match) return `${match[1]} de ${match[2]} partes subidas`;
+  match = input.match(/^(\d{1,2}:\d{2}(?::\d{2})?) left$/);
+  if (match) return `Quedan ${match[1]}`;
+  match = input.match(/^(\d+) of (\d+) correct$/);
+  if (match) return `${match[1]} de ${match[2]} correctas`;
+
   // Scan review + upload — the hero flow, so these are the most-seen strings in
   // the app after the Today tab.
   match = input.match(/^(\d+) items found$/);

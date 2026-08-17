@@ -26,13 +26,15 @@ import {
   SHARE_CARD_HEIGHT,
   type SemesterShareCardCourse,
 } from '@/components/SemesterShareCard';
-import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import { COLORS, FONTS, SCREEN_MAX_WIDTH, MARKETING_URL } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { getAppLocale } from '@/lib/i18n';
 import { useAppStore } from '@/store/appStore';
 import { useCourses, useTaskStats, useSemesters } from '@/lib/queries';
 import { track } from '@/lib/analytics';
+import { shareLink, shareLinkMessage } from '@/lib/shareLink';
+
 
 export default function ShareSemesterScreen() {
   const router = useRouter();
@@ -79,11 +81,46 @@ export default function ShareSemesterScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     }
     try {
+      // WEB TAKES A DIFFERENT PATH, deliberately.
+      //
+      // Image capture is not available in the browser. react-native-view-shot's
+      // default entry calls findNodeHandle, which react-native-web implements
+      // as a function that throws — so this screen failed in every browser and
+      // blamed "update to the latest version", advice no web user can act on.
+      // Going around it to html2canvas (the package's own web backend) was
+      // worse: on this tree it blocks the main thread SYNCHRONOUSLY, so the
+      // button span forever and no timeout could rescue it — a setTimeout
+      // cannot fire while the thread is stuck. Verified in Chrome, twice.
+      //
+      // So the browser shares the LINK instead of the picture. The point of
+      // this screen is that a classmate ends up in Semora; a link does that,
+      // instantly and reliably, and the image card remains an iPhone feature.
+      if (Platform.OS === 'web') {
+        const link = MARKETING_URL;
+        const result = await shareLink({
+          url: link,
+          title: getAppLocale() === 'es' ? 'Mi semestre en Semora' : 'My semester on Semora',
+          message: getAppLocale() === 'es'
+            ? `Mi semestre ${semesterName}, organizado con Semora. ${link}`
+            : `My ${semesterName} — organized with Semora. ${link}`,
+        });
+        const note = shareLinkMessage(result, link);
+        if (note) Alert.alert(note.title, note.body);
+        track('semester_shared', {
+          screen: 'share_semester',
+          courses: cardCourses.length,
+          deadlines: deadlineCount,
+          surface: 'web_link',
+        });
+        return;
+      }
+
       // GUARD: react-native-view-shot's native module may be absent until the
       // next native build ships. captureRef throws a native-missing error in
       // that window — catch it and tell the user to update rather than crash.
       let uri: string;
       try {
+
         uri = await captureRef(cardRef, {
           format: 'png',
           quality: 1,
@@ -106,13 +143,15 @@ export default function ShareSemesterScreen() {
         return;
       }
 
-      // React Native's built-in share sheet (no new dependency). iOS accepts a
-      // file:// url in `url`; the image rides along to Messages/Instagram/etc.
+      const caption = getAppLocale() === 'es'
+        ? `Mi semestre ${semesterName}, organizado con Semora.`
+        : `My ${semesterName} — organized with Semora.`;
+
+        // React Native's built-in share sheet (no new dependency). iOS accepts a
+        // file:// url in `url`; the image rides along to Messages/Instagram/etc.
       await Share.share({
         url: uri,
-        message: getAppLocale() === 'es'
-          ? `Mi semestre ${semesterName}, organizado con Semora.`
-          : `My ${semesterName} — organized with Semora.`,
+        message: caption,
       });
 
       track('semester_shared', {

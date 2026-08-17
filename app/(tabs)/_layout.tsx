@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { Tabs } from 'expo-router';
 import { Platform, View, StyleSheet } from 'react-native';
@@ -9,6 +9,7 @@ import { COLORS } from '@/lib/constants';
 import { useColors, useResolvedScheme } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useI18n } from '@/lib/i18n';
+import { PlusMenu } from '@/components/PlusMenu';
 
 function TabIcon({ name, color, focused }: { name: any; color: string; focused: boolean }) {
   const colors = useColors();
@@ -19,11 +20,14 @@ function TabIcon({ name, color, focused }: { name: any; color: string; focused: 
   );
 }
 
-function ScanFab() {
+// The middle tab is an action hub, not a destination: pressing it is
+// intercepted below (preventDefault) and opens the PlusMenu instead of
+// switching to the scan screen, which is now reached through the menu.
+function PlusFab() {
   const colors = useColors();
   return (
     <View style={[ts.fab, { backgroundColor: colors.brand }]}>
-      <FontAwesome name="camera" size={18} color="#fff" />
+      <FontAwesome name="plus" size={19} color="#fff" />
     </View>
   );
 }
@@ -37,8 +41,11 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const isDark = scheme === 'dark';
   const tabBarBgRgba = isDark ? 'rgba(18,18,20,0.92)' : 'rgba(250,249,245,0.92)';
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
+    <>
+    <PlusMenu visible={menuOpen} onClose={() => setMenuOpen(false)} />
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: colors.brand,
@@ -85,9 +92,17 @@ export default function TabLayout() {
       <Tabs.Screen
         name="scan"
         options={{
-          title: t('Scan'),
-          tabBarIcon: () => <ScanFab />,
+          title: t('Add'),
+          tabBarIcon: () => <PlusFab />,
           tabBarLabelStyle: { fontSize: 10, fontWeight: '500', marginTop: 6 },
+        }}
+        listeners={{
+          tabPress: (e) => {
+            // Open the action menu instead of navigating to the scan tab.
+            e.preventDefault();
+            if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            setMenuOpen(true);
+          },
         }}
       />
       <Tabs.Screen
@@ -105,6 +120,7 @@ export default function TabLayout() {
         }}
       />
     </Tabs>
+    </>
   );
 }
 

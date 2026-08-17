@@ -14,7 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
-import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import { COLORS, PROMO_SURFACE, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useSession } from '@/app/_layout';
@@ -146,7 +146,7 @@ export default function InviteScreen() {
 
         <View style={[styles.content, { maxWidth: contentMaxWidth }]}>
           {/* Gift hero — dark card matching the paywall / Me Pro card. */}
-          <View style={[styles.hero, { backgroundColor: colors.ink }]}>
+          <View style={[styles.hero, { backgroundColor: PROMO_SURFACE }]}>
             <View style={[styles.heroGlow, { backgroundColor: colors.brand }]} />
             <View style={[styles.giftBadge, { backgroundColor: colors.brand }]}>
               <FontAwesome name="gift" size={26} color="#fff" />

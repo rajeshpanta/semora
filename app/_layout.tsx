@@ -33,7 +33,7 @@ import type { Session } from '@supabase/supabase-js';
 import * as Localization from 'expo-localization';
 import { useAppStore } from '@/store/appStore';
 import { ThemeColorsProvider, useResolvedScheme, useColors } from '@/lib/theme';
-import { setQueryClient } from '@/lib/auth';
+import { setQueryClient, signOut } from '@/lib/auth';
 import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateAfterPurchase, setupPurchaseListeners } from '@/lib/purchases';
 import {
   COMPLETE_TASK_ACTION, SNOOZE_TASK_ACTION, cancelAllRemindersOnSignOut,
@@ -48,7 +48,7 @@ import { readPendingShareToken } from '@/lib/shareCourse';
 import { TaskCompletionFlowProvider } from '@/components/TaskCompletionFlow';
 import { TaskCompletionCelebration } from '@/components/TaskCompletionCelebration';
 import { showTaskCelebration } from '@/lib/taskCelebration';
-import { queryPersister, clearPersistedQueryCache } from '@/lib/queryPersistence';
+import { queryPersister, clearPersistedQueryCache, shouldPersistQuery } from '@/lib/queryPersistence';
 import { isNetworkFailure, clearOfflineUserState } from '@/lib/offlineSync';
 import { OfflineSyncBridge } from '@/components/OfflineSyncBridge';
 import {
@@ -113,6 +113,49 @@ const AuthContext = createContext<{
 
 export function useSession() {
   return useContext(AuthContext);
+}
+
+/**
+ * Ask the server whether the account behind a restored session still exists,
+ * and sign this device out if it does not.
+ *
+ * WHY: deleting an account only tears down the device it was deleted on.
+ * Anywhere else that holds a session — a browser left signed in, a second
+ * phone — keeps showing the signed-in app, because getSession() reads from
+ * local storage and does not phone home until the access token expires. The
+ * account is gone and every row with it, so that session renders an empty app
+ * that claims to be logged in.
+ *
+ * THE RULE HERE: only a definitive answer from the auth server signs anyone
+ * out. 401/403 mean this token is no longer good for anyone; 404 and
+ * user_not_found mean the account is gone. Everything else — a timeout, a
+ * captive portal, a 5xx, a plane — is NOT evidence of anything and must leave
+ * the session exactly as it is. The app works offline by design, and throwing
+ * a student out of their deadline list because the train went into a tunnel
+ * would be a far worse bug than the one this fixes.
+ */
+async function validateRestoredSession() {
+  let status: number | undefined;
+  let code: string | undefined;
+  try {
+    const { error } = await supabase.auth.getUser();
+    if (!error) return;
+    status = (error as { status?: number }).status;
+    code = (error as { code?: string }).code;
+  } catch {
+    // Threw rather than returned — treated as a transport failure, which is
+    // not grounds for signing anyone out.
+    return;
+  }
+
+  const accountIsGone =
+    status === 401 || status === 403 || status === 404 || code === 'user_not_found';
+  if (!accountIsGone) return;
+
+  track('session_invalidated', { screen: 'launch', status: status ?? 0 });
+  // signOut() clears everything user-scoped on this device (cache, reminders,
+  // widget, calendar links) and never throws out of its own cleanup.
+  await signOut().catch(() => {});
 }
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -286,6 +329,20 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setLoading(false);
       track('app_opened', { screen: 'launch', signed_in: !!session });
+
+      // Confirm the restored session still belongs to a real account.
+      //
+      // getSession() is a LOCAL read: it hands back whatever is in storage and
+      // only contacts the server once the access token has expired. So a
+      // browser or second device that was signed in before the account was
+      // deleted keeps rendering the signed-in app — with every row already
+      // gone — until the token lapses an hour later. Deleting your account and
+      // still being logged in is not something to leave to a timeout.
+      //
+      // Deliberately NOT awaited: launch must not wait on the network, and the
+      // app is usable offline. This resolves in the background and only ever
+      // acts on a definitive answer from the server.
+      if (session) validateRestoredSession();
 
       // Detect and save timezone on first sign-in.
       // NOTE: notification permission is deliberately NOT requested here.
@@ -888,6 +945,7 @@ function RootLayoutNav() {
         persister: queryPersister,
         maxAge: 1000 * 60 * 60 * 24 * 7,
         buster: 'semora-cache-v1',
+        dehydrateOptions: { shouldDehydrateQuery: shouldPersistQuery },
       }}
     >
       <ThemeProvider value={navTheme}>
@@ -920,9 +978,23 @@ function RootLayoutNav() {
               <Stack.Screen name="task/new" options={{ presentation: 'modal', title: t('New Task') }} />
               <Stack.Screen name="task/[id]" options={{ title: t('Task') }} />
               <Stack.Screen name="search" options={{ title: t('Search Tasks') }} />
+              {/* gestureEnabled false: swiping this modal away unmounts the
+                  recorder, which destroys the native session mid-lecture and
+                  strands the recording with no way back to it. Leaving is an
+                  explicit Stop or Discard. */}
+              <Stack.Screen
+                name="lecture/record"
+                options={{ presentation: 'modal', title: t('Record Lecture'), gestureEnabled: false }}
+              />
+              <Stack.Screen name="lecture/index" options={{ title: t('Lectures') }} />
+              <Stack.Screen name="lecture/[id]" options={{ title: t('Lecture') }} />
+              <Stack.Screen name="lecture/quiz" options={{ presentation: 'modal', title: t('Lecture Quiz') }} />
               <Stack.Screen name="syllabus/paste" options={{ presentation: 'modal', title: t('Paste Syllabus Text') }} />
               <Stack.Screen name="syllabus/upload" options={{ presentation: 'modal', title: t('Upload Syllabus') }} />
               <Stack.Screen name="syllabus/review" options={{ title: t('Review Items') }} />
+              {/* Terminal step of the import flow — no back button, because
+                  every route into it has already replaced the stack. */}
+              <Stack.Screen name="syllabus/added" options={{ headerShown: false, gestureEnabled: false }} />
               <Stack.Screen name="settings/index" options={{ title: t('Settings') }} />
               <Stack.Screen name="settings/password" options={{ title: t('Change Password') }} />
               <Stack.Screen name="settings/delete-account" options={{ title: t('Delete Account') }} />

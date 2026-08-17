@@ -138,6 +138,28 @@ function DesktopSidebar({ session }: { session: Session }) {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [router]);
 
+  // Swallow file drops that land anywhere we don't handle.
+  //
+  // A browser's default action for a dropped file is to NAVIGATE THE TAB to it,
+  // which unloads the whole SPA — so a student who dragged their syllabus at
+  // the scan frame and missed watched Semora vanish and get replaced by a raw
+  // PDF viewer. Nothing in the app wanted that behaviour; the scan screen's own
+  // listeners stopPropagation for the region that does handle drops.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const swallow = (e: DragEvent) => {
+      if ((e as any).__semoraHandled) return;
+      e.preventDefault();
+      if (e.type === 'drop' && e.dataTransfer) e.dataTransfer.dropEffect = 'none';
+    };
+    document.addEventListener('dragover', swallow);
+    document.addEventListener('drop', swallow);
+    return () => {
+      document.removeEventListener('dragover', swallow);
+      document.removeEventListener('drop', swallow);
+    };
+  }, []);
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const current =

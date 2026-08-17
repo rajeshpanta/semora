@@ -348,18 +348,50 @@ export default function SyllabusUploadScreen() {
         );
         return;
       }
+      // Branch on the server's CODE, never on the message text. The message is
+      // localized, so string-matching it sent every Spanish student down the
+      // generic "Scan Failed" path and threw away the specific guidance the
+      // server had already written for them.
+      const code = (error as { code?: string })?.code;
+
       // Not a syllabus (receipt / random paper). The server classified it and
       // created NOTHING (no course/semester, no scan burned) — show calm,
-      // distinct guidance instead of a scary "Scan Failed".
-      if (typeof error?.message === 'string' && error.message.includes("doesn't look like a course syllabus")) {
+      // distinct guidance instead of a scary "Scan Failed". On web, "paste the
+      // text" is genuinely the easiest recovery, so offer it directly.
+      if (code === 'NOT_SYLLABUS') {
         track('scan_not_syllabus', { screen: 'scan' });
         Alert.alert(
-          'Not a syllabus',
+          'Not the right page',
           error.message,
-          [
-            { text: 'Pick Another', onPress: () => router.back() },
-            { text: 'Try Again', onPress: () => handleProcess(), style: 'cancel' },
-          ],
+          Platform.OS === 'web'
+            ? [
+                { text: 'Pick Another', onPress: () => router.back() },
+                { text: 'Paste text instead', onPress: () => router.replace('/syllabus/paste' as any) },
+              ]
+            : [
+                { text: 'Pick Another', onPress: () => router.back() },
+                { text: 'Try Again', onPress: () => handleProcess(), style: 'cancel' },
+              ],
+        );
+        return;
+      }
+
+      // A real syllabus we could not READ — a dark photo, an image-only PDF.
+      // Retrying the same file rarely helps, so lead with the fix.
+      if (code === 'UNREADABLE_DOCUMENT') {
+        track('scan_unreadable', { screen: 'scan' });
+        Alert.alert(
+          "Couldn't read this",
+          error.message,
+          Platform.OS === 'web'
+            ? [
+                { text: 'Pick Another', onPress: () => router.back() },
+                { text: 'Paste text instead', onPress: () => router.replace('/syllabus/paste' as any) },
+              ]
+            : [
+                { text: 'Try Again', onPress: () => handleProcess(), style: 'cancel' },
+                { text: 'Pick Another', onPress: () => router.back() },
+              ],
         );
         return;
       }
