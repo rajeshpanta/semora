@@ -134,7 +134,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
   const [pendingPath, setPendingPath] = useState<string | null>(null);
 
   const selectedSemesterId = useAppStore((st) => st.selectedSemesterId);
-  const { data: courses = [] } = useCourses(selectedSemesterId);
+  const { data: courses = [], isLoading: coursesLoading } = useCourses(selectedSemesterId);
 
   useEffect(() => {
     if (visible) {
@@ -168,6 +168,16 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
    * where asking earns its tap.
    */
   const goWithCourse = (path: string) => {
+    // "Still loading" is not "no courses". Reading data alone, a cold start
+    // plus a fast tap routed with no class at all — the exact filing problem
+    // this picker exists to prevent — because an unresolved query and an empty
+    // semester look identical from here. When in doubt, ask.
+    if (coursesLoading) {
+      if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      setPendingPath(path);
+      setPage('course');
+      return;
+    }
     if (courses.length === 0) return go(path);
     if (courses.length === 1) return go(path, { courseId: courses[0].id });
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);

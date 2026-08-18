@@ -58,7 +58,13 @@ export default function DeckDetailScreen() {
   const [showCoursePicker, setShowCoursePicker] = useState(false);
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const { data: courses = [] } = useCourses(selectedSemesterId);
-  const deckCourse = courses.find((c: { id: string }) => c.id === deck?.course_id);
+  // Resolved from the deck's OWN joined course, not by searching the current
+  // semester's list. The deck list spans every semester (useDecks has no
+  // semester filter), so a deck belonging to last term's course found no match
+  // here and read "Assign to a class" as though it had none — and tapping a
+  // class would then have moved it quietly into the current semester. The
+  // lecture screen has always used its joined row for exactly this reason.
+  const deckCourse = deck?.courses ?? null;
   const reviewCard = useReviewCard();
 
   // 'manage' lists/edits cards; 'study' walks the due queue one card at a time.
@@ -76,6 +82,10 @@ export default function DeckDetailScreen() {
   const [queue, setQueue] = useState<Card[]>([]);
   const [studyIndex, setStudyIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
+  // Sticky for the current card: 'revealed' is which face is showing, this is
+  // whether the answer has been seen at all. They diverge the moment flipping
+  // back became possible.
+  const [seenAnswer, setSeenAnswer] = useState(false);
   const [reviewedCount, setReviewedCount] = useState(0);
 
   const dueNow = useMemo(() => dueCards(cards), [cards]);
@@ -242,6 +252,7 @@ export default function DeckDetailScreen() {
     setQueue(dueNow);
     setStudyIndex(0);
     setRevealed(false);
+    setSeenAnswer(false);
     setReviewedCount(0);
     setMode('study');
     track('flashcard_study_started', { screen: 'flashcards', due: dueNow.length });
@@ -252,6 +263,7 @@ export default function DeckDetailScreen() {
     setQueue([]);
     setStudyIndex(0);
     setRevealed(false);
+    setSeenAnswer(false);
   };
 
   const gradeCurrent = async (grade: Grade) => {
@@ -271,6 +283,7 @@ export default function DeckDetailScreen() {
     } else {
       setStudyIndex((i) => i + 1);
       setRevealed(false);
+      setSeenAnswer(false);
     }
   };
 
@@ -315,7 +328,10 @@ export default function DeckDetailScreen() {
                 activeOpacity={0.85}
                 onPress={() => {
                   if (Platform.OS === 'ios') Haptics.selectionAsync();
-                  setRevealed((v) => !v);
+                  setRevealed((v) => {
+                    if (!v) setSeenAnswer(true);
+                    return !v;
+                  });
                 }}
                 accessibilityRole="button"
                 accessibilityLabel={revealed ? `Answer: ${card.back}. Tap to see the question.` : `Question: ${card.front}. Tap to see the answer.`}
@@ -335,7 +351,12 @@ export default function DeckDetailScreen() {
                 </Text>
               </TouchableOpacity>
 
-              {revealed ? (
+              {/* Grading stays available once the answer has been seen, even
+                  if the card is flipped back to re-read the question. Hiding it
+                  on flip-back meant the only way to grade was to have the
+                  answer on screen, which quietly punished checking the prompt
+                  again — the one thing re-reading is for. */}
+              {seenAnswer ? (
                 <View style={styles.gradeRow}>
                   {GRADES.map((g) => (
                     <TouchableOpacity

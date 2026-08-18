@@ -34,6 +34,7 @@ import * as Localization from 'expo-localization';
 import { useAppStore } from '@/store/appStore';
 import { ThemeColorsProvider, useResolvedScheme, useColors } from '@/lib/theme';
 import { setQueryClient, signOut } from '@/lib/auth';
+import { loadLastServerRead, trackServerReads } from '@/lib/dataFreshness';
 import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateAfterPurchase, setupPurchaseListeners } from '@/lib/purchases';
 import {
   COMPLETE_TASK_ACTION, SNOOZE_TASK_ACTION, cancelAllRemindersOnSignOut,
@@ -181,7 +182,21 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       supabase.auth
         .getSession()
         .then(({ data: { session } }) => {
-          if (session) rescheduleAllTaskReminders(session.user.id);
+          if (!session) return;
+          rescheduleAllTaskReminders(session.user.id);
+          // Re-check the account still exists, on the same foreground pass.
+          //
+          // The launch check only covers a cold start, and an app can sit in
+          // the background for days — long enough for the account to be deleted
+          // from another device, or the session revoked. Without this, coming
+          // back would show a signed-in shell over data that is gone until
+          // something happened to fail.
+          //
+          // Deliberately folded into THIS listener rather than added as a
+          // second one: the session is already in hand here and the 2-minute
+          // throttle above applies, so it costs no extra subscription and no
+          // extra getSession call.
+          validateRestoredSession();
         })
         .catch(() => {});
     });
@@ -324,6 +339,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       // jarring) — the paywall's own listener surfaces user-facing errors.
       (err: any) => { console.warn('[IAP] purchase error:', err?.code, err?.message); },
     );
+
+    // Restore the previous session's freshness stamp, then record every
+    // successful server read from here on.
+    loadLastServerRead();
+    const untrackReads = trackServerReads(queryClient);
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -564,6 +584,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
       linkSub.remove();
+      untrackReads();
       removePurchaseListeners();
       endIAP();
     };

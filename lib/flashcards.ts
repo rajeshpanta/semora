@@ -20,6 +20,16 @@ export interface Deck {
   updated_at: string;
 }
 
+/**
+ * A deck with the course it belongs to joined in. Needed because a deck can
+ * outlive the semester it was made in, and the deck list is not semester
+ * scoped — so the class name has to travel with the deck rather than be looked
+ * up against whichever term happens to be selected.
+ */
+export interface DeckWithCourse extends Deck {
+  courses: { id: string; name: string; color: string | null } | null;
+}
+
 export interface Card {
   id: string;
   user_id: string;
@@ -232,14 +242,19 @@ export function useCourseLookup() {
 export function useDeck(deckId: string | undefined) {
   return useQuery({
     queryKey: flashcardKeys.deck(deckId!),
-    queryFn: async (): Promise<Deck> => {
+    queryFn: async (): Promise<DeckWithCourse> => {
+      // Joined, not just '*': the deck screen needs the class NAME, and the
+      // deck may belong to a course outside the currently selected semester —
+      // the deck list spans every term, so resolving the name against the
+      // current semester's courses silently reported "no class" for older
+      // decks. The join is correct whatever semester is selected.
       const { data, error } = await supabase
         .from('decks')
-        .select('*')
+        .select('*, courses(id, name, color)')
         .eq('id', deckId!)
         .single();
       if (error) throw error;
-      return data as Deck;
+      return data as DeckWithCourse;
     },
     enabled: !!deckId,
   });

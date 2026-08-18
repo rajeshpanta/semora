@@ -180,9 +180,16 @@ export function useLectureRecorder() {
    * than whichever screen happens to be mounted, and releases on unmount even
    * if that unmount is a crash or a navigation nobody predicted.
    */
-  const phase = state.phase;
+  // One lock for the whole session, not one per phase. Keying the effect on
+  // `phase` released and re-acquired it at every transition
+  // (starting -> recording -> paused -> finishing), which is four needless
+  // round trips through a native module and a window, however brief, where
+  // nothing holds the screen. `active` collapses all four into one boolean, so
+  // the effect runs exactly twice: once when recording begins, once when it
+  // ends.
+  const active = state.phase !== 'idle';
   useEffect(() => {
-    if (phase === 'idle') return;
+    if (!active) return;
     let released = false;
     activateKeepAwakeAsync(KEEP_AWAKE_TAG).catch(() => {});
     return () => {
@@ -196,7 +203,7 @@ export function useLectureRecorder() {
         // ignore
       }
     };
-  }, [phase]);
+  }, [active]);
 
   const lectureIdRef = useRef<string | null>(null);
   const seqRef = useRef(0);

@@ -18,6 +18,8 @@ import {
   subscribeOfflineSync,
 } from '@/lib/offlineSync';
 import { useColors } from '@/lib/theme';
+import { formatDistanceToNow } from 'date-fns';
+import { useLastServerRead, isStale } from '@/lib/dataFreshness';
 
 export function useOfflineSyncStatus() {
   return useSyncExternalStore(
@@ -63,14 +65,49 @@ export function OfflineSyncBridge({ userId }: { userId: string | null }) {
 
 export function SyncStatusPill({ compact = false }: { compact?: boolean }) {
   const status = useOfflineSyncStatus();
+  const lastRead = useLastServerRead();
   const colors = useColors();
-  if (
+
+  const nothingPending =
     status.isOnline &&
     !status.isSyncing &&
     status.pendingCount === 0 &&
     status.conflictCount === 0 &&
-    status.failedCount === 0
-  ) return null;
+    status.failedCount === 0;
+
+  // Nothing pending is not the same as up to date.
+  //
+  // This used to render null whenever the outbound queue was empty — which is
+  // also true of a device that has been offline for two days showing a cached
+  // deadline list. The queue describes what THIS device still owes the server;
+  // it says nothing about whether what you are reading is current. So when the
+  // queue is clear but the last successful read is old, say so rather than
+  // showing a screen that looks freshly loaded.
+  const stale = isStale(lastRead);
+  if (nothingPending && !stale) return null;
+
+  if (nothingPending) {
+    const staleLabel = lastRead
+      ? `Showing data from ${formatDistanceToNow(new Date(lastRead), { addSuffix: true })}`
+      : 'Not synced yet';
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${staleLabel}. Open sync status.`}
+        onPress={() => router.push('/settings/sync' as any)}
+        style={[
+          styles.pill,
+          { borderColor: `${colors.ink3}55`, backgroundColor: `${colors.ink3}12` },
+          compact && styles.compact,
+        ]}
+      >
+        <FontAwesome name="clock-o" size={12} color={colors.ink3} />
+        <Text numberOfLines={1} style={[styles.label, { color: colors.ink3 }]}>{staleLabel}</Text>
+        <View style={styles.spacer} />
+        <FontAwesome name="chevron-right" size={9} color={colors.ink3} />
+      </Pressable>
+    );
+  }
 
   const conflict = status.conflictCount > 0;
   const failed = status.failedCount > 0;

@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSession } from '@/app/_layout';
 import { useOfflineSyncStatus } from '@/components/OfflineSyncBridge';
+import { useLastServerRead } from '@/lib/dataFreshness';
 import {
   flushOfflineQueue,
   listSyncConflicts,
@@ -31,6 +32,7 @@ export default function SyncSettingsScreen() {
   const { session } = useSession();
   const queryClient = useQueryClient();
   const status = useOfflineSyncStatus();
+  const lastRead = useLastServerRead();
   const conflicts = useQuery({
     queryKey: ['syncConflicts', session?.user.id, status.conflictCount],
     queryFn: () => listSyncConflicts(session!.user.id),
@@ -77,8 +79,17 @@ export default function SyncSettingsScreen() {
             <Text style={[styles.statusText, { color: colors.ink3 }]}>
               {status.isOnline ? 'Internet connected' : 'Edits and completions are saved on this device'}
               {status.lastSyncedAt
-                ? ` · Last synced ${formatDistanceToNow(new Date(status.lastSyncedAt), { addSuffix: true })}`
+                ? ` · Your changes sent ${formatDistanceToNow(new Date(status.lastSyncedAt), { addSuffix: true })}`
                 : ''}
+            </Text>
+            {/* Two different questions, and this screen only ever answered one.
+                lastSyncedAt is about edits leaving this device; it says nothing
+                about whether what you are READING is current — and stays blank
+                entirely for anyone who has never made an offline edit. */}
+            <Text style={[styles.statusText, { color: colors.ink3 }]}>
+              {lastRead
+                ? `Data loaded ${formatDistanceToNow(new Date(lastRead), { addSuffix: true })}`
+                : 'No data loaded from the server yet on this device'}
             </Text>
           </View>
         </View>
