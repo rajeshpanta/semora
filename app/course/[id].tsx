@@ -43,7 +43,12 @@ import { track } from '@/lib/analytics';
 
 // One tappable row in the Study Tools card. Shows a PRO pill when locked so
 // the gating is legible before the tap routes to the paywall.
-function StudyToolRow({
+// A tool tile. Two per row on a phone, and each one has to say what it is at a
+// glance, so the icon is given real size and the label sits under it rather
+// than beside it. The Pro badge stays a corner mark instead of a trailing
+// chip — in a tile the trailing edge is the bottom, where it would collide
+// with the description.
+function StudyToolTile({
   icon, label, sub, accent, locked, onPress,
 }: {
   icon: string;
@@ -55,25 +60,28 @@ function StudyToolRow({
 }) {
   const colors = useColors();
   return (
-    <TouchableOpacity style={styles.studyToolRow} onPress={onPress} activeOpacity={0.7}>
-      <View style={[styles.studyToolIcon, { backgroundColor: accent + '18' }]}>
-        <FontAwesome name={icon as any} size={15} color={accent} />
-      </View>
-      <View style={{ flex: 1 }}>
-        <Text style={[styles.detailValue, { color: colors.ink, fontWeight: '600' }]}>{label}</Text>
-        <Text style={[styles.detailEmpty, { color: colors.ink3, fontStyle: 'normal' }]}>{sub}</Text>
-      </View>
+    <TouchableOpacity
+      style={[styles.toolTile, { backgroundColor: colors.card, borderColor: colors.line }]}
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+      accessibilityLabel={locked ? `${label}, ${sub}, Pro feature` : `${label}, ${sub}`}
+    >
       {locked ? (
-        <View style={[styles.lockedBadge, { backgroundColor: colors.brand, marginTop: 0 }]}>
-          <FontAwesome name="star" size={9} color="#fff" />
+        <View style={[styles.toolTileBadge, { backgroundColor: colors.brand }]}>
+          <FontAwesome name="star" size={8} color="#fff" />
           <Text style={styles.lockedBadgeText}>PRO</Text>
         </View>
-      ) : (
-        <FontAwesome name="chevron-right" size={13} color={colors.ink3} />
-      )}
+      ) : null}
+      <View style={[styles.toolTileIcon, { backgroundColor: accent + '18' }]}>
+        <FontAwesome name={icon as any} size={19} color={accent} />
+      </View>
+      <Text style={[styles.toolTileLabel, { color: colors.ink }]} numberOfLines={1}>{label}</Text>
+      <Text style={[styles.toolTileSub, { color: colors.ink3 }]} numberOfLines={2}>{sub}</Text>
     </TouchableOpacity>
   );
 }
+
 
 export default function CourseDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -667,108 +675,82 @@ export default function CourseDetailScreen() {
   );
 
   const studySection = !editing ? (
-          <View style={[styles.detailsCard, isWide && styles.cardPadWide, { backgroundColor: colors.card, borderColor: colors.line }]}>
-            <StudyToolRow
-              icon="clone"
-              label="Flashcards"
-              sub="Study with spaced repetition"
-              accent={course.color}
-              locked={!isPro}
-              onPress={() => {
-                if (Platform.OS === 'ios') Haptics.selectionAsync();
-                if (isPro) {
-                  router.push({ pathname: '/flashcards', params: { courseId: course.id } } as any);
-                } else {
-                  router.push({ pathname: '/paywall', params: { context: 'flashcards' } } as any);
-                }
-              }}
-            />
-            {/* Reviewing works everywhere — a lecture recorded on a phone should
-                be readable on a laptop — so this row is NOT platform-gated.
-                It is also the half that makes filing worth doing: without a
-                route from the class to its recordings, attaching a course only
-                labels the lecture rather than shelving it. */}
-            <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
-            <StudyToolRow
-              icon="list-ul"
-              label="Lectures"
-              sub="Recordings and notes for this class"
-              accent={course.color}
-              locked={false}
-              onPress={() => {
-                if (Platform.OS === 'ios') Haptics.selectionAsync();
-                router.push({
-                  pathname: '/lecture',
-                  params: { courseId: course.id, courseName: course.name },
-                } as any);
-              }}
-            />
-
-            {/* Recording itself IS native-only (lib/lectureRecorder.ts), so the
-                browser gets no row rather than one that can only apologise. */}
-            {Platform.OS !== 'web' && (
-              <>
-                <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
-                <StudyToolRow
-                  icon="microphone"
-                  label="Record lecture"
-                  sub="Transcript and notes for this class"
-                  accent={course.color}
-                  // Not lock-badged: the free tier includes lectures up to a
-                  // quota, and the recorder screen is where that limit is
-                  // explained. A padlock here would claim otherwise.
-                  locked={false}
-                  onPress={() => {
-                    if (Platform.OS === 'ios') Haptics.selectionAsync();
-                    router.push({ pathname: '/lecture/record', params: { courseId: course.id } } as any);
-                  }}
-                />
-              </>
-            )}
-            <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
-            <StudyToolRow
-              icon="magic"
-              label="Ask AI Tutor"
-              sub="Get help on this course"
-              accent={course.color}
-              locked={!isPro}
-              onPress={() => {
-                if (Platform.OS === 'ios') Haptics.selectionAsync();
-                if (isPro) {
-                  router.push({ pathname: '/tutor', params: { courseId: course.id } } as any);
-                } else {
-                  router.push({ pathname: '/paywall', params: { context: 'tutor' } } as any);
-                }
-              }}
-            />
-            <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
-            {/* Share this course — copy-on-join. SENDING is Pro (free users get
-                the locked teaser → paywall); the recipient imports for free. */}
-            <StudyToolRow
-              icon="share-alt"
-              label="Share this course"
-              sub={sharing ? 'Creating link…' : "Send a classmate all its deadlines"}
-              accent={course.color}
-              locked={!isPro}
-              onPress={() => {
-                if (Platform.OS === 'ios') Haptics.selectionAsync();
-                if (isPro) {
-                  handleShareCourse();
-                } else {
-                  router.push({ pathname: '/paywall', params: { context: 'share_course' } } as any);
-                }
-              }}
-            />
-            <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
-            <StudyToolRow
-              icon="users"
-              label="Live course space"
-              sub="Share changing deadlines and group assignments"
-              accent={course.color}
-              locked={false}
-              onPress={() => router.push('/collaboration' as any)}
-            />
-          </View>
+        // A grid, not a list. These are five destinations of equal weight; a
+        // stack of full-width rows made them read as a settings menu and put
+        // the useful ones an extra scroll away. Tiles fit more above the fold
+        // and give each one an icon large enough to be recognised rather than
+        // read.
+        //
+        // "Record lecture" is deliberately NOT here any more. The Notes screen
+        // opens with a record button when it is empty and a "new recording"
+        // action when it is not, so a tile here was a second door to the same
+        // room — and it crowded out the thing students actually lacked, which
+        // was a way to bring in material they already had.
+        <View style={styles.toolGrid}>
+          <StudyToolTile
+            icon="file-text-o"
+            label="Notes"
+            sub="Recordings and uploads"
+            accent={course.color}
+            locked={false}
+            onPress={() => {
+              if (Platform.OS === 'ios') Haptics.selectionAsync();
+              router.push({
+                pathname: '/lecture',
+                params: { courseId: course.id, courseName: course.name },
+              } as any);
+            }}
+          />
+          <StudyToolTile
+            icon="cloud-upload"
+            label="Upload material"
+            sub="Notes, quiz or flashcards"
+            accent={course.color}
+            locked={false}
+            onPress={() => {
+              if (Platform.OS === 'ios') Haptics.selectionAsync();
+              router.push({ pathname: '/lecture/new', params: { courseId: course.id } } as any);
+            }}
+          />
+          <StudyToolTile
+            icon="magic"
+            label="AI Tutor"
+            sub="Get help on this course"
+            accent={course.color}
+            locked={!isPro}
+            onPress={() => {
+              if (Platform.OS === 'ios') Haptics.selectionAsync();
+              if (isPro) {
+                router.push({ pathname: '/tutor', params: { courseId: course.id } } as any);
+              } else {
+                router.push({ pathname: '/paywall', params: { context: 'tutor' } } as any);
+              }
+            }}
+          />
+          <StudyToolTile
+            icon="share-alt"
+            label="Share course"
+            sub="Send a classmate its deadlines"
+            accent={course.color}
+            locked={!isPro}
+            onPress={() => {
+              if (Platform.OS === 'ios') Haptics.selectionAsync();
+              if (isPro) {
+                handleShareCourse();
+              } else {
+                router.push({ pathname: '/paywall', params: { context: 'share_course' } } as any);
+              }
+            }}
+          />
+          <StudyToolTile
+            icon="users"
+            label="Live space"
+            sub="Changing deadlines, group work"
+            accent={course.color}
+            locked={false}
+            onPress={() => router.push('/collaboration' as any)}
+          />
+        </View>
   ) : null;
 
   const infoSection = !editing ? (
@@ -975,7 +957,7 @@ export default function CourseDetailScreen() {
             <Disclosure title="Grades" summary={gradeSummary} icon="line-chart" accent={displayColor}>
               {gradesSection}
             </Disclosure>
-            <Disclosure title="Study tools" summary="Flashcards · Lectures · AI Tutor" icon="graduation-cap" accent={displayColor}>
+            <Disclosure title="Study tools" summary="Notes · Upload material · AI Tutor" icon="graduation-cap" accent={displayColor}>
               {studySection}
             </Disclosure>
             <Disclosure title="Course info" summary={infoSummary} icon="info-circle" accent={displayColor}>
@@ -1072,6 +1054,26 @@ const styles = StyleSheet.create({
   actionText: { fontSize: 13, fontWeight: '600', color: COLORS.brand },
   addTaskBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
   addTaskText: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  toolGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  // Two per row: (100% - one 10px gap) / 2, expressed as a basis so the last
+  // odd tile grows to fill rather than sitting half-width next to a hole.
+  toolTile: {
+    flexBasis: '47%',
+    flexGrow: 1,
+    minWidth: 140,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+    gap: 6,
+  },
+  toolTileIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  toolTileLabel: { fontSize: 15, fontWeight: '700' },
+  toolTileSub: { fontSize: 12, lineHeight: 16 },
+  toolTileBadge: {
+    position: 'absolute', top: 10, right: 10, zIndex: 1,
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 6, paddingVertical: 3, borderRadius: 999,
+  },
   tasksHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
   // The heading keeps its type scale but drops sectionTitle's bottom margin,
   // which the row now owns.

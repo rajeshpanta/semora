@@ -153,7 +153,7 @@ export default function LectureDetailScreen() {
   const qc = useQueryClient();
   const { contentMaxWidth } = useResponsive();
   const { localeTag } = useI18n();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, generate } = useLocalSearchParams<{ id: string; generate?: string }>();
 
   const { data: lecture, isLoading } = useLecture(id);
   const isPro = useAppStore((s) => s.isPro);
@@ -300,6 +300,23 @@ export default function LectureDetailScreen() {
       },
     );
   }, [lecture, isPro, router, generateCards, setLectureDeck]);
+
+  // Arriving from the document-upload flow with "make me a quiz" / "make me
+  // flashcards". Both are built FROM the notes, so this waits for notes_md
+  // rather than firing on mount — at which point the notes are usually still
+  // being written.
+  //
+  // The ref is what stops it looping: handleQuiz and handleFlashcards both
+  // mutate the lecture, which re-renders this screen with notes_md still set,
+  // which would fire the effect again. One shot per arrival.
+  const autoRan = useRef(false);
+  useEffect(() => {
+    if (autoRan.current) return;
+    if (!generate || !lecture?.notes_md) return;
+    autoRan.current = true;
+    if (generate === 'quiz') handleQuiz();
+    else if (generate === 'cards') handleFlashcards();
+  }, [generate, lecture?.notes_md, handleQuiz, handleFlashcards]);
 
   const handleDelete = useCallback(() => {
     if (!lecture) return;

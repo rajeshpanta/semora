@@ -122,6 +122,10 @@ const MSG = {
     en: 'This lecture has no transcript yet.',
     es: 'Esta clase todavía no tiene transcripción.',
   },
+  freeUsed: {
+    en: "You've used your free action. Upgrade to Pro for unlimited notes, lectures and scans.",
+    es: 'Ya usaste tu acción gratuita. Hazte Pro para generar apuntes, clases y escaneos sin límite.',
+  },
   noNotes: {
     en: 'Generate the lecture notes first.',
     es: 'Genera primero los apuntes de la clase.',
@@ -202,7 +206,7 @@ serve(withRequestLogging('lecture-study-kit', async (req, log) => {
     // service_role bypasses RLS, so ownership is re-checked explicitly here.
     const { data: lecture, error: lectureErr } = await adminClient
       .from('lecture_recordings')
-      .select('id, user_id, course_id, title, status, transcript, notes_md, duration_seconds')
+      .select('id, user_id, course_id, title, status, transcript, notes_md, duration_seconds, source')
       .eq('id', lectureId)
       .eq('user_id', userId)
       .maybeSingle();
@@ -255,6 +259,54 @@ async function handleNotes(
   const transcript = typeof lecture.transcript === 'string' ? lecture.transcript.trim() : '';
   if (!transcript) {
     return jsonResponse({ error: t('notReady', locale), code: 'NO_TRANSCRIPT' }, 409);
+  }
+
+  // ── Free tier ────────────────────────────────────────────────────────────
+  // A document-sourced note is an AI action and has to draw from the same
+  // single free allowance as a scan or a recording (migration 071). Without
+  // this it would be the way around the paywall: upload a PDF instead of
+  // recording, unlimited, forever.
+  //
+  // Only the DOCUMENT path is charged here. A recording has already paid at
+  // transcription time (lecture-transcribe charges lecture_usage_log when the
+  // audio is processed); charging again here would take two actions for one
+  // lecture. `source` is the whole distinction.
+  //
+  // Charged BEFORE generation, unlike the audio path, because there is no
+  // earlier moment that costs anything — the upload itself is free. The row is
+  // already written, so a student who is out of free actions is told before the
+  // model runs rather than after.
+  if (lecture.source === 'document') {
+    const { data: proResult, error: proErr } = await admin.rpc('is_pro', { uid: userId });
+    if (proErr) {
+      log.error('is_pro_failed', errorFields(proErr));
+      return jsonResponse({ error: t('transient', locale) }, 503);
+    }
+    if (proResult !== true) {
+      const { data: usedResult, error: usedErr } = await admin
+        .rpc('free_action_used', { uid: userId });
+      if (usedErr) {
+        log.error('free_action_check_failed', errorFields(usedErr));
+        return jsonResponse({ error: t('transient', locale) }, 503);
+      }
+      if (usedResult === true) {
+        return jsonResponse({ error: t('freeUsed', locale), code: 'FREE_ACTION_USED' }, 402);
+      }
+      // Recorded in scan_usage_log rather than lecture_usage_log: that table
+      // carries audio_seconds and feeds the daily transcription-capacity
+      // ledger, neither of which a document touches. free_action_used() reads
+      // both, so either one spends the allowance.
+      const { error: chargeErr } = await admin.from('scan_usage_log').insert({
+        user_id: userId,
+        status: 'success',
+      });
+      if (chargeErr) {
+        // Logged, not thrown — same rule as parse-syllabus. The student is
+        // about to receive their notes; losing them over our bookkeeping is
+        // the worse outcome.
+        log.error('free_action_charge_failed', errorFields(chargeErr));
+      }
+    }
   }
 
   // Stamp the claim so a client can tell "working on it" from "the isolate died

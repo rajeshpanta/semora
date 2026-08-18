@@ -1,5 +1,5 @@
 import React from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Platform, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TouchableOpacity } from '@/components/LocalizedReactNative';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -132,7 +132,7 @@ export default function LecturesScreen() {
         }
       >
         {scopeCourseName ? (
-          <Text style={[styles.scopeLabel, { color: colors.ink3 }]}>{`Lectures for ${scopeCourseName}`}</Text>
+          <Text style={[styles.scopeLabel, { color: colors.ink3 }]}>{`Notes for ${scopeCourseName}`}</Text>
         ) : null}
 
         {isLoading ? (
@@ -145,26 +145,43 @@ export default function LecturesScreen() {
               <FontAwesome name="microphone" size={26} color={colors.coral} />
             </View>
             <Text style={[styles.emptyTitle, { color: colors.ink }]}>
-              {scopeCourseId ? 'No lectures for this class yet' : 'Record your first lecture'}
+              {scopeCourseId ? 'No notes for this class yet' : 'Make your first notes'}
             </Text>
             <Text style={[styles.emptyText, { color: colors.ink2 }]}>
-              Hit record in class. Semora transcribes the audio, writes your notes, and can turn it
-              all into flashcards and practice quizzes.
+              Record a class, or upload slides, a chapter or a photo of the board. Semora writes
+              the notes and can turn them into flashcards and practice quizzes.
             </Text>
+            {Platform.OS !== 'web' && (
+              <TouchableOpacity
+                style={[styles.emptyBtn, { backgroundColor: colors.coral }]}
+                activeOpacity={0.85}
+                onPress={() =>
+                  router.push({
+                    pathname: '/lecture/record',
+                    params: scopeCourseId ? { courseId: scopeCourseId } : undefined,
+                  } as any)
+                }
+                accessibilityRole="button"
+                accessibilityLabel="Record a lecture"
+              >
+                <FontAwesome name="microphone" size={15} color="#fff" />
+                <Text style={styles.emptyBtnText}>Record a lecture</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
-              style={[styles.emptyBtn, { backgroundColor: colors.coral }]}
+              style={[styles.emptyBtnAlt, { borderColor: colors.brand }]}
               activeOpacity={0.85}
               onPress={() =>
                 router.push({
-                  pathname: '/lecture/record',
+                  pathname: '/lecture/new',
                   params: scopeCourseId ? { courseId: scopeCourseId } : undefined,
                 } as any)
               }
               accessibilityRole="button"
-              accessibilityLabel="Record a lecture"
+              accessibilityLabel="Upload a file"
             >
-              <FontAwesome name="microphone" size={15} color="#fff" />
-              <Text style={styles.emptyBtnText}>Record a lecture</Text>
+              <FontAwesome name="cloud-upload" size={15} color={colors.brand} />
+              <Text style={[styles.emptyBtnText, { color: colors.brand }]}>Upload a file</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -179,21 +196,40 @@ export default function LecturesScreen() {
                 <LectureRow key={l.id} lecture={l} />
               ))}
             </View>
-            <TouchableOpacity
-              style={[styles.newBtn, { borderColor: colors.coral }]}
-              activeOpacity={0.8}
-              onPress={() =>
-                router.push({
-                  pathname: '/lecture/record',
-                  params: scopeCourseId ? { courseId: scopeCourseId } : undefined,
-                } as any)
-              }
-              accessibilityRole="button"
-              accessibilityLabel="Record a new lecture"
-            >
-              <FontAwesome name="plus" size={13} color={colors.coral} />
-              <Text style={[styles.newBtnText, { color: colors.coral }]}>New recording</Text>
-            </TouchableOpacity>
+            <View style={styles.newRow}>
+              {Platform.OS !== 'web' && (
+                <TouchableOpacity
+                  style={[styles.newBtn, { borderColor: colors.coral }]}
+                  activeOpacity={0.8}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/lecture/record',
+                      params: scopeCourseId ? { courseId: scopeCourseId } : undefined,
+                    } as any)
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel="Record a new lecture"
+                >
+                  <FontAwesome name="microphone" size={13} color={colors.coral} />
+                  <Text style={[styles.newBtnText, { color: colors.coral }]}>Record</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={[styles.newBtn, { borderColor: colors.brand }]}
+                activeOpacity={0.8}
+                onPress={() =>
+                  router.push({
+                    pathname: '/lecture/new',
+                    params: scopeCourseId ? { courseId: scopeCourseId } : undefined,
+                  } as any)
+                }
+                accessibilityRole="button"
+                accessibilityLabel="Upload a file"
+              >
+                <FontAwesome name="cloud-upload" size={13} color={colors.brand} />
+                <Text style={[styles.newBtnText, { color: colors.brand }]}>Upload</Text>
+              </TouchableOpacity>
+            </View>
           </>
         )}
       </ScrollView>
@@ -249,7 +285,22 @@ const styles = StyleSheet.create({
     marginTop: 22,
   },
   emptyBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  // The secondary way in. Outlined rather than filled so the two buttons read
+  // as a choice with a recommendation, not two equal shouts — except on web,
+  // where recording does not exist and this is the only button on screen.
+  emptyBtnAlt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    paddingHorizontal: 22,
+    paddingVertical: 13,
+    marginTop: 12,
+  },
+  newRow: { flexDirection: 'row', gap: 10 },
   newBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

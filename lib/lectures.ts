@@ -632,3 +632,80 @@ export function formatLectureDuration(totalSeconds: number): string {
   if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
   return `${m}:${String(sec).padStart(2, '0')}`;
 }
+
+// ── Notes from an uploaded document ─────────────────────────────────────────
+// A student hands Semora a PDF, a photo of the board, a slide deck or an
+// essay, and gets back what a recorded lecture produces: structured notes, and
+// from those a quiz and a flashcard deck.
+//
+// The upload half is NOT reimplemented here. `useUploadCourseNote` already
+// stores the file, extracts its text, handles the formats iCloud and Drive
+// mislabel as octet-stream, and rolls back only when the document itself is
+// the problem. This hook takes that finished note and gives it the same shape
+// a transcript has, so everything downstream stops caring where the words came
+// from (migration 072).
+//
+// status is 'transcribed', not 'ready': that is precisely what the row is —
+// source text present, notes not written yet — and it is the state the lecture
+// screen already knows how to act on, so the generate-notes call it makes on
+// arrival needs no special case for documents.
+export function useCreateDocumentNote(courseId?: string | null) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { noteId: string; filename: string; title?: string }) => {
+      const { data: session } = await supabase.auth.getUser();
+      const userId = session.user?.id;
+      if (!userId) throw new Error('Not signed in');
+
+      // The text extracted at upload time. Read back rather than passed in, so
+      // this cannot run against a file whose extraction silently failed.
+      const { data: note, error: noteErr } = await supabase
+        .from('course_notes')
+        .select('extracted_text, filename')
+        .eq('id', input.noteId)
+        .maybeSingle();
+      if (noteErr) throw noteErr;
+
+      const text = typeof note?.extracted_text === 'string' ? note.extracted_text.trim() : '';
+      if (!text) {
+        // Reached when the file is a scan of handwriting, an image with no
+        // legible text, or a PDF of pure figures. Saying so beats generating
+        // notes from nothing and handing back a confident page of invention.
+        const err = new Error(
+          "We couldn't read any text in that file. Try a clearer photo, or a PDF with selectable text.",
+        );
+        (err as any).code = 'NO_TEXT';
+        throw err;
+      }
+
+      const title = (input.title?.trim() || stripExtension(input.filename)).slice(0, 120);
+      const { data, error } = await supabase
+        .from('lecture_recordings')
+        .insert({
+          user_id: userId,
+          course_id: courseId ?? null,
+          title,
+          transcript: text,
+          status: 'transcribed',
+          source: 'document',
+          source_filename: input.filename,
+        })
+        .select('id')
+        .single();
+      if (error) throw error;
+      track('document_note_created', { has_course: Boolean(courseId) });
+      return data.id as string;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['lectures'] });
+      qc.invalidateQueries({ queryKey: ['freeActionUsed'] });
+    },
+  });
+}
+
+// "Week 4 slides.pdf" → "Week 4 slides". The extension is noise in a title and
+// the original filename is kept on the row anyway (072: source_filename).
+function stripExtension(filename: string): string {
+  const cut = filename.lastIndexOf('.');
+  return cut > 0 ? filename.slice(0, cut) : filename;
+}
