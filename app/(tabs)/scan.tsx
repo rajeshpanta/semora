@@ -29,7 +29,7 @@ import { useColors } from '@/lib/theme';
 import { HEIC_HELP, isHeic, transcodeHeicToJpeg } from '@/lib/heic';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
-import { useSemesters, useCourses, useScanCount, scanCountQueryOptions, FREE_SCAN_LIMIT } from '@/lib/queries';
+import { useSemesters, useCourses, useFreeActionUsed, freeActionUsedQueryOptions } from '@/lib/queries';
 import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
 import { MAX_SCAN_PAGES, MAX_SCAN_RAW_BYTES, scanTooLargeMessage, type SyllabusPage } from '@/lib/ai-extraction';
 import { getFileSize } from '@/lib/readFileBase64';
@@ -62,7 +62,7 @@ export default function ScanScreen() {
   const qc = useQueryClient();
   const { data: semesters = [] } = useSemesters();
   const { data: courses = [] } = useCourses(selectedSemesterId);
-  const { data: scanCount = 0, isLoading: scanCountLoading } = useScanCount();
+  const { data: freeActionUsed = false, isLoading: freeActionLoading } = useFreeActionUsed();
 
   // The free tier has TWO separate caps — scans AND courses-per-semester — and
   // a scan that extracts a NEW course trips the course cap even with scans
@@ -78,35 +78,35 @@ export default function ScanScreen() {
   // catching it here is cleaner UX).
   useFocusEffect(
     useCallback(() => {
-      qc.invalidateQueries({ queryKey: ['scanCount'] });
+      qc.invalidateQueries({ queryKey: ['freeActionUsed'] });
     }, [qc]),
   );
 
   const checkScanLimit = async (): Promise<boolean> => {
     if (isPro) return true;
 
-    // WAIT for the count rather than refusing on it. The "+" menu deep-links
+    // WAIT for the answer rather than refusing on it. The "+" menu deep-links
     // straight into a picker, which fires on this screen's first commit — long
-    // before the count can have loaded. Alerting "Please Wait" there turned the
+    // before the check can have loaded. Alerting "Please Wait" there turned the
     // menu's whole purpose (skip the chooser, go straight to the camera) into a
-    // dead tap that never retried once the count arrived. ensureQueryData
+    // dead tap that never retried once the answer arrived. ensureQueryData
     // resolves immediately when the value is already cached, so the common path
     // is unchanged.
-    let effectiveCount = scanCount;
-    if (scanCountLoading) {
+    let used = freeActionUsed;
+    if (freeActionLoading) {
       try {
-        effectiveCount = await qc.ensureQueryData(scanCountQueryOptions);
+        used = await qc.ensureQueryData(freeActionUsedQueryOptions);
       } catch {
-        // The server enforces this limit too, and refusing to open a picker
-        // because a COUNT query failed punishes the user for our outage.
+        // The server enforces this too, and refusing to open a picker
+        // because one RPC failed punishes the user for our outage.
         return true;
       }
     }
 
-    if (effectiveCount >= FREE_SCAN_LIMIT) {
+    if (used) {
       Alert.alert(
-        'Scan Limit Reached',
-        `You've used your ${FREE_SCAN_LIMIT} free scans this month. They reset on the 1st — or upgrade to Pro for unlimited syllabus scanning.`,
+        'Free Scan Used',
+        "You've already used your free action — a syllabus scan or a lecture recording. Upgrade to Pro for unlimited scanning and lectures.",
         [
           { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
           { text: 'Cancel', style: 'cancel' },
@@ -114,23 +114,24 @@ export default function ScanScreen() {
       );
       return false;
     }
-    // Heads-up before the user burns their last free scan, so they can
-    // decide to upgrade instead of finding out only after the fact.
-    if (scanCount === FREE_SCAN_LIMIT - 1) {
-      return new Promise((resolve) => {
-        Alert.alert(
-          'Last Free Scan',
-          `This will use your last of ${FREE_SCAN_LIMIT} free scans this month. After this you'll need Pro (or wait for the monthly reset) for more.`,
-          [
-            { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-            { text: 'Upgrade', onPress: () => { router.push('/paywall' as any); resolve(false); } },
-            { text: 'Use Last Scan', onPress: () => resolve(true) },
-          ],
-          { cancelable: true, onDismiss: () => resolve(false) },
-        );
-      });
-    }
-    return true;
+
+    // Heads-up before the student spends the only free action they get, since
+    // there is no monthly reset to fall back on. Lecture recording draws from
+    // the same one, so it is named here — finding that out afterwards, having
+    // meant to save it for a lecture, is the version of this that feels like a
+    // trick rather than a limit.
+    return new Promise((resolve) => {
+      Alert.alert(
+        'Use Your Free Scan?',
+        'Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it. Pro includes unlimited scans and lectures.',
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'See Pro', onPress: () => { router.push('/paywall' as any); resolve(false); } },
+          { text: 'Use Free Scan', onPress: () => resolve(true) },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) },
+      );
+    });
   };
 
   useEffect(() => {
@@ -174,10 +175,6 @@ export default function ScanScreen() {
       },
     } as any);
   };
-
-  // Remaining free scans for FREE users — clamped to 0 so the copy never
-  // reads "-1 left" if the server count ever overshoots the limit.
-  const remainingScans = Math.max(FREE_SCAN_LIMIT - scanCount, 0);
 
   // expo-image-picker's WEB build resolves its promise from inside a `change`
   // listener that has no reject path: if the picked file has no MIME mapping
@@ -532,25 +529,27 @@ export default function ScanScreen() {
           Snap it, upload it, or drag it in.{'\n'}We'll pull every deadline.
         </Text>
 
-        {/* Free-scan usage. Pro = unlimited; free users see how many of
-            their FREE_SCAN_LIMIT scans remain so the upsell isn't a
-            surprise. Hidden while the count is still loading. */}
+        {/* Free-tier usage. Pro = unlimited; free users get ONE AI action for
+            the life of the account, shared with lecture recording. The pill
+            names the lecture half even here, because the alternative is a
+            student spending their one action on a scan without ever learning
+            it was also their lecture. Hidden while the answer is loading. */}
         {isPro ? (
           <View style={[styles.scanCountPill, { backgroundColor: colors.brand50 }]}>
             <FontAwesome name="check-circle" size={12} color={colors.brand} />
             <Text style={[styles.scanCountText, { color: colors.brand }]}>Unlimited scans</Text>
           </View>
-        ) : !scanCountLoading ? (
-          <View style={[styles.scanCountPill, { backgroundColor: remainingScans === 0 ? colors.coral50 : colors.brand50 }]}>
+        ) : !freeActionLoading ? (
+          <View style={[styles.scanCountPill, { backgroundColor: freeActionUsed ? colors.coral50 : colors.brand50 }]}>
             <FontAwesome
-              name={remainingScans === 0 ? 'lock' : 'bolt'}
+              name={freeActionUsed ? 'lock' : 'bolt'}
               size={12}
-              color={remainingScans === 0 ? colors.coral : colors.brand}
+              color={freeActionUsed ? colors.coral : colors.brand}
             />
-            <Text style={[styles.scanCountText, { color: remainingScans === 0 ? colors.coral : colors.brand }]}>
-              {remainingScans === 0
-                ? `No free scans left this month`
-                : `${remainingScans} of ${FREE_SCAN_LIMIT} free scans left this month`}
+            <Text style={[styles.scanCountText, { color: freeActionUsed ? colors.coral : colors.brand }]}>
+              {freeActionUsed
+                ? 'Free action used — upgrade for unlimited'
+                : '1 free scan or lecture included'}
             </Text>
           </View>
         ) : null}
@@ -563,9 +562,9 @@ export default function ScanScreen() {
           <View style={[styles.courseCapNote, { backgroundColor: colors.amber50, borderColor: colors.amber }]}>
             <FontAwesome name="info-circle" size={13} color={colors.amber} style={{ marginTop: 1 }} />
             <Text style={[styles.courseCapText, { color: colors.ink2 }]}>
-              {remainingScans > 0
-                ? `You have ${remainingScans} free scan${remainingScans === 1 ? '' : 's'} left, but you're at the free limit of ${FREE_COURSE_LIMIT} courses this semester. Re-scan a course you already have, or upgrade to Pro to add a new one.`
-                : `You've used your free scans and reached the ${FREE_COURSE_LIMIT}-course limit. Upgrade to Pro for unlimited scans and courses.`}
+              {!freeActionUsed
+                ? `Your free action is still available, but you're at the free limit of ${FREE_COURSE_LIMIT} courses this semester. Re-scan a course you already have, or upgrade to Pro to add a new one.`
+                : `You've used your free action and reached the ${FREE_COURSE_LIMIT}-course limit. Upgrade to Pro for unlimited scans, lectures, and courses.`}
             </Text>
           </View>
         )}

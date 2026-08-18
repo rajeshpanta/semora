@@ -12,7 +12,7 @@ import type { CourseMeeting } from '@/types/database';
 import { COURSE_COLORS, COURSE_ICONS, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
 import { suggestCurrentSemesterName } from '@/lib/semesters';
-import { FREE_SCAN_LIMIT, freeScanWindowStartIso } from '@/lib/queries';
+import { freeActionUsedQueryOptions } from '@/lib/queries';
 
 export const FREE_COURSE_LIMIT = 4;
 export const FREE_SEMESTER_LIMIT = 1;
@@ -23,7 +23,13 @@ export const FREE_SEMESTER_LIMIT = 1;
 // table so the client surfaces an Upgrade prompt instead of a generic
 // error when the client-cached isPro state is stale.
 export function isFreeLimitError(err: any): boolean {
-  return err?.code === 'P0001' || /free accounts support|\d+ free scans/i.test(err?.message ?? '');
+  // `free scan` (singular) matches the one-free-action wording; the older
+  // `\d+ free scans` pattern stays because the DB trigger, the edge function
+  // and shipped builds can each still be a deploy behind one another, and a
+  // missed match here means the paywall never opens — the user just sees a
+  // raw error and no way to upgrade.
+  return err?.code === 'P0001'
+    || /free accounts support|\d+ free scans|free scan\b|free action/i.test(err?.message ?? '');
 }
 
 export interface ProcessResult {
@@ -66,22 +72,24 @@ export async function processSyllabus(
 ): Promise<ProcessResult> {
   const startTime = Date.now();
 
-  // 0. Enforce the free scan limit BEFORE any writes. The DB trigger on
+  // 0. Check the free allowance BEFORE any writes. The DB trigger on
   //    syllabus_uploads fires at step 4 — by then the semester, course,
   //    meetings, and grade scale have already been created, leaving
   //    orphan rows when the limit trips (and burning AI compute).
-  //    Message wording must keep the "N free scans" pattern so
-  //    isFreeLimitError still surfaces the Upgrade prompt.
-  //    Counting window = current calendar month (UTC), matching useScanCount,
-  //    the edge function, and the enforce_free_scan_limit trigger exactly.
+  //    Message wording must stay matchable by isFreeLimitError above, or the
+  //    refusal surfaces as a raw error with no Upgrade prompt.
   if (!useAppStore.getState().isPro) {
-    const { count } = await supabase
-      .from('syllabus_uploads')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .gte('created_at', freeScanWindowStartIso());
-    if ((count ?? 0) >= FREE_SCAN_LIMIT) {
-      throw new Error(`You've used your ${FREE_SCAN_LIMIT} free scans this month. Upgrade to Pro for unlimited syllabus scanning.`);
+    // One free AI action per account, shared with lecture recording. Asked of
+    // the database (migration 071), not counted here — a client-side count of
+    // syllabus_uploads was both wrong (the user can delete rows) and a fourth
+    // copy of a rule that already disagreed with itself across layers.
+    const { data: used, error } = await supabase.rpc('my_free_action_used');
+    // A failed check does NOT block the scan: the DB trigger and the edge
+    // function both gate this independently, so the cost of being wrong here
+    // is a slightly later paywall, while the cost of failing closed is a
+    // paying-eligible student locked out by an RPC blip.
+    if (!error && used === true) {
+      throw new Error("You've used your free scan. Upgrade to Pro for unlimited syllabus scanning and lecture recordings.");
     }
   }
 

@@ -25,10 +25,10 @@ const GLOBAL_DAILY_CAP = (() => {
   return Number.isFinite(raw) && raw > 0 ? raw : 1500;
 })();
 
-// Free tier: 5 successful extractions per CALENDAR MONTH (UTC), matching
-// lib/queries FREE_SCAN_LIMIT and the enforce_free_scan_limit trigger.
-// Enforced server-side below so it can't be bypassed.
-const FREE_SCAN_LIMIT = 5;
+// Free tier is ONE AI action per account for life — scan or lecture — and the
+// rule is NOT duplicated here. See migration 071: free_action_used(). The old
+// FREE_SCAN_LIMIT constant is gone deliberately; a second copy of a number is
+// how the four enforcement layers drifted apart the first time.
 
 // Multi-page photo scans: each page is one inline_data part. 5 pages of
 // phone photos (~2-4MB base64 each) stays comfortably under the body cap
@@ -207,6 +207,32 @@ async function logCall(
       error_code: errorCode ?? null,
       duration_ms: durationMs,
     });
+
+    // Charge the account's one free action, here and only here.
+    //
+    // WHY THIS SPOT. This helper runs at exactly one moment: a real syllabus
+    // was extracted and is being returned. Charging earlier would bill a
+    // student for a photo of a menu that got rejected as NOT_SYLLABUS;
+    // charging in the client would make the quota opt-in. Only 'success'
+    // counts, matching lecture-transcribe, which explicitly does not charge a
+    // recording whose transcription failed.
+    //
+    // scan_usage_log, not syllabus_uploads: the user can delete an upload, and
+    // at a one-scan allowance "delete and rescan" would be the obvious way
+    // around the paywall. This table is service-role-only (migration 071).
+    //
+    // A failure here is logged, never thrown. The extraction is already done
+    // and about to be handed back; turning a bookkeeping error into a failed
+    // request would take the student's work away over our accounting.
+    if (status === 'success') {
+      const { error: chargeErr } = await adminClient.from('scan_usage_log').insert({
+        user_id: userId,
+        status: 'success',
+      });
+      if (chargeErr) {
+        console.error(JSON.stringify({ lvl: 'error', fn: 'parse-syllabus', evt: 'free_action_charge_failed', err_message: String(chargeErr.message ?? chargeErr).slice(0, 200) }));
+      }
+    }
   } catch (err) {
     console.error(JSON.stringify({ lvl: 'error', fn: 'parse-syllabus', evt: 'log_call_failed', err_message: String(err).slice(0, 200) }));
   }
@@ -350,45 +376,28 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
     if (proResult !== true) {
-      // Effective scan count = max(server-side successes, client-inserted
-      // uploads). gemini_call_log 'success' rows are written by THIS function
-      // (step 6) only after a real syllabus was extracted and returned —
-      // NOT_SYLLABUS rejections and failures log status='failed' and never
-      // count. Counting only syllabus_uploads (as before) let a scripted
-      // client that skips the post-extraction insert take unlimited free
-      // extractions; counting only gemini_call_log would miss legacy scans
-      // made before this deploy. max() closes the bypass while legacy data
-      // still counts. Trade-off, accepted: an extraction the client abandons
-      // after the server returned it still counts — the paid AI work was
-      // done and delivered.
-      // Free scans are per CALENDAR MONTH (UTC), not lifetime. This window
-      // boundary MUST match the client (freeScanWindowStartIso in queries.ts)
-      // and the enforce_free_scan_limit DB trigger exactly, or the layers
-      // disagree. Anchored to UTC month start.
-      const now = new Date();
-      const monthStartIso = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-      const [successRes, uploadRes] = await Promise.all([
-        adminClient
-          .from('gemini_call_log')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .eq('status', 'success')
-          .gte('created_at', monthStartIso),
-        adminClient
-          .from('syllabus_uploads')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .gte('created_at', monthStartIso),
-      ]);
-      if (successRes.error || uploadRes.error) {
-        log.error('scan_count_failed', errorFields(successRes.error ?? uploadRes.error));
+      // ONE free AI action per account, lifetime — a syllabus scan or a
+      // lecture recording, whichever the student reaches first. The rule lives
+      // in free_action_used() (migration 071) and is asked, never re-derived:
+      // this function, lecture-transcribe, the DB trigger and the client all
+      // call the same thing, because the previous design repeated a monthly
+      // count in four places and 044's own comment warned they would drift.
+      //
+      // Fail closed AS TRANSIENT (503) for the same reason as is_pro above: an
+      // RPC blip must not silently hand out a second free action, and must not
+      // accuse a user of spending one they still have.
+      const { data: usedResult, error: usedErr } = await adminClient
+        .rpc('free_action_used', { uid: userId });
+      if (usedErr) {
+        log.error('free_action_check_failed', errorFields(usedErr));
         return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
       }
-      const scanCount = Math.max(successRes.count ?? 0, uploadRes.count ?? 0);
-
-      if (scanCount >= FREE_SCAN_LIMIT) {
+      if (usedResult === true) {
         return jsonResponse(
-          { error: `You've used your ${FREE_SCAN_LIMIT} free scans this month. Upgrade to Pro for unlimited syllabus scanning.` },
+          {
+            error: "You've used your free scan. Upgrade to Pro for unlimited syllabus scanning and lecture recordings.",
+            code: 'FREE_ACTION_USED',
+          },
           402,
         );
       }

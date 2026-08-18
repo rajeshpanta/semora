@@ -195,30 +195,20 @@ export function useLectureSegments(lectureId: string | null | undefined) {
 }
 
 /**
- * Whether this account has already spent its one free lecture.
+ * Whether this account has already spent its ONE free AI action.
  *
- * Read-only mirror of the server gate so the UI can show the paywall BEFORE the
- * microphone opens rather than after a recording exists. `lecture_usage_log` is
- * service-role-only, so a client cannot read it — the proxy is "has any lecture
- * ever reached a transcript". That can drift (a lecture deleted after
- * transcription reads as unused here but is still charged server-side), which
- * is why this is advisory only: `startLecture` is the real gate and returns
- * FREE_LECTURE_USED regardless of what this said.
+ * The allowance is shared: a syllabus scan and a lecture recording draw from
+ * the same single action (migration 071). So this is no longer a lecture
+ * question, and the old lecture-only hook is gone.
+ *
+ * Unlike the proxy it replaces — "has any lecture ever reached a transcript",
+ * which read as unused once the student deleted the recording — this asks the
+ * database for the real answer. my_free_action_used() is SECURITY DEFINER over
+ * two service-role-only ledgers, so the client gets the truth without being
+ * able to read or write either one. It can no longer drift from the server
+ * gate; `startLecture` remains the authority, but they now agree.
  */
-export function useFreeLectureUsed() {
-  return useQuery({
-    queryKey: ['lectureFreeUsed'],
-    staleTime: 30_000,
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('lecture_recordings')
-        .select('id', { count: 'exact', head: true })
-        .in('status', ['transcribed', 'generating', 'ready']);
-      if (error) throw error;
-      return (count ?? 0) > 0;
-    },
-  });
-}
+export { useFreeActionUsed } from '@/lib/queries';
 
 // ── Lifecycle ───────────────────────────────────────────────────────────────
 
@@ -582,7 +572,7 @@ export function useDeleteLecture() {
     onSuccess: () => {
       track('lecture_deleted', { screen: 'lecture_detail' });
       qc.invalidateQueries({ queryKey: lectureKeys.all });
-      qc.invalidateQueries({ queryKey: ['lectureFreeUsed'] });
+      qc.invalidateQueries({ queryKey: ['freeActionUsed'] });
     },
   });
 }

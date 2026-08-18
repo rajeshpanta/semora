@@ -103,8 +103,8 @@ type Locale = 'en' | 'es';
 // are already localized at the source.
 const MSG = {
   freeUsed: {
-    en: "You've used your free lecture recording. Upgrade to Pro for unlimited lectures.",
-    es: 'Ya usaste tu grabación de clase gratuita. Hazte Pro para grabar clases sin límite.',
+    en: "You've used your free action. Upgrade to Pro for unlimited lectures and syllabus scans.",
+    es: 'Ya usaste tu acción gratuita. Hazte Pro para grabar clases y escanear programas sin límite.',
   },
   atCapacity: {
     en: 'Lecture transcription is at capacity today. Please try again tomorrow.',
@@ -253,8 +253,40 @@ async function chargedLectureCount(
   return count ?? 0;
 }
 
-// ── start ───────────────────────────────────────────────────────────────────
-// Runs BEFORE the microphone opens. Creates the row the client will hang
+/**
+ * Has this account spent its ONE free AI action, on either side?
+ *
+ * The free tier is a single action for the life of the account (migration
+ * 071): one syllabus scan OR one lecture. So a student who already scanned a
+ * syllabus has nothing left for a lecture, and the reverse.
+ *
+ * Reads the two ledgers directly rather than calling free_action_used(),
+ * because that function cannot express `exceptLectureId` — and excluding the
+ * lecture in progress is what keeps an authorized recording able to finish.
+ *
+ * Returns null on a read failure so callers can fail closed as TRANSIENT
+ * rather than either granting a second free action or accusing a student of
+ * spending one they still have.
+ */
+async function freeActionSpent(
+  admin: any,
+  userId: string,
+  exceptLectureId?: string | null,
+): Promise<boolean | null> {
+  const lectures = await chargedLectureCount(admin, userId, exceptLectureId);
+  if (lectures === null) return null;
+  if (lectures >= FREE_LECTURE_ALLOWANCE) return true;
+
+  const { count, error } = await admin
+    .from('scan_usage_log')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('status', 'success');
+  if (error) return null;
+  return (count ?? 0) > 0;
+}
+
+// ── start ───────────────────────────────────────────────────────────────────// Runs BEFORE the microphone opens. Creates the row the client will hang
 // segments off, and reserves the capacity the recording may consume.
 async function handleStart(
   admin: any,
@@ -268,13 +300,13 @@ async function handleStart(
   const courseId = typeof body.courseId === 'string' && body.courseId ? body.courseId : null;
 
   if (!isPro) {
-    const used = await chargedLectureCount(admin, userId);
-    if (used === null) {
+    const spent = await freeActionSpent(admin, userId);
+    if (spent === null) {
       log.error('usage_count_failed');
       return jsonResponse({ error: t('transient', locale) }, 503);
     }
-    if (used >= FREE_LECTURE_ALLOWANCE) {
-      log.info('free_lecture_exhausted', { used });
+    if (spent) {
+      log.info('free_action_exhausted');
       return jsonResponse({ error: t('freeUsed', locale), code: 'FREE_LECTURE_USED' }, 402);
     }
   }
@@ -500,6 +532,13 @@ async function handleSegment(
   // Re-check the free allowance here too, not just at start: `start` may have
   // run days ago, or a second lecture may have completed since. Excluding this
   // lecture keeps an authorized recording able to finish.
+  //
+  // DELIBERATELY lecture-only — this does NOT use freeActionSpent(). A student
+  // who started a recording and then scanned a syllabus would otherwise be
+  // told, with the audio already captured, that it cannot be transcribed. This
+  // file's own rule: refusing a lecture AFTER it was recorded is the worst
+  // possible failure. `start` is where the shared allowance is enforced; once
+  // a recording is authorized, only another completed LECTURE can stop it.
   if (!isPro) {
     const used = await chargedLectureCount(admin, userId, lectureId);
     if (used === null) {

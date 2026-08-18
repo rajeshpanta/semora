@@ -349,77 +349,30 @@ export function useHasPendingTasks() {
   });
 }
 
-// Free users get FREE_SCAN_LIMIT syllabus scans per CALENDAR MONTH (not
-// lifetime). The window resets at the start of each month, UTC. Everything
-// that counts scans — this hook, the processSyllabus pre-check, the
-// parse-syllabus edge function, and the enforce_free_scan_limit DB trigger —
-// MUST use this same UTC month boundary and the same limit, or the three
-// layers disagree and the user is either blocked early or bypasses the cap.
-export const FREE_SCAN_LIMIT = 5;
-
-/**
- * Start of the current calendar month, in UTC, as an ISO string — the lower
- * bound of the free-scan counting window. Anchored to UTC (Date.UTC) so it
- * exactly matches the DB trigger's `date_trunc('month', now() AT TIME ZONE
- * 'UTC') AT TIME ZONE 'UTC'` and the edge function's identical computation.
- */
-export function freeScanWindowStartIso(): string {
-  const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
-}
-
-/**
- * Shared so callers can AWAIT the count instead of racing it.
- *
- * The scan screen's gate used to alert "Please Wait" whenever this query had
- * not resolved yet, which broke the "+" menu's whole point: the deep-linked
- * picker fires on the screen's very first commit, before any fetch can finish,
- * so a user tapping "Take a photo" from a cold start got an alert instead of a
- * camera — and nothing retried once the count arrived.
- */
-export const scanCountQueryOptions = {
-  queryKey: ['scanCount'] as const,
-    // Always treat as stale so the count is re-fetched whenever the scan tab
-    // mounts/focuses (and on explicit invalidation after a scan completes).
-    // A 60s-cached count let the pill claim "free scans left" right after the
-    // user burned one — the server gate then disagreed, which read as a bug.
-    staleTime: 0,
-    queryFn: async () => {
-      const userId = await getUserId();
-      // Mirror the server's free-scan gate EXACTLY (parse-syllabus step 2b):
-      // effective scans this month = max(gemini_call_log 'success' rows,
-      // syllabus_uploads rows) since the start of the UTC month. Counting
-      // uploads alone let the pill promise a free scan the server then 402'd —
-      // a client that abandoned an extraction (or an old build that failed the
-      // post-extraction insert) has a success-log row but no upload row. The
-      // call-log read needs migration 022's SELECT-own-rows policy.
-      const monthStart = freeScanWindowStartIso();
-      const [uploadsRes, callLogRes] = await Promise.all([
-        supabase
-          .from('syllabus_uploads')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .gte('created_at', monthStart),
-        supabase
-          .from('gemini_call_log')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .eq('status', 'success')
-          .gte('created_at', monthStart),
-      ]);
-      if (uploadsRes.error) throw uploadsRes.error;
-      const uploads = uploadsRes.count ?? 0;
-      // Degrade gracefully, in this order: if the call-log read fails (e.g.
-      // migration 022 not yet applied in prod), fall back to uploads-only
-      // counting — a slightly optimistic pill beats a broken scan tab, and
-      // the server gate still has the final say at scan time.
-      if (callLogRes.error) return uploads;
-      return Math.max(uploads, callLogRes.count ?? 0);
-    },
+// ── The free tier ───────────────────────────────────────────────
+// ONE AI action for the lifetime of the account: a syllabus scan OR a lecture
+// recording, whichever the student reaches for first. After that, the paywall.
+//
+// The rule is NOT re-derived here. It lives in the database as
+// free_action_used() (migration 071), and the client, both edge functions and
+// the DB trigger all ask that same function. The previous design kept a copy
+// of "5 per UTC month" in four places, with a comment in each begging the next
+// person to keep them in sync; they drifted anyway. One question, one answer.
+export const freeActionUsedQueryOptions = {
+  queryKey: ['freeActionUsed'] as const,
+  // Always stale, for the reason the old scan pill was: a cached "you still
+  // have your free action" shown right after the user spent it makes the
+  // server's refusal look like a bug rather than the paywall working.
+  staleTime: 0,
+  queryFn: async (): Promise<boolean> => {
+    const { data, error } = await supabase.rpc('my_free_action_used');
+    if (error) throw error;
+    return data === true;
+  },
 };
 
-export function useScanCount() {
-  return useQuery(scanCountQueryOptions);
+export function useFreeActionUsed() {
+  return useQuery(freeActionUsedQueryOptions);
 }
 
 // Latest uploaded syllabus for a course. Used by the course detail

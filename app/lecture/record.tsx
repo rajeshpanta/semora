@@ -15,7 +15,7 @@ import { useI18n } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
 import { useLectureRecorder } from '@/lib/lectureRecorder';
 import { MAX_RECORDING_SECONDS } from '@/lib/lectureRecordingOptions';
-import { formatLectureDuration, useFreeLectureUsed } from '@/lib/lectures';
+import { formatLectureDuration, useFreeActionUsed } from '@/lib/lectures';
 import {
   LectureConsentSheet,
   hasAcceptedLectureConsent,
@@ -50,7 +50,7 @@ export default function RecordLectureScreen() {
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const { data: courses = [] } = useCourses(selectedSemesterId);
   const isPro = useAppStore((s) => s.isPro);
-  const { data: freeLectureUsed } = useFreeLectureUsed();
+  const { data: freeLectureUsed } = useFreeActionUsed();
 
   const navigation = useNavigation();
   const recorder = useLectureRecorder();
@@ -367,8 +367,8 @@ export default function RecordLectureScreen() {
             />
             <Text style={[styles.warnText, { color: colors.ink2 }]}>
               {freeLectureUsed
-                ? "You've used your free lecture recording. Semora Pro includes unlimited lectures."
-                : 'Free accounts include one lecture recording. Semora Pro includes unlimited lectures.'}
+                ? "You've used your free action. Semora Pro includes unlimited lectures and scans."
+                : 'Free accounts include one AI action — this lecture or a syllabus scan. Pro includes unlimited lectures and scans.'}
             </Text>
           </View>
         )}
