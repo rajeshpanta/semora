@@ -5,6 +5,7 @@ import {
   useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useEffect,
+  useState,
   useSyncExternalStore } from 'react';
 import {
   AppState,
@@ -19,7 +20,7 @@ import {
 } from '@/lib/offlineSync';
 import { useColors } from '@/lib/theme';
 import { formatDistanceToNow } from 'date-fns';
-import { useLastServerRead, isStale } from '@/lib/dataFreshness';
+import { useLastServerRead, isStale, refreshActiveData } from '@/lib/dataFreshness';
 
 export function useOfflineSyncStatus() {
   return useSyncExternalStore(
@@ -66,6 +67,8 @@ export function OfflineSyncBridge({ userId }: { userId: string | null }) {
 export function SyncStatusPill({ compact = false }: { compact?: boolean }) {
   const status = useOfflineSyncStatus();
   const lastRead = useLastServerRead();
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
   const colors = useColors();
 
   const nothingPending =
@@ -87,24 +90,44 @@ export function SyncStatusPill({ compact = false }: { compact?: boolean }) {
   if (nothingPending && !stale) return null;
 
   if (nothingPending) {
-    const staleLabel = lastRead
-      ? `Showing data from ${formatDistanceToNow(new Date(lastRead), { addSuffix: true })}`
-      : 'Not synced yet';
+    // Tapping REFRESHES rather than navigating.
+    //
+    // The other states send you to /settings/sync because that screen owns the
+    // resolution UI for conflicts and failed writes. Staleness needs no
+    // resolution UI — it needs a fetch. Sending someone to a settings screen to
+    // read the same sentence again, with a button that is hidden unless they
+    // happen to have pending writes, is telling them twice and helping once.
+    const staleLabel = refreshing
+      ? 'Refreshing…'
+      : lastRead
+        ? `Showing data from ${formatDistanceToNow(new Date(lastRead), { addSuffix: true })}`
+        : 'Not synced yet';
     return (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${staleLabel}. Open sync status.`}
-        onPress={() => router.push('/settings/sync' as any)}
+        accessibilityLabel={`${staleLabel}. Tap to refresh now.`}
+        accessibilityState={{ busy: refreshing }}
+        disabled={refreshing}
+        onPress={async () => {
+          setRefreshing(true);
+          try {
+            await refreshActiveData(queryClient);
+          } finally {
+            // Always clears, so a refresh that fails offline leaves a tappable
+            // pill rather than a spinner that never stops.
+            setRefreshing(false);
+          }
+        }}
         style={[
           styles.pill,
           { borderColor: `${colors.ink3}55`, backgroundColor: `${colors.ink3}12` },
           compact && styles.compact,
         ]}
       >
-        <FontAwesome name="clock-o" size={12} color={colors.ink3} />
+        <FontAwesome name={refreshing ? 'refresh' : 'clock-o'} size={12} color={colors.ink3} />
         <Text numberOfLines={1} style={[styles.label, { color: colors.ink3 }]}>{staleLabel}</Text>
         <View style={styles.spacer} />
-        <FontAwesome name="chevron-right" size={9} color={colors.ink3} />
+        {!refreshing && <Text style={[styles.label, { color: colors.ink3 }]}>Refresh</Text>}
       </Pressable>
     );
   }

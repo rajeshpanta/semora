@@ -114,3 +114,23 @@ export const STALE_AFTER_MS = 15 * 60 * 1000;
 export function isStale(at: number | null, now: number = Date.now()): boolean {
   return at === null || now - at > STALE_AFTER_MS;
 }
+
+/**
+ * Reload everything currently on screen from the server.
+ *
+ * Telling a student their data is two hours old is only half an answer — the
+ * other half is letting them do something about it without hunting for a
+ * gesture that may not exist on the screen they are looking at. Pull-to-refresh
+ * covers some screens and not others; this covers all of them.
+ *
+ * `type: 'active'` on purpose: refetching every cached query would pull seven
+ * days of screens the student is not looking at, on a connection that is
+ * probably the reason the data was stale. Mounted queries are what "reload this
+ * screen" means, and anything else refetches when it is next shown.
+ *
+ * Resolves when the refetches settle, so a caller can show a spinner for the
+ * real duration rather than a fixed guess.
+ */
+export async function refreshActiveData(queryClient: QueryClient): Promise<void> {
+  await queryClient.refetchQueries({ type: 'active' });
+}

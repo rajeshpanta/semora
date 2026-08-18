@@ -1,6 +1,7 @@
 import { TouchableOpacity } from '@/components/LocalizedReactNative';
 import { Alert, Text } from '@/components/LocalizedReactNative';
 import {
+  useCallback,
   useEffect,
   useState } from 'react';
 import {
@@ -10,10 +11,12 @@ import {
   Platform,
   ActivityIndicator,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTasks, useDeleteSemester, useGpaScale, useSemesterGradeCategories } from '@/lib/queries';
@@ -36,6 +39,12 @@ export default function CoursesScreen() {
   const { contentMaxWidth, isWide, width } = useResponsive();
   const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    queryClient.invalidateQueries().then(() => setRefreshing(false));
+  }, [queryClient]);
 
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const setSelectedSemester = useAppStore((s) => s.setSelectedSemester);
@@ -212,7 +221,16 @@ export default function CoursesScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
-      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
+        showsVerticalScrollIndicator={false}
+        // Courses is a primary tab and was the only one without pull-to-refresh
+        // — a student looking at a stale grade had to leave the screen to do
+        // anything about it. Matches Today's handler exactly.
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
+        }
+      >
 
         {/* Header */}
         <View style={styles.headerRow}>

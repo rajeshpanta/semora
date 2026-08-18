@@ -15,8 +15,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSession } from '@/app/_layout';
+import { useState } from 'react';
 import { useOfflineSyncStatus } from '@/components/OfflineSyncBridge';
-import { useLastServerRead } from '@/lib/dataFreshness';
+import { useLastServerRead, refreshActiveData } from '@/lib/dataFreshness';
 import {
   flushOfflineQueue,
   listSyncConflicts,
@@ -59,6 +60,18 @@ export default function SyncSettingsScreen() {
   // Parked (permanently-failed) or still-pending changes both mean a manual retry
   // can still recover something — surface the button whenever either is nonzero.
   const canRetry = status.pendingCount > 0 || status.failedCount > 0;
+
+  const [reloading, setReloading] = useState(false);
+  const reload = async () => {
+    setReloading(true);
+    try {
+      await refreshActiveData(queryClient);
+    } finally {
+      // Cleared whatever happened, so a failed reload leaves a usable button
+      // rather than a permanent spinner.
+      setReloading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
@@ -110,6 +123,29 @@ export default function SyncSettingsScreen() {
             <Text style={styles.retryText}>{status.isSyncing ? 'Syncing…' : 'Try sync now'}</Text>
           </TouchableOpacity>
         )}
+
+        {/* Always available, unlike "Try sync now" above, which only appears
+            when this device has edits waiting. Those are opposite directions:
+            that button pushes what you changed, this pulls what everyone else
+            did. A student whose data is stale has nothing waiting to push, so
+            the only button on this screen was invisible to exactly the person
+            who came here to fix it. */}
+        <TouchableOpacity
+          onPress={reload}
+          disabled={!status.isOnline || reloading}
+          style={[
+            styles.retry,
+            { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.line, opacity: !status.isOnline ? 0.45 : 1 },
+          ]}
+          accessibilityRole="button"
+          accessibilityState={{ busy: reloading }}
+          accessibilityLabel="Reload data from the server"
+        >
+          <FontAwesome name="cloud-download" size={14} color={colors.ink} />
+          <Text style={[styles.retryText, { color: colors.ink }]}>
+            {reloading ? 'Reloading…' : 'Reload data now'}
+          </Text>
+        </TouchableOpacity>
 
         <Text style={[styles.sectionTitle, { color: colors.ink }]}>Conflict resolution</Text>
         <Text style={[styles.explain, { color: colors.ink3 }]}>

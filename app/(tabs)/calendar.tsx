@@ -5,6 +5,7 @@ import {
   useEffect,
   useCallback } from 'react';
 import {
+  RefreshControl,
   View,
   StyleSheet,
   ScrollView,
@@ -15,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { format, startOfMonth, endOfMonth, addMonths, subMonths, isToday as isDateToday } from 'date-fns';
 import { useI18n } from '@/lib/i18n';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
@@ -86,6 +88,12 @@ function getCalendarDays(year: number, month: number, todayDate: Date) {
 }
 
 export default function CalendarScreen() {
+  const queryClient = useQueryClient();
+  const [refreshing, setRefreshing] = useState(false);
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    queryClient.invalidateQueries().then(() => setRefreshing(false));
+  }, [queryClient]);
   const colors = useColors();
   const { locale } = useI18n();
   const { contentMaxWidth } = useResponsive();
@@ -169,7 +177,15 @@ export default function CalendarScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
-      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
+        showsVerticalScrollIndicator={false}
+        // A calendar of deadlines is the screen where stale data misleads most
+        // — a date moved by a professor looks identical to one that has not.
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />
+        }
+      >
         {/* Header */}
         <View style={styles.headerRow}>
           <View>
