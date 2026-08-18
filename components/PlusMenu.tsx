@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TouchableOpacity } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
@@ -257,6 +257,16 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
             {page === 'course' && (
               <>
                 <Text style={[styles.courseHeading, { color: colors.ink3 }]}>Which class is this for?</Text>
+                {/* The guard above opens this page while the query is still in
+                    flight — asking is right, but without this the sheet showed
+                    a heading over nothing for a beat, which reads as "you have
+                    no classes" rather than "still loading". */}
+                {coursesLoading && courses.length === 0 && (
+                  <View style={styles.courseLoading}>
+                    <ActivityIndicator size="small" color={colors.brand} />
+                    <Text style={[styles.rowSub, { color: colors.ink3 }]}>Loading your classes…</Text>
+                  </View>
+                )}
                 {courses.map((c) => (
                   <TouchableOpacity
                     key={c.id}
@@ -342,6 +352,7 @@ const styles = StyleSheet.create({
   sheet: { borderRadius: 24, borderWidth: 0.5, padding: 10, gap: 2 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 14 },
   rowIcon: { width: 40, height: 40, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  courseLoading: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, paddingHorizontal: 10 },
   courseHeading: { fontSize: 12.5, fontWeight: '600', letterSpacing: 0.3, paddingHorizontal: 10, paddingTop: 6, paddingBottom: 2 },
   rowTitle: { fontSize: 15, fontWeight: '600', fontFamily: FONTS.displaySemibold },
   rowSub: { fontSize: 12.5, marginTop: 1 },

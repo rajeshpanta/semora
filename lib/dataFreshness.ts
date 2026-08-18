@@ -54,6 +54,20 @@ export async function loadLastServerRead(): Promise<void> {
  */
 let lastPersistedAt = 0;
 export function markServerRead(at: number = Date.now()) {
+  // MONOTONIC. This only ever moves forward.
+  //
+  // The value arriving here is a query's own dataUpdatedAt, which is often old:
+  // restoring the persisted cache at launch replays up to seven days of queries,
+  // each carrying the timestamp of when IT was fetched, and each satisfying the
+  // success/idle filter that feeds this. Assigning unconditionally meant a
+  // late-settling hydrated query could overwrite a fresh fetch — so a student
+  // could tap Refresh, watch it succeed, and be told their data was three days
+  // old a moment later. That is worse than the silence this replaced: it makes
+  // a working button look broken.
+  //
+  // "When did this device last see fresh data" can only be the newest such
+  // moment, so anything older than what we already have is not news.
+  if (lastReadAt !== null && at <= lastReadAt) return;
   lastReadAt = at;
   emit();
   if (at - lastPersistedAt < 60_000) return;
