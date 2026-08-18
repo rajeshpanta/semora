@@ -50,8 +50,16 @@ Rules:
 - If a section of the transcript is marked as missing or interrupted, do not fabricate what was said there.
 - Never pad. Length must come from real content in the transcript, never from restating the same point in different words.
 
-FORMATTING — the app renders a small subset of markdown and prints anything else literally, as the characters you typed:
-- Headings (#, ##, ###), "- " bullets (indent two spaces to nest), and **bold** are supported.
+FORMATTING — the app renders a small subset of markdown and prints anything else literally, as the characters you typed.
+
+NOTE FOR MAINTAINERS: bold is deliberately NOT requested here even though the
+current app renders it. The shipped App Store build (1.6/46, cut before the
+inline-bold renderer existed) prints ** as literal asterisks, and this function
+serves that build too — a prompt change reaches every version at once, while a
+renderer change reaches only the next one. Re-introduce **bold** once 1.6/46 is
+no longer the floor.
+
+- Headings (#, ##, ###) and "- " bullets (indent two spaces to nest) are supported. Use no inline formatting at all — no bold, no italics.
 - Do NOT use tables, code fences, links, images, blockquotes, numbered lists, or *italics* — they will appear as raw punctuation in the middle of the notes.
 - Write formulas as plain text (E = mc^2, dy/dx). A single * is read as multiplication, never as emphasis.
 
@@ -70,7 +78,7 @@ Organise the substance under your own H3 (###) subheadings, named after what the
 - Keep worked examples intact, showing the working rather than just the answer.
 
 ## Key terms
-- **Term** — definition as the instructor gave it. Omit this heading entirely if the lecture introduced no new terminology.
+- Term — definition as the instructor gave it. Omit this heading entirely if the lecture introduced no new terminology.
 
 ## Action items
 - deadlines, readings, exam dates, logistics (omit this heading entirely if none were mentioned)`;
