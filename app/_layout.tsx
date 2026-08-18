@@ -203,6 +203,37 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => sub.remove();
   }, []);
 
+  // The same account re-check, for the web.
+  //
+  // The effect above is native-only — it exists to reschedule LOCAL
+  // notifications, which the browser has none of — so folding the session
+  // check into it left web covered only at page load. A tab left open for a
+  // day never asked again, which is the exact case that started this: an
+  // account deleted elsewhere, a browser still showing the signed-in app.
+  //
+  // AppState is not used here. react-native-web maps it onto page visibility,
+  // but the browser's own visibilitychange is the direct signal and does not
+  // depend on that mapping holding.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+    const THROTTLE_MS = 2 * 60 * 1000; // matches the native path
+    let lastCheckedAt = 0;
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastCheckedAt < THROTTLE_MS) return;
+      lastCheckedAt = now;
+      supabase.auth
+        .getSession()
+        .then(({ data: { session } }) => {
+          if (session) validateRestoredSession();
+        })
+        .catch(() => {});
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
   useEffect(() => {
     // Tracks the currently-signed-in user id so SIGNED_OUT (where Supabase
     // delivers session=null) can still delete THIS device's push token row
