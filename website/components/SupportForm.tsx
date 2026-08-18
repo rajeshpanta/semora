@@ -114,11 +114,15 @@ export function SupportForm({ supportEmail, locale = 'en' }: SupportFormProps) {
   // route out of static prerendering unless it is wrapped in Suspense, and
   // /support and /es/ayuda are static pages. A query string this page reads
   // once is not worth making both of them render on the client.
+  //
+  // Deferred to a microtask for the same reason Reveal and TableOfContents do
+  // it: reading the URL is a measurement of the environment, not a render
+  // input, and setting state straight from an effect trips the
+  // cascading-render rule. Identical timing, honest about what it is.
   const [topic, setTopic] = useState('');
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('topic') === 'feature') {
-      setTopic(copy.featureTopic);
-    }
+    if (new URLSearchParams(window.location.search).get('topic') !== 'feature') return;
+    queueMicrotask(() => setTopic(copy.featureTopic));
   }, [copy.featureTopic]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
