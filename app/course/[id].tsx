@@ -33,6 +33,7 @@ import type { GradeThreshold } from '@/types/database';
 import { useAppStore } from '@/store/appStore';
 import { MAX_SCAN_PAGES } from '@/lib/ai-extraction';
 import { useColors } from '@/lib/theme';
+import Disclosure from '@/components/Disclosure';
 import { useResponsive, gridItemBasis } from '@/lib/responsive';
 import { getAppLocale } from '@/lib/i18n';
 import { formatMeetings, formatOfficeHours } from '@/lib/schedule';
@@ -507,98 +508,28 @@ export default function CourseDetailScreen() {
     maxWidth: columns >= 3 ? ('32%' as const) : ('49%' as const),
   };
 
-  return (
-    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="always">
-        {/* Header */}
-        <View style={[styles.header, isWide && styles.headerWide, { backgroundColor: displayColor + '12' }]}>
-          <View style={[styles.headerIcon, isWide && styles.headerIconWide, { backgroundColor: displayColor + '25' }]}>
-            <FontAwesome name={displayIcon as any} size={28} color={displayColor} />
-          </View>
-          <View style={isWide ? styles.headerMetaWide : undefined}>
-            {editing ? (
-              <>
-                <TextInput style={[styles.editTitle, isWide && styles.editTitleWide, { color: colors.ink, borderBottomColor: colors.line }]} value={editName} onChangeText={setEditName} placeholder="Course Name" placeholderTextColor={colors.ink3} />
-                <TextInput style={[styles.editSub, isWide && styles.editSubWide, { color: colors.ink2, borderBottomColor: colors.line }]} value={editInstructor} onChangeText={setEditInstructor} placeholder="Instructor" placeholderTextColor={colors.ink3} />
-                <TextInput style={[styles.editSub, isWide && styles.editSubWide, { color: colors.ink2, borderBottomColor: colors.line }]} value={editCreditHours} onChangeText={setEditCreditHours} placeholder="Credit hours" placeholderTextColor={colors.ink3} keyboardType="decimal-pad" />
-              </>
-            ) : (
-              <>
-                <Text style={[styles.headerTitle, isWide && styles.headerTitleWide, { color: colors.ink }]}>{course.name}</Text>
-                {course.instructor && <Text style={[styles.headerSub, isWide && styles.headerSubWide, { color: colors.ink2 }]}>{course.instructor}</Text>}
-              </>
-            )}
-            <View style={[styles.statsRow, isWide && styles.statsRowWide]}>
-              <View style={styles.statBadge}><Text style={styles.statNum}>{pendingCount}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>pending</Text></View>
-              <View style={styles.statBadge}><Text style={[styles.statNum, { color: '#22c55e' }]}>{doneCount}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>done</Text></View>
-              <View style={styles.statBadge}><Text style={[styles.statNum, { color: displayColor }]}>{editing ? editCreditHours || '—' : course.credit_hours ?? 3}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>credits</Text></View>
-            </View>
-          </View>
-        </View>
 
-        {/* Course details — always show, tap empty card to edit. */}
-        {!editing && (() => {
-          const scheduleText = formatMeetings(course.course_meetings);
-          const officeHoursText = formatOfficeHours(course.course_office_hours);
-          const hasAnyMeeting = !!scheduleText;
-          const hasAnyOfficeHours = !!officeHoursText;
-          return (
-            <TouchableOpacity
-              style={[styles.detailsCard, isWide && styles.cardPadWide, { backgroundColor: colors.card, borderColor: colors.line }]}
-              onPress={!hasAnyMeeting && !hasAnyOfficeHours ? startEdit : undefined}
-              activeOpacity={0.8}
-            >
-              <View style={styles.detailRow}>
-                <FontAwesome name="clock-o" size={13} color={hasAnyMeeting ? colors.ink2 : colors.ink3} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.detailLabel, { color: colors.ink3 }]}>Class Schedule</Text>
-                  {scheduleText ? (
-                    <Text style={[styles.detailValue, { color: colors.ink }]}>{scheduleText}</Text>
-                  ) : (
-                    <Text style={[styles.detailEmpty, { color: colors.ink3 }]}>Tap Edit to add a schedule</Text>
-                  )}
-                </View>
-              </View>
-              <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
-              <View style={styles.detailRow}>
-                <FontAwesome name="building-o" size={13} color={hasAnyOfficeHours ? colors.ink2 : colors.ink3} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.detailLabel, { color: colors.ink3 }]}>Office Hours</Text>
-                  {officeHoursText ? (
-                    <Text style={[styles.detailValue, { color: colors.ink }]}>{officeHoursText}</Text>
-                  ) : (
-                    <Text style={[styles.detailEmpty, { color: colors.ink3 }]}>Tap Edit to add office hours</Text>
-                  )}
-                </View>
-              </View>
-              {/* Original syllabus link — only when a successful upload
-                  exists. Tapping shorts out the parent's onPress (which
-                  is the empty-card → startEdit shortcut) by handling
-                  the press itself. */}
-              {syllabus && (
-                <>
-                  <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
-                  <TouchableOpacity
-                    style={styles.detailRow}
-                    onPress={handleViewSyllabus}
-                    activeOpacity={0.7}
-                  >
-                    <FontAwesome name="file-text-o" size={13} color={colors.ink2} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.detailLabel, { color: colors.ink3 }]}>Syllabus</Text>
-                      <Text style={[styles.detailValue, { color: course.color }]} numberOfLines={1}>
-                        View original {syllabus.file_name ? `· ${syllabus.file_name}` : ''}
-                      </Text>
-                    </View>
-                    <FontAwesome name="external-link" size={11} color={colors.ink3} />
-                  </TouchableOpacity>
-                </>
-              )}
-            </TouchableOpacity>
-          );
-        })()}
+  // ── Sections, hoisted ──────────────────────────────────────────────
+  // Declared here rather than inline so reading mode and editing mode can
+  // arrange the SAME JSX differently. Editing needs the grade-scale rows and
+  // the colour picker up top; reading needs the assignment list up top. Only
+  // one arrangement mounts at a time.
 
-        {/* Grade summary */}
+  // What each collapsed row says about itself. A door labelled "Grades" can
+  // only be evaluated by opening it; "Grades · 92% (A)" answers the question
+  // most students came with and leaves the tap to the ones who want more.
+  const gradeSummary =
+    percentage != null
+      ? `${percentage}%${letter ? ` · ${letter}` : ''}`
+      : gradedCount > 0
+        ? `${gradedCount} of ${tasks.length} graded`
+        : 'No grades entered yet';
+
+  const scheduleSummaryText = formatMeetings(course.course_meetings);
+  const infoSummary =
+    scheduleSummaryText || course.instructor || 'Schedule, office hours, syllabus';
+
+  const gradesSection = (
         <View style={[styles.gradeCard, isWide && styles.cardPadWide, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <GradeCard percentage={percentage} letter={letter} gradedCount={gradedCount} totalCount={tasks.length} weightAttempted={weightAttempted} weightTotal={weightTotal} categoryMode={usesCategories} />
 
@@ -733,11 +664,9 @@ export default function CourseDetailScreen() {
             </TouchableOpacity>
           )}
         </View>
+  );
 
-        {/* Study tools — Flashcards + AI Tutor. Both Pro; free users get a
-            locked row that routes to the paywall (consistent with the
-            grade-scale/what-if gate above). */}
-        {!editing && (
+  const studySection = !editing ? (
           <View style={[styles.detailsCard, isWide && styles.cardPadWide, { backgroundColor: colors.card, borderColor: colors.line }]}>
             <StudyToolRow
               icon="clone"
@@ -840,10 +769,74 @@ export default function CourseDetailScreen() {
               onPress={() => router.push('/collaboration' as any)}
             />
           </View>
-        )}
+  ) : null;
 
-        {/* Edit color/icon */}
-        {editing && (
+  const infoSection = !editing ? (
+        // Course details — schedule, office hours, original syllabus.
+        (() => {
+          const scheduleText = formatMeetings(course.course_meetings);
+          const officeHoursText = formatOfficeHours(course.course_office_hours);
+          const hasAnyMeeting = !!scheduleText;
+          const hasAnyOfficeHours = !!officeHoursText;
+          return (
+            <TouchableOpacity
+              style={[styles.detailsCard, isWide && styles.cardPadWide, { backgroundColor: colors.card, borderColor: colors.line }]}
+              onPress={!hasAnyMeeting && !hasAnyOfficeHours ? startEdit : undefined}
+              activeOpacity={0.8}
+            >
+              <View style={styles.detailRow}>
+                <FontAwesome name="clock-o" size={13} color={hasAnyMeeting ? colors.ink2 : colors.ink3} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.detailLabel, { color: colors.ink3 }]}>Class Schedule</Text>
+                  {scheduleText ? (
+                    <Text style={[styles.detailValue, { color: colors.ink }]}>{scheduleText}</Text>
+                  ) : (
+                    <Text style={[styles.detailEmpty, { color: colors.ink3 }]}>Tap Edit to add a schedule</Text>
+                  )}
+                </View>
+              </View>
+              <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
+              <View style={styles.detailRow}>
+                <FontAwesome name="building-o" size={13} color={hasAnyOfficeHours ? colors.ink2 : colors.ink3} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.detailLabel, { color: colors.ink3 }]}>Office Hours</Text>
+                  {officeHoursText ? (
+                    <Text style={[styles.detailValue, { color: colors.ink }]}>{officeHoursText}</Text>
+                  ) : (
+                    <Text style={[styles.detailEmpty, { color: colors.ink3 }]}>Tap Edit to add office hours</Text>
+                  )}
+                </View>
+              </View>
+              {/* Original syllabus link — only when a successful upload
+                  exists. Tapping shorts out the parent's onPress (which
+                  is the empty-card → startEdit shortcut) by handling
+                  the press itself. */}
+              {syllabus && (
+                <>
+                  <View style={[styles.detailDivider, { backgroundColor: colors.line }]} />
+                  <TouchableOpacity
+                    style={styles.detailRow}
+                    onPress={handleViewSyllabus}
+                    activeOpacity={0.7}
+                  >
+                    <FontAwesome name="file-text-o" size={13} color={colors.ink2} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.detailLabel, { color: colors.ink3 }]}>Syllabus</Text>
+                      <Text style={[styles.detailValue, { color: course.color }]} numberOfLines={1}>
+                        View original {syllabus.file_name ? `· ${syllabus.file_name}` : ''}
+                      </Text>
+                    </View>
+                    <FontAwesome name="external-link" size={11} color={colors.ink3} />
+                  </TouchableOpacity>
+                </>
+              )}
+            </TouchableOpacity>
+          );
+        })()
+
+  ) : null;
+
+  const appearanceSection = editing ? (
           <View style={[styles.editCard, isWide && styles.cardPadWide, { backgroundColor: colors.card, borderColor: colors.line }]}>
             <Text style={[styles.editLabel, { color: colors.ink2, marginTop: 0 }]}>Schedule</Text>
             <ScheduleEditor
@@ -884,10 +877,9 @@ export default function CourseDetailScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        )}
+  ) : null;
 
-        {/* Actions */}
-        {!editing && (
+  const actionsSection = !editing ? (
           <View style={styles.actionRow}>
             <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.brand50 }]} onPress={startEdit}>
               <FontAwesome name="pencil" size={14} color={colors.brand} /><Text style={[styles.actionText, { color: colors.brand }]}>Edit</Text>
@@ -895,15 +887,22 @@ export default function CourseDetailScreen() {
             <TouchableOpacity style={[styles.actionBtn, styles.deleteBtn]} onPress={handleDelete}>
               <FontAwesome name="trash-o" size={14} color="#ef4444" /><Text style={[styles.actionText, { color: '#ef4444' }]}>Delete</Text>
             </TouchableOpacity>
-            <View style={{ flex: 1 }} />
+          </View>
+  ) : null;
+
+  const tasksSection = (
+    <>
+        {/* Tasks. The heading carries its own Add button: the action belongs
+            beside the list it appends to, not in the admin row at the foot of
+            the screen where Edit and Delete live. */}
+        <View style={styles.tasksHeaderRow}>
+          <Text style={[styles.sectionTitle, styles.tasksHeading, { color: colors.ink }]}>Tasks ({tasks.length})</Text>
+          {!editing && (
             <TouchableOpacity style={[styles.addTaskBtn, { backgroundColor: course.color }]} onPress={() => router.push(`/task/new?courseId=${course.id}` as any)}>
               <FontAwesome name="plus" size={12} color="#fff" /><Text style={styles.addTaskText}>Add Task</Text>
             </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Tasks */}
-        <Text style={[styles.sectionTitle, { color: colors.ink }]}>Tasks ({tasks.length})</Text>
+          )}
+        </View>
         {tasks.length === 0 ? (
           <View style={styles.emptyState}><Text style={[styles.emptyText, { color: colors.ink3 }]}>No tasks yet for this course</Text></View>
         ) : (
@@ -924,6 +923,67 @@ export default function CourseDetailScreen() {
             ))}
           </View>
         )}
+    </>
+  );
+
+  return (
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
+      <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="always">
+        {/* Header */}
+        <View style={[styles.header, isWide && styles.headerWide, { backgroundColor: displayColor + '12' }]}>
+          <View style={[styles.headerIcon, isWide && styles.headerIconWide, { backgroundColor: displayColor + '25' }]}>
+            <FontAwesome name={displayIcon as any} size={28} color={displayColor} />
+          </View>
+          <View style={isWide ? styles.headerMetaWide : undefined}>
+            {editing ? (
+              <>
+                <TextInput style={[styles.editTitle, isWide && styles.editTitleWide, { color: colors.ink, borderBottomColor: colors.line }]} value={editName} onChangeText={setEditName} placeholder="Course Name" placeholderTextColor={colors.ink3} />
+                <TextInput style={[styles.editSub, isWide && styles.editSubWide, { color: colors.ink2, borderBottomColor: colors.line }]} value={editInstructor} onChangeText={setEditInstructor} placeholder="Instructor" placeholderTextColor={colors.ink3} />
+                <TextInput style={[styles.editSub, isWide && styles.editSubWide, { color: colors.ink2, borderBottomColor: colors.line }]} value={editCreditHours} onChangeText={setEditCreditHours} placeholder="Credit hours" placeholderTextColor={colors.ink3} keyboardType="decimal-pad" />
+              </>
+            ) : (
+              <>
+                <Text style={[styles.headerTitle, isWide && styles.headerTitleWide, { color: colors.ink }]}>{course.name}</Text>
+                {course.instructor && <Text style={[styles.headerSub, isWide && styles.headerSubWide, { color: colors.ink2 }]}>{course.instructor}</Text>}
+              </>
+            )}
+            <View style={[styles.statsRow, isWide && styles.statsRowWide]}>
+              <View style={styles.statBadge}><Text style={styles.statNum}>{pendingCount}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>pending</Text></View>
+              <View style={styles.statBadge}><Text style={[styles.statNum, { color: '#22c55e' }]}>{doneCount}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>done</Text></View>
+              <View style={styles.statBadge}><Text style={[styles.statNum, { color: displayColor }]}>{editing ? editCreditHours || '—' : course.credit_hours ?? 3}</Text><Text style={[styles.statLabel, { color: colors.ink3 }]}>credits</Text></View>
+            </View>
+          </View>
+        </View>
+
+        {/* EDITING: the editors come first, because that is what the mode is
+            for. Reading mode puts the assignment list here instead. */}
+        {editing ? (
+          <>
+            {gradesSection}
+            {appearanceSection}
+          </>
+        ) : null}
+
+        {/* Tasks — first in reading mode. A student opens a course to find out
+            what is due; every panel above this line was something they had to
+            scroll past to get there. Grades, tools and schedule are still one
+            tap away below, each labelled with what it holds. */}
+        {tasksSection}
+
+        {!editing ? (
+          <>
+            <Disclosure title="Grades" summary={gradeSummary} icon="line-chart" accent={displayColor}>
+              {gradesSection}
+            </Disclosure>
+            <Disclosure title="Study tools" summary="Flashcards · Lectures · AI Tutor" icon="graduation-cap" accent={displayColor}>
+              {studySection}
+            </Disclosure>
+            <Disclosure title="Course info" summary={infoSummary} icon="info-circle" accent={displayColor}>
+              {infoSection}
+            </Disclosure>
+            {actionsSection}
+          </>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
@@ -1012,6 +1072,10 @@ const styles = StyleSheet.create({
   actionText: { fontSize: 13, fontWeight: '600', color: COLORS.brand },
   addTaskBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8 },
   addTaskText: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  tasksHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12 },
+  // The heading keeps its type scale but drops sectionTitle's bottom margin,
+  // which the row now owns.
+  tasksHeading: { marginBottom: 0, flexShrink: 1 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 12 },
   // Tasks render single-column on iPhone (plain wrapper, no row styling).
   // On wide screens the canonical grid turns them into 2-3 columns.
@@ -1026,3 +1090,4 @@ const styles = StyleSheet.create({
   lockedBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.brand, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, marginTop: 12 },
   lockedBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },
 });
+
