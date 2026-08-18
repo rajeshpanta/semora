@@ -30,16 +30,24 @@ import { useAppStore } from '@/store/appStore';
 
 type Outcome = 'notes' | 'quiz' | 'cards';
 
+// `pro` mirrors the gate on the notes screen, where quiz and flashcard
+// generation both refuse a free account. Repeating it here is not duplication
+// for its own sake: without it this screen offers three outcomes as equals, and
+// a free student picks "Practice quiz", spends the one free action they get on
+// the notes, and meets the paywall holding something they did not ask for.
+// Showing the badge before the file is chosen is the difference between a
+// price and a bait.
 const OUTCOMES: {
   key: Outcome;
   icon: React.ComponentProps<typeof FontAwesome>['name'];
   title: string;
   sub: string;
   tone: 'brand' | 'teal' | 'amber';
+  pro: boolean;
 }[] = [
-  { key: 'notes', icon: 'file-text-o', title: 'Study notes', sub: 'Organised summary with the key points', tone: 'brand' },
-  { key: 'quiz', icon: 'check-square-o', title: 'Practice quiz', sub: 'Questions to test yourself, with answers', tone: 'teal' },
-  { key: 'cards', icon: 'clone', title: 'Flashcards', sub: 'A deck you can review anywhere', tone: 'amber' },
+  { key: 'notes', icon: 'file-text-o', title: 'Study notes', sub: 'Organised summary with the key points', tone: 'brand', pro: false },
+  { key: 'quiz', icon: 'check-square-o', title: 'Practice quiz', sub: 'Questions to test yourself, with answers', tone: 'teal', pro: true },
+  { key: 'cards', icon: 'clone', title: 'Flashcards', sub: 'A deck you can review anywhere', tone: 'amber', pro: true },
 ];
 
 export default function NewNotesFromDocument() {
@@ -117,6 +125,14 @@ export default function NewNotesFromDocument() {
   const choose = (outcome: Outcome) => {
     if (!lectureId) return;
     if (Platform.OS === 'ios') Haptics.selectionAsync();
+    // Stop here rather than routing into a screen that would only bounce the
+    // student to the paywall a moment later, having also consumed their notes.
+    const spec = OUTCOMES.find((o) => o.key === outcome);
+    if (spec?.pro && !isPro) {
+      track('paywall_open', { screen: 'document_note_new', context: `document_${outcome}` });
+      router.push({ pathname: '/paywall', params: { context: `document_${outcome}` } } as any);
+      return;
+    }
     track('document_note_outcome', { outcome });
     // `generate` tells the notes screen to keep going once the notes exist,
     // rather than leaving the student on a page of notes wondering where the
@@ -205,7 +221,7 @@ export default function NewNotesFromDocument() {
                   onPress={() => choose(o.key)}
                   activeOpacity={0.85}
                   accessibilityRole="button"
-                  accessibilityLabel={`${o.title}. ${o.sub}`}
+                  accessibilityLabel={o.pro && !isPro ? `${o.title}. ${o.sub}. Pro feature` : `${o.title}. ${o.sub}`}
                   style={[
                     styles.outcomeCard,
                     { backgroundColor: colors.card, borderColor: colors.line },
@@ -216,7 +232,15 @@ export default function NewNotesFromDocument() {
                     <FontAwesome name={o.icon} size={20} color={tone.fg} />
                   </View>
                   <View style={styles.outcomeText}>
-                    <Text style={[styles.outcomeTitle, { color: colors.ink }]}>{o.title}</Text>
+                    <View style={styles.outcomeTitleRow}>
+                      <Text style={[styles.outcomeTitle, { color: colors.ink }]}>{o.title}</Text>
+                      {o.pro && !isPro ? (
+                        <View style={[styles.proBadge, { backgroundColor: colors.brand }]}>
+                          <FontAwesome name="star" size={8} color="#fff" />
+                          <Text style={styles.proBadgeText}>PRO</Text>
+                        </View>
+                      ) : null}
+                    </View>
                     <Text style={[styles.outcomeSub, { color: colors.ink2 }]}>{o.sub}</Text>
                   </View>
                   <FontAwesome name="chevron-right" size={13} color={colors.ink3} />
@@ -224,8 +248,9 @@ export default function NewNotesFromDocument() {
               );
             })}
             <Text style={[styles.footnote, { color: colors.ink3 }]}>
-              Notes are made either way — a quiz and flashcards are built from them, and you can
-              add the other two later from the notes screen.
+              {isPro
+                ? 'Notes are made either way — a quiz and flashcards are built from them, and you can add the other two later from the notes screen.'
+                : 'Your free action makes the notes. Quizzes and flashcards are built from them and need Pro.'}
             </Text>
           </>
         ) : null}
@@ -278,7 +303,13 @@ const styles = StyleSheet.create({
   },
   outcomeIcon: { width: 46, height: 46, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   outcomeText: { flex: 1, gap: 3 },
+  outcomeTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   outcomeTitle: { fontSize: 16, fontWeight: '700' },
+  proBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999,
+  },
+  proBadgeText: { color: '#fff', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   outcomeSub: { fontSize: 13, lineHeight: 18 },
   footnote: { fontSize: 12, lineHeight: 17, marginTop: 4 },
 });
