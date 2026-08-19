@@ -17,6 +17,10 @@ const DOCUMENT_SPECS: readonly DocumentSpec[] = [
   { extensions: ['png'], mimeType: 'image/png', image: true },
   { extensions: ['webp'], mimeType: 'image/webp', image: true },
   { extensions: ['gif'], mimeType: 'image/gif', image: true },
+  // Accepted, then decoded to JPEG server-side (see _shared/heic.ts). No
+  // model in this stack reads HEIC, but it is what every iPhone shoots, so
+  // refusing it means refusing the default camera output.
+  { extensions: ['heic', 'heif'], mimeType: 'image/heic', aliases: ['image/heif'], image: true },
   { extensions: ['doc'], mimeType: 'application/msword' },
   { extensions: ['docx'], mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
   { extensions: ['rtf'], mimeType: 'application/rtf', aliases: ['text/rtf'] },

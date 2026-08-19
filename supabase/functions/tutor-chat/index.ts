@@ -16,6 +16,7 @@ import {
   modelFor, openAIText, providerFor, usageFromGemini, usageFromOpenAI,
   asUntrustedDocument, OPENAI_API_KEY, GEMINI_API_KEY,
 } from '../_shared/ai.ts';
+import { prepareImagePayload } from '../_shared/heic.ts';
 import {
   DOCUMENT_EXTRACTION_FAILED_CODE,
   documentExtractionFailedMessage,
@@ -789,7 +790,20 @@ async function extractNoteTextOpenAI(
   base64: string,
   mimeType: string,
 ): Promise<string | null> {
-  const document = normalizeSupportedDocument(note.filename, mimeType);
+  // Read the header, and decode a HEIC rather than handing the model bytes it
+  // will refuse. A student photographs a lecture slide on their iPhone and
+  // uploads it here exactly as often as they do on the scan screen.
+  const ready = await prepareImagePayload(base64, mimeType);
+  if (!ready.ok) {
+    console.warn('[tutor-chat] unreadable note image, skipping', note.filename, ready.code);
+    return null;
+  }
+  base64 = ready.base64;
+  mimeType = ready.mimeType;
+  const document = normalizeSupportedDocument(
+    ready.converted ? 'note.jpg' : note.filename,
+    mimeType,
+  );
   if (!document) {
     console.warn('[tutor-chat] unsupported note type, skipping', note.filename, mimeType);
     return null;

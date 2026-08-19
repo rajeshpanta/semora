@@ -31,6 +31,8 @@ const DOCUMENT_SPECS: readonly DocumentSpec[] = [
   { extensions: ['png'], mimeType: 'image/png', category: 'image' },
   { extensions: ['webp'], mimeType: 'image/webp', category: 'image' },
   { extensions: ['gif'], mimeType: 'image/gif', category: 'image' },
+  // iPhone's default format. Uploaded as-is; the server decodes it.
+  { extensions: ['heic', 'heif'], mimeType: 'image/heic', mimeAliases: ['image/heif'], category: 'image' },
 
   { extensions: ['doc'], mimeType: 'application/msword', category: 'document' },
   { extensions: ['docx'], mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', category: 'document' },

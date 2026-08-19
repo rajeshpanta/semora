@@ -7,6 +7,7 @@ import {
   sniffFormat,
   HEIC_SERVER_HELP,
 } from '../_shared/document-files.ts';
+import { prepareImagePayload } from '../_shared/heic.ts';
 import { createLogger, errorFields, type EdgeLogger } from '../_shared/log.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
@@ -497,36 +498,29 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
         if (!page || typeof page.base64 !== 'string' || !page.base64) {
           return jsonResponse({ error: 'Each page needs a base64 string' }, 400);
         }
-        // The HEADER decides, not the label. iOS reports mimeType as optional
-        // and scan.tsx fell back to 'image/jpeg', so a HEIC from the photo
-        // library arrived claiming to be a JPEG, passed this check, and was
-        // refused by the model with an opaque 400.
-        const sniffed = sniffFormat(page.base64 as string);
-        if (sniffed.kind === 'heic') {
-          return jsonResponse({ error: HEIC_SERVER_HELP, code: 'HEIC_UNSUPPORTED' }, 400);
-        }
-        // Fall back to the declared type only when the bytes are unreadable
-        // (an empty or truncated upload), so a genuinely broken payload still
-        // gets the old message rather than a confusing format complaint.
-        const effective = sniffed.kind === 'image' ? sniffed.mimeType : page.mimeType;
-        const normalizedPage = typeof effective === 'string'
-          ? normalizeSupportedDocument(null, effective)
-          : null;
-        if (!normalizedPage?.isImage) {
-          return jsonResponse({ error: `Unsupported page type: ${effective}. Pages must be images; send PDFs as a single file.` }, 400);
-        }
       }
-      pages = body.pages.map((page) => {
-        // Relabel to what the bytes actually are: a JPEG mislabelled as PNG (or
-        // vice versa) is common from pickers and harmless to correct, and the
-        // model is handed a data URI that matches its payload.
-        const sniffed = sniffFormat(page.base64 as string);
-        const effective = sniffed.kind === 'image' ? sniffed.mimeType : (page.mimeType as string);
-        return {
-          base64: page.base64 as string,
-          mimeType: normalizeSupportedDocument(null, effective)!.mimeType,
-        };
-      });
+      // Prepare every page in one pass: the header decides the format, HEIC is
+      // decoded to JPEG rather than refused, and a mislabelled JPEG/PNG is
+      // corrected. Sequential rather than parallel on purpose — each HEIC
+      // decode holds well over a hundred megabytes while it runs, and five at
+      // once would take the invocation out on memory.
+      const prepared: { base64: string; mimeType: string }[] = [];
+      let convertedCount = 0;
+      for (const page of body.pages) {
+        const ready = await prepareImagePayload(
+          page.base64 as string,
+          typeof page.mimeType === 'string' ? page.mimeType : null,
+        );
+        if (!ready.ok) return jsonResponse({ error: ready.error, code: ready.code }, 400);
+        if (ready.converted) convertedCount++;
+        const normalizedPage = normalizeSupportedDocument(null, ready.mimeType);
+        if (!normalizedPage?.isImage) {
+          return jsonResponse({ error: `Unsupported page type: ${ready.mimeType}. Pages must be images; send PDFs as a single file.` }, 400);
+        }
+        prepared.push({ base64: ready.base64, mimeType: normalizedPage.mimeType });
+      }
+      if (convertedCount) log.info('heic_pages_converted', { count: convertedCount });
+      pages = prepared;
     } else {
       const { base64, mimeType } = body;
       if (!base64 || !mimeType) {
@@ -535,26 +529,22 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
       if (typeof base64 !== 'string') {
         return jsonResponse({ error: 'base64 must be a string' }, 400);
       }
-      // Same header-over-label rule as the multi-page branch. A HEIC reaches
-      // here from the iOS document picker and from a browser drag-and-drop
-      // where the page could not transcode it.
-      const sniffedSingle = sniffFormat(base64);
-      if (sniffedSingle.kind === 'heic') {
-        return jsonResponse({ error: HEIC_SERVER_HELP, code: 'HEIC_UNSUPPORTED' }, 400);
-      }
+      // Same treatment as the multi-page branch. A HEIC reaches here from the
+      // iOS document picker and from a browser drag-and-drop that could not
+      // transcode it in-page (anything but Safari).
+      const ready = await prepareImagePayload(base64, typeof mimeType === 'string' ? mimeType : null);
+      if (!ready.ok) return jsonResponse({ error: ready.error, code: ready.code }, 400);
+      if (ready.converted) log.info('heic_converted', { path: 'single' });
       singleDocument = normalizeSupportedDocument(
-        typeof body.fileName === 'string' ? body.fileName : null,
-        // An image or PDF identified from its own header outranks the caller's
-        // claim. Everything else — Office, text, iWork — has no signature we
-        // read, so those keep using the declared type and the filename.
-        sniffedSingle.kind === 'image' || sniffedSingle.kind === 'pdf'
-          ? sniffedSingle.mimeType
-          : (typeof mimeType === 'string' ? mimeType : null),
+        // A converted HEIC is a JPEG now, so the original .heic filename must
+        // not be what decides the type — the header already did.
+        ready.converted ? 'syllabus_photo.jpg' : (typeof body.fileName === 'string' ? body.fileName : null),
+        ready.mimeType || null,
       );
       if (!singleDocument) {
         return jsonResponse({ error: SUPPORTED_DOCUMENT_ERROR }, 400);
       }
-      pages = [{ base64, mimeType: singleDocument.mimeType }];
+      pages = [{ base64: ready.base64, mimeType: singleDocument.mimeType }];
     }
 
     // Same total-payload ceiling regardless of shape — 5 pages share the

@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { prepareImagePayload } from '../_shared/heic.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import {
   DOCUMENT_EXTRACTION_FAILED_CODE,
@@ -585,7 +586,22 @@ async function extractNoteText(
     console.warn('[generate-flashcards] note too large to extract inline, skipping');
     return null;
   }
-  const document = normalizeSupportedDocument(note.filename, note.mime_type);
+  // Prepare BEFORE deciding the type. Deriving `document` from the filename
+  // first would reject a .heic outright — it is not in the format table — and
+  // return null long before the decoder could run.
+  let binaryAll = '';
+  for (let i = 0; i < buf.length; i += 0x8000) {
+    binaryAll += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+  }
+  const ready = await prepareImagePayload(btoa(binaryAll), note.mime_type);
+  if (!ready.ok) {
+    console.warn('[generate-flashcards] unreadable image source, skipping', note.filename, ready.code);
+    return null;
+  }
+  const document = normalizeSupportedDocument(
+    ready.converted ? 'note.jpg' : note.filename,
+    ready.converted ? 'image/jpeg' : (ready.mimeType || note.mime_type),
+  );
   if (!document) {
     console.warn('[generate-flashcards] unsupported note type, skipping', note.filename, note.mime_type);
     return null;
@@ -605,12 +621,7 @@ async function extractNoteText(
     return decoded;
   }
 
-  let binary = '';
-  const CHUNK = 0x8000;
-  for (let i = 0; i < buf.length; i += CHUNK) {
-    binary += String.fromCharCode(...buf.subarray(i, i + CHUNK));
-  }
-  const base64 = btoa(binary);
+  const base64 = ready.base64;
   const mimeType = document.mimeType;
 
   const attachment = document.isImage

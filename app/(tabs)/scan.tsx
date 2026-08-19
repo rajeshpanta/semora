@@ -343,12 +343,17 @@ export default function ScanScreen() {
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
       if (isHeic(asset.name, asset.mimeType)) {
+        // Transcode in-page when the browser can (Safari decodes HEIC), purely
+        // to save the upload of a larger file. Everywhere else — every iPhone,
+        // Chrome, Firefox — it now goes to the server as-is, which decodes it.
+        // This used to dead-end in an alert telling the student to go change a
+        // camera setting and take the photo again.
         const converted = await transcodeHeicToJpeg(asset.uri);
-        if (converted) {
-          navigateToUpload(converted.uri, 'syllabus_photo.jpg', converted.mimeType);
-          return;
-        }
-        Alert.alert("Can't read that photo", HEIC_HELP);
+        navigateToUpload(
+          converted?.uri ?? asset.uri,
+          converted ? 'syllabus_photo.jpg' : (asset.name || 'syllabus_photo.heic'),
+          converted?.mimeType ?? 'image/heic',
+        );
         return;
       }
       const document = normalizeSupportedDocument(asset.name, asset.mimeType);
@@ -446,17 +451,17 @@ export default function ScanScreen() {
 
   const handleDroppedFile = async (file: File) => {
     if (!(await checkScanLimit())) return;
-    // HEIC first: dragging an iPhone photo onto the web app is the single most
-    // natural web flow, and it used to be refused outright. Safari can decode
-    // it, so convert in-page and say nothing; browsers that can't get a
-    // specific instruction instead of a format list they can't act on.
+    // Dragging an iPhone photo onto the web app is the single most natural web
+    // flow and it used to be refused outright. Safari can decode HEIC, so
+    // convert in-page and skip uploading the larger original; Chrome and
+    // Firefox now send it untouched, because the server decodes it.
     if (isHeic(file.name, file.type)) {
       const converted = await transcodeHeicToJpeg(URL.createObjectURL(file));
-      if (converted) {
-        navigateToUpload(converted.uri, 'syllabus_photo.jpg', converted.mimeType);
-        return;
-      }
-      Alert.alert("Can't read that photo", HEIC_HELP);
+      navigateToUpload(
+        converted?.uri ?? URL.createObjectURL(file),
+        converted ? 'syllabus_photo.jpg' : (file.name || 'syllabus_photo.heic'),
+        converted?.mimeType ?? 'image/heic',
+      );
       return;
     }
     const document = normalizeSupportedDocument(file.name, file.type);
