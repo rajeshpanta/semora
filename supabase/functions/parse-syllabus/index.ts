@@ -109,6 +109,14 @@ type OpenAIResult = {
   data: any | null;
   status: number;
   networkError: boolean;
+  /**
+   * The provider's own error envelope, truncated. Carried out of the retry
+   * loop rather than only logged: edge-function logs live ~24h, and a 12.5%
+   * http_400 rate went three days without anyone being able to read the
+   * reason. Never surfaced to the client verbatim.
+   */
+  errorBody?: string;
+  attempts?: number;
 };
 
 function readOpenAIOutputText(data: any): string | null {
@@ -128,11 +136,14 @@ function readOpenAIOutputText(data: any): string | null {
 }
 
 async function callOpenAIResponses(payload: Record<string, unknown>, log: EdgeLogger): Promise<OpenAIResult> {
-  if (!OPENAI_API_KEY) return { data: null, status: 0, networkError: false };
+  if (!OPENAI_API_KEY) return { data: null, status: 0, networkError: false, attempts: 0 };
 
   let lastStatus = 0;
   let networkError = false;
+  let lastErrorBody = '';
+  let usedAttempts = 0;
   for (let attempt = 1; attempt <= OPENAI_MAX_ATTEMPTS; attempt++) {
+    usedAttempts = attempt;
     let response: Response;
     try {
       response = await fetch(OPENAI_RESPONSES_URL, {
@@ -157,14 +168,18 @@ async function callOpenAIResponses(payload: Record<string, unknown>, log: EdgeLo
     lastStatus = response.status;
     if (response.ok) {
       try {
-        return { data: await response.json(), status: response.status, networkError: false };
+        return { data: await response.json(), status: response.status, networkError: false, attempts: usedAttempts };
       } catch (error) {
         log.error('openai_invalid_json', errorFields(error));
-        return { data: null, status: response.status, networkError: false };
+        return {
+          data: null, status: response.status, networkError: false,
+          errorBody: 'provider returned invalid JSON', attempts: usedAttempts,
+        };
       }
     }
 
     const errorBody = await response.text().catch(() => '');
+    lastErrorBody = errorBody;
     log.warn('openai_http_error', {
       status: response.status,
       attempt,
@@ -179,7 +194,7 @@ async function callOpenAIResponses(payload: Record<string, unknown>, log: EdgeLo
     }
     break;
   }
-  return { data: null, status: lastStatus, networkError };
+  return { data: null, status: lastStatus, networkError, errorBody: lastErrorBody, attempts: usedAttempts };
 }
 
 async function makeSafetyIdentifier(userId: string): Promise<string> {
@@ -197,6 +212,11 @@ async function logCall(
   status: 'success' | 'failed' | 'rate_limited',
   durationMs: number,
   errorCode?: string,
+  // The provider's own words about why it refused. `error_code` says
+  // 'http_400'; this says which field it objected to. Without it a 400 can
+  // only be diagnosed from edge-function logs, which are gone in ~24h — and
+  // that is exactly how 16 of these became unreadable before anyone looked.
+  detail?: { errorBody?: string; attempts?: number },
 ) {
   try {
     // Legacy table name retained for production compatibility. It is the
@@ -206,6 +226,11 @@ async function logCall(
       status,
       error_code: errorCode ?? null,
       duration_ms: durationMs,
+      // Truncated here rather than in the column: provider bodies can echo
+      // request fragments, and a base64 syllabus does not belong in a ledger.
+      error_detail: detail?.errorBody ? detail.errorBody.slice(0, 500) : null,
+      attempts: detail?.attempts ?? null,
+      model: OPENAI_MODEL,
     });
 
     // Charge the account's one free action, here and only here.
@@ -558,13 +583,29 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
 
     if (!openAIResult.data) {
       const code = openAIResult.networkError ? 'fetch_error' : `http_${openAIResult.status || 0}`;
-      log.error('openai_failed_after_retries', { code });
-      await logCall(adminClient, userId, 'failed', Date.now() - startTime, code);
+      log.error('openai_failed_after_retries', {
+        code,
+        attempts: openAIResult.attempts,
+        // Logged AND persisted: the log line is the fast path while it is
+        // still in retention, the ledger is what is still there next week.
+        error_body: (openAIResult.errorBody ?? '').slice(0, 300),
+      });
+      await logCall(adminClient, userId, 'failed', Date.now() - startTime, code, {
+        errorBody: openAIResult.errorBody,
+        attempts: openAIResult.attempts,
+      });
+      // "Please try again" is the right advice for a 5xx or a 429 and the
+      // WRONG advice for a 4xx: the provider rejected this exact request and
+      // will reject an identical retry. The ledger shows a student burning
+      // three attempts on one photo inside a minute doing what we told them.
+      // A 4xx therefore asks for a DIFFERENT input, not the same one again.
+      const retryable = openAIResult.status === 503 || openAIResult.status === 429 ||
+        openAIResult.status >= 500;
       const msg = openAIResult.networkError
         ? 'AI service unreachable. Please try again.'
-        : (openAIResult.status === 503 || openAIResult.status === 429)
+        : retryable
           ? 'The AI is busy right now — please try again in a minute.'
-          : `AI processing failed (status ${openAIResult.status}). Please try again.`;
+          : "Semora couldn't read this file. Try a PDF of the syllabus, or retake the photo straight-on in good light — one page at a time.";
       return jsonResponse({ error: msg }, 502);
     }
 
