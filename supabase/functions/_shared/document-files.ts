@@ -29,6 +29,7 @@ const DOCUMENT_SPECS: readonly DocumentSpec[] = [
   { extensions: ['ppt'], mimeType: 'application/vnd.ms-powerpoint' },
   { extensions: ['pptx'], mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' },
   { extensions: ['key'], mimeType: 'application/vnd.apple.keynote', aliases: ['application/x-iwork-keynote-sffkey'] },
+  { extensions: ['numbers'], mimeType: 'application/vnd.apple.numbers', aliases: ['application/x-iwork-numbers-sffnumbers'] },
   { extensions: ['xls'], mimeType: 'application/vnd.ms-excel' },
   { extensions: ['xlsx'], mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' },
   { extensions: ['csv'], mimeType: 'text/csv', aliases: ['application/csv'] },

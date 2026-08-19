@@ -54,6 +54,12 @@ const DOCUMENT_SPECS: readonly DocumentSpec[] = [
     category: 'presentation',
   },
 
+  {
+    extensions: ['numbers'],
+    mimeType: 'application/vnd.apple.numbers',
+    mimeAliases: ['application/x-iwork-numbers-sffnumbers'],
+    category: 'spreadsheet',
+  },
   { extensions: ['xls'], mimeType: 'application/vnd.ms-excel', category: 'spreadsheet' },
   { extensions: ['xlsx'], mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', category: 'spreadsheet' },
   { extensions: ['csv'], mimeType: 'text/csv', mimeAliases: ['application/csv'], category: 'spreadsheet' },

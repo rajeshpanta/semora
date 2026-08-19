@@ -79,9 +79,21 @@ export async function decodeHeicToJpeg(base64Heic: string): Promise<HeicDecodeRe
     const images = new libheif.HeifDecoder().decode(fromBase64(base64Heic));
     if (!images?.length) return { ok: false, reason: 'decode_failed' };
 
-    // Only the primary image. A Live Photo or a burst carries several, and the
-    // student photographed one page.
-    const first = images[0];
+    // The LARGEST image, not images[0].
+    //
+    // A portrait-mode or Live Photo HEIC carries auxiliary images — a depth
+    // map, an alpha matte, a thumbnail — alongside the photo, and nothing
+    // guarantees the one the student took comes first. The obvious fix,
+    // is_primary(), throws in this build:
+    //   ReferenceError: heif_image_handle_is_primary_image is not defined
+    // so area is the reliable discriminator: aux images are always smaller
+    // than the capture they describe.
+    let first = images[0];
+    let bestArea = (first.get_width() || 0) * (first.get_height() || 0);
+    for (const candidate of images.slice(1)) {
+      const area = (candidate.get_width() || 0) * (candidate.get_height() || 0);
+      if (area > bestArea) { first = candidate; bestArea = area; }
+    }
     const width = first.get_width();
     const height = first.get_height();
     if (!width || !height) return { ok: false, reason: 'decode_failed' };
