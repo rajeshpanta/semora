@@ -13,8 +13,8 @@ import { track } from '@/lib/analytics';
 import { normalizeSupportedDocument, unsupportedDocumentMessage } from '@/lib/documentFiles';
 import { useUploadCourseNote, type CourseNoteUploadProgress } from '@/lib/tutor';
 import { useCreateDocumentNote } from '@/lib/lectures';
-import { useFreeActionUsed } from '@/lib/queries';
-import { useAppStore } from '@/store/appStore';
+import { useCourses, useFreeActionUsed, useSemesters } from '@/lib/queries';
+import { useAppStore, findCurrentSemester } from '@/store/appStore';
 
 // Study material from a file.
 //
@@ -55,7 +55,17 @@ export default function NewNotesFromDocument() {
   const params = useLocalSearchParams<{ courseId?: string }>();
   const router = useRouter();
   const colors = useColors();
-  const courseId = params.courseId ?? null;
+  // A class is REQUIRED: course_notes.course_id is NOT NULL, so an upload
+  // without one fails at the insert. This screen is reached both from a course
+  // (which passes courseId) and from the Notes tab (which cannot), so when it
+  // arrives without one the student picks the class here. Before this, that
+  // second route let them choose a file and then dead-ended on "No course".
+  const [courseId, setCourseId] = useState<string | null>(params.courseId ?? null);
+  const selectedSemesterId = useAppStore((st) => st.selectedSemesterId);
+  const { data: semesters = [] } = useSemesters();
+  const activeSemesterId = selectedSemesterId ?? findCurrentSemester(semesters);
+  const { data: semesterCourses = [], isLoading: coursesLoading } = useCourses(activeSemesterId);
+  const needsCourseChoice = !params.courseId;
 
   const upload = useUploadCourseNote(courseId);
   const createNote = useCreateDocumentNote(courseId);
@@ -77,6 +87,13 @@ export default function NewNotesFromDocument() {
 
   const pick = async () => {
     if (Platform.OS === 'ios') Haptics.selectionAsync();
+
+    // Stop at the picker rather than after the upload: the insert would fail
+    // anyway, but only after the student had chosen and uploaded a file.
+    if (!courseId) {
+      Alert.alert('Choose a class first', 'Pick which class this file belongs to, then choose the file.');
+      return;
+    }
 
     // Checked BEFORE the picker, not after the upload. The server is the real
     // gate (lecture-study-kit charges the free action when it generates), but
@@ -171,6 +188,67 @@ export default function NewNotesFromDocument() {
           makes notes, a quiz, or flashcards.
         </Text>
 
+        {/* ── Step 0: the class, when we were not told one ─────────────── */}
+        {needsCourseChoice && !lectureId ? (
+          <View style={styles.classBlock}>
+            <Text style={[styles.stepLabel, styles.classLabel, { color: colors.ink3 }]}>
+              WHICH CLASS IS THIS FOR?
+            </Text>
+            {coursesLoading ? (
+              <ActivityIndicator color={colors.brand} style={{ alignSelf: 'flex-start' }} />
+            ) : semesterCourses.length === 0 ? (
+              // No classes yet: say so and offer the fix, rather than showing an
+              // empty row that looks broken.
+              <TouchableOpacity
+                onPress={() => router.push('/course/new' as any)}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                style={[styles.addClassBtn, { borderColor: colors.brand, backgroundColor: colors.card }]}
+              >
+                <FontAwesome name="plus" size={13} color={colors.brand} />
+                <Text style={[styles.addClassText, { color: colors.brand }]}>
+                  Add a class to file notes under
+                </Text>
+              </TouchableOpacity>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.classRow}
+              >
+                {semesterCourses.map((c) => {
+                  const active = c.id === courseId;
+                  return (
+                    <TouchableOpacity
+                      key={c.id}
+                      onPress={() => {
+                        if (Platform.OS === 'ios') Haptics.selectionAsync();
+                        setCourseId(c.id);
+                      }}
+                      activeOpacity={0.8}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active }}
+                      style={[
+                        styles.classChip,
+                        { borderColor: colors.line, backgroundColor: colors.card },
+                        active && { borderColor: colors.brand, backgroundColor: colors.brand50 },
+                      ]}
+                    >
+                      <View style={[styles.classDot, { backgroundColor: c.color || colors.brand }]} />
+                      <Text
+                        style={[styles.classChipText, { color: active ? colors.brand : colors.ink2 }]}
+                        numberOfLines={1}
+                      >
+                        {c.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+        ) : null}
+
         {/* ── Step 1: the file ─────────────────────────────────────────── */}
         {!lectureId ? (
           <TouchableOpacity
@@ -181,7 +259,9 @@ export default function NewNotesFromDocument() {
             accessibilityLabel="Choose a file"
             style={[
               styles.dropCard,
-              { borderColor: busy ? colors.line : colors.brand, backgroundColor: colors.card },
+              { borderColor: busy || !courseId ? colors.line : colors.brand, backgroundColor: colors.card },
+              // Dimmed rather than hidden: the student can see what comes next.
+              !courseId && { opacity: 0.55 },
               WEB_CARD_SHADOW,
             ]}
           >
@@ -272,6 +352,20 @@ const styles = StyleSheet.create({
   title: { fontFamily: FONTS.display, fontSize: 26, lineHeight: 32, marginBottom: 8 },
   subtitle: { fontSize: 15, lineHeight: 21, marginBottom: 22 },
 
+  classBlock: { gap: 10, marginBottom: 18 },
+  classLabel: { marginTop: 0, marginBottom: 0 },
+  classRow: { gap: 8, paddingRight: 4 },
+  classChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999, borderWidth: 1, maxWidth: 190,
+  },
+  classDot: { width: 8, height: 8, borderRadius: 4 },
+  classChipText: { fontSize: 13.5, fontWeight: '600', flexShrink: 1 },
+  addClassBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start',
+    paddingHorizontal: 14, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderStyle: 'dashed',
+  },
+  addClassText: { fontSize: 13.5, fontWeight: '600' },
   dropCard: {
     borderRadius: 20,
     borderWidth: 2,

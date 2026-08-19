@@ -2061,4 +2061,8 @@ export const ES: Record<string, string> = {
   'This subscription was previously linked to a Semora account that has been deleted.': 'Esta suscripción estaba vinculada a una cuenta de Semora que se ha eliminado.',
   'Could not save entitlement. Please try again.': 'No se pudo guardar la suscripción. Inténtalo de nuevo.',
   'Could not open the App Store. You can search for Semora there to leave a review.': 'No se pudo abrir la App Store. Puedes buscar Semora allí para dejar tu reseña.',
+  'Add a class to file notes under': 'Añade una clase para archivar los apuntes',
+  'Choose a class first': 'Elige primero una clase',
+  'Pick which class this file belongs to, then choose the file.': 'Elige a qué clase pertenece este archivo y luego selecciona el archivo.',
+  'WHICH CLASS IS THIS FOR?': '¿PARA QUÉ CLASE ES?',
 };
