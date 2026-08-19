@@ -4,6 +4,8 @@ import {
   normalizeSupportedDocument,
   SUPPORTED_DOCUMENT_ERROR,
   type NormalizedDocument,
+  sniffFormat,
+  HEIC_SERVER_HELP,
 } from '../_shared/document-files.ts';
 import { createLogger, errorFields, type EdgeLogger } from '../_shared/log.ts';
 
@@ -495,17 +497,36 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
         if (!page || typeof page.base64 !== 'string' || !page.base64) {
           return jsonResponse({ error: 'Each page needs a base64 string' }, 400);
         }
-        const normalizedPage = typeof page.mimeType === 'string'
-          ? normalizeSupportedDocument(null, page.mimeType)
+        // The HEADER decides, not the label. iOS reports mimeType as optional
+        // and scan.tsx fell back to 'image/jpeg', so a HEIC from the photo
+        // library arrived claiming to be a JPEG, passed this check, and was
+        // refused by the model with an opaque 400.
+        const sniffed = sniffFormat(page.base64 as string);
+        if (sniffed.kind === 'heic') {
+          return jsonResponse({ error: HEIC_SERVER_HELP, code: 'HEIC_UNSUPPORTED' }, 400);
+        }
+        // Fall back to the declared type only when the bytes are unreadable
+        // (an empty or truncated upload), so a genuinely broken payload still
+        // gets the old message rather than a confusing format complaint.
+        const effective = sniffed.kind === 'image' ? sniffed.mimeType : page.mimeType;
+        const normalizedPage = typeof effective === 'string'
+          ? normalizeSupportedDocument(null, effective)
           : null;
         if (!normalizedPage?.isImage) {
-          return jsonResponse({ error: `Unsupported page type: ${page.mimeType}. Pages must be images; send PDFs as a single file.` }, 400);
+          return jsonResponse({ error: `Unsupported page type: ${effective}. Pages must be images; send PDFs as a single file.` }, 400);
         }
       }
-      pages = body.pages.map((page) => ({
-        base64: page.base64 as string,
-        mimeType: normalizeSupportedDocument(null, page.mimeType as string)!.mimeType,
-      }));
+      pages = body.pages.map((page) => {
+        // Relabel to what the bytes actually are: a JPEG mislabelled as PNG (or
+        // vice versa) is common from pickers and harmless to correct, and the
+        // model is handed a data URI that matches its payload.
+        const sniffed = sniffFormat(page.base64 as string);
+        const effective = sniffed.kind === 'image' ? sniffed.mimeType : (page.mimeType as string);
+        return {
+          base64: page.base64 as string,
+          mimeType: normalizeSupportedDocument(null, effective)!.mimeType,
+        };
+      });
     } else {
       const { base64, mimeType } = body;
       if (!base64 || !mimeType) {
@@ -514,9 +535,21 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
       if (typeof base64 !== 'string') {
         return jsonResponse({ error: 'base64 must be a string' }, 400);
       }
+      // Same header-over-label rule as the multi-page branch. A HEIC reaches
+      // here from the iOS document picker and from a browser drag-and-drop
+      // where the page could not transcode it.
+      const sniffedSingle = sniffFormat(base64);
+      if (sniffedSingle.kind === 'heic') {
+        return jsonResponse({ error: HEIC_SERVER_HELP, code: 'HEIC_UNSUPPORTED' }, 400);
+      }
       singleDocument = normalizeSupportedDocument(
         typeof body.fileName === 'string' ? body.fileName : null,
-        typeof mimeType === 'string' ? mimeType : null,
+        // An image or PDF identified from its own header outranks the caller's
+        // claim. Everything else — Office, text, iWork — has no signature we
+        // read, so those keep using the declared type and the filename.
+        sniffedSingle.kind === 'image' || sniffedSingle.kind === 'pdf'
+          ? sniffedSingle.mimeType
+          : (typeof mimeType === 'string' ? mimeType : null),
       );
       if (!singleDocument) {
         return jsonResponse({ error: SUPPORTED_DOCUMENT_ERROR }, 400);

@@ -53,6 +53,21 @@ const getFileSizeBestEffort = async (uri: string): Promise<number> => {
   }
 };
 
+// A picked asset's declared type, or the best guess from its filename — never
+// a blind 'image/jpeg'. expo-image-picker documents mimeType as "null if could
+// not be determined", and defaulting that to JPEG is precisely how a HEIC got
+// forwarded to the model wearing the wrong label and came back as an
+// unactionable 400.
+function assetMimeType(asset: { mimeType?: string | null; fileName?: string | null; uri?: string }): string {
+  if (asset.mimeType) return asset.mimeType;
+  const name = asset.fileName || asset.uri || '';
+  const normalized = normalizeSupportedDocument(name, null);
+  if (normalized?.category === 'image') return normalized.mimeType;
+  // Unknown: say so rather than guessing. The server reads the header and
+  // decides, and a wrong guess here is what this whole change exists to stop.
+  return 'application/octet-stream';
+}
+
 export default function ScanScreen() {
   const colors = useColors();
   const { contentMaxWidth, isDesktop } = useResponsive();
@@ -283,7 +298,7 @@ export default function ScanScreen() {
         break;
       }
       totalBytes += size;
-      pages.push({ uri: asset.uri, mimeType: asset.mimeType || 'image/jpeg' });
+      pages.push({ uri: asset.uri, mimeType: assetMimeType(asset) });
       if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       if (pages.length >= MAX_SCAN_PAGES) {
@@ -371,6 +386,14 @@ export default function ScanScreen() {
       // (expo-image-manipulator broke the EAS build and was reverted in
       // ab79b84), and 0.5 JPEG is still ample for printed syllabus text.
       quality: 0.5,
+      // Ask iOS for the most COMPATIBLE representation rather than the
+      // original. The default is Automatic, which Apple may satisfy with the
+      // untouched HEIC — and HEIC is what an iPhone shoots. Compatible makes
+      // the picker hand back JPEG, so the format never reaches the parser.
+      // This is the fix at the source; the byte sniff in parse-syllabus is the
+      // net under it for builds already in the wild.
+      preferredAssetRepresentationMode:
+        ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
       // Multi-select: the pipeline now sends every page to the parser as one
       // scan. orderedSelection so page order follows the user's tap order,
       // not library order.
@@ -404,7 +427,7 @@ export default function ScanScreen() {
         const size = await getFileSizeBestEffort(a.uri);
         if (fitted.length > 0 && totalBytes + size > MAX_SCAN_RAW_BYTES) break;
         totalBytes += size;
-        fitted.push({ uri: a.uri, mimeType: a.mimeType || 'image/jpeg' });
+        fitted.push({ uri: a.uri, mimeType: assetMimeType(a) });
       }
       if (fitted.length < assets.length) {
         // Await the alert so it isn't racing the navigation push.

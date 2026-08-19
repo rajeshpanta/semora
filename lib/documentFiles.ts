@@ -30,6 +30,7 @@ const DOCUMENT_SPECS: readonly DocumentSpec[] = [
   { extensions: ['jpg', 'jpeg'], mimeType: 'image/jpeg', mimeAliases: ['image/jpg'], category: 'image' },
   { extensions: ['png'], mimeType: 'image/png', category: 'image' },
   { extensions: ['webp'], mimeType: 'image/webp', category: 'image' },
+  { extensions: ['gif'], mimeType: 'image/gif', category: 'image' },
 
   { extensions: ['doc'], mimeType: 'application/msword', category: 'document' },
   { extensions: ['docx'], mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', category: 'document' },

@@ -16,6 +16,7 @@ const DOCUMENT_SPECS: readonly DocumentSpec[] = [
   { extensions: ['jpg', 'jpeg'], mimeType: 'image/jpeg', aliases: ['image/jpg'], image: true },
   { extensions: ['png'], mimeType: 'image/png', image: true },
   { extensions: ['webp'], mimeType: 'image/webp', image: true },
+  { extensions: ['gif'], mimeType: 'image/gif', image: true },
   { extensions: ['doc'], mimeType: 'application/msword' },
   { extensions: ['docx'], mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' },
   { extensions: ['rtf'], mimeType: 'application/rtf', aliases: ['text/rtf'] },
@@ -146,3 +147,80 @@ export function documentExtractionFailedMessage(
     ? `Semora couldn't read ${displayNames}. Try again. If it still fails, remove the file and upload it again, or export it as a PDF first.`
     : `Semora couldn't read these files: ${displayNames}. Try again. If it still fails, remove and upload them again, or export them as PDFs first.`;
 }
+
+// ── What the bytes actually are ─────────────────────────────────────────────
+//
+// The client's declared mimeType was believed on trust, and that is how HEIC
+// reached the model. On iOS, `expo-image-picker` reports `mimeType` as
+// optional ("null if could not be determined"), and both photo paths in
+// scan.tsx fell back to `asset.mimeType || 'image/jpeg'`. A HEIC from the
+// photo library with no reported type therefore arrived labelled image/jpeg,
+// satisfied every check here, and was handed to OpenAI as
+// `data:image/jpeg;base64,<HEIC bytes>` — which it rejects in under two
+// seconds with an HTTP 400 the student cannot act on.
+//
+// So the format is decided by the file's own header, not by what the caller
+// claims. This lives server-side deliberately: it fixes the shipped 1.4/1.6
+// builds today, without waiting on an App Store release.
+
+export type SniffedFormat =
+  | { kind: 'image'; mimeType: string }
+  | { kind: 'pdf'; mimeType: string }
+  | { kind: 'heic' }
+  | { kind: 'unknown' };
+
+/** Decode just enough leading bytes to read a file signature. */
+function leadingBytes(base64: string, count = 32): Uint8Array {
+  // 4 base64 chars → 3 bytes; take a whole number of quartets so atob never
+  // sees a partial group.
+  const quartets = Math.ceil(count / 3);
+  const slice = base64.slice(0, quartets * 4);
+  try {
+    const binary = atob(slice);
+    const out = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
+    return out;
+  } catch {
+    return new Uint8Array(0);
+  }
+}
+
+const ascii = (b: Uint8Array, start: number, len: number): string =>
+  String.fromCharCode(...b.slice(start, start + len));
+
+/**
+ * Identify a file from its magic number. Covers every format the scan pipeline
+ * can legitimately receive plus HEIC/HEIF, which is called out separately so
+ * the caller can say something useful instead of forwarding it to a model that
+ * will refuse it.
+ */
+export function sniffFormat(base64: string): SniffedFormat {
+  const b = leadingBytes(base64);
+  if (b.length < 12) return { kind: 'unknown' };
+
+  // JPEG: FF D8 FF
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return { kind: 'image', mimeType: 'image/jpeg' };
+  // PNG: 89 "PNG" CR LF 1A LF
+  if (b[0] === 0x89 && ascii(b, 1, 3) === 'PNG') return { kind: 'image', mimeType: 'image/png' };
+  // GIF: "GIF8"
+  if (ascii(b, 0, 4) === 'GIF8') return { kind: 'image', mimeType: 'image/gif' };
+  // WEBP: "RIFF" .... "WEBP"
+  if (ascii(b, 0, 4) === 'RIFF' && ascii(b, 8, 4) === 'WEBP') return { kind: 'image', mimeType: 'image/webp' };
+  // PDF: "%PDF"
+  if (ascii(b, 0, 4) === '%PDF') return { kind: 'pdf', mimeType: 'application/pdf' };
+
+  // ISO-BMFF container: bytes 4..8 are "ftyp", brand follows. HEIC, HEIF and
+  // the burst/sequence variants all live here. This is what an iPhone shoots.
+  if (ascii(b, 4, 4) === 'ftyp') {
+    const brand = ascii(b, 8, 4).toLowerCase();
+    if (['heic', 'heix', 'heim', 'heis', 'hevc', 'hevm', 'hevs', 'mif1', 'msf1'].includes(brand)) {
+      return { kind: 'heic' };
+    }
+  }
+  return { kind: 'unknown' };
+}
+
+/** Shown when a student sends a photo the model cannot decode. */
+export const HEIC_SERVER_HELP =
+  "That photo is in Apple's HEIC format, which the scanner can't read. Update Semora, " +
+  'or on your iPhone open Settings → Camera → Formats and choose "Most Compatible", then retake it.';
