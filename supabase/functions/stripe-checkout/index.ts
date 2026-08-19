@@ -109,6 +109,48 @@ serve(withRequestLogging('stripe-checkout', async (req, log) => {
       if (mapErr) log.warn('customer_map_failed', errorFields(mapErr));
     }
 
+    // Second gate, and the one that matters for money: ask STRIPE, not our own
+    // entitlements table. The table above is written by the webhook, so during
+    // the seconds between "card charged" and "webhook delivered" it still says
+    // not-Pro. The paywall gives up waiting after ~20s and re-enables its
+    // Subscribe button, so a payer whose webhook is slow can press it again and
+    // buy a SECOND subscription. Stripe knows about the first one immediately.
+    //
+    // `incomplete` is deliberately in the list: it means a payment is in
+    // flight. Starting another checkout on top of it is the exact double-charge
+    // this guards against.
+    if (mapped?.customer_id) {
+      const LIVE = ['active', 'trialing', 'past_due', 'unpaid', 'incomplete'];
+      const existing = await stripe.subscriptions.list({
+        customer: customerId,
+        status: 'all',
+        limit: 20,
+      });
+      const live = existing.data.find((sub: { id: string; status: string }) =>
+        LIVE.includes(sub.status),
+      );
+      if (live) {
+        log.info('checkout_blocked_existing_subscription', {
+          subscription_id: live.id,
+          status: live.status,
+        });
+        // A failed RENEWAL is a different problem from a settling payment, and
+        // "tap Restore" would be useless advice for it — the card needs
+        // updating, which only the billing portal can do.
+        const needsCard = live.status === 'past_due' || live.status === 'unpaid';
+        return jsonResponse(
+          {
+            error: needsCard
+              ? 'Your subscription needs a payment update. Open Manage Subscription in Settings to fix your card.'
+              : 'A subscription for this account is already being set up. Give it a moment, then tap Restore.',
+            code: needsCard ? 'SUBSCRIPTION_PAST_DUE' : 'SUBSCRIPTION_PENDING',
+            status: live.status,
+          },
+          409,
+        );
+      }
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customerId,

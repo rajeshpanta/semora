@@ -364,10 +364,15 @@ export default function PaywallScreen() {
         screen: 'paywall',
         reason: String(err?.code ?? err?.message ?? 'unknown').slice(0, 100),
       });
-      Alert.alert(
-        err?.code === 'ALREADY_PRO' ? 'You already have Pro' : 'Purchase Failed',
-        err.message ?? 'Something went wrong. Please try again.',
-      );
+      // SUBSCRIPTION_PENDING means the card WAS charged and Stripe is still
+      // settling — titling that "Purchase Failed" would send a paying customer
+      // to support, or to buy again somewhere else.
+      const title =
+        err?.code === 'ALREADY_PRO' ? 'You already have Pro'
+        : err?.code === 'SUBSCRIPTION_PENDING' ? 'Payment received'
+        : err?.code === 'SUBSCRIPTION_PAST_DUE' ? 'Payment needs updating'
+        : 'Purchase Failed';
+      Alert.alert(title, err.message ?? 'Something went wrong. Please try again.');
     }
   };
 
