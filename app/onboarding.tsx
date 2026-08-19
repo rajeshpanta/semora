@@ -199,6 +199,33 @@ export default function OnboardingScreen() {
         ) : null}
       </View>
 
+      {/* An existing account needs a way past this on WEB specifically.
+          Skip deliberately does not leave the flow — it fast-forwards to the
+          personalize step so even skippers make one small commitment — which is
+          right on a phone, where a fresh install is almost always a fresh user.
+          A fresh BROWSER is not: it is a work laptop, a library machine, or
+          cleared cookies, and the person behind it already pays us. Making them
+          answer onboarding questions to reach a login is a worse first
+          impression than the login form this flow was added to replace. */}
+      {Platform.OS === 'web' && (
+        <TouchableOpacity
+          onPress={() => {
+            // Not setHasOnboarded: they did not onboard, they left. Marking it
+            // would rob them of the tour if they ever do want it, and would
+            // quietly change what the funnel is measuring.
+            router.replace({ pathname: '/(auth)/sign-in', params: { mode: 'signin' } } as any);
+          }}
+          hitSlop={10}
+          activeOpacity={0.7}
+          accessibilityRole="link"
+          style={styles.haveAccount}
+        >
+          <Text style={[styles.haveAccountText, { color: colors.ink3 }]}>
+            Already have an account? <Text style={{ color: colors.brand, fontWeight: '700' }}>Sign in</Text>
+          </Text>
+        </TouchableOpacity>
+      )}
+
       {/* Progress */}
       <View style={[styles.progress, { maxWidth: stageMaxWidth }]}>
         {Array.from({ length: STEP_COUNT }).map((_, i) => (
@@ -746,6 +773,8 @@ const styles = StyleSheet.create({
   brandDot: { width: 10, height: 10, borderRadius: 3 },
   brandWord: { fontFamily: FONTS.displaySemibold, fontSize: 18 },
   skip: { fontSize: 15, fontWeight: '600' },
+  haveAccount: { alignSelf: 'center', paddingVertical: 10, paddingHorizontal: 12 },
+  haveAccountText: { fontSize: 14 },
   progress: { flexDirection: 'row', gap: 6, paddingHorizontal: 24, marginTop: 14, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   bar: { flex: 1, height: 4, borderRadius: 999 },
   stage: { flex: 1, paddingHorizontal: 28, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
