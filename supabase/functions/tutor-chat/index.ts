@@ -169,11 +169,52 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       console.error('[tutor-chat] is_pro check failed:', proErr);
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
-    if (proResult !== true) {
-      return jsonResponse(
-        { error: 'The AI tutor is a Pro feature. Upgrade to Pro to start studying with it.', code: 'PRO_REQUIRED' },
-        402,
-      );
+    const isPro = proResult === true;
+
+    // The body has to be read BEFORE the gate now, because one action is not
+    // Pro-only. Reading it here and reusing it below keeps the single
+    // req.json() this endpoint is allowed.
+    let rawBody: Record<string, unknown>;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return jsonResponse({ error: 'Invalid request body' }, 400);
+    }
+    const requestedAction = typeof rawBody.action === 'string' ? rawBody.action : null;
+
+    // `prepare_note` extracts the text from an uploaded document. That is the
+    // first half of "turn a file into study material", which the free tier
+    // includes: a free account gets ONE AI action — a syllabus scan, a lecture
+    // recording, or a document turned into notes — and this is that third
+    // route. Gating it as Pro made the feature reachable but impossible to
+    // finish: the button was offered to everyone and then 402'd.
+    //
+    // Free callers get exactly one. The action is CHARGED at note creation
+    // (lecture-study-kit), not here, so this only has to refuse a free user who
+    // has already spent it — otherwise extraction would be an unlimited free
+    // OCR endpoint.
+    if (!isPro) {
+      if (requestedAction !== 'prepare_note') {
+        return jsonResponse(
+          { error: 'The AI tutor is a Pro feature. Upgrade to Pro to start studying with it.', code: 'PRO_REQUIRED' },
+          402,
+        );
+      }
+      const { data: spent, error: spentErr } = await adminClient
+        .rpc('free_action_used', { uid: userId });
+      if (spentErr) {
+        console.error('[tutor-chat] free_action_used check failed:', spentErr);
+        return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
+      }
+      if (spent === true) {
+        return jsonResponse(
+          {
+            error: "You've already used your free action — a syllabus scan, a lecture recording, or a document turned into notes. Upgrade to Pro for unlimited.",
+            code: 'FREE_ACTION_USED',
+          },
+          402,
+        );
+      }
     }
 
     // 4. Parse and validate request body. Practice generation and evaluation
@@ -184,11 +225,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       action?: unknown; assignmentId?: unknown; practiceId?: unknown; answer?: unknown; locale?: unknown;
       noteId?: unknown;
     };
-    try {
-      body = await req.json();
-    } catch {
-      return jsonResponse({ error: 'Invalid request body' }, 400);
-    }
+    body = rawBody as typeof body;
     const conversationId = typeof body.conversationId === 'string' ? body.conversationId : null;
     const message = typeof body.message === 'string' ? body.message.trim() : '';
     const courseId = typeof body.courseId === 'string' ? body.courseId : null;

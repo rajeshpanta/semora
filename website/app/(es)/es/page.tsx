@@ -32,7 +32,7 @@ export const metadata: Metadata = {
 };
 
 const CHIPS = [
-  '5 escaneos gratis al mes',
+  '1 acción con IA gratis por cuenta',
   'App completa en español',
   'Tus datos al día en iPhone, iPad y la web',
 ];
@@ -145,7 +145,7 @@ const FAQ = [
   {
     question: '¿Semora es realmente gratis?',
     answer:
-      'Sí. El plan gratuito incluye cinco escaneos al mes, hasta cuatro cursos dentro de un solo semestre, seguimiento de entregas, promedios ponderados y recordatorios. No necesitas tarjeta de crédito.',
+      'Sí. El plan gratuito incluye una acción con IA para toda la vida de la cuenta —un escaneo del programa, una grabación de clase o un documento convertido en apuntes—, hasta cuatro cursos dentro de un solo semestre, seguimiento de entregas, promedios ponderados y recordatorios. No necesitas tarjeta de crédito.',
   },
   {
     question: '¿Qué añade Pro?',

@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 };
 
 const HERO_CHIPS = [
-  '5 free scans every month',
+  'Your first AI action is free',
   'Synced across iPhone, iPad and web',
 ];
 
@@ -142,7 +142,7 @@ const HOME_FAQ = [
   {
     question: 'Is Semora actually free?',
     answer:
-      'Yes. The free plan includes five scans a month, up to four courses within one semester, deadline tracking, weighted grades and reminders—no credit card required.',
+      'Yes. The free plan includes one AI action for the lifetime of your account—a syllabus scan, a lecture recording or turning a document into notes, whichever you reach for first—plus up to four courses within one semester, deadline tracking, weighted grades and reminders. No credit card required.',
   },
   {
     question: 'What does Pro add?',

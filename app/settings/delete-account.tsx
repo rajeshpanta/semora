@@ -188,6 +188,32 @@ export default function DeleteAccountScreen() {
       // Supabase Storage objects must be deleted through the Storage API;
       // direct SQL deletes are intentionally rejected. Do this while the
       // user's authenticated RLS still grants access to their private folder.
+      // Cancel any card subscription FIRST, while the account (and therefore
+      // the stripe_customers mapping) still exists. Deleting the auth row
+      // cascades that mapping away, after which nothing on our side remembers
+      // the subscription — and Stripe would keep charging the card every month
+      // for an account nobody can sign into. A failure here must stop the
+      // deletion: losing access while still being billed is far worse than a
+      // deletion the user can retry.
+      const { error: cancelError } = await supabase.functions.invoke('stripe-portal', {
+        body: { action: 'cancel' },
+      });
+      if (cancelError) {
+        // 404 NO_WEB_SUBSCRIPTION is the normal case for App Store and
+        // never-subscribed accounts — there is simply nothing to cancel.
+        const ctx = (cancelError as { context?: Response }).context;
+        let payload: { code?: string } | null = null;
+        try { payload = ctx ? await ctx.json() : null; } catch { /* body already read */ }
+        if (payload?.code !== 'NO_WEB_SUBSCRIPTION') {
+          Alert.alert(
+            'Could not cancel your subscription',
+            'Your account was not deleted, because we could not stop your card subscription first and did not want to leave you paying for an account you cannot reach. Please try again, or contact support.',
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
       await deleteAccountStorage(targetUserId);
 
       // Credentials are device-only, so the database cascade cannot remove
@@ -232,7 +258,12 @@ export default function DeleteAccountScreen() {
             <Text style={[styles.warningText, { color: colors.ink2 }]}>
               All your semesters, courses, tasks, grades, uploaded syllabi, course notes, and lecture recordings will be deleted. This cannot be undone.
               {isPro
-                ? '\n\nDeleting your account does NOT cancel your Pro subscription — Apple keeps billing until you cancel it in Settings → Apple Account → Subscriptions.'
+                ? (Platform.OS === 'web'
+                    // A card subscription IS cancelled as part of this flow
+                    // (see the stripe-portal cancel call above), so the Apple
+                    // warning would be both wrong and alarming here.
+                    ? '\n\nYour card subscription will be cancelled as part of deleting your account.'
+                    : '\n\nIf you subscribed through the App Store, deleting your account does NOT cancel it — Apple keeps billing until you cancel in Settings → Apple Account → Subscriptions. A subscription bought by card on the web is cancelled automatically.')
                 : ''}
             </Text>
           </View>

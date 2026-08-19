@@ -33,7 +33,7 @@ const FAQ = [
   {
     question: "Is Semora free, and what's included in Pro?",
     answer:
-      "Semora's free tier includes 5 syllabus scans per calendar month, up to 4 courses within one semester, one semester total, full deadline and grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no monthly scan cap, Smart Plan, the Workload dashboard, Grade Scale & Forecasting, calendar sync with .ics export, Flashcards, a Focus timer, an AI tutor, Academic Risk alerts, Progress Insights, and Share & Streaks.",
+      "Semora's free tier includes one AI action for the lifetime of the account—a syllabus scan, a lecture recording, or a document turned into notes—plus up to 4 courses within one semester, one semester total, full deadline and grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no scan cap, Smart Plan, the Workload dashboard, Grade Scale & Forecasting, calendar sync with .ics export, Flashcards, a Focus timer, an AI tutor, Academic Risk alerts, Progress Insights, and Share & Streaks.",
   },
   {
     question: 'Does Semora sync with Canvas or other tools?',
@@ -43,7 +43,7 @@ const FAQ = [
 ];
 
 const TABLE_ROWS = [
-  { feature: 'Syllabus scans', free: '5 per calendar month', pro: 'Unlimited' },
+  { feature: 'AI actions (scan, lecture, or notes)', free: '1 per account, lifetime', pro: 'Unlimited' },
   { feature: 'Courses', free: 'Up to 4 within one semester', pro: 'Unlimited' },
   { feature: 'Semesters', free: '1 total', pro: 'Unlimited' },
   { feature: 'Task, deadline & grade tracking', free: 'Included', pro: 'Included' },
@@ -184,8 +184,9 @@ export default function AiStudyPlannerPage() {
       <h2>What&apos;s free vs. what&apos;s in Pro</h2>
       <TierTable rows={TABLE_ROWS} caption="Semora plan comparison" proLabel={PRO_LABEL} />
       <p className={styles.note}>
-        Pro is purchased in the app and applies account-wide, including on the web. On web,
-        Pro entitlement is read and refreshed rather than purchased directly.
+        Pro applies account-wide, including on the web. You can buy it by card on the web at
+        app.semoraai.com, where Stripe handles checkout, or inside the iOS app through the App
+        Store — either route unlocks every device on your account.
       </p>
 
       <h2>How this compares to planning it yourself</h2>

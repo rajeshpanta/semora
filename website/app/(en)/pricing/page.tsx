@@ -13,7 +13,7 @@ import { RouteReporter } from '@/components/RouteReporter';
 
 export const metadata: Metadata = {
   title: 'Pricing',
-  description: "Semora is free to start. Pro is $3.99/month or $19.99/year, purchased in the app and applied account-wide including web.",
+  description: "Semora is free to start. Pro is $3.99/month or $19.99/year, bought by card on the web or in the iOS app, and applied account-wide including web.",
   alternates: enAlternates('/pricing'),
 };
 
@@ -21,17 +21,17 @@ const PRICING_FAQ = [
   {
     question: 'Is Semora free?',
     answer:
-      'Yes. The free tier includes 5 syllabus scans per calendar month, up to 4 courses in one semester, full deadline and grade tracking, and same-day reminders. No credit card required. Calendar sync (device + .ics export) is a Pro feature.',
+      'Yes. The free tier includes one AI action for the lifetime of your account—a syllabus scan, a lecture recording or a document turned into notes, whichever you use it on—plus up to 4 courses in one semester, full deadline and grade tracking, and same-day reminders. No credit card required. Calendar sync (device + .ics export) is a Pro feature.',
   },
   {
     question: 'How do I upgrade to Pro?',
     answer:
-      'Pro is purchased inside the app through the App Store, on iPhone or iPad. Once purchased, it applies to your whole account, including on the web.',
+      'Two ways. Pay by card on the web at app.semoraai.com, or buy it inside the app through the App Store on iPhone or iPad. Either way it applies to your whole account, including on the web.',
   },
   {
     question: 'Can I cancel anytime?',
     answer:
-      'Yes. Pro subscriptions are managed through your Apple ID. Go to Settings > Apple ID > Subscriptions to cancel. Subscriptions renew automatically unless canceled at least 24 hours before the period ends.',
+      'Yes. If you paid by card, open Settings in Semora and tap Manage Semora Plan to cancel in the billing portal. If you subscribed through the App Store, go to Settings > Apple ID > Subscriptions. Subscriptions renew automatically unless canceled, and App Store plans must be canceled at least 24 hours before the period ends.',
   },
   {
     question: 'What happens to my data if I cancel Pro?',

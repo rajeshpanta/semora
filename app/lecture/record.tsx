@@ -8,6 +8,7 @@ import { useLocalSearchParams, useNavigation, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { useCourses } from '@/lib/queries';
@@ -51,6 +52,7 @@ export default function RecordLectureScreen() {
   const { data: courses = [] } = useCourses(selectedSemesterId);
   const isPro = useAppStore((s) => s.isPro);
   const { data: freeLectureUsed } = useFreeActionUsed();
+  const [upsellVisible, setUpsellVisible] = useState(false);
 
   const navigation = useNavigation();
   const recorder = useLectureRecorder();
@@ -148,23 +150,10 @@ export default function RecordLectureScreen() {
     }
 
     if (result.code === 'FREE_LECTURE_USED') {
-      // Explain before navigating. Dropping someone onto a paywall with no
-      // stated reason reads as a bug, and the server already localized this.
-      Alert.alert(
-        'Free lecture already used',
-        result.message ||
-          "You've used your free lecture recording. Upgrade to Pro for unlimited lectures.",
-        [
-          { text: 'Not now', style: 'cancel' },
-          {
-            text: 'See Pro',
-            onPress: () => {
-              track('paywall_open', { screen: 'lecture_record', context: 'lecture' });
-              router.push('/paywall' as any);
-            },
-          },
-        ],
-      );
+      // Same upgrade moment the scan and notes limits use, so hitting the one
+      // free action feels like one rule rather than three different refusals.
+      track('paywall_open', { screen: 'lecture_record', context: 'lecture' });
+      setUpsellVisible(true);
       return;
     }
     if (result.code === 'WEB_UNSUPPORTED') {
@@ -251,6 +240,11 @@ export default function RecordLectureScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
+      <ProUpsellSheet
+        visible={upsellVisible}
+        reason="lecture"
+        onClose={() => setUpsellVisible(false)}
+      />
       <LectureConsentSheet
         visible={consentVisible}
         onAccept={() => void handleConsentAccepted()}

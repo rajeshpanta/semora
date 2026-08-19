@@ -49,7 +49,7 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         save: `Ahorra ${PRO_ANNUAL_SAVINGS_PCT} %`,
         everything: 'Todo lo de Gratis, y además:',
         purchase:
-          'Pro se compra en la app y se aplica a toda tu cuenta, incluida la versión web.',
+          'Pro se compra con tarjeta en la web o en la app de iOS, y en ambos casos se aplica a toda tu cuenta.',
       }
     : {
         free: PRICING.free.name,

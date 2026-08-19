@@ -400,12 +400,12 @@ serve(withRequestLogging('validate-receipt', async (req, log) => {
         }
       }
       if (jwsActive) {
-        return await writeEntitlementAndRespond(adminClient, userId, platform, jwsActive, startTime);
+        return await writeEntitlementAndRespond(adminClient, userId, platform, jwsActive, startTime, log);
       }
       // jws verified but inactive (lapsed/revoked/foreign product):
       // when no receipt fallback, record the inactive state honestly.
       if (!receiptUsable) {
-        return await writeEntitlementAndRespond(adminClient, userId, platform, null, startTime);
+        return await writeEntitlementAndRespond(adminClient, userId, platform, null, startTime, log);
       }
     }
 
@@ -470,7 +470,7 @@ serve(withRequestLogging('validate-receipt', async (req, log) => {
       BLOCK_SANDBOX && appleResp.environment && appleResp.environment !== 'Production'
         ? null
         : pickLatestActive(appleResp);
-    return await writeEntitlementAndRespond(adminClient, userId, platform, active, startTime);
+    return await writeEntitlementAndRespond(adminClient, userId, platform, active, startTime, log);
   } catch (err) {
     log.error('handler_error', errorFields(err));
     return jsonResponse({ error: 'An unexpected error occurred. Please try again.' }, 500);
@@ -488,6 +488,13 @@ async function writeEntitlementAndRespond(
   platform: string,
   active: { productId: string; expiresAt: Date; originalTransactionId: string } | null,
   startTime: number,
+  // Passed in rather than closed over: `log` is bound as the handler's second
+  // parameter, and this function lives at module scope. Referencing it here
+  // without threading it through is a ReferenceError at runtime — which Deno
+  // only surfaces when the line executes, and this file is excluded from
+  // tsconfig so tsc never sees it either.
+  // deno-lint-ignore no-explicit-any
+  log: any,
 ): Promise<Response> {
 
     // 5. Upsert entitlement row (adminClient created above for rate-limit check)
@@ -551,6 +558,55 @@ async function writeEntitlementAndRespond(
           );
         }
       }
+    }
+
+    // ── DO NOT CLOBBER A WEB (STRIPE) SUBSCRIPTION ────────────────────────
+    // This function writes is_pro:false whenever it finds no active Apple
+    // receipt — correct when Apple is the only biller, catastrophic once
+    // Stripe can bill too. A student who subscribes on app.semoraai.com and
+    // then opens the iOS app has no Apple receipt, so this would have
+    // downgraded them to free while Stripe kept charging their card.
+    //
+    // Stripe-billed rows are owned by the stripe-webhook function alone.
+    // Apple may not write them: an Apple receipt that is genuinely active is
+    // still refused below, because two live subscriptions for one account is
+    // a billing problem to resolve with the user, not silently by whichever
+    // validator ran last.
+    const { data: currentRow } = await adminClient
+      .from('entitlements')
+      .select('platform, is_pro, expires_at, plan')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const webBilled =
+      currentRow?.platform === 'web' &&
+      currentRow?.is_pro === true &&
+      (!currentRow.expires_at || new Date(currentRow.expires_at) > new Date());
+
+    if (webBilled) {
+      if (active) {
+        // Both billers think they own this account. Say so rather than
+        // picking a winner and quietly cancelling someone's access.
+        log.warn('apple_receipt_over_web_subscription', { user_id: userId });
+        return jsonResponse(
+          {
+            error:
+              'This account already has an active Semora Pro subscription billed on the web. ' +
+              'Manage or cancel it from Settings before subscribing through the App Store, ' +
+              'so you are not charged twice.',
+          },
+          409,
+        );
+      }
+      // No Apple receipt and a healthy web subscription: nothing to do, and
+      // above all nothing to downgrade.
+      log.info('skipped_write_web_billed', { user_id: userId });
+      await logCall(adminClient, userId, 'success', Date.now() - startTime, null);
+      return jsonResponse({
+        is_pro: true,
+        plan: currentRow?.plan ?? null,
+        expires_at: currentRow?.expires_at ?? null,
+      });
     }
 
     const entitlement = active

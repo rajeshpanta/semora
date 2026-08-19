@@ -110,11 +110,22 @@ export default function SettingsScreen() {
   // than opening the user's full Apple Account subscription list.
   const handleManageSubscription = async () => {
     if (managing) return;
+    // On web this opens Stripe's billing portal. It returns opened:false only
+    // when the account has no Stripe customer, which means they subscribed
+    // through the App Store — and Apple, not us, owns that cancellation.
     if (Platform.OS === 'web') {
-      Alert.alert(
-        'Manage Semora on iPhone or iPad',
-        'Open Semora on your iPhone or iPad, then go to Settings → Subscription → Manage Semora Plan.',
-      );
+      setManaging(true);
+      try {
+        const result = await openSubscriptionManagement();
+        if (!result.opened) {
+          Alert.alert(
+            'Manage Semora on iPhone or iPad',
+            'This subscription was purchased through the App Store. Open Semora on your iPhone or iPad, then go to Settings → Subscription → Manage Semora Plan.',
+          );
+        }
+      } finally {
+        setManaging(false);
+      }
       return;
     }
 

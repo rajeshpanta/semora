@@ -45,11 +45,38 @@ export default function TermsPage() {
       <h2>4. Subscriptions and Payments</h2>
       <ul>
         <li>Semora offers both free and paid subscription tiers (&quot;Semora Pro&quot;).</li>
-        <li>Pro subscriptions are billed through Apple&apos;s App Store. Prices are displayed in the App before purchase.</li>
-        <li>Subscriptions automatically renew unless canceled at least 24 hours before the end of the current period.</li>
-        <li>You can manage and cancel your subscription through your Apple ID account settings.</li>
+        <li>
+          Semora Pro costs $3.99 per month or $19.99 per year. Card payments on the web are charged
+          in US dollars; on the App Store, Apple charges the local equivalent for your storefront.
+          Prices are shown before purchase.
+        </li>
+        <li>
+          Pro is billed one of two ways, depending on where you subscribe: through Apple&apos;s App
+          Store if you subscribe in the iOS app, or by card through our payment processor, Stripe,
+          if you subscribe at app.semoraai.com. Semora never receives or stores your card details.
+        </li>
+        <li>Subscriptions renew automatically at the end of each period until you cancel.</li>
+        <li>
+          To cancel an App Store subscription, use your Apple ID account settings at least 24 hours
+          before the period ends. To cancel a card subscription, open Settings in Semora and choose
+          Manage Semora Plan, which opens the Stripe billing portal.
+        </li>
+        <li>
+          Canceling stops future renewals. You keep Pro until the end of the period you have already
+          paid for.
+        </li>
         <li>Free trial periods, if offered, automatically convert to paid subscriptions unless canceled before the trial ends.</li>
-        <li>Refunds are handled by Apple according to their refund policies.</li>
+        <li>
+          Refunds for App Store purchases are handled by Apple under their refund policies.
+        </li>
+        <li>
+          For card payments made on the web: email semora365@gmail.com within 14 days of your first
+          charge and we will refund it in full, no questions asked.
+        </li>
+        <li>
+          We will also refund a renewal charge if you contact us within 14 days of it and you have
+          not used Pro since it renewed.
+        </li>
       </ul>
 
       <h2>5. Free Tier Limitations</h2>

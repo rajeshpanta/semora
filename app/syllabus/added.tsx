@@ -144,7 +144,7 @@ export default function SyllabusAddedScreen() {
               <Text style={[styles.widgetTipTitle, { color: colors.ink }]}>Put it on your home screen</Text>
             </View>
             <Text style={[styles.widgetTipBody, { color: colors.ink2 }]}>
-              Semora has a widget that shows what&apos;s due next, so you see it without opening anything.
+              Semora has a widget that shows what’s due next, so you see it without opening anything.
               Touch and hold your home screen, tap Edit → Add Widget, then search Semora.
             </Text>
             <TouchableOpacity onPress={dismissWidgetTip} style={styles.widgetTipDismiss}>

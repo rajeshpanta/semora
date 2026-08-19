@@ -8,6 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { FONTS, SCREEN_MAX_WIDTH, WEB_CARD_SHADOW } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { track } from '@/lib/analytics';
 import { normalizeSupportedDocument, unsupportedDocumentMessage } from '@/lib/documentFiles';
 import { useUploadCourseNote, type CourseNoteUploadProgress } from '@/lib/tutor';
@@ -60,6 +61,7 @@ export default function NewNotesFromDocument() {
   const createNote = useCreateDocumentNote(courseId);
   const isPro = useAppStore((s) => s.isPro);
   const { data: freeActionUsed = false } = useFreeActionUsed();
+  const [upsellVisible, setUpsellVisible] = useState(false);
 
   const [progress, setProgress] = useState<CourseNoteUploadProgress | null>(null);
   const [lectureId, setLectureId] = useState<string | null>(null);
@@ -82,7 +84,7 @@ export default function NewNotesFromDocument() {
     // uploaded a file and created a note — leaving an empty, un-generatable
     // row sitting in their Notes list as the reward for hitting the paywall.
     if (!isPro && freeActionUsed) {
-      router.push({ pathname: '/paywall', params: { context: 'document_notes' } } as any);
+      setUpsellVisible(true);
       return;
     }
 
@@ -157,6 +159,11 @@ export default function NewNotesFromDocument() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
+      <ProUpsellSheet
+        visible={upsellVisible}
+        reason="notes"
+        onClose={() => setUpsellVisible(false)}
+      />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: SCREEN_MAX_WIDTH }]}>
         <Text style={[styles.title, { color: colors.ink }]}>Turn a file into study material</Text>
         <Text style={[styles.subtitle, { color: colors.ink2 }]}>

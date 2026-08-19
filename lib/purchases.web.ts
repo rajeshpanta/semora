@@ -1,5 +1,6 @@
 import type { ProductOrSubscription, Purchase, PurchaseError } from 'react-native-iap';
 import { getServerEntitlement, type ProEntitlement } from '@/lib/entitlementServer';
+import { supabase } from '@/lib/supabase';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Web shim for lib/purchases.ts. Metro resolves `.web.ts` ahead of `.ts` when
@@ -17,10 +18,18 @@ import { getServerEntitlement, type ProEntitlement } from '@/lib/entitlementServ
 // The type-only imports above are erased at compile time (no runtime require),
 // so they keep the signatures identical to the native module for free.
 //
-// There is deliberately NO purchasing on web. Pro is read-only in the browser:
-// entitlement comes from the server row that the iOS StoreKit flow wrote. That
-// keeps App Store guideline 3.1.1 out of scope entirely and means is_pro() —
-// which every Pro gate and the scan-quota trigger depend on — needs no changes.
+// PURCHASING ON WEB IS STRIPE. Until this shipped, the browser could show the
+// paywall but not sell anything, so every web visitor who wanted Pro was told
+// to go find an iPhone — and most simply left.
+//
+// Stripe lives HERE, in the file iOS never resolves, which is the whole point:
+// the shipping iOS binary contains no Stripe code and no reference to outside
+// purchasing, so App Store guideline 3.1.1 stays exactly as out-of-scope as it
+// was when this file did nothing. Do not move any of this into purchases.ts.
+//
+// Stripe never grants Pro from the client. Checkout only redirects; the
+// stripe-webhook edge function writes the entitlement row, and is_pro() — which
+// every Pro gate and the scan-quota trigger depend on — still needs no changes.
 // ─────────────────────────────────────────────────────────────────────────────
 
 // Kept in sync with lib/purchases.ts so any UI reading a product id still works.
@@ -50,8 +59,39 @@ export async function getProducts(): Promise<{
   return null;
 }
 
-/** Purchasing is iOS-only. Callers treat false as "did not purchase". */
-export async function purchaseProduct(_productId: string): Promise<boolean> {
+/**
+ * Send the browser to Stripe Checkout.
+ *
+ * Returns false in the sense every caller already understands — "Pro was not
+ * granted in this call" — because on success the tab NAVIGATES AWAY and the
+ * entitlement arrives later via the webhook. The paywall picks the result back
+ * up from the ?checkout= parameter on the return trip.
+ */
+export async function purchaseProduct(productId: string): Promise<boolean> {
+  const plan = productId === PRODUCT_IDS.annual ? 'annual' : 'monthly';
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Please sign in before subscribing.');
+
+  const { data, error } = await supabase.functions.invoke('stripe-checkout', {
+    body: { plan },
+  });
+
+  if (error) {
+    // supabase-js buries the response body on non-2xx; dig out the real message
+    // so "you already have Pro" doesn't surface as "Edge Function returned a
+    // non-2xx status code".
+    const ctx = (error as { context?: Response }).context;
+    let payload: { error?: string; code?: string } | null = null;
+    try { payload = ctx ? await ctx.json() : null; } catch { /* body already read */ }
+    const e = new Error(payload?.error ?? 'Could not start checkout. Please try again.');
+    (e as Error & { code?: string }).code = payload?.code;
+    throw e;
+  }
+
+  const url = (data as { url?: string })?.url;
+  if (!url) throw new Error('Could not start checkout. Please try again.');
+
+  window.location.assign(url);
   return false;
 }
 
@@ -60,9 +100,25 @@ export type SubscriptionManagementResult = {
   purchase: Purchase | null;
 };
 
-/** Apple's in-app management sheet is unavailable in a browser. */
+/**
+ * Open Stripe's billing portal — the web counterpart of Apple's management
+ * sheet — where a subscriber can change their card, read invoices or cancel.
+ *
+ * Returns opened:false when this account has no Stripe customer, which means
+ * they subscribed on the iPhone and Apple owns cancellation. Callers show the
+ * Apple instructions in that case rather than a dead end.
+ */
 export async function openSubscriptionManagement(): Promise<SubscriptionManagementResult> {
-  return { opened: false, purchase: null };
+  try {
+    const { data, error } = await supabase.functions.invoke('stripe-portal', { body: {} });
+    if (error) return { opened: false, purchase: null };
+    const url = (data as { url?: string })?.url;
+    if (!url) return { opened: false, purchase: null };
+    window.location.assign(url);
+    return { opened: true, purchase: null };
+  } catch {
+    return { opened: false, purchase: null };
+  }
 }
 
 /** Web can never confirm a trial offer; false is the safe default. */

@@ -29,7 +29,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
 {
   "syllabus-scanner": {
     "metaTitle": "AI Syllabus Scanner for College Students",
-    "metaDescription": "Turn a syllabus photo, PDF, or pasted text into every deadline, class time, and grade cutoff. Review each item before it saves. Free tier: 5 scans per month.",
+    "metaDescription": "Turn a syllabus photo, PDF, or pasted text into every deadline, class time, and grade cutoff. Review each item before it saves. Free tier: one AI action per account.",
     "h1": "AI Syllabus Scanner",
     "lede": "Photograph, upload, or paste your syllabus and Semora returns the course, the class schedule, the grading scale, and every deadline it can find. You review the list before a single item is saved.",
     "intro": [
@@ -91,17 +91,17 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       {
         "heading": "The free limit, stated precisely",
         "paragraphs": [
-          "Scanning is a free feature with a real number attached: five scans per calendar month. The window is the calendar month in UTC, so the count resets on the 1st, and the same boundary is used by the app, the server, and the database so the three never disagree with each other about how many you have left.",
-          "You are not left guessing where you stand. The Scan tab shows a pill reading something like \"3 of 5 free scans left this month,\" which turns red at zero. Before you spend the last one, Semora interrupts with a confirmation that says exactly that and offers three choices: cancel, upgrade, or use the last scan. At zero, the scan buttons explain that they reset on the 1st and offer the upgrade path.",
-          "Two other limits are worth knowing because they are separate from the scan count. A free account holds up to four courses within one semester, and one semester total. That matters here because a scan that extracts a brand-new course can hit the course cap even when you still have scans left, so the Scan tab shows a specific note when you are at four courses, telling you to re-scan a course you already have or upgrade rather than letting you discover it mid-import. There is also a rolling cap of 20 scan attempts per 24 hours on every account, free or Pro, which exists to stop runaway automation and which no ordinary semester setup will ever approach.",
-          "Pro removes the scan and course caps entirely, at $3.99 per month or $19.99 per year, which works out to about $1.67 a month on the annual plan. Pro is purchased inside the iOS app and the entitlement applies to your whole account, including the web app; there is no separate web checkout."
+          "Scanning is a free feature with a real number attached: one AI action for the lifetime of your account. You pick what it buys — a syllabus scan, a lecture recording, or turning a document into notes — and whichever you reach for first is where it goes. Nothing resets. The count is attached to the account rather than to the calendar, so there is no refill waiting on the 1st, and the same single count is used by the app, the server, and the database so the three never disagree with each other about whether you still have it.",
+          "You are not left guessing where you stand. The Scan tab shows a pill reading something like \"1 free AI action left,\" which turns red at zero. Before you spend it, Semora interrupts with a confirmation that says exactly that and offers three choices: cancel, upgrade, or go ahead and use it. At zero, the scan buttons say plainly that the free action is used up and offer the upgrade path.",
+          "Two other limits are worth knowing because they are separate from the free action. A free account holds up to four courses within one semester, and one semester total. That matters here because a scan that extracts a brand-new course can hit the course cap even when your free action is still unspent, so the Scan tab shows a specific note when you are at four courses, telling you to re-scan a course you already have or upgrade rather than letting you discover it mid-import. There is also a rolling cap of 20 scan attempts per 24 hours on every account, free or Pro, which exists to stop runaway automation and which no ordinary semester setup will ever approach.",
+          "Pro removes the scan and course caps entirely, at $3.99 per month or $19.99 per year, which works out to about $1.67 a month on the annual plan. Pro can be bought two ways \u2014 with a card on the web at app.semoraai.com, where Stripe handles the checkout, or inside the iOS app through the App Store \u2014 and either way the entitlement applies to your whole account, including the web app, so you only ever pay once."
         ]
       },
       {
         "heading": "When the document is not a syllabus, and other awkward cases",
         "paragraphs": [
           "The first thing the model is asked is not \"what are the deadlines\" but \"is this actually a syllabus.\" A receipt, a boarding pass, an article, a random screenshot, or a photo of the wrong page is classified as not-a-syllabus and returned as exactly that, before a single row is written. You get a calm \"Not a syllabus\" message with two buttons, Pick Another and Try Again, instead of a phantom course called Unknown Course full of invented dates. The same gate catches an extraction that comes back completely empty: no course name, no items, no meetings, nothing usable.",
-          "That rejection does not cost you a free scan. Only successful extractions count toward your five. It does count as one of the 20 attempts allowed in a rolling 24-hour window, so pointing the camera at your lunch receipt eleven times in a row is not free forever, but a genuine mistake costs you nothing that matters.",
+          "That rejection does not spend your free action. Only successful extractions count against it. It does count as one of the 20 attempts allowed in a rolling 24-hour window, so pointing the camera at your lunch receipt eleven times in a row is not free forever, but a genuine mistake costs you nothing that matters.",
           "The other failure modes have their own handling instead of one generic error. A syllabus so dense that the response gets cut off mid-structure returns a specific message suggesting you scan one course, or fewer pages, at a time. If the AI service is overloaded, the request retries with backoff and then falls back to a second model before giving up, so a capacity blip usually resolves itself rather than becoming your problem. A scan that hangs is aborted after 120 seconds, and the abort cancels the in-flight request before any database writes happen, so a timeout never leaves you with a half-created course. If the extraction did finish server-side just as the client gave up, that one still counts \u2014 the work was done and delivered. While a scan is running, the modal is locked - you cannot swipe it away and strand an extraction you will never see.",
           "Re-scanning a syllabus you already imported is caught too. Semora tells you the course already exists in that semester and offers two honest options: open the existing course, or create a separate duplicate. It does not offer to merge, because the review screen has no per-item comparison against your existing tasks and merging would silently double every deadline you already have."
         ]
@@ -134,7 +134,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
     "faq": [
       {
         "question": "How many syllabi can I scan for free?",
-        "answer": "Five scans per calendar month. A photo scan of up to five pages counts as one scan, not five. The free plan also holds up to four courses within one semester, and one semester in total. Pro removes the monthly scan cap and both of those limits."
+        "answer": "One. A free account gets a single AI action for the lifetime of the account, and a syllabus scan is one way to spend it — a lecture recording or turning a document into notes are the others. It does not reset. A photo scan of up to five pages counts as one scan, not five. The free plan also holds up to four courses within one semester, and one semester in total. Pro removes the cap on AI actions and both of those limits."
       },
       {
         "question": "What can I actually feed the scanner?",
@@ -257,8 +257,8 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       {
         "heading": "Who this is for, what it costs, and who should skip it",
         "paragraphs": [
-          "Grade tracking with weighted averages is on the free plan, and that means the whole engine: point or percentage entry, per-assignment weights, categories, drop-lowest rules, all three extra-credit policies, letter grades from your course's scale, and the semester GPA estimate. Free accounts are capped at 5 syllabus scans per calendar month and up to 4 courses within one semester, with one semester total on free, which for a lot of students is a full course load already.",
-          "Pro is $3.99 per month or $19.99 per year, which works out to about $1.67 a month annually. It adds editing your course grade scale, editing your GPA scale, both what-if calculators, Academic Risk alerts, and Progress Insights, along with everything else in the Pro tier. Pro is purchased inside the iOS app and applies to your whole account, including the web app — there is no separate web checkout.",
+          "Grade tracking with weighted averages is on the free plan, and that means the whole engine: point or percentage entry, per-assignment weights, categories, drop-lowest rules, all three extra-credit policies, letter grades from your course's scale, and the semester GPA estimate. Free accounts get one AI action for the lifetime of the account — a syllabus scan, a lecture recording, or a document turned into notes, your choice — and hold up to 4 courses within one semester, with one semester total on free, which for a lot of students is a full course load already.",
+          "Pro is $3.99 per month or $19.99 per year, which works out to about $1.67 a month annually. It adds editing your course grade scale, editing your GPA scale, both what-if calculators, Academic Risk alerts, and Progress Insights, along with everything else in the Pro tier. Pro can be bought with a card on the web at app.semoraai.com, where Stripe processes the payment, or inside the iOS app through the App Store, and either way it applies to your whole account, including the web app.",
           "It is genuinely useful if your syllabus states weights and your school's LMS does not show a live weighted grade, or shows one you do not trust. It is useful if you have ever rebuilt the same spreadsheet in October. It is useful if your professor drops the lowest two quizzes and you cannot be bothered to model that by hand.",
           "It is less useful if your LMS already publishes an accurate weighted grade you check regularly and you never wonder what you need on the final. And it is not a gradebook of record. It is your estimate, built from what you enter; your instructor's number is the one that goes on the transcript. If you never get around to typing in scores, it will correctly show you nothing."
         ]
@@ -435,7 +435,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       },
       {
         "question": "Is Smart Plan included on the free plan?",
-        "answer": "No, it is part of Pro, which is $3.99 a month or $19.99 a year. Pro is purchased in the iOS app and the entitlement applies to your whole account, including the web app."
+        "answer": "No, it is part of Pro, which is $3.99 a month or $19.99 a year. You can buy Pro with a card on the web at app.semoraai.com, or inside the iOS app through the App Store, and the entitlement applies to your whole account, including the web app."
       }
     ]
   },
@@ -526,7 +526,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "How flashcards connect to the rest of Semora",
         "paragraphs": [
           "Flashcards are downstream of the scanner. The syllabus you scanned is the grounding source, the tasks Semora extracted become the focus chips, and the notes you attached feed both this and the AI Tutor. Delete a course and its decks are not destroyed — they detach and move to Uncategorized, keeping every card and every review schedule intact. Decks also ignore semester filters on purpose, so last term's deck is still there when the final rolls around.",
-          "Flashcards are part of Pro, at $3.99 per month or $19.99 per year, which works out to about $1.67 a month on the annual plan. Pro is purchased in the iOS app and the entitlement applies to your whole account, including the web app — there is no separate web checkout. Free accounts get a genuinely usable core: 5 syllabus scans per calendar month, up to 4 courses within one semester, one semester total, full deadline and task tracking, grade tracking with weighted averages, same-day reminders, and Course Spaces \u2014 joining a classmate's shared course is always free. Pro adds unlimited scans and courses, Canvas, Blackboard, and Moodle assignment import subject to school policy and platform configuration, hosting your own Course Space, Smart Plan, the Workload dashboard, Flashcards, the Focus timer, the AI Tutor, Grade Scale and Forecasting, calendar sync with .ics export, custom 1-day and 3-day reminders with quiet hours, Academic Risk alerts, Progress Insights, and Share and Streaks."
+          "Flashcards are part of Pro, at $3.99 per month or $19.99 per year, which works out to about $1.67 a month on the annual plan. Pro is bought either with a card on the web at app.semoraai.com, where Stripe handles the checkout, or inside the iOS app through the App Store — and the entitlement applies to your whole account, including the web app, whichever way you paid. Free accounts get a genuinely usable core: full deadline and task tracking, grade tracking with weighted averages, same-day reminders, up to 4 courses within one semester, one semester total, one AI action for the lifetime of the account to spend on a scan, a lecture recording, or a document turned into notes, and Course Spaces \u2014 joining a classmate's shared course is always free. Pro adds unlimited scans and courses, Canvas, Blackboard, and Moodle assignment import subject to school policy and platform configuration, hosting your own Course Space, Smart Plan, the Workload dashboard, Flashcards, the Focus timer, the AI Tutor, Grade Scale and Forecasting, calendar sync with .ics export, custom 1-day and 3-day reminders with quiet hours, Academic Risk alerts, Progress Insights, and Share and Streaks."
         ]
       },
       {
@@ -655,13 +655,13 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "Free versus Pro",
         "paragraphs": [
           "The Focus Timer is a Pro feature in full. Free accounts that tap it get a preview screen (the clock icon, a short description, and a button through to the paywall) rather than a limited number of sessions.",
-          "That is worth stating plainly, because most of Semora's core is free and stays free. On a free account you get five syllabus scans per calendar month, up to four courses within one semester, one semester total, complete deadline and task tracking, grade tracking with weighted averages, same-day reminders, and free access to any Course Space a classmate invites you into. That is a working deadline tracker without paying anything.",
-          "Pro is $3.99 per month or $19.99 per year, which works out to about $1.67 a month on the annual plan. It is purchased inside the iOS app and the entitlement applies to your whole account, so the timer is available in the web app too even though there is no web checkout. Alongside the Focus Timer, Pro covers unlimited scans and courses, Smart Plan, the Workload dashboard, flashcards, the AI tutor, Grade Scale and Forecasting, calendar sync with .ics export, custom reminder timing at one and three days out with quiet hours, Academic Risk alerts, Progress Insights, and Share and Streaks."
+          "That is worth stating plainly, because most of Semora's core is free and stays free. On a free account you get up to four courses within one semester, one semester total, complete deadline and task tracking, grade tracking with weighted averages, same-day reminders, free access to any Course Space a classmate invites you into, and one AI action for the lifetime of the account to spend on a syllabus scan, a lecture recording, or a document turned into notes. That is a working deadline tracker without paying anything.",
+          "Pro is $3.99 per month or $19.99 per year, which works out to about $1.67 a month on the annual plan. It is bought with a card on the web at app.semoraai.com, through Stripe, or inside the iOS app through the App Store, and the entitlement applies to your whole account either way, so the timer is available in the web app too. Alongside the Focus Timer, Pro covers unlimited scans and courses, Smart Plan, the Workload dashboard, flashcards, the AI tutor, Grade Scale and Forecasting, calendar sync with .ics export, custom reminder timing at one and three days out with quiet hours, Academic Risk alerts, Progress Insights, and Share and Streaks."
         ],
         "bullets": [
-          "Free: 5 scans per calendar month, up to 4 courses within one semester, one semester total, deadlines and tasks, weighted grade averages, same-day reminders, joining a classmate's Course Space | Pro: $3.99 per month or $19.99 per year, about $1.67 a month billed annually \u2014 plus Canvas, Blackboard, and Moodle import subject to school policy and platform configuration, and hosting your own Course Space",
+          "Free: up to 4 courses within one semester, one semester total, deadlines and tasks, weighted grade averages, same-day reminders, joining a classmate's Course Space, and one AI action for the lifetime of the account | Pro: $3.99 per month or $19.99 per year, about $1.67 a month billed annually \u2014 plus Canvas, Blackboard, and Moodle import subject to school policy and platform configuration, and hosting your own Course Space",
           "Pro: $3.99 per month or $19.99 per year, about $1.67 a month billed annually",
-          "Pro is bought in the iOS app and applies account-wide, including on the web",
+          "Pro is bought by card on the web or inside the iOS app, and applies account-wide either way \u2014 iPhone, iPad, and the web app",
           "Free users see a preview of the timer with a link to the paywall, not a trimmed-down version of it"
         ]
       },
@@ -708,7 +708,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       },
       {
         "question": "Is the Focus Timer free?",
-        "answer": "No, it is part of Pro at $3.99 a month or $19.99 a year, which works out to about $1.67 a month on the annual plan. Pro is bought inside the iOS app and applies account-wide, so the timer is available in the web app too."
+        "answer": "No, it is part of Pro at $3.99 a month or $19.99 a year, which works out to about $1.67 a month on the annual plan. Pro is bought with a card on the web at app.semoraai.com, or inside the iOS app through the App Store, and it applies account-wide either way, so the timer is available in the web app too."
       }
     ]
   },
@@ -806,7 +806,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
           "Edits you make to a deadline anywhere in the app change what the tutor says the next time you ask.",
           "Notes uploaded here are the same notes flashcard generation reads, sharing one transcription.",
           "Class meeting times and your custom grade scale, both set on the course, land in the tutor's context automatically.",
-          "Pro is bought in the iOS app and the entitlement applies account-wide, so the tutor is available on iPhone, iPad, and the web app under the same login. There is no separate web checkout."
+          "Pro is bought with a card on the web at app.semoraai.com, where Stripe handles the checkout, or inside the iOS app through the App Store, and the entitlement applies account-wide, so the tutor is available on iPhone, iPad, and the web app under the same login. You only ever pay once."
         ]
       },
       {
@@ -948,7 +948,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "Joining is free; hosting a space is Pro",
         "paragraphs": [
           "Joining a classmate's Course Space is free and always will be. You do not need Pro to accept an invite, see shared deadlines, or take on group work \u2014 and you can sync all of it into your planner as long as you have room under the free plan's four-courses-per-semester cap. That matters, because the person who most needs the shared calendar is rarely the person who set it up.",
-          "Hosting your own space — creating one and running it as owner — is part of Pro, which is $3.99 a month or $19.99 a year, about $1.67 a month on the annual plan. Pro is bought in the iOS app and applies to your whole account, including the web app; there is no separate web checkout. The gate is enforced on the server, not just in the app, and if your Pro lapses the app routes you to the upgrade screen rather than showing a raw database error.",
+          "Hosting your own space — creating one and running it as owner — is part of Pro, which is $3.99 a month or $19.99 a year, about $1.67 a month on the annual plan. Pro is bought with a card on the web at app.semoraai.com, where Stripe handles the checkout, or inside the iOS app through the App Store, and it applies to your whole account either way, including the web app. The gate is enforced on the server, not just in the app, and if your Pro lapses the app routes you to the upgrade screen rather than showing a raw database error.",
           "In practice that means one person in the group needs Pro, and everyone else joins for free. If your Pro lapses later, the spaces you already own do not vanish and the deadlines you already published stay published."
         ]
       },
@@ -1102,8 +1102,8 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       {
         "heading": "What it costs, who it is for, and where it gets awkward",
         "paragraphs": [
-          "Connecting a learning platform is a Pro feature. The current Canvas connector uses a personal access token and may be disabled or prohibited by an institution; Blackboard and Moodle setup also varies by school. Pro is $3.99 per month or $19.99 per year, which works out to about $1.67 a month on the annual plan. It is purchased inside the iOS app and applies to your whole account, including the web app; there is no separate web checkout. The entitlement check happens on Semora's server before your school is ever contacted, so a free account gets a clear upgrade screen rather than a connection that mysteriously fails halfway.",
-          "You still get full deadline and task tracking, grade tracking with weighted averages, same-day reminders, joining a classmate's Course Space (hosting your own is Pro), five syllabus scans per calendar month, and up to four courses within one semester, with one semester total on free. There is also a manual route that costs nothing extra: copy the text off a Canvas page or a syllabus PDF, paste it into Semora's scanner, and it pulls every deadline out of it. That uses one of your five monthly scans and takes under a minute per course.",
+          "Connecting a learning platform is a Pro feature. The current Canvas connector uses a personal access token and may be disabled or prohibited by an institution; Blackboard and Moodle setup also varies by school. Pro is $3.99 per month or $19.99 per year, which works out to about $1.67 a month on the annual plan. It can be bought with a card on the web at app.semoraai.com, where Stripe processes the payment, or inside the iOS app through the App Store, and applies to your whole account either way, including the web app. The entitlement check happens on Semora's server before your school is ever contacted, so a free account gets a clear upgrade screen rather than a connection that mysteriously fails halfway.",
+          "You still get full deadline and task tracking, grade tracking with weighted averages, same-day reminders, joining a classmate's Course Space (hosting your own is Pro), one AI action for the lifetime of the account, and up to four courses within one semester, with one semester total on free. There is also a manual route: copy the text off a Canvas page or a syllabus PDF, paste it into Semora's scanner, and it pulls every deadline out of it in under a minute. That spends your one free AI action, so on free it is worth aiming at the course with the messiest schedule — typing deadlines in by hand stays unlimited and costs nothing at all, and Pro lifts the cap.",
           "Canvas Sync is not for everyone. If your professor never posts assignments to Canvas and keeps everything in the syllabus, scanning the syllabus is the better path and it is free. If you want to submit work or message your instructor, Canvas stays where that happens — Semora is an organizing layer on top, deliberately read-only. And a few edges are worth knowing before you connect:"
         ],
         "bullets": [
@@ -1119,7 +1119,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
     "faq": [
       {
         "question": "Is Canvas import free?",
-        "answer": "No. Learning-platform import is a Pro feature, at $3.99 a month or $19.99 a year. The free plan still covers the same job from the syllabus side: five scans per calendar month, up to four courses within one semester, full deadline and task tracking, grade tracking with weighted averages, and same-day reminders."
+        "answer": "No. Learning-platform import is a Pro feature, at $3.99 a month or $19.99 a year. The free plan still covers the same job from the syllabus side: one AI action for the lifetime of the account to spend on a scan, up to four courses within one semester, unlimited deadlines and tasks you add yourself, grade tracking with weighted averages, and same-day reminders."
       },
       {
         "question": "How does Semora connect to Canvas?",
@@ -1127,7 +1127,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       },
       {
         "question": "What if my school does not allow token access?",
-        "answer": "Scan the syllabus, or paste the Canvas assignment list straight into the scanner. Both routes work on the free plan, and if your professor keeps everything in the syllabus rather than posting to Canvas, scanning is the better path anyway."
+        "answer": "Scan the syllabus, or paste the Canvas assignment list straight into the scanner. Both routes run through the scanner, so on a free account either one spends your single lifetime AI action, and if your professor keeps everything in the syllabus rather than posting to Canvas, scanning is the better path anyway."
       },
       {
         "question": "What actually gets imported?",

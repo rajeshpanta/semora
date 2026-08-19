@@ -28,7 +28,7 @@ const FAQ = [
   {
     question: 'How many syllabi can I scan for free?',
     answer:
-      'The free tier includes 5 syllabus scans per calendar month and supports up to 4 courses within one semester, with one semester total on free. Full task tracking and grade tracking are included. Calendar sync (device + .ics export) is a Pro feature.',
+      'One. The free tier includes a single AI action for the lifetime of the account—spend it on a syllabus scan, a lecture recording, or turning a document into notes—and supports up to 4 courses within one semester, with one semester total on free. Full task tracking and grade tracking are included. Calendar sync (device + .ics export) is a Pro feature.',
   },
   {
     question: 'Does Semora sync with Canvas?',
@@ -43,7 +43,7 @@ const FAQ = [
 ];
 
 const TABLE_ROWS = [
-  { feature: 'Syllabus scans', free: '5 per calendar month', pro: 'Unlimited' },
+  { feature: 'AI actions (scan, lecture, or notes)', free: '1 per account, lifetime', pro: 'Unlimited' },
   { feature: 'Courses', free: 'Up to 4 within one semester', pro: 'Unlimited' },
   { feature: 'Semesters', free: '1 total', pro: 'Unlimited' },
   { feature: 'Task & deadline tracking', free: 'Full', pro: 'Full' },
@@ -132,13 +132,14 @@ export default function AiSyllabusScannerPage() {
 
       <h2>Free to Start, With a Pro Tier for Heavier Course Loads</h2>
       <p>
-        Semora&apos;s core scanning and organizing features are usable for free. Pro unlocks
-        planning tools built on top of the same scanned data, for students juggling more courses or
-        more deadlines.
+        Semora&apos;s free tier covers one AI action—your first syllabus scan, say—plus the
+        organizing that follows it: deadlines, grades, and reminders. Pro unlocks unlimited scans
+        and the planning tools built on top of the same scanned data, for students juggling more
+        courses or more deadlines.
       </p>
       <TierTable rows={TABLE_ROWS} proLabel={PRO_LABEL} />
       <p className={styles.note}>
-        Pro is a subscription purchased and managed in the app, and it applies account-wide,
+        Pro is a subscription bought by card on the web or in the iOS app, and it applies account-wide,
         including on the web.
       </p>
 

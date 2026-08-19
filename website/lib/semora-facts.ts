@@ -51,10 +51,11 @@ export const PRICING = {
     name: 'Pro',
     monthly: { price: 3.99, priceLabel: '$3.99/month' },
     annual: { price: 19.99, priceLabel: '$19.99/year' },
-    // Purchases happen in the iOS app (StoreKit) and the entitlement applies
-    // account-wide, including on the web — there is no separate web checkout.
+    // Pro can be bought two ways: with a card on the web (Stripe checkout at
+    // app.semoraai.com) or inside the iOS app (StoreKit). Both grant the same
+    // account-wide entitlement, so it applies on iPhone, iPad and the web.
     purchaseNote:
-      'Pro is purchased in the app and applies to your whole account, including web.',
+      'Pro can be bought with a card on the web or in the iOS app, and applies to your whole account either way.',
   },
 } as const;
 
@@ -77,8 +78,12 @@ export const PRO_ANNUAL_SAVINGS_PCT = Math.round(
 // public.semesters (migration 010). A free account cannot start a second
 // term at all, so "4 courses per semester" alone reads as if terms roll
 // over — they do not. Do not drop this line.
+// The free AI allowance is ONE action for the lifetime of the account — not a
+// monthly quota. Nothing resets on the 1st. The student picks what to spend it
+// on (syllabus scan, lecture recording, or document-to-notes), and after that
+// every AI action is Pro. Never reintroduce "per month" language here.
 export const FREE_FEATURES = [
-  '5 syllabus scans per calendar month',
+  'One AI action for the lifetime of the account: a syllabus scan, a lecture recording, or a document turned into notes',
   'Up to 4 courses within one semester; one semester total on free',
   'Full deadline and task tracking',
   'Grade tracking with weighted averages',
@@ -90,7 +95,7 @@ export const FREE_FEATURES = [
 // app (app/settings/calendar.tsx gates handleExport behind isPro) — do not
 // move it back to FREE_FEATURES without re-checking the app first.
 export const PRO_FEATURES = [
-  'Unlimited courses and semesters, with no monthly scan cap',
+  'Unlimited courses and semesters, with no cap on AI actions',
   'Canvas, Blackboard, and Moodle assignment import',
   'Course Spaces: host your own shared course and invite classmates',
   'Smart Plan: an AI-generated study schedule that adapts to your deadlines',
@@ -132,7 +137,7 @@ export const FEATURES: FeatureFact[] = [
       'Turn a syllabus photo or PDF into a full calendar of deadlines, grades, and class times.',
     tier: 'free',
     description:
-      "Take a photo or upload a PDF of your syllabus and Semora's AI extracts every assignment, exam, and deadline automatically. Review and edit everything before saving. Nothing is added to your calendar without your confirmation. Free accounts get 5 scans per calendar month; Pro is unlimited.",
+      "Take a photo or upload a PDF of your syllabus and Semora's AI extracts every assignment, exam, and deadline automatically. Review and edit everything before saving. Nothing is added to your calendar without your confirmation. Free accounts get one AI action for the lifetime of the account, and a scan is one way to spend it; Pro is unlimited.",
   },
   {
     slug: 'grade-tracking',

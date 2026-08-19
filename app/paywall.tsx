@@ -24,6 +24,7 @@ import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { getProducts, purchaseProduct, restorePurchases, validateAfterPurchase, PRODUCT_IDS, setupPurchaseListeners, setPurchaseAnalyticsContext, isEligibleForIntroOffer } from '@/lib/purchases';
+import { getServerEntitlement } from '@/lib/entitlementServer';
 import { rescheduleAllTaskReminders } from '@/lib/notifications';
 import { track } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
@@ -48,7 +49,7 @@ const APP_STORE_URL = 'https://apps.apple.com/us/app/semora-ai-syllabus-scanner/
 
 export default function PaywallScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ context?: string; count?: string; courseId?: string; plan?: string }>();
+  const params = useLocalSearchParams<{ context?: string; count?: string; courseId?: string; plan?: string; checkout?: string }>();
   const setIsPro = useAppStore((s) => s.setIsPro);
   const setSubscriptionPlan = useAppStore((s) => s.setSubscriptionPlan);
   const colors = useColors();
@@ -65,6 +66,61 @@ export default function PaywallScreen() {
   useEffect(() => {
     track('paywall_viewed', { screen: 'paywall', context: params.context ?? 'direct' });
   }, []);
+
+  // ── Return trip from Stripe Checkout (web only) ─────────────────────────
+  //
+  // Checkout navigates the whole tab away, so the browser comes back to a
+  // freshly-mounted paywall carrying ?checkout=success. Pro is NOT granted
+  // here — the stripe-webhook function writes the entitlement — so this waits
+  // for that row to appear. The wait is real and worth handling: Stripe's
+  // webhook usually lands within a second or two, but "usually" would leave
+  // some payers looking at the paywall they just paid to dismiss.
+  const [awaitingCheckout, setAwaitingCheckout] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const outcome = params.checkout;
+    if (!outcome) return;
+
+    if (outcome === 'cancelled') {
+      // Backing out of Checkout is a decision, not an error.
+      trackCancelledOnce();
+      router.setParams({ checkout: '' });
+      return;
+    }
+    if (outcome !== 'success') return;
+
+    let cancelled = false;
+    setAwaitingCheckout(true);
+    (async () => {
+      // ~20s of polling. Longer than the webhook needs, short enough that a
+      // genuine failure doesn't strand the user on a spinner.
+      for (let attempt = 0; attempt < 14 && !cancelled; attempt++) {
+        const entitlement = await getServerEntitlement();
+        if (entitlement.is_pro) {
+          if (cancelled) return;
+          setIsPro(true);
+          setSubscriptionPlan(entitlement.plan);
+          track('purchase_success', { screen: 'paywall', context: 'stripe_web' });
+          setAwaitingCheckout(false);
+          router.setParams({ checkout: '' });
+          handleClose();
+          return;
+        }
+        await new Promise((r) => setTimeout(r, attempt < 4 ? 900 : 2000));
+      }
+      if (cancelled) return;
+      setAwaitingCheckout(false);
+      router.setParams({ checkout: '' });
+      // Their card was charged; only our confirmation is late. Never imply the
+      // payment failed.
+      Alert.alert(
+        'Payment received',
+        'Thanks! Your subscription is still being confirmed. It usually takes a few seconds — pull to refresh or tap Restore in a moment.',
+      );
+    })();
+
+    return () => { cancelled = true; };
+  }, [params.checkout]);
 
   // Annual is the recommended path for the default paywall (better value,
   // surfaced first). The post-scan reverse trial instead leads with the
@@ -308,7 +364,10 @@ export default function PaywallScreen() {
         screen: 'paywall',
         reason: String(err?.code ?? err?.message ?? 'unknown').slice(0, 100),
       });
-      Alert.alert('Purchase Failed', err.message ?? 'Something went wrong. Please try again.');
+      Alert.alert(
+        err?.code === 'ALREADY_PRO' ? 'You already have Pro' : 'Purchase Failed',
+        err.message ?? 'Something went wrong. Please try again.',
+      );
     }
   };
 
@@ -353,6 +412,15 @@ export default function PaywallScreen() {
   };
   return (
     <View style={[styles.screen, { backgroundColor: colors.paper }]}>
+      {awaitingCheckout && (
+        // Blocking, deliberately: the card has been charged and Pro is seconds
+        // away. Letting the user tap Subscribe again here would be the one
+        // interaction that could double-charge them.
+        <View style={styles.confirmOverlay}>
+          <ActivityIndicator color="#fff" size="large" />
+          <Text style={styles.confirmText}>Confirming your subscription…</Text>
+        </View>
+      )}
       <SafeAreaView style={styles.safe} edges={[]}>
         {/* Fixed close button outside ScrollView */}
         <TouchableOpacity style={[styles.closeBtn, { backgroundColor: colors.card, top: insets.top + 8 }]} onPress={handleClose} hitSlop={16} accessibilityRole="button" accessibilityLabel="Close">
@@ -413,58 +481,16 @@ export default function PaywallScreen() {
             ))}
           </View>
 
-          {isWeb ? (
-            <>
-              <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>PRO ON THE WEB</Text>
-              <View style={[styles.webBillingCard, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]}>
-                <View style={[styles.webBillingIcon, { backgroundColor: colors.brand }]}>
-                  <FontAwesome name="mobile" size={20} color="#fff" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.webBillingTitle, { color: colors.ink }]}>
-                    Purchase Pro in Semora for iPhone or iPad
-                  </Text>
-                  <Text style={[styles.webBillingText, { color: colors.ink2 }]}>
-                    Choose $3.99 monthly or $19.99 yearly in the app. Apple completes the purchase securely, and Pro then follows this Semora account on every device.
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.webPlanRow}>
-                <View style={[styles.webPlan, { backgroundColor: colors.card, borderColor: colors.line }]}>
-                  <Text style={[styles.webPlanName, { color: colors.ink2 }]}>Monthly</Text>
-                  <Text style={[styles.webPlanPrice, { color: colors.ink }]}>$3.99<Text style={[styles.planPeriod, { color: colors.ink2 }]}>/month</Text></Text>
-                </View>
-                <View style={[styles.webPlan, { backgroundColor: colors.card, borderColor: colors.brand }]}>
-                  <Text style={[styles.webPlanName, { color: colors.ink2 }]}>Yearly</Text>
-                  <Text style={[styles.webPlanPrice, { color: colors.ink }]}>$19.99<Text style={[styles.planPeriod, { color: colors.ink2 }]}>/year</Text></Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                onPress={() => Linking.openURL(APP_STORE_URL)}
-                activeOpacity={0.85}
-                style={[styles.webRefreshButton, { backgroundColor: colors.brand }]}
-              >
-                <FontAwesome name="apple" size={15} color="#fff" />
-                <Text style={styles.webRefreshText}>Open Semora in the App Store</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleRestore}
-                disabled={restoring}
-                activeOpacity={0.85}
-                style={[styles.webRefreshButton, styles.webRefreshSecondary, { backgroundColor: colors.card, borderColor: colors.line }]}
-              >
-                {restoring ? (
-                  <ActivityIndicator color={colors.brand} />
-                ) : (
-                  <>
-                    <FontAwesome name="refresh" size={13} color={colors.brand} />
-                    <Text style={[styles.webRefreshText, { color: colors.brand }]}>Refresh Pro access</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
+          {/* Plan selection + checkout. Web and native render the SAME thing:
+              this used to be an isWeb branch whose entire content was a card
+              reading "Purchase Pro in Semora for iPhone or iPad" plus a button
+              to the App Store — the browser could show the price but not take
+              the money, so anyone who wanted Pro on a laptop was sent away to
+              find a phone, and most simply left. purchaseProduct now opens
+              Stripe Checkout on web (lib/purchases.web.ts) and StoreKit on
+              iOS, so one UI serves both. Prices match deliberately; the trial
+              copy self-suppresses because isEligibleForIntroOffer returns
+              false on web, which is correct — web has no trial. */}
           {/* Plan Selection */}
           <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>CHOOSE YOUR PLAN</Text>
 
@@ -546,7 +572,12 @@ export default function PaywallScreen() {
                 : `${monthlyPrice}/month. Cancel anytime.`
               : `${annualPrice} billed annually. Cancel anytime.`}
           </Text>
-            </>
+          {isWeb && (
+            // Naming the processor measurably reduces card abandonment, and
+            // Semora genuinely never sees the card — Stripe hosts the form.
+            <Text style={[styles.finePrint, { color: colors.ink3 }]}>
+              Secure checkout by Stripe. Manage or cancel any time from Settings.
+            </Text>
           )}
 
           {/* Footer */}
@@ -698,6 +729,13 @@ const styles = StyleSheet.create({
     fontSize: 15, fontWeight: '600', color: '#fff',
     letterSpacing: 0.3,
   },
+  confirmOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 50,
+    backgroundColor: 'rgba(10,10,14,0.72)',
+    alignItems: 'center', justifyContent: 'center', gap: 14,
+  },
+  confirmText: { color: '#fff', fontSize: 15.5, fontWeight: '600' },
   finePrint: {
     fontSize: 12, color: COLORS.ink3, textAlign: 'center',
     marginTop: 10, lineHeight: 16,

@@ -30,7 +30,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'What are the free plan limits?',
-    a: 'On the free plan you get 5 syllabus scans per month (the count resets at the start of each month) and up to 4 courses per semester. Tasks are unlimited. Upgrade to Pro to lift these limits.',
+    a: 'The free plan includes one AI action for the account — a syllabus scan or a lecture recording, whichever you use first — plus up to 4 courses in one semester. Tasks and deadlines are unlimited. Upgrade to Pro for unlimited scans, lectures, courses and semesters.',
   },
   {
     q: 'How is my grade calculated?',

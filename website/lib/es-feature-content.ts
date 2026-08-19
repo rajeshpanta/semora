@@ -96,17 +96,17 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'El límite gratuito, dicho con precisión',
         paragraphs: [
-          'Escanear es una función gratuita con un número real detrás: cinco escaneos por mes natural. La ventana es el mes natural en UTC, así que la cuenta se reinicia el día 1, y ese mismo límite lo aplican la app, el servidor antes de gastar nada en la extracción, y un disparador de la base de datos.',
-          'No te quedas adivinando en qué punto estás. La pestaña de escaneo muestra una etiqueta del tipo «Te quedan 3 de 5 escaneos gratis este mes», que se pone en rojo al llegar a cero. Antes de gastar el último, Semora te interrumpe para avisarte de que es el último.',
-          'Hay otros dos límites que conviene conocer porque son independientes del recuento de escaneos: una cuenta gratuita admite hasta cuatro cursos dentro de un único semestre, y un semestre en total. Importa aquí porque un escaneo que crearía un quinto curso topa con el límite de cursos aunque te sobren escaneos.',
-          'Pro elimina por completo los topes de escaneos y de cursos, por 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes en el plan anual. Pro se compra dentro de la app de iOS y la suscripción se aplica a toda la cuenta, incluida la web. Lo único que queda por encima es un techo de uso razonable: 20 escaneos en cualquier ventana de 24 horas.',
+          'Escanear entra en el plan gratuito con un número real detrás: una sola acción con IA para toda la vida de la cuenta. Tú eliges en qué la gastas —escanear un programa, grabar una clase o convertir un documento en apuntes—, y ese mismo límite lo aplican la app, el servidor antes de gastar nada en la extracción, y un disparador de la base de datos.',
+          'Y no se renueva: no hay recuento mensual esperando al día 1, así que cuando la gastas el paso siguiente es Pro. Tampoco te quedas adivinando en qué punto estás. La pestaña de escaneo muestra una etiqueta del tipo «Te queda 1 acción con IA gratis», que se pone en rojo al llegar a cero, y antes de que la gastes Semora te interrumpe para avisarte de que es la única.',
+          'Hay otros dos límites que conviene conocer porque son independientes de esa acción: una cuenta gratuita admite hasta cuatro cursos dentro de un único semestre, y un semestre en total. Importa aquí porque un escaneo que crearía un quinto curso topa con el límite de cursos aunque todavía no hayas gastado tu acción gratuita.',
+          'Pro elimina por completo los topes de escaneos y de cursos, por 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes en el plan anual. Pro se compra de dos maneras —con tarjeta en la web, en app.semoraai.com, donde Stripe se encarga del pago, o dentro de la app de iOS a través de la App Store— y en ambos casos la suscripción se aplica a toda la cuenta, incluida la web, así que solo pagas una vez. Lo único que queda por encima es un techo de uso razonable: 20 escaneos en cualquier ventana de 24 horas.',
         ],
       },
       {
         heading: 'Cuando el documento no es un programa, y otros casos incómodos',
         paragraphs: [
           'Lo primero que se le pregunta al modelo no es «cuáles son las fechas» sino «¿esto es de verdad un programa?». Un recibo, una tarjeta de embarque, un artículo, una captura cualquiera o la foto de la página equivocada se rechazan con un mensaje que dice exactamente eso, en lugar de devolverte tres fechas inventadas.',
-          'Ese rechazo no te cuesta un escaneo gratuito. Solo cuentan las extracciones correctas. Sí cuenta como uno de los 20 intentos permitidos en una ventana móvil de 24 horas, así que apuntar la cámara a algo que no es un programa no te sale gratis del todo, pero tampoco te gasta el mes.',
+          'Ese rechazo no te cuesta tu acción gratuita. Solo cuentan las extracciones correctas. Sí cuenta como uno de los 20 intentos permitidos en una ventana móvil de 24 horas, así que apuntar la cámara a algo que no es un programa no te sale gratis del todo, pero tampoco quema la única acción con IA que trae la cuenta.',
           'Los demás fallos tienen su propio tratamiento en vez de un error genérico. Un programa tan denso que la respuesta se corta a mitad de estructura devuelve un mensaje concreto que sugiere escanear un curso, o menos páginas, cada vez.',
           'Reescanear un programa que ya importaste también se detecta. Semora te dice que el curso ya existe en ese semestre y te ofrece dos opciones honestas: abrir el curso existente o crear uno duplicado aparte, y te deja elegir a ti.',
         ],
@@ -122,7 +122,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Dónde aparece un escaneo en el resto de Semora',
         paragraphs: [
-          'El escaneo es la puerta de entrada, no una herramienta suelta. Todo lo que produce son datos normales de Semora desde el momento en que los guardas, y por eso el escáner es gratis: es lo que hace que el resto de la app funcione.',
+          'El escaneo es la puerta de entrada, no una herramienta suelta. Todo lo que produce son datos normales de Semora desde el momento en que los guardas, y por eso tu primera acción con IA es gratis: es lo que hace que el resto de la app funcione.',
           'Las entregas se convierten en tareas de la pestaña Hoy —ordenadas en atrasadas, vencen hoy y esta semana— con recordatorios el mismo día en el plan gratuito. Las ponderaciones alimentan el seguimiento de calificaciones, así que un promedio ponderado aparece sin que tengas que teclear ningún porcentaje.',
           'Del lado de Pro, esa misma extracción alimenta el horario del Plan Inteligente y la vista de semanas cargadas de la carga académica, y ambos valen exactamente lo que valgan las entregas que tengan. El Tutor con IA responde desde el programa de ese curso, y las tarjetas de estudio se generan a partir del mismo material.',
         ],
@@ -140,7 +140,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         question: '¿Cuántos programas puedo escanear gratis?',
         answer:
-          'Cinco escaneos por mes natural. Un escaneo con foto de hasta cinco páginas cuenta como uno solo, no como cinco. El plan Gratis también admite hasta cuatro cursos dentro de un semestre, y un semestre en total. Pro elimina el tope mensual y esos dos límites.',
+          'Uno. El plan Gratis trae una sola acción con IA para toda la vida de la cuenta, y tú eliges si la gastas en escanear un programa, grabar una clase o convertir un documento en apuntes. Un escaneo con foto de hasta cinco páginas cuenta como uno solo, no como cinco. El plan Gratis también admite hasta cuatro cursos dentro de un semestre, y un semestre en total. Pro elimina ese tope y esos dos límites.',
       },
       {
         question: '¿Qué puedo darle al escáner?',
@@ -452,7 +452,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         question: '¿El Plan Inteligente está en el plan Gratis?',
         answer:
-          'No, forma parte de Pro, que cuesta 3,99 USD al mes o 19,99 USD al año. Pro se compra dentro de la app de iOS y se aplica a toda tu cuenta, incluida la versión web.',
+          'No, forma parte de Pro, que cuesta 3,99 USD al mes o 19,99 USD al año. Pro se compra con tarjeta en la web, en app.semoraai.com, o dentro de la app de iOS a través de la App Store, y en ambos casos se aplica a toda tu cuenta, incluida la versión web.',
       },
     ],
   },
@@ -541,7 +541,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'Cómo se conectan las tarjetas con el resto de Semora',
         paragraphs: [
           'Las tarjetas van por detrás del escáner. El programa que escaneaste es la fuente de anclaje, las tareas que Semora extrajo se convierten en las fichas de enfoque, y los apuntes que adjuntaste alimentan tanto la generación como el Tutor.',
-          'Las tarjetas forman parte de Pro, por 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes en el plan anual. Pro se compra en la app de iOS y la suscripción se aplica a toda la cuenta.',
+          'Las tarjetas forman parte de Pro, por 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes en el plan anual. Pro se compra con tarjeta en la web, en app.semoraai.com, donde Stripe se encarga del pago, o dentro de la app de iOS a través de la App Store, y la suscripción se aplica a toda la cuenta pagues como pagues.',
         ],
       },
       {
@@ -674,13 +674,13 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'Gratis frente a Pro',
         paragraphs: [
           'El temporizador de concentración es una función de Pro por completo. Las cuentas gratuitas que lo tocan ven una pantalla de presentación con el icono, una descripción corta y un botón hacia la suscripción, en lugar de una versión recortada.',
-          'Conviene decirlo claro, porque casi todo el núcleo de Semora es gratis y seguirá siéndolo. En una cuenta gratuita tienes cinco escaneos de programa por mes natural, hasta cuatro asignaturas dentro de un único semestre, un semestre en total, entregas y tareas, promedios ponderados y recordatorios el mismo día.',
-          'Pro cuesta 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes en el plan anual. Se compra dentro de la app de iOS y la suscripción se aplica a toda tu cuenta, la web incluida.',
+          'Conviene decirlo claro, porque casi todo el núcleo de Semora es gratis y seguirá siéndolo. En una cuenta gratuita tienes una acción con IA para toda la vida de la cuenta —un escaneo de programa, una grabación de clase o un documento convertido en apuntes—, hasta cuatro asignaturas dentro de un único semestre, un semestre en total, entregas y tareas, promedios ponderados y recordatorios el mismo día.',
+          'Pro cuesta 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes en el plan anual. Se compra con tarjeta en la web, en app.semoraai.com, a través de Stripe, o dentro de la app de iOS por la App Store, y en ambos casos la suscripción se aplica a toda tu cuenta, la web incluida.',
         ],
         bullets: [
-          'Gratis: 5 escaneos por mes natural, hasta 4 asignaturas dentro de un único semestre, un semestre en total, entregas y tareas, promedios ponderados y recordatorios el mismo día.',
+          'Gratis: 1 acción con IA para toda la vida de la cuenta, hasta 4 asignaturas dentro de un único semestre, un semestre en total, entregas y tareas, promedios ponderados y recordatorios el mismo día.',
           'Pro: 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual.',
-          'Pro se compra en la app de iOS y se aplica a toda la cuenta, incluida la web.',
+          'Pro se compra con tarjeta en la web o dentro de la app de iOS, y se aplica a toda la cuenta en ambos casos: iPhone, iPad y navegador.',
           'Las cuentas gratuitas ven una presentación del temporizador con enlace a la suscripción, no una versión reducida.',
         ],
       },
@@ -732,7 +732,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         question: '¿El temporizador de enfoque es gratis?',
         answer:
-          'No, forma parte de Pro, a 3,99 USD al mes o 19,99 USD al año, que sale a unos 1,67 USD al mes en el plan anual. Pro se compra dentro de la app de iOS y se aplica a toda la cuenta, así que el temporizador también está disponible en la web.',
+          'No, forma parte de Pro, a 3,99 USD al mes o 19,99 USD al año, que sale a unos 1,67 USD al mes en el plan anual. Pro se compra con tarjeta en la web, en app.semoraai.com, o dentro de la app de iOS a través de la App Store, y se aplica a toda la cuenta pagues como pagues, así que el temporizador también está disponible en la web.',
       },
     ],
   },
@@ -828,7 +828,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Los cambios que hagas en una entrega desde cualquier parte de la app cambian lo que el Tutor dice la próxima vez que preguntes.',
           'Los apuntes subidos aquí son los mismos que lee la generación de tarjetas, compartiendo una única transcripción.',
           'Los horarios de clase y tu escala de calificación propia, ambos definidos en la asignatura, entran en el contexto del Tutor.',
-          'Pro se compra en la app de iOS y la suscripción se aplica a toda la cuenta, así que el Tutor está disponible también en la web.',
+          'Pro se compra con tarjeta en la web o en la app de iOS, y la suscripción se aplica a toda la cuenta en ambos casos, así que el Tutor está disponible también en la web.',
         ],
       },
       {
@@ -1129,9 +1129,9 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Qué cuesta, para quién es y dónde se pone incómodo',
         paragraphs: [
-          'Conectar una plataforma académica es una función de Pro. El conector actual de Canvas usa un token personal y puede estar desactivado o prohibido por una institución; la configuración de Blackboard y Moodle también varía según la universidad. Pro cuesta 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual. Se compra dentro de la app de iOS.',
-          'Sigues teniendo el seguimiento completo de entregas y tareas, las calificaciones con promedios ponderados, los recordatorios el mismo día, unirte al espacio de un compañero y cinco escaneos de programa al mes.',
-          'La sincronización con Canvas no es para todo el mundo. Si tu profesor no publica nunca tareas en Canvas y lo deja todo en el programa, escanear el programa es el mejor camino y además es gratis.',
+          'Conectar una plataforma académica es una función de Pro. El conector actual de Canvas usa un token personal y puede estar desactivado o prohibido por una institución; la configuración de Blackboard y Moodle también varía según la universidad. Pro cuesta 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual. Se compra con tarjeta en la web, en app.semoraai.com, donde Stripe procesa el pago, o dentro de la app de iOS a través de la App Store, y se aplica a toda la cuenta en ambos casos.',
+          'Sigues teniendo el seguimiento completo de entregas y tareas, las calificaciones con promedios ponderados, los recordatorios el mismo día, unirte al espacio de un compañero y una acción con IA gratuita para toda la vida de la cuenta.',
+          'La sincronización con Canvas no es para todo el mundo. Si tu profesor no publica nunca tareas en Canvas y lo deja todo en el programa, escanear el programa es el mejor camino, y la acción con IA gratuita de la cuenta sirve justo para eso.',
         ],
         bullets: [
           'Las tareas sin fecha de entrega en Canvas se saltan. Semora marca la conexión como «parcial» y te dice cuántas.',
@@ -1147,7 +1147,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         question: '¿La importación desde Canvas es gratis?',
         answer:
-          'No. La importación desde plataformas académicas es una función Pro, a 3,99 USD al mes o 19,99 USD al año. El plan Gratis sigue cubriendo el mismo trabajo desde el lado del programa: cinco escaneos por mes natural, hasta cuatro cursos dentro de un semestre, seguimiento completo de tareas y fechas, calificaciones con medias ponderadas y recordatorios el mismo día.',
+          'No. La importación desde plataformas académicas es una función Pro, a 3,99 USD al mes o 19,99 USD al año. El plan Gratis te deja empezar por el lado del programa: una acción con IA para toda la vida de la cuenta, que puedes gastar escaneando un programa, hasta cuatro cursos dentro de un semestre, seguimiento completo de tareas y fechas, calificaciones con medias ponderadas y recordatorios el mismo día.',
       },
       {
         question: '¿Cómo se conecta Semora con Canvas?',

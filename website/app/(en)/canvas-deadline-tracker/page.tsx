@@ -33,17 +33,17 @@ const FAQ = [
   {
     question: 'Is Semora free to use alongside Canvas?',
     answer:
-      'Partly. Importing assignments from Canvas is a Pro feature, but the free tier covers the syllabus side of the same job, and you can paste Canvas assignment text straight into the scanner. The free tier includes 5 syllabus scans per calendar month, up to 4 courses within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no monthly scan cap, plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
+      'Partly. Importing assignments from Canvas is a Pro feature, but the free tier gets you started on the syllabus side of the same job, and you can paste Canvas assignment text straight into the scanner. The free tier includes one AI action for the lifetime of the account—a syllabus scan, a lecture recording, or a document turned into notes—plus up to 4 courses within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no scan cap, plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
   },
   {
     question: 'Does Semora work on iPhone, iPad, and web?',
     answer:
-      'Yes. Semora is available on iPhone, iPad, and the web, sharing one account and database that sync in near real time. Pro is purchased through the app and applies account-wide, including on web.',
+      'Yes. Semora is available on iPhone, iPad, and the web, sharing one account and database that sync in near real time. Pro can be bought by card on the web or through the App Store in the app, and applies account-wide either way, including on web.',
   },
 ];
 
 const TABLE_ROWS = [
-  { feature: 'Syllabus scans', free: '5 per calendar month', pro: 'Unlimited' },
+  { feature: 'AI actions (scan, lecture, or notes)', free: '1 per account, lifetime', pro: 'Unlimited' },
   { feature: 'Courses', free: 'Up to 4 within one semester', pro: 'Unlimited' },
   { feature: 'Semesters', free: '1 total', pro: 'Unlimited' },
   { feature: 'Task & deadline tracking', free: 'Full', pro: 'Full' },
@@ -130,8 +130,8 @@ export default function CanvasDeadlineTrackerPage() {
         </li>
       </ul>
       <p>
-        On Pro ($3.99/month or $19.99/year, purchased in the app and applied account-wide
-        including web), Semora goes further:
+        On Pro ($3.99/month or $19.99/year, bought by card on the web or through the App Store
+        in the app, and applied account-wide including web), Semora goes further:
       </p>
       <ul>
         <li>
@@ -186,8 +186,8 @@ export default function CanvasDeadlineTrackerPage() {
       <h2>Free vs. Pro</h2>
       <TierTable rows={TABLE_ROWS} caption="What's included at each tier" proLabel={PRO_LABEL} />
       <p className={styles.note}>
-        Pro is $3.99/month or $19.99/year, purchased in the app. It applies to your whole
-        account, including web.
+        Pro is $3.99/month or $19.99/year, bought by card on the web or through the App Store in
+        the app. It applies to your whole account, including web.
       </p>
 
       <h2>How this compares to doing it manually or with a generic to-do app</h2>

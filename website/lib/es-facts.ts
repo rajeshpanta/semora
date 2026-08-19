@@ -6,7 +6,7 @@ export const SITE_DESCRIPTION_ES =
   'Semora convierte una foto o PDF del programa de tu materia en un calendario con tareas, exámenes y criterios de evaluación organizados.';
 
 export const FREE_FEATURES_ES = [
-  '5 escaneos de programas al mes',
+  '1 acción con IA para toda la vida de la cuenta: un escaneo, una grabación o un documento en apuntes',
   'Hasta 4 cursos dentro de un único semestre; una cuenta gratis admite un semestre en total',
   'Seguimiento de tareas y fechas de entrega',
   'Calificaciones con promedios ponderados',
@@ -15,7 +15,7 @@ export const FREE_FEATURES_ES = [
 ] as const;
 
 export const PRO_FEATURES_ES = [
-  'Cursos y semestres ilimitados, sin límite mensual de escaneos',
+  'Cursos y semestres ilimitados, sin límite de escaneos',
   'Importación de tareas desde Canvas, Blackboard y Moodle',
   'Crea Espacios de curso e invita a tus compañeros',
   'Plan Inteligente que se adapta a tus fechas de entrega',
@@ -130,7 +130,7 @@ export const SHOWCASE_ES = [
     bullets: [
       'Foto de hasta 5 páginas por escaneo',
       'PDF, arrastrar y soltar o texto pegado',
-      '5 escaneos gratis al mes',
+      '1 acción con IA gratis por cuenta',
     ],
     href: '/es/funciones/escaner-de-programas',
   },

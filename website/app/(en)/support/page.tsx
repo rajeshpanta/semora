@@ -48,7 +48,7 @@ const SUPPORT_FAQ = [
   {
     question: 'How do I cancel my subscription?',
     answer:
-      'Subscriptions are managed through your Apple ID. Go to Settings > Apple ID > Subscriptions on your device to manage or cancel your Semora Pro subscription.',
+      'It depends on how you paid. If you subscribed by card on the web, open Settings in Semora and tap "Manage Semora Plan" to cancel through Stripe\'s billing portal. If you subscribed through the App Store, go to Settings > Apple ID > Subscriptions on your device, at least 24 hours before the period ends.',
   },
   {
     question: 'How do I delete my account?',

@@ -26,6 +26,7 @@ import {
 } from 'react-native';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { HEIC_HELP, isHeic, transcodeHeicToJpeg } from '@/lib/heic';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
@@ -63,6 +64,7 @@ export default function ScanScreen() {
   const { data: semesters = [] } = useSemesters();
   const { data: courses = [] } = useCourses(selectedSemesterId);
   const { data: freeActionUsed = false, isLoading: freeActionLoading } = useFreeActionUsed();
+  const [upsellVisible, setUpsellVisible] = useState(false);
 
   // The free tier has TWO separate caps — scans AND courses-per-semester — and
   // a scan that extracts a NEW course trips the course cap even with scans
@@ -104,14 +106,10 @@ export default function ScanScreen() {
     }
 
     if (used) {
-      Alert.alert(
-        'Free Scan Used',
-        "You've already used your free action — a syllabus scan or a lecture recording. Upgrade to Pro for unlimited scanning and lectures.",
-        [
-          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
-          { text: 'Cancel', style: 'cancel' },
-        ],
-      );
+      // The paywall moment gets a sheet, not an alert: an alert has no room to
+      // say what Pro actually costs or includes, so the decision was being
+      // asked for on no information, two taps from the thing they wanted.
+      setUpsellVisible(true);
       return false;
     }
 
@@ -520,6 +518,11 @@ export default function ScanScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
+      <ProUpsellSheet
+        visible={upsellVisible}
+        reason="scan"
+        onClose={() => setUpsellVisible(false)}
+      />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
           <Text style={[styles.title, { color: colors.ink }]}>Scan syllabus</Text>

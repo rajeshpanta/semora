@@ -31,7 +31,7 @@ const SHOWCASE: ShowcaseItem[] = [
     bullets: [
       'Photo capture, multi-page, up to 5 pages',
       'PDF upload, drag-and-drop, or pasted text',
-      '5 free scans per calendar month',
+      'One free AI action per account, then Pro',
     ],
     href: '/features/syllabus-scanner',
   },
