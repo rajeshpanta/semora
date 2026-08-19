@@ -760,21 +760,37 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
     if (!session) {
       if (Platform.OS === 'web') {
-        // This domain is the app; semoraai.com is the marketing site. Anyone
-        // arriving signed out clicked "Sign in"/"Try it for free" over there,
-        // so send them straight to the auth screen — its logo links back to
-        // semoraai.com. (app/welcome.tsx was the stand-in marketing page from
-        // before that site existed; it now just bounces to it.)
-        if (!inAuthGroup && !onWelcome) {
-          // A generic signed-out app route is a returning-user path. Keep the
-          // intent explicit so an early AuthGate redirect cannot turn a
-          // marketing-site "Sign in" visit into the default signup framing.
-          // The marketing site's "Try it for free" URL already lands inside
-          // the auth group without this parameter and remains signup mode.
-          router.replace({
-            pathname: '/(auth)/sign-in',
-            params: { mode: 'signin' },
-          } as any);
+        // This domain is the app; semoraai.com is the marketing site.
+        //
+        // This block used to send EVERY signed-out arrival straight to the auth
+        // screen, reasoning that they must have clicked "Sign in"/"Try it for
+        // free" on the marketing site and were therefore already sold. The
+        // numbers disagreed: of 352 web visitors in 30 days, 287 arrived signed
+        // out and 170 of those fired a single event and never came back — half
+        // of all web traffic, gone at a login form. People who just clicked
+        // "Try it for free" do not bounce in under 30 seconds.
+        //
+        // Meanwhile native has always shown onboarding first, explicitly to
+        // "sell the value before the sign-up wall", and converts a scan at 15%
+        // against web's 2%. Web now gets the same courtesy.
+        //
+        // Deliberate clickers are unaffected: the marketing site's "Try it for
+        // free" and "Sign in" links land INSIDE the auth group, which this
+        // never touches — so does the embedded Google button's iframe. Only a
+        // generic arrival at the app root, with no onboarding behind it, is
+        // treated as someone who has not yet been told what this is.
+        if (!inAuthGroup && !onWelcome && !onOnboarding) {
+          if (!hasOnboarded) {
+            router.replace('/onboarding' as any);
+          } else {
+            // Returning user. Keep the intent explicit so an early AuthGate
+            // redirect cannot turn a marketing-site "Sign in" visit into the
+            // default signup framing.
+            router.replace({
+              pathname: '/(auth)/sign-in',
+              params: { mode: 'signin' },
+            } as any);
+          }
         }
       } else if (!hasOnboarded) {
         // First launch on this device: sell the value before the sign-up

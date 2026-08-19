@@ -69,6 +69,11 @@ export default function SignInScreen() {
     : painPoint === 'grades' ? 'Know your grade in every class'
     : null;
 
+  // Has this person told us anything about themselves yet? Onboarding sets all
+  // three; a cold arrival at the app domain sets none. The difference decides
+  // whether the copy can refer to "your semester" as something that exists.
+  const hasContext = Boolean(onboardName || onboardTerm || painPoint);
+
   // Expo Router can retain this screen while only its query string changes.
   // Keep the visible intent in sync so /sign-in?mode=signin can never retain
   // a previously-rendered "Create your account" state.
@@ -260,11 +265,20 @@ export default function SignInScreen() {
                 <Text style={[styles.brandWord, { color: colors.ink }]}>Semora</Text>
               </View>
             )}
+            {/* The signup headline has two audiences, and they need different
+                words. Someone arriving from onboarding has just told us their
+                name, their term and what they want fixed — "Save your semester"
+                closes on what they described. Someone who landed here cold has
+                given us nothing, and telling THEM to save a semester names
+                something they do not have yet; it reads as a demand rather than
+                an offer. So the cold copy says what the product does. */}
             <Text style={[styles.title, { color: colors.ink }]}>
               {mode === 'signup'
                 ? onboardName
                   ? `Save your semester,\n${onboardName}.`
-                  : 'Create your account'
+                  : hasContext
+                    ? 'Create your account'
+                    : 'Turn your syllabus into\na semester that runs itself'
                 : 'Welcome back'}
             </Text>
             <Text style={[styles.subtitle, { color: colors.ink2 }]}>
@@ -273,7 +287,9 @@ export default function SignInScreen() {
                   ? `${painLine} — one tap, and ${onboardTerm ?? 'your semester'} is saved.`
                   : onboardTerm
                     ? `One tap, and your ${onboardTerm} deadlines are saved.`
-                    : 'Save your semester and never miss a deadline'
+                    : hasContext
+                      ? 'Save your semester and never miss a deadline'
+                      : 'Snap a photo of your syllabus. Semora pulls out every deadline, assignment and exam, and keeps track of them for you.'
                 : 'Sign in to pick up where you left off'}
             </Text>
           </View>
