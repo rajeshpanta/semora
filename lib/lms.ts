@@ -211,12 +211,36 @@ export async function connectLms(input: {
       });
       if (linkError) throw linkError;
     }
-    if (input.connectionMethod === 'calendar_feed') {
+    // Automatic sync is ON from the moment you connect.
+    //
+    // Nobody connects Canvas wanting a one-time snapshot. They connect it so a
+    // deadline their instructor moves is right in Semora without anyone doing
+    // anything — which is what background sync does and a one-off import does
+    // not. Making it a second, separate toggle in Settings got the default
+    // backwards: the only real Canvas connection in production sat with
+    // background_sync_enabled = false for three weeks, importing nothing after
+    // its first run, and the student had no way to know.
+    //
+    // This ran for calendar_feed only. Token connections were left off, which
+    // is exactly why that account never synced.
+    //
+    // NON-FATAL, unlike before. Unguarded inside this try, a failure to enable
+    // auto-sync fell through to the catch below and DELETED the whole
+    // connection — punishing a student who had a perfectly good one because an
+    // optional extra did not take. A connection that synced once is still worth
+    // keeping; canvasOfferFor() reports it as needs_attention and every entry
+    // point offers to finish the job.
+    try {
       await invokeLms({
         action: 'enable_background',
         connection_id: connection.id,
         access_token: input.credential.accessToken,
+        refresh_token: input.credential.refreshToken ?? null,
+        expires_at: input.credential.expiresAt ?? null,
       });
+    } catch {
+      // Left off deliberately: the student hears about it from the "Finish
+      // Canvas setup" prompt, not from a connection that vanished.
     }
     const result = await syncLmsConnection(connection.id, 'initial');
     return { connectionId: connection.id, ...result };
