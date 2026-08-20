@@ -71,7 +71,14 @@ async function logCall(
       duration_ms: durationMs,
     });
   } catch (err) {
-    log.error('failed_to_log_call', errorFields(err));
+    // console, NOT `log` — this is a module-level helper and the structured
+    // logger is created per request and never passed in, so `log` was an
+    // undefined identifier here. Nothing caught it because supabase-js returns
+    // { error } instead of throwing, so this branch only runs on a network
+    // fault — at which point the handler for a failed telemetry insert would
+    // itself have thrown a ReferenceError, out of a receipt validation.
+    // Matches how _shared/ai.ts reports the same class of failure.
+    console.error('[validate-receipt] failed_to_log_call:', errorFields(err));
   }
 }
 
@@ -204,11 +211,14 @@ async function verifyAppleJws(jws: string): Promise<{
 
   // 3. Verify the JWS signature with the leaf certificate's key.
   const leafKey = await certs[0].publicKey.export(crypto);
-  const data = new TextEncoder().encode(`${parts[0]}.${parts[1]}`);
+  // `as BufferSource` because TypeScript's newer lib types Uint8Array as
+  // Uint8Array<ArrayBufferLike>, which no longer satisfies BufferSource's
+  // ArrayBuffer-backed view. Same bytes, same call, purely a type assertion.
+  const data = new TextEncoder().encode(`${parts[0]}.${parts[1]}`) as BufferSource;
   const valid = await crypto.subtle.verify(
     { name: 'ECDSA', hash: 'SHA-256' },
     leafKey,
-    b64urlToBytes(parts[2]),
+    b64urlToBytes(parts[2]) as BufferSource,
     data,
   );
   if (!valid) throw new Error('Invalid transaction signature');
@@ -601,12 +611,15 @@ async function writeEntitlementAndRespond(
       // No Apple receipt and a healthy web subscription: nothing to do, and
       // above all nothing to downgrade.
       log.info('skipped_write_web_billed', { user_id: userId });
-      await logCall(adminClient, userId, 'success', Date.now() - startTime, null);
-      return jsonResponse({
-        is_pro: true,
-        plan: currentRow?.plan ?? null,
-        expires_at: currentRow?.expires_at ?? null,
-      });
+      await logCall(adminClient, userId, 'success', Date.now() - startTime);
+      return jsonResponse(
+        {
+          is_pro: true,
+          plan: currentRow?.plan ?? null,
+          expires_at: currentRow?.expires_at ?? null,
+        },
+        200,
+      );
     }
 
     const entitlement = active

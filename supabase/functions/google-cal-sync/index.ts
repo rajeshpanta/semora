@@ -65,7 +65,12 @@ function jsonResponse(body: unknown, status: number) {
   });
 }
 
-type AdminClient = ReturnType<typeof createClient>;
+// Generic arguments spelled out on purpose. Bare `ReturnType<typeof
+// createClient>` resolves the schema parameter to `never` in Deno — Supabase's
+// factory is overloaded and the un-instantiated form collapses — so every call
+// site passing the real client (`SupabaseClient<any, "public", any>`) failed to
+// typecheck against it. Runtime was always fine; this makes the type say so.
+type AdminClient = ReturnType<typeof createClient<any, 'public', any>>;
 
 interface TokenRow {
   user_id: string;

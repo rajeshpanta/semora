@@ -22,6 +22,28 @@ supabase db push        # applies 021–028
 > It preserves migration 009's entitlements logic verbatim and only OR-s in an active promo.
 > Sanity-check `select is_pro('<a-pro-user-uuid>')` after applying.
 
+## 1b. Typecheck before deploying (edge functions)
+
+```bash
+# Deno must NOT use this repo's node_modules. It exists for the React Native
+# app, so Deno defaults to nodeModulesDir "manual" and then cannot resolve the
+# npm: specifiers in validate-receipt (@peculiar/x509) and submit-support
+# (nodemailer) — they look like type errors but are a resolution failure.
+# --node-modules-dir=none makes Deno fetch and cache them itself.
+#
+# Do NOT "fix" this with a deno.json setting nodeModulesDir to "auto": that
+# makes Deno REWRITE node_modules into .deno/ with symlinked packages, which
+# breaks `expo export` (config-plugin loading fails on react-native-iap) and
+# therefore breaks the web deploy. Recovering takes `rm -rf node_modules && npm ci`.
+for d in supabase/functions/*/; do
+  [ -f "$d/index.ts" ] && deno check --node-modules-dir=none --no-lock "$d/index.ts"
+done
+
+deno test --allow-env --no-lock supabase/functions/_shared/
+npx tsc --noEmit          # the app
+npm run build:web         # the web bundle, clean — this is what deploy:web runs
+```
+
 ## 2. Edge functions
 ```
 supabase functions deploy parse-syllabus                 # Wave 1 changes (quota fix, multi-page, dateless)

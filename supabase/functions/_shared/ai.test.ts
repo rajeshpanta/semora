@@ -25,15 +25,32 @@ Deno.test('model ids are the two the product is specified against', () => {
 
 // ── Routing ─────────────────────────────────────────────────────────────────
 
-Deno.test('every task routes to OpenAI Luna — Gemini serves nothing', () => {
+Deno.test('every TEXT task routes to OpenAI Luna — Gemini serves nothing', () => {
   // The product decision this file guards: no user content reaches Google.
   // If this test starts failing because a task was moved back to 'gemini', the
   // privacy policy on semoraai.com (EN and /es) has to name Google again in the
   // same change — that is the whole reason the assertion is this blunt.
+  //
+  // Transcription is excluded because it is not a model preference: it is a
+  // modality Luna cannot serve at all, so it goes to Groq Whisper. That is
+  // asserted separately below rather than weakening this loop — Groq is a
+  // subprocessor for user audio and deserves its own named assertion.
   for (const task of Object.values(AiTask)) {
+    if (task === AiTask.transcription) continue;
     assertEquals(providerFor(task as AiTask), 'openai', `${task} must use OpenAI`);
     assertEquals(modelFor(task as AiTask), 'gpt-5.6-luna');
   }
+});
+
+Deno.test('transcription — and only transcription — leaves OpenAI', () => {
+  // Added 2026-08-20. Groq routing landed 2026-08-16 (e97a0ab) and this file
+  // had not been touched since 2026-08-08, so the suite had been failing on it
+  // ever since: the code was right and the test was stale. Naming the one
+  // exception explicitly means the next provider move has to come here too.
+  assertEquals(providerFor(AiTask.transcription), 'groq');
+  assertEquals(modelFor(AiTask.transcription), 'whisper-large-v3-turbo');
+  const offOpenAI = Object.values(AiTask).filter((t) => providerFor(t as AiTask) !== 'openai');
+  assertEquals(offOpenAI, [AiTask.transcription]);
 });
 
 Deno.test('no task routes to Gemini', () => {
@@ -44,7 +61,7 @@ Deno.test('no task routes to Gemini', () => {
 Deno.test('routing is total — no task falls through undefined', () => {
   for (const task of Object.values(AiTask)) {
     const p = providerFor(task as AiTask);
-    assert(p === 'gemini' || p === 'openai', `${task} resolved to ${p}`);
+    assert(p === 'gemini' || p === 'openai' || p === 'groq', `${task} resolved to ${p}`);
   }
 });
 
