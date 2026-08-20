@@ -128,7 +128,45 @@ async function resolveUserId(
   return data?.user_id ?? null;
 }
 
-async function applySubscription(admin: any, sub: Stripe.Subscription, log: any): Promise<void> {
+async function applySubscription(admin: any, event: Stripe.Subscription, log: any): Promise<void> {
+  // Ask Stripe what is true NOW, rather than trusting the event payload.
+  //
+  // Stripe emits customer.subscription.created and .updated for a new
+  // subscription in the same millisecond, and delivery order is explicitly not
+  // guaranteed. Both land here concurrently, each carrying the status frozen at
+  // the moment ITS event was generated, and the upsert below has no idea which
+  // is newer — so whichever finishes last wins.
+  //
+  // On 2026-08-20 that cost a real customer their subscription. She paid at
+  // 19:16:55; the two writes landed 8ms apart:
+  //
+  //   19:16:55.367  status=active      is_pro=true    <- correct
+  //   19:16:55.375  status=incomplete  is_pro=false   <- stale, overwrote it
+  //
+  // Stripe considered her subscription active the whole time — stripe-checkout
+  // proved it by refusing her four retries with checkout_blocked_existing_
+  // subscription, status "active". She was left paying, locked out, and unable
+  // to buy again, because a payload from 8ms earlier was written 8ms later.
+  //
+  // Re-fetching removes the ordering problem entirely instead of trying to
+  // referee it: whichever event arrives, and in whatever order, both write the
+  // same current truth. A retry delivered ten minutes late writes today's
+  // status, not the one from when it was generated. The cost is one API call
+  // per subscription webhook, on a path that runs a handful of times a day.
+  let sub = event;
+  try {
+    sub = (await stripeClient().subscriptions.retrieve(event.id)) as Stripe.Subscription;
+    if (sub.status !== event.status) {
+      log.info('subscription_status_refreshed', {
+        sub: event.id, event_status: event.status, live_status: sub.status,
+      });
+    }
+  } catch (err) {
+    // Fall back to the payload. Stale is better than dropping the write and
+    // leaving someone who just paid with nothing at all.
+    log.warn('subscription_refetch_failed', { sub: event.id, ...errorFields(err) });
+  }
+
   const userId = await resolveUserId(admin, sub, log);
   if (!userId) return;
 
