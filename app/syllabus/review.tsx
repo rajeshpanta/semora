@@ -107,10 +107,14 @@ export default function SyllabusReviewScreen() {
 
   // Extraction-quality telemetry, once per review session. Fire-and-forget.
   useEffect(() => {
-    if (showPastTermBanner) track('scan_past_term_banner_shown', { screen: 'review' });
     const dateless = items.filter((i) => i.needsDate).length;
-    if (dateless > 0) track('scan_dateless_items', { screen: 'review', count: dateless });
     const suspect = items.filter((i) => i.date_suspect).length;
+    // The stage between a successful parse and saving. Without it the funnel
+    // could not distinguish "the AI failed" from "the student saw the result
+    // and walked away" — two very different problems.
+    track('scan_review_opened', { screen: 'review', items: items.length, dateless, suspect });
+    if (showPastTermBanner) track('scan_past_term_banner_shown', { screen: 'review' });
+    if (dateless > 0) track('scan_dateless_items', { screen: 'review', count: dateless });
     if (suspect > 0) track('scan_suspect_dates', { screen: 'review', count: suspect });
     // Mount-only: these describe the initial extraction, not later edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps

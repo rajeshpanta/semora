@@ -23,7 +23,7 @@ import { COLORS, PROMO_SURFACE, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants'
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
-import { getProducts, purchaseProduct, restorePurchases, validateAfterPurchase, PRODUCT_IDS, setupPurchaseListeners, setPurchaseAnalyticsContext, isEligibleForIntroOffer } from '@/lib/purchases';
+import { getProducts, purchaseProduct, restorePurchases, validateAfterPurchase, PRODUCT_IDS, setupPurchaseListeners, setPurchaseAnalyticsContext } from '@/lib/purchases';
 import { getServerEntitlement } from '@/lib/entitlementServer';
 import { rescheduleAllTaskReminders } from '@/lib/notifications';
 import { track } from '@/lib/analytics';
@@ -57,9 +57,9 @@ export default function PaywallScreen() {
   const insets = useSafeAreaInsets();
   const isWeb = Platform.OS === 'web';
 
-  // Reverse-trial entry: opened automatically right after the first scan's
-  // "aha". Lead with the free trial (momentum, not a block) and dismiss to
-  // the freshly-populated course rather than back to the review list.
+  // Post-scan entry: opened automatically right after the first scan's "aha".
+  // Leads with monthly (the lower-commitment plan, not a block) and dismisses
+  // to the freshly-populated course rather than back to the review list.
   const isPostScan = params.context === 'postScan';
   const importedCount = Number(params.count) || 0;
 
@@ -123,19 +123,20 @@ export default function PaywallScreen() {
   }, [params.checkout]);
 
   // Annual is the recommended path for the default paywall (better value,
-  // surfaced first). The post-scan reverse trial instead leads with the
-  // monthly free trial, so the CTA reads "Try 7 Days Free".
+  // surfaced first). The post-scan entry leads with monthly instead: it is the
+  // smallest commitment to offer someone who has just seen it work once.
   const requestedPlan = params.plan === 'monthly' || params.plan === 'annual' ? params.plan : null;
   const [selectedPlan, setSelectedPlan] = useState<'annual' | 'monthly'>(requestedPlan ?? (isPostScan ? 'monthly' : 'annual'));
   const [loading, setLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [monthlySub, setMonthlySub] = useState<ProductOrSubscription | null>(null);
   const [annualSub, setAnnualSub] = useState<ProductOrSubscription | null>(null);
-  // Whether THIS Apple ID still qualifies for the 7-day intro trial.
-  // Default OFF (pessimistic): re-subscribers don't qualify, and promising a
-  // trial the payment sheet won't honor is a bait-and-switch / App Review
-  // risk. Flipped true only once isEligibleForIntroOfferIOS confirms it.
-  const [trialEligible, setTrialEligible] = useState(false);
+  // There is no introductory trial. The free tier already gives every account
+  // one AI action outright, so a 7-day trial on top of it was paying twice for
+  // the same "try before you buy" — and it meant a student who had already
+  // used their free scan could still take another week of Pro for nothing.
+  // The introductory offers were removed in App Store Connect to match; this
+  // screen must not advertise what the payment sheet will not honour.
 
   // A sheet dismissal can surface BOTH as a requestPurchase rejection
   // (handled in handlePurchase) and via the error listener — dedupe so one
@@ -152,12 +153,6 @@ export default function PaywallScreen() {
       if (products) {
         setMonthlySub(products.monthly);
         setAnnualSub(products.annual);
-        const groupId = (products.monthly as any)?.subscriptionInfoIOS?.subscriptionGroupId;
-        if (groupId) {
-          isEligibleForIntroOffer(groupId)
-            .then((ok: boolean) => setTrialEligible(ok === true))
-            .catch(() => {});
-        }
       }
     });
 
@@ -313,7 +308,7 @@ export default function PaywallScreen() {
   }, [annualSub, monthlySub]);
 
   const handleClose = () => {
-    // From the post-scan reverse trial, "back" would land on the review
+    // From the post-scan paywall, "back" would land on the review
     // list (which we already saved). Send the user on to the next-class
     // prompt instead — declining Pro must not also cost us the ask that
     // turns a single scan into a semester (app/syllabus/added.tsx).
@@ -344,7 +339,7 @@ export default function PaywallScreen() {
     // the paywall's context param and trial eligibility aren't reachable.
     setPurchaseAnalyticsContext({
       context: params.context ?? 'direct',
-      trial: selectedPlan === 'monthly' && trialEligible,
+      trial: false,
     });
     try {
       const didPurchase = await purchaseProduct(productId);
@@ -493,9 +488,7 @@ export default function PaywallScreen() {
               the money, so anyone who wanted Pro on a laptop was sent away to
               find a phone, and most simply left. purchaseProduct now opens
               Stripe Checkout on web (lib/purchases.web.ts) and StoreKit on
-              iOS, so one UI serves both. Prices match deliberately; the trial
-              copy self-suppresses because isEligibleForIntroOffer returns
-              false on web, which is correct — web has no trial. */}
+              iOS, so one UI serves both. Prices match deliberately. */}
           {/* Plan Selection */}
           <Text style={[styles.sectionLabel, { color: colors.ink3 }]}>CHOOSE YOUR PLAN</Text>
 
@@ -542,11 +535,11 @@ export default function PaywallScreen() {
             <View style={{ flex: 1 }}>
               <Text style={[styles.planName, { color: colors.ink }]}>Monthly</Text>
               <Text style={[styles.planPrice, { color: colors.ink }]}>{monthlyPrice}<Text style={[styles.planPeriod, { color: colors.ink2 }]}>/month</Text></Text>
-              <Text style={[styles.planSub, { color: colors.ink3 }]}>{trialEligible ? '7-day free trial included' : 'Auto-renews monthly'}</Text>
+              <Text style={[styles.planSub, { color: colors.ink3 }]}>Auto-renews monthly</Text>
             </View>
             {selectedPlan === 'monthly' && (
               <View style={[styles.trialBadge, { backgroundColor: colors.brand }]}>
-                <Text style={styles.trialBadgeText}>{trialEligible ? 'FREE TRIAL' : 'FLEXIBLE'}</Text>
+                <Text style={styles.trialBadgeText}>FLEXIBLE</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -564,7 +557,7 @@ export default function PaywallScreen() {
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.ctaText}>
-                  {selectedPlan === 'monthly' && trialEligible ? 'Try 7 Days Free' : 'Subscribe Now'}
+                  Subscribe Now
                 </Text>
               )}
             </LinearGradient>
@@ -572,9 +565,7 @@ export default function PaywallScreen() {
 
           <Text style={[styles.finePrint, { color: colors.ink3 }]}>
             {selectedPlan === 'monthly'
-              ? trialEligible
-                ? `7-day free trial, then ${monthlyPrice}/month. Cancel anytime.`
-                : `${monthlyPrice}/month. Cancel anytime.`
+              ? `${monthlyPrice}/month. Cancel anytime.`
               : `${annualPrice} billed annually. Cancel anytime.`}
           </Text>
           {isWeb && (

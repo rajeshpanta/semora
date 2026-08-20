@@ -26,6 +26,7 @@ import {
 } from 'react-native';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { track } from '@/lib/analytics';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { HEIC_HELP, isHeic, transcodeHeicToJpeg } from '@/lib/heic';
 import { useResponsive } from '@/lib/responsive';
@@ -174,6 +175,12 @@ export default function ScanScreen() {
     // a 400 whose only offered action was "Try Again", which failed identically
     // forever.
     const ext = (m: string) => (m === 'image/png' ? 'png' : m === 'image/webp' ? 'webp' : 'jpg');
+    // Camera capture finished with at least one page kept. The multi-page
+    // count is the interesting part: it says whether students photograph one
+    // page and stop, or work through a whole syllabus.
+    track('scan_source_selected', {
+      screen: 'scan', method: 'camera', pages: pages.length, mime: pages[0]?.mimeType ?? null,
+    });
     if (pages.length === 1) {
       navigateToUpload(pages[0].uri, `syllabus_photo.${ext(pages[0].mimeType)}`, pages[0].mimeType);
       return;
@@ -224,6 +231,10 @@ export default function ScanScreen() {
   };
 
   const handleTakePhoto = async () => {
+    // Fired BEFORE the free-tier gate on purpose: a student who taps this
+    // and is turned away still counts as having tried to scan. Firing it
+    // after the gate would make the paywall look like disinterest.
+    track('scan_started', { screen: 'scan', method: 'camera' });
     if (!(await checkScanLimit())) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -332,6 +343,10 @@ export default function ScanScreen() {
   };
 
   const handleUploadDocument = async () => {
+    // Fired BEFORE the free-tier gate on purpose: a student who taps this
+    // and is turned away still counts as having tried to scan. Firing it
+    // after the gate would make the paywall look like disinterest.
+    track('scan_started', { screen: 'scan', method: 'document' });
     if (!(await checkScanLimit())) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -340,8 +355,20 @@ export default function ScanScreen() {
       copyToCacheDirectory: true,
     }));
 
-    if (!result.canceled && result.assets[0]) {
+    if (result.canceled || !result.assets?.[0]) {
+      // The picker opening and being dismissed was previously invisible: the
+      // funnel went straight from intent to nothing, so an abandoned scan and
+      // a scan that was never attempted looked identical.
+      track('scan_cancelled', { screen: 'scan', method: 'document' });
+      return;
+    }
+    {
       const asset = result.assets[0];
+      track('scan_source_selected', {
+        screen: 'scan', method: 'document', pages: 1,
+        mime: asset.mimeType ?? null,
+        kb: asset.size ? Math.round(asset.size / 1024) : null,
+      });
       if (isHeic(asset.name, asset.mimeType)) {
         // Transcode in-page when the browser can (Safari decodes HEIC), purely
         // to save the upload of a larger file. Everywhere else — every iPhone,
@@ -366,6 +393,10 @@ export default function ScanScreen() {
   };
 
   const handleChooseFromPhotos = async () => {
+    // Fired BEFORE the free-tier gate on purpose: a student who taps this
+    // and is turned away still counts as having tried to scan. Firing it
+    // after the gate would make the paywall look like disinterest.
+    track('scan_started', { screen: 'scan', method: 'photos' });
     if (!(await checkScanLimit())) return;
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -407,7 +438,11 @@ export default function ScanScreen() {
       selectionLimit: MAX_SCAN_PAGES,
     }));
 
-    if (!result.canceled && result.assets.length > 0) {
+    if (result.canceled || result.assets.length === 0) {
+      track('scan_cancelled', { screen: 'scan', method: 'photos' });
+      return;
+    }
+    {
       // selectionLimit caps the native picker, but guard anyway (Android and
       // older iOS builds don't always honor it) — with clear messaging
       // instead of silently dropping extras.
@@ -434,6 +469,13 @@ export default function ScanScreen() {
         totalBytes += size;
         fitted.push({ uri: a.uri, mimeType: assetMimeType(a) });
       }
+      track('scan_source_selected', {
+        screen: 'scan', method: 'photos',
+        pages: fitted.length,
+        // How often the byte budget silently drops pages a student picked.
+        dropped: assets.length - fitted.length,
+        kb: Math.round(totalBytes / 1024),
+      });
       if (fitted.length < assets.length) {
         // Await the alert so it isn't racing the navigation push.
         await new Promise<void>((resolve) => {
