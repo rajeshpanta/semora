@@ -2170,4 +2170,13 @@ export const ES: Record<string, string> = {
   'Every class imports itself — and stays right when your teacher moves a deadline': 'Cada clase se importa sola y sigue correcta cuando tu profesor cambia una entrega',
   'Recordings and uploads': 'Grabaciones y archivos subidos',
   'Notes, quiz or flashcards': 'Apuntes, cuestionario o tarjetas',
+
+  // ── Remaining gaps found by sweeping every <Text> and Alert in the app.
+  // A missing key renders in English with no warning, so these were only
+  // ever going to be found by looking for them.
+  'Back to Sign In': 'Volver a iniciar sesión',
+  'Contact support': 'Contactar con soporte',
+  'Could not start a semester': 'No se pudo crear el semestre',
+  'Current Password': 'Contraseña actual',
+  'Semester Name *': 'Nombre del semestre *',
 };
