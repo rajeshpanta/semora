@@ -1,0 +1,21 @@
+/* Deliberately neutral: this sits inside two different page shells (the English
+   support hero and the Spanish widget), so it borrows the surrounding colour
+   rather than declaring its own. */
+.backToApp {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 18px;
+  padding: 8px 14px;
+  border: 1px solid var(--line, rgba(0, 0, 0, 0.12));
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: inherit;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.backToApp:hover {
+  background: var(--surface-2, rgba(0, 0, 0, 0.04));
+  border-color: currentColor;
+}

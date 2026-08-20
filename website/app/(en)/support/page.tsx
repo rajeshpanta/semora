@@ -11,6 +11,7 @@ import { OG_IMAGE } from '@/lib/og';
 import { ArticleShell } from '@/components/ArticleShell';
 import { SupportForm } from '@/components/SupportForm';
 import { Breadcrumb } from '@/components/Breadcrumb';
+import { BackToApp } from '@/components/BackToApp';
 import heroStyles from './support.module.css';
 
 export const metadata: Metadata = {
@@ -76,6 +77,7 @@ export default function SupportPage() {
           />
           <header className={heroStyles.intro}>
             <span className={heroStyles.eyebrow}>Semora support</span>
+            <BackToApp />
             <h1 id="support-heading">How can we help?</h1>
             <p>Tell us what&apos;s going on. We usually respond within a few hours.</p>
           </header>

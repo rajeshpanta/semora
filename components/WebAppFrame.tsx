@@ -318,7 +318,12 @@ function DesktopSidebar({ session }: { session: Session }) {
           onPress={() => {
             track('support_opened', { screen: 'web_sidebar', topic: 'general' });
             if (typeof window !== 'undefined') {
-              window.open(`${MARKETING_URL}/support`, '_blank', 'noopener,noreferrer');
+              // `from=app` tells the marketing site this visitor is signed in, which
+              // it cannot work out for itself — different origin, and the session
+              // lives in the app's storage. It uses it to offer a way back to the
+              // dashboard instead of a "Sign in" button meant for strangers.
+              const path = locale === 'es' ? '/es/ayuda' : '/support';
+              window.open(`${MARKETING_URL}${path}?from=app`, '_blank', 'noopener,noreferrer');
             }
           }}
         />
