@@ -116,19 +116,35 @@ serve(withRequestLogging('stripe-checkout', async (req, log) => {
     // Subscribe button, so a payer whose webhook is slow can press it again and
     // buy a SECOND subscription. Stripe knows about the first one immediately.
     //
-    // `incomplete` is deliberately in the list: it means a payment is in
-    // flight. Starting another checkout on top of it is the exact double-charge
-    // this guards against.
+    // `incomplete` needs care, and getting it wrong locked a real customer out.
+    //
+    // Stripe creates the subscription as `incomplete` the moment Checkout
+    // opens, and promotes it to `active` only once the card clears. Blocking
+    // on `incomplete` outright therefore does not just stop a second charge
+    // during settlement — it refuses every RETRY after a first attempt that
+    // failed or was abandoned, because that attempt sits there as `incomplete`
+    // for the ~23 hours Stripe takes to expire it. Seen in production: four
+    // 409s in seventeen seconds from someone who simply could not buy.
+    //
+    // So `incomplete` blocks only while a payment could still plausibly be in
+    // flight. Past that window the stale attempt is ignored and the customer
+    // can try again. The genuinely-subscribed states have no such window —
+    // those block for as long as they last.
     if (mapped?.customer_id) {
-      const LIVE = ['active', 'trialing', 'past_due', 'unpaid', 'incomplete'];
+      const SETTLING_WINDOW_MS = 10 * 60 * 1000;
+      const ALWAYS_BLOCK = ['active', 'trialing', 'past_due', 'unpaid'];
       const existing = await stripe.subscriptions.list({
         customer: customerId,
         status: 'all',
         limit: 20,
       });
-      const live = existing.data.find((sub: { id: string; status: string }) =>
-        LIVE.includes(sub.status),
-      );
+      const now = Date.now();
+      const live = existing.data.find((sub: { id: string; status: string; created: number }) => {
+        if (ALWAYS_BLOCK.includes(sub.status)) return true;
+        if (sub.status !== 'incomplete') return false;
+        // `created` is seconds since the epoch.
+        return now - sub.created * 1000 < SETTLING_WINDOW_MS;
+      });
       if (live) {
         log.info('checkout_blocked_existing_subscription', {
           subscription_id: live.id,

@@ -2122,4 +2122,8 @@ export const ES: Record<string, string> = {
   'Choose a class first': 'Elige primero una clase',
   'Pick which class this file belongs to, then choose the file.': 'Elige a qué clase pertenece este archivo y luego selecciona el archivo.',
   'WHICH CLASS IS THIS FOR?': '¿PARA QUÉ CLASE ES?',
+  'Add every class': 'Añade todas tus clases',
+  'This recording didn’t finish': 'Esta grabación no se completó',
+  'Delete this recording': 'Eliminar esta grabación',
+  'Attached to your next question. It isn’t saved to your course.': 'Se adjunta a tu próxima pregunta. No se guarda en tu curso.',
 };

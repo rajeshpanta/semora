@@ -407,6 +407,10 @@ function spanishPattern(input: string): string | null {
     if (match) return `${translate(match[1], 'es')}: un toque y ${translate(match[2], 'es')} queda guardado.`;
   match = input.match(/^One tap, and your (.+?) deadlines are saved\.$/);
     if (match) return `Un toque y tus entregas de ${translate(match[1], 'es')} quedan guardadas.`;
+  // Interpolates FREE_COURSE_LIMIT, so it is matched rather than keyed —
+  // a literal key would silently fall back to English if the limit changed.
+  match = input.match(/^Free semesters hold (\d+) courses\. Pro has no limit on classes or semesters\.$/i);
+    if (match) return `Los semestres gratuitos admiten ${match[1]} cursos. Pro no limita las clases ni los semestres.`;
   match = input.match(/^Or (.+?)\/month with 7-day free trial$/i);
     if (match) return `O ${match[1]} al mes con 7 días de prueba gratis`;
   match = input.match(/^(\d+) (friend|friends) joined$/i);
