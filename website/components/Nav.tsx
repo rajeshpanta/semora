@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { SignupButton } from './SignupButton';
+import { NavAuthActions } from './NavAuthActions';
 import styles from './Nav.module.css';
 import { FeaturesMenu } from './FeaturesMenu';
 import { MobileNav } from './MobileNav';
@@ -32,8 +32,8 @@ export function Nav({ locale = 'en' }: { locale?: SiteLocale }) {
     : NAV_LINKS;
   const homeHref = locale === 'es' ? '/es' : '/';
   const copy = locale === 'es'
-    ? { getApp: 'Descargar la app', signIn: 'Iniciar sesión', tryFree: 'Empezar gratis', aria: 'Navegación principal' }
-    : { getApp: 'Get the app', signIn: 'Sign in', tryFree: 'Try it for free', aria: 'Main' };
+    ? { getApp: 'Descargar la app', signIn: 'Iniciar sesión', tryFree: 'Empezar gratis', dashboard: 'Panel', aria: 'Navegación principal' }
+    : { getApp: 'Get the app', signIn: 'Sign in', tryFree: 'Try it for free', dashboard: 'Dashboard', aria: 'Main' };
 
   return (
     <header className={styles.header}>
@@ -63,10 +63,13 @@ export function Nav({ locale = 'en' }: { locale?: SiteLocale }) {
             free" reads as "make a new account", so without this a returning
             user has no obvious way back into the app from the marketing site. */}
         <div className={styles.actions}>
-          <SignupButton mode="signin" className={styles.ghost}>
-            {copy.signIn}
-          </SignupButton>
-          <SignupButton className={styles.cta}>{copy.tryFree}</SignupButton>
+          <NavAuthActions
+            signIn={copy.signIn}
+            tryFree={copy.tryFree}
+            dashboard={copy.dashboard}
+            ghostClassName={styles.ghost}
+            ctaClassName={styles.cta}
+          />
         </div>
 
         <MobileNav links={links} locale={locale} />

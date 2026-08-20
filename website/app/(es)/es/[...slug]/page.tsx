@@ -14,7 +14,6 @@ import { FeatureShowcase } from '@/components/FeatureShowcase';
 import { GpaCalculator } from '@/components/GpaCalculator';
 import { PomodoroTimer } from '@/components/PomodoroTimer';
 import { SupportForm } from '@/components/SupportForm';
-import { BackToApp } from '@/components/BackToApp';
 import { SUPPORT_EMAIL } from '@/lib/semora-facts';
 import { FEATURES_ES, SHOWCASE_ES } from '@/lib/es-facts';
 import {
@@ -87,7 +86,6 @@ function DirectoryWidget({ config }: { config: SpanishPageConfig }) {
   if (config.kind === 'support') {
     return (
       <div className={styles.supportWidget}>
-        <BackToApp locale="es" />
         <SupportForm supportEmail={SUPPORT_EMAIL} locale="es" />
         <p>
           También puedes escribir directamente a{' '}
