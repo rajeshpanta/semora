@@ -1220,8 +1220,20 @@ async function persistTurns(
     isFirstTurn: boolean;
   },
 ): Promise<boolean> {
+  // BOTH objects carry the SAME KEYS, including `citations` on the user turn.
+  // PostgREST rejects a bulk insert whose objects differ in shape —
+  // PGRST102 "All object keys must match" — and it rejects the WHOLE batch,
+  // not the odd row. The user turn used to omit `citations` (it has none),
+  // which meant this insert had never once succeeded: every tutor answer since
+  // the feature shipped was generated, returned to the student, and then
+  // dropped on the floor. It looked like a schema problem for months because
+  // the failure is silent by design here — persisting is best-effort so a
+  // failed write can never cost someone an answer they waited for.
   const { error } = await admin.from('tutor_messages').insert([
-    { user_id: turn.userId, conversation_id: turn.conversationId, role: 'user', content: turn.message },
+    {
+      user_id: turn.userId, conversation_id: turn.conversationId, role: 'user',
+      content: turn.message, citations: [],
+    },
     {
       user_id: turn.userId, conversation_id: turn.conversationId, role: 'assistant',
       content: turn.reply, citations: turn.citations,
