@@ -225,7 +225,13 @@ export function sniffFormat(base64: string): SniffedFormat {
   return { kind: 'unknown' };
 }
 
-/** Shown when a student sends a photo the model cannot decode. */
+/**
+ * Shown when a student sends a photo the model cannot decode.
+ *
+ * Deliberately free of device-settings instructions. Telling a student to
+ * reconfigure their camera and retake the photo is not an error message, it is
+ * homework — and it is unreachable advice for the photo they are holding right
+ * now, which was taken before they read it.
+ */
 export const HEIC_SERVER_HELP =
-  "That photo is in Apple's HEIC format, which the scanner can't read. Update Semora, " +
-  'or on your iPhone open Settings → Camera → Formats and choose "Most Compatible", then retake it.';
+  'That photo could not be read. Choose it from Photos instead of Files — we resize it for you — or send the syllabus as a PDF.';

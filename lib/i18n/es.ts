@@ -102,6 +102,19 @@ export const ES: Record<string, string> = {
   'Notes, flashcards and practice quizzes': 'Apuntes, tarjetas y cuestionarios de práctica',
   'AI tutor, Smart Plan and grade forecasting': 'Tutor IA, Plan Inteligente y previsión de notas',
   'Cancel anytime · Secure checkout': 'Cancela cuando quieras · Pago seguro',
+
+  // ── The paywall sheet and the free-tier wall it opens from (1.8) ────────
+  // These render on the ONE screen a Spanish-speaking student sees at the
+  // moment they are being asked for money. Half-translated pricing is exactly
+  // where a reader stops trusting the number, so every fragment of the plan
+  // rows lives here — including the bare units, which sit in their own <Text>
+  // beside the price and would otherwise stay English while the row around
+  // them translated.
+  'Cancel anytime': 'Cancela cuando quieras',
+  '/week': '/sem',
+  '/wk': '/sem',
+  'Free action used — upgrade for unlimited': 'Ya usaste tu acción gratuita: mejora para tener acceso ilimitado',
+  '1 free scan or lecture included': 'Incluye 1 escaneo o clase gratis',
   'MOST POPULAR': 'MÁS POPULAR',
   'Save 58%': 'Ahorra 58 %',
   'Continue to checkout': 'Continuar al pago',
@@ -125,7 +138,9 @@ export const ES: Record<string, string> = {
   'Semora could not read that file. Please try a different one — PDF works best.': 'Semora no pudo leer ese archivo. Prueba con otro; el PDF funciona mejor.',
   'Semora lost track of that file — this happens if the page was reloaded. Please choose it again.': 'Semora perdió el rastro de ese archivo (suele pasar si se recargó la página). Vuelve a elegirlo.',
   "Can't read that photo": 'No se puede leer esa foto',
-  'That photo is in Apple’s HEIC format, which browsers can’t read. On your iPhone open the photo, tap Share → Copy Photo, then paste it — or set Settings → Camera → Formats to "Most Compatible" and take it again.': 'Esa foto está en formato HEIC de Apple, que los navegadores no pueden leer. En tu iPhone abre la foto, toca Compartir → Copiar foto y pégala, o cambia Ajustes → Cámara → Formatos a "Más compatible" y tómala de nuevo.',
+  'That photo could not be read. Try adding it again, or send the syllabus as a PDF.': 'No pudimos leer esa foto. Intenta añadirla de nuevo o envía el programa en PDF.',
+  'That photo could not be read. Choose it from Photos instead of Files — we resize it for you — or send the syllabus as a PDF.': 'No pudimos leer esa foto. Elígela desde Fotos en lugar de Archivos (la ajustamos por ti) o envía el programa en PDF.',
+  'That photo is larger than we can read directly. Choose the same photo from Photos instead of Files — we resize it for you — or send the syllabus as a PDF.': 'Esa foto es más grande de lo que podemos leer directamente. Elige la misma foto desde Fotos en lugar de Archivos (la ajustamos por ti) o envía el programa en PDF.',
   'Network error while uploading. Please check your connection and try again.': 'Error de red al subir el archivo. Revisa tu conexión e inténtalo de nuevo.',
   'The upload timed out. Please try again.': 'Se agotó el tiempo de la subida. Inténtalo de nuevo.',
   // ── Lecture recording ───────────────────────────────────────────────────

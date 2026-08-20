@@ -1,8 +1,10 @@
 import { readFileAsBase64 } from '@/lib/readFileBase64';
+import { normalizeImageForUpload } from '@/lib/imageIntake';
 import { parseUploadJson, requestWithUploadProgress } from '@/lib/httpUpload';
 import { supabase } from '@/lib/supabase';
 import type { GradeThreshold, CourseMeetingKind } from '@/types/database';
 import { getAppLocale } from '@/lib/i18n';
+import { track } from '@/lib/analytics';
 
 export interface ExtractedItem {
   title: string;
@@ -144,8 +146,50 @@ export async function extractFromPages(
     throw new Error('No pages to scan');
   }
   onProgress?.({ stage: 'preparing' });
+
+  // Normalise EVERY page before a single byte is read.
+  //
+  // This is the one place all five intake paths meet — camera, Photos, Files,
+  // web drag-drop and the web picker all reach the server through here, and
+  // extractFromDocument delegates to this function too. Putting the resize
+  // here instead of in each picker is what stops the same size complaint from
+  // reappearing under a new error string every release: a new entry point
+  // cannot forget to call it, because there is nowhere else to go.
+  //
+  // Non-images (PDF, Word, text) are passed through untouched.
+  const normalized = await Promise.all(
+    pages.map(async (p) => {
+      const result = await normalizeImageForUpload({
+        uri: p.uri,
+        fileName: fileName ?? `page.${p.mimeType.split('/')[1] || 'jpg'}`,
+        mimeType: p.mimeType,
+      });
+      return result;
+    }),
+  );
+
+  // Report what the pipeline actually did.
+  //
+  // Every previous round of the upload problem was discovered by a student
+  // hitting it and telling us — six times, each under a different error
+  // string. Emitting the before/after here means the next regression shows up
+  // as a shrink ratio that stopped moving, in a dashboard, before anyone is
+  // turned away. Fires only when work was done, so a passthrough (native
+  // today, small JPEGs everywhere) costs nothing.
+  const worked = normalized.filter((n) => n.resized);
+  if (worked.length > 0) {
+    const sum = (pick: (n: typeof worked[number]) => number | null) =>
+      worked.reduce((total, n) => total + (pick(n) ?? 0), 0);
+    track('scan_image_normalized', {
+      pages: worked.length,
+      from_kb: Math.round(sum((n) => n.originalBytes) / 1024),
+      to_kb: Math.round(sum((n) => n.bytes) / 1024),
+      max_edge: Math.max(...worked.map((n) => n.edge ?? 0)),
+    });
+  }
+
   const encoded = await Promise.all(
-    pages.map(async (p) => ({
+    normalized.map(async (p) => ({
       base64: await readFileAsBase64(p.uri),
       mimeType: p.mimeType,
     })),

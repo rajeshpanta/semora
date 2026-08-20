@@ -21,10 +21,12 @@ export function isHeic(fileName?: string | null, mimeType?: string | null): bool
   return /\.(heic|heif)$/.test(name) || mime.includes('heic') || mime.includes('heif');
 }
 
+// No settings instructions. Since the intake pipeline transcodes in-browser
+// where it can and the server decodes HEIC where it can't, this is now a
+// last-resort string — and a last resort should still name an action the
+// student can take here, not a preference panel on another device.
 export const HEIC_HELP =
-  'That photo is in Apple’s HEIC format, which browsers can’t read. ' +
-  'On your iPhone open the photo, tap Share → Copy Photo, then paste it — or ' +
-  'set Settings → Camera → Formats to "Most Compatible" and take it again.';
+  'That photo could not be read. Try adding it again, or send the syllabus as a PDF.';
 
 /**
  * Try to turn a picked HEIC into a JPEG blob URL. Returns null when the

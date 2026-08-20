@@ -31,6 +31,7 @@ import { COLORS, FONTS, COURSE_COLORS, COURSE_ICONS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { normalizeSupportedDocument } from '@/lib/documentFiles';
+import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 
 const TYPE_SINGULAR: Record<string, string> = {
   assignment: 'assignment', quiz: 'quiz', exam: 'exam',
@@ -142,6 +143,12 @@ export default function SyllabusUploadScreen() {
   const [pastedText] = useState(() => takePendingScanText());
 
   const [processing, setProcessing] = useState(false);
+  // Shown when the account's one free AI action is already spent — either
+  // caught here, or refused by the server after the upload started.
+  const [upsellVisible, setUpsellVisible] = useState(false);
+  // Which wall was hit. The course cap and the AI-action cap are different
+  // limits and must not claim to be each other.
+  const [upsellReason, setUpsellReason] = useState<'scan' | 'course'>('scan');
   const [status, setStatus] = useState('');
   const [step, setStep] = useState(0); // 0-4 progress steps
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
@@ -300,10 +307,13 @@ export default function SyllabusUploadScreen() {
                   setStep(0);
                   setStatus('');
                   if (isFreeLimitError(err)) {
-                    Alert.alert('Course Limit Reached', err.message, [
-                      { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
-                      { text: 'Cancel', style: 'cancel', onPress: () => router.back() },
-                    ]);
+                    // The sheet, for the same reason the other limit path below uses
+                    // it: an alert states a price-less refusal and makes the student
+                    // tap twice more, through a screen change, before they can even
+                    // see what Pro costs. This is a Pro wall — it should offer Pro,
+                    // right here.
+                    setUpsellReason('course');
+                    setUpsellVisible(true);
                   } else {
                     Alert.alert('Error', err.message);
                     router.back();
@@ -336,16 +346,18 @@ export default function SyllabusUploadScreen() {
       // Free-tier limit (scan or course) — surface the Upgrade prompt
       // even when the client thought the user was Pro (stale isPro).
       if (isFreeLimitError(error)) {
-        // Hit the free limit -> upsell. Expected, not a failure.
+        // The SHEET, not an alert.
+        //
+        // This used to be Alert.alert('Pro feature') with an "Upgrade" button
+        // that pushed the full paywall screen: the student was shown a
+        // price-less sentence, then had to tap again and change screens before
+        // they could see what Pro costs or pick a plan. The scan tab already
+        // shows ProUpsellSheet when it catches this limit BEFORE uploading —
+        // this is the same wall reached a second later and should look the
+        // same. The sheet names both prices, keeps the plans selectable
+        // inline, and completes the purchase without leaving this screen.
         track('scan_limit_hit', { screen: 'scan' });
-        Alert.alert(
-          'Pro feature',
-          error.message,
-          [
-            { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
-            { text: 'Go Back', onPress: () => router.back(), style: 'cancel' },
-          ],
-        );
+        setUpsellVisible(true);
         return;
       }
       // Branch on the server's CODE, never on the message text. The message is
@@ -519,6 +531,13 @@ export default function SyllabusUploadScreen() {
           )}
         </View>
       </View>
+      {/* Dismissing without buying returns to the picker rather than leaving
+          the student on a dead upload screen whose file can never be scanned. */}
+      <ProUpsellSheet
+        visible={upsellVisible}
+        reason="scan"
+        onClose={() => { setUpsellVisible(false); router.back(); }}
+      />
     </SafeAreaView>
   );
 }

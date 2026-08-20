@@ -625,6 +625,17 @@ function spanishPattern(input: string): string | null {
     if (match) return `${translate(match[1], 'es')} · ${match[2]}`;
   match = input.match(/^(Hey|Good morning|Good afternoon|Good evening), (.+)$/);
     if (match) return `${translate(match[1], 'es')}, ${match[2]}`;
+  // Paywall + free-tier wall. The price and the course cap are interpolated at
+  // render time, so no exact key can ever match these — they have to be
+  // patterns or they stay English on the one screen where we ask for money.
+  match = input.match(/^Billed (.+)\/year$/);
+    if (match) return `Facturado ${match[1]}/año`;
+  match = input.match(/^Billed (.+)\/month$/);
+    if (match) return `Facturado ${match[1]}/mes`;
+  match = input.match(/^You've used your free action and reached the (\d+)-course limit\. Upgrade to Pro for unlimited scans, lectures, and courses\.$/);
+    if (match) return `Ya usaste tu acción gratuita y llegaste al límite de ${match[1]} cursos. Mejora a Pro para tener escaneos, clases y cursos ilimitados.`;
+  match = input.match(/^Your free action is still available, but you're at the free limit of (\d+) courses this semester\. Re-scan a course you already have, or upgrade to Pro to add a new one\.$/);
+    if (match) return `Todavía tienes tu acción gratuita, pero llegaste al límite gratuito de ${match[1]} cursos este semestre. Vuelve a escanear un curso que ya tengas o mejora a Pro para añadir uno nuevo.`;
   return null;
 }
 

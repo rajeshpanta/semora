@@ -9,6 +9,7 @@
  */
 
 import { HEIC_HELP, isHeic } from '@/lib/heic';
+import { canTranscodeImages } from '@/lib/imageIntake';
 
 export type SupportedDocumentCategory =
   | 'pdf'
@@ -23,6 +24,15 @@ type DocumentSpec = {
   mimeType: string;
   mimeAliases?: readonly string[];
   category: SupportedDocumentCategory;
+  /**
+   * Accepted only where the client can re-encode the file itself. Neither the
+   * vision model nor the server reads TIFF, BMP, AVIF or camera RAW, so these
+   * are only offered on platforms whose intake pipeline converts them to JPEG
+   * first (see lib/imageIntake.ts). Offering them where nothing can convert
+   * them would trade a clear "unsupported file" for an opaque server error,
+   * which is a worse answer, not a more generous one.
+   */
+  requiresTranscode?: boolean;
 };
 
 const DOCUMENT_SPECS: readonly DocumentSpec[] = [
@@ -33,6 +43,17 @@ const DOCUMENT_SPECS: readonly DocumentSpec[] = [
   { extensions: ['gif'], mimeType: 'image/gif', category: 'image' },
   // iPhone's default format. Uploaded as-is; the server decodes it.
   { extensions: ['heic', 'heif'], mimeType: 'image/heic', mimeAliases: ['image/heif'], category: 'image' },
+  // Formats a student plausibly arrives with but that nothing downstream
+  // reads: a flatbed scanner writes TIFF, Windows Snipping Tool writes BMP,
+  // a Google Photos download is often AVIF, and a DSLR card is full of RAW.
+  // Every one of these was answered with "Choose PDF, JPG, PNG…" — a list
+  // that does not include what they are holding. The browser decodes them, so
+  // on web the intake pipeline turns them into JPEG and they simply work.
+  { extensions: ['tif', 'tiff'], mimeType: 'image/tiff', category: 'image', requiresTranscode: true },
+  { extensions: ['bmp'], mimeType: 'image/bmp', mimeAliases: ['image/x-ms-bmp'], category: 'image', requiresTranscode: true },
+  { extensions: ['avif'], mimeType: 'image/avif', category: 'image', requiresTranscode: true },
+  { extensions: ['jfif', 'pjpeg'], mimeType: 'image/jpeg', category: 'image', requiresTranscode: true },
+  { extensions: ['dng'], mimeType: 'image/x-adobe-dng', category: 'image', requiresTranscode: true },
 
   { extensions: ['doc'], mimeType: 'application/msword', category: 'document' },
   { extensions: ['docx'], mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', category: 'document' },
@@ -133,6 +154,9 @@ export function normalizeSupportedDocument(
   const normalizedMime = rawMimeType?.trim().toLowerCase() || '';
   const spec = SPEC_BY_EXTENSION.get(extension) ?? SPEC_BY_MIME.get(normalizedMime);
   if (!spec) return null;
+  // Offered only where something downstream can convert them — see the note
+  // on DocumentSpec.requiresTranscode.
+  if (spec.requiresTranscode && !canTranscodeImages()) return null;
 
   const fileName = extension && SPEC_BY_EXTENSION.has(extension)
     ? originalName

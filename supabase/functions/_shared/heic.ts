@@ -43,6 +43,15 @@ const MAX_EDGE = 2200;
  */
 const MAX_PIXELS = 16_000_000;
 
+/**
+ * Floor for the fallback above. A syllabus is printed text, and MAX_EDGE
+ * re-encodes to 2200px on the long side anyway, so anything at or above about
+ * 1.2MP still reaches the model at full useful detail. Below that the page
+ * stops being legible and a "successful" scan that finds nothing is a worse
+ * outcome than saying we could not read it.
+ */
+const MIN_READABLE_PIXELS = 1_200_000;
+
 export type HeicDecodeResult =
   | { ok: true; base64: string; mimeType: 'image/jpeg'; width: number; height: number; ms: number }
   | { ok: false; reason: 'too_large' | 'decode_failed' };
@@ -88,16 +97,33 @@ export async function decodeHeicToJpeg(base64Heic: string): Promise<HeicDecodeRe
     //   ReferenceError: heif_image_handle_is_primary_image is not defined
     // so area is the reliable discriminator: aux images are always smaller
     // than the capture they describe.
-    let first = images[0];
-    let bestArea = (first.get_width() || 0) * (first.get_height() || 0);
-    for (const candidate of images.slice(1)) {
-      const area = (candidate.get_width() || 0) * (candidate.get_height() || 0);
-      if (area > bestArea) { first = candidate; bestArea = area; }
-    }
-    const width = first.get_width();
-    const height = first.get_height();
-    if (!width || !height) return { ok: false, reason: 'decode_failed' };
-    if (width * height > MAX_PIXELS) return { ok: false, reason: 'too_large' };
+    // Largest FIRST, then the largest that actually fits.
+    //
+    // This used to take the largest image outright and refuse if it was over
+    // MAX_PIXELS — which is what turned a 48MP iPhone photo into a message
+    // asking the student to go and change a camera setting. A HEIC routinely
+    // carries more than one image (a Live Photo's frames, a portrait capture's
+    // matte, an embedded preview), so when the full-resolution one is beyond
+    // what the isolate can decode, the next one down is often still a perfectly
+    // readable photograph of the same page. Reading that is strictly better
+    // than refusing.
+    //
+    // Bounded at the bottom too: a 320px thumbnail would decode happily and
+    // then hand the model an unreadable page, which is worse than an honest
+    // failure — the student would get "no assignments found" and blame the app.
+    const candidates = images
+      .map((img: any) => ({ img, w: img.get_width() || 0, h: img.get_height() || 0 }))
+      .filter((c: any) => c.w > 0 && c.h > 0)
+      .sort((a: any, b: any) => b.w * b.h - a.w * a.h);
+    if (!candidates.length) return { ok: false, reason: 'decode_failed' };
+
+    const usable = candidates.find(
+      (c: any) => c.w * c.h <= MAX_PIXELS && c.w * c.h >= MIN_READABLE_PIXELS,
+    );
+    if (!usable) return { ok: false, reason: 'too_large' };
+    const first = usable.img;
+    const width = usable.w;
+    const height = usable.h;
 
     let rgba: Uint8ClampedArray | null = new Uint8ClampedArray(width * height * 4);
     await new Promise<void>((resolve, reject) => {
@@ -210,8 +236,15 @@ export async function prepareImagePayload(
     return {
       ok: false,
       code: decoded.reason === 'too_large' ? 'IMAGE_TOO_LARGE' : 'HEIC_UNSUPPORTED',
+      // Never send the student to iOS Settings. The old copy here told them to
+      // turn off Resolution Control (48MP) — asking someone to reconfigure
+      // their camera before they can scan a page is the same dead end that
+      // refusing HEIC outright used to be. Every route offered now is one tap
+      // inside Semora: picking the same photo from Photos hands us a
+      // re-encoded JPEG at a size that always decodes, and a PDF skips the
+      // image path entirely.
       error: decoded.reason === 'too_large'
-        ? 'That photo is too high-resolution to read. On your iPhone turn off Settings → Camera → Formats → Resolution Control (48MP), or send a PDF instead.'
+        ? 'That photo is larger than we can read directly. Choose the same photo from Photos instead of Files — we resize it for you — or send the syllabus as a PDF.'
         : HEIC_SERVER_HELP,
     };
   }
