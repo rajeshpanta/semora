@@ -26,7 +26,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rajeshpanta.syllabussnap",
-      "buildNumber": "48",
+      "buildNumber": "49",
       "appleTeamId": "7T9897GFKH",
       "usesAppleSignIn": true,
       "entitlements": {
