@@ -20,6 +20,7 @@ import * as Notifications from 'expo-notifications';
 import { createContext,
   useContext,
   useEffect,
+  useRef,
   useState } from 'react';
 import { ActivityIndicator,
   AppState,
@@ -57,6 +58,7 @@ import {
   savePendingCollaborationToken,
 } from '@/lib/collaboration';
 import { LmsSyncBridge } from '@/components/LmsSyncBridge';
+import { recoverUnfinishedLectures } from '@/lib/lectureRecovery';
 import { CollaborationSyncBridge } from '@/components/CollaborationSyncBridge';
 import { RealtimeSyncBridge } from '@/components/RealtimeSyncBridge';
 import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
@@ -1112,6 +1114,31 @@ function OfflineSyncRuntime() {
 function RealtimeSyncRuntime() {
   const { session } = useSession();
   return <RealtimeSyncBridge userId={session?.user.id ?? null} />;
+}
+
+/**
+ * One recovery pass per launch for recordings a killed app left unfinished.
+ *
+ * The retry pair it calls already existed, but only ran from the lecture
+ * detail screen — so a student got their audio back only if they thought to
+ * reopen that particular lecture. The audio was on the phone the whole time.
+ *
+ * Runs once per signed-in session, not on every render: `session?.user.id` in
+ * the dependency list would re-fire on token refresh, and re-uploading a
+ * 50-minute lecture because a JWT rotated is not a recovery, it is a bill.
+ */
+function LectureRecoveryRuntime() {
+  const { session } = useSession();
+  const userId = session?.user.id ?? null;
+  const ranForRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!userId || ranForRef.current === userId) return;
+    ranForRef.current = userId;
+    // Deliberately not awaited and never surfaced: this sits behind whatever
+    // the student opened the app to do.
+    void recoverUnfinishedLectures();
+  }, [userId]);
+  return null;
 }
 
 function LmsSyncRuntime() {

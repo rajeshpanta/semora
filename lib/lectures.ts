@@ -733,3 +733,40 @@ function stripExtension(filename: string): string {
   const cut = filename.lastIndexOf('.');
   return cut > 0 ? filename.slice(0, cut) : filename;
 }
+
+
+/**
+ * How much of a recording has actually reached the server.
+ *
+ * The detail screen's busy state was a bare spinner reading "Working on your
+ * lecture", which is the same thing whether nine of ten parts are up or none
+ * are. A student packing up after class needs the difference: one means walk
+ * away, the other means stay on the wifi another minute.
+ *
+ * Counts rows rather than trusting lecture_recordings.segment_count, which is
+ * what the CLIENT said to expect — and is exactly the field that reads 0 on a
+ * recording whose finishing call never happened.
+ */
+export function useLectureSegmentProgress(lectureId: string | null, enabled: boolean) {
+  return useQuery({
+    queryKey: ['lectureSegments', lectureId],
+    enabled: Boolean(lectureId) && enabled,
+    // Matches the detail screen's own poll; this is the same wait.
+    refetchInterval: enabled ? 4000 : false,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lecture_segments')
+        .select('status')
+        .eq('lecture_id', lectureId as string);
+      if (error) throw error;
+      const rows = (data ?? []) as { status: string }[];
+      return {
+        total: rows.length,
+        // 'pending' is the only status that means the bytes are still on the
+        // phone; everything else is server-side progress.
+        uploaded: rows.filter((r) => r.status !== 'pending').length,
+        transcribed: rows.filter((r) => r.status === 'done').length,
+      };
+    },
+  });
+}

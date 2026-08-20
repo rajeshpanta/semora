@@ -314,7 +314,11 @@ export default function RecordLectureScreen() {
         {/* Upload progress — real counts, not a spinner. Transcription happens
             while the lecture is still being recorded, so by Stop most of it is
             usually already done. */}
-        {isLive && recorder.segmentsClosed > 0 && (
+        {/* Kept visible through 'finishing' too, not just while live. Stop is
+            exactly when a student stands up and walks out of wifi range, and
+            hiding the one indicator that says "3 parts still going up" at
+            that moment is how audio gets stranded on a phone. */}
+        {(isLive || recorder.phase === 'finishing') && recorder.segmentsClosed > 0 && (
           <View style={[styles.progressCard, { backgroundColor: colors.brand50 }]}>
             <FontAwesome name="cloud-upload" size={13} color={colors.brand} />
             <Text style={[styles.progressText, { color: colors.ink2 }]}>

@@ -27,6 +27,7 @@ import {
   useRetryLectureNotes,
   type LectureError,
   isLectureStalled,
+  useLectureSegmentProgress,
 } from '@/lib/lectures';
 
 // One lecture: what the recording became.
@@ -163,6 +164,15 @@ export default function LectureDetailScreen() {
   const { id, generate } = useLocalSearchParams<{ id: string; generate?: string }>();
 
   const { data: lecture, isLoading } = useLecture(id);
+  // Declared here, with the other hooks, and NOT beside the render branch that
+  // uses it: there is an early return for the not-found case further down, and
+  // a hook after it runs on some renders and not others — which React throws
+  // on and TypeScript cannot see. `lecture` is optional-chained for the same
+  // reason: at this point it may not have loaded yet.
+  const { data: segmentProgress } = useLectureSegmentProgress(
+    id,
+    lecture?.status === 'uploading' || lecture?.status === 'transcribing',
+  );
   const isPro = useAppStore((s) => s.isPro);
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const { data: courses = [] } = useCourses(selectedSemesterId);
@@ -516,6 +526,17 @@ export default function LectureDetailScreen() {
             <Text style={[styles.stateText, { color: colors.ink2 }]}>
               {recovering ? 'Picking up where the upload left off…' : busyCopy}
             </Text>
+            {/* The number, not just the spinner. A student packing up after
+                class needs to know whether the audio is still leaving the
+                phone: "9 of 10 parts uploaded" means stay on the wifi one more
+                minute, and an identical spinner never said that. */}
+            {segmentProgress && segmentProgress.total > 0 ? (
+              <Text style={[styles.stateText, { color: colors.ink3 }]}>
+                {segmentProgress.uploaded < segmentProgress.total
+                  ? `${segmentProgress.uploaded} of ${segmentProgress.total} parts uploaded — stay connected until this finishes`
+                  : `All ${segmentProgress.total} parts uploaded — safe to close the app`}
+              </Text>
+            ) : null}
             <Text style={[styles.stateText, { color: colors.ink3 }]}>
               Keep Semora open until this finishes.
             </Text>
