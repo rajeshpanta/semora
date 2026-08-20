@@ -303,7 +303,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
           'Programas de clase y apuntes que decides subir para escanearlos, crear tarjetas o usar el Tutor con IA.',
           'Grabaciones de clase, si decides grabar: el audio capta la voz de tu profesor y de quienes estén cerca. Se guarda en privado solo hasta transcribirse y después se elimina automáticamente. La grabación nunca empieza hasta que pulsas Grabar y confirmas que tienes permiso.',
           'Transcripciones de clase y el material de estudio generado a partir de ellas (apuntes, cuestionarios y tarjetas), que permanecen hasta que elimines la grabación o tu cuenta.',
-          'Datos de uso anónimos asociados a un identificador aleatorio de instalación, no a tu nombre ni a tu correo electrónico.',
+          'Datos de uso anónimos asociados a un identificador aleatorio, no a tu nombre ni a tu correo electrónico. En este sitio web ese identificador se guarda en una cookie propia llamada semora_device_id, en semoraai.com, para que el sitio y la aplicación reconozcan el mismo navegador y podamos saber si una página realmente ayudó a alguien a empezar. Es un número aleatorio, nunca se vende ni se comparte, no instalamos ninguna cookie publicitaria ni de seguimiento de terceros, y se borra al borrar los datos de tu navegador.',
           'Un identificador para enviar notificaciones si autorizas los recordatorios y datos de referidos si utilizas una invitación.',
         ],
       },
