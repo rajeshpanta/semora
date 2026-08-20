@@ -13,6 +13,7 @@ import {
   isLectureInFlight,
   useLectures,
   type LectureWithCourse,
+  isLectureStalled,
 } from '@/lib/lectures';
 
 // All recordings, newest first.
@@ -120,7 +121,13 @@ export default function LecturesScreen() {
       ?? allLectures.find((l) => l.course_id === scopeCourseId)?.courses?.name
     : undefined;
 
-  const anyInFlight = allLectures.some((l) => isLectureInFlight(l.status));
+  // Stalled rows keep an in-flight STATUS forever, so asking about status
+  // alone left this list promising "Keep Semora open while a lecture finishes
+  // processing" about a recording that stopped hours ago. Same rule the detail
+  // screen and the poller use.
+  const anyInFlight = allLectures.some(
+    (l) => isLectureInFlight(l.status) && !isLectureStalled(l),
+  );
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
