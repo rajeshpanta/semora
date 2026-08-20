@@ -441,10 +441,11 @@ export async function disconnectLms(connectionId: string): Promise<void> {
 //                     a prompt to do it again — that is how a useful feature
 //                     turns into nagging.
 
-export type CanvasOffer = 'none' | 'needs_attention' | 'healthy';
+export type CanvasOffer = 'none' | 'needs_attention' | 'healthy' | 'locked';
 
 export function canvasOfferFor(
   connections: (LmsConnection & { links: LmsCourseLink[] })[] | undefined,
+  isPro?: boolean,
 ): { offer: CanvasOffer; connection: LmsConnection | null } {
   // While the query is loading, offer nothing. Flashing "Connect Canvas" at a
   // student who connected it last term, then swapping it out a beat later, is
@@ -452,6 +453,25 @@ export function canvasOfferFor(
   if (!connections) return { offer: 'healthy', connection: null };
 
   const canvas = connections.find((c) => c.provider === 'canvas') ?? null;
+
+  // Pro, and said so up front.
+  //
+  // lms-sync refuses a non-Pro caller server-side, so a free student who taps
+  // "Connect Canvas" reaches Settings, then the paywall — a dead end dressed
+  // as a feature, and the second-worst way to learn something costs money. The
+  // worst is finding out after connecting.
+  //
+  // 'locked' still SHOWS the offer, deliberately: this is the strongest reason
+  // to upgrade Semora has, and hiding it from exactly the people who have not
+  // upgraded would be the wrong lesson from "do not dead-end them". It carries
+  // a PRO badge and goes straight to the paywall.
+  //
+  // Checked before the healthy case on purpose. When Pro lapses the server
+  // disables background sync and deletes the credential, so a lapsed
+  // subscriber's connection is not healthy no matter what the row says — and
+  // reconnecting is what they will have to do.
+  if (isPro === false) return { offer: 'locked', connection: canvas };
+
   if (!canvas) return { offer: 'none', connection: null };
 
   const stalled =

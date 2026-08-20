@@ -82,8 +82,11 @@ export default function ScanScreen() {
   const { data: courses = [] } = useCourses(selectedSemesterId);
   const { data: freeActionUsed = false, isLoading: freeActionLoading } = useFreeActionUsed();
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
-  const { offer: canvasOffer } = canvasOfferFor(lmsConnections);
+  const { offer: canvasOffer } = canvasOfferFor(lmsConnections, isPro);
   const [upsellVisible, setUpsellVisible] = useState(false);
+  // Which wall was hit. The scan limit and the Canvas Pro gate are different
+  // reasons and must not borrow each other's words.
+  const [upsellReason, setUpsellReason] = useState<'scan' | 'canvas'>('scan');
 
   // The free tier has TWO separate caps — scans AND courses-per-semester — and
   // a scan that extracts a NEW course trips the course cap even with scans
@@ -128,6 +131,7 @@ export default function ScanScreen() {
       // The paywall moment gets a sheet, not an alert: an alert has no room to
       // say what Pro actually costs or includes, so the decision was being
       // asked for on no information, two taps from the thing they wanted.
+      setUpsellReason('scan');
       setUpsellVisible(true);
       return false;
     }
@@ -593,7 +597,7 @@ export default function ScanScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
       <ProUpsellSheet
         visible={upsellVisible}
-        reason="scan"
+        reason={upsellReason}
         onClose={() => setUpsellVisible(false)}
       />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
@@ -619,6 +623,15 @@ export default function ScanScreen() {
             accessibilityLabel={canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Connect Canvas'}
             onPress={() => {
               track('canvas_offer_tapped', { screen: 'scan', offer: canvasOffer });
+              // A free account gets the upgrade SHEET here, not a trip to
+              // another screen. The offer and the answer belong in the same
+              // place — sending someone to Settings or a full paywall screen
+              // to learn the price is how a tap turns into navigation.
+              if (canvasOffer === 'locked') {
+                setUpsellReason('canvas');
+                setUpsellVisible(true);
+                return;
+              }
               router.push('/settings/lms' as any);
             }}
           >
@@ -626,9 +639,17 @@ export default function ScanScreen() {
               <FontAwesome name={canvasOffer === 'needs_attention' ? 'refresh' : 'university'} size={16} color={colors.teal} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.canvasTitle, { color: colors.ink }]}>
-                {canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Connect Canvas instead'}
-              </Text>
+              <View style={styles.canvasTitleRow}>
+                <Text style={[styles.canvasTitle, { color: colors.ink }]}>
+                  {canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Connect Canvas instead'}
+                </Text>
+                {canvasOffer === 'locked' && (
+                  <View style={[styles.canvasPro, { backgroundColor: colors.brand }]}>
+                    <FontAwesome name="star" size={8} color="#fff" />
+                    <Text style={styles.canvasProText}>PRO</Text>
+                  </View>
+                )}
+              </View>
               <Text style={[styles.canvasSub, { color: colors.ink2 }]}>
                 {canvasOffer === 'needs_attention'
                   ? 'Connected, but not syncing on its own yet'
@@ -815,7 +836,13 @@ const styles = StyleSheet.create({
     borderRadius: 16, borderWidth: 1, padding: 14, marginTop: 14,
   },
   canvasIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  canvasTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   canvasTitle: { fontSize: 15, fontWeight: '700' },
+  canvasPro: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 6, paddingVertical: 2, borderRadius: 999,
+  },
+  canvasProText: { color: '#fff', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
   canvasSub: { fontSize: 12.5, lineHeight: 17, marginTop: 2 },
   scanCountPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, marginTop: 12 },
   scanCountText: { fontSize: 13, fontWeight: '600' },

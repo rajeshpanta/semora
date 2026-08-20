@@ -24,6 +24,7 @@ import { COLORS, FONTS, DEFAULT_GRADE_SCALE, SCREEN_MAX_WIDTH, WEB_CARD_SHADOW }
 import { calculateCourseGrade, calculateSemesterGpaWithScale, DEFAULT_GPA_SCALE } from '@/lib/grades';
 import { useColors } from '@/lib/theme';
 import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { track } from '@/lib/analytics';
 import { useResponsive } from '@/lib/responsive';
 import { differenceInCalendarDays, isToday, isPast, format } from 'date-fns';
@@ -71,8 +72,10 @@ export default function CoursesScreen() {
   const { data: semesters = [], isLoading: semestersLoading } = useSemesters();
   const deleteSemester = useDeleteSemester();
   const { data: courses = [] } = useCourses(selectedSemesterId);
+  const isPro = useAppStore((st) => st.isPro);
+  const [canvasUpsell, setCanvasUpsell] = useState(false);
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
-  const { offer: canvasOffer } = canvasOfferFor(lmsConnections);
+  const { offer: canvasOffer } = canvasOfferFor(lmsConnections, isPro);
   const { data: tasks = [] } = useTasks(selectedSemesterId ? { semesterId: selectedSemesterId } : { semesterId: null });
   const { data: gradeCategories = [] } = useSemesterGradeCategories(selectedSemesterId);
   const { data: gpaScale = DEFAULT_GPA_SCALE } = useGpaScale();
@@ -108,15 +111,25 @@ export default function CoursesScreen() {
       canvasOffer === 'healthy'
         ? []
         : [{
-            text: canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Connect Canvas',
+            text:
+              canvasOffer === 'needs_attention' ? 'Finish Canvas setup'
+              : canvasOffer === 'locked' ? 'Connect Canvas (Pro)'
+              : 'Connect Canvas',
             onPress: () => {
               track('canvas_offer_tapped', { screen: 'courses', offer: canvasOffer });
+              // Free account: the upgrade sheet, right here. Sending someone
+              // to another screen to find out something costs money turns one
+              // tap into a journey.
+              if (canvasOffer === 'locked') {
+                setCanvasUpsell(true);
+                return;
+              }
               handleNav('/settings/lms');
             },
           }];
     Alert.alert(
       'Add a course',
-      canvasOffer === 'none'
+      canvasOffer === 'none' || canvasOffer === 'locked'
         ? 'Connect Canvas and your classes arrive on their own — or scan a syllabus, or type it yourself.'
         : 'Scan a syllabus and the AI fills everything in — or type it yourself.',
       [
@@ -247,6 +260,11 @@ export default function CoursesScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
+      <ProUpsellSheet
+        visible={canvasUpsell}
+        reason="canvas"
+        onClose={() => setCanvasUpsell(false)}
+      />
       <ScrollView
         contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
         showsVerticalScrollIndicator={false}

@@ -24,7 +24,7 @@ import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
 // that is false advertising (App Store 2.3), not marketing. The trust line
 // below says only things that are true.
 
-export type ProUpsellReason = 'scan' | 'notes' | 'lecture' | 'course';
+export type ProUpsellReason = 'scan' | 'notes' | 'lecture' | 'course' | 'canvas';
 
 const COPY: Record<ProUpsellReason, { title: string; subtitle: string }> = {
   scan: {
@@ -44,6 +44,14 @@ const COPY: Record<ProUpsellReason, { title: string; subtitle: string }> = {
   // they are blocked by how many classes a free semester holds, not by AI use.
   // Telling them they have used something they have not is the kind of wrong
   // that makes a paywall feel like a trick.
+  // Canvas is the strongest reason to upgrade Semora has, so it says what it
+  // does rather than what it costs. Deliberately NOT the "one free AI action"
+  // line: nobody hits this by running out of anything — Canvas sync simply
+  // requires Pro, and pretending otherwise would be a different lie.
+  canvas: {
+    title: 'Let Canvas fill in your semester',
+    subtitle: 'Pro connects Canvas: every class imports itself, and deadlines stay right when your instructor moves them.',
+  },
   course: {
     title: 'Add every class',
     subtitle: `Free semesters hold ${FREE_COURSE_LIMIT} courses. Pro has no limit on classes or semesters.`,

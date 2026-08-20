@@ -3,6 +3,7 @@ import { Text } from '@/components/LocalizedReactNative';
 import {
   useEffect,
   type ComponentProps,
+  useState,
   type ReactNode } from 'react';
 import {
   Platform,
@@ -16,6 +17,8 @@ import type { Session } from '@supabase/supabase-js';
 import { useColors } from '@/lib/theme';
 import { useQuery } from '@tanstack/react-query';
 import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { useAppStore } from '@/store/appStore';
+import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { useResponsive, WEB_SIDEBAR_WIDTH } from '@/lib/responsive';
 import { displayName, accountSubtitle } from '@/lib/user';
 import { FONTS } from '@/lib/constants';
@@ -37,6 +40,13 @@ type NavigationItem = {
 // who already connected it is furniture, and furniture gets ignored.
 const CANVAS_ITEM: NavigationItem = { label: 'Connect Canvas', icon: 'university', path: '/settings/lms' };
 const CANVAS_FIX_ITEM: NavigationItem = { label: 'Finish Canvas setup', icon: 'refresh', path: '/settings/lms' };
+// Free accounts go straight to the paywall. lms-sync refuses them server-side,
+// so routing to Settings first only adds a step before the same answer.
+// The path is a sentinel, not a destination: SidebarItem's press handler
+// intercepts it and opens the upgrade sheet in place. A free student should
+// meet the price where they met the offer, not on another screen.
+const CANVAS_UPSELL_PATH = '__canvas_upsell__';
+const CANVAS_PRO_ITEM: NavigationItem = { label: 'Connect Canvas · Pro', icon: 'university', path: CANVAS_UPSELL_PATH };
 
 const PRIMARY_ITEMS: NavigationItem[] = [
   { label: 'Today', icon: 'sun-o', path: '/', exact: true },
@@ -110,11 +120,16 @@ function DesktopSidebar({ session }: { session: Session }) {
   // Canvas between Calendar and Import syllabus, only while it is worth
   // offering. Same rule the "+" menu and the add-course prompt use, so the
   // three cannot disagree about whether this student needs it.
+  const isPro = useAppStore((st) => st.isPro);
+  const [canvasUpsellOpen, setCanvasUpsellOpen] = useState(false);
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
-  const { offer: canvasOffer } = canvasOfferFor(lmsConnections);
+  const { offer: canvasOffer } = canvasOfferFor(lmsConnections, isPro);
   const primaryItems = (() => {
     if (canvasOffer === 'healthy') return PRIMARY_ITEMS;
-    const item = canvasOffer === 'needs_attention' ? CANVAS_FIX_ITEM : CANVAS_ITEM;
+    const item =
+      canvasOffer === 'needs_attention' ? CANVAS_FIX_ITEM
+      : canvasOffer === 'locked' ? CANVAS_PRO_ITEM
+      : CANVAS_ITEM;
     const at = PRIMARY_ITEMS.findIndex((i) => i.path === '/scan');
     return [...PRIMARY_ITEMS.slice(0, at), item, ...PRIMARY_ITEMS.slice(at)];
   })();
@@ -197,6 +212,13 @@ function DesktopSidebar({ session }: { session: Session }) {
         { backgroundColor: colors.card, borderRightColor: colors.line },
       ]}
     >
+      {/* The upgrade sheet lives here so the sidebar can answer the
+          Canvas offer in place instead of navigating away. */}
+      <ProUpsellSheet
+        visible={canvasUpsellOpen}
+        reason="canvas"
+        onClose={() => setCanvasUpsellOpen(false)}
+      />
       <View style={styles.brandBlock}>
         <View style={[styles.brandMark, { backgroundColor: colors.brand }]}>
           <Text style={styles.brandMarkText}>S</Text>
@@ -250,7 +272,11 @@ function DesktopSidebar({ session }: { session: Session }) {
               key={item.path}
               item={item}
               active={isActive(pathname, item)}
-              onPress={() => navigate(item.path)}
+              onPress={() =>
+                item.path === CANVAS_UPSELL_PATH
+                  ? setCanvasUpsellOpen(true)
+                  : navigate(item.path)
+              }
             />
           ))}
         </View>

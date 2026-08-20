@@ -12,6 +12,7 @@ import { useAppStore } from '@/store/appStore';
 import { useCourses } from '@/lib/queries';
 import { useQuery } from '@tanstack/react-query';
 import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 
 // Floating action menu opened by the "+" tab button. The tab press itself is
 // intercepted in app/(tabs)/_layout.tsx (preventDefault), so this menu is the
@@ -41,6 +42,8 @@ type MenuRow = {
    * field to skip.
    */
   needsCourse?: boolean;
+  /** Free account: show the Pro sheet here instead of navigating. */
+  opensUpsell?: boolean;
 };
 
 const ROOT_ACTIONS: MenuRow[] = [
@@ -212,10 +215,21 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
   // sync stops working, where it says so plainly instead of pretending to be
   // a fresh setup.
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
-  const { offer: canvasOffer } = canvasOfferFor(lmsConnections);
+  const isPro = useAppStore((st) => st.isPro);
+  const { offer: canvasOffer } = canvasOfferFor(lmsConnections, isPro);
+  const [canvasUpsell, setCanvasUpsell] = useState(false);
   const canvasRow: MenuRow | null =
     canvasOffer === 'healthy'
       ? null
+      : canvasOffer === 'locked'
+        ? {
+            icon: 'university',
+            tint: 'teal',
+            title: 'Connect Canvas',
+            sub: 'Pro · every class imports itself and stays up to date',
+            // No route: a free account gets the upgrade sheet, not a screen.
+            opensUpsell: true,
+          }
       : canvasOffer === 'needs_attention'
         ? {
             icon: 'refresh',
@@ -249,6 +263,12 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
   };
 
   return (
+    <>
+    <ProUpsellSheet
+      visible={canvasUpsell}
+      reason="canvas"
+      onClose={() => setCanvasUpsell(false)}
+    />
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       {/* Backdrop and sheet are SIBLINGS, not parent/child: a pressable
           backdrop wrapping the sheet swallowed every row press under the new
@@ -381,6 +401,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
         </Animated.View>
       </View>
     </Modal>
+    </>
   );
 }
 
