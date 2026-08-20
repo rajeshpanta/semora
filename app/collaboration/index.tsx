@@ -22,10 +22,12 @@ import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useCourses } from '@/lib/queries';
 import { useResponsive } from '@/lib/responsive';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useAppStore } from '@/store/appStore';
 
 export default function CollaborationHubScreen() {
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const { session } = useSession();
   const semesterId = useAppStore((state) => state.selectedSemesterId);
@@ -52,7 +54,7 @@ export default function CollaborationHubScreen() {
       // rather than showing the raw Pro-required text as an error.
       if (error?.code === 'P0001' || /pro feature/i.test(error?.message ?? '')) {
         track('paywall_open', { screen: 'collaboration', context: 'collaboration' });
-        router.push({ pathname: '/paywall', params: { context: 'collaboration' } } as any);
+        showProUpsell('collaboration');
         return;
       }
       Alert.alert('Couldn’t create course space', error.message);
@@ -63,7 +65,7 @@ export default function CollaborationHubScreen() {
   const handleStartSpace = (courseId: string) => {
     if (!isPro) {
       track('paywall_open', { screen: 'collaboration', context: 'collaboration' });
-      router.push({ pathname: '/paywall', params: { context: 'collaboration' } } as any);
+      showProUpsell('collaboration');
       return;
     }
     create.mutate(courseId);

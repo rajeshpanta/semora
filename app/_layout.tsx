@@ -59,6 +59,7 @@ import {
 } from '@/lib/collaboration';
 import { LmsSyncBridge } from '@/components/LmsSyncBridge';
 import { recoverUnfinishedLectures } from '@/lib/lectureRecovery';
+import { ProUpsellHost } from '@/components/ProUpsellHost';
 import { CollaborationSyncBridge } from '@/components/CollaborationSyncBridge';
 import { RealtimeSyncBridge } from '@/components/RealtimeSyncBridge';
 import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
@@ -1029,6 +1030,7 @@ function RootLayoutNav() {
       <ThemeProvider value={navTheme}>
         <AuthProvider>
           <TaskCompletionFlowProvider>
+          <ProUpsellHost>
             <NotificationActionBridge />
             <OfflineSyncRuntime />
             <RealtimeSyncRuntime />
@@ -1102,6 +1104,7 @@ function RootLayoutNav() {
             </AuthGate>
             <TaskCompletionCelebration />
             <WebAlertHost />
+          </ProUpsellHost>
           </TaskCompletionFlowProvider>
         </AuthProvider>
       </ThemeProvider>

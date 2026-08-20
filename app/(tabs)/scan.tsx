@@ -147,7 +147,7 @@ export default function ScanScreen() {
         'Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it. Pro includes unlimited scans and lectures.',
         [
           { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-          { text: 'See Pro', onPress: () => { router.push('/paywall' as any); resolve(false); } },
+          { text: 'See Pro', onPress: () => { setUpsellReason('scan'); setUpsellVisible(true); resolve(false); } },
           { text: 'Use Free Scan', onPress: () => resolve(true) },
         ],
         { cancelable: true, onDismiss: () => resolve(false) },

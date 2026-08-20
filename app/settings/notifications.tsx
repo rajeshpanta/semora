@@ -24,6 +24,7 @@ import { supabase } from '@/lib/supabase';
 import { useSession } from '@/app/_layout';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { track } from '@/lib/analytics';
@@ -62,6 +63,7 @@ function dateToTime(value: Date) {
 
 export default function NotificationSettings() {
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const { session } = useSession();
   const userId = session?.user?.id;
@@ -134,7 +136,7 @@ export default function NotificationSettings() {
   // no quiet-hours behavior.
   const openQuietHoursPaywall = () => {
     track('paywall_open', { screen: 'settings_notifications', context: 'quiet_hours' });
-    router.push({ pathname: '/paywall', params: { context: 'quiet_hours' } } as any);
+    showProUpsell('reminders');
   };
 
   const updateQuietHours = async (patch: Partial<ReminderPrefs>) => {
@@ -173,7 +175,7 @@ export default function NotificationSettings() {
         'Pro Feature',
         'Advance reminders are available with Semora Pro. Free users get same-day reminders.',
         [
-          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+          { text: 'Upgrade', onPress: () => showProUpsell('reminders') },
           { text: 'Cancel', style: 'cancel' },
         ],
       );

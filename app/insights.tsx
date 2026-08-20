@@ -27,10 +27,12 @@ import {
 } from '@/lib/queries';
 import { useResponsive } from '@/lib/responsive';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useAppStore } from '@/store/appStore';
 
 export default function InsightsScreen() {
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const isPro = useAppStore((state) => state.isPro);
   const semesterId = useAppStore((state) => state.selectedSemesterId);
@@ -57,7 +59,7 @@ export default function InsightsScreen() {
   const openPaywall = () => {
     Haptics.selectionAsync().catch(() => {});
     track('paywall_open', { screen: 'insights', context: 'insights' });
-    router.push({ pathname: '/paywall', params: { context: 'insights' } } as any);
+    showProUpsell('insights');
   };
 
   const shareReport = async () => {

@@ -21,6 +21,7 @@ import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
 import { COLORS, PROMO_SURFACE, FONTS, SCREEN_MAX_WIDTH, TASK_TYPE_LABELS } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { track } from '@/lib/analytics';
@@ -57,6 +58,7 @@ const NO_NOTES: CourseNote[] = [];
 export default function FlashcardsScreen() {
   const router = useRouter();
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const isPro = useAppStore((s) => s.isPro);
   // Optional course scope: /flashcards?courseId=<id> preselects the course
@@ -180,7 +182,7 @@ export default function FlashcardsScreen() {
       // should rarely fire — but client isPro can be stale, same reasoning
       // as the AI Tutor screen's identical guard.
       if (err?.code === 'PRO_REQUIRED') {
-        router.push({ pathname: '/paywall', params: { context: 'flashcards_generate' } } as any);
+        showProUpsell('flashcards');
         return;
       }
       Alert.alert('Could not generate flashcards', err?.message ?? 'Please try again.');
@@ -254,7 +256,7 @@ export default function FlashcardsScreen() {
               style={[styles.upgradeBtn, { backgroundColor: colors.brand }]}
               onPress={() => {
                 if (Platform.OS === 'ios') Haptics.selectionAsync();
-                router.push({ pathname: '/paywall', params: { context: 'flashcards' } } as any);
+                showProUpsell('flashcards');
               }}
               activeOpacity={0.85}
             >

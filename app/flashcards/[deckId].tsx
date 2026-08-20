@@ -23,6 +23,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { useCourses } from '@/lib/queries';
@@ -45,6 +46,7 @@ export default function DeckDetailScreen() {
   const { deckId } = useLocalSearchParams<{ deckId: string }>();
   const router = useRouter();
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const isPro = useAppStore((s) => s.isPro);
 
@@ -157,7 +159,7 @@ export default function DeckDetailScreen() {
           <Text style={[styles.lockedText, { color: colors.ink2 }]}>Flashcards are a Pro feature.</Text>
           <TouchableOpacity
             style={[styles.upgradeBtn, { backgroundColor: colors.brand }]}
-            onPress={() => router.push({ pathname: '/paywall', params: { context: 'flashcards' } } as any)}
+            onPress={() => showProUpsell('flashcards')}
           >
             <Text style={styles.upgradeText}>Unlock with Pro</Text>
           </TouchableOpacity>

@@ -33,6 +33,7 @@ import { COLORS, DEFAULT_GRADE_SCALE, FONTS, SCREEN_MAX_WIDTH } from '@/lib/cons
 import { calculateCourseGrade } from '@/lib/grades';
 import type { GradeThreshold } from '@/types/database';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { track } from '@/lib/analytics';
@@ -59,6 +60,7 @@ import { FileWorkProgress } from '@/components/FileWorkProgress';
 export default function TutorScreen() {
   const router = useRouter();
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const isPro = useAppStore((s) => s.isPro);
   // Optional course scope: /tutor?courseId=<id> grounds the tutor on that
@@ -88,7 +90,7 @@ export default function TutorScreen() {
               style={[styles.upgradeBtn, { backgroundColor: colors.brand }]}
               onPress={() => {
                 if (Platform.OS === 'ios') Haptics.selectionAsync();
-                router.push({ pathname: '/paywall', params: { context: 'tutor' } } as any);
+                showProUpsell('tutor');
               }}
               activeOpacity={0.85}
             >
@@ -132,6 +134,7 @@ function TutorChat({
   }
   const router = useRouter();
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth, isDesktop } = useResponsive();
 
   // Resolve the semester by derivation rather than reading global state alone:
@@ -342,7 +345,7 @@ function TutorChat({
       scrollToEnd();
     } catch (e: any) {
       if (e?.code === 'PRO_REQUIRED') {
-        router.push({ pathname: '/paywall', params: { context: 'tutor' } } as any);
+        showProUpsell('tutor');
         return;
       }
       Alert.alert('Could not create practice', e?.message || 'Please try again.');
@@ -461,7 +464,7 @@ function TutorChat({
       // Server marks Pro-required with code PRO_REQUIRED — route to paywall
       // instead of showing a dead-end error (client isPro can be stale).
       if (e?.code === 'PRO_REQUIRED') {
-        router.push({ pathname: '/paywall', params: { context: 'tutor' } } as any);
+        showProUpsell('tutor');
         return;
       }
       // Restore the draft AND the photo — re-taking a picture of a problem set

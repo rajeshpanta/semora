@@ -8,6 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { FONTS, SCREEN_MAX_WIDTH, WEB_CARD_SHADOW } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { track } from '@/lib/analytics';
 import { normalizeSupportedDocument, unsupportedDocumentMessage } from '@/lib/documentFiles';
@@ -55,6 +56,7 @@ export default function NewNotesFromDocument() {
   const params = useLocalSearchParams<{ courseId?: string }>();
   const router = useRouter();
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   // A class is REQUIRED: course_notes.course_id is NOT NULL, so an upload
   // without one fails at the insert. This screen is reached both from a course
   // (which passes courseId) and from the Notes tab (which cannot), so when it
@@ -149,7 +151,7 @@ export default function NewNotesFromDocument() {
     const spec = OUTCOMES.find((o) => o.key === outcome);
     if (spec?.pro && !isPro) {
       track('paywall_open', { screen: 'document_note_new', context: `document_${outcome}` });
-      router.push({ pathname: '/paywall', params: { context: `document_${outcome}` } } as any);
+      showProUpsell(outcome === 'quiz' ? 'quiz' : 'flashcards');
       return;
     }
     track('document_note_outcome', { outcome });

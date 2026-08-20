@@ -7,6 +7,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQueryClient } from '@tanstack/react-query';
 import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useI18n } from '@/lib/i18n';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
@@ -157,6 +158,7 @@ const nb = StyleSheet.create({
 
 export default function LectureDetailScreen() {
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const router = useRouter();
   const qc = useQueryClient();
   const { contentMaxWidth } = useResponsive();
@@ -239,7 +241,7 @@ export default function LectureDetailScreen() {
     }
     if (!isPro) {
       track('paywall_open', { screen: 'lecture_detail', context: 'lecture_quiz' });
-      router.push('/paywall' as any);
+      showProUpsell('quiz');
       return;
     }
     generateQuiz.mutate(undefined, {
@@ -253,7 +255,7 @@ export default function LectureDetailScreen() {
       onError: (err) => {
         const e = err as LectureError;
         if (e?.code === 'PRO_REQUIRED') {
-          router.push('/paywall' as any);
+          showProUpsell('quiz');
           return;
         }
         Alert.alert("Couldn't build a quiz", e?.message || 'Please try again.');
@@ -276,7 +278,7 @@ export default function LectureDetailScreen() {
     }
     if (!isPro) {
       track('paywall_open', { screen: 'lecture_detail', context: 'lecture_flashcards' });
-      router.push('/paywall' as any);
+      showProUpsell('flashcards');
       return;
     }
     // Already made once — open it. Without this the generator was handed no
@@ -309,7 +311,7 @@ export default function LectureDetailScreen() {
         onError: (err) => {
           const e = err as LectureError;
           if (e?.code === 'PRO_REQUIRED') {
-            router.push('/paywall' as any);
+            showProUpsell('flashcards');
             return;
           }
           Alert.alert("Couldn't make flashcards", e?.message || 'Please try again.');

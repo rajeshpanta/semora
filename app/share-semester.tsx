@@ -28,6 +28,7 @@ import {
 } from '@/components/SemesterShareCard';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH, MARKETING_URL } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { getAppLocale } from '@/lib/i18n';
 import { useAppStore } from '@/store/appStore';
@@ -39,6 +40,7 @@ import { shareLink, shareLinkMessage } from '@/lib/shareLink';
 export default function ShareSemesterScreen() {
   const router = useRouter();
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const insets = useSafeAreaInsets();
 
@@ -220,7 +222,7 @@ export default function ShareSemesterScreen() {
               style={[styles.upgradeBtn, { backgroundColor: colors.brand }]}
               activeOpacity={0.85}
               onPress={() =>
-                router.push({ pathname: '/paywall', params: { context: 'share_semester' } } as any)
+                showProUpsell('share')
               }
             >
               <FontAwesome name="star" size={13} color="#fff" />

@@ -37,6 +37,7 @@ import { track } from '@/lib/analytics';
 import { useSemesters } from '@/lib/queries';
 import { useResponsive } from '@/lib/responsive';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useAppStore } from '@/store/appStore';
 import type { LmsProvider } from '@/types/database';
 
@@ -55,6 +56,7 @@ const HELP: Record<Exclude<LmsProvider, 'google_classroom' | 'canvas'>, { url: s
 
 export default function LmsConnectScreen() {
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const { session } = useSession();
   const params = useLocalSearchParams<{
@@ -76,7 +78,11 @@ export default function LmsConnectScreen() {
   // upsell instead of a failed connect. Matches the calendar.tsx pattern.
   const openPaywall = useCallback(() => {
     track('paywall_open', { screen: 'settings_lms_connect', context: 'lms' });
-    router.replace({ pathname: '/paywall', params: { context: 'lms' } } as any);
+    // Sheet, then back. Replacing this screen with a full paywall stranded a
+    // free student on a screen they never chose; going back leaves them where
+    // they were with the offer on top.
+    showProUpsell('canvas');
+    router.back();
   }, []);
 
   // Defense in depth: the LMS list screen already gates entry behind Pro, but

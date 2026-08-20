@@ -14,6 +14,7 @@ import * as Haptics from 'expo-haptics';
 import { useEffect, useState } from 'react';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { track } from '@/lib/analytics';
@@ -37,6 +38,7 @@ import {
 
 export default function CalendarSyncSettings() {
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const [synced, setSynced] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -105,7 +107,7 @@ export default function CalendarSyncSettings() {
           'Pro Feature',
           'Calendar sync is available with Semora Pro.',
           [
-            { text: 'Upgrade', onPress: () => router.push({ pathname: '/paywall', params: { context: 'calendarSync' } } as any) },
+            { text: 'Upgrade', onPress: () => showProUpsell('calendar') },
             { text: 'Cancel', style: 'cancel' },
           ],
         );
@@ -152,7 +154,7 @@ export default function CalendarSyncSettings() {
     // reasoning as handleResync).
     if (!isPro) {
       Alert.alert('Pro Feature', 'Calendar sync is available with Semora Pro.', [
-        { text: 'Upgrade', onPress: () => router.push({ pathname: '/paywall', params: { context: 'calendarSync' } } as any) },
+        { text: 'Upgrade', onPress: () => showProUpsell('calendar') },
         { text: 'Cancel', style: 'cancel' },
       ]);
       return;
@@ -199,7 +201,7 @@ export default function CalendarSyncSettings() {
     // gated by isSyncEnabled the way auto-sync is).
     if (!isPro) {
       Alert.alert('Pro Feature', 'Calendar sync is available with Semora Pro.', [
-        { text: 'Upgrade', onPress: () => router.push({ pathname: '/paywall', params: { context: 'calendarSync' } } as any) },
+        { text: 'Upgrade', onPress: () => showProUpsell('calendar') },
         { text: 'Cancel', style: 'cancel' },
       ]);
       return;
@@ -230,7 +232,7 @@ export default function CalendarSyncSettings() {
         'Pro Feature',
         'Exporting your semester as a calendar file is available with Semora Pro.',
         [
-          { text: 'Upgrade', onPress: () => router.push({ pathname: '/paywall', params: { context: 'icsExport' } } as any) },
+          { text: 'Upgrade', onPress: () => showProUpsell('calendar') },
           { text: 'Cancel', style: 'cancel' },
         ],
       );
@@ -259,7 +261,7 @@ export default function CalendarSyncSettings() {
     // here so free users see the upsell instead of a failed connect.
     if (!isPro) {
       Alert.alert('Pro Feature', 'Google Calendar sync is available with Semora Pro.', [
-        { text: 'Upgrade', onPress: () => router.push({ pathname: '/paywall', params: { context: 'google_calendar' } } as any) },
+        { text: 'Upgrade', onPress: () => showProUpsell('calendar') },
         { text: 'Cancel', style: 'cancel' },
       ]);
       return;
@@ -316,7 +318,7 @@ export default function CalendarSyncSettings() {
       // Silently ignore user-cancel (dismissing the Google sheet).
       if (err?.code === 'SIGN_IN_CANCELLED') return;
       if (err?.code === 'PRO_REQUIRED') {
-        router.push({ pathname: '/paywall', params: { context: 'google_calendar' } } as any);
+        showProUpsell('calendar');
         return;
       }
       Alert.alert('Connection Failed', err?.message ?? 'Could not connect Google Calendar. Please try again.');

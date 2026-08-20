@@ -22,6 +22,7 @@ import { SemesterPicker } from '@/components/SemesterPicker';
 import { ScheduleEditor, type ScheduleBlock } from '@/components/ScheduleEditor';
 import { FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 
 export default function NewCourseScreen() {
@@ -41,6 +42,7 @@ export default function NewCourseScreen() {
   const [icon, setIcon] = useState<string>(COURSE_ICONS[0]);
   const [meetings, setMeetings] = useState<ScheduleBlock[]>([]);
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth, isWide } = useResponsive();
 
   const handleSubmit = async () => {
@@ -70,7 +72,7 @@ export default function NewCourseScreen() {
         'Course Limit Reached',
         `Free accounts support up to ${FREE_COURSE_LIMIT} courses. Upgrade to Pro for unlimited courses.`,
         [
-          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+          { text: 'Upgrade', onPress: () => showProUpsell('course') },
           { text: 'Cancel', style: 'cancel' },
         ],
       );
@@ -168,7 +170,7 @@ export default function NewCourseScreen() {
           'Course Limit Reached',
           err.message,
           [
-            { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+            { text: 'Upgrade', onPress: () => showProUpsell('course') },
             { text: 'Cancel', style: 'cancel' },
           ],
         );

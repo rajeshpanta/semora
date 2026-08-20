@@ -20,6 +20,7 @@ import { useSemesters, useCourses, useTasks } from '@/lib/queries';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import type { GradeThreshold } from '@/types/database';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import {
   buildWeeklyWorkload, perCourseLoad, examDensity, type WorkloadTask,
@@ -36,6 +37,7 @@ const TIER_META: Record<UrgencyTier, { label: string; icon: 'exclamation-circle'
 
 export default function DashboardScreen() {
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const router = useRouter();
   const qc = useQueryClient();
@@ -127,7 +129,7 @@ export default function DashboardScreen() {
 
   const openPaywall = () => {
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    router.push({ pathname: '/paywall', params: { context: 'dashboard' } } as any);
+    showProUpsell('dashboard');
   };
 
 

@@ -19,12 +19,14 @@ import { DEFAULT_GPA_SCALE } from '@/lib/grades';
 import type { GpaScaleEntry } from '@/types/database';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { track } from '@/lib/analytics';
 
 export default function GpaScaleScreen() {
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const router = useRouter();
   // Custom scale EDITOR is Pro (paywall advertises "Grade Scale"). Free users
@@ -44,7 +46,7 @@ export default function GpaScaleScreen() {
   const openPaywall = () => {
     Haptics.selectionAsync().catch(() => {});
     track('paywall_open', { screen: 'gpa_scale', context: 'gpa_scale' });
-    router.push({ pathname: '/paywall', params: { context: 'gpa_scale' } } as any);
+    showProUpsell('grades');
   };
 
   const save = async () => {

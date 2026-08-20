@@ -33,6 +33,7 @@ import type { GradeThreshold } from '@/types/database';
 import { useAppStore } from '@/store/appStore';
 import { MAX_SCAN_PAGES } from '@/lib/ai-extraction';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import Disclosure from '@/components/Disclosure';
 import { useResponsive, gridItemBasis } from '@/lib/responsive';
 import { getAppLocale } from '@/lib/i18n';
@@ -101,6 +102,7 @@ export default function CourseDetailScreen() {
   const deleteOfficeHours = useDeleteCourseOfficeHours();
   const isPro = useAppStore((s) => s.isPro);
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth, isWide, columns } = useResponsive();
 
   const [editing, setEditing] = useState(false);
@@ -494,7 +496,7 @@ export default function CourseDetailScreen() {
       // Server rejected a free/stale-Pro caller — route to the paywall instead
       // of a dead-end error, matching the app's gating pattern.
       if (err?.code === 'PRO_REQUIRED') {
-        router.push({ pathname: '/paywall', params: { context: 'share_course' } } as any);
+        showProUpsell('share');
         return;
       }
       Alert.alert('Couldn\'t create link', err?.message ?? 'Something went wrong. Please try again.');
@@ -570,7 +572,7 @@ export default function CourseDetailScreen() {
               weightTotal={weightTotal}
               scale={gradeScale as GradeThreshold[]}
               isPro={isPro}
-              onUpgrade={() => router.push('/paywall' as any)}
+              onUpgrade={() => showProUpsell('grades')}
               pendingEcWeight={tasks
                 .filter((t) => t.is_extra_credit && t.score == null && t.weight != null)
                 .reduce((sum, t) => sum + (t.weight ?? 0), 0)}
@@ -593,7 +595,7 @@ export default function CourseDetailScreen() {
             scale={gradeScale as GradeThreshold[]}
             extraCreditPolicy={course.extra_credit_policy || 'bonus'}
             isPro={isPro}
-            onUpgrade={() => router.push('/paywall' as any)}
+            onUpgrade={() => showProUpsell('grades')}
           />
 
           <TouchableOpacity
@@ -660,7 +662,7 @@ export default function CourseDetailScreen() {
               )}
             </>
           ) : (
-            <TouchableOpacity style={[styles.scaleToggle, { borderTopColor: colors.line }]} activeOpacity={0.8} onPress={() => router.push('/paywall' as any)}>
+            <TouchableOpacity style={[styles.scaleToggle, { borderTopColor: colors.line }]} activeOpacity={0.8} onPress={() => showProUpsell('grades')}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <FontAwesome name="lock" size={12} color={colors.brand} />
                 <Text style={[styles.editScaleLink, { color: colors.brand }]}>Customize grade scale</Text>
@@ -723,7 +725,7 @@ export default function CourseDetailScreen() {
               if (isPro) {
                 router.push({ pathname: '/tutor', params: { courseId: course.id } } as any);
               } else {
-                router.push({ pathname: '/paywall', params: { context: 'tutor' } } as any);
+                showProUpsell('tutor');
               }
             }}
           />
@@ -738,7 +740,7 @@ export default function CourseDetailScreen() {
               if (isPro) {
                 handleShareCourse();
               } else {
-                router.push({ pathname: '/paywall', params: { context: 'share_course' } } as any);
+                showProUpsell('share');
               }
             }}
           />

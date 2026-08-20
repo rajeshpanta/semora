@@ -9,7 +9,7 @@ import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { getProducts, purchaseProduct, PRODUCT_IDS } from '@/lib/purchases';
 import { track } from '@/lib/analytics';
-import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
+import { FREE_COURSE_LIMIT, FREE_SEMESTER_LIMIT } from '@/lib/syllabus';
 
 // The upgrade moment, as a sheet rather than a screen.
 //
@@ -24,7 +24,11 @@ import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
 // that is false advertising (App Store 2.3), not marketing. The trust line
 // below says only things that are true.
 
-export type ProUpsellReason = 'scan' | 'notes' | 'lecture' | 'course' | 'canvas';
+export type ProUpsellReason =
+  | 'scan' | 'notes' | 'lecture' | 'course' | 'canvas'
+  | 'tutor' | 'flashcards' | 'insights' | 'dashboard' | 'planner'
+  | 'pomodoro' | 'grades' | 'reminders' | 'streak' | 'risk'
+  | 'share' | 'collaboration' | 'calendar' | 'quiz' | 'semester';
 
 const COPY: Record<ProUpsellReason, { title: string; subtitle: string }> = {
   scan: {
@@ -51,6 +55,74 @@ const COPY: Record<ProUpsellReason, { title: string; subtitle: string }> = {
   canvas: {
     title: 'Let Canvas fill in your semester',
     subtitle: 'Pro connects Canvas: every class imports itself, and deadlines stay right when your instructor moves them.',
+  },
+  // One entry per wall, each in its own words.
+  //
+  // A single generic "This is a Pro feature" line would have been less code and
+  // worse: a student who taps the AI tutor and a student who taps grade
+  // forecasting want different things, and telling them both the same sentence
+  // is how a paywall reads as a toll booth rather than an offer. None of these
+  // borrow the "you have used your one free AI action" line unless the student
+  // actually did — running out and never having access are different facts.
+  tutor: {
+    title: 'Ask about any class',
+    subtitle: 'Pro adds a tutor that already knows this course — its syllabus, its deadlines, and the notes you upload.',
+  },
+  flashcards: {
+    title: 'Study with flashcards',
+    subtitle: 'Pro builds decks from your notes and lectures, and schedules the review for you.',
+  },
+  insights: {
+    title: 'See how the term is going',
+    subtitle: 'Pro tracks what you finish, what slips, and where the workload is about to spike.',
+  },
+  dashboard: {
+    title: 'See the whole workload',
+    subtitle: 'Pro charts every deadline across every class, so a heavy week is visible before you are in it.',
+  },
+  planner: {
+    title: 'Plan the whole term',
+    subtitle: 'Free plans the next 7 days. Pro plans the whole semester, and rebuilds it when a date moves.',
+  },
+  pomodoro: {
+    title: 'Focus timer',
+    subtitle: 'Pro adds a focus timer that logs what you worked on against the deadline it belongs to.',
+  },
+  grades: {
+    title: 'Know your grade',
+    subtitle: 'Pro forecasts your grade from your own syllabus weighting, and uses your school\u2019s scale, not a guess.',
+  },
+  reminders: {
+    title: 'Reminders on your schedule',
+    subtitle: 'Free reminds you the day something is due. Pro reminds you 3 days and 1 day ahead, and stays quiet overnight.',
+  },
+  streak: {
+    title: 'Keep your streak',
+    subtitle: 'Pro tracks the days you stay on top of everything, and what it took to get there.',
+  },
+  risk: {
+    title: 'See trouble coming',
+    subtitle: 'Pro flags a class slipping out of reach while there is still time to do something about it.',
+  },
+  share: {
+    title: 'Share this with your class',
+    subtitle: 'Pro sends a classmate every deadline in one link. Opening a link a friend sent is always free.',
+  },
+  collaboration: {
+    title: 'Host a shared space',
+    subtitle: 'Pro hosts a space where a class keeps changing deadlines and group work in one place. Joining someone else\u2019s is free.',
+  },
+  calendar: {
+    title: 'Put deadlines in your calendar',
+    subtitle: 'Pro syncs every deadline to the calendar you already check, and keeps it right when a date moves.',
+  },
+  quiz: {
+    title: 'Practice before the exam',
+    subtitle: 'Pro turns your notes and lectures into practice questions, with answers, as many times as you want.',
+  },
+  semester: {
+    title: 'Every semester at once',
+    subtitle: `Free accounts hold ${FREE_SEMESTER_LIMIT} semester. Pro keeps them all, so last term stays where you left it.`,
   },
   course: {
     title: 'Add every class',

@@ -11,6 +11,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useAppStore } from '@/store/appStore';
 import {
   PRIORITY_OPTIONS, RECURRENCE_OPTIONS, REMINDER_OPTIONS,
@@ -37,6 +38,7 @@ type Props = {
 
 export function TaskPlanningFields(props: Props) {
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const router = useRouter();
   const isPro = useAppStore((s) => s.isPro);
   const [showCustomReminder, setShowCustomReminder] = useState(false);
@@ -50,7 +52,7 @@ export function TaskPlanningFields(props: Props) {
   // client still only gets defaults.
   const requireProReminders = (): boolean => {
     if (isPro) return true;
-    router.push({ pathname: '/paywall', params: { context: 'custom_reminders' } } as any);
+    showProUpsell('reminders');
     return false;
   };
 

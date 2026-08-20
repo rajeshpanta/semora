@@ -28,6 +28,7 @@ import { track } from '@/lib/analytics';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useResponsive } from '@/lib/responsive';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useAppStore } from '@/store/appStore';
 import type { LmsProvider } from '@/types/database';
 
@@ -56,6 +57,7 @@ const OTHER_PROVIDERS: Array<{ id: LmsProvider; icon: string; detail: string }> 
 
 export default function LmsSettingsScreen() {
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const isPro = useAppStore((s) => s.isPro);
   const queryClient = useQueryClient();
@@ -66,7 +68,7 @@ export default function LmsSettingsScreen() {
   // calendar.tsx PRO-badge pattern.
   const openPaywall = () => {
     track('paywall_open', { screen: 'settings_lms', context: 'lms' });
-    router.push({ pathname: '/paywall', params: { context: 'lms' } } as any);
+    showProUpsell('canvas');
   };
   const query = useQuery({
     queryKey: ['lmsConnections'],
@@ -94,7 +96,7 @@ export default function LmsSettingsScreen() {
       // raw "sync needs attention" alert.
       if (/pro feature/i.test(error.message)) {
         track('paywall_open', { screen: 'settings_lms', context: 'lms' });
-        router.push({ pathname: '/paywall', params: { context: 'lms' } } as any);
+        showProUpsell('canvas');
         return;
       }
       const connection = query.data?.find((row) => row.id === connectionId);

@@ -31,6 +31,7 @@ import {
 } from '@/lib/queries';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH, WEB_CARD_SHADOW } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { formatTimeOfDay, classTimeStatus } from '@/lib/schedule';
 import { updateTodayWidget, type DueThisWeekItem } from '@/lib/widgetBridge';
@@ -66,6 +67,7 @@ const KIND_LABEL: Record<'lecture' | 'lab' | 'discussion' | 'other', string> = {
 
 export default function TodayScreen() {
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth, width } = useResponsive();
   const { session } = useSession();
   const router = useRouter();
@@ -539,7 +541,7 @@ export default function TodayScreen() {
           onPress={() => {
             Haptics.selectionAsync().catch(() => {});
             track('paywall_open', { screen: 'today', context: 'streak' });
-            router.push({ pathname: '/paywall', params: { context: 'streak' } } as any);
+            showProUpsell('streak');
           }}
           activeOpacity={0.75}
           style={[styles.streakChip, { backgroundColor: colors.brand50 }]}
@@ -645,7 +647,7 @@ export default function TodayScreen() {
           isPro={isPro}
           onUpgrade={() => {
             track('paywall_open', { screen: 'today', context: 'academic_risk' });
-            router.push({ pathname: '/paywall', params: { context: 'academic_risk' } } as any);
+            showProUpsell('risk');
           }}
           onOpenTask={(taskId) => router.push(`/task/${taskId}` as any)}
           onOpenCourse={(courseId) => router.push(`/course/${courseId}` as any)}

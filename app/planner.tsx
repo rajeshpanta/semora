@@ -34,6 +34,7 @@ import { getPlannerCalendarConflicts } from '@/lib/plannerCalendar';
 import type { StudyPlannerSettings, StudySessionMinutes } from '@/types/database';
 import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { formatLocalDate } from '@/lib/dates';
@@ -66,6 +67,7 @@ function dayLabel(dateKey: string) {
 export default function PlannerScreen() {
   const router = useRouter();
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const isPro = useAppStore((state) => state.isPro);
   // Free users get a working plan over a shorter window rather than a locked
@@ -306,7 +308,7 @@ export default function PlannerScreen() {
           <TouchableOpacity
             style={[styles.upsell, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]}
             activeOpacity={0.8}
-            onPress={() => router.push({ pathname: '/paywall', params: { context: 'smart_planner' } } as any)}
+            onPress={() => showProUpsell('planner')}
           >
             <FontAwesome name="magic" size={15} color={colors.brand} style={{ marginTop: 1 }} />
             <View style={{ flex: 1 }}>

@@ -20,6 +20,7 @@ import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useAppStore } from '@/store/appStore';
 import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { FREE_SEMESTER_LIMIT, isFreeLimitError } from '@/lib/syllabus';
 import { formatLocalDate } from '@/lib/dates';
@@ -33,6 +34,7 @@ export default function NewSemesterScreen() {
   const defaultTerm = useAppStore((s) => s.defaultTerm);
   const { data: existingSemesters = [] } = useSemesters();
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth, isWide } = useResponsive();
 
   // Pre-fill with the term picked during onboarding, but only for the very
@@ -66,7 +68,7 @@ export default function NewSemesterScreen() {
         'Semester Limit Reached',
         `Free accounts support up to ${FREE_SEMESTER_LIMIT} semester. Upgrade to Pro for unlimited semesters.`,
         [
-          { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+          { text: 'Upgrade', onPress: () => showProUpsell('semester') },
           { text: 'Cancel', style: 'cancel' },
         ],
       );
@@ -95,7 +97,7 @@ export default function NewSemesterScreen() {
           'Semester Limit Reached',
           err.message,
           [
-            { text: 'Upgrade', onPress: () => router.push('/paywall' as any) },
+            { text: 'Upgrade', onPress: () => showProUpsell('semester') },
             { text: 'Cancel', style: 'cancel' },
           ],
         );

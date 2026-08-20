@@ -25,6 +25,7 @@ import {
 import { isFreeLimitError } from '@/lib/syllabus';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { useSession } from '@/app/_layout';
@@ -52,6 +53,7 @@ export default function JoinScreen() {
   const { token: tokenParam } = useLocalSearchParams<{ token?: string }>();
   const router = useRouter();
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const qc = useQueryClient();
   const { session, loading: sessionLoading } = useSession();
@@ -154,7 +156,7 @@ export default function JoinScreen() {
             {
               text: 'See Pro',
               onPress: () =>
-                router.push({ pathname: '/paywall', params: { context: 'share_course' } } as any),
+                showProUpsell('share'),
             },
           ],
         );

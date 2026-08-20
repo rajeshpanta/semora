@@ -15,6 +15,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { track } from '@/lib/analytics';
@@ -29,6 +30,7 @@ export default function PomodoroScreen() {
   const params = useLocalSearchParams<{ taskId?: string; title?: string; minutes?: string; blockId?: string }>();
   const isPro = useAppStore((s) => s.isPro);
   const colors = useColors();
+  const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
 
   const taskId = params.taskId ?? null;
@@ -109,7 +111,7 @@ export default function PomodoroScreen() {
             activeOpacity={0.85}
             onPress={() => {
               if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              router.push({ pathname: '/paywall', params: { context: 'pomodoro' } } as any);
+              showProUpsell('pomodoro');
             }}
           >
             <FontAwesome name="star" size={13} color="#fff" />
