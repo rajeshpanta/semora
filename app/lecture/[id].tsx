@@ -26,6 +26,7 @@ import {
   useLecture,
   useRetryLectureNotes,
   type LectureError,
+  isLectureStalled,
 } from '@/lib/lectures';
 
 // One lecture: what the recording became.
@@ -128,6 +129,12 @@ function NotesBody({
  * Without an expiry the screen spins and the retry button never renders.
  */
 const STALE_GENERATION_MS = 4 * 60 * 1000;
+// Longer than STALE_GENERATION_MS because transcription is genuinely slower
+// and arrives in pieces: updated_at moves as each segment lands, so this only
+// elapses when nothing at all has progressed. Long enough that a slow upload
+// on bad signal is never mistaken for a dead one.
+// (the threshold itself lives in lib/lectures as LECTURE_STALLED_MS, shared
+// with the poller so the screen and the refetch loop cannot disagree)
 
 // Notes are read, not skimmed — a student revising sits with this screen the
 // way they would with a page of a textbook. 14pt with a 20pt line height is
@@ -366,14 +373,24 @@ export default function LectureDetailScreen() {
   // Once the server has recorded NOTES_FAILED, or a 'generating' claim has gone
   // stale because the invocation died, this must fall through to the content
   // branch — that is where the transcript and the "Try again" button live.
+  // A recording can die in 'uploading'/'transcribing' too, and unlike notes
+  // generation nothing was watching for it: `busy` below treated those two
+  // states as permanently in-flight, so a recording whose segments never
+  // arrived showed a spinner and "Keep Semora open until this finishes"
+  // forever. One was found stuck for over an hour with 0 segments and no
+  // error code — the student simply never got their notes and had nothing to
+  // tap. There is no transcribe_started_at claim stamp to read, but updated_at
+  // moves on every segment and status change, so a row that has not been
+  // touched in TRANSCRIBE_STALE_MS has nothing left working on it.
+  const transcriptionStale = isLectureStalled(lecture);
+
   const notesStale =
     lecture.status === 'generating' &&
     (!lecture.notes_started_at ||
       Date.now() - new Date(lecture.notes_started_at).getTime() > STALE_GENERATION_MS);
   const busy =
     lecture.status === 'recording' ||
-    lecture.status === 'uploading' ||
-    lecture.status === 'transcribing' ||
+    ((lecture.status === 'uploading' || lecture.status === 'transcribing') && !transcriptionStale) ||
     (lecture.status === 'generating' && !notesStale) ||
     (lecture.status === 'transcribed' && !lecture.notes_md &&
       lecture.error_code !== 'NOTES_FAILED');
@@ -502,6 +519,25 @@ export default function LectureDetailScreen() {
             <Text style={[styles.stateText, { color: colors.ink3 }]}>
               Keep Semora open until this finishes.
             </Text>
+          </View>
+        ) : transcriptionStale ? (
+          <View style={[styles.stateCard, { backgroundColor: colors.coral50, borderColor: colors.coral }]}>
+            <FontAwesome name="exclamation-circle" size={20} color={colors.coral} />
+            <Text style={[styles.stateTitle, { color: colors.ink }]}>This recording didn{'\u2019'}t finish</Text>
+            <Text style={[styles.stateText, { color: colors.ink2 }]}>
+              {lecture.segment_count === 0
+                ? "None of the audio reached us, so there's nothing to transcribe — this usually means the recording was interrupted or the connection dropped before it could upload. Your free lecture wasn't used."
+                : "The audio stopped uploading part way through and processing has stalled. Your free lecture wasn't used."}
+            </Text>
+            <TouchableOpacity
+              style={[styles.retryBtn, { borderColor: colors.coral }]}
+              onPress={handleDelete}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+            >
+              <FontAwesome name="trash-o" size={13} color={colors.coral} />
+              <Text style={[styles.retryText, { color: colors.coral }]}>Delete this recording</Text>
+            </TouchableOpacity>
           </View>
         ) : lecture.status === 'failed' ? (
           <View style={[styles.stateCard, { backgroundColor: colors.coral50, borderColor: colors.coral }]}>

@@ -206,6 +206,32 @@ async function makeSafetyIdentifier(userId: string): Promise<string> {
   return `semora_${hex.slice(0, 32)}`;
 }
 
+/**
+ * An RPC that must not fail open, retried once.
+ *
+ * is_pro() and free_action_used() are both fail-closed-as-transient: a blip
+ * returns 503 rather than risk demoting a paying user or handing out a second
+ * free action. That is the right call, but it means every momentary hiccup is
+ * a user staring at "Service temporarily unavailable" — six of them in 24h on
+ * 2026-08-19, each one a scan someone had to start over.
+ *
+ * One retry, 250ms apart, because these are sub-millisecond index lookups: if
+ * the first attempt failed it was the connection, not the query, and a second
+ * attempt either succeeds immediately or confirms something real is wrong.
+ * Deliberately not more — a scan already makes the user wait, and retrying a
+ * genuinely broken database just makes them wait longer for the same answer.
+ */
+async function rpcOnceRetried(
+  client: any,
+  fn: string,
+  args: Record<string, unknown>,
+): Promise<{ data: any; error: any }> {
+  const first = await client.rpc(fn, args);
+  if (!first.error) return first;
+  await sleep(250);
+  return await client.rpc(fn, args);
+}
+
 async function logCall(
   // Supabase's overloaded generic factory does not preserve its concrete
   // schema through ReturnType in Deno. The client is created and scoped in
@@ -396,7 +422,7 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
     // a client that skips that insert (or calls this endpoint directly) would
     // otherwise get unlimited free extractions. is_pro() is SECURITY DEFINER
     // and granted to service_role, so the admin client can call it.
-    const { data: proResult, error: proErr } = await adminClient.rpc('is_pro', { uid: userId });
+    const { data: proResult, error: proErr } = await rpcOnceRetried(adminClient, 'is_pro', { uid: userId });
     if (proErr) {
       // Fail closed AS TRANSIENT (503) — never demote a paying user to the
       // free cap on an RPC blip.
@@ -414,8 +440,8 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
       // Fail closed AS TRANSIENT (503) for the same reason as is_pro above: an
       // RPC blip must not silently hand out a second free action, and must not
       // accuse a user of spending one they still have.
-      const { data: usedResult, error: usedErr } = await adminClient
-        .rpc('free_action_used', { uid: userId });
+      const { data: usedResult, error: usedErr } = await rpcOnceRetried(
+        adminClient, 'free_action_used', { uid: userId });
       if (usedErr) {
         log.error('free_action_check_failed', errorFields(usedErr));
         return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
@@ -504,6 +530,17 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
       // corrected. Sequential rather than parallel on purpose — each HEIC
       // decode holds well over a hundred megabytes while it runs, and five at
       // once would take the invocation out on memory.
+      // Recorded BEFORE the loop, because this is the stretch that kills the
+      // worker and a killed worker logs nothing. Five 546s (edge worker limit)
+      // arrived on 2026-08-19 with no accompanying function log at all — the
+      // invocation died mid-request. This line is what makes the next one
+      // diagnosable: if 546s correlate with page count or HEIC, it will show.
+      const payloadChars = body.pages.reduce(
+        (n: number, pg: any) => n + (typeof pg?.base64 === 'string' ? pg.base64.length : 0),
+        0,
+      );
+      log.info('scan_payload', { pages: body.pages.length, base64_chars: payloadChars });
+
       const prepared: { base64: string; mimeType: string }[] = [];
       let convertedCount = 0;
       for (const page of body.pages) {
@@ -518,6 +555,19 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
           return jsonResponse({ error: `Unsupported page type: ${ready.mimeType}. Pages must be images; send PDFs as a single file.` }, 400);
         }
         prepared.push({ base64: ready.base64, mimeType: normalizedPage.mimeType });
+
+        // Drop the ORIGINAL now that its converted form is held.
+        //
+        // Sequential conversion (above) stops five HEIC decodes running at
+        // once, but it does nothing about what is merely being *retained*:
+        // without this line `body.pages` keeps all five originals alive for the
+        // whole loop while `prepared` fills up with five converted copies, so
+        // by the last page the invocation is holding two full sets of image
+        // data — and that is precisely when the >100MB decode runs on top.
+        // Releasing each original as it is consumed keeps one set resident
+        // instead of two, which is the difference between peaking under the
+        // worker's memory ceiling and being killed at it.
+        page.base64 = '';
       }
       if (convertedCount) log.info('heic_pages_converted', { count: convertedCount });
       pages = prepared;

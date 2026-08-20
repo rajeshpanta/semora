@@ -93,6 +93,24 @@ export function isLectureInFlight(status: LectureStatus): boolean {
   return IN_FLIGHT.includes(status);
 }
 
+/**
+ * True when a recording says it is working but nothing is.
+ *
+ * `updated_at` moves on every segment and status change, so a row untouched
+ * for this long has no invocation behind it. Kept here rather than only on the
+ * detail screen because the poller needs the same answer — an in-flight status
+ * that will never change is exactly the case that polled forever.
+ */
+export const LECTURE_STALLED_MS = 15 * 60 * 1000;
+
+export function isLectureStalled(lecture: {
+  status: LectureStatus;
+  updated_at: string;
+}): boolean {
+  if (lecture.status !== 'uploading' && lecture.status !== 'transcribing') return false;
+  return Date.now() - new Date(lecture.updated_at).getTime() > LECTURE_STALLED_MS;
+}
+
 async function getSession() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Not authenticated');
@@ -173,6 +191,12 @@ export function useLecture(id: string | null | undefined) {
       const lecture = query.state.data as LectureWithCourse | null | undefined;
       if (!lecture) return false;
       if (lecture.quiz_generating) return 3000;
+      // "Terminal state" has to include stalled, not just finished. A recording
+      // whose segments never arrived sits in 'transcribing' indefinitely, and
+      // this polled it every 4 seconds for as long as the screen stayed open —
+      // one was found stuck for over an hour. Nothing is coming, so stop
+      // asking; the screen shows the stalled card instead of a spinner.
+      if (isLectureStalled(lecture)) return false;
       return isLectureInFlight(lecture.status) ? 4000 : false;
     },
   });
