@@ -13,12 +13,19 @@ export function SignupButton({
   className,
   mode = 'signup',
   onClick,
+  placement,
 }: {
   children: React.ReactNode;
   className?: string;
   mode?: 'signup' | 'signin';
   /** Runs before navigation — e.g. dismissing the mobile nav sheet. */
   onClick?: () => void;
+  /**
+   * Where on the page this button sits: 'hero', 'footer', 'nav', 'pricing'.
+   * Without it every CTA reports identically, so a hero that nobody presses
+   * and a footer link that carries the whole funnel are the same number.
+   */
+  placement?: string;
 }) {
   const href = mode === 'signin' ? APP_SIGNIN_URL : APP_SIGNUP_URL;
 

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Fraunces } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
+import { PageTelemetry } from '@/components/PageTelemetry';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../../globals.css';
 import { Nav } from '@/components/Nav';
@@ -46,6 +47,7 @@ export default function SpanishRootLayout({ children }: Readonly<{ children: Rea
         <main>{children}</main>
         <Footer locale="es" />
         <Analytics />
+        <PageTelemetry />
         <SpeedInsights />
       </body>
     </html>

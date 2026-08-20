@@ -15,6 +15,7 @@ import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { signIn, signInWithApple, signInWithGoogle, isAppleSignInAvailable } from '@/lib/auth';
+import { track } from '@/lib/analytics';
 import { GoogleWebSignInButton } from '@/components/GoogleWebSignInButton';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
@@ -48,6 +49,15 @@ export default function SignInScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<'apple' | 'google' | null>(null);
+
+  // This screen had NO instrumentation at all, and it is where most signed-out
+  // web traffic ends: 58% of signed-out arrivals fired one event and were never
+  // seen again, with nothing recorded between "opened the app" and "gone". Every
+  // explanation for that was a guess. `mode` matters because arriving to sign in
+  // and arriving to sign up are different intents with different expectations.
+  useEffect(() => {
+    track('sign_in_viewed', { screen: 'auth', mode });
+  }, [mode]);
   const [appleAvailable, setAppleAvailable] = useState(false);
   const [error, setError] = useState('');
   const [errorType, setErrorType] = useState<'confirm' | 'credentials' | 'generic' | ''>('');
@@ -98,14 +108,23 @@ export default function SignInScreen() {
     setError('');
     setErrorType('');
     setOauthLoading('apple');
+    // Tapped, before anything can fail. The gap between this and
+    // sign_in_succeeded is where a broken provider hides.
+    track('sign_in_provider_tapped', { screen: 'auth', provider: 'apple', mode });
     try {
       await signInWithApple();
+      track('sign_in_succeeded', { screen: 'auth', provider: 'apple', mode });
       useAppStore.getState().setPostSignupBanner(null);
     } catch (err: any) {
       // User-cancel on iOS reports as ERR_REQUEST_CANCELED — silent ignore.
       if (err?.code === 'ERR_REQUEST_CANCELED' || err?.code === 'ERR_CANCELED') {
+        // Backing out is a real answer, not an error — and telling the two
+        // apart is the difference between "they changed their mind" and
+        // "Apple sign-in is broken for everyone".
+        track('sign_in_abandoned', { screen: 'auth', provider: 'apple', mode });
         return;
       }
+      track('sign_in_failed', { screen: 'auth', provider: 'apple', code: String(err?.code ?? 'unknown').slice(0, 60) });
       setError(err?.message ?? 'Sign in with Apple failed. Please try again.');
       setErrorType('generic');
     } finally {
@@ -117,16 +136,22 @@ export default function SignInScreen() {
     setError('');
     setErrorType('');
     setOauthLoading('google');
+    // Tapped, before anything can fail. The gap between this and
+    // sign_in_succeeded is where a broken provider hides.
+    track('sign_in_provider_tapped', { screen: 'auth', provider: 'google', mode });
     try {
       await signInWithGoogle();
+      track('sign_in_succeeded', { screen: 'auth', provider: 'google', mode });
       useAppStore.getState().setPostSignupBanner(null);
     } catch (err: any) {
       // SIGN_IN_CANCELLED / IN_PROGRESS — silently ignore. Other codes
       // bubble up.
       const code = err?.code;
       if (code === '12501' || code === 'SIGN_IN_CANCELLED' || code === '-5') {
+        track('sign_in_abandoned', { screen: 'auth', provider: 'google', mode });
         return;
       }
+      track('sign_in_failed', { screen: 'auth', provider: 'google', code: String(code ?? 'unknown').slice(0, 60) });
       setError(err?.message ?? 'Sign in with Google failed. Please try again.');
       setErrorType('generic');
     } finally {

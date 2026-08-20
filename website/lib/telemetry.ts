@@ -1,6 +1,7 @@
 'use client';
 
 import { track as vercelTrack } from '@vercel/analytics';
+import { looksAutomated, sessionId, storageWorks, visitorId } from './visitor';
 
 /**
  * Website telemetry: what people do, and what breaks while they do it.
@@ -43,6 +44,24 @@ export const TELEMETRY_EVENTS = {
   languageSwitch: 'language_switch',
   supportSubmit: 'support_submit',
   faqOpen: 'faq_open',
+
+  // ── Added so the funnel has a start and a middle, not only an end ──
+  // Without a view event there is no denominator: "12 signup clicks" cannot
+  // become a rate, and a page nobody reaches looks identical to one everybody
+  // abandons.
+  pageView: 'page_view',
+  // How far down a page someone actually got. A landing page everyone opens
+  // and nobody scrolls fails in a completely different way from one they read
+  // to the end and still leave.
+  scrollDepth: 'scroll_depth',
+  // The blog is the top of the funnel; without this it is a black box.
+  blogView: 'blog_view',
+  // Which specific call to action, on which page — 'signup_click' alone could
+  // not tell the hero button from the one in the footer.
+  ctaClick: 'cta_click',
+  // Left for the app domain. The last thing this site sees before the app's
+  // own analytics picks the same visitor up by the shared device_id.
+  appHandoff: 'app_handoff',
 } as const;
 
 export type TelemetryEvent = (typeof TELEMETRY_EVENTS)[keyof typeof TELEMETRY_EVENTS];
@@ -68,6 +87,18 @@ function clean(props: Props): Props {
 export function report(event: TelemetryEvent, props: Props = {}): void {
   if (typeof window === 'undefined') return;
   const payload = clean({ ...props, path: window.location.pathname });
+
+  // Identity is attached HERE rather than at each call site so no event can
+  // be recorded without it — an event missing a visitor is invisible to every
+  // funnel query and would silently shrink whichever step it belongs to.
+  const identity = {
+    device_id: visitorId(),
+    session_id: sessionId(),
+    // Kept as properties rather than dropped: automated traffic is worth
+    // counting, just not worth counting as people.
+    automated: looksAutomated(),
+    persisted: storageWorks(),
+  };
 
   try {
     vercelTrack(event, payload);

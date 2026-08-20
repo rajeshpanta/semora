@@ -1,5 +1,7 @@
 'use client';
 
+import { report, TELEMETRY_EVENTS } from '@/lib/telemetry';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styles from './Nav.module.css';

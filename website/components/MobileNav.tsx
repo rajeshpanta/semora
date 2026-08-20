@@ -1,5 +1,7 @@
 'use client';
 
+import { report, TELEMETRY_EVENTS } from '@/lib/telemetry';
+
 import { useEffect, useState } from 'react';
 import { SignupButton } from './SignupButton';
 import Link from 'next/link';
@@ -94,7 +96,7 @@ export function MobileNav({ links, locale = 'en' }: { links: { href: string; lab
             {copy.signIn}
           </SignupButton>
 
-          <a href={APP_STORE_URL} className={styles.sheetGhost} onClick={close}>
+          <a href={APP_STORE_URL} className={styles.sheetGhost} onClick={() => { report(TELEMETRY_EVENTS.appStoreClick, {}); close(); }}>
             {copy.getApp}
           </a>
           <SignupButton className={styles.sheetCta} onClick={close}>

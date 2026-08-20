@@ -24,20 +24,68 @@ function uuid(): string {
   });
 }
 
+/**
+ * The marketing site's id for this same browser, if it left one.
+ *
+ * semoraai.com writes `semora_device_id` as a cookie scoped to `.semoraai.com`,
+ * which app.semoraai.com can therefore read. Adopting it is the entire join:
+ * without it a student who reads a blog post, clicks Get Started and signs up
+ * is two unrelated rows, and no query can ever connect what they read to what
+ * they did. localStorage cannot do this — it is per-origin — which is why the
+ * site uses a cookie for the id and localStorage only as its own fallback.
+ *
+ * Only ever READ here. The site owns creating it; the app adopting a value it
+ * did not write is what keeps one visitor to one id.
+ */
+function siteDeviceId(): string | null {
+  try {
+    if (typeof document === 'undefined') return null;
+    const match = document.cookie.match(/(?:^|; )semora_device_id=([^;]*)/);
+    const value = match ? decodeURIComponent(match[1]) : '';
+    // Bounded and shape-checked: this is an id from another origin we control,
+    // but a malformed cookie should not become a permanent poisoned device id.
+    return /^[A-Za-z0-9-]{8,64}$/.test(value) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 function getDeviceId(): string {
   if (cachedDeviceId) return cachedDeviceId;
   try {
     let id = getDeviceItem(DEVICE_ID_KEY);
     if (!id) {
-      id = uuid();
+      // Prefer the site's id over minting a new one, so arriving from
+      // semoraai.com continues one journey instead of starting a second.
+      id = siteDeviceId() ?? uuid();
       setDeviceItem(DEVICE_ID_KEY, id);
     }
     cachedDeviceId = id;
   } catch {
     // Storage genuinely unavailable (private browsing) — ephemeral id.
     cachedDeviceId = uuid();
+    // Recorded so this event can be told apart from a real returning visitor.
+    // Roughly half of recent "web devices" were a headless browser minting a
+    // fresh id on every page load, which is indistinguishable from a person
+    // bouncing unless the difference is written down.
+    ephemeralDeviceId = true;
   }
   return cachedDeviceId;
+}
+
+/** True when the id above could not be persisted — private mode or headless. */
+let ephemeralDeviceId = false;
+
+/**
+ * Whether this device's id is throwaway.
+ *
+ * Reads through getDeviceId() so the answer is never stale on the first event
+ * of a session, which is the only event a headless page-load produces — and
+ * therefore the exact one that must carry the flag.
+ */
+function deviceIdWasEphemeral(): boolean {
+  getDeviceId();
+  return ephemeralDeviceId;
 }
 
 // ── Sessions ────────────────────────────────────────────────────────────────
@@ -78,7 +126,9 @@ export function track(eventName: string, properties: Record<string, any> = {}): 
       .insert({
         app_name: 'semora',
         event_name: eventName,
-        properties,
+        // getDeviceId() runs first so `ephemeralDeviceId` reflects THIS call
+        // rather than a previous one — the flag is set inside it.
+        properties: { ...properties, ...(deviceIdWasEphemeral() ? { ephemeral: true } : {}) },
         device_id: getDeviceId(),
         session_id: currentSessionId(),
         platform: Platform.OS,
