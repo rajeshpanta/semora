@@ -395,3 +395,56 @@ export async function disconnectLms(connectionId: string): Promise<void> {
   if (error) throw error;
   await removeLmsCredential(connectionId);
 }
+
+// ── Canvas status, in one place ─────────────────────────────────────────────
+//
+// Canvas sync is the thing Semora does that nothing else on a student's phone
+// does: when an instructor moves a deadline, it moves here too, without anyone
+// asking. It also lived exclusively in Settings, behind a Pro wall, and had
+// exactly one connection in three weeks. Surfacing it where students actually
+// start — the empty course list and the "+" menu — means the same question
+// ("should we be offering Canvas right now, and how?") gets asked from three
+// screens, and three copies of that rule would drift.
+//
+// The states are deliberately about what to OFFER, not about what is true:
+//
+//   none            → offer "Connect Canvas". Nothing is set up.
+//   needs_attention → offer "Finish setup". Connected, but not actually
+//                     syncing on its own: background sync is off, or the last
+//                     run failed, or the feed URL stopped working.
+//   healthy         → offer NOTHING. It is connected and working, and a
+//                     student who has already done this should never be shown
+//                     a prompt to do it again — that is how a useful feature
+//                     turns into nagging.
+
+export type CanvasOffer = 'none' | 'needs_attention' | 'healthy';
+
+export function canvasOfferFor(
+  connections: (LmsConnection & { links: LmsCourseLink[] })[] | undefined,
+): { offer: CanvasOffer; connection: LmsConnection | null } {
+  // While the query is loading, offer nothing. Flashing "Connect Canvas" at a
+  // student who connected it last term, then swapping it out a beat later, is
+  // worse than showing it a moment late.
+  if (!connections) return { offer: 'healthy', connection: null };
+
+  const canvas = connections.find((c) => c.provider === 'canvas') ?? null;
+  if (!canvas) return { offer: 'none', connection: null };
+
+  const stalled =
+    !canvas.background_sync_enabled ||
+    ['error', 'credentials_required'].includes(canvas.last_sync_status ?? '');
+
+  return { offer: stalled ? 'needs_attention' : 'healthy', connection: canvas };
+}
+
+/**
+ * Shared query. One key, so connecting Canvas on one screen updates the offer
+ * everywhere else without a refresh.
+ */
+export const lmsConnectionsQuery = {
+  queryKey: ['lmsConnections'] as const,
+  queryFn: listLmsConnections,
+  // Cheap, indexed, and read on screens the student opens constantly; a stale
+  // answer here shows the wrong call to action.
+  staleTime: 30_000,
+};

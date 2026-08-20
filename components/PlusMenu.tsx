@@ -10,6 +10,8 @@ import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { useCourses } from '@/lib/queries';
+import { useQuery } from '@tanstack/react-query';
+import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
 
 // Floating action menu opened by the "+" tab button. The tab press itself is
 // intercepted in app/(tabs)/_layout.tsx (preventDefault), so this menu is the
@@ -23,7 +25,7 @@ interface PlusMenuProps {
 
 type MenuRow = {
   icon: React.ComponentProps<typeof FontAwesome>['name'];
-  tint: 'brand' | 'coral' | 'teal' | 'blue';
+  tint: 'brand' | 'coral' | 'teal' | 'blue' | 'amber';
   title: string;
   sub: string;
   route?: { pathname: string; params?: Record<string, string> };
@@ -192,9 +194,45 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
 
   // Recording is native-only (see lib/lectureRecorder.ts), so the browser must
   // not offer a row that can only apologise.
-  const rootRows = Platform.OS === 'web'
+  const baseRows = Platform.OS === 'web'
     ? ROOT_ACTIONS.filter((a) => a.title !== 'Record lecture')
     : ROOT_ACTIONS;
+
+  // Canvas, first — and only while it is worth offering.
+  //
+  // When an instructor moves a deadline, Canvas sync moves it here too, with
+  // nobody asking. That is the single most valuable thing in the app and it
+  // lived only in Settings: one connection in three weeks. It leads this menu
+  // now, above scanning, because a student who connects Canvas never has to
+  // scan that course at all.
+  //
+  // Dynamic on purpose. Once it is connected AND actually syncing, the row
+  // disappears entirely — a student who already did this being told to do it
+  // again is how a useful prompt becomes nagging. It comes back only if the
+  // sync stops working, where it says so plainly instead of pretending to be
+  // a fresh setup.
+  const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
+  const { offer: canvasOffer } = canvasOfferFor(lmsConnections);
+  const canvasRow: MenuRow | null =
+    canvasOffer === 'healthy'
+      ? null
+      : canvasOffer === 'needs_attention'
+        ? {
+            icon: 'refresh',
+            tint: 'amber',
+            title: 'Finish Canvas setup',
+            sub: 'Connected, but not syncing on its own yet',
+            route: { pathname: '/settings/lms' },
+          }
+        : {
+            icon: 'university',
+            tint: 'teal',
+            title: 'Connect Canvas',
+            sub: 'Deadlines arrive on their own, and update when your teacher changes them',
+            route: { pathname: '/settings/lms' },
+          };
+
+  const rootRows = canvasRow ? [canvasRow, ...baseRows] : baseRows;
   // Same reason the scan screen hides its camera card on desktop: there is no
   // camera behind it, only a file dialog wearing a camera label.
   const scanRows = isDesktop
@@ -207,6 +245,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
     coral: { bg: colors.coral50, fg: colors.coral },
     teal: { bg: colors.teal50, fg: colors.teal },
     blue: { bg: colors.blue50, fg: colors.blue },
+    amber: { bg: colors.amber50, fg: colors.amber },
   };
 
   return (

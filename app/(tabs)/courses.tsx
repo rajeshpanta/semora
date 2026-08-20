@@ -16,13 +16,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTasks, useDeleteSemester, useGpaScale, useSemesterGradeCategories } from '@/lib/queries';
 import { COLORS, FONTS, DEFAULT_GRADE_SCALE, SCREEN_MAX_WIDTH, WEB_CARD_SHADOW } from '@/lib/constants';
 import { calculateCourseGrade, calculateSemesterGpaWithScale, DEFAULT_GPA_SCALE } from '@/lib/grades';
 import { useColors } from '@/lib/theme';
+import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { track } from '@/lib/analytics';
 import { useResponsive } from '@/lib/responsive';
 import { differenceInCalendarDays, isToday, isPast, format } from 'date-fns';
 import type { GradeThreshold } from '@/types/database';
@@ -69,6 +71,8 @@ export default function CoursesScreen() {
   const { data: semesters = [], isLoading: semestersLoading } = useSemesters();
   const deleteSemester = useDeleteSemester();
   const { data: courses = [] } = useCourses(selectedSemesterId);
+  const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
+  const { offer: canvasOffer } = canvasOfferFor(lmsConnections);
   const { data: tasks = [] } = useTasks(selectedSemesterId ? { semesterId: selectedSemesterId } : { semesterId: null });
   const { data: gradeCategories = [] } = useSemesterGradeCategories(selectedSemesterId);
   const { data: gpaScale = DEFAULT_GPA_SCALE } = useGpaScale();
@@ -91,10 +95,32 @@ export default function CoursesScreen() {
   // The Scan tab in the bottom nav stays as a direct entry point for
   // users who land with a syllabus already in hand.
   const handleAddCourse = () => {
+    // Canvas leads when it is worth offering.
+    //
+    // A student who connects Canvas never has to scan that course at all, and
+    // their deadlines keep updating when the instructor moves them — so
+    // offering it AFTER scanning is offering it too late. It is listed first
+    // for the same reason it is first in the "+" menu.
+    //
+    // Suppressed once Canvas is connected and syncing: someone who already did
+    // this should not be asked again every time they add a course.
+    const canvasOption =
+      canvasOffer === 'healthy'
+        ? []
+        : [{
+            text: canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Connect Canvas',
+            onPress: () => {
+              track('canvas_offer_tapped', { screen: 'courses', offer: canvasOffer });
+              handleNav('/settings/lms');
+            },
+          }];
     Alert.alert(
       'Add a course',
-      'Scan a syllabus and the AI fills everything in — or type it yourself.',
+      canvasOffer === 'none'
+        ? 'Connect Canvas and your classes arrive on their own — or scan a syllabus, or type it yourself.'
+        : 'Scan a syllabus and the AI fills everything in — or type it yourself.',
       [
+        ...canvasOption,
         { text: 'Scan syllabus', onPress: () => handleNav('/scan') },
         { text: 'Add manually', onPress: () => handleNav('/course/new') },
         { text: 'Cancel', style: 'cancel' },
