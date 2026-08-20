@@ -812,9 +812,31 @@ async function performConnectionSync(
     const processed = Number((applied as any)?.processed ?? 0);
     const skipped = Number((applied as any)?.skipped ?? 0);
     const status = skipped > 0 ? 'partial' : 'success';
+    const finishedAt = new Date().toISOString();
     await Promise.all([
-      admin.from('lms_sync_runs').update({ status, processed, skipped, finished_at: new Date().toISOString() }).eq('id', runId),
+      admin.from('lms_sync_runs').update({ status, processed, skipped, finished_at: finishedAt }).eq('id', runId),
       admin.from('lms_connections').update({
+        // A SUCCESSFUL sync used to record nothing about itself. The failure
+        // branch below writes last_sync_status, but this one only touched the
+        // scheduling fields — so three things were wrong at once:
+        //
+        //   * last_sync_status was left at the 'syncing' this run set on entry,
+        //     so a connection that worked perfectly displayed "syncing" for
+        //     ever on the LMS settings screen (it renders the value verbatim).
+        //   * last_successful_sync_at and last_synced_at were never written by
+        //     ANY code path, so the screen's "last synced" label was always
+        //     blank no matter how many times it had synced.
+        //   * consecutive_sync_failures only ever incremented. Nothing reset
+        //     it, so nextBackgroundAttempt() kept computing the backoff from a
+        //     stale count: a connection that hit five transient errors months
+        //     ago and has worked ever since stayed pinned at the 24-hour
+        //     maximum interval, permanently. That is the damaging one — the
+        //     recovery path existed but could never be reached.
+        last_sync_status: status,
+        last_error: null,
+        last_synced_at: finishedAt,
+        last_successful_sync_at: finishedAt,
+        consecutive_sync_failures: 0,
         next_background_sync_at: connection.background_sync_enabled
           ? new Date(Date.now() + (connection.connection_method === 'calendar_feed' ? 1 : 4) * 60 * 60 * 1000).toISOString()
           : null,

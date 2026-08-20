@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
+  Text as RawText,
   Image,
   Modal,
   Linking,
@@ -292,20 +293,24 @@ function TutorChat({
    * than somewhere else.
    */
   const starterPrompts = useMemo(() => {
+    // Translated HERE, not at render. The chip both displays this string and
+    // becomes the draft, so translating only the <Text> would show a Spanish
+    // chip that types an English question into the composer.
     if (!courseId) {
       return [
-        'What should I work on tonight?',
-        'Which deadline should I worry about first?',
-        'Help me plan the next two weeks.',
+        translate('What should I work on tonight?'),
+        translate('Which deadline should I worry about first?'),
+        translate('Help me plan the next two weeks.'),
       ];
     }
     const prompts: string[] = [];
-    if (upcomingWork[0]) prompts.push(`Help me get started on ${upcomingWork[0].title}`);
-    if (notes.length > 0) prompts.push('Summarise the key ideas from my notes.');
+    // The task title is the student's own text and is never translated.
+    if (upcomingWork[0]) prompts.push(`${translate('Help me get started on')} ${upcomingWork[0].title}`);
+    if (notes.length > 0) prompts.push(translate('Summarise the key ideas from my notes.'));
     if (gradeSnapshot?.percentage != null) {
-      prompts.push('What do I need on the rest to finish with an A?');
+      prompts.push(translate('What do I need on the rest to finish with an A?'));
     }
-    prompts.push('What should I study first for this course?');
+    prompts.push(translate('What should I study first for this course?'));
     return prompts.slice(0, 4);
   }, [courseId, upcomingWork, notes.length, gradeSnapshot?.percentage]);
 
@@ -908,7 +913,13 @@ function TutorChat({
                     : [styles.bubbleAssistant, { backgroundColor: colors.card, borderColor: colors.line }],
                 ]}>
                   {m.role === 'user' ? (
-                    <Text selectable style={[styles.bubbleText, { color: '#fff' }]}>{m.content}</Text>
+                    // RawText, NOT the localized wrapper: this is the student's
+                    // own sentence. The wrapper translates any string that
+                    // matches a catalogue key, so a question they typed could
+                    // come back rendered in the other language — their words,
+                    // silently rewritten. The assistant side already avoids
+                    // this by going through RichText.
+                    <RawText selectable style={[styles.bubbleText, { color: '#fff' }]}>{m.content}</RawText>
                   ) : (
                     <RichText
                       text={m.content}

@@ -381,9 +381,36 @@ export async function validateProEntitlement(opts?: {
  * NEVER interactive: a launch-time AppStore.sync() would prompt for
  * Apple-ID credentials on receipt-less installs.
  */
+/**
+ * How long the silent launch refresh may spend talking to StoreKit before it
+ * gives up and answers from the server row instead.
+ *
+ * Every StoreKit read on this path is awaited with no bound of its own, and the
+ * launch chain in app/_layout.tsx is `initIAP().then(refreshProStatus)` under a
+ * bare `.catch(() => {})`. So a StoreKit call that never settles does not fail
+ * — it silently stops the chain, the entitlement is never read, and `isPro`
+ * keeps whatever stale value the store was persisted with. A subscriber can
+ * therefore open the app and be shown the paywall, with nothing logged.
+ *
+ * Observed on a simulator (no StoreKit configuration, so the credential reads
+ * hang rather than fail); on a device the same shape is reachable whenever
+ * StoreKit is wedged. Eight seconds is far longer than a healthy read and far
+ * shorter than a student's patience.
+ */
+const ENTITLEMENT_REFRESH_TIMEOUT_MS = 8000;
+
 export async function refreshProStatus(): Promise<ProEntitlement> {
   if (Platform.OS !== 'web' && connected) {
-    return await validateProEntitlement({ interactiveRefresh: false });
+    // The server row is the source of truth anyway (entitlementServer.ts), so
+    // timing out costs only the receipt cross-check — never the answer.
+    return await Promise.race([
+      validateProEntitlement({ interactiveRefresh: false }),
+      new Promise<ProEntitlement>((resolve) => {
+        setTimeout(() => {
+          resolve(getServerEntitlement().catch(() => EMPTY_ENTITLEMENT));
+        }, ENTITLEMENT_REFRESH_TIMEOUT_MS);
+      }),
+    ]);
   }
   return await getServerEntitlement();
 }

@@ -882,7 +882,13 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
 
       if (lines.length) {
         deadlinesText = lines.join('\n\n');
-        citations.push({ kind: 'deadline', label: 'Your deadlines across every course' });
+        citations.push({
+          kind: 'deadline',
+          // Citation labels are rendered verbatim by the client, so this one has
+          // to be localized here — it is the only citation the server invents
+          // rather than echoing a course or file name the student chose.
+          label: localized('Your deadlines across every course', 'Tus entregas de todos los cursos'),
+        });
       }
     }
 
