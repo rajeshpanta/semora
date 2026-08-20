@@ -38,6 +38,8 @@ const ALLOWED_EVENTS = new Set([
   'blog_view',
   'cta_click',
   'app_handoff',
+  'rage_click',
+  'dead_click',
 ]);
 
 // ── The durable sink ────────────────────────────────────────────────────────

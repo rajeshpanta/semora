@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Fraunces } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/next';
 import { PageTelemetry } from '@/components/PageTelemetry';
+import { InteractionTelemetry } from '@/components/InteractionTelemetry';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import '../globals.css';
 import { Nav } from '@/components/Nav';
@@ -60,6 +61,7 @@ export default function RootLayout({
         <Footer locale="en" />
         <Analytics />
         <PageTelemetry />
+        <InteractionTelemetry />
         <SpeedInsights />
       </body>
     </html>

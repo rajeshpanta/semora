@@ -62,6 +62,10 @@ export const TELEMETRY_EVENTS = {
   // Left for the app domain. The last thing this site sees before the app's
   // own analytics picks the same visitor up by the shared device_id.
   appHandoff: 'app_handoff',
+  // Frustration. A page view says someone arrived; these say whether the page
+  // actually worked once they were there.
+  rageClick: 'rage_click',
+  deadClick: 'dead_click',
 } as const;
 
 export type TelemetryEvent = (typeof TELEMETRY_EVENTS)[keyof typeof TELEMETRY_EVENTS];
