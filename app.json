@@ -3,7 +3,17 @@
     "name": "Semora",
     "slug": "semora",
     "version": "1.8",
-    "runtimeVersion": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/063fbdf9-33e3-49b4-8b0b-ba9d6f18490b",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD",
+      "requestHeaders": {
+        "expo-channel-name": "production"
+      }
+    },
     "icon": "./assets/images/icon.png",
     "scheme": "semora",
     "userInterfaceStyle": "automatic",
