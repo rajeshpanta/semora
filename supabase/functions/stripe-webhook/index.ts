@@ -225,6 +225,25 @@ async function applySubscription(admin: any, event: Stripe.Subscription, log: an
     return;
   }
 
+  // Belt and braces: `incomplete` can never be news about a live subscription.
+  //
+  // The refetch above narrows the race but does not provably close it. The
+  // `updated` event is only GENERATED when the status flips to active, so its
+  // handler always refetches after the flip and always sees the truth. The
+  // `created` handler has no such guarantee — if it refetches in the sub-second
+  // window before the card confirms, it legitimately reads `incomplete`, and if
+  // its write then lands after the other handler's, the stale value wins again.
+  //
+  // Stripe has no active -> incomplete transition. A subscription leaves
+  // `incomplete` for `active` or `incomplete_expired` and never returns. So an
+  // `incomplete` status for a subscription this row already records as paid is
+  // necessarily a message from before activation, whenever it happens to
+  // arrive, and there is no ordering question left to lose.
+  if (sub.status === 'incomplete' && current?.is_pro === true && current?.stripe_subscription_id === sub.id) {
+    log.warn('skipped_stale_preactivation_write', { user_id: userId, sub: sub.id });
+    return;
+  }
+
   const row: Record<string, unknown> = {
     user_id: userId,
     is_pro: active,
