@@ -341,7 +341,18 @@ export async function processSyllabus(
   };
 }
 
-async function findOrCreateSemester(
+/**
+ * Exported for Canvas.
+ *
+ * Connecting Canvas used to refuse outright when no semester existed — "Create
+ * a semester before connecting Canvas so Semora knows where to add your
+ * courses" — with no button to do it. That is a question asked for the
+ * schema's benefit, not the student's: someone connecting Canvas plainly wants
+ * their current term, and scanning a syllabus has always created one silently.
+ * The two paths now resolve a semester the same way instead of one of them
+ * dead-ending a first-time student.
+ */
+export async function findOrCreateSemester(
   userId: string,
   semesterName: string | null,
   startDate: string | null,

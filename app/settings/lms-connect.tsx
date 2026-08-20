@@ -37,6 +37,8 @@ import { track } from '@/lib/analytics';
 import { useSemesters } from '@/lib/queries';
 import { useResponsive } from '@/lib/responsive';
 import { useColors } from '@/lib/theme';
+import { findOrCreateSemester } from '@/lib/syllabus';
+import { supabase } from '@/lib/supabase';
 import { useProUpsell } from '@/components/ProUpsellHost';
 import { useAppStore } from '@/store/appStore';
 import type { LmsProvider } from '@/types/database';
@@ -69,7 +71,7 @@ export default function LmsConnectScreen() {
     : 'canvas') as LmsProvider;
   const reconnecting = !!params.connectionId;
   const isCanvasCalendar = provider === 'canvas';
-  const { data: semesters = [] } = useSemesters();
+  const { data: semesters = [], refetch: refetchSemesters } = useSemesters();
   const isPro = useAppStore((state) => state.isPro);
   const selectedSemesterId = useAppStore((state) => state.selectedSemesterId);
 
@@ -135,9 +137,36 @@ export default function LmsConnectScreen() {
 
   const discover = async () => {
     if (working) return;
+    // No semester yet? Make one, do not refuse.
+    //
+    // This used to alert "Create a semester before connecting Canvas" and
+    // stop, with no button to do it — a dead end for exactly the student
+    // this flow is now advertised to, since nothing creates a semester at
+    // signup and Canvas is offered on the empty course list. Scanning a
+    // syllabus has always created one silently; the same resolver runs here,
+    // so both paths agree on what "this term" means.
+    //
+    // Named from the term picked during onboarding, falling back to one
+    // derived from today's date. A student connecting Canvas wants their
+    // current term; asking them to name a container first is a question our
+    // schema needs, not one they have an opinion about.
     if (!reconnecting && semesters.length === 0) {
-      Alert.alert('Semester needed', 'Create a semester before connecting Canvas so Semora knows where to add your courses.');
-      return;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const uid = session?.user?.id;
+        if (!uid) throw new Error('Not signed in');
+        const created = await findOrCreateSemester(uid, null, null, null);
+        setSemesterId(created.semesterId);
+        await refetchSemesters();
+      } catch (error) {
+        // The free-semester cap raises here for a lapsed-Pro account with a
+        // semester already archived. Its message already says what to do.
+        Alert.alert(
+          'Could not start a semester',
+          error instanceof Error ? error.message : 'Please try again.',
+        );
+        return;
+      }
     }
     setWorking(true);
     try {
