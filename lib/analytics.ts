@@ -4,9 +4,14 @@ import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
 import { supabase } from '@/lib/supabase';
 
 // Events are logged into the SHARED `analytics_events` table (also used by the
-// Citizen app) and tagged with app_name='semora', so `where app_name='semora'`
-// isolates this app. The table is device-based (a `device_id` column, no
-// user_id), so analytics stays anonymous and is never tied to account identity.
+// Citizen app) and tagged with app_name='semora'. Always query the
+// `semora_events` view rather than the table: app_name DEFAULTS to 'citizen',
+// so a forgotten filter silently mixes the two apps together.
+//
+// Rows also carry a user_id, but this file never sends one — the column is
+// stamped by the database from the JWT (`default auth.uid()`), and clients hold
+// no INSERT grant on it. That is what makes attribution trustworthy rather than
+// merely present. Signed-out events keep a null user and are still recorded.
 
 const DEVICE_ID_KEY = 'semora_device_id';
 let cachedDeviceId: string | null = null;
@@ -35,6 +40,31 @@ function getDeviceId(): string {
   return cachedDeviceId;
 }
 
+// ── Sessions ────────────────────────────────────────────────────────────────
+//
+// A session is one visit: it starts at launch and ends when the app has been
+// in the background long enough that coming back is a new sitting. Thirty
+// minutes is the usual convention and matters little — what matters is that
+// the boundary is decided HERE, once, at the only place that knows the app
+// resumed. Deriving sessions later from gaps between timestamps gives a
+// different answer every time you change the gap.
+const SESSION_IDLE_MS = 30 * 60 * 1000;
+let sessionId: string = uuid();
+let lastEventAt = Date.now();
+
+/** Called when the app returns to the foreground (see app/_layout.tsx). */
+export function noteAppForegrounded(): void {
+  if (Date.now() - lastEventAt > SESSION_IDLE_MS) sessionId = uuid();
+}
+
+function currentSessionId(): string {
+  // Also rotate on a long quiet stretch, so a session cannot run for days on a
+  // device that never fully backgrounds the app.
+  if (Date.now() - lastEventAt > SESSION_IDLE_MS) sessionId = uuid();
+  lastEventAt = Date.now();
+  return sessionId;
+}
+
 /**
  * Fire-and-forget analytics event. Inserts into the shared `analytics_events`
  * table tagged app_name='semora'. Include a `screen` in `properties` so every
@@ -50,6 +80,7 @@ export function track(eventName: string, properties: Record<string, any> = {}): 
         event_name: eventName,
         properties,
         device_id: getDeviceId(),
+        session_id: currentSessionId(),
         platform: Platform.OS,
         app_version: Constants.expoConfig?.version ?? null,
       })
@@ -58,5 +89,62 @@ export function track(eventName: string, properties: Record<string, any> = {}): 
       .then(() => {}, () => {});
   } catch {
     // never let analytics break a render path
+  }
+}
+
+// ── Client error capture ────────────────────────────────────────────────────
+//
+// Until now a JS crash was invisible: expo-router's ErrorBoundary renders a
+// screen and the app carries on, but nothing is recorded, so the only signal
+// that students were hitting a crash was a review complaining about it.
+//
+// Two handlers, because native and web fail differently:
+//   * ErrorUtils.setGlobalHandler — React Native's last stop for an uncaught
+//     JS error, including fatal ones.
+//   * window.onerror / unhandledrejection — the browser equivalents. Promise
+//     rejections matter most on web, where a failed fetch in an event handler
+//     produces no visible error at all.
+//
+// The previous handler is always chained. Replacing RN's default would swallow
+// the redbox in development and Expo's own fatal reporting in production —
+// this is meant to observe crashes, not to take ownership of them.
+let errorHandlersInstalled = false;
+
+export function installErrorTracking(): void {
+  if (errorHandlersInstalled) return;
+  errorHandlersInstalled = true;
+
+  const report = (error: unknown, fatal: boolean, kind: string) => {
+    try {
+      const e = error as { message?: string; name?: string; stack?: string };
+      track('client_error', {
+        kind,
+        fatal,
+        name: e?.name ?? typeof error,
+        // Truncated: a message is for grouping, not for reading a novel. The
+        // stack's first frame is usually enough to find the call site.
+        message: String(e?.message ?? error).slice(0, 300),
+        frame: (e?.stack ?? '').split('\n')[1]?.trim().slice(0, 160) ?? null,
+      });
+    } catch {
+      // A failure to report an error must never become a second error.
+    }
+  };
+
+  try {
+    const RNErrorUtils = (globalThis as any).ErrorUtils;
+    if (RNErrorUtils?.setGlobalHandler) {
+      const previous = RNErrorUtils.getGlobalHandler?.();
+      RNErrorUtils.setGlobalHandler((error: unknown, isFatal?: boolean) => {
+        report(error, Boolean(isFatal), 'js');
+        previous?.(error, isFatal);
+      });
+    }
+  } catch { /* handler unavailable — nothing to install */ }
+
+  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    window.addEventListener('error', (ev) => report(ev.error ?? ev.message, true, 'window'));
+    window.addEventListener('unhandledrejection', (ev: PromiseRejectionEvent) =>
+      report(ev.reason, false, 'unhandled_rejection'));
   }
 }

@@ -109,6 +109,37 @@ export interface EdgeLogger {
  * client-reported failure be found in the logs without guessing from
  * timestamps. Falls back to a generated id.
  */
+/**
+ * Write a failed request to `edge_request_log` (migration 086).
+ *
+ * A bare fetch against PostgREST rather than the Supabase client: this file is
+ * imported by every function, and pulling the client in here would put its
+ * cold-start cost on all of them for a table written only when something has
+ * already gone wrong.
+ *
+ * Every failure path is swallowed. A logger that can throw is worse than no
+ * logger, and this runs after the response has already been decided.
+ */
+function persistFailure(row: Record<string, unknown>): void {
+  try {
+    const url = Deno.env.get('SUPABASE_URL');
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!url || !key) return;
+    void fetch(`${url}/rest/v1/edge_request_log`, {
+      method: 'POST',
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify(row),
+    }).catch(() => {});
+  } catch {
+    // Never let telemetry surface as an error.
+  }
+}
+
 export function createLogger(fn: string, req?: Request): EdgeLogger {
   const started = Date.now();
   const inbound = req?.headers.get('x-request-id') ?? req?.headers.get('x-client-request-id');
@@ -149,12 +180,28 @@ export function createLogger(fn: string, req?: Request): EdgeLogger {
     info: (evt, fields) => emit('info', evt, fields),
     warn: (evt, fields) => emit('warn', evt, fields),
     error: (evt, fields) => emit('error', evt, fields),
-    done: (outcome, status, fields) =>
+    done: (outcome, status, fields) => {
       emit(outcome === 'ok' ? 'info' : outcome === 'client_error' ? 'warn' : 'error', 'request_done', {
         outcome,
         status,
         ...(fields ?? {}),
-      }),
+      });
+      // Failures also go somewhere that outlives the ~24h log retention.
+      // Fire-and-forget and never awaited: persisting a log line must not add
+      // latency to the response, and must never be able to fail a request that
+      // already succeeded at its actual job.
+      if (outcome !== 'ok') {
+        persistFailure({
+          fn,
+          request_id: requestId,
+          outcome,
+          status,
+          method: typeof fields?.method === 'string' ? fields.method : null,
+          duration_ms: Date.now() - started,
+          user_id: uid ?? null,
+        });
+      }
+    },
     elapsedMs: () => Date.now() - started,
   };
 }

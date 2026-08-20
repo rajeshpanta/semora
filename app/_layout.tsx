@@ -43,7 +43,7 @@ import {
   snoozeNotification, startWebDueSoonReminders,
 } from '@/lib/notifications';
 import { registerForPushNotificationsAsync } from '@/lib/push';
-import { track } from '@/lib/analytics';
+import { track, installErrorTracking, noteAppForegrounded } from '@/lib/analytics';
 import { clearLocalSyncState } from '@/lib/calendarSync';
 import { applyPendingReferral, hasActivePromoGrant } from '@/lib/referral';
 import { readPendingShareToken } from '@/lib/shareCourse';
@@ -178,6 +178,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     const THROTTLE_MS = 2 * 60 * 1000; // at most once every 2 minutes
     const sub = AppState.addEventListener('change', (state) => {
       if (state !== 'active') return;
+      // Before the throttle below: a session boundary is about how long the app
+      // was away, which the 2-minute sync throttle knows nothing about.
+      noteAppForegrounded();
       const now = Date.now();
       if (now - lastSyncAt < THROTTLE_MS) return;
       lastSyncAt = now;
@@ -943,6 +946,11 @@ function NotificationActionBridge() {
 
   return null;
 }
+
+// Installed at module scope, before any component renders — a crash during
+// the first render is exactly the one worth catching, and a useEffect would be
+// too late for it.
+installErrorTracking();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
