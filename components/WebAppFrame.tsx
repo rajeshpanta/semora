@@ -18,6 +18,8 @@ import { useColors } from '@/lib/theme';
 import { useQuery } from '@tanstack/react-query';
 import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
 import { useAppStore } from '@/store/appStore';
+import { MARKETING_URL } from '@/lib/constants';
+import { track } from '@/lib/analytics';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { useResponsive, WEB_SIDEBAR_WIDTH } from '@/lib/responsive';
 import { displayName, accountSubtitle } from '@/lib/user';
@@ -38,6 +40,10 @@ type NavigationItem = {
 // never has to import that syllabus at all. Once it is connected AND syncing,
 // the item disappears — a permanent "Connect Canvas" in the sidebar of someone
 // who already connected it is furniture, and furniture gets ignored.
+// Not a route. The sidebar highlights by pathname and this opens an external
+// page, so it must never match anything isActive() compares against.
+const SUPPORT_PATH = '__support__';
+
 const CANVAS_ITEM: NavigationItem = { label: 'Connect Canvas', icon: 'university', path: '/settings/lms' };
 const CANVAS_FIX_ITEM: NavigationItem = { label: 'Finish Canvas setup', icon: 'refresh', path: '/settings/lms' };
 // Free accounts go straight to the paywall. lms-sync refuses them server-side,
@@ -295,6 +301,27 @@ function DesktopSidebar({ session }: { session: Session }) {
       </ScrollView>
 
       <View style={[styles.accountArea, { borderTopColor: colors.line }]}>
+        {/* Support sits ABOVE the account row: it is what someone looks for when
+            something has gone wrong, and the account row is where the eye already is.
+
+            Opens the marketing support FORM, not a `mailto:` — mirroring the app
+            (openSupport in app/(tabs)/me.tsx). A mailto does nothing at all on a
+            machine with no mail client configured, and the page cannot tell, so the
+            click just appears dead. The form posts to Supabase, so the message is
+            stored before any email is attempted and reaches us either way.
+
+            New tab: someone mid-scan should not lose the page they were on in order
+            to ask a question about it. */}
+        <SidebarItem
+          item={{ label: 'Help & feedback', icon: 'life-ring', path: SUPPORT_PATH }}
+          active={false}
+          onPress={() => {
+            track('support_opened', { screen: 'web_sidebar', topic: 'general' });
+            if (typeof window !== 'undefined') {
+              window.open(`${MARKETING_URL}/support`, '_blank', 'noopener,noreferrer');
+            }
+          }}
+        />
         <Pressable
           accessibilityRole="button"
           onPress={() => router.replace('/me' as any)}

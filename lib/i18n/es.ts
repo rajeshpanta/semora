@@ -2126,4 +2126,5 @@ export const ES: Record<string, string> = {
   'This recording didn’t finish': 'Esta grabación no se completó',
   'Delete this recording': 'Eliminar esta grabación',
   'Attached to your next question. It isn’t saved to your course.': 'Se adjunta a tu próxima pregunta. No se guarda en tu curso.',
+  'Help & feedback': 'Ayuda y comentarios',
 };
