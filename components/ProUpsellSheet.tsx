@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert } from '@/components/LocalizedReactNative';
 import { Text, TouchableOpacity } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
-import { getProducts } from '@/lib/purchases';
+import { getProducts, purchaseProduct, PRODUCT_IDS } from '@/lib/purchases';
 import { track } from '@/lib/analytics';
+import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
 
 // The upgrade moment, as a sheet rather than a screen.
 //
@@ -22,7 +24,7 @@ import { track } from '@/lib/analytics';
 // that is false advertising (App Store 2.3), not marketing. The trust line
 // below says only things that are true.
 
-export type ProUpsellReason = 'scan' | 'notes' | 'lecture';
+export type ProUpsellReason = 'scan' | 'notes' | 'lecture' | 'course';
 
 const COPY: Record<ProUpsellReason, { title: string; subtitle: string }> = {
   scan: {
@@ -36,6 +38,15 @@ const COPY: Record<ProUpsellReason, { title: string; subtitle: string }> = {
   lecture: {
     title: 'Record every lecture',
     subtitle: 'You have used your one free AI action. Pro records and transcribes all term.',
+  },
+  // Deliberately NOT the "one free AI action" line the other three share. A
+  // student who hits the course cap may still have their free action unspent —
+  // they are blocked by how many classes a free semester holds, not by AI use.
+  // Telling them they have used something they have not is the kind of wrong
+  // that makes a paywall feel like a trick.
+  course: {
+    title: 'Add every class',
+    subtitle: `Free semesters hold ${FREE_COURSE_LIMIT} courses. Pro has no limit on classes or semesters.`,
   },
 };
 
@@ -61,6 +72,7 @@ export function ProUpsellSheet({
   // the web values. Never show a price the payment sheet will not honour.
   const [monthlyPrice, setMonthlyPrice] = useState('$3.99');
   const [annualPrice, setAnnualPrice] = useState('$19.99');
+  const [starting, setStarting] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
@@ -73,11 +85,44 @@ export function ProUpsellSheet({
 
   const copy = COPY[reason];
 
-  const choose = () => {
+  const choose = async () => {
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     track('pro_upsell_continue', { screen: 'upsell_sheet', reason, plan });
+
+    // WEB: go straight to Stripe from here.
+    //
+    // This used to push /paywall for everyone, which made hitting the free
+    // limit cost three taps across two screens — refusal, sheet, paywall, then
+    // the actual buy button. On web there is no reason for the middle screen:
+    // the sheet already shows both prices and what Pro includes, and
+    // purchaseProduct() simply redirects the tab to Stripe Checkout. One tap.
+    //
+    // NATIVE still routes to /paywall on purpose. StoreKit purchases need the
+    // transaction listeners, receipt validation and restore path that live on
+    // that screen; running a native purchase from a modal would duplicate all
+    // of it, and getting receipt validation subtly wrong is how a paying
+    // customer ends up without Pro.
+    if (Platform.OS !== 'web') {
+      onClose();
+      router.push({ pathname: '/paywall', params: { context: `upsell_${reason}`, plan } } as any);
+      return;
+    }
+
+    setStarting(true);
+    try {
+      await purchaseProduct(plan === 'annual' ? PRODUCT_IDS.annual : PRODUCT_IDS.monthly);
+      // Reached only if the redirect has not taken effect yet; the tab is on
+      // its way to Stripe. Deliberately NOT tracked as a cancellation — that
+      // mistake is what made every web checkout look abandoned.
+      track('purchase_checkout_started', { screen: 'upsell_sheet', reason, plan });
+    } catch (err: any) {
+      setStarting(false);
+      const title = err?.code === 'ALREADY_PRO' ? 'You already have Pro' : 'Could not start checkout';
+      Alert.alert(title, err?.message ?? 'Something went wrong. Please try again.');
+      return;
+    }
+    setStarting(false);
     onClose();
-    router.push({ pathname: '/paywall', params: { context: `upsell_${reason}`, plan } } as any);
   };
 
   const dismiss = () => {
@@ -146,13 +191,25 @@ export function ProUpsellSheet({
             />
 
             <TouchableOpacity
-              style={[styles.cta, { backgroundColor: colors.brand }]}
+              style={[styles.cta, { backgroundColor: colors.brand }, starting && { opacity: 0.6 }]}
               onPress={choose}
+              disabled={starting}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel="Continue to checkout"
+              // Web goes straight to Stripe now, so the label has to say so —
+              // "Continue" implied another screen, which is exactly the step
+              // that was removed.
+              accessibilityLabel={Platform.OS === 'web' ? 'Subscribe to Pro' : 'Continue to checkout'}
             >
-              <Text style={styles.ctaText}>Continue</Text>
+              {starting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.ctaText}>
+                  {Platform.OS === 'web'
+                    ? `Get Pro — ${plan === 'annual' ? annualPrice + '/year' : monthlyPrice + '/month'}`
+                    : 'Continue'}
+                </Text>
+              )}
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.notNow} onPress={dismiss} accessibilityRole="button">

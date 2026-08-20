@@ -349,11 +349,27 @@ export default function PaywallScreen() {
     try {
       const didPurchase = await purchaseProduct(productId);
       if (!didPurchase) {
-        // requestPurchase rejected with user-cancelled (the v15 promise-side
-        // cancellation path — see purchaseProduct).
         setLoading(false);
         setPurchaseAnalyticsContext(null);
-        trackCancelledOnce();
+        if (Platform.OS === 'web') {
+          // On web `false` means SUCCESS, not cancellation. purchases.web.ts
+          // returns it because the tab is navigating to Stripe Checkout and Pro
+          // cannot be granted in this call — the entitlement arrives later via
+          // the webhook. Counting that as a cancel is why every web attempt in
+          // the funnel reads 'purchase_cancelled' and none reads success: the
+          // event fired at the exact moment checkout WORKED. A genuine web
+          // failure throws and is handled below, so nothing is lost by not
+          // treating this as a cancel.
+          track('purchase_checkout_started', {
+            screen: 'paywall',
+            context: params.context ?? 'direct',
+            plan: selectedPlan,
+          });
+        } else {
+          // Native: requestPurchase rejected with user-cancelled (the v15
+          // promise-side cancellation path — see purchaseProduct).
+          trackCancelledOnce();
+        }
       }
     } catch (err: any) {
       setLoading(false);

@@ -357,6 +357,7 @@ export default function SyllabusUploadScreen() {
         // same. The sheet names both prices, keeps the plans selectable
         // inline, and completes the purchase without leaving this screen.
         track('scan_limit_hit', { screen: 'scan' });
+        setUpsellReason('scan');
         setUpsellVisible(true);
         return;
       }
@@ -535,7 +536,7 @@ export default function SyllabusUploadScreen() {
           the student on a dead upload screen whose file can never be scanned. */}
       <ProUpsellSheet
         visible={upsellVisible}
-        reason="scan"
+        reason={upsellReason}
         onClose={() => { setUpsellVisible(false); router.back(); }}
       />
     </SafeAreaView>
