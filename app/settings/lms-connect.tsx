@@ -37,6 +37,7 @@ import { track } from '@/lib/analytics';
 import { useSemesters } from '@/lib/queries';
 import { useResponsive } from '@/lib/responsive';
 import { useColors } from '@/lib/theme';
+import { useI18n } from '@/lib/i18n';
 import { findOrCreateSemester } from '@/lib/syllabus';
 import { supabase } from '@/lib/supabase';
 import { useProUpsell } from '@/components/ProUpsellHost';
@@ -58,6 +59,7 @@ const HELP: Record<Exclude<LmsProvider, 'google_classroom' | 'canvas'>, { url: s
 
 export default function LmsConnectScreen() {
   const colors = useColors();
+  const { t } = useI18n();
   const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const { session } = useSession();
@@ -268,7 +270,15 @@ export default function LmsConnectScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: `${reconnecting ? 'Reconnect' : 'Connect'} ${LMS_PROVIDER_LABELS[provider]}` }} />
+      <Stack.Screen
+        options={{
+          // Built from two pieces, so the whole title never matched a catalogue
+          // key and the header stayed English while the screen under it was
+          // Spanish. Each half is translated on its own; the provider name is a
+          // proper noun and stays as it is.
+          title: `${t(reconnecting ? 'Reconnect' : 'Connect')} ${LMS_PROVIDER_LABELS[provider]}`,
+        }}
+      />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="handled">
           {courses.length === 0 ? (

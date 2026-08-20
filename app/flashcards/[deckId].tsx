@@ -23,6 +23,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useI18n } from '@/lib/i18n';
 import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
@@ -46,6 +47,7 @@ export default function DeckDetailScreen() {
   const { deckId } = useLocalSearchParams<{ deckId: string }>();
   const router = useRouter();
   const colors = useColors();
+  const { t } = useI18n();
   const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const isPro = useAppStore((s) => s.isPro);
@@ -294,7 +296,7 @@ export default function DeckDetailScreen() {
     const card = queue[studyIndex];
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-        <Stack.Screen options={{ title: deck.title, headerBackTitle: 'Decks' }} />
+        <Stack.Screen options={{ title: deck.title, headerBackTitle: t('Decks') }} />
         <View style={[styles.studyWrap, { maxWidth: contentMaxWidth }]}>
           {done ? (
             <View style={styles.centered}>
@@ -389,7 +391,7 @@ export default function DeckDetailScreen() {
   // ── Manage mode ─────────────────────────────────────────────
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: deck.title, headerBackTitle: 'Decks' }} />
+      <Stack.Screen options={{ title: deck.title, headerBackTitle: t('Decks') }} />
       <ScrollView
         contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
         keyboardShouldPersistTaps="handled"
