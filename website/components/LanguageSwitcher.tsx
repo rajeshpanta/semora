@@ -71,6 +71,9 @@ export function LanguageSwitcher({ locale }: { locale: SiteLocale }) {
             className={styles.languageOption}
             hrefLang={option.code}
             lang={option.code}
+            // Switching language means the page failed this reader in theirs.
+            // Worth knowing which pages cause it, and in which direction.
+            onClick={() => report(TELEMETRY_EVENTS.languageSwitch, { to: option.code, from: locale })}
             // The visible label is a two-letter code; the accessible name says
             // what the link actually does, in the language being offered.
             aria-label={

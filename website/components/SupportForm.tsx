@@ -1,5 +1,7 @@
 'use client';
 
+import { report, TELEMETRY_EVENTS } from '@/lib/telemetry';
+
 import { FormEvent, useEffect, useState } from 'react';
 import styles from '@/app/(en)/support/support.module.css';
 import type { SiteLocale } from '@/lib/i18n';
@@ -161,6 +163,10 @@ export function SupportForm({ supportEmail, locale = 'en' }: SupportFormProps) {
       // message they just typed — they can retry, or copy it into an email.
       form.reset();
       setTopic('');
+      // A support message is the one place someone tells us in words what went
+      // wrong. Knowing which page they were on when they gave up matters as
+      // much as the message itself.
+      report(TELEMETRY_EVENTS.supportSubmit, { topic });
       setStatus('sent');
     } catch {
       setErrorCode('unavailable');

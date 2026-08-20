@@ -31,12 +31,43 @@ export function PageTelemetry() {
   const pathname = usePathname();
   const maxDepth = useRef(0);
   const reportedFor = useRef<string | null>(null);
+  // Whether this mount has already recorded the visit's entry point.
+  const sessionStarted = useRef(false);
 
   useEffect(() => {
     if (!pathname) return;
     maxDepth.current = 0;
     reportedFor.current = pathname;
-    report(TELEMETRY_EVENTS.pageView, { path: pathname });
+    // Where they came from, attached to the page view.
+    //
+    // Referrer is only meaningful on the FIRST view of a visit — after that it
+    // is just the previous page of our own site, which the path already says.
+    // Capturing it per-session is what turns "34 people saw pricing" into
+    // "Reddit sends readers who bounce and Google sends readers who sign up",
+    // which is the difference between knowing the number and being able to act
+    // on it. UTM parameters are read from the URL so a campaign can be told
+    // apart from organic arrivals on the same referrer.
+    const isFirstOfSession = !sessionStarted.current;
+    sessionStarted.current = true;
+    let entry: Record<string, string> = {};
+    if (isFirstOfSession) {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const ref = document.referrer || '';
+        // Host only, never the full URL: a referring path can carry a search
+        // query someone typed, and that is their business, not ours.
+        const refHost = ref ? new URL(ref).hostname : '';
+        entry = {
+          referrer: refHost && refHost !== window.location.hostname ? refHost : ref ? 'internal' : 'direct',
+          ...(params.get('utm_source') ? { utm_source: params.get('utm_source')!.slice(0, 60) } : {}),
+          ...(params.get('utm_medium') ? { utm_medium: params.get('utm_medium')!.slice(0, 60) } : {}),
+          ...(params.get('utm_campaign') ? { utm_campaign: params.get('utm_campaign')!.slice(0, 60) } : {}),
+        };
+      } catch {
+        entry = { referrer: 'unknown' };
+      }
+    }
+    report(TELEMETRY_EVENTS.pageView, { path: pathname, ...entry, entry: isFirstOfSession });
 
     const onScroll = () => {
       const doc = document.documentElement;

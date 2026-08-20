@@ -73,8 +73,14 @@ export default function PrivacyPage() {
           account until you delete the recording or your account.
         </li>
         <li>
-          <strong>Usage analytics:</strong> Anonymous, app-level events (e.g. a scan completed, a
-          paywall viewed) tied to a random per-install identifier, never to your name or email, to help us understand which features are used and improve the app.
+          <strong>Usage analytics:</strong> Anonymous events (e.g. a page viewed, a scan
+          completed, a paywall viewed) tied to a random identifier, never to your name or email,
+          to help us understand which features are used and improve the app. On this website that
+          identifier is stored in a first-party cookie named <code>semora_device_id</code>, set on
+          <code>semoraai.com</code> so the website and the app recognise the same browser and we
+          can tell whether a page actually helped someone get started. It is a random number, it is
+          never sold or shared, no advertising or third-party tracking cookie is set, and clearing
+          your browser data removes it.
         </li>
         <li>
           <strong>Push notification token:</strong> If you grant notification permission, a device
