@@ -14,6 +14,8 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { usePathname, useRouter } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
 import { useColors } from '@/lib/theme';
+import { useQuery } from '@tanstack/react-query';
+import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
 import { useResponsive, WEB_SIDEBAR_WIDTH } from '@/lib/responsive';
 import { displayName, accountSubtitle } from '@/lib/user';
 import { FONTS } from '@/lib/constants';
@@ -27,6 +29,14 @@ type NavigationItem = {
   path: string;
   exact?: boolean;
 };
+
+// Canvas sits between Calendar and Import syllabus, and only while it is
+// worth offering. Above importing on purpose: a student who connects Canvas
+// never has to import that syllabus at all. Once it is connected AND syncing,
+// the item disappears — a permanent "Connect Canvas" in the sidebar of someone
+// who already connected it is furniture, and furniture gets ignored.
+const CANVAS_ITEM: NavigationItem = { label: 'Connect Canvas', icon: 'university', path: '/settings/lms' };
+const CANVAS_FIX_ITEM: NavigationItem = { label: 'Finish Canvas setup', icon: 'refresh', path: '/settings/lms' };
 
 const PRIMARY_ITEMS: NavigationItem[] = [
   { label: 'Today', icon: 'sun-o', path: '/', exact: true },
@@ -97,6 +107,17 @@ function SidebarItem({
 function DesktopSidebar({ session }: { session: Session }) {
   const colors = useColors();
   const pathname = usePathname();
+  // Canvas between Calendar and Import syllabus, only while it is worth
+  // offering. Same rule the "+" menu and the add-course prompt use, so the
+  // three cannot disagree about whether this student needs it.
+  const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
+  const { offer: canvasOffer } = canvasOfferFor(lmsConnections);
+  const primaryItems = (() => {
+    if (canvasOffer === 'healthy') return PRIMARY_ITEMS;
+    const item = canvasOffer === 'needs_attention' ? CANVAS_FIX_ITEM : CANVAS_ITEM;
+    const at = PRIMARY_ITEMS.findIndex((i) => i.path === '/scan');
+    return [...PRIMARY_ITEMS.slice(0, at), item, ...PRIMARY_ITEMS.slice(at)];
+  })();
   const router = useRouter();
   const name = displayName(session.user, 'Student');
   // Same reason as Settings: an Apple user can have no email on record.
@@ -224,7 +245,7 @@ function DesktopSidebar({ session }: { session: Session }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.navGroup}>
-          {PRIMARY_ITEMS.map((item) => (
+          {primaryItems.map((item) => (
             <SidebarItem
               key={item.path}
               item={item}

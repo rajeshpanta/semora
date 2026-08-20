@@ -17,7 +17,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter,
   useLocalSearchParams,
   useFocusEffect } from 'expo-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
@@ -33,6 +33,7 @@ import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useFreeActionUsed, freeActionUsedQueryOptions } from '@/lib/queries';
 import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
+import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
 import { MAX_SCAN_PAGES, MAX_SCAN_RAW_BYTES, scanTooLargeMessage, type SyllabusPage } from '@/lib/ai-extraction';
 import { getFileSize } from '@/lib/readFileBase64';
 import {
@@ -80,6 +81,8 @@ export default function ScanScreen() {
   const { data: semesters = [] } = useSemesters();
   const { data: courses = [] } = useCourses(selectedSemesterId);
   const { data: freeActionUsed = false, isLoading: freeActionLoading } = useFreeActionUsed();
+  const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
+  const { offer: canvasOffer } = canvasOfferFor(lmsConnections);
   const [upsellVisible, setUpsellVisible] = useState(false);
 
   // The free tier has TWO separate caps — scans AND courses-per-semester — and
@@ -602,6 +605,40 @@ export default function ScanScreen() {
           Snap it, upload it, or drag it in.{'\n'}We'll pull every deadline.
         </Text>
 
+        {/* Canvas, before any of the upload options.
+            A student on this screen is about to do by hand — photograph a
+            syllabus, find the PDF — what Canvas does by itself, and keeps doing
+            every time an instructor moves a date. Offering it after the upload
+            buttons would be offering it to someone who has already started the
+            slower path. Hidden entirely once Canvas is connected and syncing. */}
+        {canvasOffer !== 'healthy' && (
+          <TouchableOpacity
+            style={[styles.canvasCard, { backgroundColor: colors.teal50, borderColor: colors.teal }]}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Connect Canvas'}
+            onPress={() => {
+              track('canvas_offer_tapped', { screen: 'scan', offer: canvasOffer });
+              router.push('/settings/lms' as any);
+            }}
+          >
+            <View style={[styles.canvasIcon, { backgroundColor: colors.teal + '22' }]}>
+              <FontAwesome name={canvasOffer === 'needs_attention' ? 'refresh' : 'university'} size={16} color={colors.teal} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.canvasTitle, { color: colors.ink }]}>
+                {canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Connect Canvas instead'}
+              </Text>
+              <Text style={[styles.canvasSub, { color: colors.ink2 }]}>
+                {canvasOffer === 'needs_attention'
+                  ? 'Connected, but not syncing on its own yet'
+                  : 'Every class imports itself — and stays right when your teacher moves a deadline'}
+              </Text>
+            </View>
+            <FontAwesome name="chevron-right" size={13} color={colors.teal} />
+          </TouchableOpacity>
+        )}
+
         {/* Free-tier usage. Pro = unlimited; free users get ONE AI action for
             the life of the account, shared with lecture recording. The pill
             names the lecture half even here, because the alternative is a
@@ -773,6 +810,13 @@ const styles = StyleSheet.create({
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   title: { fontFamily: FONTS.displaySemibold, fontSize: 27, color: COLORS.ink, letterSpacing: -0.5 },
   subtitle: { fontSize: 14, color: COLORS.ink2, marginTop: 4, lineHeight: 19 },
+  canvasCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    borderRadius: 16, borderWidth: 1, padding: 14, marginTop: 14,
+  },
+  canvasIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  canvasTitle: { fontSize: 15, fontWeight: '700' },
+  canvasSub: { fontSize: 12.5, lineHeight: 17, marginTop: 2 },
   scanCountPill: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, marginTop: 12 },
   scanCountText: { fontSize: 13, fontWeight: '600' },
   courseCapNote: { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 10, padding: 10, borderRadius: 12, borderWidth: 1 },
