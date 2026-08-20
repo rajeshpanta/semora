@@ -118,7 +118,7 @@ serve(withRequestLogging('redeem-referral', async (req, log) => {
     });
 
     if (rpcErr) {
-      console.error('[redeem-referral] try_redeem_referral failed:', rpcErr);
+      log.error('try_redeem_referral_failed', errorFields(rpcErr));
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
 
@@ -151,7 +151,7 @@ serve(withRequestLogging('redeem-referral', async (req, log) => {
           409,
         );
       default:
-        console.error('[redeem-referral] unexpected RPC status:', status);
+        log.error('unexpected_rpc_status', errorFields(status));
         return jsonResponse({ error: 'An unexpected error occurred. Please try again.' }, 500);
     }
   } catch (err) {

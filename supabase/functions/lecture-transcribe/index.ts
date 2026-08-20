@@ -670,6 +670,8 @@ async function handleSegment(
       model,
       status: rateLimited ? 'rate_limited' : 'failed',
       errorCode: String(result.status),
+      // Groq's own words about the refusal, kept past the ~24h log retention.
+      errorDetail: result.errorBody,
       durationMs: result.durationMs,
       attempts: result.attempts,
     });

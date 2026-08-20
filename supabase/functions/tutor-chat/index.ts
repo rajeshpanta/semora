@@ -167,7 +167,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     //    (503) on an RPC blip so a paying user is never demoted.
     const { data: proResult, error: proErr } = await adminClient.rpc('is_pro', { uid: userId });
     if (proErr) {
-      console.error('[tutor-chat] is_pro check failed:', proErr);
+      log.error('is_pro_check_failed', errorFields(proErr));
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
     const isPro = proResult === true;
@@ -204,7 +204,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       const { data: spent, error: spentErr } = await adminClient
         .rpc('free_action_used', { uid: userId });
       if (spentErr) {
-        console.error('[tutor-chat] free_action_used check failed:', spentErr);
+        log.error('free_action_check_failed', errorFields(spentErr));
         return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
       }
       if (spent === true) {
@@ -242,9 +242,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     // exists this branch stops being reachable and routing is purely the table.
     let TASK = tutorTaskForMode(mode);
     if (!isProviderConfigured(providerFor(TASK))) {
-      console.warn(
-        `[tutor-chat] ${providerFor(TASK)} not configured — serving ${mode} as tutor`,
-      );
+      log.warn('provider_not_configured', { provider: providerFor(TASK), mode });
       TASK = AiTask.tutor;
     }
     const action = body.action === 'evaluate_practice'
@@ -275,15 +273,15 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
         .eq('user_id', userId)
         .maybeSingle();
       if (noteErr) {
-        console.error('[tutor-chat] note lookup failed:', noteErr);
+        log.error('note_lookup_failed', errorFields(noteErr));
         return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
       }
       if (!note) return jsonResponse({ error: 'Course material not found' }, 404);
       if (typeof note.extracted_text === 'string' && note.extracted_text.trim()) {
         return jsonResponse({ ready: true, cached: true }, 200);
       }
-      const extracted = await extractNoteText(adminClient, note, userId).catch((error) => {
-        console.warn('[tutor-chat] note preparation failed:', error);
+      const extracted = await extractNoteText(log, adminClient, note, userId).catch((error) => {
+        log.warn('note_preparation_failed', errorFields(error));
         return null;
       });
       if (!extracted) {
@@ -315,7 +313,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       .eq('id', conversationId)
       .maybeSingle();
     if (convoErr) {
-      console.error('[tutor-chat] conversation lookup failed:', convoErr);
+      log.error('conversation_lookup_failed', errorFields(convoErr));
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
     if (!convo || convo.user_id !== userId) {
@@ -356,7 +354,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
         p_topics: topics,
       });
       if (recordErr) {
-        console.error('[tutor-chat] record practice attempt failed:', recordErr);
+        log.error('record_practice_attempt_failed', errorFields(recordErr));
         return jsonResponse({ error: 'Could not save your practice result' }, 503);
       }
       return jsonResponse({ evaluation: { correct, feedback, topics } }, 200);
@@ -379,7 +377,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       cap: DAILY_MESSAGE_CAP,
     });
     if (usageErr) {
-      console.error('[tutor-chat] usage reservation failed:', usageErr);
+      log.error('usage_reservation_failed', errorFields(usageErr));
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
     if (reserved !== true) {
@@ -518,8 +516,8 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
           // of 422-ing the entire conversation over it.
           if (!text && !note.storage_path) continue;
           if (!text) {
-            text = await extractNoteText(adminClient, note, userId).catch((e) => {
-              console.warn('[tutor-chat] note extraction failed:', e);
+            text = await extractNoteText(log, adminClient, note, userId).catch((e) => {
+              log.warn('note_extraction_failed', errorFields(e));
               return null;
             });
           }
@@ -666,7 +664,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
           durationMs: openAIResult.durationMs, attempts: openAIResult.attempts,
         });
 
-        console.error(`[tutor-chat] tutor failed (${failCode})`);
+        log.error('tutor_failed', { code: failCode });
         const msg = openAIResult.networkError
           ? 'AI service unreachable. Please try again.'
           : (openAIResult.status === 503 || openAIResult.status === 429)
@@ -713,7 +711,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
           .map((topic: string) => topic.trim().slice(0, 160)).filter(Boolean).slice(0, 3)
         : [];
       if (!prompt || choices.length < 2 || !expectedAnswer || !choices.some((choice) => normalizeAnswer(choice) === normalizeAnswer(expectedAnswer)) || !explanation || !topics.length) {
-        console.error('[tutor-chat] invalid practice JSON:', assistantText.slice(0, 500));
+        log.error('invalid_practice_json', { sample: assistantText.slice(0, 300) });
         return jsonResponse({ error: "Couldn't create a usable practice question. Please try again." }, 502);
       }
       const { data: saved, error: saveErr } = await adminClient
@@ -725,7 +723,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
         .select('id')
         .single();
       if (saveErr || !saved) {
-        console.error('[tutor-chat] practice save failed:', saveErr);
+        log.error('practice_save_failed', errorFields(saveErr));
         return jsonResponse({ error: 'Could not save your practice question. Please try again.' }, 503);
       }
       return jsonResponse({
@@ -744,7 +742,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       { user_id: userId, conversation_id: conversationId, role: 'assistant', content: assistantText, citations },
     ]);
     if (insertErr) {
-      console.warn('[tutor-chat] failed to persist messages (non-fatal):', insertErr);
+      log.warn('persist_messages_failed', errorFields(insertErr));
     }
 
     // Usage was already reserved atomically in step 3 (try_consume_tutor_usage)
@@ -784,6 +782,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
  * course_notes.extracted_text and grounds the other for free.
  */
 async function extractNoteTextOpenAI(
+  log: EdgeLogger,
   adminClient: any,
   note: { id: string; storage_path: string; filename: string; mime_type: string | null },
   userId: string,
@@ -795,7 +794,7 @@ async function extractNoteTextOpenAI(
   // uploads it here exactly as often as they do on the scan screen.
   const ready = await prepareImagePayload(base64, mimeType);
   if (!ready.ok) {
-    console.warn('[tutor-chat] unreadable note image, skipping', note.filename, ready.code);
+    log.warn('image_unreadable', { note_id: note.id, filename: note.filename, code: ready.code });
     return null;
   }
   base64 = ready.base64;
@@ -805,7 +804,7 @@ async function extractNoteTextOpenAI(
     mimeType,
   );
   if (!document) {
-    console.warn('[tutor-chat] unsupported note type, skipping', note.filename, mimeType);
+    log.warn('unsupported_note_type', { note_id: note.id, filename: note.filename, mime_type: mimeType });
     return null;
   }
   const attachment = document.isImage
@@ -837,12 +836,13 @@ async function extractNoteTextOpenAI(
     task: AiTask.documentExtraction, provider: 'openai', model: MODELS.tutor,
     status: result.ok ? 'success' : 'failed',
     errorCode: result.ok ? null : (result.networkError ? 'fetch_error' : `http_${result.status || 0}`),
+    errorDetail: result.ok ? null : result.errorBody,
     durationMs: result.durationMs, attempts: result.attempts,
     ...(result.ok ? usageFromOpenAI(result.data) : {}),
   });
 
   if (!result.ok || !result.data) {
-    console.warn('[tutor-chat] OpenAI note extraction failed', result.status);
+    log.warn('note_extraction_openai_failed', { note_id: note.id, status: result.status });
     return null;
   }
   const extracted = openAIText(result.data);
@@ -853,11 +853,12 @@ async function extractNoteTextOpenAI(
     .update({ extracted_text: extracted })
     .eq('id', note.id)
     .eq('user_id', userId)
-    .then(undefined, (e: unknown) => console.warn('[tutor-chat] cache extracted_text failed:', e));
+    .then(undefined, (e: unknown) => log.warn('cache_extracted_text_failed', errorFields(e)));
   return extracted;
 }
 
 async function extractNoteText(
+  log: EdgeLogger,
   // Supabase's overloaded generic factory collapses to an unusable
   // unknown/never schema through ReturnType in Deno.
   adminClient: any,
@@ -869,7 +870,7 @@ async function extractNoteText(
     .from('course-notes')
     .download(note.storage_path);
   if (dlErr || !file) {
-    console.warn('[tutor-chat] note download failed:', dlErr);
+    log.warn('note_download_failed', { note_id: note.id, ...errorFields(dlErr) });
     return null;
   }
 
@@ -879,7 +880,7 @@ async function extractNoteText(
   // input_file, decoding it here is free, instant, and lossless.
   const document = normalizeSupportedDocument(note.filename, note.mime_type);
   if (!document) {
-    console.warn('[tutor-chat] unsupported note type, skipping', note.filename, note.mime_type);
+    log.warn('unsupported_note_type', { note_id: note.id, filename: note.filename, mime_type: note.mime_type });
     return null;
   }
   if (document.mimeType.startsWith('text/') || document.mimeType === 'application/json') {
@@ -890,14 +891,14 @@ async function extractNoteText(
       .update({ extracted_text: decoded })
       .eq('id', note.id)
       .eq('user_id', userId)
-      .then(undefined, (e: unknown) => console.warn('[tutor-chat] cache extracted_text failed:', e));
+      .then(undefined, (e: unknown) => log.warn('cache_extracted_text_failed', errorFields(e)));
     return decoded;
   }
 
   // Guard: only send reasonably sized files to OpenAI inline (base64 inflates
   // 4/3). ~6MB raw keeps the request well within limits.
   if (buf.byteLength > 6 * 1024 * 1024) {
-    console.warn('[tutor-chat] note too large to extract inline, skipping');
+    log.warn('note_too_large', { note_id: note.id });
     return null;
   }
   // Chunked base64 to avoid a huge apply() spread on large buffers.
@@ -919,7 +920,7 @@ async function extractNoteText(
   // capability exists — tutor-chat was simply left pointing at the unconfigured
   // provider. Use whichever provider this environment actually has.
   if (!isProviderConfigured('gemini') || (!document.isImage && !document.isPdf)) {
-    return await extractNoteTextOpenAI(adminClient, note, userId, base64, mimeType);
+    return await extractNoteTextOpenAI(log, adminClient, note, userId, base64, mimeType);
   }
   const result = await callGemini({
     label: 'tutor-note-extraction',
@@ -936,11 +937,12 @@ async function extractNoteText(
     task: AiTask.documentExtraction, provider: 'gemini', model: MODELS.general,
     status: result.ok ? 'success' : 'failed',
     errorCode: result.ok ? null : (result.networkError ? 'fetch_error' : `http_${result.status || 0}`),
+    errorDetail: result.ok ? null : result.errorBody,
     durationMs: result.durationMs, attempts: result.attempts,
     ...(result.ok ? usageFromGemini(result.data) : {}),
   });
   if (!result.ok || !result.data) {
-    console.warn('[tutor-chat] Gemini note extraction failed', result.status);
+    log.warn('note_extraction_gemini_failed', { note_id: note.id, status: result.status });
     return null;
   }
   const extracted = geminiText(result.data);
@@ -952,7 +954,7 @@ async function extractNoteText(
     .update({ extracted_text: extracted })
     .eq('id', note.id)
     .eq('user_id', userId)
-    .then(undefined, (e: unknown) => console.warn('[tutor-chat] cache extracted_text failed:', e));
+    .then(undefined, (e: unknown) => log.warn('cache_extracted_text_failed', errorFields(e)));
 
   return extracted;
 }

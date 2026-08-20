@@ -189,7 +189,7 @@ serve(withRequestLogging('submit-support', async (req, log) => {
   try {
     // 1. Shared-secret gate (fail closed — see the header note).
     if (!SUPPORT_INGEST_SECRET) {
-      console.error('[submit-support] SUPPORT_INGEST_SECRET not configured — refusing all requests');
+      log.error('support_ingest_secret_not_configured_refusing_all_re');
       return jsonResponse({ error: 'Server not configured' }, 500);
     }
     const authHeader = req.headers.get('Authorization') ?? '';
@@ -212,7 +212,7 @@ serve(withRequestLogging('submit-support', async (req, log) => {
     // it in is automation, and the useful answer is a plain 200 — a bot that
     // is told it failed simply retries with the field cleared.
     if (str(body.company, 200)) {
-      console.log('[submit-support] honeypot triggered, discarding');
+      log.info('honeypot_triggered');
       return jsonResponse({ ok: true, discarded: true }, 200);
     }
 
@@ -256,7 +256,7 @@ serve(withRequestLogging('submit-support', async (req, log) => {
       // A failed count must not block a real support request — log it and let
       // the message through. Losing the message is the worse outcome.
       if (error) {
-        console.error('[submit-support] rate-limit check failed:', error.message);
+        log.error('rate_limit_check_failed', errorFields(error.message));
         break;
       }
       if ((count ?? 0) >= RATE_LIMIT_PER_HOUR) {
@@ -286,7 +286,7 @@ serve(withRequestLogging('submit-support', async (req, log) => {
       .single();
 
     if (insertError || !inserted) {
-      console.error('[submit-support] insert failed:', insertError?.message);
+      log.error('insert_failed', { message: insertError?.message ?? null });
       return jsonResponse({ error: 'Could not save your message' }, 500);
     }
 
@@ -308,9 +308,9 @@ serve(withRequestLogging('submit-support', async (req, log) => {
     if (SMTP_HOSTNAME && SMTP_USERNAME && SMTP_PASSWORD && SUPPORT_NOTIFY_TO) {
       emailError = await sendNotification(row);
       emailStatus = emailError ? 'failed' : 'sent';
-      if (emailError) console.error('[submit-support] email failed:', emailError);
+      if (emailError) log.error('email_failed', errorFields(emailError));
     } else {
-      console.warn('[submit-support] SMTP not configured — request stored, no email sent');
+      log.warn('smtp_not_configured_request_stored_no_email_sent');
     }
 
     const { error: updateError } = await admin
@@ -323,7 +323,7 @@ serve(withRequestLogging('submit-support', async (req, log) => {
       .eq('id', row.id);
 
     if (updateError) {
-      console.error('[submit-support] status update failed:', updateError.message);
+      log.error('status_update_failed', errorFields(updateError.message));
     }
 
     return jsonResponse({ ok: true, id: row.id, emailStatus }, 200);

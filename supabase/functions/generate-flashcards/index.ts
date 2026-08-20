@@ -7,6 +7,7 @@ import {
   normalizeSupportedDocument,
 } from '../_shared/document-files.ts';
 import { withRequestLogging, errorFields, type EdgeLogger } from '../_shared/log.ts';
+import { AiTask, logAiCall } from '../_shared/ai.ts';
 
 // AI flashcard generation. Structured on tutor-chat/index.ts (CORS, JWT
 // verification, service-role client, OpenAI call with retries,
@@ -87,6 +88,13 @@ type OpenAIResult = {
   data: any | null;
   status: number;
   networkError: boolean;
+  /**
+   * The provider's error envelope, truncated. Carried out of the retry loop
+   * rather than only logged: edge-function logs keep about a day, and a bare
+   * status code cannot be diagnosed after that. Never shown to the client.
+   */
+  errorBody?: string;
+  attempts?: number;
 };
 
 function readOpenAIOutputText(data: any): string | null {
@@ -106,14 +114,18 @@ function readOpenAIOutputText(data: any): string | null {
 }
 
 async function callOpenAIResponses(
+  log: EdgeLogger,
   payload: Record<string, unknown>,
   label: string,
 ): Promise<OpenAIResult> {
-  if (!OPENAI_API_KEY) return { data: null, status: 0, networkError: false };
+  if (!OPENAI_API_KEY) return { data: null, status: 0, networkError: false, attempts: 0 };
 
   let lastStatus = 0;
   let networkError = false;
+  let lastErrorBody = '';
+  let usedAttempts = 0;
   for (let attempt = 1; attempt <= OPENAI_MAX_ATTEMPTS; attempt++) {
+    usedAttempts = attempt;
     let response: Response;
     try {
       response = await fetch(OPENAI_RESPONSES_URL, {
@@ -126,10 +138,9 @@ async function callOpenAIResponses(
       });
     } catch (error) {
       networkError = true;
-      console.warn(
-        `[generate-flashcards] OpenAI ${label} network error (attempt ${attempt}/${OPENAI_MAX_ATTEMPTS}):`,
-        error,
-      );
+      log.warn('openai_network_error', {
+            label, attempt, max_attempts: OPENAI_MAX_ATTEMPTS, ...errorFields(error),
+          });
       if (attempt < OPENAI_MAX_ATTEMPTS) {
         await sleep(600 * attempt);
         continue;
@@ -141,25 +152,31 @@ async function callOpenAIResponses(
     lastStatus = response.status;
     if (response.ok) {
       try {
-        return { data: await response.json(), status: response.status, networkError: false };
+        return { data: await response.json(), status: response.status, networkError: false, attempts: usedAttempts };
       } catch (error) {
-        console.error(`[generate-flashcards] OpenAI ${label} returned invalid JSON:`, error);
-        return { data: null, status: response.status, networkError: false };
+        log.error('openai_invalid_json', { label, ...errorFields(error) });
+        return {
+          data: null, status: response.status, networkError: false,
+          errorBody: 'provider returned invalid JSON', attempts: usedAttempts,
+        };
       }
     }
 
     const errorBody = await response.text().catch(() => '');
-    console.warn(
-      `[generate-flashcards] OpenAI ${label} HTTP ${response.status} (attempt ${attempt}/${OPENAI_MAX_ATTEMPTS}):`,
-      errorBody.slice(0, 300),
-    );
+    lastErrorBody = errorBody;
+    log.warn('openai_http_error', {
+          label, status: response.status, attempt, max_attempts: OPENAI_MAX_ATTEMPTS,
+          // The provider's own words — the fastest way to tell a quota error
+          // from a malformed request without reproducing it.
+          provider_error: errorBody.slice(0, 300),
+        });
     if (OPENAI_RETRYABLE.has(response.status) && attempt < OPENAI_MAX_ATTEMPTS) {
       await sleep(600 * attempt);
       continue;
     }
     break;
   }
-  return { data: null, status: lastStatus, networkError };
+  return { data: null, status: lastStatus, networkError, errorBody: lastErrorBody, attempts: usedAttempts };
 }
 
 async function makeSafetyIdentifier(userId: string): Promise<string> {
@@ -213,7 +230,7 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
     //    blip so a paying user is never demoted.
     const { data: proResult, error: proErr } = await adminClient.rpc('is_pro', { uid: userId });
     if (proErr) {
-      console.error('[generate-flashcards] is_pro check failed:', proErr);
+      log.error('is_pro_check_failed', errorFields(proErr));
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
     if (proResult !== true) {
@@ -259,7 +276,7 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
       .eq('user_id', userId)
       .maybeSingle();
     if (courseErr) {
-      console.error('[generate-flashcards] course lookup failed:', courseErr);
+      log.error('course_lookup_failed', errorFields(courseErr));
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
     if (!course) {
@@ -289,7 +306,7 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
         .eq('user_id', userId)
         .maybeSingle();
       if (taskErr) {
-        console.error('[generate-flashcards] task lookup failed:', taskErr);
+        log.error('task_lookup_failed', errorFields(taskErr));
         return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
       }
       if (!task) {
@@ -330,7 +347,7 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
         .eq('user_id', userId)
         .maybeSingle();
       if (deckErr) {
-        console.error('[generate-flashcards] deck lookup failed:', deckErr);
+        log.error('deck_lookup_failed', errorFields(deckErr));
         return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
       }
       if (!deck) {
@@ -391,8 +408,8 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
         // failing the whole generation over it.
         if (!text && !note.storage_path) continue;
         if (!text) {
-          text = await extractNoteText(adminClient, note, userId).catch((e) => {
-            console.warn('[generate-flashcards] note extraction failed:', e);
+          text = await extractNoteText(log, adminClient, note, userId).catch((e) => {
+            log.warn('note_extraction_failed', errorFields(e));
             return null;
           });
         }
@@ -450,7 +467,8 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
     ]
       .filter(Boolean)
       .join('\n\n');
-    const openAIResult = await callOpenAIResponses({
+    const startedAt = Date.now();
+    const openAIResult = await callOpenAIResponses(log, {
       model: OPENAI_MODEL,
       input: [{ role: 'user', content: modelInput }],
       reasoning: { effort: 'none' },
@@ -460,10 +478,25 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
       safety_identifier: await makeSafetyIdentifier(userId),
     }, 'card generation');
 
+    await logAiCall(adminClient, userId, {
+      task: AiTask.contentGeneration,
+      provider: 'openai',
+      model: OPENAI_MODEL,
+      status: openAIResult.data ? 'success' : 'failed',
+      errorCode: openAIResult.data
+        ? null
+        : (openAIResult.networkError ? 'fetch_error' : `http_${openAIResult.status || 0}`),
+      // The provider's own sentence, kept because edge logs expire in a day.
+      errorDetail: openAIResult.data ? null : openAIResult.errorBody,
+      durationMs: Date.now() - startedAt,
+      attempts: openAIResult.attempts,
+    });
+
     if (!openAIResult.data) {
-      console.error(
-        `[generate-flashcards] OpenAI failed after retries (network=${openAIResult.networkError}, status=${openAIResult.status})`,
-      );
+      log.error('openai_failed_after_retries', {
+            network_error: openAIResult.networkError,
+            status: openAIResult.status,
+          });
       const msg = openAIResult.networkError
         ? 'AI service unreachable. Please try again.'
         : (openAIResult.status === 503 || openAIResult.status === 429)
@@ -475,7 +508,7 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
     const data = openAIResult.data;
     const servedModel = typeof data.model === 'string' ? data.model : OPENAI_MODEL;
     if (data.status === 'incomplete' && data.incomplete_details?.reason === 'max_output_tokens') {
-      console.error('[generate-flashcards] OpenAI hit max_output_tokens — output truncated');
+      log.error('openai_max_output_tokens');
       return jsonResponse(
         { error: 'That generated more than fits in one batch. Try again — it usually succeeds on retry.' },
         502,
@@ -483,7 +516,7 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
     }
     const text = readOpenAIOutputText(data);
     if (!text) {
-      console.error('[generate-flashcards] OpenAI empty/blocked response:', JSON.stringify(data).slice(0, 500));
+      log.error('openai_empty_response', { response_keys: Object.keys(data ?? {}).join(','), sample: JSON.stringify(data).slice(0, 300) });
       return jsonResponse({ error: "Couldn't generate flashcards. Please try again." }, 502);
     }
 
@@ -492,7 +525,7 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
     try {
       parsed = JSON.parse(cleaned);
     } catch (parseErr) {
-      console.error('[generate-flashcards] JSON parse failed:', parseErr, 'text:', cleaned.slice(0, 500));
+      log.error('json_parse_failed', { ...errorFields(parseErr), sample: cleaned.slice(0, 300) });
       return jsonResponse({ error: "Couldn't generate flashcards. Please try again." }, 502);
     }
 
@@ -509,7 +542,7 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
       .slice(0, MAX_CARDS);
 
     if (cleanCards.length < MIN_CARDS) {
-      console.error('[generate-flashcards] no valid cards after sanitizing:', cleaned.slice(0, 500));
+      log.error('no_valid_cards', { sample: cleaned.slice(0, 300) });
       return jsonResponse(
         { error: "Couldn't generate flashcards from this course yet. Try again, or add more material first." },
         502,
@@ -529,7 +562,7 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
         .select('id, title')
         .single();
       if (deckInsertErr || !newDeck) {
-        console.error('[generate-flashcards] deck creation failed:', deckInsertErr);
+        log.error('deck_creation_failed', errorFields(deckInsertErr));
         return jsonResponse({ error: 'Could not create the deck. Please try again.' }, 502);
       }
       targetDeckId = newDeck.id;
@@ -548,7 +581,7 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
       })),
     );
     if (cardsInsertErr) {
-      console.error('[generate-flashcards] cards insert failed:', cardsInsertErr);
+      log.error('cards_insert_failed', errorFields(cardsInsertErr));
       return jsonResponse({ error: 'Generated the cards but could not save them. Please try again.' }, 502);
     }
 
@@ -565,6 +598,7 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
 // Identical in behavior to tutor-chat's note extraction. Kept local so each
 // deployed Edge Function remains self-contained.
 async function extractNoteText(
+  log: EdgeLogger,
   // Supabase's overloaded generic factory collapses to an unusable
   // unknown/never schema through ReturnType in Deno.
   adminClient: any,
@@ -577,13 +611,13 @@ async function extractNoteText(
     .from('course-notes')
     .download(note.storage_path);
   if (dlErr || !file) {
-    console.warn('[generate-flashcards] note download failed:', dlErr);
+    log.warn('note_download_failed', { note_id: note.id, ...errorFields(dlErr) });
     return null;
   }
 
   const buf = new Uint8Array(await file.arrayBuffer());
   if (buf.byteLength > 6 * 1024 * 1024) {
-    console.warn('[generate-flashcards] note too large to extract inline, skipping');
+    log.warn('note_too_large', { note_id: note.id, bytes: buf.byteLength });
     return null;
   }
   // Prepare BEFORE deciding the type. Deriving `document` from the filename
@@ -595,7 +629,7 @@ async function extractNoteText(
   }
   const ready = await prepareImagePayload(btoa(binaryAll), note.mime_type);
   if (!ready.ok) {
-    console.warn('[generate-flashcards] unreadable image source, skipping', note.filename, ready.code);
+    log.warn('image_unreadable', { note_id: note.id, filename: note.filename, code: ready.code });
     return null;
   }
   const document = normalizeSupportedDocument(
@@ -603,7 +637,7 @@ async function extractNoteText(
     ready.converted ? 'image/jpeg' : (ready.mimeType || note.mime_type),
   );
   if (!document) {
-    console.warn('[generate-flashcards] unsupported note type, skipping', note.filename, note.mime_type);
+    log.warn('unsupported_note_type', { note_id: note.id, filename: note.filename, mime_type: note.mime_type });
     return null;
   }
 
@@ -617,7 +651,7 @@ async function extractNoteText(
       .update({ extracted_text: decoded })
       .eq('id', note.id)
       .eq('user_id', userId)
-      .then(undefined, (e: unknown) => console.warn('[generate-flashcards] cache extracted_text failed:', e));
+      .then(undefined, (e: unknown) => log.warn('cache_extracted_text_failed', errorFields(e)));
     return decoded;
   }
 
@@ -632,7 +666,7 @@ async function extractNoteText(
       file_data: `data:${mimeType};base64,${base64}`,
       ...(document.isPdf ? { detail: 'high' } : {}),
     };
-  const result = await callOpenAIResponses({
+  const result = await callOpenAIResponses(log, {
     model: OPENAI_MODEL,
     instructions: 'Extract all readable text from the supplied lecture notes or slides. Preserve headings, lists, and logical structure. Return only the extracted text with no commentary.',
     input: [{
@@ -649,7 +683,7 @@ async function extractNoteText(
     safety_identifier: await makeSafetyIdentifier(userId),
   }, 'note extraction');
   if (!result.data) {
-    console.warn('[generate-flashcards] OpenAI note extraction failed', result.status);
+    log.warn('note_extraction_openai_failed', { note_id: note.id, status: result.status });
     return null;
   }
   const extracted = readOpenAIOutputText(result.data);
@@ -660,7 +694,7 @@ async function extractNoteText(
     .update({ extracted_text: extracted })
     .eq('id', note.id)
     .eq('user_id', userId)
-    .then(undefined, (e: unknown) => console.warn('[generate-flashcards] cache extracted_text failed:', e));
+    .then(undefined, (e: unknown) => log.warn('cache_extracted_text_failed', errorFields(e)));
 
   return extracted;
 }

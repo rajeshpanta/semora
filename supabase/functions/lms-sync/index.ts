@@ -650,10 +650,10 @@ async function requireUser(req: Request) {
   return data.user;
 }
 
-async function requirePro(admin: AdminClient, userId: string) {
+async function requirePro(log: EdgeLogger, admin: AdminClient, userId: string) {
   const { data, error } = await admin.rpc('is_pro', { uid: userId });
   if (error) {
-    console.error('[lms-sync] is_pro check failed:', error);
+    log.error('is_pro_check_failed', errorFields(error));
     const unavailable: any = new Error('Service temporarily unavailable');
     unavailable.status = 503;
     throw unavailable;
@@ -769,6 +769,7 @@ async function createRun(
 }
 
 async function performConnectionSync(
+  log: EdgeLogger,
   admin: AdminClient,
   connection: SyncConnection,
   token: string,
@@ -855,7 +856,7 @@ async function performConnectionSync(
       const { error: revokeError } = await admin.rpc('disable_lms_background_sync', {
         p_connection_id: connection.id,
       });
-      if (revokeError) console.error('[lms-sync] could not remove expired background credential:', revokeError);
+      if (revokeError) log.error('could_not_remove_expired_background_credential', errorFields(revokeError));
     }
     throw error;
   }
@@ -913,8 +914,8 @@ serve(withRequestLogging('lms-sync', async (req, log) => {
       for (const row of rows ?? []) {
         const connection = { ...row, links: (row as any).links ?? [] } as SyncConnection;
         try {
-          await requirePro(admin, connection.user_id);
-          await performConnectionSync(admin, connection, await backgroundCredential(admin, connection.id), 'background');
+          await requirePro(log, admin, connection.user_id);
+          await performConnectionSync(log, admin, connection, await backgroundCredential(admin, connection.id), 'background');
           succeeded += 1;
         } catch (error) {
           failed += 1;
@@ -929,7 +930,7 @@ serve(withRequestLogging('lms-sync', async (req, log) => {
               p_connection_id: connection.id,
             });
             if (disableError) {
-              console.error('[lms-sync] failed to disable lapsed-Pro connection:', connection.id, disableError.message);
+              log.error('disable_lapsed_pro_connection_failed', { connection_id: connection.id, message: disableError.message });
             } else {
               // The RPC covers the sync flags; record WHY it was paused so the
               // settings screen can explain rather than showing a bare error.
@@ -939,14 +940,14 @@ serve(withRequestLogging('lms-sync', async (req, log) => {
               }).eq('id', connection.id);
             }
           }
-          console.error('[lms-sync] background connection failed:', connection.id, (error as Error)?.message);
+          log.error('background_connection_failed', { connection_id: connection.id, message: (error as Error)?.message ?? null });
         }
       }
       return json({ processed_connections: (rows ?? []).length, succeeded, failed });
     }
 
     const user = await requireUser(req);
-    await requirePro(admin, user.id);
+    await requirePro(log, admin, user.id);
     const provider = body?.provider as Provider;
     const token = typeof body?.access_token === 'string' ? body.access_token.trim() : '';
 
@@ -972,7 +973,7 @@ serve(withRequestLogging('lms-sync', async (req, log) => {
     if (action === 'sync') {
       const syncToken = token || await backgroundCredential(admin, connection.id);
       const trigger: SyncTrigger = body?.trigger === 'foreground_auto' ? 'foreground_auto' : body?.trigger === 'initial' ? 'initial' : 'manual';
-      const result = await performConnectionSync(admin, connection, syncToken, trigger);
+      const result = await performConnectionSync(log, admin, connection, syncToken, trigger);
       return json(result);
     }
 
@@ -1002,7 +1003,7 @@ serve(withRequestLogging('lms-sync', async (req, log) => {
     if (status === 401 || status === 403) return json({ error: message, code }, 401);
     if (status === 402) return json({ error: message, code: 'PRO_REQUIRED' }, 402);
     if (status === 503) return json({ error: message }, 503);
-    console.error('[lms-sync] request failed:', message);
+    log.error('request_failed', errorFields(message));
     return json({ error: message, code }, status >= 400 && status < 500 ? status : 400);
   }
 }));

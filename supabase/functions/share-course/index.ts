@@ -112,7 +112,7 @@ serve(withRequestLogging('share-course', async (req, log) => {
     //    deny a paying user, matching parse-syllabus's is_pro handling.
     const { data: proResult, error: proErr } = await adminClient.rpc('is_pro', { uid: userId });
     if (proErr) {
-      console.error('[share-course] is_pro check failed:', proErr);
+      log.error('is_pro_check_failed', errorFields(proErr));
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
     if (proResult !== true) {
@@ -133,7 +133,7 @@ serve(withRequestLogging('share-course', async (req, log) => {
       .eq('id', courseId)
       .maybeSingle();
     if (courseErr) {
-      console.error('[share-course] course load failed:', courseErr);
+      log.error('course_load_failed', errorFields(courseErr));
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
     if (!course) {
@@ -155,7 +155,7 @@ serve(withRequestLogging('share-course', async (req, log) => {
       .order('due_date', { ascending: true, nullsFirst: false })
       .limit(MAX_SNAPSHOT_TASKS);
     if (tasksErr) {
-      console.error('[share-course] tasks load failed:', tasksErr);
+      log.error('tasks_load_failed', errorFields(tasksErr));
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
 
@@ -211,7 +211,7 @@ serve(withRequestLogging('share-course', async (req, log) => {
       break;
     }
     if (insertErr) {
-      console.error('[share-course] share insert failed:', insertErr);
+      log.error('share_insert_failed', errorFields(insertErr));
       return jsonResponse({ error: 'Could not create share link. Please try again.' }, 500);
     }
 

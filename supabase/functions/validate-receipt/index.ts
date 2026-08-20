@@ -71,7 +71,7 @@ async function logCall(
       duration_ms: durationMs,
     });
   } catch (err) {
-    console.error('[validate-receipt] Failed to log call:', err);
+    log.error('failed_to_log_call', errorFields(err));
   }
 }
 
@@ -335,7 +335,7 @@ serve(withRequestLogging('validate-receipt', async (req, log) => {
       .gte('created_at', oneHourAgo);
 
     if (countError) {
-      console.error('[validate-receipt] Rate limit check failed:', countError);
+      log.error('rate_limit_check_failed', errorFields(countError));
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
 
@@ -352,7 +352,7 @@ serve(withRequestLogging('validate-receipt', async (req, log) => {
 
     // 2. Apple shared secret must be configured for any validation to occur
     if (!APPLE_SHARED_SECRET) {
-      console.error('[validate-receipt] APPLE_SHARED_SECRET not set in env');
+      log.error('apple_shared_secret_not_set_in_env');
       return jsonResponse(
         { error: 'Server is not configured for receipt validation. Please contact support.' },
         503,
@@ -390,7 +390,7 @@ serve(withRequestLogging('validate-receipt', async (req, log) => {
       try {
         jwsActive = await verifyAppleJws(jws!);
       } catch (err) {
-        console.error('[validate-receipt] JWS verification failed:', err);
+        log.error('jws_verification_failed', errorFields(err));
         await logCall(adminClient, userId, 'failed', Date.now() - startTime, 'jws_invalid');
         // If a legacy receipt was also provided, fall through to it below
         // instead of failing the whole request.
@@ -415,7 +415,7 @@ serve(withRequestLogging('validate-receipt', async (req, log) => {
       appleResp = await verifyWithApple(receipt!);
     } catch (err) {
       const isTimeout = err instanceof DOMException && err.name === 'TimeoutError';
-      console.error('[validate-receipt] Apple fetch failed:', err);
+      log.error('apple_fetch_failed', errorFields(err));
       await logCall(
         adminClient,
         userId,
@@ -434,7 +434,7 @@ serve(withRequestLogging('validate-receipt', async (req, log) => {
     }
 
     if (appleResp.status !== 0) {
-      console.error('[validate-receipt] Apple returned status:', appleResp.status);
+      log.error('apple_returned_status', errorFields(appleResp.status));
       await logCall(
         adminClient,
         userId,
@@ -645,7 +645,7 @@ async function writeEntitlementAndRespond(
       .upsert(entitlement, { onConflict: 'user_id' });
 
     if (upsertError) {
-      console.error('[validate-receipt] Upsert failed:', upsertError);
+      log.error('upsert_failed', errorFields(upsertError));
       await logCall(
         adminClient,
         userId,
@@ -669,7 +669,7 @@ async function writeEntitlementAndRespond(
           { onConflict: 'original_transaction_id' },
         );
       if (ledgerError) {
-        console.error('[validate-receipt] Ledger write failed:', ledgerError);
+        log.error('ledger_write_failed', errorFields(ledgerError));
       }
     }
 

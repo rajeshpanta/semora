@@ -77,7 +77,7 @@ serve(withRequestLogging('send-push', async (req, log) => {
     //    that doesn't present the exact PUSH_SEND_SECRET. Fail closed if the
     //    secret isn't configured (never run wide-open).
     if (!PUSH_SEND_SECRET) {
-      console.error('[send-push] PUSH_SEND_SECRET not configured — refusing all requests');
+      log.error('push_send_secret_not_configured_refusing_all_request');
       return jsonResponse({ error: 'Server not configured' }, 500);
     }
     const authHeader = req.headers.get('Authorization') ?? '';
@@ -131,7 +131,7 @@ serve(withRequestLogging('send-push', async (req, log) => {
       .in('user_id', userIds);
 
     if (tokenErr) {
-      console.error('[send-push] token lookup failed:', tokenErr);
+      log.error('token_lookup_failed', errorFields(tokenErr));
       return jsonResponse({ error: 'Failed to look up push tokens' }, 500);
     }
 
@@ -191,13 +191,13 @@ serve(withRequestLogging('send-push', async (req, log) => {
       } catch (err) {
         // Network blip to Expo — log and move on to the next chunk rather
         // than failing the whole run.
-        console.error('[send-push] Expo fetch failed:', err);
+        log.error('expo_fetch_failed', errorFields(err));
         continue;
       }
 
       if (!expoResp.ok) {
         const errText = await expoResp.text().catch(() => '');
-        console.error(`[send-push] Expo HTTP ${expoResp.status}:`, errText.slice(0, 300));
+        log.error('expo_http_error', { status: expoResp.status, provider_error: errText.slice(0, 300) });
         continue;
       }
 
@@ -231,7 +231,7 @@ serve(withRequestLogging('send-push', async (req, log) => {
         .delete({ count: 'exact' })
         .in('token', deadTokens);
       if (delErr) {
-        console.error('[send-push] dead-token cleanup failed:', delErr);
+        log.error('dead_token_cleanup_failed', errorFields(delErr));
       } else {
         removed = count ?? deadTokens.length;
       }

@@ -87,7 +87,7 @@ class RevokedError extends Error {}
 // offlineAccess:true on the client is what makes Google return a refresh
 // token here (the app requested offline server access). redirect_uri is empty
 // for the installed-app/serverAuthCode flow.
-async function exchangeAuthCode(authCode: string): Promise<{
+async function exchangeAuthCode(log: EdgeLogger, authCode: string): Promise<{
   access_token: string;
   refresh_token: string | null;
   expires_in: number;
@@ -105,7 +105,7 @@ async function exchangeAuthCode(authCode: string): Promise<{
   });
   const data = await resp.json().catch(() => ({}));
   if (!resp.ok) {
-    console.error('[google-cal-sync] auth code exchange failed:', resp.status, JSON.stringify(data).slice(0, 300));
+    log.error('auth_code_exchange_failed', { status: resp.status, provider_error: JSON.stringify(data).slice(0, 300) });
     throw new Error('Could not connect your Google account. Please try again.');
   }
   return {
@@ -121,7 +121,7 @@ async function exchangeAuthCode(authCode: string): Promise<{
 // Refresh an expired access token from the stored refresh token. A Google
 // 'invalid_grant' means the refresh token was revoked — surface it as
 // RevokedError so the caller can mark the connection dead rather than retry.
-async function refreshAccessToken(refreshToken: string): Promise<{
+async function refreshAccessToken(log: EdgeLogger, refreshToken: string): Promise<{
   access_token: string;
   expires_in: number;
 }> {
@@ -140,7 +140,7 @@ async function refreshAccessToken(refreshToken: string): Promise<{
     if (data?.error === 'invalid_grant') {
       throw new RevokedError('Google access was revoked.');
     }
-    console.error('[google-cal-sync] token refresh failed:', resp.status, JSON.stringify(data).slice(0, 300));
+    log.error('token_refresh_failed', { status: resp.status, provider_error: JSON.stringify(data).slice(0, 300) });
     throw new Error('Could not refresh Google access. Please reconnect.');
   }
   return {
@@ -152,7 +152,7 @@ async function refreshAccessToken(refreshToken: string): Promise<{
 // Best-effort revoke on disconnect so Semora's grant disappears from the
 // user's Google "third-party access" list. Failure is non-fatal — we clear
 // local tokens regardless.
-async function revokeToken(token: string): Promise<void> {
+async function revokeToken(log: EdgeLogger, token: string): Promise<void> {
   try {
     await fetch(REVOKE_URL, {
       method: 'POST',
@@ -160,14 +160,14 @@ async function revokeToken(token: string): Promise<void> {
       body: new URLSearchParams({ token }),
     });
   } catch (e) {
-    console.warn('[google-cal-sync] token revoke failed (non-fatal):', e);
+    log.warn('token_revoke_failed', errorFields(e));
   }
 }
 
 // Return a VALID access token for the user, refreshing + persisting when the
 // cached one is expired (or within a 60s skew). Throws RevokedError if the
 // grant is gone.
-async function getValidAccessToken(admin: AdminClient, row: TokenRow): Promise<string> {
+async function getValidAccessToken(log: EdgeLogger, admin: AdminClient, row: TokenRow): Promise<string> {
   const now = Date.now();
   const exp = row.expires_at ? new Date(row.expires_at).getTime() : 0;
   if (row.access_token && exp - 60_000 > now) {
@@ -176,7 +176,7 @@ async function getValidAccessToken(admin: AdminClient, row: TokenRow): Promise<s
   if (!row.refresh_token) {
     throw new RevokedError('No refresh token stored.');
   }
-  const refreshed = await refreshAccessToken(row.refresh_token);
+  const refreshed = await refreshAccessToken(log, row.refresh_token);
   const expiresAt = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
   await admin
     .from('google_calendar_tokens')
@@ -221,6 +221,7 @@ async function calFetch(
 // stored id when it still exists so reconnects don't spawn duplicates —
 // mirrors getOrCreateCalendar's adopt logic in lib/calendarSync.ts.
 async function getOrCreateSemoraCalendar(
+  log: EdgeLogger,
   accessToken: string,
   storedId: string | null,
 ): Promise<string> {
@@ -244,7 +245,7 @@ async function getOrCreateSemoraCalendar(
     if (existing?.id) return existing.id;
   } catch (e) {
     if (e instanceof RevokedError) throw e;
-    console.warn('[google-cal-sync] calendarList lookup failed (will create):', e);
+    log.warn('calendarlist_lookup_failed', errorFields(e));
   }
 
   const created = await calFetch(accessToken, '/calendars', {
@@ -310,6 +311,7 @@ function taskEventBody(task: any, courseName: string, timeZone: string): Record<
 // upserting by the task→event map, and prune events for tasks no longer in
 // the set. Returns the number of events created/updated.
 async function syncTasks(
+  log: EdgeLogger,
   admin: AdminClient,
   accessToken: string,
   calendarId: string,
@@ -326,7 +328,7 @@ async function syncTasks(
     .order('due_date')
     .limit(MAX_TASKS);
   if (error) {
-    console.error('[google-cal-sync] task load failed:', error);
+    log.error('task_load_failed', errorFields(error));
     throw new Error('Could not load your tasks — please try again.');
   }
   const rows = tasks ?? [];
@@ -362,7 +364,7 @@ async function syncTasks(
       } catch (e: any) {
         if (e instanceof RevokedError) throw e;
         if (e?.status !== 404 && e?.status !== 410) {
-          console.warn('[google-cal-sync] task event update failed:', e);
+          log.warn('task_event_update_failed', errorFields(e));
           continue;
         }
         // fall through to create
@@ -385,7 +387,7 @@ async function syncTasks(
       }
     } catch (e) {
       if (e instanceof RevokedError) throw e;
-      console.warn('[google-cal-sync] task event create failed:', e);
+      log.warn('task_event_create_failed', errorFields(e));
     }
   }
 
@@ -404,7 +406,7 @@ async function syncTasks(
       // it doesn't wedge future syncs (the event, if any, is orphaned in
       // Google — the user can delete it, same trade-off as the EventKit side).
       if (e?.status !== 404 && e?.status !== 410) {
-        console.warn('[google-cal-sync] task event delete failed (dropping map):', e);
+        log.warn('task_event_delete_failed', errorFields(e));
       }
     }
     await admin.from('task_google_event_map').delete().eq('id', mapped.id);
@@ -421,6 +423,7 @@ async function syncTasks(
 // re-sync finds and replaces its own events without a local map. Best effort —
 // returns the count created; failures are logged and skipped.
 async function syncMeetings(
+  log: EdgeLogger,
   admin: AdminClient,
   accessToken: string,
   calendarId: string,
@@ -438,7 +441,7 @@ async function syncMeetings(
       .limit(MAX_MEETINGS),
   ]);
   if (error) {
-    console.warn('[google-cal-sync] meeting load failed (skipping class sync):', error);
+    log.warn('meeting_load_failed', errorFields(error));
     return 0;
   }
   const rows = meetings ?? [];
@@ -520,7 +523,7 @@ async function syncMeetings(
         count++;
       } catch (e) {
         if (e instanceof RevokedError) throw e;
-        console.warn('[google-cal-sync] meeting event create failed:', e);
+        log.warn('meeting_event_create_failed', errorFields(e));
       }
     }
   }
@@ -537,7 +540,7 @@ function meetingTitle(courseName: string, kind: string): string {
 // Mark the connection disconnected (tokens cleared) — used both on explicit
 // disconnect and on graceful revocation handling. Keeps the row so the map's
 // FK stays valid and a later reconnect updates in place.
-async function markDisconnected(admin: AdminClient, userId: string): Promise<void> {
+async function markDisconnected(log: EdgeLogger, admin: AdminClient, userId: string): Promise<void> {
   await admin
     .from('google_calendar_tokens')
     .update({ sync_enabled: false, refresh_token: null, access_token: null, expires_at: null })
@@ -582,7 +585,7 @@ serve(withRequestLogging('google-cal-sync', async (req, log) => {
     const userId = userData.user.id;
 
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-      console.error('[google-cal-sync] Google OAuth client not configured on server');
+      log.error('google_oauth_client_not_configured_on_server');
       return jsonResponse({ error: 'Google Calendar is not configured on the server.' }, 500);
     }
 
@@ -592,7 +595,7 @@ serve(withRequestLogging('google-cal-sync', async (req, log) => {
     //    as tutor-chat. Google Calendar sync is a Pro feature.
     const { data: proResult, error: proErr } = await admin.rpc('is_pro', { uid: userId });
     if (proErr) {
-      console.error('[google-cal-sync] is_pro check failed:', proErr);
+      log.error('is_pro_check_failed', errorFields(proErr));
       return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
     }
     if (proResult !== true) {
@@ -625,7 +628,7 @@ serve(withRequestLogging('google-cal-sync', async (req, log) => {
 
       let tokens;
       try {
-        tokens = await exchangeAuthCode(serverAuthCode);
+        tokens = await exchangeAuthCode(log, serverAuthCode);
       } catch (e: any) {
         return jsonResponse({ error: e?.message ?? 'Could not connect your Google account.' }, 502);
       }
@@ -636,12 +639,12 @@ serve(withRequestLogging('google-cal-sync', async (req, log) => {
       // Provision (or adopt) the Semora calendar.
       let calendarId: string;
       try {
-        calendarId = await getOrCreateSemoraCalendar(tokens.access_token, null);
+        calendarId = await getOrCreateSemoraCalendar(log, tokens.access_token, null);
       } catch (e) {
         if (e instanceof RevokedError) {
           return jsonResponse({ error: 'Google access was not granted. Please reconnect and allow calendar access.' }, 502);
         }
-        console.error('[google-cal-sync] calendar provisioning failed:', e);
+        log.error('calendar_provisioning_failed', errorFields(e));
         return jsonResponse({ error: 'Could not set up your Google calendar. Please try again.' }, 502);
       }
 
@@ -660,7 +663,7 @@ serve(withRequestLogging('google-cal-sync', async (req, log) => {
         .from('google_calendar_tokens')
         .upsert(upsertRow, { onConflict: 'user_id' });
       if (upErr) {
-        console.error('[google-cal-sync] token upsert failed:', upErr);
+        log.error('token_upsert_failed', errorFields(upErr));
         return jsonResponse({ error: 'Could not save your Google connection. Please try again.' }, 500);
       }
 
@@ -669,17 +672,17 @@ serve(withRequestLogging('google-cal-sync', async (req, log) => {
       let meetingCount = 0;
       try {
         if (semesterId) {
-          taskCount = await syncTasks(admin, tokens.access_token, calendarId, userId, semesterId, timeZone);
+          taskCount = await syncTasks(log, admin, tokens.access_token, calendarId, userId, semesterId, timeZone);
           if (includeMeetings) {
-            meetingCount = await syncMeetings(admin, tokens.access_token, calendarId, userId, semesterId, timeZone);
+            meetingCount = await syncMeetings(log, admin, tokens.access_token, calendarId, userId, semesterId, timeZone);
           }
         }
       } catch (e) {
         if (e instanceof RevokedError) {
-          await markDisconnected(admin, userId);
+          await markDisconnected(log, admin, userId);
           return jsonResponse({ error: 'Google access was revoked. Please reconnect.', code: 'REVOKED' }, 409);
         }
-        console.warn('[google-cal-sync] initial sync failed (connection kept):', e);
+        log.warn('initial_sync_failed', errorFields(e));
       }
 
       return jsonResponse({ connected: true, taskCount, meetingCount }, 200);
@@ -693,7 +696,7 @@ serve(withRequestLogging('google-cal-sync', async (req, log) => {
         .eq('user_id', userId)
         .maybeSingle();
       if (rowErr) {
-        console.error('[google-cal-sync] token row load failed:', rowErr);
+        log.error('token_row_load_failed', errorFields(rowErr));
         return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
       }
       if (!row || !(row as any).sync_enabled || !(row as any).refresh_token) {
@@ -704,24 +707,24 @@ serve(withRequestLogging('google-cal-sync', async (req, log) => {
       }
 
       try {
-        const accessToken = await getValidAccessToken(admin, row as TokenRow);
-        const calendarId = await getOrCreateSemoraCalendar(accessToken, (row as any).google_calendar_id);
+        const accessToken = await getValidAccessToken(log, admin, row as TokenRow);
+        const calendarId = await getOrCreateSemoraCalendar(log, accessToken, (row as any).google_calendar_id);
         // Persist a (possibly) newly (re)created calendar id.
         if (calendarId !== (row as any).google_calendar_id) {
           await admin.from('google_calendar_tokens').update({ google_calendar_id: calendarId }).eq('user_id', userId);
         }
-        const taskCount = await syncTasks(admin, accessToken, calendarId, userId, semesterId, timeZone);
+        const taskCount = await syncTasks(log, admin, accessToken, calendarId, userId, semesterId, timeZone);
         let meetingCount = 0;
         if (includeMeetings) {
-          meetingCount = await syncMeetings(admin, accessToken, calendarId, userId, semesterId, timeZone);
+          meetingCount = await syncMeetings(log, admin, accessToken, calendarId, userId, semesterId, timeZone);
         }
         return jsonResponse({ synced: true, taskCount, meetingCount }, 200);
       } catch (e) {
         if (e instanceof RevokedError) {
-          await markDisconnected(admin, userId);
+          await markDisconnected(log, admin, userId);
           return jsonResponse({ error: 'Google access was revoked. Please reconnect.', code: 'REVOKED' }, 409);
         }
-        console.error('[google-cal-sync] sync failed:', e);
+        log.error('sync_failed', errorFields(e));
         return jsonResponse({ error: 'Could not sync to Google Calendar. Please try again.' }, 502);
       }
     }
@@ -735,8 +738,8 @@ serve(withRequestLogging('google-cal-sync', async (req, log) => {
         .maybeSingle();
       // Best-effort revoke so Semora leaves the user's Google access list.
       const rt = (row as any)?.refresh_token;
-      if (rt) await revokeToken(rt);
-      await markDisconnected(admin, userId);
+      if (rt) await revokeToken(log, rt);
+      await markDisconnected(log, admin, userId);
       // Clear the map so a future reconnect starts clean (events were in the
       // Google calendar the user may keep or delete — we don't delete their
       // calendar on disconnect, matching the "don't destroy calendar data"

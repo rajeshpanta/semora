@@ -423,6 +423,12 @@ export type AiTelemetry = {
   model: string;
   status: 'success' | 'failed' | 'fallback' | 'rate_limited';
   errorCode?: string | null;
+  /**
+   * The provider's own explanation, truncated. `errorCode` groups failures;
+   * this says which field it objected to. Persisted because edge-function logs
+   * keep about a day — see migration 077.
+   */
+  errorDetail?: string | null;
   durationMs: number;
   attempts?: number;
   promptTokens?: number | null;
@@ -465,6 +471,7 @@ export async function logAiCall(
       model: t.model,
       status: t.status,
       error_code: t.errorCode ?? null,
+      error_detail: t.errorDetail ? t.errorDetail.slice(0, 500) : null,
       duration_ms: t.durationMs,
       attempts: t.attempts ?? null,
       prompt_tokens: t.promptTokens ?? null,
