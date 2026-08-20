@@ -803,6 +803,34 @@ export default function TodayScreen() {
               {format(new Date(nextUp.due_date + 'T00:00:00'), 'EEEE, MMMM d')}
               {nextUp.due_time ? ` · ${nextUp.due_time.slice(0, 5)}` : ''}
             </Text>
+            {/* The tutor's only entry points were a settings list, the + menu
+                and a course toolbar — none of which a student visits because
+                they are stuck. This is the most-read card in the app, and it
+                is already naming the exact thing they are worried about, so
+                the offer belongs here and nowhere earlier. */}
+            {['exam', 'quiz', 'assignment', 'project'].includes(nextUp.type) && (
+              <TouchableOpacity
+                style={styles.heroTutor}
+                onPress={() => {
+                  track('tutor_offered_tapped', { screen: 'dashboard', type: nextUp.type });
+                  router.push({
+                    pathname: '/tutor',
+                    params: { courseId: nextUp.course_id, assignmentId: nextUp.id },
+                  } as any);
+                }}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Ask your tutor about this"
+              >
+                <FontAwesome name="comments" size={12} color="#fff" />
+                <Text style={styles.heroTutorText}>
+                  {nextUp.type === 'exam' || nextUp.type === 'quiz'
+                    ? 'Help me study for this'
+                    : 'Where do I start?'}
+                </Text>
+                <FontAwesome name="angle-right" size={15} color="rgba(255,255,255,0.8)" />
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -1298,6 +1326,12 @@ const styles = StyleSheet.create({
   heroBadgeText: { fontSize: 14, fontWeight: '600', color: '#fff' },
   heroTitle: { fontSize: 19, fontWeight: '600', color: '#fff', marginTop: 6, letterSpacing: -0.3 },
   heroSub: { fontSize: 14, color: 'rgba(255,255,255,0.82)', marginTop: 2 },
+  heroTutor: {
+    flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(255,255,255,0.28)',
+    paddingTop: 11,
+  },
+  heroTutorText: { flex: 1, color: '#fff', fontSize: 13.5, fontWeight: '700' },
   // Section
   sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   sectionRowRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },

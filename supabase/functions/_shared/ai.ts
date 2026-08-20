@@ -286,6 +286,119 @@ export async function callOpenAIResponses(payload: Record<string, unknown>, labe
     }));
 }
 
+/**
+ * Call the Responses API in STREAMING mode and hand back the raw HTTP response.
+ *
+ * Why this is separate from callOpenAIResponses rather than a flag on it: that
+ * function's contract is "retry until you have a parsed body", and a stream has
+ * no parsed body — it has a sequence of events that the caller must forward as
+ * they arrive. Retrying is also only coherent BEFORE the first byte reaches the
+ * student. Once a partial answer is on screen, a retry would replay the answer
+ * from the top, so this retries connection-level failures and pre-stream HTTP
+ * errors only, then gets out of the way.
+ *
+ * The caller owns the body. Nothing here reads it, so nothing here can buffer
+ * the whole answer and defeat the point.
+ */
+export async function streamOpenAIResponses(
+  payload: Record<string, unknown>,
+  label = 'tutor-stream',
+): Promise<{ ok: true; response: Response } | { ok: false; status: number; networkError: boolean; errorBody: string }> {
+  if (!OPENAI_API_KEY) {
+    return { ok: false, status: 0, networkError: false, errorBody: 'OPENAI_API_KEY is not configured' };
+  }
+
+  let status = 0;
+  let networkError = false;
+  let errorBody = '';
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    let response: Response;
+    try {
+      response = await fetch(OPENAI_RESPONSES_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          Accept: 'text/event-stream',
+        },
+        body: JSON.stringify({ ...payload, stream: true }),
+      });
+    } catch (error) {
+      networkError = true;
+      console.warn(`[ai:${label}] network error (attempt ${attempt}/${MAX_ATTEMPTS}):`, String(error).slice(0, 200));
+      if (attempt < MAX_ATTEMPTS) { await sleep(backoffMs(attempt)); continue; }
+      break;
+    }
+
+    networkError = false;
+    status = response.status;
+    if (response.ok && response.body) return { ok: true, response };
+
+    errorBody = await response.text().catch(() => '');
+    console.warn(`[ai:${label}] HTTP ${status} (attempt ${attempt}/${MAX_ATTEMPTS}):`, errorBody.slice(0, 300));
+    if (RETRYABLE_HTTP.has(status) && attempt < MAX_ATTEMPTS) { await sleep(backoffMs(attempt)); continue; }
+    break;
+  }
+
+  return { ok: false, status, networkError, errorBody: errorBody.slice(0, 500) };
+}
+
+/** One decoded event from the Responses stream. */
+export type OpenAIStreamEvent =
+  | { kind: 'delta'; text: string }
+  | { kind: 'completed'; response: any }
+  | { kind: 'failed'; message: string };
+
+/**
+ * Decode an OpenAI SSE body into the three events a caller actually acts on.
+ *
+ * Framing is the fiddly part and the reason this is shared rather than inlined:
+ * a chunk boundary can fall anywhere, including the middle of a multi-byte
+ * character or halfway through a `data:` line, so the decoder is streaming
+ * (`{ stream: true }`) and the tail of an incomplete line is carried into the
+ * next chunk. Getting this wrong drops characters at random points in an answer,
+ * which is worse than not streaming at all because it looks like the model
+ * mis-spelled something.
+ */
+export async function* readOpenAIStream(response: Response): AsyncGenerator<OpenAIStreamEvent> {
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    // Normalized to \n so frame splitting works whichever line ending the
+    // provider (or a proxy between us) uses. SSE permits both.
+    buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
+
+    // SSE frames are separated by a blank line; a frame may carry several
+    // `data:` lines, though the Responses API sends one per frame today.
+    let split: number;
+    while ((split = buffer.indexOf('\n\n')) !== -1) {
+      const frame = buffer.slice(0, split);
+      buffer = buffer.slice(split + 2);
+      for (const line of frame.split('\n')) {
+        if (!line.startsWith('data:')) continue;
+        const raw = line.slice(5).trim();
+        if (!raw || raw === '[DONE]') continue;
+        let event: any;
+        try { event = JSON.parse(raw); } catch { continue; }
+        const type = typeof event?.type === 'string' ? event.type : '';
+        if (type === 'response.output_text.delta' && typeof event.delta === 'string') {
+          yield { kind: 'delta', text: event.delta };
+        } else if (type === 'response.completed') {
+          yield { kind: 'completed', response: event.response };
+        } else if (type === 'response.failed' || type === 'response.incomplete' || type === 'error') {
+          const message = event?.response?.error?.message ?? event?.error?.message ?? type;
+          yield { kind: 'failed', message: String(message).slice(0, 300) };
+        }
+      }
+    }
+  }
+}
+
 // ── Groq (lecture transcription only) ───────────────────────────────────────
 
 /**

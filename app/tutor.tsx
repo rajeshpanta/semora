@@ -14,13 +14,23 @@ import {
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
+  Image,
+  Modal,
+  Linking,
+  // Only for Alert.prompt, which the localized wrapper does not expose (it
+  // wraps .alert alone). Every other dialog on this screen goes through the
+  // wrapper so its buttons stay translated.
+  Alert as NativeAlert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
-import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import * as ImagePicker from 'expo-image-picker';
+import { COLORS, DEFAULT_GRADE_SCALE, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
+import { calculateCourseGrade } from '@/lib/grades';
+import type { GradeThreshold } from '@/types/database';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
@@ -32,7 +42,12 @@ import {
   useCourseNotes, useUploadCourseNote, useDeleteCourseNote, useGenerateTutorPractice,
   useEvaluateTutorPractice, useCourseTopicMastery, type TutorPracticeQuestion,
   prepareCourseNotes, type CourseNoteReadProgress, type CourseNoteUploadProgress,
+  useTutorThreads, useCreateTutorThread, useRenameTutorThread, useDeleteTutorThread,
+  useRateTutorMessage, useTutorQuota, useOpenPractice,
+  type TutorConversation, type TutorGradeSnapshot,
 } from '@/lib/tutor';
+import { RichText } from '@/components/RichText';
+import { shareText, shareTextMessage } from '@/lib/shareLink';
 import {
   normalizeSupportedDocument,
   SUPPORTED_DOCUMENT_PICKER_TYPE,
@@ -47,7 +62,10 @@ export default function TutorScreen() {
   const isPro = useAppStore((s) => s.isPro);
   // Optional course scope: /tutor?courseId=<id> grounds the tutor on that
   // course. Without it, the tutor is a general study chat.
-  const { courseId } = useLocalSearchParams<{ courseId?: string }>();
+  // `assignmentId` arrives from the "Stuck on this?" prompt on a task, so the
+  // student lands on an explanation of the thing they tapped rather than on an
+  // empty chat box they now have to describe it into.
+  const { courseId, assignmentId } = useLocalSearchParams<{ courseId?: string; assignmentId?: string }>();
 
   // ── Pro gate: locked teaser routes to the paywall ─────────────
   if (!isPro) {
@@ -82,12 +100,18 @@ export default function TutorScreen() {
     );
   }
 
-  return <TutorChat initialCourseId={courseId ?? null} />;
+  return <TutorChat initialCourseId={courseId ?? null} explainAssignmentId={assignmentId ?? null} />;
 }
 
 // Pro-only chat body, split out so the hooks below never run for free users
 // (the early return above would otherwise violate the rules-of-hooks).
-function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
+function TutorChat({
+  initialCourseId,
+  explainAssignmentId,
+}: {
+  initialCourseId: string | null;
+  explainAssignmentId: string | null;
+}) {
   // The tutor is reachable two ways: from a course (which passes courseId) and
   // from the Study Tools list, which passes nothing. Opening it the second way
   // used to be a dead end — "Add notes" and the practice chips just told you to
@@ -107,7 +131,7 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
   }
   const router = useRouter();
   const colors = useColors();
-  const { contentMaxWidth } = useResponsive();
+  const { contentMaxWidth, isDesktop } = useResponsive();
 
   // Resolve the semester by derivation rather than reading global state alone:
   // selectedSemesterId is only populated by the tabs that set it, so arriving
@@ -122,17 +146,40 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
   const { data: courseTasks = [] } = useTasks(courseId ? { courseId } : { semesterId: null });
   const { data: gradeCategories = [] } = useGradeCategories(courseId);
   const { data: conversation } = useTutorConversation(courseId);
-  const conversationId = conversation?.id ?? null;
+  const { data: threads = [] } = useTutorThreads(courseId);
+  const createThread = useCreateTutorThread(courseId);
+  const renameThread = useRenameTutorThread(courseId);
+  const deleteThread = useDeleteTutorThread(courseId);
+  // A thread the student picked wins; otherwise the newest one, with the
+  // find-or-create hook as the fallback for a scope that has none yet.
+  const [pickedThreadId, setPickedThreadId] = useState<string | null>(null);
+  // The pick wins outright rather than being validated against the list: a
+  // thread created a moment ago is not in `threads` until that query refetches,
+  // and checking membership first would silently drop the student back into the
+  // previous conversation for a frame. A deleted thread clears the pick at the
+  // point of deletion, so a stale id cannot survive here.
+  const conversationId = pickedThreadId ?? threads[0]?.id ?? conversation?.id ?? null;
+  const activeThread = threads.find((t) => t.id === conversationId) ?? null;
+
   const { data: messages = [], isLoading } = useTutorMessages(conversationId);
   const sendMessage = useSendTutorMessage(conversationId, courseId);
+  const rateMessage = useRateTutorMessage(conversationId);
   const generatePractice = useGenerateTutorPractice(conversationId, courseId);
   const evaluatePractice = useEvaluateTutorPractice(conversationId, courseId);
   const { data: topicMastery = [] } = useCourseTopicMastery(courseId);
   const { data: notes = [] } = useCourseNotes(courseId);
+  const { data: quota } = useTutorQuota();
+  const { data: openPractice } = useOpenPractice(courseId);
   const uploadNote = useUploadCourseNote(courseId);
   const deleteNote = useDeleteCourseNote(courseId);
 
   const [draft, setDraft] = useState('');
+  const [threadSheetOpen, setThreadSheetOpen] = useState(false);
+  /** The answer as it is being written, before it becomes a stored turn. */
+  const [streamingText, setStreamingText] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<
+    { uri: string; base64: string; mimeType: string } | null
+  >(null);
   const [practice, setPractice] = useState<TutorPracticeQuestion | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [practiceFeedback, setPracticeFeedback] = useState<{ correct: boolean; feedback: string } | null>(null);
@@ -143,6 +190,10 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
     stage: 'reading' | 'creating';
   } | null>(null);
   const scrollRef = useRef<ScrollView>(null);
+  // Streaming grows the content on every token. Animating each of those is
+  // both janky and pointless — the view is already at the bottom — so the
+  // auto-scroll drops the animation while an answer is arriving.
+  const streamingRef = useRef(false);
   const tutorWorkInFlightRef = useRef(false);
   const fileProgressClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTutorWorking = tutorWork !== null || sendMessage.isPending || generatePractice.isPending;
@@ -153,8 +204,75 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
 
   const scrollToEnd = useCallback(() => {
     // Defer past layout so the newest message is measured before we scroll.
-    requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+    requestAnimationFrame(() =>
+      scrollRef.current?.scrollToEnd({ animated: !streamingRef.current }));
   }, []);
+
+  // Switching course must not carry the previous course's thread along.
+  useEffect(() => { setPickedThreadId(null); }, [courseId]);
+
+  // Arriving from a task: explain it, once, as soon as there is a thread to
+  // put the answer in. Latched by ref rather than state so a re-render during
+  // the request cannot fire a second one.
+  const autoExplainedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!explainAssignmentId || !conversationId) return;
+    if (autoExplainedRef.current === explainAssignmentId) return;
+    const task = courseTasks.find((candidate) => candidate.id === explainAssignmentId);
+    if (!task) return;
+    autoExplainedRef.current = explainAssignmentId;
+    handleExplainAssignment(task);
+    // handleExplainAssignment is stable enough for this one-shot latch; adding
+    // it to the deps would re-run the effect on every render it is recreated.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [explainAssignmentId, conversationId, courseTasks]);
+
+  // A question the student generated and never answered. It used to live only
+  // in this component's state, so checking the notes it asked about threw it
+  // away; the row was always in the database, it just had no way back.
+  useEffect(() => {
+    if (openPractice && !practice && !practiceFeedback) setPractice(openPractice);
+  }, [openPractice, practice, practiceFeedback]);
+
+  /**
+   * The grade exactly as the course screen renders it, sent with each question
+   * so the tutor can answer "what do I need on the final".
+   *
+   * Computed here from the same function the course screen uses rather than
+   * re-derived on the server: two implementations of category weighting, drop
+   * -lowest and extra credit would eventually disagree, and a tutor that
+   * contradicts the number on the course screen is worse than one that cannot
+   * see grades at all.
+   */
+  const gradeSnapshot = useMemo<TutorGradeSnapshot | null>(() => {
+    if (!course || !courseId) return null;
+    const result = calculateCourseGrade(
+      courseTasks.map((task) => ({
+        id: task.id,
+        grade_category_id: task.grade_category_id,
+        weight: task.weight,
+        score: task.score,
+        points_earned: task.points_earned,
+        points_possible: task.points_possible,
+        is_extra_credit: task.is_extra_credit,
+      })),
+      gradeCategories,
+      ((course as any).grade_scale || DEFAULT_GRADE_SCALE) as GradeThreshold[],
+      (course as any).extra_credit_policy || 'bonus',
+    );
+    if (result.percentage == null && result.categoryBreakdown.length === 0) return null;
+    return {
+      percentage: result.percentage,
+      letter: result.letter,
+      weightRemaining: Math.max(0, result.weightTotal - result.weightAttempted),
+      categories: result.categoryBreakdown.map((category) => ({
+        name: category.name,
+        weight: category.weight,
+        average: category.average,
+        graded: category.gradedCount,
+      })),
+    };
+  }, [course, courseId, courseTasks, gradeCategories]);
 
   const riskReport = useMemo(
     () => course ? buildAcademicRiskReport(courseTasks, [course], gradeCategories) : null,
@@ -164,6 +282,32 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
     () => courseTasks.filter((task) => !task.is_completed).sort((a, b) => a.due_date.localeCompare(b.due_date)).slice(0, 3),
     [courseTasks],
   );
+
+  /**
+   * Openers for an empty thread.
+   *
+   * Chosen to be questions a general chatbot CANNOT answer — they need this
+   * student's deadlines, this course's notes, this course's weighting — so the
+   * first exchange demonstrates the only reason to use the tutor here rather
+   * than somewhere else.
+   */
+  const starterPrompts = useMemo(() => {
+    if (!courseId) {
+      return [
+        'What should I work on tonight?',
+        'Which deadline should I worry about first?',
+        'Help me plan the next two weeks.',
+      ];
+    }
+    const prompts: string[] = [];
+    if (upcomingWork[0]) prompts.push(`Help me get started on ${upcomingWork[0].title}`);
+    if (notes.length > 0) prompts.push('Summarise the key ideas from my notes.');
+    if (gradeSnapshot?.percentage != null) {
+      prompts.push('What do I need on the rest to finish with an A?');
+    }
+    prompts.push('What should I study first for this course?');
+    return prompts.slice(0, 4);
+  }, [courseId, upcomingWork, notes.length, gradeSnapshot?.percentage]);
 
   const handleGeneratePractice = async (mode: 'practice' | 'quiz') => {
     if (tutorWorkInFlightRef.current || isTutorWorking) return;
@@ -227,7 +371,7 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
         });
       }
       setTutorWork({ kind: 'answer', stage: 'creating' });
-      await sendMessage.mutateAsync({ message: text, mode: 'explain_assignment', assignmentId: task.id });
+      await runTurn({ message: text, mode: 'explain_assignment', assignmentId: task.id });
       track('tutor_assignment_explained', { screen: 'tutor' });
       scrollToEnd();
     } catch (e: any) {
@@ -239,12 +383,58 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
     }
   };
 
+  /**
+   * Send one turn and paint the answer as it is written.
+   *
+   * The reply used to appear all at once after three to ten seconds of a
+   * spinner, which is the same wait dressed as a failure. Deltas land in local
+   * state; once the turn is stored the message list becomes the source of
+   * truth again and the streaming copy is dropped in the same commit, so the
+   * bubble never duplicates or flickers.
+   */
+  const runTurn = async (input: {
+    message: string;
+    mode?: 'chat' | 'explain_assignment';
+    assignmentId?: string | null;
+    image?: { base64: string; mimeType: string } | null;
+  }) => {
+    streamingRef.current = true;
+    // Repainting on every token means re-parsing the whole answer's markdown
+    // several hundred times as it grows, which is quadratic and shows up as
+    // stutter on an older phone. ~13 frames a second still reads as typing,
+    // and the final text is painted unconditionally below.
+    let lastPaint = 0;
+    let latest = '';
+    try {
+      await sendMessage.mutateAsync({
+        ...input,
+        grades: gradeSnapshot,
+        onDelta: (soFar) => {
+          latest = soFar;
+          const now = Date.now();
+          if (now - lastPaint < 75) return;
+          lastPaint = now;
+          setStreamingText(soFar);
+          scrollToEnd();
+        },
+      });
+      // Whatever the throttle skipped. Without this the visible answer can stop
+      // a word or two short until the stored turn replaces it.
+      if (latest) setStreamingText(latest);
+    } finally {
+      streamingRef.current = false;
+      setStreamingText(null);
+    }
+  };
+
   const handleSend = async () => {
     const text = draft.trim();
     if (!text || tutorWorkInFlightRef.current || isTutorWorking || !conversationId) return;
     tutorWorkInFlightRef.current = true;
     if (Platform.OS === 'ios') Haptics.selectionAsync();
+    const photo = attachment;
     setDraft('');
+    setAttachment(null);
     scrollToEnd();
     try {
       if (courseId && notes.length > 0) {
@@ -254,8 +444,13 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
         });
       }
       setTutorWork({ kind: 'answer', stage: 'creating' });
-      await sendMessage.mutateAsync(text);
-      track('tutor_message_sent', { screen: 'tutor', scoped: !!courseId, grounded: notes.length > 0 });
+      await runTurn({
+        message: text,
+        image: photo ? { base64: photo.base64, mimeType: photo.mimeType } : null,
+      });
+      track('tutor_message_sent', {
+        screen: 'tutor', scoped: !!courseId, grounded: notes.length > 0, photo: !!photo,
+      });
       scrollToEnd();
     } catch (e: any) {
       // Server marks Pro-required with code PRO_REQUIRED — route to paywall
@@ -264,8 +459,14 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
         router.push({ pathname: '/paywall', params: { context: 'tutor' } } as any);
         return;
       }
-      // Restore the draft so the user doesn't lose what they typed.
+      // Restore the draft AND the photo — re-taking a picture of a problem set
+      // because the network blipped is a genuinely annoying thing to ask.
       setDraft(text);
+      if (photo) setAttachment(photo);
+      if (e?.code === 'TUTOR_DAILY_CAP') {
+        Alert.alert("That's today's limit", e?.message || 'Please try again tomorrow.');
+        return;
+      }
       Alert.alert('Could not send', e?.message || 'Please try again.');
     } finally {
       tutorWorkInFlightRef.current = false;
@@ -316,6 +517,130 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
     }
   };
 
+  // ── A photo of the problem ───────────────────────────────────
+  // The most common tutoring moment there is — "here's question 4, I'm stuck"
+  // — and until now the only way to show the tutor anything was to file it
+  // permanently as course material. This is read for one turn and discarded.
+  const pickPhoto = async (source: 'camera' | 'library') => {
+    const permission = source === 'camera'
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.status !== 'granted') {
+      Alert.alert(
+        source === 'camera' ? 'Camera Access Needed' : 'Photo Access Needed',
+        'Semora needs access so you can show the tutor a problem. You can enable it in Settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ],
+      );
+      return;
+    }
+    const result = source === 'camera'
+      ? await ImagePicker.launchCameraAsync({ base64: true, quality: 0.6 })
+      : await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        base64: true,
+        quality: 0.6,
+        // Ask iOS for the compatible representation so a HEIC never has to be
+        // decoded at all. The server handles one if it arrives anyway.
+        preferredAssetRepresentationMode:
+          ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+      });
+    if (result.canceled || !result.assets?.[0]) return;
+    const asset = result.assets[0];
+    if (!asset.base64) {
+      Alert.alert("Couldn't read that photo", 'Please try another one.');
+      return;
+    }
+    setAttachment({ uri: asset.uri, base64: asset.base64, mimeType: asset.mimeType || 'image/jpeg' });
+    if (Platform.OS === 'ios') Haptics.selectionAsync();
+    track('tutor_photo_attached', { screen: 'tutor', source });
+  };
+
+  const handleAttachPhoto = () => {
+    if (isTutorWorking) return;
+    // A desktop browser has no camera to open. expo-image-picker's web build
+    // sets capture="camera" on a file input, which phones honour and desktops
+    // ignore — so the option works, but it promises a camera and delivers a
+    // file dialog. Mobile web keeps the real camera, so this gates on
+    // isDesktop rather than Platform.OS, matching the scan screen.
+    const options = [
+      ...(isDesktop ? [] : [{ text: 'Take a photo', onPress: () => pickPhoto('camera') }]),
+      { text: isDesktop ? 'Choose an image' : 'Choose from library', onPress: () => pickPhoto('library') },
+      { text: 'Cancel', style: 'cancel' as const },
+    ];
+    Alert.alert(
+      'Show the tutor a problem',
+      'It reads the photo for this question only — it is not saved to your course.',
+      options,
+    );
+  };
+
+  // Long-press already selects the text; this is the one-tap route out to
+  // Notes, Messages, or the clipboard.
+  //
+  // Through shareText, NOT Share.share directly: react-native-web's Share is
+  // not a polyfill — it rejects outright wherever `navigator.share` is missing
+  // (Firefox everywhere, Chrome and Edge on macOS and Linux). Calling it raw
+  // and catching the rejection is a button that silently does nothing, which
+  // is precisely what this control did on those browsers. The ladder falls
+  // back to the clipboard, and copying an answer is a fine outcome.
+  const handleShareAnswer = async (text: string) => {
+    const result = await shareText({ text });
+    track('tutor_answer_shared', { screen: 'tutor', result });
+    const notice = shareTextMessage(result);
+    if (notice) Alert.alert(notice.title, notice.body);
+  };
+
+  // ── Threads ──────────────────────────────────────────────────
+  const handleNewThread = async () => {
+    if (isTutorWorking) return;
+    try {
+      const created = await createThread.mutateAsync();
+      setPickedThreadId(created.id);
+      setThreadSheetOpen(false);
+      setPractice(null);
+      setPracticeFeedback(null);
+      setSelectedAnswer(null);
+      if (Platform.OS === 'ios') Haptics.selectionAsync();
+    } catch (e: any) {
+      Alert.alert("Couldn't start a new chat", e?.message || 'Please try again.');
+    }
+  };
+
+  const handleRenameThread = (thread: TutorConversation) => {
+    NativeAlert.prompt?.(
+      'Rename chat',
+      undefined,
+      (value?: string) => {
+        if (value == null) return;
+        renameThread.mutate({ id: thread.id, title: value });
+      },
+      'plain-text',
+      thread.title ?? '',
+    );
+  };
+
+  const handleDeleteThread = (thread: TutorConversation) => {
+    Alert.alert(
+      'Delete chat?',
+      'The whole conversation is removed. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteThread.mutateAsync(thread.id).catch((e: any) =>
+              Alert.alert("Couldn't delete", e?.message || 'Please try again.'));
+            if (pickedThreadId === thread.id) setPickedThreadId(null);
+          },
+        },
+      ],
+    );
+  };
+
   const confirmDeleteNote = (note: { id: string; storage_path: string; filename: string }) => {
     Alert.alert('Remove note?', `“${note.filename}” will no longer ground the tutor.`, [
       { text: 'Cancel', style: 'cancel' },
@@ -339,6 +664,44 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
+        {/* Which conversation this is, and the way out to another one. A
+            thread was previously an invisible, permanent, per-course singleton
+            — this is the whole of the UI that changes that. */}
+        <View style={[styles.threadBar, { borderBottomColor: colors.line, maxWidth: contentMaxWidth }]}>
+          <TouchableOpacity
+            style={styles.threadTitleBtn}
+            onPress={() => setThreadSheetOpen(true)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Switch chat"
+          >
+            <FontAwesome name="comments-o" size={13} color={colors.ink3} />
+            <Text style={[styles.threadTitle, { color: colors.ink }]} numberOfLines={1}>
+              {activeThread?.title || 'New chat'}
+            </Text>
+            <FontAwesome name="angle-down" size={14} color={colors.ink3} />
+          </TouchableOpacity>
+          {/* Only worth the space once it is close enough to matter. Before
+              this the cap was invisible until the moment it refused a
+              question, which is the one moment it is too late to be useful. */}
+          {!!quota && quota.cap - quota.used <= 10 && (
+            <Text style={[styles.quotaPill, { color: colors.amber, backgroundColor: colors.amber50 }]}>
+              {`${Math.max(0, quota.cap - quota.used)} left today`}
+            </Text>
+          )}
+          <TouchableOpacity
+            style={[styles.newThreadBtn, { borderColor: colors.line }]}
+            onPress={handleNewThread}
+            disabled={isTutorWorking || createThread.isPending}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="New chat"
+          >
+            <FontAwesome name="plus" size={11} color={colors.brand} />
+            <Text style={[styles.newThreadText, { color: colors.brand }]}>New</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Course scope picker — only worth showing when there's a choice to
             make. "General" keeps the unscoped chat that this screen already
             offered, so nothing is taken away by adding the scope. */}
@@ -511,9 +874,29 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
               </Text>
               <Text style={[styles.emptyText, { color: colors.ink3 }]}>
                 {courseId
-                  ? 'Answers are grounded in this course’s syllabus, deadlines, and any notes you attach above.'
-                  : 'Pick a course above to ground answers in your syllabus and notes, or just ask anything.'}
+                  ? 'Answers are grounded in this course’s syllabus, deadlines, grades, and any notes you attach above.'
+                  : 'Ask across every course — your deadlines are already here. Pick a course above to add its syllabus and notes.'}
               </Text>
+              {/* A blank chat box is a hard thing to start. These are the
+                  questions this app can answer better than a general chatbot,
+                  because it is holding the material — so the first question a
+                  student asks is one that shows that. */}
+              <View style={styles.starterWrap}>
+                {starterPrompts.map((prompt) => (
+                  <TouchableOpacity
+                    key={prompt}
+                    style={[styles.starterChip, { borderColor: colors.line, backgroundColor: colors.card }]}
+                    onPress={() => {
+                      if (Platform.OS === 'ios') Haptics.selectionAsync();
+                      setDraft(prompt);
+                      track('tutor_starter_tapped', { screen: 'tutor', scoped: !!courseId });
+                    }}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.starterText, { color: colors.ink2 }]}>{prompt}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           ) : (
             messages.map((m) => (
@@ -524,7 +907,19 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
                     ? [styles.bubbleUser, { backgroundColor: colors.brand }]
                     : [styles.bubbleAssistant, { backgroundColor: colors.card, borderColor: colors.line }],
                 ]}>
-                  <Text style={[styles.bubbleText, { color: m.role === 'user' ? '#fff' : colors.ink }]}>{m.content}</Text>
+                  {m.role === 'user' ? (
+                    <Text selectable style={[styles.bubbleText, { color: '#fff' }]}>{m.content}</Text>
+                  ) : (
+                    <RichText
+                      text={m.content}
+                      color={colors.ink}
+                      strongColor={colors.ink}
+                      mutedColor={colors.ink2}
+                      accentColor={colors.brand}
+                      surfaceColor={colors.paper}
+                      lineColor={colors.line}
+                    />
+                  )}
                 </View>
                 {m.role === 'assistant' && m.citations?.length > 0 && (
                   <View style={styles.citationRow}>
@@ -536,8 +931,75 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
                     ))}
                   </View>
                 )}
+                {/* Rating and share sit under the answer, not on it: they are
+                    about the answer rather than part of it. A rescued turn
+                    (id 'local-…') has no row to rate, so it only offers share. */}
+                {m.role === 'assistant' && (
+                  <View style={styles.answerActions}>
+                    {!m.id.startsWith('local-') && (
+                      <>
+                        <TouchableOpacity
+                          onPress={() => {
+                            if (Platform.OS === 'ios') Haptics.selectionAsync();
+                            rateMessage.mutate({ messageId: m.id, rating: m.rating === 1 ? null : 1 });
+                          }}
+                          style={styles.answerAction}
+                          accessibilityRole="button"
+                          accessibilityLabel="Helpful"
+                        >
+                          <FontAwesome
+                            name={m.rating === 1 ? 'thumbs-up' : 'thumbs-o-up'}
+                            size={12}
+                            color={m.rating === 1 ? colors.teal : colors.ink3}
+                          />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => {
+                            if (Platform.OS === 'ios') Haptics.selectionAsync();
+                            rateMessage.mutate({ messageId: m.id, rating: m.rating === -1 ? null : -1 });
+                          }}
+                          style={styles.answerAction}
+                          accessibilityRole="button"
+                          accessibilityLabel="Not helpful"
+                        >
+                          <FontAwesome
+                            name={m.rating === -1 ? 'thumbs-down' : 'thumbs-o-down'}
+                            size={12}
+                            color={m.rating === -1 ? colors.coral : colors.ink3}
+                          />
+                        </TouchableOpacity>
+                      </>
+                    )}
+                    <TouchableOpacity
+                      onPress={() => handleShareAnswer(m.content)}
+                      style={styles.answerAction}
+                      accessibilityRole="button"
+                      accessibilityLabel="Share this answer"
+                    >
+                      <FontAwesome name="share-square-o" size={12} color={colors.ink3} />
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             ))
+          )}
+          {/* The answer as it is being written. Replaced by the stored turn the
+              moment the send resolves, in the same commit, so there is never a
+              frame with both. */}
+          {streamingText !== null && (
+            <View style={styles.messageAssistantWrap}>
+              <View style={[styles.bubble, styles.bubbleAssistant, { backgroundColor: colors.card, borderColor: colors.line }]}>
+                <RichText
+                  text={streamingText}
+                  color={colors.ink}
+                  strongColor={colors.ink}
+                  mutedColor={colors.ink2}
+                  accentColor={colors.brand}
+                  surfaceColor={colors.paper}
+                  lineColor={colors.line}
+                />
+              </View>
+            </View>
           )}
           {practice && (
             <View style={[styles.practiceCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
@@ -568,7 +1030,7 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
               {practice.citations?.length > 0 && <Text style={[styles.practiceSources, { color: colors.ink3 }]}>Sources: {practice.citations.map((citation) => citation.label).join(' · ')}</Text>}
             </View>
           )}
-          {isTutorWorking && (
+          {isTutorWorking && streamingText === null && (
             <FileWorkProgress
               compact
               title={tutorWork?.stage === 'reading'
@@ -584,7 +1046,33 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
         </ScrollView>
 
         {/* Composer */}
+        {!!attachment && (
+          <View style={[styles.attachmentBar, { borderTopColor: colors.line, backgroundColor: colors.paper, maxWidth: contentMaxWidth }]}>
+            <Image source={{ uri: attachment.uri }} style={styles.attachmentThumb} />
+            <Text style={[styles.attachmentLabel, { color: colors.ink2 }]} numberOfLines={2}>
+              Attached to your next question. It isn{'\u2019'}t saved to your course.
+            </Text>
+            <TouchableOpacity
+              onPress={() => setAttachment(null)}
+              style={styles.attachmentRemove}
+              accessibilityRole="button"
+              accessibilityLabel="Remove photo"
+            >
+              <FontAwesome name="times-circle" size={18} color={colors.ink3} />
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={[styles.composer, { borderTopColor: colors.line, backgroundColor: colors.paper, maxWidth: contentMaxWidth }]}>
+          <TouchableOpacity
+            style={[styles.attachBtn, { borderColor: colors.line }]}
+            onPress={handleAttachPhoto}
+            disabled={isTutorWorking}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Attach a photo of a problem"
+          >
+            <FontAwesome name="camera" size={15} color={attachment ? colors.brand : colors.ink3} />
+          </TouchableOpacity>
           <TextInput
             style={[styles.input, { color: colors.ink, backgroundColor: colors.card, borderColor: colors.line }]}
             value={draft}
@@ -611,6 +1099,99 @@ function TutorChat({ initialCourseId }: { initialCourseId: string | null }) {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Every chat in this scope. Ordered by last use, because the one you
+          were in five minutes ago is the one you want back. */}
+      <Modal
+        visible={threadSheetOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setThreadSheetOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.sheetBackdrop}
+          activeOpacity={1}
+          onPress={() => setThreadSheetOpen(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        />
+        <View style={[styles.sheet, { backgroundColor: colors.paper, maxWidth: contentMaxWidth }]}>
+          <View style={styles.sheetHandleWrap}><View style={[styles.sheetHandle, { backgroundColor: colors.line }]} /></View>
+          <View style={styles.sheetHead}>
+            <Text style={[styles.sheetTitle, { color: colors.ink }]}>
+              {course?.name ? `Chats · ${course.name}` : 'General chats'}
+            </Text>
+            <TouchableOpacity
+              style={[styles.sheetNewBtn, { backgroundColor: colors.brand }]}
+              onPress={handleNewThread}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Start a new chat"
+            >
+              <FontAwesome name="plus" size={11} color="#fff" />
+              <Text style={styles.sheetNewText}>New chat</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.sheetList} contentContainerStyle={{ paddingBottom: 24 }}>
+            {threads.length === 0 && (
+              <Text style={[styles.sheetEmpty, { color: colors.ink3 }]}>
+                No chats yet. Ask a question and this one gets named after it.
+              </Text>
+            )}
+            {threads.map((thread) => {
+              const active = thread.id === conversationId;
+              return (
+                <View
+                  key={thread.id}
+                  style={[
+                    styles.threadRow,
+                    { borderColor: active ? colors.brand : colors.line, backgroundColor: colors.card },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={styles.threadRowMain}
+                    onPress={() => {
+                      setPickedThreadId(thread.id);
+                      setThreadSheetOpen(false);
+                      setPractice(null);
+                      setPracticeFeedback(null);
+                      setSelectedAnswer(null);
+                    }}
+                    activeOpacity={0.75}
+                    accessibilityRole="button"
+                    accessibilityLabel={thread.title || 'Untitled chat'}
+                  >
+                    <Text style={[styles.threadRowTitle, { color: active ? colors.brand : colors.ink }]} numberOfLines={1}>
+                      {thread.title || 'New chat'}
+                    </Text>
+                    <Text style={[styles.threadRowMeta, { color: colors.ink3 }]}>
+                      {new Date(thread.updated_at || thread.created_at).toLocaleDateString()}
+                    </Text>
+                  </TouchableOpacity>
+                  {Platform.OS === 'ios' && (
+                    <TouchableOpacity
+                      onPress={() => handleRenameThread(thread)}
+                      style={styles.threadRowAction}
+                      accessibilityRole="button"
+                      accessibilityLabel="Rename chat"
+                    >
+                      <FontAwesome name="pencil" size={13} color={colors.ink3} />
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    onPress={() => handleDeleteThread(thread)}
+                    style={styles.threadRowAction}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete chat"
+                  >
+                    <FontAwesome name="trash-o" size={14} color={colors.coral} />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -679,6 +1260,45 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: 'center', paddingVertical: 50, gap: 10 },
   emptyTitle: { fontSize: 16, fontWeight: '700', marginTop: 4, textAlign: 'center' },
   emptyText: { fontSize: 13.5, textAlign: 'center', lineHeight: 19, maxWidth: 280 },
+
+  // Threads
+  threadBar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 9, borderBottomWidth: 0.5, width: '100%', alignSelf: 'center' },
+  threadTitleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7 },
+  threadTitle: { flex: 1, fontSize: 13.5, fontWeight: '700' },
+  quotaPill: { fontSize: 10.5, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, overflow: 'hidden' },
+  newThreadBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
+  newThreadText: { fontSize: 12, fontWeight: '700' },
+  sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
+  sheet: { maxHeight: '70%', width: '100%', alignSelf: 'center', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 8 },
+  sheetHandleWrap: { alignItems: 'center', paddingTop: 8, paddingBottom: 4 },
+  sheetHandle: { width: 38, height: 4, borderRadius: 2 },
+  sheetHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 18, paddingVertical: 10 },
+  sheetTitle: { flex: 1, fontFamily: FONTS.displaySemibold, fontSize: 17 },
+  sheetNewBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
+  sheetNewText: { color: '#fff', fontSize: 12.5, fontWeight: '700' },
+  sheetList: { paddingHorizontal: 14 },
+  sheetEmpty: { fontSize: 13, lineHeight: 19, paddingHorizontal: 4, paddingVertical: 18, textAlign: 'center' },
+  threadRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: 12, marginBottom: 8, paddingRight: 6 },
+  threadRowMain: { flex: 1, paddingHorizontal: 12, paddingVertical: 11, gap: 3 },
+  threadRowTitle: { fontSize: 14, fontWeight: '600' },
+  threadRowMeta: { fontSize: 11 },
+  threadRowAction: { padding: 9 },
+
+  // Answer actions
+  answerActions: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 3, marginLeft: 2 },
+  answerAction: { paddingVertical: 5, paddingHorizontal: 7 },
+
+  // Starters
+  starterWrap: { gap: 8, marginTop: 14, width: '100%', maxWidth: 340 },
+  starterChip: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11 },
+  starterText: { fontSize: 13.5, lineHeight: 18 },
+
+  // Attachment
+  attachmentBar: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingTop: 10, borderTopWidth: 0.5, width: '100%', alignSelf: 'center' },
+  attachmentThumb: { width: 42, height: 42, borderRadius: 8 },
+  attachmentLabel: { flex: 1, fontSize: 11.5, lineHeight: 16 },
+  attachmentRemove: { padding: 4 },
+  attachBtn: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginBottom: 2 },
 
   // Composer
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 0.5, width: '100%', alignSelf: 'center' },

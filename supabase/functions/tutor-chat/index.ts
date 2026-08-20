@@ -15,6 +15,7 @@ import {
   AiTask, MODELS, tutorTaskForMode, isProviderConfigured, callGemini, callOpenAIResponses, geminiText, logAiCall,
   modelFor, openAIText, providerFor, usageFromGemini, usageFromOpenAI,
   asUntrustedDocument, OPENAI_API_KEY, GEMINI_API_KEY,
+  streamOpenAIResponses, readOpenAIStream,
 } from '../_shared/ai.ts';
 import { prepareImagePayload } from '../_shared/heic.ts';
 import {
@@ -64,10 +65,41 @@ const MAX_NOTES_CHARS = 24000; // shared budget across all note files
  */
 const MAX_PER_NOTE_CHARS = 8000;
 const MAX_TASKS = 60;
+/**
+ * How many of a course's notes are considered before the character budget is
+ * filled. Larger than the number that can fit on purpose: ranking can only
+ * pick a relevant note out of the set it was given.
+ */
+const MAX_NOTES_CONSIDERED = 24;
 // Recent conversation turns replayed for continuity. Older turns are
 // dropped — a tutoring session rarely needs deep history and it bounds cost.
 const MAX_HISTORY_TURNS = 12;
 const MAX_MESSAGE_CHARS = 4000; // reject absurdly long single messages
+
+/**
+ * A photo attached to one question — "here is problem 4, I'm stuck".
+ *
+ * Not stored anywhere: it is read for this turn and discarded. A photo of a
+ * problem set is working material, not course material the student chose to
+ * keep, and quietly filing it next to their uploaded notes would be a
+ * surprise. course_notes remains the deliberate, visible place for that.
+ */
+const MAX_IMAGE_BASE64_CHARS = 6_000_000; // ~4.4MB of image bytes
+
+/** Category rows accepted in a grade snapshot, and how long a name may be. */
+const MAX_GRADE_CATEGORIES = 12;
+const MAX_GRADE_NAME_CHARS = 60;
+
+/**
+ * Semester-wide grounding for the UNSCOPED tutor.
+ *
+ * Opened from Study Tools with no course chosen, this endpoint used to attach
+ * nothing at all — which made Semora's own tutor worse than a generic chatbot
+ * at the most common question a student actually has ("what should I work on
+ * tonight?"), while the answer sat in the database the whole time.
+ */
+const MAX_CROSS_COURSE_TASKS = 40;
+const CROSS_COURSE_HORIZON_DAYS = 21;
 
 const TUTOR_SYSTEM_PROMPT = `You are Semora's AI study tutor helping a college student with a specific course.
 
@@ -76,8 +108,17 @@ Ground your answers in the COURSE CONTEXT provided (syllabus info, uploaded lect
 Rules:
 - Be a tutor, not an answer key. Explain concepts, walk through reasoning, and check understanding. For graded work, guide the student to the answer rather than just handing it over.
 - If the course context doesn't cover the question, say so briefly, then help using general knowledge.
-- Be concise and encouraging. Use short paragraphs or bullet points. Plain text only — no markdown headers.
-- If asked about deadlines/dates, use the DEADLINES section; never invent dates.`;
+- Be concise and encouraging. Short paragraphs, or a numbered list when the answer really is a sequence of steps.
+- If asked about deadlines/dates, use the DEADLINES section; never invent dates.
+- If asked about grades, use the GRADES section verbatim. Those are the figures the student sees on their course screen, so never recompute them or contradict them — explain them and work forward from them.
+- If a photo is attached, read it and work from what is actually in it. Say what you can see before you explain it, so a mis-read is obvious to the student rather than silent.
+
+FORMATTING. The app renders a small markdown subset. Use it and nothing else:
+- **bold** for key terms; "## " for a heading only when an answer genuinely has sections.
+- "- " for bullets, "1. " for ordered steps, "> " for a callout.
+- Fence code with triple backticks and a language tag.
+- MATHS IN UNICODE, never LaTeX: x², x₁, √2, ∫, Σ, π, θ, α, β, Δ, ∂, ∞, ≤, ≥, ≠, ±, ×, ÷, →, ≈. Write a fraction inline as (a + b)/c, and put a long derivation on its own lines. Do not emit \\frac, \\sqrt, $…$ or \\[…\\]; the student sees those as raw characters.
+- No tables — they do not render.`;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -110,6 +151,148 @@ function parseModelJson(raw: string) {
   try { return JSON.parse(cleaned); } catch { return null; }
 }
 
+/**
+ * The student's grade, exactly as their course screen shows it.
+ *
+ * COMPUTED ON THE CLIENT, ON PURPOSE. calculateCourseGrade in lib/grades.ts is
+ * two hundred lines of category weighting, drop-lowest rules, points-vs-percent
+ * handling and extra-credit policy. Reimplementing that here would produce a
+ * second answer to "what is my grade" — and the day the two drift, the tutor
+ * confidently contradicts the number on the course screen, which is the fastest
+ * way to make a student stop trusting both.
+ *
+ * So the client sends what it already displays and this re-formats it. It is
+ * the student's own figure being read back to them, so there is nothing to
+ * escalate; it is still clamped and still wrapped as untrusted content, because
+ * it arrives over the wire and lands in a model prompt.
+ */
+function formatGradeSnapshot(raw: unknown): string {
+  if (!raw || typeof raw !== 'object') return '';
+  const snapshot = raw as Record<string, unknown>;
+  const num = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isFinite(v) ? Math.round(v * 10) / 10 : null;
+
+  const percentage = num(snapshot.percentage);
+  const letter = typeof snapshot.letter === 'string' ? snapshot.letter.trim().slice(0, 4) : '';
+  const lines: string[] = [];
+
+  if (percentage != null) {
+    lines.push(`Current grade: ${percentage}%${letter ? ` (${letter})` : ''}`);
+  } else {
+    lines.push('Current grade: nothing graded yet.');
+  }
+
+  const categories = Array.isArray(snapshot.categories) ? snapshot.categories.slice(0, MAX_GRADE_CATEGORIES) : [];
+  const rows = categories
+    .map((entry: any) => {
+      if (!entry || typeof entry !== 'object') return '';
+      const name = typeof entry.name === 'string' ? entry.name.trim().slice(0, MAX_GRADE_NAME_CHARS) : '';
+      const weight = num(entry.weight);
+      const average = num(entry.average);
+      if (!name || weight == null) return '';
+      const graded = typeof entry.graded === 'number' && Number.isFinite(entry.graded)
+        ? Math.max(0, Math.trunc(entry.graded)) : 0;
+      return average == null
+        ? `- ${name}: worth ${weight}% of the final grade, nothing graded yet`
+        : `- ${name}: ${average}% so far, worth ${weight}% of the final grade (${graded} graded)`;
+    })
+    .filter(Boolean);
+  if (rows.length) lines.push('Breakdown:\n' + rows.join('\n'));
+
+  const remaining = num(snapshot.weightRemaining);
+  if (remaining != null && remaining > 0) {
+    // The single most-asked grade question is "what do I need on the final".
+    // Without this line the model has no idea how much of the grade is still
+    // winnable and has to guess, which is exactly where it invents numbers.
+    lines.push(`${remaining}% of the final grade has not been graded yet — that is what is still winnable.`);
+  }
+  return lines.join('\n');
+}
+
+/** Words too common to say anything about which note a question is about. */
+const STOPWORDS = new Set([
+  'the', 'a', 'an', 'and', 'or', 'but', 'if', 'of', 'to', 'in', 'on', 'for', 'with', 'is', 'are',
+  'was', 'were', 'be', 'been', 'do', 'does', 'did', 'how', 'what', 'why', 'when', 'which', 'who',
+  'can', 'could', 'should', 'would', 'my', 'me', 'i', 'you', 'it', 'this', 'that', 'these', 'those',
+  'from', 'about', 'into', 'than', 'then', 'there', 'here', 'we', 'us', 'our', 'explain', 'help',
+  'tell', 'give', 'need', 'want', 'please', 'am', 'as', 'at', 'by', 'so', 'up', 'out', 'not',
+  'el', 'la', 'los', 'las', 'de', 'que', 'y', 'en', 'un', 'una', 'por', 'para', 'con', 'como',
+]);
+
+/**
+ * Order this course's notes by how much they look like an answer to THIS
+ * question, not by when they were uploaded.
+ *
+ * Newest-first was the old rule, and with a 24,000 character budget and a
+ * ten-note ceiling it meant a student with a semester of lectures uploaded got
+ * grounded on whichever ten they added last — while the lecture that actually
+ * covered their question sat unread. Scoring is deliberately crude (term hits,
+ * damped by note length) because it has to run inline on every turn: the goal
+ * is to stop obviously-irrelevant notes crowding out obviously-relevant ones,
+ * not to be a search engine.
+ *
+ * Recency stays as the tiebreak, so with no usable query terms — "explain this
+ * again", a two-word follow-up — the behaviour is exactly what it was before.
+ */
+function rankNotesByRelevance<T extends { filename?: string | null; extracted_text?: string | null }>(
+  notes: T[],
+  query: string,
+): T[] {
+  const terms = Array.from(new Set(
+    query.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/)
+      .filter((w) => w.length > 2 && !STOPWORDS.has(w)),
+  )).slice(0, 12);
+  if (!terms.length) return notes;
+
+  const scored = notes.map((note, index) => {
+    const haystack = `${note.filename ?? ''}\n${(note.extracted_text ?? '').slice(0, 40_000)}`.toLowerCase();
+    if (!haystack.trim()) return { note, index, score: 0 };
+    let score = 0;
+    for (const term of terms) {
+      let hits = 0;
+      let at = haystack.indexOf(term);
+      while (at !== -1 && hits < 25) { hits++; at = haystack.indexOf(term, at + term.length); }
+      if (!hits) continue;
+      // Diminishing returns per term, so one note repeating a word 25 times
+      // cannot outrank a note that covers four of the terms once each.
+      score += 1 + Math.log10(hits);
+      // A hit in the filename is a strong signal — students name files after
+      // the lecture ("week7-eigenvalues.pdf").
+      if ((note.filename ?? '').toLowerCase().includes(term)) score += 1.5;
+    }
+    return { note, index, score };
+  });
+
+  if (scored.every((entry) => entry.score === 0)) return notes;
+  return scored
+    .sort((a, b) => (b.score - a.score) || (a.index - b.index))
+    .map((entry) => entry.note);
+}
+
+/**
+ * How much room the answer gets, and how hard the model thinks about it.
+ *
+ * NOT routing. Every tutoring turn goes to the same model on the same provider
+ * — the routing table in _shared/ai.ts is untouched and still decided by the
+ * endpoint. This picks the SHAPE of one reply, the way a person answering
+ * "when is the midterm" and "derive the chain rule" writes different amounts,
+ * and that is a formatting decision the content is allowed to inform.
+ *
+ * The old single setting (low/low/2048) was tuned for the first kind and made
+ * the second kind impossible: a worked derivation ran out of tokens mid-proof.
+ */
+function answerBudget(mode: string, message: string, hasImage: boolean): {
+  effort: 'low' | 'medium';
+  verbosity: 'low' | 'medium';
+  maxTokens: number;
+} {
+  const deep = /\b(why|how|derive|derivation|prove|proof|explain|walk me|step by step|steps|difference between|compare|understand|confused|stuck|work through|solve|show me)\b/i;
+  const wantsWork = hasImage || mode === 'explain_assignment' || deep.test(message) || message.length > 180;
+  return wantsWork
+    ? { effort: 'medium', verbosity: 'medium', maxTokens: 6144 }
+    : { effort: 'low', verbosity: 'low', maxTokens: 2048 };
+}
+
 async function makeSafetyIdentifier(userId: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(userId));
   const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -127,7 +310,13 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     // 0. Bound the request body. The chat payload is small (a message + a few
     //    ids), so a tight cap is safe and blocks abuse. Require Content-Length
     //    like parse-syllabus so a chunked stream can't bypass the check.
+    // Two ceilings, because one number cannot serve both shapes. A text turn
+    // is a few hundred bytes and a tight cap is free abuse protection; a turn
+    // carrying a photo is megabytes by definition. The large ceiling is only
+    // ever reached by a request that turns out to contain an image — checked
+    // after parsing, below — so the small cap still guards ordinary chat.
     const MAX_BODY_BYTES = 256 * 1024;
+    const MAX_BODY_BYTES_WITH_IMAGE = 8 * 1024 * 1024;
     const contentLengthRaw = req.headers.get('content-length');
     if (!contentLengthRaw) {
       return jsonResponse({ error: 'Content-Length required' }, 411);
@@ -136,7 +325,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     if (!Number.isFinite(contentLength) || contentLength < 0) {
       return jsonResponse({ error: 'Invalid Content-Length' }, 400);
     }
-    if (contentLength > MAX_BODY_BYTES) {
+    if (contentLength > MAX_BODY_BYTES_WITH_IMAGE) {
       return jsonResponse({ error: 'Message too large' }, 413);
     }
 
@@ -249,13 +438,45 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       ? 'evaluate_practice'
       : body.action === 'prepare_note'
         ? 'prepare_note'
-        : 'chat';
+        : body.action === 'open_practice'
+          ? 'open_practice'
+          : 'chat';
     const assignmentId = typeof body.assignmentId === 'string' ? body.assignmentId : null;
     const practiceId = typeof body.practiceId === 'string' ? body.practiceId : null;
     const noteId = typeof body.noteId === 'string' ? body.noteId : null;
     const submittedAnswer = typeof body.answer === 'string' ? body.answer.trim() : '';
     const locale = body.locale === 'es' ? 'es' : 'en';
     const localized = (english: string, spanish: string) => locale === 'es' ? spanish : english;
+    // Streaming is opt-in per request. A client that does not ask for it — an
+    // older build, or the web app before it is updated — keeps getting exactly
+    // the JSON body it has always got, from the same handler.
+    const wantsStream = (body as { stream?: unknown }).stream === true;
+    const gradeSummary = formatGradeSnapshot((body as { grades?: unknown }).grades);
+
+    // A photo attached to this one question. Decoded here (HEIC included, since
+    // that is what an iPhone camera produces) so the model never receives bytes
+    // it will refuse, and never receives a format the caller mislabelled.
+    let attachedImage: { base64: string; mimeType: string } | null = null;
+    const rawImage = (body as { image?: unknown }).image;
+    if (rawImage && typeof rawImage === 'object') {
+      const candidate = rawImage as { base64?: unknown; mimeType?: unknown };
+      if (typeof candidate.base64 === 'string' && candidate.base64) {
+        if (candidate.base64.length > MAX_IMAGE_BASE64_CHARS) {
+          return jsonResponse({ error: 'That photo is too large. Try a smaller one.' }, 413);
+        }
+        const ready = await prepareImagePayload(
+          candidate.base64,
+          typeof candidate.mimeType === 'string' ? candidate.mimeType : null,
+        );
+        if (!ready.ok) return jsonResponse({ error: ready.error, code: ready.code }, 400);
+        attachedImage = { base64: ready.base64, mimeType: ready.mimeType };
+      }
+    }
+    // The generous body ceiling exists only for the image case. Anything else
+    // that large is not a question.
+    if (!attachedImage && contentLength > MAX_BODY_BYTES) {
+      return jsonResponse({ error: 'Message too large' }, 413);
+    }
     // Preparing a newly uploaded note is deliberately a separate request from
     // answering/generating. That gives the client an honest request boundary:
     // it can show "Reading document" until extraction is actually cached,
@@ -291,6 +512,54 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
         }, 422);
       }
       return jsonResponse({ ready: true, cached: false }, 200);
+    }
+
+    // The practice question the student was part-way through.
+    //
+    // Questions have no client SELECT policy — exposing expected_answer would
+    // make every quiz answerable by reading the table — so the client cannot
+    // fetch this for itself, and until now nothing could: a generated question
+    // lived in React state and died the moment the student switched tabs to
+    // check the thing it was asking about. The answer never leaves the server;
+    // only the prompt and the choices come back.
+    if (action === 'open_practice') {
+      if (!courseId) return jsonResponse({ error: 'courseId is required' }, 400);
+      const { data: recent, error: recentErr } = await adminClient
+        .from('tutor_practice_questions')
+        .select('id, mode, prompt, choices, topics, citations, created_at')
+        .eq('user_id', userId)
+        .eq('course_id', courseId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (recentErr) {
+        log.error('open_practice_lookup_failed', errorFields(recentErr));
+        return jsonResponse({ error: localized('Service temporarily unavailable', 'El servicio no está disponible temporalmente.') }, 503);
+      }
+      if (!recent?.length) return jsonResponse({ practice: null }, 200);
+
+      // "Unanswered" is the absence of an attempt row. Done as a second read
+      // rather than a NOT EXISTS because supabase-js cannot express one, and
+      // ten ids is a trivial index lookup.
+      const answered = new Set<string>();
+      const { data: attemptRows } = await adminClient
+        .from('tutor_practice_attempts')
+        .select('question_id')
+        .eq('user_id', userId)
+        .in('question_id', recent.map((q: any) => q.id));
+      for (const row of attemptRows ?? []) answered.add(String((row as any).question_id));
+
+      const open = recent.find((q: any) => !answered.has(String(q.id)));
+      if (!open) return jsonResponse({ practice: null }, 200);
+      return jsonResponse({
+        practice: {
+          id: open.id,
+          mode: open.mode,
+          prompt: open.prompt,
+          choices: Array.isArray(open.choices) ? open.choices : [],
+          topics: Array.isArray(open.topics) ? open.topics : [],
+          citations: Array.isArray(open.citations) ? open.citations : [],
+        },
+      }, 200);
     }
 
     if (!conversationId) {
@@ -382,10 +651,25 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     }
     if (reserved !== true) {
       return jsonResponse(
-        { error: `You've reached today's tutor limit of ${DAILY_MESSAGE_CAP} messages. Please try again in 24 hours.` },
+        {
+          error: `You've reached today's tutor limit of ${DAILY_MESSAGE_CAP} messages. Please try again in 24 hours.`,
+          code: 'TUTOR_DAILY_CAP',
+          usage: { used: DAILY_MESSAGE_CAP, cap: DAILY_MESSAGE_CAP },
+        },
         429,
       );
     }
+
+    // What the student has left today, returned with every answer. The cap has
+    // always existed and has always been invisible until the moment it refused
+    // a question — which is the one moment it is too late to be useful. One
+    // indexed count on a table that was just written to.
+    const { count: usedToday } = await adminClient
+      .from('tutor_usage')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
+    const tutorUsage = { used: usedToday ?? 0, cap: DAILY_MESSAGE_CAP };
 
 
     // 5. Build grounding context (all reads via service role, but every query
@@ -495,13 +779,18 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       //     persist the text so later turns skip the re-read. Robust-simple
       //     path: the edge function owns extraction (the client just uploads
       //     the raw file), which keeps note upload dumb and cheap on-device.
-      const { data: notes } = await adminClient
+      // Read wider than the budget can hold, then order by what the student
+      // actually asked. The old query took ten notes newest-first and fed the
+      // budget in that order, so the lecture that answered the question was
+      // dropped whenever it was not among the ten most recent uploads.
+      const { data: storedNotes } = await adminClient
         .from('course_notes')
         .select('id, storage_path, filename, mime_type, extracted_text')
         .eq('course_id', groundCourseId)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(MAX_NOTES_CONSIDERED);
+      const notes = storedNotes ? rankNotesByRelevance(storedNotes, message) : storedNotes;
 
       if (notes && notes.length > 0) {
         const chunks: string[] = [];
@@ -538,6 +827,63 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
         }
         notesText = chunks.join('\n\n');
       }
+    } else {
+      // 5e. NO COURSE CHOSEN. This branch used to not exist, so the tutor
+      //     opened from Study Tools answered every question knowing nothing —
+      //     while "what should I work on tonight?", the single most common
+      //     thing a student asks, was answerable from rows already in this
+      //     database. Semester-wide is the right scope here: the student did
+      //     not pick a course precisely because the question spans them.
+      const today = new Date().toISOString().slice(0, 10);
+      const horizon = new Date(Date.now() + CROSS_COURSE_HORIZON_DAYS * 86_400_000)
+        .toISOString().slice(0, 10);
+
+      const [upcoming, overdue] = await Promise.all([
+        adminClient
+          .from('tasks')
+          .select('title, type, due_date, due_time, weight, courses!inner(name)')
+          .eq('user_id', userId)
+          .eq('is_completed', false)
+          .gte('due_date', today)
+          .lte('due_date', horizon)
+          .order('due_date', { ascending: true })
+          .limit(MAX_CROSS_COURSE_TASKS),
+        adminClient
+          .from('tasks')
+          .select('title, type, due_date, courses!inner(name)')
+          .eq('user_id', userId)
+          .eq('is_completed', false)
+          .lt('due_date', today)
+          .order('due_date', { ascending: false })
+          .limit(10),
+      ]);
+
+      const courseName = (row: any) =>
+        Array.isArray(row?.courses) ? (row.courses[0]?.name ?? '') : (row?.courses?.name ?? '');
+
+      const lines: string[] = [];
+      if (overdue.data?.length) {
+        // Overdue first and labelled as such. A list sorted purely by date
+        // buries the thing that is already late underneath next week's
+        // reading, which is the opposite of how a student needs to see it.
+        lines.push('ALREADY LATE:\n' + overdue.data
+          .map((t: any) => `- ${t.title} [${t.type}] — ${courseName(t)}, was due ${t.due_date}`)
+          .join('\n'));
+      }
+      if (upcoming.data?.length) {
+        lines.push(`DUE IN THE NEXT ${CROSS_COURSE_HORIZON_DAYS} DAYS:\n` + upcoming.data
+          .map((t: any) => {
+            const weight = typeof t.weight === 'number' ? ` (${t.weight}% of the grade)` : '';
+            const time = t.due_time ? ` ${t.due_time}` : '';
+            return `- ${t.title} [${t.type}]${weight} — ${courseName(t)}, due ${t.due_date}${time}`;
+          })
+          .join('\n'));
+      }
+
+      if (lines.length) {
+        deadlinesText = lines.join('\n\n');
+        citations.push({ kind: 'deadline', label: 'Your deadlines across every course' });
+      }
     }
 
     // 6. Recent conversation history for continuity (oldest→newest of the last
@@ -557,15 +903,54 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     const contextBlock = [
       syllabusText ? `SYLLABUS / COURSE:\n${syllabusText}` : '',
       deadlinesText ? `DEADLINES:\n${clamp(deadlinesText, MAX_SYLLABUS_CHARS)}` : '',
+      // "What do I need on the final for a B?" is a question this app can
+      // answer better than anyone, because it is the only one holding the
+      // student's actual category weights — and until now the tutor was the
+      // one part of the app that could not see them.
+      gradeSummary ? `GRADES (as shown on the student's course screen):\n${gradeSummary}` : '',
       notesText ? `LECTURE NOTES:\n${notesText}` : '',
     ]
       .filter(Boolean)
       .join('\n\n');
 
+    // Practice targets what the student is worst at. course_topic_mastery has
+    // been recording per-topic accuracy since 057 and the screen even displays
+    // it ("Review Fourier — 40% in practice") — but the next question ignored
+    // it entirely and asked about "the most important current course material",
+    // so a student could sit at 40% on one topic and never be asked about it
+    // again. The data was already right; nothing was reading it.
+    let masteryDirective = '';
+    if ((mode === 'practice' || mode === 'quiz') && groundCourseId) {
+      const { data: mastery } = await adminClient
+        .from('course_topic_mastery')
+        .select('topic, attempts, correct')
+        .eq('user_id', userId)
+        .eq('course_id', groundCourseId)
+        .gt('attempts', 0)
+        .order('updated_at', { ascending: false })
+        .limit(20);
+      const rated = (mastery ?? [])
+        .map((row: any) => ({
+          topic: String(row.topic ?? '').slice(0, 160),
+          ratio: row.attempts > 0 ? row.correct / row.attempts : 1,
+          attempts: row.attempts as number,
+        }))
+        .filter((row) => row.topic);
+      const weakest = rated.slice().sort((a, b) => (a.ratio - b.ratio) || (b.attempts - a.attempts))[0];
+      if (weakest && weakest.ratio < 0.7) {
+        masteryDirective = ` The student is weakest on "${weakest.topic}" (${Math.round(weakest.ratio * 100)}% correct across ${weakest.attempts} attempts) — ask about THAT, from a different angle than a definition check, unless the course material genuinely does not support another question on it.`;
+      } else if (rated.length) {
+        // Everything practised is solid, so widen rather than re-test. Without
+        // this, a student who has answered well gets the same few topics for
+        // ever, because those are the only ones with any data.
+        masteryDirective = ` The student is already solid on: ${rated.slice(0, 6).map((r) => r.topic).join(', ')}. Cover something from the course material they have NOT been asked about yet.`;
+      }
+    }
+
     const modeInstruction = mode === 'quiz'
-      ? 'Create one concise multiple-choice quiz question from the grounded course material. Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names).'
+      ? `Create one concise multiple-choice quiz question from the grounded course material.${masteryDirective} Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names).`
       : mode === 'practice'
-        ? 'Create one low-stakes multiple-choice practice question from the grounded course material. Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names).'
+        ? `Create one low-stakes multiple-choice practice question from the grounded course material.${masteryDirective} Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names).`
         : mode === 'explain_assignment'
           ? 'Explain the selected assignment as a student-friendly checklist: what it asks for, a first step, suggested milestones, and one question to ask the instructor if the brief is unclear. Do not fabricate requirements.'
           : '';
@@ -581,17 +966,58 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       ? `${TUTOR_SYSTEM_PROMPT}\n\n${languageInstruction}\n${modeInstruction ? `\nMODE: ${modeInstruction}\n` : ''}\n${asUntrustedDocument(contextBlock, 'COURSE_CONTEXT')}`
       : `${TUTOR_SYSTEM_PROMPT}\n\n${languageInstruction}\n\n(No course material is attached to this conversation yet — help using general knowledge and invite the student to add their syllabus or notes for grounded answers.)`;
 
-    const input: { role: 'user' | 'assistant'; content: string }[] = [
+    // Prior turns are text; only the turn being sent can carry a photo, and
+    // only then does it need the content-array shape.
+    const finalUserContent: unknown = attachedImage
+      ? [
+        { type: 'input_text', text: message },
+        {
+          type: 'input_image',
+          image_url: `data:${attachedImage.mimeType};base64,${attachedImage.base64}`,
+          detail: 'high',
+        },
+      ]
+      : message;
+    const input: { role: 'user' | 'assistant'; content: unknown }[] = [
       ...priorTurns.map((m: any) => ({
         role: m.role === 'assistant' ? 'assistant' as const : 'user' as const,
-        content: String(m.content ?? ''),
+        content: String(m.content ?? '') as unknown,
       })),
-      { role: 'user', content: message },
+      { role: 'user', content: finalUserContent },
     ];
 
-    // 8. Call GPT-5.6 Luna. Low reasoning gives the Tutor useful planning and
-    //    explanation ability while keeping latency and reasoning-token cost
-    //    bounded. Responses are not stored by OpenAI.
+    // 8. Call GPT-5.6 Luna. Effort and length are chosen per question (see
+    //    answerBudget) rather than fixed: the old single setting was tuned for
+    //    "when is the midterm" and truncated every derivation. Responses are
+    //    not stored by OpenAI.
+    const budget = answerBudget(mode, message, !!attachedImage);
+    const safetyIdentifier = await makeSafetyIdentifier(userId);
+    // Titling a thread costs nothing when the first question is already in
+    // hand, and a list of threads all called "Tutor" is not a list.
+    const isFirstTurn = priorTurns.length === 0;
+
+    // STREAMING. Only a conversational turn streams: practice and quiz return
+    // one JSON object that is worthless in pieces, and a client that did not
+    // ask for a stream must keep getting exactly the body it always got.
+    if (wantsStream && mode !== 'practice' && mode !== 'quiz' && providerFor(TASK) !== 'gemini') {
+      return await streamTutorTurn({
+        log,
+        admin: adminClient,
+        userId,
+        conversationId,
+        message,
+        input,
+        instructions: groundingIntro,
+        budget,
+        safetyIdentifier,
+        citations,
+        task: TASK,
+        usage: tutorUsage,
+        startTime,
+        isFirstTurn,
+      });
+    }
+
     let reply: string | null = null;
     let servedModel: string = MODELS.tutor;
 
@@ -628,11 +1054,11 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
         model: MODELS.tutor,
         instructions: groundingIntro,
         input,
-        reasoning: { effort: 'low' },
-        text: { verbosity: 'low' },
-        max_output_tokens: 2048,
+        reasoning: { effort: budget.effort },
+        text: { verbosity: budget.verbosity },
+        max_output_tokens: budget.maxTokens,
         store: false,
-        safety_identifier: await makeSafetyIdentifier(userId),
+        safety_identifier: safetyIdentifier,
       }, 'tutor');
 
       reply = openAIResult.ok ? openAIText(openAIResult.data) : null;
@@ -737,13 +1163,9 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     //    is written here (not client-side) so history stays consistent even if
     //    the client crashes after send. Non-fatal if the insert fails — the
     //    reply is still returned.
-    const { error: insertErr } = await adminClient.from('tutor_messages').insert([
-      { user_id: userId, conversation_id: conversationId, role: 'user', content: message },
-      { user_id: userId, conversation_id: conversationId, role: 'assistant', content: assistantText, citations },
-    ]);
-    if (insertErr) {
-      log.warn('persist_messages_failed', errorFields(insertErr));
-    }
+    const persisted = await persistTurns(log, adminClient, {
+      userId, conversationId, message, reply: assistantText, citations, isFirstTurn,
+    });
 
     // Usage was already reserved atomically in step 3 (try_consume_tutor_usage)
     // BEFORE the paid model call, so there is no post-success insert here —
@@ -755,6 +1177,13 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       {
         reply: assistantText,
         citations,
+        // Whether the thread actually kept this turn. The insert is non-fatal
+        // by design — an answer the student waited for is not thrown away over
+        // a failed write — but the client renders from the stored thread, so
+        // without this flag a dropped write looked exactly like the tutor
+        // saying nothing at all.
+        persisted,
+        usage: tutorUsage,
         model: servedModel || null,
         // `degraded` used to ride here when a stand-in provider answered. With
         // no cross-provider fallback there is no degraded state to report: a
@@ -769,6 +1198,235 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     return jsonResponse({ error: 'An unexpected error occurred. Please try again.' }, 500);
   }
 }));
+
+/**
+ * Write both turns of one exchange, and name the thread if it is new.
+ *
+ * Shared by the streaming and non-streaming paths so they cannot disagree about
+ * what a completed turn means. Returns whether the write landed: the caller
+ * tells the client, which renders from the stored thread and otherwise has no
+ * way to distinguish "the tutor said nothing" from "the tutor answered and the
+ * answer was dropped on the floor".
+ */
+async function persistTurns(
+  log: EdgeLogger,
+  admin: any,
+  turn: {
+    userId: string;
+    conversationId: string;
+    message: string;
+    reply: string;
+    citations: TutorCitation[];
+    isFirstTurn: boolean;
+  },
+): Promise<boolean> {
+  const { error } = await admin.from('tutor_messages').insert([
+    { user_id: turn.userId, conversation_id: turn.conversationId, role: 'user', content: turn.message },
+    {
+      user_id: turn.userId, conversation_id: turn.conversationId, role: 'assistant',
+      content: turn.reply, citations: turn.citations,
+    },
+  ]);
+  if (error) {
+    log.warn('persist_messages_failed', errorFields(error));
+    return false;
+  }
+
+  // Activity time orders the thread list; the title is taken from the opening
+  // question, which is what the student would have called it anyway. Both are
+  // best-effort — neither is worth failing an answered question over.
+  await admin
+    .from('tutor_conversations')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', turn.conversationId)
+    .eq('user_id', turn.userId)
+    .then(undefined, (e: unknown) => log.warn('touch_conversation_failed', errorFields(e)));
+
+  // Titling is a SEPARATE statement, guarded on the title still being unset, so
+  // a thread the student renamed before asking anything keeps its name. Folding
+  // the guard into the update above would have made the activity timestamp
+  // conditional on it too — the renamed thread would then never re-sort, which
+  // is the bug this ordering avoids.
+  if (turn.isFirstTurn) {
+    const condensed = turn.message.replace(/\s+/g, ' ').trim();
+    const title = condensed.length > 60 ? `${condensed.slice(0, 57)}…` : condensed;
+    await admin
+      .from('tutor_conversations')
+      .update({ title })
+      .eq('id', turn.conversationId)
+      .eq('user_id', turn.userId)
+      .is('title', null)
+      .then(undefined, (e: unknown) => log.warn('title_conversation_failed', errorFields(e)));
+  }
+  return true;
+}
+
+/**
+ * Answer one tutoring turn as Server-Sent Events.
+ *
+ * WHY: a tutoring answer takes three to ten seconds, and the screen showed a
+ * spinner for all of it. That is not a latency problem — the same tokens arrive
+ * at the same time either way — it is a "did this break?" problem, and every
+ * chat product a student already uses answers it by showing the first sentence
+ * immediately.
+ *
+ * The wire format is one JSON object per `data:` line, with a `type` field:
+ *   delta  incremental text
+ *   done   citations, usage, whether the turn was stored — sent AFTER the
+ *          write, so `persisted` is a fact rather than an intention
+ *   error  a failure that happened after the stream opened
+ *
+ * A failure BEFORE the stream opens returns ordinary JSON with a non-200
+ * status, so a client that asked for a stream and got an error handles it
+ * through the same path it always did.
+ */
+async function streamTutorTurn(opts: {
+  log: EdgeLogger;
+  admin: any;
+  userId: string;
+  conversationId: string;
+  message: string;
+  input: unknown[];
+  instructions: string;
+  budget: { effort: 'low' | 'medium'; verbosity: 'low' | 'medium'; maxTokens: number };
+  safetyIdentifier: string;
+  citations: TutorCitation[];
+  task: AiTask;
+  usage: { used: number; cap: number };
+  startTime: number;
+  isFirstTurn: boolean;
+}): Promise<Response> {
+  const started = Date.now();
+  const opened = await streamOpenAIResponses({
+    model: MODELS.tutor,
+    instructions: opts.instructions,
+    input: opts.input,
+    reasoning: { effort: opts.budget.effort },
+    text: { verbosity: opts.budget.verbosity },
+    max_output_tokens: opts.budget.maxTokens,
+    store: false,
+    safety_identifier: opts.safetyIdentifier,
+  }, 'tutor-stream');
+
+  if (!opened.ok) {
+    await logAiCall(opts.admin, opts.userId, {
+      task: opts.task, provider: 'openai', model: MODELS.tutor,
+      status: 'failed',
+      errorCode: opened.networkError ? 'fetch_error' : `http_${opened.status || 0}`,
+      errorDetail: opened.errorBody,
+      durationMs: Date.now() - started,
+    });
+    opts.log.error('tutor_stream_open_failed', { status: opened.status });
+    const message = opened.networkError
+      ? 'AI service unreachable. Please try again.'
+      : (opened.status === 503 || opened.status === 429)
+        ? 'The tutor is busy right now — please try again in a minute.'
+        : "The tutor couldn't answer that one. Try rephrasing your question.";
+    return jsonResponse({ error: message, retryable: true }, 502);
+  }
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      // The student can walk away mid-answer — background the app, lose signal,
+      // close the tab — and enqueueing into a stream nobody is reading throws.
+      // If that were allowed to propagate it would abort this function before
+      // the turn was stored, losing an answer the model had already finished
+      // writing (and that the student had already been charged for). So a dead
+      // client stops the sending and nothing else: the loop still drains, the
+      // turn is still written, and it is waiting in the thread when they
+      // come back.
+      let clientGone = false;
+      const send = (payload: Record<string, unknown>) => {
+        if (clientGone) return;
+        try {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+        } catch {
+          clientGone = true;
+        }
+      };
+      const finish = () => {
+        if (clientGone) return;
+        try { controller.close(); } catch { clientGone = true; }
+      };
+
+      let full = '';
+      let failure: string | null = null;
+      let completion: any = null;
+
+      try {
+        for await (const event of readOpenAIStream(opened.response)) {
+          if (event.kind === 'delta') {
+            full += event.text;
+            send({ type: 'delta', text: event.text });
+          } else if (event.kind === 'completed') {
+            completion = event.response;
+          } else if (event.kind === 'failed') {
+            failure = event.message;
+          }
+        }
+      } catch (err) {
+        opts.log.error('tutor_stream_read_failed', errorFields(err));
+        failure = failure ?? 'The connection dropped part way through that answer.';
+      }
+
+      const durationMs = Date.now() - started;
+
+      // A stream that produced nothing is a failure however it ended. A stream
+      // that produced text and THEN failed is not: the student has a partial
+      // answer on screen and taking it away to show an error would be worse
+      // than keeping it, so it is stored and flagged.
+      if (!full.trim()) {
+        await logAiCall(opts.admin, opts.userId, {
+          task: opts.task, provider: 'openai', model: MODELS.tutor,
+          status: 'failed', errorCode: 'empty_stream', errorDetail: failure, durationMs,
+        });
+        send({ type: 'error', error: failure ?? "The tutor couldn't answer that one. Try rephrasing your question.", retryable: true });
+        finish();
+        return;
+      }
+
+      const persisted = await persistTurns(opts.log, opts.admin, {
+        userId: opts.userId,
+        conversationId: opts.conversationId,
+        message: opts.message,
+        reply: full,
+        citations: opts.citations,
+        isFirstTurn: opts.isFirstTurn,
+      });
+
+      const usage = completion ? usageFromOpenAI(completion) : { promptTokens: null, outputTokens: null };
+      await logAiCall(opts.admin, opts.userId, {
+        task: opts.task, provider: 'openai', model: MODELS.tutor,
+        status: 'success', durationMs,
+        promptTokens: usage.promptTokens, outputTokens: usage.outputTokens,
+      });
+
+      send({
+        type: 'done',
+        citations: opts.citations,
+        persisted,
+        usage: opts.usage,
+        model: MODELS.tutor,
+        truncated: Boolean(failure),
+        duration_ms: Date.now() - opts.startTime,
+      });
+      finish();
+    },
+  });
+
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      // Named for the proxies that buffer a response until it completes, which
+      // would turn a stream back into the spinner this exists to remove.
+      'X-Accel-Buffering': 'no',
+    },
+  });
+}
 
 // Read a note file from the private course-notes bucket and extract its text,
 // caching the result on the row so later turns skip it. Uploads call this

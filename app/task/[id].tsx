@@ -323,6 +323,38 @@ export default function TaskDetailScreen() {
           </View>
         </View>
 
+        {/* The moment a student is actually stuck is looking at the thing
+            they have to do — not browsing a tools menu. The tutor was only
+            reachable from Study Tools, the + menu, and a course toolbar, so it
+            was never offered at the point of need and, measurably, never used.
+            Only for work that is still outstanding: explaining a finished
+            assignment helps nobody. */}
+        {!task.is_completed && ['assignment', 'project', 'exam', 'quiz', 'reading'].includes(task.type) && (
+          <TouchableOpacity
+            style={[styles.tutorCta, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]}
+            onPress={() => {
+              if (Platform.OS === 'ios') Haptics.selectionAsync();
+              track('tutor_offered_tapped', { screen: 'task_detail', type: task.type });
+              router.push({
+                pathname: '/tutor',
+                params: { courseId: task.course_id, assignmentId: task.id },
+              } as any);
+            }}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Ask the tutor about this"
+          >
+            <FontAwesome name="comments" size={14} color={colors.brand} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.tutorCtaTitle, { color: colors.brand }]}>Stuck on this?</Text>
+              <Text style={[styles.tutorCtaSub, { color: colors.ink2 }]} numberOfLines={2}>
+                Your tutor knows this course — ask it where to start.
+              </Text>
+            </View>
+            <FontAwesome name="angle-right" size={16} color={colors.brand} />
+          </TouchableOpacity>
+        )}
+
         {/* Main card */}
         <View style={[styles.card, width < 360 && styles.cardNarrow, { backgroundColor: colors.card, borderColor: colors.line }]}>
           {editing ? (
@@ -737,6 +769,9 @@ const styles = StyleSheet.create({
   lateBadge: { backgroundColor: '#fef2f2', paddingHorizontal: 6, paddingVertical: 4, borderRadius: 6 },
   lateBadgeText: { fontSize: 11, fontWeight: '700', color: '#ef4444' },
   card: { backgroundColor: '#fff', borderRadius: 18, padding: 24, borderWidth: 1, borderColor: '#edf0f7', marginBottom: 14 },
+  tutorCta: { flexDirection: 'row', alignItems: 'center', gap: 11, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 14 },
+  tutorCtaTitle: { fontSize: 13.5, fontWeight: '800' },
+  tutorCtaSub: { fontSize: 12, lineHeight: 16.5, marginTop: 2 },
   cardNarrow: { padding: 16 },
   title: { fontSize: 22, fontWeight: '800', color: '#0f172a' },
   titleDone: { textDecorationLine: 'line-through', color: '#94a3b8' },
