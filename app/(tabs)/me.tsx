@@ -23,7 +23,7 @@ import { useResponsive } from '@/lib/responsive';
 import { getAppLocale } from '@/lib/i18n';
 import { useEffect, useState } from 'react';
 import Constants from 'expo-constants';
-import { getProducts } from '@/lib/purchases';
+import { getProducts, isEligibleForIntroOffer } from '@/lib/purchases';
 import { getMyCode, getRedemptionCount, inviteLink, applyPendingReferral, syncPromoPro } from '@/lib/referral';
 import { track } from '@/lib/analytics';
 import { shareLink, shareLinkMessage } from '@/lib/shareLink';
@@ -43,10 +43,17 @@ export default function MeScreen() {
   // Default OFF: only promise the 7-day trial once Apple confirms THIS
   // Apple ID is still intro-offer eligible. Promising a trial the payment
   // sheet won't honor (re-subscribers) is a bait-and-switch / App Review risk.
+  const [trialEligible, setTrialEligible] = useState(false);
   useEffect(() => {
     getProducts().then((p) => {
       if (p?.annual?.displayPrice) setAnnualPrice(p.annual.displayPrice);
       if (p?.monthly?.displayPrice) setMonthlyPrice(p.monthly.displayPrice);
+      const groupId = (p?.monthly as any)?.subscriptionInfoIOS?.subscriptionGroupId;
+      if (groupId) {
+        isEligibleForIntroOffer(groupId)
+          .then((ok: boolean) => setTrialEligible(ok === true))
+          .catch(() => {});
+      }
     }).catch(() => {});
   }, []);
 
@@ -239,7 +246,9 @@ export default function MeScreen() {
                   <Text style={styles.proButtonText}>Upgrade to Pro</Text>
                 </View>
                 <Text style={styles.proAlt}>
-                  {`Or ${monthlyPrice}/month`}
+                  {trialEligible
+                    ? `Or ${monthlyPrice}/month with 7-day free trial`
+                    : `Or ${monthlyPrice}/month`}
                 </Text>
               </>
             )}
