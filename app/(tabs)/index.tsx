@@ -4,6 +4,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useMemo,
   useRef } from 'react';
 import {
   View,
@@ -39,6 +40,7 @@ import { rescheduleAllTaskReminders, requestNotificationPermission } from '@/lib
 import { track } from '@/lib/analytics';
 import { computeStreak } from '@/lib/streaks';
 import StudySuggestionsCard from '@/components/StudySuggestionsCard';
+import DecisionStrip from '@/components/DecisionStrip';
 import { GlobalSearchButton } from '@/components/GlobalSearchButton';
 import { useTaskCompletionFlow } from '@/components/TaskCompletionFlow';
 import { buildAcademicRiskReport } from '@/lib/academicRisk';
@@ -68,7 +70,7 @@ const KIND_LABEL: Record<'lecture' | 'lab' | 'discussion' | 'other', string> = {
 export default function TodayScreen() {
   const colors = useColors();
   const showProUpsell = useProUpsell();
-  const { contentMaxWidth, width } = useResponsive();
+  const { contentMaxWidth, width, isDesktop } = useResponsive();
   const { session } = useSession();
   const router = useRouter();
   const qc = useQueryClient();
@@ -525,6 +527,51 @@ export default function TodayScreen() {
   const showTomorrow =
     today.getHours() >= 17 && (tomorrowsClasses.length > 0 || tomorrowsTasks.length > 0);
 
+  // ── Desktop decision band ────────────────────────────────────────────────
+  // Everything below is derived from data already fetched for this screen; no
+  // new query runs for the wide layout.
+  // weekTasks (declared above) is the Mon–Sun calendar week and already
+  // includes completed items; the load tile should only count work still
+  // owed, so filter rather than fetch again.
+  const weekRemaining = useMemo(
+    () => (weekTasks as any[]).filter((t) => !t.is_completed),
+    [weekTasks],
+  );
+
+  // Which course needs work — named WITHOUT any grade signal. Ranked by the
+  // weight a student is actually carrying (syllabus weight, which is public
+  // information), then by how many items have slipped. Saying "Biology 101"
+  // is actionable; saying "Biology 101, C+" is a number the person sitting
+  // behind them in the lecture can read too.
+  const { attentionCourse, attentionReason } = useMemo(() => {
+    if (overdueTasks.length === 0) {
+      return { attentionCourse: null as string | null, attentionReason: null as string | null };
+    }
+    const byCourse = new Map<string, { count: number; weight: number }>();
+    for (const task of overdueTasks as any[]) {
+      const name = task.courses?.name;
+      if (!name) continue;
+      const entry = byCourse.get(name) ?? { count: 0, weight: 0 };
+      entry.count += 1;
+      entry.weight += typeof task.weight === 'number' ? task.weight : 0;
+      byCourse.set(name, entry);
+    }
+    let worstName: string | null = null;
+    let worst = { count: 0, weight: 0 };
+    for (const [name, entry] of byCourse) {
+      if (entry.weight > worst.weight || (entry.weight === worst.weight && entry.count > worst.count)) {
+        worstName = name;
+        worst = entry;
+      }
+    }
+    if (!worstName) return { attentionCourse: null, attentionReason: null };
+    return {
+      attentionCourse: worstName,
+      attentionReason:
+        worst.count === 1 ? '1 item still outstanding' : `${worst.count} items still outstanding`,
+    };
+  }, [overdueTasks]);
+
 
   // Streak chip for the progress area. Pro-gated per the owner directive:
   //   - Free users: a compact locked teaser that sells the streak and
@@ -603,6 +650,20 @@ export default function TodayScreen() {
           <GlobalSearchButton />
         </View>
         <SyncStatusPill compact />
+
+        {/* Desktop web only. On a phone the four numbers would push the day's
+            actual work below the fold, which is the opposite of the problem
+            this solves — there, the linear order below is already right. */}
+        {isDesktop && (
+          <DecisionStrip
+            overdue={overdueTasks}
+            dueToday={todayTasks}
+            dueTomorrow={tomorrowsTasks}
+            weekTasks={weekRemaining}
+            attentionCourse={attentionCourse}
+            attentionReason={attentionReason}
+          />
+        )}
 
         {/* Notification permission nudge. Surfaces ONLY when the OS prompt
             was explicitly denied (never-asked users get the primed ask in
