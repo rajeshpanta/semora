@@ -5,11 +5,26 @@ import {
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import { useColors } from '@/lib/theme';
+import { useResponsive } from '@/lib/responsive';
 
-/** Persistent search entry used by every main tab. */
+/**
+ * Search entry for every main tab — on the surfaces that have no sidebar.
+ *
+ * The desktop shell already carries "Search everything ⌘K" permanently at the
+ * top of the rail, so on a browser this icon was a second search button on
+ * every screen, four rows below the first one and without the shortcut hint.
+ * Two controls for one action is not redundancy the user reads as thorough; it
+ * is a screen that has not decided where search lives.
+ *
+ * The rail wins because it is always in the same place and teaches the
+ * keyboard shortcut. Below the desktop breakpoint there is no rail, so this is
+ * the only way in and it renders as before.
+ */
 export function GlobalSearchButton() {
   const router = useRouter();
   const colors = useColors();
+  const { isDesktop } = useResponsive();
+  if (isDesktop) return null;
   return (
     <TouchableOpacity
       style={[styles.button, { backgroundColor: colors.card, borderColor: colors.line }]}
