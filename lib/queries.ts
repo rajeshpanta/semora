@@ -81,6 +81,32 @@ export function useSemesters() {
   });
 }
 
+/**
+ * Every course on the account, across semesters.
+ *
+ * useCourses() needs a semester and is the right hook for a screen that is
+ * showing one. Search is not: a student looking for "organic chem" does not
+ * remember, and should not have to, which semester it was filed under. Deriving
+ * the list from tasks (which search used to do) silently loses every course
+ * that has no tasks yet — exactly the ones just imported from Canvas.
+ *
+ * Slim select: search reads names, not schedules.
+ */
+export function useAllCourses(enabled = true) {
+  return useQuery({
+    queryKey: ['courses', 'all'] as const,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, name, instructor, color, icon, semester_id')
+        .order('name');
+      if (error) throw error;
+      return data as Pick<Course, 'id' | 'name' | 'instructor' | 'color' | 'icon' | 'semester_id'>[];
+    },
+    enabled,
+  });
+}
+
 export function useCourses(semesterId: string | null) {
   return useQuery({
     queryKey: queryKeys.courses(semesterId!),

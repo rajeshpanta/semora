@@ -156,7 +156,7 @@ export type LectureError = Error & { code?: string; status?: number };
 
 // ── Queries ─────────────────────────────────────────────────────────────────
 
-export function useLectures() {
+export function useLectures(enabled = true) {
   return useQuery({
     queryKey: lectureKeys.all,
     queryFn: async () => {
@@ -167,6 +167,11 @@ export function useLectures() {
       if (error) throw error;
       return (data ?? []) as LectureWithCourse[];
     },
+    // Defaults to on, so the Notes screen is unaffected. The command palette
+    // passes its own visibility — it is mounted by the desktop shell on every
+    // screen, and an always-on hook there would turn one list into a fetch on
+    // every page load whether or not anyone opened search.
+    enabled,
   });
 }
 

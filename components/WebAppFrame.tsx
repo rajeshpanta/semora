@@ -1,6 +1,7 @@
 import { Pressable } from '@/components/LocalizedReactNative';
 import { Text } from '@/components/LocalizedReactNative';
 import {
+  useCallback,
   useEffect,
   type ComponentProps,
   useState,
@@ -18,6 +19,7 @@ import type { Session } from '@supabase/supabase-js';
 import { useColors } from '@/lib/theme';
 import { useQuery } from '@tanstack/react-query';
 import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import CommandPalette from '@/components/CommandPalette';
 import { useAppStore } from '@/store/appStore';
 import { MARKETING_URL } from '@/lib/constants';
 import { track } from '@/lib/analytics';
@@ -138,7 +140,7 @@ function SidebarItem({
  * would silently stop working exactly when the student has the fewest
  * on-screen controls left.
  */
-function useShellChrome({ enabled }: { enabled: boolean }) {
+function useShellChrome({ enabled, openSearch }: { enabled: boolean; openSearch: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const { locale, t } = useI18n();
@@ -148,17 +150,23 @@ function useShellChrome({ enabled }: { enabled: boolean }) {
   useEffect(() => {
     if (Platform.OS !== 'web' || !enabled) return;
     const onKeyDown = (event: KeyboardEvent) => {
+      // ⌘K is checked BEFORE the typing guard below. Every other shortcut here
+      // has to stand down while a field has focus — ⇧⌘A inside a task title
+      // would be a keystroke going somewhere the student did not aim it. Search
+      // is the exception people actually expect: half of reaching for it is
+      // abandoning whatever you were half-typing.
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        openSearch();
+        return;
+      }
+
       const target = event.target as HTMLElement | null;
       const editing =
         target?.tagName === 'INPUT' ||
         target?.tagName === 'TEXTAREA' ||
         target?.isContentEditable;
       if (editing) return;
-
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        router.push('/search' as any);
-      }
       if (
         (event.metaKey || event.ctrlKey) &&
         event.shiftKey &&
@@ -179,9 +187,16 @@ function useShellChrome({ enabled }: { enabled: boolean }) {
         setCollapsed(!collapsed);
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [router, enabled, collapsed, setCollapsed]);
+    // CAPTURE phase, not bubble. react-native-web's TextInput calls
+    // stopPropagation() on every keydown it receives (its issue #612), so a
+    // bubble-phase listener on window never hears a key pressed inside any
+    // field in the app — which would silently kill ⌘K in exactly the moments
+    // it is most useful. Capture runs window-inward, before the target can
+    // stop anything. The `editing` guard above still reads event.target, so
+    // the other shortcuts keep standing down while someone is typing.
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [router, enabled, collapsed, setCollapsed, openSearch]);
 
   // Swallow file drops that land anywhere we don't handle.
   //
@@ -451,11 +466,13 @@ export function WebAppFrame({
   const pathname = usePathname();
   const { isDesktop } = useResponsive();
   const collapsed = useAppStore((s) => s.sidebarCollapsed);
+  const [searchOpen, setSearchOpen] = useState(false);
   const immersive = IMMERSIVE_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),
   );
   const showShell = Platform.OS === 'web' && isDesktop && !!session && !immersive;
-  useShellChrome({ enabled: showShell });
+  const openSearch = useCallback(() => setSearchOpen(true), []);
+  useShellChrome({ enabled: showShell, openSearch });
 
   if (!showShell || !session) return <>{children}</>;
 
@@ -463,9 +480,13 @@ export function WebAppFrame({
     <View style={styles.shell}>
       {!collapsed && <DesktopSidebar session={session} />}
       <View style={styles.main}>
-        <TopBar collapsed={collapsed} />
+        <TopBar collapsed={collapsed} onSearch={openSearch} />
         <View style={styles.mainContent}>{children}</View>
       </View>
+      {/* Mounted by the shell, not by the bar. It has to outlive the row that
+          opened it — the palette navigates, and a panel owned by a component
+          that re-renders underneath the navigation closes itself mid-jump. */}
+      <CommandPalette visible={searchOpen} onClose={() => setSearchOpen(false)} />
     </View>
   );
 }
@@ -487,10 +508,9 @@ export function WebAppFrame({
  *
  * GlobalSearchButton still renders nothing on desktop; this is the one.
  */
-function TopBar({ collapsed }: { collapsed: boolean }) {
+function TopBar({ collapsed, onSearch }: { collapsed: boolean; onSearch: () => void }) {
   const colors = useColors();
   const { t } = useI18n();
-  const router = useRouter();
   const setCollapsed = useAppStore((s) => s.setSidebarCollapsed);
   return (
     <View
@@ -520,7 +540,10 @@ function TopBar({ collapsed }: { collapsed: boolean }) {
 
       <Pressable
         accessibilityRole="search"
-        onPress={() => router.push('/search' as any)}
+        // Opens in place. This used to push /search, which unmounted whatever
+        // you were reading to show you a filter screen you then had to navigate
+        // back out of — the cost of a glance was losing your place.
+        onPress={onSearch}
         style={({ pressed, hovered }: any) => [
           styles.topBarSearch,
           {

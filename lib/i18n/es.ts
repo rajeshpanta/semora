@@ -2224,6 +2224,30 @@ export const ES: Record<string, string> = {
   'Free, limited time · every class imports itself and stays up to date':
     'Gratis por tiempo limitado · cada clase se importa sola y se mantiene al día',
   'Or connect Canvas — free': 'O conecta Canvas: gratis',
+
+  // ── Command palette: search in place, across everything ────────────────
+  // The `keywords` field in CommandPalette is deliberately NOT here — it is
+  // match vocabulary rather than UI text, and carries both languages inline.
+  'Search tasks, courses, notes and settings': 'Busca tareas, cursos, apuntes y ajustes',
+  'Nothing matched': 'Nada coincide',
+  'Try fewer words, or part of a course name.': 'Prueba con menos palabras o parte del nombre de un curso.',
+  'Closest matches': 'Coincidencias más cercanas',
+  'Go to': 'Ir a',
+  'Note': 'Apunte',
+  'Untitled note': 'Apunte sin título',
+  'esc': 'esc',
+  'Your day at a glance': 'Tu día de un vistazo',
+  'Every class this semester': 'Todas tus clases de este semestre',
+  'Deadlines by month': 'Entregas por mes',
+  'Scan or upload a syllabus': 'Escanea o sube un programa',
+  'Import every class automatically': 'Importa todas tus clases automáticamente',
+  'Build a study plan': 'Crea un plan de estudio',
+  'Where the heavy weeks are': 'Dónde están las semanas cargadas',
+  'Grades and how the term is going': 'Notas y cómo va el semestre',
+  'Lectures and uploaded files': 'Clases grabadas y archivos subidos',
+  'Decks built from your notes': 'Mazos creados a partir de tus apuntes',
+  'Ask about any course': 'Pregunta sobre cualquier curso',
+  'Account, reminders, appearance': 'Cuenta, recordatorios y apariencia',
   'Free: one AI action (a scan or a lecture), one course you add yourself, unlimited classes from Canvas, and same-day reminders. The tools above are part of Pro.':
     'Gratis: una acción de IA (un escaneo o una clase grabada), un curso que agregas tú, clases ilimitadas desde Canvas y recordatorios del mismo día. Las herramientas de arriba son parte de Pro.',
   'The free plan includes one AI action for the account — a syllabus scan or a lecture recording, whichever you use first — plus one course per semester that you add yourself. Classes imported from Canvas do not count towards that: while the current offer runs, Canvas sync is free and brings across every class you have, with no limit. Tasks and deadlines are unlimited. Upgrade to Pro for unlimited scans, lectures, courses and semesters.':
