@@ -22,7 +22,36 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  return NextResponse.next();
+  // Hand the language across to the app.
+  //
+  // The marketing site and the app are different origins (semoraai.com vs
+  // app.semoraai.com), so a visitor reading in Spanish who taps "Get started"
+  // arrived at an app that knew nothing about it and fell back to the device
+  // language — landing an English-laptop reader of the Spanish site in an
+  // English app, with Settings the only way out. Choosing a language once and
+  // having it forgotten one click later is the kind of small betrayal that
+  // makes a product feel like two products.
+  //
+  // A cookie on the shared parent domain rather than a query string on the
+  // CTA: it survives every route into the app, including links we did not
+  // decorate and ones the visitor typed or bookmarked. Exactly the mechanism
+  // semora_device_id already uses to stitch a journey across the same
+  // boundary — see siteDeviceId() in lib/analytics.ts.
+  //
+  // Not httpOnly, deliberately: the app is a client bundle and has to read it.
+  // It carries no identity and no session, only 'en' or 'es'.
+  const response = NextResponse.next();
+  const path = request.nextUrl.pathname;
+  if (!path.startsWith('/_next') && !path.startsWith('/api')) {
+    response.cookies.set('semora_locale', path === '/es' || path.startsWith('/es/') ? 'es' : 'en', {
+      domain: '.semoraai.com',
+      path: '/',
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: 'lax',
+      secure: true,
+    });
+  }
+  return response;
 }
 
 export const config = {

@@ -79,10 +79,40 @@ const initialTheme = (() => {
   return 'system' as ThemeMode;
 })();
 
+/**
+ * The language the visitor was reading semoraai.com in, if they came from it.
+ *
+ * The marketing site sets `semora_locale` on `.semoraai.com` (website/proxy.ts),
+ * which app.semoraai.com can therefore read — the same trick semora_device_id
+ * uses in lib/analytics.ts, and the only one available across two origins.
+ *
+ * Without it, someone reading the Spanish site on an English laptop tapped
+ * "Get started" and landed in an English app, because the device language was
+ * all the app had to go on. They had chosen Spanish a moment earlier; nothing
+ * carried it.
+ *
+ * Only ever READ, and only ever a hint. It loses to any preference the student
+ * has actually set — see below.
+ */
+function siteLocaleHint(): AppLanguagePreference | null {
+  try {
+    if (typeof document === 'undefined') return null;
+    const match = document.cookie.match(/(?:^|; )semora_locale=([^;]*)/);
+    const value = match ? decodeURIComponent(match[1]) : '';
+    return value === 'es' || value === 'en' ? value : null;
+  } catch {
+    return null;
+  }
+}
+
 const initialLanguagePreference = (() => {
   const stored = getItem(LANGUAGE_KEY);
   if (stored === 'en' || stored === 'es' || stored === 'system') return stored;
-  return 'system' as AppLanguagePreference;
+  // Nothing stored means this account has never touched the language setting,
+  // which is the ONLY moment the site's hint may speak. A student who has been
+  // through Settings — even to pick "Use device language" — has said what they
+  // want, and a cookie from a marketing page must never overrule that.
+  return siteLocaleHint() ?? ('system' as AppLanguagePreference);
 })();
 
 const initialSemester = getItem(SEMESTER_KEY);
