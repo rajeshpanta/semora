@@ -41,6 +41,8 @@ import { track } from '@/lib/analytics';
 import { computeStreak } from '@/lib/streaks';
 import StudySuggestionsCard from '@/components/StudySuggestionsCard';
 import DecisionStrip from '@/components/DecisionStrip';
+import CoursesGlance from '@/components/CoursesGlance';
+import WeekGlance from '@/components/WeekGlance';
 import { GlobalSearchButton } from '@/components/GlobalSearchButton';
 import { useTaskCompletionFlow } from '@/components/TaskCompletionFlow';
 import { buildAcademicRiskReport } from '@/lib/academicRisk';
@@ -543,6 +545,17 @@ export default function TodayScreen() {
   // information), then by how many items have slipped. Saying "Biology 101"
   // is actionable; saying "Biology 101, C+" is a number the person sitting
   // behind them in the lecture can read too.
+  const outstandingByCourse = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const task of [...(overdueTasks as any[]), ...(upcomingTasks as any[])]) {
+      if (task.is_completed) continue;
+      const id = task.course_id;
+      if (!id) continue;
+      out[id] = (out[id] ?? 0) + 1;
+    }
+    return out;
+  }, [overdueTasks, upcomingTasks]);
+
   const { attentionCourse, attentionReason } = useMemo(() => {
     if (overdueTasks.length === 0) {
       return { attentionCourse: null as string | null, attentionReason: null as string | null };
@@ -665,6 +678,13 @@ export default function TodayScreen() {
           />
         )}
 
+        {/* Two columns on a desktop browser. The left keeps the established
+            order — it is the day's work and it reads top to bottom. The right
+            is the rail the phone never had room for: the things you consult
+            rather than work through. */}
+        <View style={isDesktop ? styles.deckRow : undefined}>
+        <View style={isDesktop ? styles.deckMain : undefined}>
+
         {/* Notification permission nudge. Surfaces ONLY when the OS prompt
             was explicitly denied (never-asked users get the primed ask in
             the review screen instead). Tapping opens the device's Semora
@@ -703,6 +723,7 @@ export default function TodayScreen() {
           </TouchableOpacity>
         )}
 
+        {!isDesktop && (
         <AcademicRiskCard
           report={academicRisk}
           isPro={isPro}
@@ -714,6 +735,7 @@ export default function TodayScreen() {
           onOpenCourse={(courseId) => router.push(`/course/${courseId}` as any)}
           onOpenPlanner={() => router.push('/planner' as any)}
         />
+        )}
 
         {/* Today's classes — only renders when a course meets today. Hidden
             entirely when no schedule data exists, so users with no times set
@@ -1351,6 +1373,27 @@ export default function TodayScreen() {
           )}
         </View>
 
+        </View>
+
+        {isDesktop && (
+          <View style={styles.deckRail}>
+            <AcademicRiskCard
+              report={academicRisk}
+              isPro={isPro}
+              onUpgrade={() => {
+                track('paywall_open', { screen: 'today', context: 'academic_risk' });
+                showProUpsell('risk');
+              }}
+              onOpenTask={(taskId) => router.push(`/task/${taskId}` as any)}
+              onOpenCourse={(courseId) => router.push(`/course/${courseId}` as any)}
+              onOpenPlanner={() => router.push('/planner' as any)}
+            />
+            <WeekGlance tasks={weekTasks} today={today} />
+            <CoursesGlance courses={courses as any} outstandingByCourse={outstandingByCourse} />
+          </View>
+        )}
+        </View>
+
         <View style={{ height: 40 }} />
       </ScrollView>
 
@@ -1366,6 +1409,11 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
+  // Desktop browser only. 340px is the narrowest the rail can be before the
+  // risk card's recovery steps start wrapping to three lines each.
+  deckRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 20 },
+  deckMain: { flex: 1, minWidth: 0 },
+  deckRail: { width: 340, gap: 14 },
   safe: { flex: 1, backgroundColor: COLORS.paper },
   content: { padding: 18, paddingBottom: 120, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   eyeLabel: { fontSize: 14, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.ink3 },
