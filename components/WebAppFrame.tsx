@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode } from 'react';
 import {
+  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -127,11 +128,99 @@ function SidebarItem({
   );
 }
 
+/**
+ * Chrome that belongs to the desktop shell rather than to the sidebar view:
+ * the global shortcuts, the page title, and the drop guard.
+ *
+ * It lives here, not inside DesktopSidebar, because the sidebar can now be
+ * hidden — and ⌘K, ⌘B and "don't let a stray file drop unload the SPA" have
+ * to keep working for someone who hid it. Anything unmounted with the rail
+ * would silently stop working exactly when the student has the fewest
+ * on-screen controls left.
+ */
+function useShellChrome({ enabled }: { enabled: boolean }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { locale, t } = useI18n();
+  const collapsed = useAppStore((s) => s.sidebarCollapsed);
+  const setCollapsed = useAppStore((s) => s.setSidebarCollapsed);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !enabled) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const editing =
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.isContentEditable;
+      if (editing) return;
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        router.push('/search' as any);
+      }
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        event.shiftKey &&
+        event.key.toLowerCase() === 'a'
+      ) {
+        event.preventDefault();
+        router.push('/task/new' as any);
+      }
+      // ⌘B / Ctrl+B — the shortcut every editor-shaped app uses for this, and
+      // the only way back if the rail is hidden and the mouse is elsewhere.
+      if (
+        (event.metaKey || event.ctrlKey) &&
+        !event.shiftKey &&
+        !event.altKey &&
+        event.key.toLowerCase() === 'b'
+      ) {
+        event.preventDefault();
+        setCollapsed(!collapsed);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [router, enabled, collapsed, setCollapsed]);
+
+  // Swallow file drops that land anywhere we don't handle.
+  //
+  // A browser's default action for a dropped file is to NAVIGATE THE TAB to it,
+  // which unloads the whole SPA — so a student who dragged their syllabus at
+  // the scan frame and missed watched Semora vanish and get replaced by a raw
+  // PDF viewer. Nothing in the app wanted that behaviour; the scan screen's own
+  // listeners stopPropagation for the region that does handle drops.
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !enabled) return;
+    const swallow = (e: DragEvent) => {
+      if ((e as any).__semoraHandled) return;
+      e.preventDefault();
+      if (e.type === 'drop' && e.dataTransfer) e.dataTransfer.dropEffect = 'none';
+    };
+    document.addEventListener('dragover', swallow);
+    document.addEventListener('drop', swallow);
+    return () => {
+      document.removeEventListener('dragover', swallow);
+      document.removeEventListener('drop', swallow);
+    };
+  }, [enabled]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !enabled) return;
+    const current =
+      [...PRIMARY_ITEMS, ...TOOL_ITEMS].find((item) => isActive(pathname, item))?.label ??
+      (pathname.startsWith('/settings') ? 'Settings' : 'Semora');
+    document.documentElement.lang = locale;
+    document.title = `${t(current)} · Semora`;
+  }, [pathname, locale, enabled]);
+}
+
 function DesktopSidebar({ session }: { session: Session }) {
   const colors = useColors();
   const pathname = usePathname();
   const storedToolsOpen = useAppStore((s) => s.sidebarToolsOpen);
   const setSidebarToolsOpen = useAppStore((s) => s.setSidebarToolsOpen);
+  const setCollapsed = useAppStore((s) => s.setSidebarCollapsed);
   // A tool that IS the current screen keeps the group open, so the active
   // highlight can never disappear underneath a collapsed header.
   const onAToolScreen = TOOL_ITEMS.some((item) => isActive(pathname, item));
@@ -168,64 +257,6 @@ function DesktopSidebar({ session }: { session: Session }) {
     }
   };
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const editing =
-        target?.tagName === 'INPUT' ||
-        target?.tagName === 'TEXTAREA' ||
-        target?.isContentEditable;
-      if (editing) return;
-
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        router.push('/search' as any);
-      }
-      if (
-        (event.metaKey || event.ctrlKey) &&
-        event.shiftKey &&
-        event.key.toLowerCase() === 'a'
-      ) {
-        event.preventDefault();
-        router.push('/task/new' as any);
-      }
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [router]);
-
-  // Swallow file drops that land anywhere we don't handle.
-  //
-  // A browser's default action for a dropped file is to NAVIGATE THE TAB to it,
-  // which unloads the whole SPA — so a student who dragged their syllabus at
-  // the scan frame and missed watched Semora vanish and get replaced by a raw
-  // PDF viewer. Nothing in the app wanted that behaviour; the scan screen's own
-  // listeners stopPropagation for the region that does handle drops.
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const swallow = (e: DragEvent) => {
-      if ((e as any).__semoraHandled) return;
-      e.preventDefault();
-      if (e.type === 'drop' && e.dataTransfer) e.dataTransfer.dropEffect = 'none';
-    };
-    document.addEventListener('dragover', swallow);
-    document.addEventListener('drop', swallow);
-    return () => {
-      document.removeEventListener('dragover', swallow);
-      document.removeEventListener('drop', swallow);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    const current =
-      [...PRIMARY_ITEMS, ...TOOL_ITEMS].find((item) => isActive(pathname, item))?.label ??
-      (pathname.startsWith('/settings') ? 'Settings' : 'Semora');
-    document.documentElement.lang = locale;
-    document.title = `${t(current)} · Semora`;
-  }, [pathname, locale]);
-
   return (
     <View
       style={[
@@ -241,13 +272,44 @@ function DesktopSidebar({ session }: { session: Session }) {
         onClose={() => setCanvasUpsellOpen(false)}
       />
       <View style={styles.brandBlock}>
-        <View style={[styles.brandMark, { backgroundColor: colors.brand }]}>
-          <Text style={styles.brandMarkText}>S</Text>
-        </View>
-        <View>
+        {/* The app icon itself, not a letter standing in for it. A 128px copy
+            of assets/images/icon.png rather than the 1MB 1024px original —
+            this renders at 38pt and the full-size icon would be a megabyte of
+            web bundle for a thumbnail. */}
+        <Image
+          source={require('../assets/images/logo-mark.png')}
+          style={styles.brandMark}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+        />
+        <View style={styles.brandCopy}>
           <Text style={[styles.brandName, { color: colors.ink }]}>Semora</Text>
-          <Text style={[styles.brandTag, { color: colors.ink3 }]}>STUDENT OS</Text>
+          {/* Which plan this account is on, where the tagline used to be. A
+              static "STUDENT OS" said the same thing to everyone and so said
+              nothing; the plan is the one fact about the account that changes
+              what the app will let you do. Brand colour for Pro, muted for
+              Free — a free account should read as a state, not as a warning. */}
+          <Text
+            style={[styles.brandPlan, { color: isPro ? colors.brand : colors.ink3 }]}
+          >
+            ({t(isPro ? 'Pro' : 'Free')})
+          </Text>
         </View>
+        {/* Hide the rail. It sits on the wordmark's line because that is the
+            one row of the sidebar that is never a destination — putting it
+            beside a nav item would make it look like one. */}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('Hide sidebar')}
+          onPress={() => setCollapsed(true)}
+          style={({ pressed, hovered }: any) => [
+            styles.railToggle,
+            hovered && { backgroundColor: colors.paper },
+            pressed && { opacity: 0.6 },
+          ]}
+        >
+          <FontAwesome name="angle-double-left" size={20} color={colors.ink3} />
+        </Pressable>
       </View>
 
       <Pressable
@@ -265,22 +327,10 @@ function DesktopSidebar({ session }: { session: Session }) {
         <Text style={styles.shortcut}>⇧⌘A</Text>
       </Pressable>
 
-      <Pressable
-        accessibilityRole="search"
-        onPress={() => router.push('/search' as any)}
-        style={({ pressed, hovered }: any) => [
-          styles.searchButton,
-          {
-            backgroundColor: colors.paper,
-            borderColor: hovered ? colors.brand100 : colors.line,
-            opacity: pressed ? 0.72 : 1,
-          },
-        ]}
-      >
-        <FontAwesome name="search" size={13} color={colors.ink3} />
-        <Text style={[styles.searchText, { color: colors.ink3 }]}>Search everything</Text>
-        <Text style={[styles.searchShortcut, { color: colors.ink3 }]}>⌘K</Text>
-      </Pressable>
+      {/* Search used to sit here, under New task. It moved to the top bar —
+          see TopBar. One search, in the place a browser-shaped app puts it,
+          rather than one field that appeared in the rail and a second that
+          replaced it whenever the rail was hidden. */}
 
       <ScrollView
         style={styles.navScroll}
@@ -400,22 +450,165 @@ export function WebAppFrame({
 }) {
   const pathname = usePathname();
   const { isDesktop } = useResponsive();
+  const collapsed = useAppStore((s) => s.sidebarCollapsed);
   const immersive = IMMERSIVE_PATHS.some(
     (path) => pathname === path || pathname.startsWith(`${path}/`),
   );
-  const showSidebar = Platform.OS === 'web' && isDesktop && !!session && !immersive;
+  const showShell = Platform.OS === 'web' && isDesktop && !!session && !immersive;
+  useShellChrome({ enabled: showShell });
 
-  if (!showSidebar || !session) return <>{children}</>;
+  if (!showShell || !session) return <>{children}</>;
 
   return (
     <View style={styles.shell}>
-      <DesktopSidebar session={session} />
-      <View style={styles.main}>{children}</View>
+      {!collapsed && <DesktopSidebar session={session} />}
+      <View style={styles.main}>
+        <TopBar collapsed={collapsed} />
+        <View style={styles.mainContent}>{children}</View>
+      </View>
+    </View>
+  );
+}
+
+/**
+ * The bar across the top of the content area, and the only home search has.
+ *
+ * It began as a header that appeared ONLY while the rail was hidden, because
+ * the rail carried its own search field. That meant search lived in two places
+ * that were never both on screen, and moved sideways across the window
+ * whenever the rail was toggled — a control you hunt for is a control you stop
+ * using. Now the bar is always here and the rail carries no search at all.
+ *
+ * It also replaced a pair of buttons floating over the page. Floating meant
+ * they shared coordinates with whatever the screen had drawn at its top-left —
+ * on Today that was the title and the date line, and the buttons sat on top of
+ * both. A row in the layout cannot overlap anything by construction: the screen
+ * below simply starts under it.
+ *
+ * GlobalSearchButton still renders nothing on desktop; this is the one.
+ */
+function TopBar({ collapsed }: { collapsed: boolean }) {
+  const colors = useColors();
+  const { t } = useI18n();
+  const router = useRouter();
+  const setCollapsed = useAppStore((s) => s.setSidebarCollapsed);
+  return (
+    <View
+      style={[
+        styles.topBar,
+        { backgroundColor: colors.card, borderBottomColor: colors.line },
+      ]}
+    >
+      {/* Out of flow on purpose. As a flex sibling it would push the search
+          field off-centre by half its own width, so the field would visibly
+          shift every time the rail was toggled — which is the exact wobble
+          this bar exists to remove. Absolute keeps the centre the centre. */}
+      {collapsed && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('Show sidebar')}
+          onPress={() => setCollapsed(false)}
+          style={({ pressed, hovered }: any) => [
+            styles.topBarIcon,
+            hovered && { backgroundColor: colors.paper },
+            pressed && { opacity: 0.65 },
+          ]}
+        >
+          <FontAwesome name="bars" size={17} color={colors.ink2} />
+        </Pressable>
+      )}
+
+      <Pressable
+        accessibilityRole="search"
+        onPress={() => router.push('/search' as any)}
+        style={({ pressed, hovered }: any) => [
+          styles.topBarSearch,
+          {
+            backgroundColor: colors.paper,
+            borderColor: hovered ? colors.brand100 : colors.line,
+            opacity: pressed ? 0.72 : 1,
+          },
+        ]}
+      >
+        <FontAwesome name="search" size={13} color={colors.ink3} />
+        <Text style={[styles.searchText, { color: colors.ink3 }]}>Search everything</Text>
+        <Text style={[styles.searchShortcut, { color: colors.ink3 }]}>⌘K</Text>
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    // Centres the search field across the content area. The rail toggle is
+    // absolutely positioned so it cannot participate here and pull the field
+    // off-centre.
+    justifyContent: 'center',
+    height: 58,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    flexShrink: 0,
+    position: 'relative',
+  },
+  topBarIcon: {
+    position: 'absolute',
+    left: 16,
+    // (58 - 36) / 2. Stated rather than inherited: an absolutely positioned
+    // child's static position comes from the parent's alignItems, which is a
+    // corner of the flexbox spec worth not betting a misaligned icon on.
+    top: 11,
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transitionProperty: 'background-color',
+    transitionDuration: '120ms',
+  } as any,
+  topBarSearch: {
+    // Grows into the free space, stops at 520, and the leftover space either
+    // side is what justifyContent centres. A search field stretched across a
+    // 2560px monitor reads as an empty page element rather than a control.
+    flex: 1,
+    maxWidth: 520,
+    // Never narrower than the rail toggle it has to clear on a small window.
+    minWidth: 0,
+    height: 38,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    cursor: 'pointer',
+    transitionProperty: 'border-color',
+    transitionDuration: '160ms',
+  } as any,
+  railToggle: {
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transitionProperty: 'background-color',
+    transitionDuration: '120ms',
+  } as any,
+  brandCopy: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+  },
+  brandPlan: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
   groupHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingRight: 9,
@@ -428,6 +621,11 @@ const styles = StyleSheet.create({
   main: {
     flex: 1,
     minWidth: 0,
+    flexDirection: 'column',
+  },
+  mainContent: {
+    flex: 1,
+    minHeight: 0,
   },
   sidebar: {
     width: WEB_SIDEBAR_WIDTH,
@@ -448,27 +646,15 @@ const styles = StyleSheet.create({
   brandMark: {
     width: 38,
     height: 38,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow: '0 8px 22px rgba(107, 70, 193, 0.24)',
-  } as any,
-  brandMarkText: {
-    color: '#fff',
-    fontFamily: FONTS.display,
-    fontSize: 20,
+    // No background and no glow: the icon ships its own dark plate and its
+    // own corner radius. The old purple square and purple-tinted shadow were
+    // scaffolding for the letter "S" that used to sit on them.
+    borderRadius: 11,
   },
   brandName: {
     fontFamily: FONTS.displaySemibold,
     fontSize: 19,
     lineHeight: 21,
-  },
-  brandTag: {
-    marginTop: 2,
-    fontSize: 9,
-    lineHeight: 12,
-    fontWeight: '800',
-    letterSpacing: 1.4,
   },
   newTaskButton: {
     minHeight: 44,
@@ -498,19 +684,8 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
-  searchButton: {
-    minHeight: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 10,
-    paddingHorizontal: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    cursor: 'pointer',
-    transitionProperty: 'border-color',
-    transitionDuration: '160ms',
-  } as any,
+  // searchButton went with the rail's search field. searchText/searchShortcut
+  // stay — the top bar still uses them.
   searchText: {
     flex: 1,
     fontSize: 12.5,
