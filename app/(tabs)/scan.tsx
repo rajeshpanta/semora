@@ -26,6 +26,7 @@ import {
 } from 'react-native';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import AppHeader from '@/components/AppHeader';
 import { track } from '@/lib/analytics';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { HEIC_HELP, isHeic, transcodeHeicToJpeg } from '@/lib/heic';
@@ -601,13 +602,16 @@ export default function ScanScreen() {
         onClose={() => setUpsellVisible(false)}
       />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, { color: colors.ink }]}>Scan syllabus</Text>
-          <GlobalSearchButton />
-        </View>
-        <Text style={[styles.subtitle, { color: colors.ink2 }]}>
-          Snap it, upload it, or drag it in.{'\n'}We'll pull every deadline.
-        </Text>
+        {/* The sidebar has always called this "Import syllabus" while the page
+            called itself "Scan syllabus" — the same destination under two names,
+            which makes a student wonder whether they are two features. The rail
+            wins: it is the name they navigate by, and "import" also covers the
+            PDF and Word routes that "scan" does not describe. */}
+        <AppHeader
+          title="Import syllabus"
+          context="Snap it, upload it, or drag it in — we'll pull every deadline."
+          actions={<GlobalSearchButton />}
+        />
 
         {/* Canvas, before any of the upload options.
             A student on this screen is about to do by hand — photograph a

@@ -69,7 +69,7 @@ const ROOT_ACTIONS: MenuRow[] = [
   {
     icon: 'camera',
     tint: 'brand',
-    title: 'Scan syllabus',
+    title: 'Import syllabus',
     sub: 'Photo, PDF, document or file',
     expands: 'scan',
   },
@@ -124,7 +124,7 @@ const SHORTCUTS: {
   { icon: 'clone', label: 'Flashcards', path: '/flashcards', needsCourse: true },
   { icon: 'graduation-cap', label: 'AI Tutor', path: '/tutor' },
   { icon: 'hourglass-half', label: 'Focus', path: '/pomodoro' },
-  { icon: 'microphone', label: 'Lectures', path: '/lecture' },
+  { icon: 'microphone', label: 'Notes', path: '/lecture' },
 ];
 
 export function PlusMenu({ visible, onClose }: PlusMenuProps) {

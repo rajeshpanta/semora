@@ -540,7 +540,10 @@ export const ES: Record<string, string> = {
   'This task still needs your attention.': 'Esta tarea aún necesita tu atención.',
 
   // Syllabus import
+  // Kept: prose elsewhere still says "scan". The SCREEN is now
+  // 'Import syllabus' ('Importar programa', above), matching the sidebar.
   'Scan syllabus': 'Escanear programa',
+  "Snap it, upload it, or drag it in — we'll pull every deadline.": 'Tómale una foto, súbelo o arrástralo aquí: extraeremos todas las entregas.',
   'Take a photo': 'Tomar una foto',
   'Upload PDF': 'Subir PDF',
   'Choose from Photos': 'Elegir de Fotos',

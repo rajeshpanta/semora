@@ -41,6 +41,7 @@ import { track } from '@/lib/analytics';
 import { computeStreak } from '@/lib/streaks';
 import StudySuggestionsCard from '@/components/StudySuggestionsCard';
 import DecisionStrip from '@/components/DecisionStrip';
+import AppHeader from '@/components/AppHeader';
 import CoursesGlance from '@/components/CoursesGlance';
 import WeekGlance from '@/components/WeekGlance';
 import { GlobalSearchButton } from '@/components/GlobalSearchButton';
@@ -652,16 +653,14 @@ export default function TodayScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />}
       >
-        {/* Header */}
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.eyeLabel, { color: colors.ink3 }]}>{dateLabel}</Text>
-            {activeSemester && (
-              <Text style={[styles.semesterLabel, { color: colors.ink3 }]}>{activeSemester.name}</Text>
-            )}
-          </View>
-          <GlobalSearchButton />
-        </View>
+        {/* Today had no title — it opened with a date in small caps, which is
+            why it alone read like a different product. The date moves into the
+            context line, where it says more than it did as an eyebrow. */}
+        <AppHeader
+          title="Today"
+          context={[dateLabel, activeSemester?.name].filter(Boolean).join(' · ')}
+          actions={<GlobalSearchButton />}
+        />
         <SyncStatusPill compact />
 
         {/* Desktop web only. On a phone the four numbers would push the day's

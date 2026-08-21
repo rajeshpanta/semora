@@ -23,6 +23,7 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useTasks, useSemesters, useCourses, useToggleTaskComplete } from '@/lib/queries';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH, WEB_CARD_SHADOW } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import AppHeader from '@/components/AppHeader';
 import { useResponsive } from '@/lib/responsive';
 import { track } from '@/lib/analytics';
 import type { TaskWithCourse } from '@/lib/queries';
@@ -187,26 +188,28 @@ export default function CalendarScreen() {
         }
       >
         {/* Header */}
-        <View style={styles.headerRow}>
-          <View>
-            <Text style={[styles.title, { color: colors.ink }]}>Calendar</Text>
+        <AppHeader
+          title="Calendar"
+          context={
             <View style={styles.monthPickerRow}>
               <Text style={[styles.monthSubtitle, { color: colors.ink2 }]}>{MONTH_NAMES[viewDate.getMonth()]} {viewDate.getFullYear()}</Text>
               <FontAwesome name="caret-down" size={12} color={colors.ink3} />
             </View>
-          </View>
-          <View style={styles.headerTools}>
-            <GlobalSearchButton />
-            <View style={[styles.modeToggle, { backgroundColor: colors.card, borderColor: colors.line }]}>
-              <TouchableOpacity style={[styles.modeBtn, viewMode === 'month' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('month')}>
-                <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'month' && styles.modeBtnTextActive]}>Month</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modeBtn, viewMode === 'list' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('list')}>
-                <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'list' && styles.modeBtnTextActive]}>List</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+          }
+          actions={
+            <>
+              <GlobalSearchButton />
+              <View style={[styles.modeToggle, { backgroundColor: colors.card, borderColor: colors.line }]}>
+                <TouchableOpacity style={[styles.modeBtn, viewMode === 'month' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('month')}>
+                  <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'month' && styles.modeBtnTextActive]}>Month</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.modeBtn, viewMode === 'list' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('list')}>
+                  <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'list' && styles.modeBtnTextActive]}>List</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          }
+        />
 
         {/* Month nav arrows */}
         <View style={styles.navRow}>

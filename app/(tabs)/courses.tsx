@@ -24,6 +24,7 @@ import { COLORS, FONTS, DEFAULT_GRADE_SCALE, SCREEN_MAX_WIDTH, WEB_CARD_SHADOW }
 import { calculateCourseGrade, calculateSemesterGpaWithScale, DEFAULT_GPA_SCALE } from '@/lib/grades';
 import { useColors } from '@/lib/theme';
 import CourseCard, { formatMeetings, type CourseCardData } from '@/components/CourseCard';
+import AppHeader from '@/components/AppHeader';
 import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { track } from '@/lib/analytics';
@@ -135,7 +136,7 @@ export default function CoursesScreen() {
         : 'Scan a syllabus and the AI fills everything in — or type it yourself.',
       [
         ...canvasOption,
-        { text: 'Scan syllabus', onPress: () => handleNav('/scan') },
+        { text: 'Import syllabus', onPress: () => handleNav('/scan') },
         { text: 'Add manually', onPress: () => handleNav('/course/new') },
         { text: 'Cancel', style: 'cancel' },
       ],
@@ -298,15 +299,10 @@ export default function CoursesScreen() {
       >
 
         {/* Header */}
-        <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.title, { color: colors.ink }]}>Courses</Text>
-
-            {/* Semester selector — single hub for switch / edit / delete /
-                create. Always tappable when a semester exists, even with
-                only one, since the picker modal is also where edit and
-                delete live now. */}
-            {activeSemester ? (
+        <AppHeader
+          title="Courses"
+          context={
+            activeSemester ? (
               <TouchableOpacity
                 style={styles.semesterSelector}
                 onPress={() => setShowPicker(true)}
@@ -320,42 +316,43 @@ export default function CoursesScreen() {
               </TouchableOpacity>
             ) : (
               <Text style={[styles.subtitle, { color: colors.ink3 }]}>No semester selected</Text>
-            )}
-          </View>
-
-          <View style={styles.headerActions}>
-            {/* Layout toggle. Only worth showing once there is something to
-                lay out — on an empty semester it is a control over nothing. */}
-            {courses.length > 0 && (
-              <View style={[styles.viewToggle, { borderColor: colors.line, backgroundColor: colors.card }]}>
-                {(['list', 'grid'] as const).map((mode) => {
-                  const active = coursesView === mode;
-                  return (
-                    <TouchableOpacity
-                      key={mode}
-                      style={[styles.viewToggleBtn, active && { backgroundColor: colors.brand50 }]}
-                      onPress={() => setCoursesView(mode)}
-                      activeOpacity={0.7}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active }}
-                      accessibilityLabel={mode === 'list' ? 'List view' : 'Grid view'}
-                    >
-                      <FontAwesome
-                        name={mode === 'list' ? 'bars' : 'th-large'}
-                        size={13}
-                        color={active ? colors.brand : colors.ink3}
-                      />
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
-            <GlobalSearchButton />
-            <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.brand }]} onPress={handleAddCourse} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Add a course">
-              <FontAwesome name="plus" size={14} color="#fff" />
-            </TouchableOpacity>
-          </View>
-        </View>
+            )
+          }
+          actions={
+            <>
+              {/* Layout toggle. Only worth showing once there is something to
+                  lay out — on an empty semester it is a control over nothing. */}
+              {courses.length > 0 && (
+                <View style={[styles.viewToggle, { borderColor: colors.line, backgroundColor: colors.card }]}>
+                  {(['list', 'grid'] as const).map((mode) => {
+                    const active = coursesView === mode;
+                    return (
+                      <TouchableOpacity
+                        key={mode}
+                        style={[styles.viewToggleBtn, active && { backgroundColor: colors.brand50 }]}
+                        onPress={() => setCoursesView(mode)}
+                        activeOpacity={0.7}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: active }}
+                        accessibilityLabel={mode === 'list' ? 'List view' : 'Grid view'}
+                      >
+                        <FontAwesome
+                          name={mode === 'list' ? 'bars' : 'th-large'}
+                          size={13}
+                          color={active ? colors.brand : colors.ink3}
+                        />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+              <GlobalSearchButton />
+              <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.brand }]} onPress={handleAddCourse} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Add a course">
+                <FontAwesome name="plus" size={14} color="#fff" />
+              </TouchableOpacity>
+            </>
+          }
+        />
 
         {/* Only when there is a GPA to report. It used to render regardless,
             so a student with no marked work gave a whole banner to the
