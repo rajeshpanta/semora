@@ -2225,6 +2225,17 @@ export const ES: Record<string, string> = {
     'Gratis por tiempo limitado · cada clase se importa sola y se mantiene al día',
   'Or connect Canvas — free': 'O conecta Canvas: gratis',
 
+  // ── Sign-in / sign-up hero (the first screen anyone sees) ──────────────
+  // These two are the signed-out headline and subhead. They were the only
+  // strings on that screen missing from the catalogue, so a Spanish account
+  // met a Spanish app whose front door was in English.
+  'Turn your syllabus into\na semester that runs itself':
+    'Convierte tu programa en\nun semestre que se organiza solo',
+  'Snap a photo of your syllabus. Semora pulls out every deadline, assignment and exam, and keeps track of them for you.':
+    'Haz una foto de tu programa. Semora extrae cada entrega, tarea y examen, y los mantiene bajo control por ti.',
+  'Choose your Google account to continue to Semora.':
+    'Elige tu cuenta de Google para continuar en Semora.',
+
   // ── Command palette: search in place, across everything ────────────────
   // The `keywords` field in CommandPalette is deliberately NOT here — it is
   // match vocabulary rather than UI text, and carries both languages inline.

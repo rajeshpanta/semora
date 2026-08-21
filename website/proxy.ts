@@ -59,6 +59,22 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
+  // A prefetch is not a visit, and must never be mistaken for a decision.
+  //
+  // next/link prefetches what it renders. The language switcher on /es links to
+  // /?setlang=en, so Next fetched that URL on its own — and the branch below
+  // dutifully recorded "the visitor chose English" for someone who had only
+  // just been sent to the Spanish site and had clicked nothing. The cookie then
+  // said en, the app read en, and a Spanish reader signed in to an English app:
+  // exactly the bug this whole mechanism exists to fix, reintroduced by the
+  // fix. Only a real browser surfaced it; curl never prefetches.
+  const isPrefetch =
+    request.headers.get('next-router-prefetch') === '1' ||
+    request.headers.get('purpose') === 'prefetch' ||
+    request.headers.get('x-purpose') === 'prefetch' ||
+    request.headers.get('x-middleware-prefetch') === '1';
+  if (isPrefetch) return NextResponse.next();
+
   // An explicit choice from the language switcher. Recorded, then removed from
   // the URL so it never ends up in a share, a bookmark or a search result.
   const setLang = request.nextUrl.searchParams.get('setlang');

@@ -79,6 +79,10 @@ export function LanguageSwitcher({ locale }: { locale: SiteLocale }) {
           </span>
         ) : (
           <Link
+            // Never prefetched: these carry ?setlang=, and a prefetch would cast
+            // the vote before the visitor did. proxy.ts also refuses to act on a
+            // prefetch — this is the second lock on the same door.
+            prefetch={false}
             key={option.code}
             href={option.href}
             className={styles.languageOption}
