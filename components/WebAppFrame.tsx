@@ -61,13 +61,16 @@ const PRIMARY_ITEMS: NavigationItem[] = [
   { label: 'Import syllabus', icon: 'magic', path: '/scan' },
 ];
 
+// AI tutor leads. It was last of six, which put the one thing no competitor
+// can copy — answers grounded in the student's own syllabus — below a focus
+// timer, and then behind a fold once this group became collapsible.
 const TOOL_ITEMS: NavigationItem[] = [
+  { label: 'AI tutor', icon: 'comments-o', path: '/tutor' },
   { label: 'Smart Plan', icon: 'bolt', path: '/planner' },
   { label: 'Workload', icon: 'bar-chart', path: '/dashboard' },
   { label: 'Progress', icon: 'line-chart', path: '/insights' },
   { label: 'Flashcards', icon: 'clone', path: '/flashcards' },
   { label: 'Focus timer', icon: 'clock-o', path: '/pomodoro' },
-  { label: 'AI tutor', icon: 'comments-o', path: '/tutor' },
 ];
 
 const IMMERSIVE_PATHS = [

@@ -530,6 +530,13 @@ export default function TodayScreen() {
   const showTomorrow =
     today.getHours() >= 17 && (tomorrowsClasses.length > 0 || tomorrowsTasks.length > 0);
 
+  // Today's full task set (complete and not), shared by the Today heading and
+  // the empty-state card below it so the two can never disagree about whether
+  // there is anything due.
+  const totalTodayForEmptyState = weekTasks.filter(
+    (t: any) => t.due_date === format(today, 'yyyy-MM-dd'),
+  ).length;
+
   // ── Desktop decision band ────────────────────────────────────────────────
   // Everything below is derived from data already fetched for this screen; no
   // new query runs for the wide layout.
@@ -937,6 +944,19 @@ export default function TodayScreen() {
           const completedToday = allTodayTasks.filter((t) => t.is_completed).length;
           const totalToday = allTodayTasks.length;
           const allDone = totalToday > 0 && completedToday === totalToday;
+
+          // Nothing due today, but something IS coming: say nothing here.
+          //
+          // The Next Up hero directly above already names the next task and how
+          // far away it is ("TODAY" / "TOMORROW" / "4 DAYS"). Rendering a
+          // "Today" heading over a card reading "You're free today!" is a
+          // second answer to a question already answered, and it costs a
+          // screenful to give it. The section earns its space when there is
+          // work today, or when there is genuinely nothing anywhere — that
+          // second case still shows the empty card, because a student with an
+          // empty semester needs the import prompt it carries.
+          if (totalToday === 0 && nextUp) return null;
+
           return (
             <>
               <View style={styles.sectionRow}>
@@ -973,7 +993,11 @@ export default function TodayScreen() {
           );
         })()}
 
-        {todayTasks.length > 0 ? (
+        {/* Same rule as the heading above: when nothing is due today but the
+            Next Up hero already names what IS coming, this card would repeat
+            it. The empty card survives only when there is nothing anywhere,
+            because that student needs the import prompt inside it. */}
+        {totalTodayForEmptyState === 0 && nextUp ? null : todayTasks.length > 0 ? (
           <View style={[styles.taskCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
             {todayTasks.map((task, i) => {
               const isLast = i === todayTasks.length - 1;
