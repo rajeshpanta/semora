@@ -52,7 +52,33 @@ serve(withRequestLogging('stripe-webhook', async (req, log) => {
   } catch (err) {
     // An unverifiable payload is either a misconfiguration or someone probing
     // for a way to mint free subscriptions. Never process it.
-    log.warn('signature_verification_failed', errorFields(err));
+    //
+    // But say WHICH. "No signatures found matching the expected signature"
+    // is the same sentence whether a live event arrived with the wrong
+    // secret, a TEST-mode event hit the live endpoint, or someone posted
+    // junk — and those need opposite responses. The failures in the log were
+    // undiagnosable for exactly this reason.
+    //
+    // The body is read here for identification ONLY. It is unverified, so it
+    // is never acted on, never trusted, and never reaches the handlers below;
+    // the request still ends in a 400 on the next line. Reading an id is not
+    // the same as believing it.
+    let claimed: Record<string, unknown> = {};
+    try {
+      const peek = JSON.parse(raw) as Record<string, unknown>;
+      claimed = {
+        claimed_event_id: typeof peek.id === 'string' ? peek.id.slice(0, 64) : null,
+        claimed_type: typeof peek.type === 'string' ? peek.type.slice(0, 64) : null,
+        // The single most useful bit: a false here means a test-mode event
+        // reached the live endpoint, which is a Stripe dashboard setting and
+        // not a bug in this function.
+        claimed_livemode: typeof peek.livemode === 'boolean' ? peek.livemode : null,
+        claimed_api_version: typeof peek.api_version === 'string' ? peek.api_version : null,
+      };
+    } catch {
+      claimed = { claimed_event_id: null, body_bytes: raw.length, unparseable: true };
+    }
+    log.warn('signature_verification_failed', { ...errorFields(err), ...claimed });
     return new Response('Invalid signature', { status: 400 });
   }
 

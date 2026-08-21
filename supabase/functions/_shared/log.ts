@@ -263,5 +263,47 @@ export function errorFields(err: unknown): Record<string, unknown> {
       err_stack: err.stack?.split('\n').slice(0, 4).join(' | ').slice(0, 500) ?? null,
     };
   }
+
+  // PostgREST errors are PLAIN OBJECTS, not Errors.
+  //
+  // supabase-js resolves rather than throws: `{ data, error }`, where error is
+  // `{ message, details, hint, code }` with no prototype chain to Error. Every
+  // such error therefore fell to String(err) below and logged the literal text
+  // "[object Object]" — the code and the message, the only two things that
+  // identify a database failure, discarded at the point of writing them down.
+  //
+  // This is not hypothetical. tutor-chat's persist_messages_failed logged
+  // "[object Object]" for a PGRST102 that had gone unnoticed for months, and
+  // the shape of the bug was only recoverable by reproducing it by hand.
+  if (err && typeof err === 'object') {
+    const e = err as Record<string, unknown>;
+    const str = (v: unknown) =>
+      typeof v === 'string' ? v.slice(0, MAX_STRING) : v == null ? null : String(v).slice(0, MAX_STRING);
+
+    // `code` is what makes a Postgres or PostgREST failure searchable —
+    // PGRST102, 23505, 42501 — so it is promoted to its own field.
+    const code = str(e.code);
+    const message = str(e.message ?? e.msg ?? e.error_description ?? e.error);
+    if (code || message) {
+      const fields: Record<string, unknown> = {
+        err_name: str(e.name) ?? (code ? `postgrest_${code}` : 'object'),
+        err_message: message ?? '(no message)',
+      };
+      if (code) fields.err_code = code;
+      if (e.details != null) fields.err_details = str(e.details);
+      if (e.hint != null) fields.err_hint = str(e.hint);
+      if (typeof e.status === 'number') fields.err_status = e.status;
+      return fields;
+    }
+
+    // Anything else object-shaped: serialise it rather than stamping
+    // "[object Object]" on it. A truncated JSON blob is still evidence.
+    try {
+      return { err_name: 'object', err_message: JSON.stringify(err).slice(0, MAX_STRING) };
+    } catch {
+      // Circular or otherwise unserialisable — fall through to the default.
+    }
+  }
+
   return { err_name: typeof err, err_message: String(err).slice(0, MAX_STRING) };
 }
