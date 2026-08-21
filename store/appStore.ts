@@ -34,6 +34,7 @@ const REVIEW_REQUESTED_KEY = 'semora_review_requested';
 const IMPORTED_SYLLABUS_KEY = 'semora_imported_syllabus';
 const WIDGET_TIP_KEY = 'semora_widget_tip_seen';
 const COURSES_VIEW_KEY = 'semora_courses_view';
+const TOOLS_OPEN_KEY = 'semora_sidebar_tools_open';
 // Lifetime count of task completions on this device — the fallback trigger
 // for the review prompt (10th completion). Device-level like the flags
 // above: the rating prompt is once-per-device regardless of account, so
@@ -97,6 +98,9 @@ const initialAhaPaywallShown = getItem(AHA_PAYWALL_KEY) === 'true';
 const initialWidgetTipSeen = getItem(WIDGET_TIP_KEY) === 'true';
 const initialCoursesView: 'list' | 'grid' =
   getItem(COURSES_VIEW_KEY) === 'grid' ? 'grid' : 'list';
+// Open unless explicitly collapsed, so an existing user's sidebar looks the
+// same the first time they load a build that can collapse it.
+const initialToolsOpen = getItem(TOOLS_OPEN_KEY) !== 'false';
 const initialReviewRequested = getItem(REVIEW_REQUESTED_KEY) === 'true';
 // Backfill: a device that already has AHA_PAYWALL_KEY set completed an import
 // before IMPORTED_SYLLABUS_KEY existed. Without this, upgrading would read the
@@ -157,6 +161,9 @@ interface AppState {
    */
   coursesView: 'list' | 'grid';
   setCoursesView: (v: 'list' | 'grid') => void;
+  /** Whether the desktop sidebar's Study tools group is expanded. */
+  sidebarToolsOpen: boolean;
+  setSidebarToolsOpen: (v: boolean) => void;
   /**
    * Lifetime task completions on this device (see TASKS_COMPLETED_KEY).
    * Counts completion ACTIONS across ALL screens — incremented centrally in
@@ -258,6 +265,11 @@ export const useAppStore = create<AppState>((set) => ({
   setCoursesView: (v) => {
     set({ coursesView: v });
     setItem(COURSES_VIEW_KEY, v);
+  },
+  sidebarToolsOpen: initialToolsOpen,
+  setSidebarToolsOpen: (v) => {
+    set({ sidebarToolsOpen: v });
+    setItem(TOOLS_OPEN_KEY, v ? 'true' : 'false');
   },
   tasksCompletedCount: initialTasksCompleted,
   incrementTasksCompleted: () => set((s) => {

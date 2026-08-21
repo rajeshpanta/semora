@@ -123,6 +123,12 @@ function SidebarItem({
 function DesktopSidebar({ session }: { session: Session }) {
   const colors = useColors();
   const pathname = usePathname();
+  const storedToolsOpen = useAppStore((s) => s.sidebarToolsOpen);
+  const setSidebarToolsOpen = useAppStore((s) => s.setSidebarToolsOpen);
+  // A tool that IS the current screen keeps the group open, so the active
+  // highlight can never disappear underneath a collapsed header.
+  const onAToolScreen = TOOL_ITEMS.some((item) => isActive(pathname, item));
+  const toolsOpen = storedToolsOpen || onAToolScreen;
   // Canvas between Calendar and Import syllabus, only while it is worth
   // offering. Same rule the "+" menu and the add-course prompt use, so the
   // three cannot disagree about whether this student needs it.
@@ -287,17 +293,37 @@ function DesktopSidebar({ session }: { session: Session }) {
           ))}
         </View>
 
-        <Text style={[styles.groupLabel, { color: colors.ink3 }]}>STUDY TOOLS</Text>
-        <View style={styles.navGroup}>
-          {TOOL_ITEMS.map((item) => (
-            <SidebarItem
-              key={item.path}
-              item={item}
-              active={isActive(pathname, item)}
-              onPress={() => navigate(item.path)}
-            />
-          ))}
-        </View>
+        {/* Collapsible. Five primary links, six tools, support and the account
+            row overflowed the rail on a 900px-tall window: the last tool was
+            clipped mid-row at the fold, which reads as a rendering fault
+            rather than as a list that scrolls. Most sessions use one or two of
+            these, so the group folds and remembers the choice. */}
+        <Pressable
+          onPress={() => setSidebarToolsOpen(!toolsOpen)}
+          style={styles.groupHeader}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: toolsOpen }}
+          accessibilityLabel={toolsOpen ? 'Collapse study tools' : 'Expand study tools'}
+        >
+          <Text style={[styles.groupLabel, { color: colors.ink3 }]}>STUDY TOOLS</Text>
+          <FontAwesome
+            name={toolsOpen ? 'angle-up' : 'angle-down'}
+            size={14}
+            color={colors.ink3}
+          />
+        </Pressable>
+        {toolsOpen && (
+          <View style={styles.navGroup}>
+            {TOOL_ITEMS.map((item) => (
+              <SidebarItem
+                key={item.path}
+                item={item}
+                active={isActive(pathname, item)}
+                onPress={() => navigate(item.path)}
+              />
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       <View style={[styles.accountArea, { borderTopColor: colors.line }]}>
@@ -381,6 +407,10 @@ export function WebAppFrame({
 }
 
 const styles = StyleSheet.create({
+  groupHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingRight: 9,
+  },
   shell: {
     flex: 1,
     minHeight: '100vh',
