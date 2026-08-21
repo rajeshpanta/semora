@@ -196,6 +196,13 @@ export async function connectLms(input: {
           instructor: external.instructor ?? null,
           color: COLORS[index % COLORS.length],
           icon: 'book',
+          // Not decoration. enforce_free_course_limit (090) reads this column
+          // to decide whether the row counts against the free four-per-semester
+          // cap, and it runs BEFORE INSERT — before the lms_course_links row
+          // below exists to prove where the class came from. Drop this and a
+          // free student importing five Canvas classes is refused by Postgres
+          // on the fifth, halfway through, with the connection already made.
+          source: 'lms',
         })
         .select('id')
         .single();
@@ -443,42 +450,97 @@ export async function disconnectLms(connectionId: string): Promise<void> {
 
 export type CanvasOffer = 'none' | 'needs_attention' | 'healthy' | 'locked';
 
+/**
+ * Is Canvas sync free for everyone right now?
+ *
+ * A row in the database, not a constant in this bundle. Semora ships no OTA
+ * updates (expo-updates is not installed), so a promo compiled into the app
+ * could only be ended by an App Store release — and every install that had not
+ * updated would keep advertising a free offer the server had already stopped
+ * honouring. That is a 402 at the end of a promise. Reading it from the server
+ * means ending the offer is one UPDATE and lands on builds that shipped months
+ * ago.
+ */
+export async function canvasFreePromoActive(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('promo_active', { p_key: 'canvas_free' });
+  // Fail CLOSED on the copy, not on the feature. If this read fails we simply
+  // do not shout about a free offer; the server still decides who may sync, so
+  // a Pro subscriber and a grandfathered account are unaffected either way.
+  if (error) return false;
+  return data === true;
+}
+
+export const canvasFreePromoQuery = {
+  queryKey: ['canvasFreePromo'] as const,
+  queryFn: canvasFreePromoActive,
+  // An offer does not start and stop within a session. Read it once and leave
+  // it alone — this sits on the render path of six screens.
+  staleTime: 10 * 60_000,
+};
+
+/**
+ * Is Canvas free for THIS account right now?
+ *
+ * Two ways to qualify, and the second is the one that makes "limited time"
+ * honest: the offer is live, or this account already connected while it was.
+ * A claim is stamped by the database on the connection row (090), so ending
+ * the offer never reaches backwards and switches off somebody who took it.
+ *
+ * Separate from canvasOfferFor because the settings screens need this answer
+ * before the connection list has loaded — canvasOfferFor deliberately reports
+ * 'healthy' while loading so no prompt flashes, and a screen that gated on
+ * that would show a paywall for a beat to a student who does not owe anything.
+ */
+export function canvasFreeFor(
+  connections: (LmsConnection & { links: LmsCourseLink[] })[] | undefined,
+  isPro?: boolean,
+  freePromoActive?: boolean,
+): boolean {
+  if (isPro !== false) return false;
+  if (freePromoActive === true) return true;
+  return (connections ?? []).some((c) => c.free_promo_claimed_at != null);
+}
+
 export function canvasOfferFor(
   connections: (LmsConnection & { links: LmsCourseLink[] })[] | undefined,
   isPro?: boolean,
-): { offer: CanvasOffer; connection: LmsConnection | null } {
+  freePromoActive?: boolean,
+): { offer: CanvasOffer; connection: LmsConnection | null; free: boolean } {
   // While the query is loading, offer nothing. Flashing "Connect Canvas" at a
   // student who connected it last term, then swapping it out a beat later, is
   // worse than showing it a moment late.
-  if (!connections) return { offer: 'healthy', connection: null };
+  if (!connections) return { offer: 'healthy', connection: null, free: false };
 
   const canvas = connections.find((c) => c.provider === 'canvas') ?? null;
 
-  // Pro, and said so up front.
+  // Pro, the offer is live, or this account claimed it while it was. See
+  // canvasFreeFor — lms_access_allowed answers the same question server-side.
+  const free = canvasFreeFor(connections, isPro, freePromoActive);
+
+  // Not Pro, and the offer is not open to them.
   //
-  // lms-sync refuses a non-Pro caller server-side, so a free student who taps
+  // lms-sync refuses this caller server-side, so a free student who taps
   // "Connect Canvas" reaches Settings, then the paywall — a dead end dressed
   // as a feature, and the second-worst way to learn something costs money. The
   // worst is finding out after connecting.
   //
-  // 'locked' still SHOWS the offer, deliberately: this is the strongest reason
-  // to upgrade Semora has, and hiding it from exactly the people who have not
-  // upgraded would be the wrong lesson from "do not dead-end them". It carries
-  // a PRO badge and goes straight to the paywall.
+  // 'locked' still SHOWS the offer, deliberately: hiding it from exactly the
+  // people who have not upgraded would be the wrong lesson from "do not
+  // dead-end them". It carries a PRO badge and goes straight to the paywall.
   //
   // Checked before the healthy case on purpose. When Pro lapses the server
   // disables background sync and deletes the credential, so a lapsed
   // subscriber's connection is not healthy no matter what the row says — and
   // reconnecting is what they will have to do.
-  if (isPro === false) return { offer: 'locked', connection: canvas };
+  if (isPro === false && !free) return { offer: 'locked', connection: canvas, free: false };
 
-  if (!canvas) return { offer: 'none', connection: null };
+  if (!canvas) return { offer: 'none', connection: null, free };
 
   const stalled =
     !canvas.background_sync_enabled ||
     ['error', 'credentials_required'].includes(canvas.last_sync_status ?? '');
 
-  return { offer: stalled ? 'needs_attention' : 'healthy', connection: canvas };
+  return { offer: stalled ? 'needs_attention' : 'healthy', connection: canvas, free };
 }
 
 /**

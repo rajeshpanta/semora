@@ -25,7 +25,7 @@ import { calculateCourseGrade, calculateSemesterGpaWithScale, DEFAULT_GPA_SCALE 
 import { useColors } from '@/lib/theme';
 import CourseCard, { formatMeetings, type CourseCardData } from '@/components/CourseCard';
 import AppHeader from '@/components/AppHeader';
-import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { track } from '@/lib/analytics';
 import { useResponsive } from '@/lib/responsive';
@@ -78,7 +78,8 @@ export default function CoursesScreen() {
   const isPro = useAppStore((st) => st.isPro);
   const [canvasUpsell, setCanvasUpsell] = useState(false);
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
-  const { offer: canvasOffer } = canvasOfferFor(lmsConnections, isPro);
+  const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
+  const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
   const { data: tasks = [] } = useTasks(selectedSemesterId ? { semesterId: selectedSemesterId } : { semesterId: null });
   const { data: gradeCategories = [] } = useSemesterGradeCategories(selectedSemesterId);
   const { data: gpaScale = DEFAULT_GPA_SCALE } = useGpaScale();
@@ -117,9 +118,13 @@ export default function CoursesScreen() {
             text:
               canvasOffer === 'needs_attention' ? 'Finish Canvas setup'
               : canvasOffer === 'locked' ? 'Connect Canvas (Pro)'
+              // The price is the headline while the offer is on. "(Free)" sits
+              // where "(Pro)" sat, so the row reads as the same offer with the
+              // wall taken out rather than as a different feature.
+              : canvasFree ? 'Connect Canvas (Free)'
               : 'Connect Canvas',
             onPress: () => {
-              track('canvas_offer_tapped', { screen: 'courses', offer: canvasOffer });
+              track('canvas_offer_tapped', { screen: 'courses', offer: canvasOffer, free: canvasFree });
               // Free account: the upgrade sheet, right here. Sending someone
               // to another screen to find out something costs money turns one
               // tap into a journey.
@@ -132,7 +137,9 @@ export default function CoursesScreen() {
           }];
     Alert.alert(
       'Add a course',
-      canvasOffer === 'none' || canvasOffer === 'locked'
+      canvasFree && canvasOffer === 'none'
+        ? 'Limited time: Canvas sync is free, no Pro needed. Every class you have arrives on its own — or scan a syllabus, or type it yourself.'
+        : canvasOffer === 'none' || canvasOffer === 'locked'
         ? 'Connect Canvas and your classes arrive on their own — or scan a syllabus, or type it yourself.'
         : 'Scan a syllabus and the AI fills everything in — or type it yourself.',
       [

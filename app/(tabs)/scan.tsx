@@ -34,7 +34,7 @@ import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useFreeActionUsed, freeActionUsedQueryOptions } from '@/lib/queries';
 import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
-import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
 import { MAX_SCAN_PAGES, MAX_SCAN_RAW_BYTES, scanTooLargeMessage, type SyllabusPage } from '@/lib/ai-extraction';
 import { getFileSize } from '@/lib/readFileBase64';
 import {
@@ -83,7 +83,8 @@ export default function ScanScreen() {
   const { data: courses = [] } = useCourses(selectedSemesterId);
   const { data: freeActionUsed = false, isLoading: freeActionLoading } = useFreeActionUsed();
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
-  const { offer: canvasOffer } = canvasOfferFor(lmsConnections, isPro);
+  const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
+  const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
   const [upsellVisible, setUpsellVisible] = useState(false);
   // Which wall was hit. The scan limit and the Canvas Pro gate are different
   // reasons and must not borrow each other's words.
@@ -93,7 +94,11 @@ export default function ScanScreen() {
   // a scan that extracts a NEW course trips the course cap even with scans
   // left. Surfacing the course usage here stops that from reading as a
   // contradictory "you have scans but it says upgrade" once the gate fires.
-  const atCourseLimit = !isPro && courses.length >= FREE_COURSE_LIMIT;
+  // Canvas classes excluded: they are uncapped under the free-sync offer, and
+  // enforce_free_course_limit (090) ignores them server-side. Counting them
+  // here would tell a student who just imported seven Canvas classes that they
+  // are out of courses, seconds after being told the import was free.
+  const atCourseLimit = !isPro && courses.filter((c: any) => c.source !== 'lms').length >= FREE_COURSE_LIMIT;
 
   // After a scan completes, syllabus_uploads is inserted by processSyllabus
   // and the server count goes up. Re-entering the scan tab without
@@ -636,9 +641,13 @@ export default function ScanScreen() {
             style={[styles.canvasCard, { backgroundColor: colors.teal50, borderColor: colors.teal }]}
             activeOpacity={0.85}
             accessibilityRole="button"
-            accessibilityLabel={canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Connect Canvas'}
+            accessibilityLabel={
+              canvasOffer === 'needs_attention' ? 'Finish Canvas setup'
+              : canvasFree ? 'Connect Canvas free, limited time offer'
+              : 'Connect Canvas'
+            }
             onPress={() => {
-              track('canvas_offer_tapped', { screen: 'scan', offer: canvasOffer });
+              track('canvas_offer_tapped', { screen: 'scan', offer: canvasOffer, free: canvasFree });
               // A free account gets the upgrade SHEET here, not a trip to
               // another screen. The offer and the answer belong in the same
               // place — sending someone to Settings or a full paywall screen
@@ -659,6 +668,16 @@ export default function ScanScreen() {
                 <Text style={[styles.canvasTitle, { color: colors.ink }]}>
                   {canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Connect Canvas instead'}
                 </Text>
+                {/* The loudest place in the app to say this. A student on the
+                    scan screen is about to spend their one lifetime free AI
+                    action on a single syllabus, when Canvas would bring every
+                    class for nothing. Telling them after they have spent it
+                    would be telling them too late. */}
+                {canvasFree && canvasOffer !== 'needs_attention' && (
+                  <View style={[styles.canvasPro, { backgroundColor: colors.teal }]}>
+                    <Text style={styles.canvasProText}>FREE</Text>
+                  </View>
+                )}
                 {canvasOffer === 'locked' && (
                   <View style={[styles.canvasPro, { backgroundColor: colors.brand }]}>
                     <FontAwesome name="star" size={8} color="#fff" />
@@ -669,7 +688,9 @@ export default function ScanScreen() {
               <Text style={[styles.canvasSub, { color: colors.ink2 }]}>
                 {canvasOffer === 'needs_attention'
                   ? 'Connected, but not syncing on its own yet'
-                  : 'Every class imports itself — and stays right when your teacher moves a deadline'}
+                  : canvasFree
+                    ? 'Limited time: no Pro needed, and it does not touch your free scan. Every class imports itself.'
+                    : 'Every class imports itself — and stays right when your teacher moves a deadline'}
               </Text>
             </View>
             <FontAwesome name="chevron-right" size={13} color={colors.teal} />

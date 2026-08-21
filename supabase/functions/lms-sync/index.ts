@@ -650,10 +650,23 @@ async function requireUser(req: Request) {
   return data.user;
 }
 
-async function requirePro(log: EdgeLogger, admin: AdminClient, userId: string) {
-  const { data, error } = await admin.rpc('is_pro', { uid: userId });
+// Canvas sync is not a Pro feature right now — it is the offer.
+//
+// This used to be is_pro() and nothing else. It is now lms_access_allowed(),
+// which answers Pro OR the canvas_free promo is live OR this account claimed
+// the promo while it was. The rule lives in the database (090) rather than
+// here because the same question is asked by enforce_free_course_limit on
+// every course insert, and 044 already recorded what happens when one rule is
+// written twice: "the three layers disagree and the user is either blocked
+// early or bypasses the cap."
+//
+// Still a hard server-side gate. When the promo is off and the account never
+// claimed it, this refuses exactly as before — the client cannot talk its way
+// past it, which is what makes it safe to be generous in the UI.
+async function requireLmsAccess(log: EdgeLogger, admin: AdminClient, userId: string) {
+  const { data, error } = await admin.rpc('lms_access_allowed', { uid: userId });
   if (error) {
-    log.error('is_pro_check_failed', errorFields(error));
+    log.error('lms_access_check_failed', errorFields(error));
     const unavailable: any = new Error('Service temporarily unavailable');
     unavailable.status = 503;
     throw unavailable;
@@ -936,12 +949,20 @@ serve(withRequestLogging('lms-sync', async (req, log) => {
       for (const row of rows ?? []) {
         const connection = { ...row, links: (row as any).links ?? [] } as SyncConnection;
         try {
-          await requirePro(log, admin, connection.user_id);
+          await requireLmsAccess(log, admin, connection.user_id);
           await performConnectionSync(log, admin, connection, await backgroundCredential(admin, connection.id), 'background');
           succeeded += 1;
         } catch (error) {
           failed += 1;
           if ((error as any)?.code === 'PRO_REQUIRED') {
+            // Reachable by two routes now, and it matters which: a subscriber
+            // whose Pro lapsed, or — once the canvas_free promo is switched
+            // off — a free account that never claimed it. A free account that
+            // DID claim it never lands here at all; lms_access_allowed keeps
+            // returning true for them forever, which is the whole point of
+            // stamping free_promo_claimed_at (090). Turning off an offer must
+            // not reach backwards and switch off the people who took it.
+            //
             // Through the RPC, not a direct update: disable_lms_background_sync
             // also DELETES the lms_sync_credentials row (whose delete trigger
             // purges the vault secrets). The previous direct update here left a
@@ -969,7 +990,7 @@ serve(withRequestLogging('lms-sync', async (req, log) => {
     }
 
     const user = await requireUser(req);
-    await requirePro(log, admin, user.id);
+    await requireLmsAccess(log, admin, user.id);
     const provider = body?.provider as Provider;
     const token = typeof body?.access_token === 'string' ? body.access_token.trim() : '';
 

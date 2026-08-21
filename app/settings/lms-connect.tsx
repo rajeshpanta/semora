@@ -21,14 +21,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSession } from '@/app/_layout';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
+import { useQuery } from '@tanstack/react-query';
 import {
   canvasCalendarOrigin,
+  canvasFreeFor,
+  canvasFreePromoQuery,
   connectLms,
   discoverLmsCourses,
   DiscoveredLmsCourse,
   LMS_PROVIDER_LABELS,
   normalizeCanvasCalendarFeedUrl,
   reconnectLmsConnection,
+  lmsConnectionsQuery,
   requestGoogleClassroomCredential,
   syncLmsConnection,
   type LmsCredential,
@@ -89,13 +93,25 @@ export default function LmsConnectScreen() {
     router.back();
   }, []);
 
-  // Defense in depth: the LMS list screen already gates entry behind Pro, but
-  // this screen is directly routable (deep link / reconnect). Bounce a non-Pro
-  // user straight to the paywall rather than let them start a connect flow the
-  // server will reject anyway.
+  // Defense in depth: the LMS list screen already gates entry, but this screen
+  // is directly routable (deep link / reconnect). Bounce an account the server
+  // will refuse rather than let it start a connect flow that cannot finish.
+  //
+  // WAIT FOR THE ANSWER before bouncing. `isPro` is in the local store and
+  // resolves instantly; whether the canvas_free offer is live is a network
+  // read, and both of these start out undefined. Gating on them while they load
+  // would throw a paywall in front of every free student for the first few
+  // hundred milliseconds of the screen they were just invited onto — the exact
+  // dead end this offer exists to remove. Until the gate resolves, the blank
+  // paper screen below is what shows.
+  const { data: lmsConnections, isPending: connectionsPending } = useQuery(lmsConnectionsQuery);
+  const { data: canvasFreePromo, isPending: promoPending } = useQuery(canvasFreePromoQuery);
+  const lmsFree = canvasFreeFor(lmsConnections, isPro, canvasFreePromo);
+  const lmsAllowed = isPro || lmsFree;
+  const gateResolved = isPro || (!promoPending && !connectionsPending);
   useEffect(() => {
-    if (!isPro) openPaywall();
-  }, [isPro, openPaywall]);
+    if (gateResolved && !lmsAllowed) openPaywall();
+  }, [gateResolved, lmsAllowed, openPaywall]);
   const [semesterId, setSemesterId] = useState(selectedSemesterId ?? '');
   const [displayName, setDisplayName] = useState(LMS_PROVIDER_LABELS[provider]);
   const [baseUrl, setBaseUrl] = useState(params.baseUrl ?? '');
@@ -262,9 +278,10 @@ export default function LmsConnectScreen() {
     });
   };
 
-  // Non-Pro: the effect above is routing to the paywall. Render an empty paper
-  // screen (no connect form flash) until the replace lands.
-  if (!isPro) {
+  // Either the gate has not resolved yet, or it resolved against this account
+  // and the effect above is routing to the paywall. Both render an empty paper
+  // screen, so no connect form flashes in front of someone who cannot use it.
+  if (!lmsAllowed) {
     return <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']} />;
   }
 
@@ -299,6 +316,28 @@ export default function LmsConnectScreen() {
                   ? 'Set this up once. Semora will keep your dated Canvas assignments and events updated when an instructor changes a deadline.'
                   : 'Semora makes read-only requests to import classes, deadlines, points, and available submission status. It never changes your LMS.'}
               </Text>
+
+              {/* The promise, on the screen where it is being made.
+                  Two sentences and both of them have to be true. "No limit on
+                  classes" is enforced by enforce_free_course_limit admitting
+                  every source='lms' row (090). "Stays yours" is enforced by
+                  free_promo_claimed_at, stamped on the connection row this
+                  screen is about to create — ending the offer reads the stamp
+                  and lets these accounts through forever. Saying "limited
+                  time" while quietly meaning "we may switch yours off too" is
+                  the version of this that would deserve the App Store review
+                  it would get. */}
+              {lmsFree && !reconnecting && (
+                <View style={[styles.freeOffer, { backgroundColor: colors.teal50, borderColor: colors.teal }]}>
+                  <FontAwesome name="gift" size={15} color={colors.teal} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.freeOfferTitle, { color: colors.ink }]}>Limited time offer · free sync</Text>
+                    <Text style={[styles.freeOfferText, { color: colors.ink2 }]}>
+                      No Pro needed, and no limit on how many classes come across. Connect now and it stays free on this account, even after the offer ends.
+                    </Text>
+                  </View>
+                </View>
+              )}
 
               {isCanvasCalendar && (
                 <>
@@ -515,6 +554,13 @@ const styles = StyleSheet.create({
   title: { fontSize: 25, fontFamily: 'Fraunces_700Bold' },
   eyebrow: { fontSize: 11, fontWeight: '900', letterSpacing: 0.8, marginBottom: 7 },
   subtitle: { fontSize: 14, lineHeight: 21, marginTop: 7, marginBottom: 15 },
+  freeOffer: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 11,
+    borderWidth: 1, borderRadius: 13,
+    paddingHorizontal: 14, paddingVertical: 12, marginBottom: 16,
+  },
+  freeOfferTitle: { fontSize: 13.5, fontWeight: '800' },
+  freeOfferText: { fontSize: 12.5, lineHeight: 18, marginTop: 3 },
   label: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.45, marginTop: 14, marginBottom: 7 },
   input: { minHeight: 50, borderRadius: 13, borderWidth: 1.2, paddingHorizontal: 14, fontSize: 15 },
   secretField: { position: 'relative' },

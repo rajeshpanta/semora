@@ -55,14 +55,16 @@ function summarizeItems(items: { type: string }[]): { type: string; count: numbe
 }
 
 async function createDuplicateCourse(result: ProcessResult, userId: string): Promise<ProcessResult> {
-  // Check course limit for free users
+  // Check course limit for free users. Canvas-sourced classes are excluded to
+  // match enforce_free_course_limit (090) — see the note in lib/syllabus.ts.
   const isPro = useAppStore.getState().isPro;
   if (!isPro) {
     const { count } = await supabase
       .from('courses')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
-      .eq('semester_id', result.semesterId);
+      .eq('semester_id', result.semesterId)
+      .neq('source', 'lms');
     if ((count ?? 0) >= FREE_COURSE_LIMIT) {
       throw new Error(`Free accounts support up to ${FREE_COURSE_LIMIT} courses per semester (this is separate from your scans). Upgrade to Pro for unlimited courses, or re-scan a course you already have.`);
     }

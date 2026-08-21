@@ -48,11 +48,19 @@ export interface GpaScaleEntry {
 
 export type ExtraCreditPolicy = 'bonus' | 'category' | 'ignore';
 
+export type CourseSource = 'manual' | 'scan' | 'lms';
+
 export interface Course {
   id: string;
   user_id: string;
   semester_id: string;
   name: string;
+  /**
+   * Where this class came from (090). Only non-`lms` rows count against the
+   * free per-semester course limit — Canvas classes are uncapped while the
+   * canvas_free promo is live.
+   */
+  source: CourseSource;
   instructor: string | null;
   color: string;
   icon: string;
@@ -245,6 +253,12 @@ export interface LmsConnection {
   last_sync_attempt_at: string | null;
   last_successful_sync_at: string | null;
   consecutive_sync_failures: number;
+  /**
+   * Set by the database (090) when a non-Pro account created this connection
+   * while the `canvas_free` promo was live. Non-null means grandfathered: this
+   * connection keeps syncing after the offer closes.
+   */
+  free_promo_claimed_at: string | null;
   created_at: string;
   updated_at: string;
 }

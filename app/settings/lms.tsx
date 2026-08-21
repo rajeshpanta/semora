@@ -17,6 +17,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
+  canvasFreeFor,
+  canvasFreePromoQuery,
   disconnectLms,
   disableLmsBackgroundSync,
   enableLmsBackgroundSync,
@@ -74,6 +76,15 @@ export default function LmsSettingsScreen() {
     queryKey: ['lmsConnections'],
     queryFn: listLmsConnections,
   });
+  const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
+  // The promo is named for Canvas because Canvas is what students use and what
+  // it was opened up for, but the server gate (lms_access_allowed) is per
+  // ACCOUNT, not per provider — so Blackboard and Moodle unlock with it. Every
+  // gate on this screen therefore reads `lmsAllowed`, not `isPro`. Leaving the
+  // other rows badged PRO while the server let them straight through would be
+  // showing a price that is not being charged.
+  const lmsFree = canvasFreeFor(query.data, isPro, canvasFreePromo);
+  const lmsAllowed = isPro || lmsFree;
   const canvasFeedConnection = query.data?.find(
     (connection) => connection.provider === 'canvas' && connection.connection_method === 'calendar_feed',
   );
@@ -203,13 +214,15 @@ export default function LmsSettingsScreen() {
           </View>
           {!canvasFeedConnection && (
             <TouchableOpacity
-              onPress={() => (isPro
+              onPress={() => (lmsAllowed
                 ? router.push({ pathname: '/settings/lms-connect', params: { provider: 'canvas' } } as any)
                 : openPaywall())}
               style={[styles.canvasButton, { backgroundColor: colors.brand }]}
             >
-              <FontAwesome name={isPro ? 'link' : 'lock'} size={14} color="#fff" />
-              <Text style={styles.canvasButtonText}>{isPro ? 'Connect Canvas' : 'Connect Canvas · Pro'}</Text>
+              <FontAwesome name={lmsAllowed ? 'link' : 'lock'} size={14} color="#fff" />
+              <Text style={styles.canvasButtonText}>
+                {lmsFree ? 'Connect Canvas · Free' : lmsAllowed ? 'Connect Canvas' : 'Connect Canvas · Pro'}
+              </Text>
             </TouchableOpacity>
           )}
           {!!canvasFeedConnection && (
@@ -259,12 +272,14 @@ export default function LmsSettingsScreen() {
                     <TouchableOpacity
                       disabled={sync.isPending}
                       // Existing connections stay visible for a lapsed user, but
-                      // a new sync is Pro — route to the paywall instead of
-                      // firing a sync the server will reject with PRO_REQUIRED.
-                      onPress={() => (isPro ? sync.mutate(connection.id) : openPaywall())}
+                      // a new sync needs access — route to the paywall instead
+                      // of firing a sync the server will reject with
+                      // PRO_REQUIRED. A grandfathered free account passes here,
+                      // exactly as it passes lms_access_allowed server-side.
+                      onPress={() => (lmsAllowed ? sync.mutate(connection.id) : openPaywall())}
                       style={styles.textButton}
                     >
-                      <FontAwesome name={isPro ? 'refresh' : 'lock'} size={13} color={colors.brand} />
+                      <FontAwesome name={lmsAllowed ? 'refresh' : 'lock'} size={13} color={colors.brand} />
                       <Text style={[styles.textButtonLabel, { color: colors.brand }]}>
                         {sync.isPending && sync.variables === connection.id ? 'Syncing…' : 'Sync now'}
                       </Text>
@@ -324,9 +339,10 @@ export default function LmsSettingsScreen() {
         {OTHER_PROVIDERS.map((provider) => (
           <TouchableOpacity
             key={provider.id}
-            // Connecting a platform is Pro. Free users get the locked teaser →
-            // paywall instead of opening the connect flow.
-            onPress={() => (isPro
+            // Connecting a platform normally needs Pro; free users get the
+            // locked teaser → paywall instead of opening the connect flow.
+            // While the offer is live nobody is locked out — see lmsAllowed.
+            onPress={() => (lmsAllowed
               ? router.push({ pathname: '/settings/lms-connect', params: { provider: provider.id } } as any)
               : openPaywall())}
             style={[styles.providerRow, { backgroundColor: colors.card, borderColor: colors.line }]}
@@ -338,7 +354,7 @@ export default function LmsSettingsScreen() {
               <Text style={[styles.providerName, { color: colors.ink }]}>{LMS_PROVIDER_LABELS[provider.id]}</Text>
               <Text style={[styles.meta, { color: colors.ink3 }]}>{provider.detail}</Text>
             </View>
-            {isPro ? (
+            {lmsAllowed ? (
               <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
             ) : (
               <View style={[styles.proBadge, { backgroundColor: colors.brand }]}>

@@ -16,7 +16,7 @@ import { usePathname, useRouter } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
 import { useColors } from '@/lib/theme';
 import { useQuery } from '@tanstack/react-query';
-import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
 import { useAppStore } from '@/store/appStore';
 import { MARKETING_URL } from '@/lib/constants';
 import { track } from '@/lib/analytics';
@@ -53,6 +53,10 @@ const CANVAS_FIX_ITEM: NavigationItem = { label: 'Finish Canvas setup', icon: 'r
 // meet the price where they met the offer, not on another screen.
 const CANVAS_UPSELL_PATH = '__canvas_upsell__';
 const CANVAS_PRO_ITEM: NavigationItem = { label: 'Connect Canvas · Pro', icon: 'university', path: CANVAS_UPSELL_PATH };
+// While the canvas_free offer is live the sidebar row says what it now costs.
+// Same position, same icon, one word changed — the rail is glanced at, not
+// read, and moving the row would cost more recognition than the word gains.
+const CANVAS_FREE_ITEM: NavigationItem = { label: 'Connect Canvas · Free', icon: 'university', path: '/settings/lms' };
 
 const PRIMARY_ITEMS: NavigationItem[] = [
   { label: 'Today', icon: 'sun-o', path: '/', exact: true },
@@ -138,12 +142,14 @@ function DesktopSidebar({ session }: { session: Session }) {
   const isPro = useAppStore((st) => st.isPro);
   const [canvasUpsellOpen, setCanvasUpsellOpen] = useState(false);
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
-  const { offer: canvasOffer } = canvasOfferFor(lmsConnections, isPro);
+  const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
+  const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
   const primaryItems = (() => {
     if (canvasOffer === 'healthy') return PRIMARY_ITEMS;
     const item =
       canvasOffer === 'needs_attention' ? CANVAS_FIX_ITEM
       : canvasOffer === 'locked' ? CANVAS_PRO_ITEM
+      : canvasFree ? CANVAS_FREE_ITEM
       : CANVAS_ITEM;
     const at = PRIMARY_ITEMS.findIndex((i) => i.path === '/scan');
     return [...PRIMARY_ITEMS.slice(0, at), item, ...PRIMARY_ITEMS.slice(at)];

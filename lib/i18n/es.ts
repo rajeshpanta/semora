@@ -2199,6 +2199,32 @@ export const ES: Record<string, string> = {
   'Finish Canvas setup — your classes import themselves': 'Termina de configurar Canvas: tus clases se importan solas',
   'Sync Canvas, Pro feature': 'Sincronizar Canvas, función Pro',
   'Connect Canvas instead': 'Mejor conecta Canvas',
+
+  // ── Canvas free, limited time (090) ────────────────────────────────────
+  // Every one of these is a PRICE claim, which is the category of string that
+  // must never fall back to English: a Spanish-reading student seeing an
+  // English "FREE" badge has been shown a word they may not read on the one
+  // subject where being misunderstood costs money. Added with the strings
+  // rather than after them for that reason.
+  'FREE': 'GRATIS',
+  'Connect Canvas (Free)': 'Conectar Canvas (Gratis)',
+  'Connect Canvas · Free': 'Conectar Canvas · Gratis',
+  'Sync Canvas free — every class imports itself':
+    'Sincroniza Canvas gratis: cada clase se importa sola',
+  'Sync Canvas free, limited time offer':
+    'Sincronizar Canvas gratis, oferta por tiempo limitado',
+  'Connect Canvas free, limited time offer':
+    'Conectar Canvas gratis, oferta por tiempo limitado',
+  'Limited time: Canvas sync is free, no Pro needed. Every class you have arrives on its own — or scan a syllabus, or type it yourself.':
+    'Por tiempo limitado: sincronizar con Canvas es gratis, sin Pro. Todas tus clases llegan solas, o escanea un programa, o escríbelo tú.',
+  'Limited time: no Pro needed, and it does not touch your free scan. Every class imports itself.':
+    'Por tiempo limitado: sin Pro, y no gasta tu acción gratuita. Cada clase se importa sola.',
+  'Free, limited time · every class imports itself and stays up to date':
+    'Gratis por tiempo limitado · cada clase se importa sola y se mantiene al día',
+  'Limited time offer · free sync':
+    'Oferta por tiempo limitado · sincronización gratis',
+  'No Pro needed, and no limit on how many classes come across. Connect now and it stays free on this account, even after the offer ends.':
+    'Sin Pro y sin límite de clases. Conéctalo ahora y seguirá siendo gratis en esta cuenta, incluso cuando termine la oferta.',
   'Study tools': 'Herramientas de estudio',
   'Tasks': 'Tareas',
   'Connected, but not syncing on its own yet': 'Conectado, pero aún no se sincroniza solo',

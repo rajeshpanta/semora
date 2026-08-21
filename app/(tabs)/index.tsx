@@ -44,7 +44,7 @@ import DecisionStrip from '@/components/DecisionStrip';
 import AppHeader from '@/components/AppHeader';
 import CoursesGlance from '@/components/CoursesGlance';
 import GradesWaitingCard from '@/components/GradesWaitingCard';
-import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
 import { calculateCourseGrade } from '@/lib/grades';
 import { DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import type { GradeThreshold } from '@/types/database';
@@ -111,12 +111,15 @@ export default function TodayScreen() {
   const { data: semesters = [], isLoading: semestersLoading } = useSemesters();
   const { data: courses = [] } = useCourses(selectedSemesterId);
   const { data: gradeCategories = [] } = useSemesterGradeCategories(selectedSemesterId);
-  // canvasOfferFor takes isPro and answers 'locked' for a free account, which
-  // is what shows the PRO badge and sends the tap to the sheet rather than to
-  // Settings — lms-sync refuses a non-Pro caller server-side, so walking them
-  // to Settings first would dead-end them at the same wall one screen later.
+  // canvasOfferFor answers 'locked' only when the account is neither Pro nor
+  // covered by the canvas_free offer — that is the state that shows a PRO badge
+  // and sends the tap to the sheet rather than to Settings, because lms-sync
+  // refuses that caller server-side and walking them to Settings first would
+  // dead-end them at the same wall one screen later. While the offer is live
+  // `free` comes back true instead, and the same prompt becomes the giveaway.
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
-  const { offer: canvasOffer } = canvasOfferFor(lmsConnections, isPro);
+  const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
+  const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
   const { data: todayTasks = [] } = useTodayTasks(selectedSemesterId);
   const { data: dueSoonTasks = [], isSuccess: dueSoonLoaded } = useDueSoonTasks(selectedSemesterId);
   const { data: stats } = useTaskStats(selectedSemesterId);
@@ -1188,22 +1191,34 @@ export default function TodayScreen() {
                   <TouchableOpacity
                     style={[styles.emptyCanvas, { borderColor: colors.teal, backgroundColor: colors.teal50 }]}
                     onPress={() => {
-                      track('canvas_offer_tapped', { screen: 'today_empty', offer: canvasOffer });
+                      track('canvas_offer_tapped', { screen: 'today_empty', offer: canvasOffer, free: canvasFree });
                       if (canvasOffer === 'locked') { showProUpsell('canvas'); return; }
                       router.push('/settings/lms' as any);
                     }}
                     activeOpacity={0.85}
                     accessibilityRole="button"
                     accessibilityLabel={
-                      canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Sync Canvas, Pro feature'
+                      canvasOffer === 'needs_attention' ? 'Finish Canvas setup'
+                      : canvasFree ? 'Sync Canvas free, limited time offer'
+                      : 'Sync Canvas, Pro feature'
                     }
                   >
                     <FontAwesome name="university" size={13} color={colors.teal} />
                     <Text style={[styles.emptyCanvasText, { color: colors.ink2 }]}>
                       {canvasOffer === 'needs_attention'
                         ? 'Finish Canvas setup — your classes import themselves'
-                        : 'Or sync Canvas — every class imports itself'}
+                        : canvasFree
+                          ? 'Sync Canvas free — every class imports itself'
+                          : 'Or sync Canvas — every class imports itself'}
                     </Text>
+                    {/* Same slot, opposite meaning. A free account used to see
+                        PRO here; while the offer is live it sees what it costs
+                        instead, which is nothing. */}
+                    {canvasFree && canvasOffer !== 'needs_attention' && (
+                      <View style={[styles.emptyCanvasPro, { backgroundColor: colors.teal }]}>
+                        <Text style={styles.emptyCanvasProText}>FREE</Text>
+                      </View>
+                    )}
                     {canvasOffer === 'locked' && (
                       <View style={[styles.emptyCanvasPro, { backgroundColor: colors.brand }]}>
                         <FontAwesome name="star" size={7} color="#fff" />

@@ -11,7 +11,7 @@ import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { useCourses } from '@/lib/queries';
 import { useQuery } from '@tanstack/react-query';
-import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 
 // Floating action menu opened by the "+" tab button. The tab press itself is
@@ -216,7 +216,8 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
   // a fresh setup.
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
   const isPro = useAppStore((st) => st.isPro);
-  const { offer: canvasOffer } = canvasOfferFor(lmsConnections, isPro);
+  const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
+  const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
   const [canvasUpsell, setCanvasUpsell] = useState(false);
   const canvasRow: MenuRow | null =
     canvasOffer === 'healthy'
@@ -242,7 +243,11 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
             icon: 'university',
             tint: 'teal',
             title: 'Connect Canvas',
-            sub: 'Deadlines arrive on their own, and update when your teacher changes them',
+            // The subtitle carried "Pro ·" for a free account. It now carries
+            // the opposite, in the same slot and the same eight characters.
+            sub: canvasFree
+              ? 'Free, limited time · every class imports itself and stays up to date'
+              : 'Deadlines arrive on their own, and update when your teacher changes them',
             route: { pathname: '/settings/lms' },
           };
 

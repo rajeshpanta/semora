@@ -486,14 +486,22 @@ async function findOrCreateCourse(
     return { courseId: existing.id, courseName: existing.name, isExisting: true };
   }
 
-  // Check course limit for free users before creating
+  // Check course limit for free users before creating.
+  //
+  // neq('source', 'lms') mirrors enforce_free_course_limit (090): classes that
+  // came from Canvas do not count against the manual allowance. Without this
+  // the client would refuse at four while the database happily accepted, and a
+  // student who imported seven Canvas classes under the free-sync offer could
+  // never scan the one seminar Canvas does not know about — turning a gift
+  // into a lockout, which is a worse place to be than never having offered it.
   const isPro = useAppStore.getState().isPro;
   if (!isPro) {
     const { count } = await supabase
       .from('courses')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
-      .eq('semester_id', semesterId);
+      .eq('semester_id', semesterId)
+      .neq('source', 'lms');
     if ((count ?? 0) >= FREE_COURSE_LIMIT) {
       throw new Error(`Free accounts support up to ${FREE_COURSE_LIMIT} courses per semester (this is separate from your scans). Upgrade to Pro for unlimited courses, or re-scan a course you already have.`);
     }

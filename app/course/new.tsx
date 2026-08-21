@@ -67,15 +67,13 @@ export default function NewCourseScreen() {
     if (existingCoursesLoading) {
       return;
     }
-    if (!isPro && existingCourses.length >= FREE_COURSE_LIMIT) {
-      Alert.alert(
-        'Course Limit Reached',
-        `Free accounts support up to ${FREE_COURSE_LIMIT} courses. Upgrade to Pro for unlimited courses.`,
-        [
-          { text: 'Upgrade', onPress: () => showProUpsell('course') },
-          { text: 'Cancel', style: 'cancel' },
-        ],
-      );
+    // Only classes the student added themselves count. Canvas-sourced ones are
+    // uncapped under the free-sync offer and are excluded server-side by
+    // enforce_free_course_limit (090) — counting them here would block a manual
+    // add the database would have allowed.
+    const manualCourses = existingCourses.filter((course: any) => course.source !== 'lms');
+    if (!isPro && manualCourses.length >= FREE_COURSE_LIMIT) {
+      showProUpsell('course');
       return;
     }
 
@@ -166,14 +164,7 @@ export default function NewCourseScreen() {
       // No isPro guard — if the trigger fired, the server says they're
       // free regardless of what client state thinks (stale isPro race).
       if (isFreeLimitError(err)) {
-        Alert.alert(
-          'Course Limit Reached',
-          err.message,
-          [
-            { text: 'Upgrade', onPress: () => showProUpsell('course') },
-            { text: 'Cancel', style: 'cancel' },
-          ],
-        );
+        showProUpsell('course');
         return;
       }
       Alert.alert('Error', err.message || 'Failed to create course.');
