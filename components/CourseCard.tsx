@@ -98,7 +98,12 @@ export default function CourseCard({
             {!!instructor && (
               <Text style={[styles.sub, { color: colors.ink3 }]} numberOfLines={1}>{instructor}</Text>
             )}
-            {!!instructor && !!meetingLabel && (
+            {/* The separator follows the INSTRUCTOR, not the meeting label —
+                it was conditioned on both, so a course with a teacher and no
+                class times rendered "Dra. R. OkonkwoAdd class times" with the
+                two run together. Something always follows the instructor here;
+                the only question is which of the two it is. */}
+            {!!instructor && (
               <Text style={[styles.sub, { color: colors.ink3 }]}> · </Text>
             )}
             {meetingLabel ? (

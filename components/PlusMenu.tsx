@@ -69,7 +69,7 @@ const ROOT_ACTIONS: MenuRow[] = [
   {
     icon: 'camera',
     tint: 'brand',
-    title: 'Import syllabus',
+    title: 'Scan syllabus',
     sub: 'Photo, PDF, document or file',
     expands: 'scan',
   },

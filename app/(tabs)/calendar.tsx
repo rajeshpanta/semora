@@ -97,7 +97,7 @@ export default function CalendarScreen() {
   }, [queryClient]);
   const colors = useColors();
   const { locale } = useI18n();
-  const { contentMaxWidth } = useResponsive();
+  const { contentMaxWidth, isDesktop } = useResponsive();
   const router = useRouter();
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
@@ -188,28 +188,53 @@ export default function CalendarScreen() {
         }
       >
         {/* Header */}
-        <AppHeader
-          title="Calendar"
-          context={
+        {/* Desktop web only — see components/AppHeader.tsx. Native keeps the
+            header it shipped with. */}
+        {isDesktop ? (
+          <AppHeader
+            title="Calendar"
+            context={
+              <View style={styles.monthPickerRow}>
+                <Text style={[styles.monthSubtitle, { color: colors.ink2 }]}>{MONTH_NAMES[viewDate.getMonth()]} {viewDate.getFullYear()}</Text>
+                <FontAwesome name="caret-down" size={12} color={colors.ink3} />
+              </View>
+            }
+            actions={
+              <>
+                <GlobalSearchButton />
+                <View style={[styles.modeToggle, { backgroundColor: colors.card, borderColor: colors.line }]}>
+                  <TouchableOpacity style={[styles.modeBtn, viewMode === 'month' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('month')}>
+                    <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'month' && styles.modeBtnTextActive]}>Month</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.modeBtn, viewMode === 'list' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('list')}>
+                    <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'list' && styles.modeBtnTextActive]}>List</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            }
+          />
+        ) : (
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={[styles.title, { color: colors.ink }]}>Calendar</Text>
             <View style={styles.monthPickerRow}>
               <Text style={[styles.monthSubtitle, { color: colors.ink2 }]}>{MONTH_NAMES[viewDate.getMonth()]} {viewDate.getFullYear()}</Text>
               <FontAwesome name="caret-down" size={12} color={colors.ink3} />
             </View>
-          }
-          actions={
-            <>
-              <GlobalSearchButton />
-              <View style={[styles.modeToggle, { backgroundColor: colors.card, borderColor: colors.line }]}>
-                <TouchableOpacity style={[styles.modeBtn, viewMode === 'month' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('month')}>
-                  <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'month' && styles.modeBtnTextActive]}>Month</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.modeBtn, viewMode === 'list' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('list')}>
-                  <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'list' && styles.modeBtnTextActive]}>List</Text>
-                </TouchableOpacity>
-              </View>
-            </>
-          }
-        />
+          </View>
+          <View style={styles.headerTools}>
+            <GlobalSearchButton />
+            <View style={[styles.modeToggle, { backgroundColor: colors.card, borderColor: colors.line }]}>
+              <TouchableOpacity style={[styles.modeBtn, viewMode === 'month' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('month')}>
+                <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'month' && styles.modeBtnTextActive]}>Month</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modeBtn, viewMode === 'list' && [styles.modeBtnActive, { backgroundColor: colors.ink }]]} onPress={() => setViewMode('list')}>
+                <Text style={[styles.modeBtnText, { color: colors.ink3 }, viewMode === 'list' && styles.modeBtnTextActive]}>List</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+        )}
 
         {/* Month nav arrows */}
         <View style={styles.navRow}>

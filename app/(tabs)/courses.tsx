@@ -41,7 +41,7 @@ const GRID_GAP = 12;
 
 export default function CoursesScreen() {
   const colors = useColors();
-  const { deckMaxWidth, isWide, isXWide, width } = useResponsive();
+  const { contentMaxWidth, deckMaxWidth, isDesktop, isWide, isXWide, width } = useResponsive();
   const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -136,7 +136,7 @@ export default function CoursesScreen() {
         : 'Scan a syllabus and the AI fills everything in — or type it yourself.',
       [
         ...canvasOption,
-        { text: 'Import syllabus', onPress: () => handleNav('/scan') },
+        { text: 'Scan syllabus', onPress: () => handleNav('/scan') },
         { text: 'Add manually', onPress: () => handleNav('/course/new') },
         { text: 'Cancel', style: 'cancel' },
       ],
@@ -299,27 +299,91 @@ export default function CoursesScreen() {
       >
 
         {/* Header */}
+        {/* Desktop web only — see components/AppHeader.tsx. Native keeps
+            the header it shipped with. */}
+        {isDesktop ? (
         <AppHeader
-          title="Courses"
-          context={
-            activeSemester ? (
-              <TouchableOpacity
-                style={styles.semesterSelector}
-                onPress={() => setShowPicker(true)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.semesterName, { color: colors.ink2 }]}>{activeSemester.name}</Text>
-                <FontAwesome name="chevron-down" size={10} color={colors.ink3} style={{ marginLeft: 4 }} />
-                <View style={[styles.courseCountBadge, { backgroundColor: colors.brand50 }]}>
-                  <Text style={[styles.courseCountText, { color: colors.brand }]}>{courses.length}</Text>
-                </View>
-              </TouchableOpacity>
-            ) : (
-              <Text style={[styles.subtitle, { color: colors.ink3 }]}>No semester selected</Text>
-            )
-          }
-          actions={
-            <>
+            title="Courses"
+            context={
+              activeSemester ? (
+                <TouchableOpacity
+                  style={styles.semesterSelector}
+                  onPress={() => setShowPicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.semesterName, { color: colors.ink2 }]}>{activeSemester.name}</Text>
+                  <FontAwesome name="chevron-down" size={10} color={colors.ink3} style={{ marginLeft: 4 }} />
+                  <View style={[styles.courseCountBadge, { backgroundColor: colors.brand50 }]}>
+                    <Text style={[styles.courseCountText, { color: colors.brand }]}>{courses.length}</Text>
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <Text style={[styles.subtitle, { color: colors.ink3 }]}>No semester selected</Text>
+              )
+            }
+            actions={
+              <>
+                {/* Layout toggle. Only worth showing once there is something to
+                    lay out — on an empty semester it is a control over nothing. */}
+                {courses.length > 0 && (
+                  <View style={[styles.viewToggle, { borderColor: colors.line, backgroundColor: colors.card }]}>
+                    {(['list', 'grid'] as const).map((mode) => {
+                      const active = coursesView === mode;
+                      return (
+                        <TouchableOpacity
+                          key={mode}
+                          style={[styles.viewToggleBtn, active && { backgroundColor: colors.brand50 }]}
+                          onPress={() => setCoursesView(mode)}
+                          activeOpacity={0.7}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: active }}
+                          accessibilityLabel={mode === 'list' ? 'List view' : 'Grid view'}
+                        >
+                          <FontAwesome
+                            name={mode === 'list' ? 'bars' : 'th-large'}
+                            size={13}
+                            color={active ? colors.brand : colors.ink3}
+                          />
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                )}
+                <GlobalSearchButton />
+                <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.brand }]} onPress={handleAddCourse} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Add a course">
+                  <FontAwesome name="plus" size={14} color="#fff" />
+                </TouchableOpacity>
+              </>
+            }
+          />
+        ) : (
+          <>
+          <View style={styles.headerRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.title, { color: colors.ink }]}>Courses</Text>
+
+              {/* Semester selector — single hub for switch / edit / delete /
+                  create. Always tappable when a semester exists, even with
+                  only one, since the picker modal is also where edit and
+                  delete live now. */}
+              {activeSemester ? (
+                <TouchableOpacity
+                  style={styles.semesterSelector}
+                  onPress={() => setShowPicker(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.semesterName, { color: colors.ink2 }]}>{activeSemester.name}</Text>
+                  <FontAwesome name="chevron-down" size={10} color={colors.ink3} style={{ marginLeft: 4 }} />
+                  <View style={[styles.courseCountBadge, { backgroundColor: colors.brand50 }]}>
+                    <Text style={[styles.courseCountText, { color: colors.brand }]}>{courses.length}</Text>
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <Text style={[styles.subtitle, { color: colors.ink3 }]}>No semester selected</Text>
+              )}
+            </View>
+
+            <View style={styles.headerActions}>
               {/* Layout toggle. Only worth showing once there is something to
                   lay out — on an empty semester it is a control over nothing. */}
               {courses.length > 0 && (
@@ -350,15 +414,16 @@ export default function CoursesScreen() {
               <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.brand }]} onPress={handleAddCourse} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Add a course">
                 <FontAwesome name="plus" size={14} color="#fff" />
               </TouchableOpacity>
-            </>
-          }
-        />
+            </View>
+          </View>
+          </>
+        )}
 
         {/* Only when there is a GPA to report. It used to render regardless,
             so a student with no marked work gave a whole banner to the
             sentence "Add grades to completed work to begin tracking" — an
             instruction, styled as a statistic, above the actual content. */}
-        {courses.length > 0 && semesterGpa.gpa != null && (
+        {courses.length > 0 && (!isDesktop || semesterGpa.gpa != null) && (
           <View style={[styles.gpaCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
             <View style={[styles.gpaIcon, { backgroundColor: colors.brand50 }]}>
               <FontAwesome name="graduation-cap" size={18} color={colors.brand} />
@@ -379,7 +444,7 @@ export default function CoursesScreen() {
           </View>
         )}
 
-        {missingSchedule.length > 0 && (
+        {isDesktop && missingSchedule.length > 0 && (
           <TouchableOpacity
             style={[styles.setupBanner, { backgroundColor: colors.amber50, borderColor: colors.amber }]}
             onPress={() => router.push(`/course/${missingSchedule[0].id}/edit` as any)}
@@ -401,7 +466,7 @@ export default function CoursesScreen() {
             isGrid ? styles.courseGrid : styles.courseList,
             !isGrid && isWide && styles.courseListWide,
           ]}>
-            {orderedCourses.map((course) => {
+            {(isDesktop ? orderedCourses : courses).map((course) => {
               const courseTasks = getCourseTasks(course.id);
               const nextTask = getNextTask(course.id);
               const pendingCount = getPendingCount(course.id);
@@ -463,6 +528,64 @@ export default function CoursesScreen() {
                         )}
                       </View>
                     </View>
+                  </TouchableOpacity>
+                );
+              }
+
+              // Desktop web gets the redesigned card; native keeps the one
+              // it shipped with. See components/CourseCard.tsx for why the
+              // desktop version exists.
+              if (!isDesktop) {
+                return (
+                  <TouchableOpacity
+                    key={course.id}
+                    style={[styles.courseCard, isWide && styles.courseCardWide, { backgroundColor: colors.card, borderColor: colors.line }]}
+                    onPress={() => router.push(`/course/${course.id}` as any)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.colorStrip, { backgroundColor: course.color }]} />
+                    <View style={styles.courseTop}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.courseCode, { color: course.color }]}>{course.name}</Text>
+                        {course.instructor && <Text style={[styles.courseInstructor, { color: colors.ink3 }]}>{course.instructor}</Text>}
+                      </View>
+                      <View style={[styles.upNextBadge, { backgroundColor: course.color + '15' }]}>
+                        <Text style={[styles.upNextText, { color: course.color }]}>{pendingCount} UP NEXT</Text>
+                      </View>
+                    </View>
+                    {needsSchedule && (
+                      <View style={[styles.needsScheduleRow, { borderTopColor: colors.line, backgroundColor: colors.amber50 }]}>
+                        <FontAwesome name="calendar-o" size={12} color={colors.amber} />
+                        <Text style={[styles.needsScheduleText, { color: colors.amber }]}>
+                          No schedule yet — won't appear on Today
+                        </Text>
+                        <Text style={[styles.needsScheduleAction, { color: colors.amber }]}>Add →</Text>
+                      </View>
+                    )}
+                    {nextTask && (
+                      <View style={[styles.nextRow, { borderTopColor: colors.line }]}>
+                        <FontAwesome
+                          name={nextTask.type === 'exam' ? 'exclamation-circle' : 'clock-o'}
+                          size={13}
+                          color={dueInfo?.urgent ? colors.coral : colors.ink3}
+                        />
+                        <Text style={[styles.nextTitle, { color: colors.ink }]} numberOfLines={1}>
+                          <Text style={{ fontWeight: '500' }}>{nextTask.title}</Text>
+                          {nextTask.due_time ? <Text style={{ color: colors.ink3 }}> · {nextTask.due_time.slice(0, 5)}</Text> : null}
+                        </Text>
+                        <Text style={[styles.nextDue, { color: colors.ink3 }, dueInfo?.urgent && { color: colors.coral, fontWeight: '600' }]}>
+                          {dueInfo?.text}
+                        </Text>
+                      </View>
+                    )}
+                    {percentage !== null && (
+                      <View style={styles.progressRow}>
+                        <View style={[styles.progressBg, { backgroundColor: colors.line }]}>
+                          <View style={[styles.progressFill, { width: `${Math.min(percentage, 100)}%`, backgroundColor: course.color }]} />
+                        </View>
+                        <Text style={[styles.progressText, { color: colors.ink3 }]}>{letter ? `${letter} · ` : ''}{percentage}%</Text>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 );
               }

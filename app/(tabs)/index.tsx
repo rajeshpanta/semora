@@ -513,11 +513,23 @@ export default function TodayScreen() {
     }
   }
 
-  // Still needed by the desktop decision tile ("2 today, 2 tomorrow"). The
-  // classes list, day name and the after-5pm rule that went with the old
-  // Tomorrow section are gone with it.
-  const tomorrowStr = format(addDays(today, 1), 'yyyy-MM-dd');
+  // Tomorrow preview — surfaced in the evening when there's something to
+  // peek at. Sunday-night use case ("Monday 8am class is in 9 hours") is
+  // the primary motivator. dueSoonTasks already covers today→3 days so it
+  // crosses the week boundary cleanly without a new query.
+  const tomorrowDate = addDays(today, 1);
+  const tomorrowDow = tomorrowDate.getDay();
+  const tomorrowDayName = format(tomorrowDate, 'EEEE');
+  const tomorrowStr = format(tomorrowDate, 'yyyy-MM-dd');
+  const tomorrowsClasses = courses
+    .flatMap((c) => (c.course_meetings ?? []).map((m) => ({ course: c, meeting: m })))
+    .filter(({ meeting }) => meeting.days_of_week.includes(tomorrowDow))
+    .sort((a, b) =>
+      (a.meeting.start_time ?? '99').localeCompare(b.meeting.start_time ?? '99'),
+    );
   const tomorrowsTasks = dueSoonTasks.filter((t) => t.due_date === tomorrowStr);
+  const showTomorrow =
+    today.getHours() >= 17 && (tomorrowsClasses.length > 0 || tomorrowsTasks.length > 0);
 
   // ── The next day that actually has work ──────────────────────────────────
   //
@@ -531,7 +543,9 @@ export default function TodayScreen() {
   // horizon; this is the day you are actually working.
   const focusTasks: any[] = (() => {
     const todays = weekTasks.filter((t: any) => t.due_date === todayKey);
-    if (todays.length > 0) return todays;
+    // Native keeps its original behaviour: this section is Today, and the
+    // separate Tomorrow section below still handles the evening peek.
+    if (!isDesktop || todays.length > 0) return todays;
     const nextDay = upcomingTasks.find((t: any) => t.due_date > todayKey)?.due_date;
     return nextDay ? upcomingTasks.filter((t: any) => t.due_date === nextDay) : [];
   })();
@@ -667,11 +681,26 @@ export default function TodayScreen() {
         {/* Today had no title — it opened with a date in small caps, which is
             why it alone read like a different product. The date moves into the
             context line, where it says more than it did as an eyebrow. */}
-        <AppHeader
-          title="Today"
-          context={[dateLabel, activeSemester?.name].filter(Boolean).join(' · ')}
-          actions={<GlobalSearchButton />}
-        />
+        {isDesktop ? (
+          <AppHeader
+            title="Today"
+            context={[dateLabel, activeSemester?.name].filter(Boolean).join(' · ')}
+            actions={<GlobalSearchButton />}
+          />
+        ) : (
+          <>
+          {/* Header */}
+          <View style={styles.headerRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.eyeLabel, { color: colors.ink3 }]}>{dateLabel}</Text>
+              {activeSemester && (
+                <Text style={[styles.semesterLabel, { color: colors.ink3 }]}>{activeSemester.name}</Text>
+              )}
+            </View>
+            <GlobalSearchButton />
+          </View>
+          </>
+        )}
         <SyncStatusPill compact />
 
         {/* Desktop web only. On a phone the four numbers would push the day's
@@ -958,7 +987,7 @@ export default function TodayScreen() {
           // work today, or when there is genuinely nothing anywhere — that
           // second case still shows the empty card, because a student with an
           // empty semester needs the import prompt it carries.
-          if (totalToday === 0 && nextUp) return null;
+          if (isDesktop && totalToday === 0 && nextUp) return null;
 
           return (
             <>
@@ -1002,7 +1031,7 @@ export default function TodayScreen() {
             Next Up hero already names what IS coming, this card would repeat
             it. The empty card survives only when there is nothing anywhere,
             because that student needs the import prompt inside it. */}
-        {focusTasks.length === 0 && nextUp ? null : focusTasks.length > 0 ? (
+        {isDesktop && focusTasks.length === 0 && nextUp ? null : focusTasks.length > 0 ? (
           <View style={[styles.taskCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
             {focusTasks.map((task: any, i: number) => {
               const isLast = i === focusTasks.length - 1;
@@ -1227,11 +1256,78 @@ export default function TodayScreen() {
           </>
         )}
 
-        {/* The Tomorrow section lived here. It listed tomorrow's classes and
-            tasks after 5pm — but those tasks were already in This Week below,
-            labelled by day, and the section above now points at whichever day
-            is next, which IS tomorrow whenever today is clear. Three printings
-            of one task became one. */}
+        {/* Desktop folds this into the section above, which points at whichever
+            day is next. Native keeps both, unchanged. */}
+        {!isDesktop && (
+          <>
+          {/* Tomorrow preview — late-evening peek so a Sunday-9pm user doesn't
+              see a dead screen when nothing's left today. Only renders after
+              5pm, and only when tomorrow has a class or task worth surfacing. */}
+          {showTomorrow && (
+            <>
+              <Text style={[styles.sectionTitle, { marginTop: 20, marginBottom: 10, color: colors.ink2 }]}>
+                Tomorrow · {tomorrowDayName}
+              </Text>
+              <View style={[styles.classCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+                {tomorrowsClasses.map(({ course, meeting }, i) => {
+                  const isLastClass = i === tomorrowsClasses.length - 1;
+                  const isLast = isLastClass && tomorrowsTasks.length === 0;
+                  const kindLabel = meeting.kind !== 'lecture' ? KIND_LABEL[meeting.kind] : null;
+                  return (
+                    <View
+                      key={`tc-${meeting.id}`}
+                      style={[
+                        styles.classRow,
+                        !isLast && [styles.taskRowBorder, { borderBottomColor: colors.line }],
+                      ]}
+                    >
+                      <View style={[styles.classDot, { backgroundColor: course.color }]} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.classTitle, { color: colors.ink }]} numberOfLines={1}>
+                          {course.name}
+                        </Text>
+                        <Text style={[styles.classTime, { color: colors.ink3 }]}>
+                          {kindLabel ? `${kindLabel} · ` : ''}
+                          {meeting.start_time ? formatTimeOfDay(meeting.start_time) : 'TBD'}
+                          {meeting.end_time ? ` – ${formatTimeOfDay(meeting.end_time)}` : ''}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+                {tomorrowsTasks.map((task, i) => {
+                  const isLast = i === tomorrowsTasks.length - 1;
+                  return (
+                    <TouchableOpacity
+                      key={`tt-${task.id}`}
+                      style={[
+                        styles.taskRow,
+                        !isLast && [styles.taskRowBorder, { borderBottomColor: colors.line }],
+                      ]}
+                      onPress={() => router.push(`/task/${task.id}` as any)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[styles.cbx, { borderColor: colors.ink3 }]} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.taskTitle, { color: colors.ink }]} numberOfLines={1}>
+                          {task.title}
+                        </Text>
+                        <View style={styles.taskMeta}>
+                          <View style={[styles.dot, { backgroundColor: task.courses.color }]} />
+                          <Text style={[styles.taskCourse, { color: colors.ink3 }]} numberOfLines={1}>
+                            {task.courses.name}
+                            {task.due_time ? ` · ${task.due_time.slice(0, 5)}` : ''}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>
+          )}
+          </>
+        )}
 
         {/* This Week — the header taps through to the fuller workload
             dashboard. Kept as a header affordance (not the whole card) so

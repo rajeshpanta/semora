@@ -629,6 +629,39 @@ function spanishPattern(input: string): string | null {
     if (match) return `${translate(match[1], 'es')} · ${match[2]}`;
   match = input.match(/^(Hey|Good morning|Good afternoon|Good evening), (.+)$/);
     if (match) return `${translate(match[1], 'es')}, ${match[2]}`;
+  // The redesigned course card and the dashboard's decision band. Every one of
+  // these carries a number, so none of them can be an exact key.
+  match = input.match(/^(\d+) overdue$/);
+    if (match) return `${match[1]} atrasadas`;
+  match = input.match(/^(\d+) up next$/);
+    if (match) return `${match[1]} pendientes`;
+  match = input.match(/^(\d+) of (\d+) done$/);
+    if (match) return `${match[1]} de ${match[2]} hechas`;
+  match = input.match(/^(\d+) items? outstanding$/);
+    if (match) return match[1] === '1' ? '1 pendiente' : `${match[1]} pendientes`;
+  match = input.match(/^(\d+) items? still outstanding$/);
+    if (match) return match[1] === '1' ? 'Queda 1 pendiente' : `Quedan ${match[1]} pendientes`;
+  match = input.match(/^Oldest: (.+)$/);
+    if (match) return `La más antigua: ${match[1]}`;
+  match = input.match(/^(\d+) today, (\d+) tomorrow$/);
+    if (match) return `${match[1]} hoy, ${match[2]} mañana`;
+  match = input.match(/^across (\d+) tasks?$/);
+    if (match) return match[1] === '1' ? 'en 1 tarea' : `en ${match[1]} tareas`;
+  match = input.match(/^(\d+) courses have no class times yet, so they won't appear on Today\.$/);
+    if (match) return `${match[1]} cursos aún no tienen horario de clase, así que no aparecerán en Hoy.`;
+  match = input.match(/^(.+) has no class times yet, so it won't appear on Today\.$/);
+    if (match) return `${match[1]} aún no tiene horario de clase, así que no aparecerá en Hoy.`;
+  match = input.match(/^(\d+) finished items? have no score yet$/);
+    if (match) return match[1] === '1'
+      ? '1 entrega terminada aún no tiene nota'
+      : `${match[1]} entregas terminadas aún no tienen nota`;
+  match = input.match(/^View all (\d+)$/);
+    if (match) return `Ver las ${match[1]}`;
+  match = input.match(/^(\d+(?:\.\d+)?)h of work ahead$/);
+    if (match) return `${match[1]} h de trabajo por delante`;
+  match = input.match(/^(.+) · (\d+) due$/);
+    if (match) return `${translate(match[1], 'es')} · ${match[2]} para entregar`;
+
   // Paywall + free-tier wall. The price and the course cap are interpolated at
   // render time, so no exact key can ever match these — they have to be
   // patterns or they stay English on the one screen where we ask for money.

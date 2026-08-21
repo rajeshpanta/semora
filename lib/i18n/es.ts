@@ -111,6 +111,27 @@ export const ES: Record<string, string> = {
   // beside the price and would otherwise stay English while the row around
   // them translated.
   'Cancel anytime': 'Cancela cuando quieras',
+
+  // ── Desktop dashboard band + redesigned course card (1.9) ──────────────
+  'Add class times': 'Añadir horario de clase',
+  'Add times': 'Añadir horarios',
+  'All clear': 'Todo al día',
+  'Nothing outstanding': 'Nada pendiente',
+  'Due today & tomorrow': 'Para hoy y mañana',
+  "This week's work": 'Trabajo de esta semana',
+  'Needs attention': 'Requiere atención',
+  'Nothing is past due': 'No hay nada atrasado',
+  'Nothing new due': 'No vence nada nuevo',
+  'No course is falling behind': 'Ningún curso se está quedando atrás',
+  'Plan my week': 'Planificar mi semana',
+  'Open workload': 'Ver carga de trabajo',
+  'Next 7 days': 'Próximos 7 días',
+  'Nothing scheduled': 'Nada programado',
+  'Waiting on a grade': 'Esperando nota',
+  'Show grades': 'Mostrar notas',
+  'Hide grades': 'Ocultar notas',
+  'Grades stay hidden on this screen so a glance over your shoulder shows deadlines, not results.':
+    'Las notas se ocultan en esta pantalla para que una mirada por encima del hombro muestre entregas, no resultados.',
   '/week': '/sem',
   '/wk': '/sem',
   'Free action used — upgrade for unlimited': 'Ya usaste tu acción gratuita: mejora para tener acceso ilimitado',
