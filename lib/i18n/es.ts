@@ -349,6 +349,8 @@ export const ES: Record<string, string> = {
   'STUDENT OS': 'ORGANIZADOR ESTUDIANTIL',
   'New task': 'Nueva tarea',
   'Search everything': 'Buscar en todo',
+  'Hide sidebar': 'Ocultar la barra lateral',
+  'Show sidebar': 'Mostrar la barra lateral',
   'Search Tasks': 'Buscar tareas',
   'Completed Work': 'Trabajo completado',
   'Course': 'Curso',
@@ -2221,6 +2223,13 @@ export const ES: Record<string, string> = {
     'Por tiempo limitado: sin Pro, y no gasta tu acción gratuita. Cada clase se importa sola.',
   'Free, limited time · every class imports itself and stays up to date':
     'Gratis por tiempo limitado · cada clase se importa sola y se mantiene al día',
+  'Or connect Canvas — free': 'O conecta Canvas: gratis',
+  'Free: one AI action (a scan or a lecture), one course you add yourself, unlimited classes from Canvas, and same-day reminders. The tools above are part of Pro.':
+    'Gratis: una acción de IA (un escaneo o una clase grabada), un curso que agregas tú, clases ilimitadas desde Canvas y recordatorios del mismo día. Las herramientas de arriba son parte de Pro.',
+  'The free plan includes one AI action for the account — a syllabus scan or a lecture recording, whichever you use first — plus one course per semester that you add yourself. Classes imported from Canvas do not count towards that: while the current offer runs, Canvas sync is free and brings across every class you have, with no limit. Tasks and deadlines are unlimited. Upgrade to Pro for unlimited scans, lectures, courses and semesters.':
+    'El plan gratuito incluye una acción de IA para la cuenta (escanear un programa o grabar una clase, lo que uses primero) y un curso por semestre que agregas tú. Las clases importadas de Canvas no cuentan para ese límite: mientras dure la oferta actual, sincronizar con Canvas es gratis y trae todas tus clases, sin límite. Las tareas y las entregas son ilimitadas. Mejora a Pro para tener escaneos, clases grabadas, cursos y semestres ilimitados.',
+  'Limited time: every class you have imports itself, no Pro and no limit.':
+    'Por tiempo limitado: cada clase que tienes se importa sola, sin Pro y sin límite.',
   'Limited time offer · free sync':
     'Oferta por tiempo limitado · sincronización gratis',
   'No Pro needed, and no limit on how many classes come across. Connect now and it stays free on this account, even after the offer ends.':

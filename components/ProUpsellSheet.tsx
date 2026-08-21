@@ -9,7 +9,10 @@ import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { getProducts, purchaseProduct, PRODUCT_IDS } from '@/lib/purchases';
 import { track } from '@/lib/analytics';
-import { FREE_COURSE_LIMIT, FREE_SEMESTER_LIMIT } from '@/lib/syllabus';
+import { FREE_COURSE_PHRASE, FREE_SEMESTER_LIMIT } from '@/lib/syllabus';
+import { useQuery } from '@tanstack/react-query';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { useAppStore } from '@/store/appStore';
 
 // The upgrade moment, as a sheet rather than a screen.
 //
@@ -126,7 +129,12 @@ const COPY: Record<ProUpsellReason, { title: string; subtitle: string }> = {
   },
   course: {
     title: 'Add every class',
-    subtitle: `Free semesters hold ${FREE_COURSE_LIMIT} courses. Pro has no limit on classes or semesters.`,
+    // Says "you add yourself" because that is now the whole of the limit.
+    // Canvas classes do not count against it, and a subtitle that said "free
+    // semesters hold 1 course" full stop would be selling Pro by describing a
+    // restriction the reader can walk around for nothing — which is the kind
+    // of true-but-not-honest that a paywall cannot afford.
+    subtitle: `Free semesters hold ${FREE_COURSE_PHRASE} you add yourself — classes that come from Canvas do not count. Pro has no limit on either.`,
   },
 };
 
@@ -164,6 +172,14 @@ export function ProUpsellSheet({
   }, [visible, reason]);
 
   const copy = COPY[reason];
+  // Canvas is the free answer to "I cannot get my classes in", so it is offered
+  // on exactly those two walls and nowhere else — putting it on the flashcards
+  // or calendar sheet would be noise in a place that has to stay a clear yes/no.
+  const isPro = useAppStore((st) => st.isPro);
+  const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
+  const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
+  const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
+  const canvasEscape = canvasFree && canvasOffer !== 'healthy' && (reason === 'course' || reason === 'scan');
 
   const choose = async () => {
     if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -231,6 +247,37 @@ export function ProUpsellSheet({
                 under the x on a 393pt phone without it. */}
             <Text style={[styles.title, { color: colors.ink }]}>{copy.title}</Text>
             <Text style={[styles.subtitle, { color: colors.ink2 }]}>{copy.subtitle}</Text>
+
+            {/* The free way out, above the prices.
+                Only on the two walls Canvas actually answers: out of courses,
+                or out of AI actions. Both are "I cannot get my classes in",
+                and while the offer is live the honest response to that is not
+                a price. Showing it after the plan cards would be showing it to
+                someone who has already decided.
+                Suppressed once Canvas is healthy — then the student's classes
+                are already arriving and this wall is about something else. */}
+            {canvasEscape && (
+              <TouchableOpacity
+                style={[styles.canvasEscape, { borderColor: colors.teal, backgroundColor: colors.teal50 }]}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Connect Canvas free, limited time offer"
+                onPress={() => {
+                  track('canvas_offer_tapped', { screen: 'upsell_sheet', offer: canvasOffer, free: true, reason });
+                  onClose();
+                  router.push('/settings/lms' as any);
+                }}
+              >
+                <FontAwesome name="university" size={15} color={colors.teal} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.canvasEscapeTitle, { color: colors.ink }]}>Or connect Canvas — free</Text>
+                  <Text style={[styles.canvasEscapeText, { color: colors.ink2 }]}>
+                    Limited time: every class you have imports itself, no Pro and no limit.
+                  </Text>
+                </View>
+                <FontAwesome name="chevron-right" size={12} color={colors.teal} />
+              </TouchableOpacity>
+            )}
 
             <View style={styles.benefits}>
               {BENEFITS.map((b) => (
@@ -368,6 +415,13 @@ const styles = StyleSheet.create({
   close: { position: 'absolute', right: 0, top: 0, padding: 6, zIndex: 2 },
   title: { fontFamily: FONTS.displaySemibold, fontSize: 24, textAlign: 'center', marginTop: 6, letterSpacing: -0.3, paddingHorizontal: 30 },
   subtitle: { fontSize: 14.5, lineHeight: 20.5, textAlign: 'center', marginTop: 8 },
+  canvasEscape: {
+    flexDirection: 'row', alignItems: 'center', gap: 11,
+    borderWidth: 1, borderRadius: 13,
+    paddingHorizontal: 13, paddingVertical: 11, marginTop: 16,
+  },
+  canvasEscapeTitle: { fontSize: 13.5, fontWeight: '800' },
+  canvasEscapeText: { fontSize: 12, lineHeight: 17, marginTop: 2 },
   benefits: { marginTop: 20, gap: 11 },
   benefitRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   check: { marginTop: 2.5 },

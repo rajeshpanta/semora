@@ -14,8 +14,34 @@ import { useAppStore } from '@/store/appStore';
 import { suggestCurrentSemesterName } from '@/lib/semesters';
 import { freeActionUsedQueryOptions } from '@/lib/queries';
 
-export const FREE_COURSE_LIMIT = 4;
+// ONE course a free account adds by hand, and as many as Canvas returns.
+//
+// This was four. Four was a compromise from when adding a class by hand was
+// the only free way to get one in, and it made the free tier a worse version
+// of the paid tier rather than a different shape of thing. Typing a class in
+// is the tedious path — a name, a colour, then every deadline one at a time —
+// and being generous with it was being generous with the chore.
+//
+// Canvas sync is now free and uncapped (090), so the free tier's answer to
+// "how do I get my semester in" is no longer "type it four times". It is
+// "connect Canvas and it arrives". One manual course remains, because a
+// student always has the seminar or the lab that their LMS does not know
+// about, and refusing that outright would be mean rather than pointed.
+//
+// EXISTING free accounts above the new limit keep every course they have —
+// enforce_free_course_limit is a BEFORE INSERT trigger, so it can only refuse
+// the next one, never take one away. Nobody wakes up with three classes gone.
+export const FREE_COURSE_LIMIT = 1;
 export const FREE_SEMESTER_LIMIT = 1;
+
+/**
+ * "1 course" / "4 courses". Every message that quotes the limit builds it from
+ * here, so changing the number can never ship "Free accounts support 1
+ * courses" — which is the exact sentence a limit change writes for you if the
+ * plural is hardcoded next to an interpolated digit.
+ */
+export const FREE_COURSE_PHRASE =
+  `${FREE_COURSE_LIMIT} ${FREE_COURSE_LIMIT === 1 ? 'course' : 'courses'}`;
 
 // Detect a free-tier limit error raised by one of the DB triggers
 // (enforce_free_{semester,course,scan}_limit — all raise errcode
@@ -503,7 +529,12 @@ async function findOrCreateCourse(
       .eq('semester_id', semesterId)
       .neq('source', 'lms');
     if ((count ?? 0) >= FREE_COURSE_LIMIT) {
-      throw new Error(`Free accounts support up to ${FREE_COURSE_LIMIT} courses per semester (this is separate from your scans). Upgrade to Pro for unlimited courses, or re-scan a course you already have.`);
+      // Keeps the words "Free accounts support" — isFreeLimitError matches on
+      // that phrase, and a miss means the refusal surfaces as a raw error with
+      // no way forward. Canvas leads because it is the free answer; sending
+      // someone to a price when a free route exists is the kind of upsell that
+      // costs more trust than it earns.
+      throw new Error(`Free accounts support ${FREE_COURSE_PHRASE} per semester that you add yourself. Connect Canvas to bring every class across for free, or upgrade to Pro for unlimited courses.`);
     }
   }
 

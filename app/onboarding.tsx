@@ -688,7 +688,7 @@ function Toolkit({ colors, isWide, isLandscape }: { colors: C; isWide: boolean; 
           on screen, which was the original reason for hoisting it. All nine
           tools above are Pro, so it can say exactly that. */}
       <Text style={[styles.toolFootnote, { color: colors.ink2, borderColor: colors.line }]}>
-        Free: one AI action (a scan or a lecture), 4 courses and same-day reminders. The tools above are part of Pro.
+        Free: one AI action (a scan or a lecture), one course you add yourself, unlimited classes from Canvas, and same-day reminders. The tools above are part of Pro.
       </Text>
     </View>
   );

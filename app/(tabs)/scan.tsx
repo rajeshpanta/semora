@@ -33,7 +33,7 @@ import { HEIC_HELP, isHeic, transcodeHeicToJpeg } from '@/lib/heic';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useFreeActionUsed, freeActionUsedQueryOptions } from '@/lib/queries';
-import { FREE_COURSE_LIMIT } from '@/lib/syllabus';
+import { FREE_COURSE_LIMIT, FREE_COURSE_PHRASE } from '@/lib/syllabus';
 import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
 import { MAX_SCAN_PAGES, MAX_SCAN_RAW_BYTES, scanTooLargeMessage, type SyllabusPage } from '@/lib/ai-extraction';
 import { getFileSize } from '@/lib/readFileBase64';
@@ -147,12 +147,24 @@ export default function ScanScreen() {
     // the same one, so it is named here — finding that out afterwards, having
     // meant to save it for a lecture, is the version of this that feels like a
     // trick rather than a limit.
+    //
+    // The at-the-cap wording is not a nicety. The free action is charged when
+    // the syllabus is PARSED, and the course is created after — so a student
+    // already holding their one manual course can spend the only action their
+    // account will ever get on a scan whose course is then refused. At a limit
+    // of four that was a corner; at one it is anybody with a class already in.
+    // Saying so before the tap is the difference between a limit and a loss.
     return new Promise((resolve) => {
       Alert.alert(
         'Use Your Free Scan?',
-        'Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it. Pro includes unlimited scans and lectures.',
+        atCourseLimit
+          ? `Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it — and a free semester already holds ${FREE_COURSE_PHRASE} you added yourself, so this scan can only update a class you already have, not add a new one. Canvas imports every class for free and does not touch this action.`
+          : 'Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it. Pro includes unlimited scans and lectures.',
         [
           { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          ...(atCourseLimit
+            ? [{ text: 'Connect Canvas', onPress: () => { resolve(false); router.push('/settings/lms' as any); } }]
+            : []),
           { text: 'See Pro', onPress: () => { setUpsellReason('scan'); setUpsellVisible(true); resolve(false); } },
           { text: 'Use Free Scan', onPress: () => resolve(true) },
         ],
@@ -731,8 +743,8 @@ export default function ScanScreen() {
             <FontAwesome name="info-circle" size={13} color={colors.amber} style={{ marginTop: 1 }} />
             <Text style={[styles.courseCapText, { color: colors.ink2 }]}>
               {!freeActionUsed
-                ? `Your free action is still available, but you're at the free limit of ${FREE_COURSE_LIMIT} courses this semester. Re-scan a course you already have, or upgrade to Pro to add a new one.`
-                : `You've used your free action and reached the ${FREE_COURSE_LIMIT}-course limit. Upgrade to Pro for unlimited scans, lectures, and courses.`}
+                ? `Your free action is still available, but a free semester holds ${FREE_COURSE_PHRASE} you add yourself, and you are at it. Scanning now can only update a class you already have. Connect Canvas to bring every class across for free, or upgrade to Pro.`
+                : `You've used your free action and a free semester holds ${FREE_COURSE_PHRASE} you add yourself. Connect Canvas free to import every class, or upgrade to Pro.`}
             </Text>
           </View>
         )}

@@ -30,7 +30,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: 'What are the free plan limits?',
-    a: 'The free plan includes one AI action for the account — a syllabus scan or a lecture recording, whichever you use first — plus up to 4 courses in one semester. Tasks and deadlines are unlimited. Upgrade to Pro for unlimited scans, lectures, courses and semesters.',
+    a: 'The free plan includes one AI action for the account — a syllabus scan or a lecture recording, whichever you use first — plus one course per semester that you add yourself. Classes imported from Canvas do not count towards that: while the current offer runs, Canvas sync is free and brings across every class you have, with no limit. Tasks and deadlines are unlimited. Upgrade to Pro for unlimited scans, lectures, courses and semesters.',
   },
   {
     q: 'How is my grade calculated?',

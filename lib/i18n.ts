@@ -553,6 +553,22 @@ function spanishPattern(input: string): string | null {
     if (match) return `Editar ${match[1]}`;
   match = input.match(/^Free accounts support up to (\d+) courses per semester \(this is separate from your scans\)\. Upgrade to Pro for unlimited courses, or re-scan a course you already have\.$/i);
     if (match) return `Las cuentas gratuitas admiten hasta ${match[1]} cursos por semestre (esto es independiente de tus escaneos). Mejora a Pro para tener cursos ilimitados o vuelve a escanear un curso que ya tienes.`;
+  // ── The 1-course free tier, with Canvas as the free way past it (091) ──
+  // Matched rather than keyed, for the reason the FREE_COURSE_LIMIT note above
+  // already gives: a literal key would silently fall back to English the next
+  // time the number moves. `courses?` so the singular the limit now produces
+  // matches too — a regex that only accepts the plural is the same bug in a
+  // different place. The Spanish picks its own singular from the digit.
+  match = input.match(/^Free accounts support (\d+) courses? per semester that you add yourself\. Connect Canvas to bring every class across for free, or upgrade to Pro for unlimited courses\.$/i);
+    if (match) return `Las cuentas gratuitas admiten ${match[1]} ${match[1] === '1' ? 'curso' : 'cursos'} por semestre que agregas tú. Conecta Canvas para traer todas tus clases gratis, o mejora a Pro para tener cursos ilimitados.`;
+  match = input.match(/^Free semesters hold (\d+) courses? you add yourself — classes that come from Canvas do not count\. Pro has no limit on either\.$/i);
+    if (match) return `Los semestres gratuitos admiten ${match[1]} ${match[1] === '1' ? 'curso' : 'cursos'} que agregas tú; las clases que vienen de Canvas no cuentan. Pro no limita ninguna de las dos.`;
+  match = input.match(/^Your free action is still available, but a free semester holds (\d+) courses? you add yourself, and you are at it\. Scanning now can only update a class you already have\. Connect Canvas to bring every class across for free, or upgrade to Pro\.$/i);
+    if (match) return `Tu acción gratuita sigue disponible, pero un semestre gratuito admite ${match[1]} ${match[1] === '1' ? 'curso' : 'cursos'} que agregas tú, y ya llegaste al límite. Escanear ahora solo puede actualizar una clase que ya tienes. Conecta Canvas para traer todas tus clases gratis, o mejora a Pro.`;
+  match = input.match(/^You've used your free action and a free semester holds (\d+) courses? you add yourself\. Connect Canvas free to import every class, or upgrade to Pro\.$/i);
+    if (match) return `Ya usaste tu acción gratuita y un semestre gratuito admite ${match[1]} ${match[1] === '1' ? 'curso' : 'cursos'} que agregas tú. Conecta Canvas gratis para importar todas tus clases, o mejora a Pro.`;
+  match = input.match(/^Free accounts include one AI action: a syllabus scan or a lecture recording\. This uses it — and a free semester already holds (\d+) courses? you added yourself, so this scan can only update a class you already have, not add a new one\. Canvas imports every class for free and does not touch this action\.$/i);
+    if (match) return `Las cuentas gratuitas incluyen una acción de IA: escanear un programa o grabar una clase. Esto la usa, y tu semestre gratuito ya tiene ${match[1]} ${match[1] === '1' ? 'curso que agregaste tú' : 'cursos que agregaste tú'}, así que este escaneo solo puede actualizar una clase que ya tienes, no agregar una nueva. Canvas importa todas tus clases gratis y no gasta esta acción.`;
   match = input.match(/^"(.+?)" was already added to (.+?)\. Re-importing the same syllabus would duplicate every task\.\n\nOpen the existing course, or create a separate duplicate\?$/);
     if (match) return `"${match[1]}" ya se agregó a ${match[2]}. Volver a importar el mismo programa duplicaría todas las tareas.\n\n¿Quieres abrir el curso existente o crear un duplicado aparte?`;
   match = input.match(/^Explain the assignment “(.+)” and help me make a plan to complete it\.$/);

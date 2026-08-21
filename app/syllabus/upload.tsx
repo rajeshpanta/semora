@@ -20,6 +20,7 @@ import {
   type ProcessResult,
   type SyllabusProcessProgress,
   FREE_COURSE_LIMIT,
+  FREE_COURSE_PHRASE,
   isFreeLimitError,
 } from '@/lib/syllabus';
 import { MAX_SCAN_PAGES, type SyllabusPage } from '@/lib/ai-extraction';
@@ -66,7 +67,7 @@ async function createDuplicateCourse(result: ProcessResult, userId: string): Pro
       .eq('semester_id', result.semesterId)
       .neq('source', 'lms');
     if ((count ?? 0) >= FREE_COURSE_LIMIT) {
-      throw new Error(`Free accounts support up to ${FREE_COURSE_LIMIT} courses per semester (this is separate from your scans). Upgrade to Pro for unlimited courses, or re-scan a course you already have.`);
+      throw new Error(`Free accounts support ${FREE_COURSE_PHRASE} per semester that you add yourself. Connect Canvas to bring every class across for free, or upgrade to Pro for unlimited courses.`);
     }
   }
 
