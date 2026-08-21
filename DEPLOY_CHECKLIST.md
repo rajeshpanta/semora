@@ -51,6 +51,7 @@ supabase functions deploy tutor-chat
 supabase functions deploy share-course
 supabase functions deploy redeem-referral
 supabase functions deploy send-push --no-verify-jwt      # MUST use the flag (shared-secret auth, not JWT)
+supabase functions deploy lms-sync --no-verify-jwt       # MUST use the flag — see the note below
 supabase functions deploy google-cal-sync                # only needed when you enable Google Cal (see §5)
 supabase functions deploy lecture-transcribe             # 065 — lecture recording pipeline
 supabase functions deploy lecture-study-kit              # 065 — lecture notes + quiz
@@ -58,6 +59,46 @@ supabase functions deploy generate-flashcards            # 065 — per-note cont
 # 065-067 migrations MUST be applied before deploying lecture-transcribe:
 # it calls reserve_lecture_for_recording / release_lecture_reservation.
 ```
+
+### lms-sync and `--no-verify-jwt`: how the cron died silently for 9 days
+
+Deploying lms-sync WITHOUT the flag breaks background Canvas sync, and nothing
+anywhere reports it. The pg_cron job (063) posts to the function with only
+`x-semora-lms-cron-secret` and no `Authorization` header, because pg_net sends
+exactly the headers it is given. With JWT verification on, the Supabase gateway
+rejects that at the door — `401 UNAUTHORIZED_NO_AUTH_HEADER` — and the function
+is never reached, so it cannot log the failure either.
+
+**Why nobody noticed:** pg_cron records a run as `succeeded` when the SQL
+statement ran. The statement is `select net.http_post(...)`, which succeeds by
+queueing a request. What came back is irrelevant to it. So
+`cron.job_run_details` showed 859 consecutive successes while every single one
+of them was a 401.
+
+The flag is safe because lms-sync authenticates itself on every path:
+`action: 'background'` checks the vault cron secret via verifyCron(), and every
+other action goes through requireUser(), which requires a Bearer token and
+validates it with auth.getUser(). Gateway JWT verification adds nothing on top
+and only blocks the scheduler.
+
+**How to check it is actually working** (pg_net keeps ~6h of responses):
+
+```sql
+select status_code, left(content, 80), created
+from net._http_response order by id desc limit 5;
+```
+
+Want `200 {"processed_connections":N,...}`. A 401 with
+`UNAUTHORIZED_NO_AUTH_HEADER` means the flag was missed on the last deploy.
+
+A run returning `processed_connections: 0` is a different, unrelated thing: no
+connection is eligible. Eligibility needs `sync_enabled` AND
+`background_sync_enabled` AND a row in `lms_sync_credentials`. The credential
+can only be written by the app (the token lives in device SecureStore), so a
+connection missing it CANNOT be fixed from the server — flipping the flag by
+hand just makes every run fail with `credentials_required`. The student
+reconnects from Settings; canvasOfferFor() already surfaces that as
+"Finish Canvas setup".
 
 ## 3. Secrets
 ```
