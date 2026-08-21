@@ -23,6 +23,7 @@ import { useSemesters, useCourses, useTasks, useDeleteSemester, useGpaScale, use
 import { COLORS, FONTS, DEFAULT_GRADE_SCALE, SCREEN_MAX_WIDTH, WEB_CARD_SHADOW } from '@/lib/constants';
 import { calculateCourseGrade, calculateSemesterGpaWithScale, DEFAULT_GPA_SCALE } from '@/lib/grades';
 import { useColors } from '@/lib/theme';
+import CourseCard, { formatMeetings, type CourseCardData } from '@/components/CourseCard';
 import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { track } from '@/lib/analytics';
@@ -39,7 +40,7 @@ const GRID_GAP = 12;
 
 export default function CoursesScreen() {
   const colors = useColors();
-  const { contentMaxWidth, isWide, width } = useResponsive();
+  const { contentMaxWidth, isWide, isXWide, width } = useResponsive();
   const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -205,6 +206,26 @@ export default function CoursesScreen() {
     return ct[0] || null;
   };
   const getPendingCount = (courseId: string) => getCourseTasks(courseId).filter((t) => !t.is_completed).length;
+  const getOverdueCount = (courseId: string) => {
+    const todayKey = format(new Date(), 'yyyy-MM-dd');
+    return getCourseTasks(courseId).filter((t) => !t.is_completed && t.due_date < todayKey).length;
+  };
+
+  // Courses in the order they need you: most overdue first, then most
+  // pending, then alphabetical. A course list sorted by creation date makes
+  // the student do the triage the screen could have done for them.
+  const orderedCourses = [...courses].sort((a, b) => {
+    const overdue = getOverdueCount(b.id) - getOverdueCount(a.id);
+    if (overdue !== 0) return overdue;
+    const pending = getPendingCount(b.id) - getPendingCount(a.id);
+    if (pending !== 0) return pending;
+    return a.name.localeCompare(b.name);
+  });
+
+  // ONE prompt, not one per card. The old card put a full-width amber warning
+  // inside every course missing class times, so four such courses shouted the
+  // same sentence four times and became the loudest thing on the screen.
+  const missingSchedule = courses.filter((c) => (c.course_meetings ?? []).length === 0);
   const courseGradeSummaries = courses.map((course) => {
     const courseTasks = getCourseTasks(course.id);
     const scale = (course.grade_scale || DEFAULT_GRADE_SCALE) as GradeThreshold[];
@@ -336,7 +357,11 @@ export default function CoursesScreen() {
           </View>
         </View>
 
-        {courses.length > 0 && (
+        {/* Only when there is a GPA to report. It used to render regardless,
+            so a student with no marked work gave a whole banner to the
+            sentence "Add grades to completed work to begin tracking" — an
+            instruction, styled as a statistic, above the actual content. */}
+        {courses.length > 0 && semesterGpa.gpa != null && (
           <View style={[styles.gpaCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
             <View style={[styles.gpaIcon, { backgroundColor: colors.brand50 }]}>
               <FontAwesome name="graduation-cap" size={18} color={colors.brand} />
@@ -357,13 +382,29 @@ export default function CoursesScreen() {
           </View>
         )}
 
+        {missingSchedule.length > 0 && (
+          <TouchableOpacity
+            style={[styles.setupBanner, { backgroundColor: colors.amber50, borderColor: colors.amber }]}
+            onPress={() => router.push(`/course/${missingSchedule[0].id}/edit` as any)}
+            accessibilityRole="button"
+          >
+            <FontAwesome name="calendar-o" size={14} color={colors.amber} />
+            <Text style={[styles.setupText, { color: colors.ink2 }]}>
+              {missingSchedule.length === 1
+                ? `${missingSchedule[0].name} has no class times yet, so it won't appear on Today.`
+                : `${missingSchedule.length} courses have no class times yet, so they won't appear on Today.`}
+            </Text>
+            <Text style={[styles.setupAction, { color: colors.amber }]}>Add times</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Course cards */}
         {courses.length > 0 ? (
           <View style={[
             isGrid ? styles.courseGrid : styles.courseList,
             !isGrid && isWide && styles.courseListWide,
           ]}>
-            {courses.map((course) => {
+            {orderedCourses.map((course) => {
               const courseTasks = getCourseTasks(course.id);
               const nextTask = getNextTask(course.id);
               const pendingCount = getPendingCount(course.id);
@@ -429,57 +470,29 @@ export default function CoursesScreen() {
                 );
               }
 
+              const cardData: CourseCardData = {
+                id: course.id,
+                name: course.name,
+                color: course.color,
+                instructor: course.instructor,
+                meetingLabel: formatMeetings(course.course_meetings),
+                overdueCount: getOverdueCount(course.id),
+                pendingCount,
+                completedCount: courseTasks.filter((t) => t.is_completed).length,
+                totalCount: courseTasks.length,
+                nextTitle: nextTask?.title ?? null,
+                nextDue: dueInfo?.text ?? null,
+                nextUrgent: !!dueInfo?.urgent,
+                nextIsExam: nextTask?.type === 'exam',
+              };
               return (
-                <TouchableOpacity
+                <CourseCard
                   key={course.id}
-                  style={[styles.courseCard, isWide && styles.courseCardWide, { backgroundColor: colors.card, borderColor: colors.line }]}
+                  course={cardData}
+                  width={isXWide ? '32%' : isWide ? '48.5%' : undefined}
                   onPress={() => router.push(`/course/${course.id}` as any)}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.colorStrip, { backgroundColor: course.color }]} />
-                  <View style={styles.courseTop}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.courseCode, { color: course.color }]}>{course.name}</Text>
-                      {course.instructor && <Text style={[styles.courseInstructor, { color: colors.ink3 }]}>{course.instructor}</Text>}
-                    </View>
-                    <View style={[styles.upNextBadge, { backgroundColor: course.color + '15' }]}>
-                      <Text style={[styles.upNextText, { color: course.color }]}>{pendingCount} UP NEXT</Text>
-                    </View>
-                  </View>
-                  {needsSchedule && (
-                    <View style={[styles.needsScheduleRow, { borderTopColor: colors.line, backgroundColor: colors.amber50 }]}>
-                      <FontAwesome name="calendar-o" size={12} color={colors.amber} />
-                      <Text style={[styles.needsScheduleText, { color: colors.amber }]}>
-                        No schedule yet — won't appear on Today
-                      </Text>
-                      <Text style={[styles.needsScheduleAction, { color: colors.amber }]}>Add →</Text>
-                    </View>
-                  )}
-                  {nextTask && (
-                    <View style={[styles.nextRow, { borderTopColor: colors.line }]}>
-                      <FontAwesome
-                        name={nextTask.type === 'exam' ? 'exclamation-circle' : 'clock-o'}
-                        size={13}
-                        color={dueInfo?.urgent ? colors.coral : colors.ink3}
-                      />
-                      <Text style={[styles.nextTitle, { color: colors.ink }]} numberOfLines={1}>
-                        <Text style={{ fontWeight: '500' }}>{nextTask.title}</Text>
-                        {nextTask.due_time ? <Text style={{ color: colors.ink3 }}> · {nextTask.due_time.slice(0, 5)}</Text> : null}
-                      </Text>
-                      <Text style={[styles.nextDue, { color: colors.ink3 }, dueInfo?.urgent && { color: colors.coral, fontWeight: '600' }]}>
-                        {dueInfo?.text}
-                      </Text>
-                    </View>
-                  )}
-                  {percentage !== null && (
-                    <View style={styles.progressRow}>
-                      <View style={[styles.progressBg, { backgroundColor: colors.line }]}>
-                        <View style={[styles.progressFill, { width: `${Math.min(percentage, 100)}%`, backgroundColor: course.color }]} />
-                      </View>
-                      <Text style={[styles.progressText, { color: colors.ink3 }]}>{letter ? `${letter} · ` : ''}{percentage}%</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
+                  onAddSchedule={() => router.push(`/course/${course.id}/edit` as any)}
+                />
               );
             })}
           </View>
@@ -561,6 +574,12 @@ export default function CoursesScreen() {
 }
 
 const styles = StyleSheet.create({
+  setupBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, marginBottom: 14,
+  },
+  setupText: { flex: 1, fontSize: 12.5, lineHeight: 18 },
+  setupAction: { fontSize: 12, fontWeight: '700' },
   safe: { flex: 1, backgroundColor: COLORS.paper },
   content: { padding: CONTENT_PADDING, paddingBottom: 120, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
 
