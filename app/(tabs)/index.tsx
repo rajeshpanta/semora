@@ -41,7 +41,6 @@ import { track } from '@/lib/analytics';
 import { computeStreak } from '@/lib/streaks';
 import StudySuggestionsCard from '@/components/StudySuggestionsCard';
 import DecisionStrip from '@/components/DecisionStrip';
-import AppHeader from '@/components/AppHeader';
 import CoursesGlance from '@/components/CoursesGlance';
 import GradesWaitingCard from '@/components/GradesWaitingCard';
 import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
@@ -717,15 +716,19 @@ export default function TodayScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />}
       >
-        {/* Today had no title — it opened with a date in small caps, which is
-            why it alone read like a different product. The date moves into the
-            context line, where it says more than it did as an eyebrow. */}
+        {/* No "Today" title on desktop. The sidebar's own highlight already
+            says which screen this is, and on a browser the tab title does too
+            — so the word bought a line of vertical space and told the reader
+            nothing they had not just clicked. What is left is the one line
+            that carries information: the date and the active semester.
+            The phone keeps its own header below; there is no rail there to
+            say where you are. */}
         {isDesktop ? (
-          <AppHeader
-            title="Today"
-            context={[dateLabel, activeSemester?.name].filter(Boolean).join(' · ')}
-            actions={<GlobalSearchButton />}
-          />
+          <View style={styles.desktopHeader}>
+            <Text style={[styles.desktopDate, { color: colors.ink2 }]}>
+              {[dateLabel, activeSemester?.name].filter(Boolean).join(' · ')}
+            </Text>
+          </View>
         ) : (
           <>
           {/* Header */}
@@ -1588,6 +1591,8 @@ const styles = StyleSheet.create({
   eyeLabel: { fontSize: 14, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.ink3 },
   semesterLabel: { fontSize: 14, color: COLORS.ink3, fontWeight: '500', marginTop: 6, marginBottom: 16 },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  desktopHeader: { justifyContent: 'center', minHeight: 30, marginBottom: 14 },
+  desktopDate: { fontSize: 15, lineHeight: 20, fontWeight: '600' },
   notifBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingHorizontal: 12, paddingVertical: 10,

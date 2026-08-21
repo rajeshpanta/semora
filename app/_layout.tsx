@@ -1066,10 +1066,10 @@ function RootLayoutNav() {
                 name="lecture/record"
                 options={{ presentation: 'modal', title: t('Record Lecture'), gestureEnabled: false }}
               />
-              <Stack.Screen name="lecture/index" options={{ title: t('Lectures') }} />
-              <Stack.Screen name="lecture/[id]" options={{ title: t('Lecture') }} />
+              <Stack.Screen name="lecture/index" options={{ title: t('Notes') }} />
+              <Stack.Screen name="lecture/[id]" options={{ title: t('Notes') }} />
               <Stack.Screen name="lecture/new" options={{ title: t('New Notes') }} />
-              <Stack.Screen name="lecture/quiz" options={{ presentation: 'modal', title: t('Lecture Quiz') }} />
+              <Stack.Screen name="lecture/quiz" options={{ presentation: 'modal', title: t('Quiz') }} />
               <Stack.Screen name="syllabus/paste" options={{ presentation: 'modal', title: t('Paste Syllabus Text') }} />
               <Stack.Screen name="syllabus/upload" options={{ presentation: 'modal', title: t('Upload Syllabus') }} />
               <Stack.Screen name="syllabus/review" options={{ title: t('Review Items') }} />

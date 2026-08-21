@@ -171,14 +171,7 @@ export default function NotificationSettings() {
   const toggle = async (key: keyof ReminderPrefs) => {
     // 1-day and 3-day reminders are Pro only
     if (!isPro && (key === 'reminder_1day' || key === 'reminder_3day')) {
-      Alert.alert(
-        'Pro Feature',
-        'Advance reminders are available with Semora Pro. Free users get same-day reminders.',
-        [
-          { text: 'Upgrade', onPress: () => showProUpsell('reminders') },
-          { text: 'Cancel', style: 'cancel' },
-        ],
-      );
+      showProUpsell('reminders');
       return;
     }
 

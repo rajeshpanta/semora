@@ -1,4 +1,5 @@
 import { Platform, useWindowDimensions } from 'react-native';
+import { useAppStore } from '@/store/appStore';
 
 // Adaptive-layout breakpoints. Driven by useWindowDimensions so layouts
 // reflow LIVE on rotation AND on iPad Split View resize — the window can be
@@ -45,8 +46,12 @@ export interface Responsive {
 
 export function useResponsive(): Responsive {
   const { width, height } = useWindowDimensions();
+  // Hiding the sidebar is only worth doing if the screen actually claims the
+  // space it gave back, so the width every layout measures against has to
+  // know about it. Native never sets this flag.
+  const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
   const isDesktop = Platform.OS === 'web' && width >= DESKTOP_SHELL_BREAKPOINT;
-  const availableWidth = isDesktop ? width - WEB_SIDEBAR_WIDTH : width;
+  const availableWidth = isDesktop && !sidebarCollapsed ? width - WEB_SIDEBAR_WIDTH : width;
   const isWide = availableWidth >= WIDE_BREAKPOINT;
   const isXWide = availableWidth >= XWIDE_BREAKPOINT;
   // Data-heavy browser screens can use a wider canvas, while phone/tablet

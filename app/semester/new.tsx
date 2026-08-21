@@ -64,14 +64,7 @@ export default function NewSemesterScreen() {
     }
 
     if (!isPro && existingSemesters.length >= FREE_SEMESTER_LIMIT) {
-      Alert.alert(
-        'Semester Limit Reached',
-        `Free accounts support up to ${FREE_SEMESTER_LIMIT} semester. Upgrade to Pro for unlimited semesters.`,
-        [
-          { text: 'Upgrade', onPress: () => showProUpsell('semester') },
-          { text: 'Cancel', style: 'cancel' },
-        ],
-      );
+      showProUpsell('semester');
       return;
     }
 
@@ -93,14 +86,7 @@ export default function NewSemesterScreen() {
       // prompt rather than a generic alert. No isPro guard — the trigger
       // already canonical-checked the entitlements table.
       if (isFreeLimitError(err)) {
-        Alert.alert(
-          'Semester Limit Reached',
-          err.message,
-          [
-            { text: 'Upgrade', onPress: () => showProUpsell('semester') },
-            { text: 'Cancel', style: 'cancel' },
-          ],
-        );
+        showProUpsell('semester');
         return;
       }
       Alert.alert('Error', err.message || 'Failed to create semester.');

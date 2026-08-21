@@ -103,14 +103,7 @@ export default function CalendarSyncSettings() {
     } else {
       // Turn on
       if (!isPro) {
-        Alert.alert(
-          'Pro Feature',
-          'Calendar sync is available with Semora Pro.',
-          [
-            { text: 'Upgrade', onPress: () => showProUpsell('calendar') },
-            { text: 'Cancel', style: 'cancel' },
-          ],
-        );
+        showProUpsell('calendar');
         return;
       }
 
@@ -153,10 +146,7 @@ export default function CalendarSyncSettings() {
     // let class-schedule sync run without an active subscription (same
     // reasoning as handleResync).
     if (!isPro) {
-      Alert.alert('Pro Feature', 'Calendar sync is available with Semora Pro.', [
-        { text: 'Upgrade', onPress: () => showProUpsell('calendar') },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
+      showProUpsell('calendar');
       return;
     }
     if (classSync) {
@@ -200,10 +190,7 @@ export default function CalendarSyncSettings() {
     // explicit re-sync run without an active subscription (syncAllTasks isn't
     // gated by isSyncEnabled the way auto-sync is).
     if (!isPro) {
-      Alert.alert('Pro Feature', 'Calendar sync is available with Semora Pro.', [
-        { text: 'Upgrade', onPress: () => showProUpsell('calendar') },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
+      showProUpsell('calendar');
       return;
     }
     setSyncing(true);
@@ -228,14 +215,7 @@ export default function CalendarSyncSettings() {
 
   const handleExport = async () => {
     if (!isPro) {
-      Alert.alert(
-        'Pro Feature',
-        'Exporting your semester as a calendar file is available with Semora Pro.',
-        [
-          { text: 'Upgrade', onPress: () => showProUpsell('calendar') },
-          { text: 'Cancel', style: 'cancel' },
-        ],
-      );
+      showProUpsell('calendar');
       return;
     }
     if (!selectedSemesterId) {
@@ -260,10 +240,7 @@ export default function CalendarSyncSettings() {
     // Pro gate (teaser → paywall). Server also enforces PRO_REQUIRED, but gate
     // here so free users see the upsell instead of a failed connect.
     if (!isPro) {
-      Alert.alert('Pro Feature', 'Google Calendar sync is available with Semora Pro.', [
-        { text: 'Upgrade', onPress: () => showProUpsell('calendar') },
-        { text: 'Cancel', style: 'cancel' },
-      ]);
+      showProUpsell('calendar');
       return;
     }
     if (Platform.OS === 'web') {
@@ -404,7 +381,7 @@ export default function CalendarSyncSettings() {
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
               <TouchableOpacity style={styles.actionRow} activeOpacity={0.7} onPress={handleResync} disabled={syncing}>
                 <FontAwesome name="refresh" size={16} color={colors.brand} style={{ width: 26 }} />
-                <Text style={[styles.rowLabel, { marginLeft: 8, color: colors.ink }]}>Re-sync all tasks</Text>
+                <Text style={[styles.rowLabel, { flex: 1, marginLeft: 8, color: colors.ink }]}>Re-sync all tasks</Text>
                 <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
               </TouchableOpacity>
             </View>
@@ -499,7 +476,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 16, borderWidth: 0.5, borderColor: COLORS.line, marginBottom: 12 },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
   actionRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14 },
-  rowLabel: { fontSize: 15, fontWeight: '500', color: COLORS.ink, flex: 1 },
+  rowLabel: { fontSize: 15, fontWeight: '500', color: COLORS.ink },
   rowSub: { fontSize: 13, color: COLORS.ink3, marginTop: 2 },
   hint: { fontSize: 13, color: COLORS.ink3, lineHeight: 18, paddingHorizontal: 4 },
   infoBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, backgroundColor: COLORS.blue50, borderRadius: 14, padding: 14 },

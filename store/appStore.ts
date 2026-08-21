@@ -35,6 +35,10 @@ const IMPORTED_SYLLABUS_KEY = 'semora_imported_syllabus';
 const WIDGET_TIP_KEY = 'semora_widget_tip_seen';
 const COURSES_VIEW_KEY = 'semora_courses_view';
 const TOOLS_OPEN_KEY = 'semora_sidebar_tools_open';
+// Whether the desktop web sidebar is hidden entirely. Device-level display
+// preference, like COURSES_VIEW_KEY: someone on a 13" laptop can reasonably
+// want the rail gone while the same account on a monitor keeps it.
+const SIDEBAR_COLLAPSED_KEY = 'semora_sidebar_collapsed';
 // Lifetime count of task completions on this device — the fallback trigger
 // for the review prompt (10th completion). Device-level like the flags
 // above: the rating prompt is once-per-device regardless of account, so
@@ -101,6 +105,7 @@ const initialCoursesView: 'list' | 'grid' =
 // Open unless explicitly collapsed, so an existing user's sidebar looks the
 // same the first time they load a build that can collapse it.
 const initialToolsOpen = getItem(TOOLS_OPEN_KEY) !== 'false';
+const initialSidebarCollapsed = getItem(SIDEBAR_COLLAPSED_KEY) === 'true';
 const initialReviewRequested = getItem(REVIEW_REQUESTED_KEY) === 'true';
 // Backfill: a device that already has AHA_PAYWALL_KEY set completed an import
 // before IMPORTED_SYLLABUS_KEY existed. Without this, upgrading would read the
@@ -164,6 +169,13 @@ interface AppState {
   /** Whether the desktop sidebar's Study tools group is expanded. */
   sidebarToolsOpen: boolean;
   setSidebarToolsOpen: (v: boolean) => void;
+  /**
+   * Whether the desktop web sidebar is hidden, giving the screen the full
+   * window. Remembered across sessions — a student who hid it to write is
+   * not asking to hide it again every time they come back.
+   */
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (v: boolean) => void;
   /**
    * Lifetime task completions on this device (see TASKS_COMPLETED_KEY).
    * Counts completion ACTIONS across ALL screens — incremented centrally in
@@ -270,6 +282,11 @@ export const useAppStore = create<AppState>((set) => ({
   setSidebarToolsOpen: (v) => {
     set({ sidebarToolsOpen: v });
     setItem(TOOLS_OPEN_KEY, v ? 'true' : 'false');
+  },
+  sidebarCollapsed: initialSidebarCollapsed,
+  setSidebarCollapsed: (v) => {
+    set({ sidebarCollapsed: v });
+    setItem(SIDEBAR_COLLAPSED_KEY, v ? 'true' : 'false');
   },
   tasksCompletedCount: initialTasksCompleted,
   incrementTasksCompleted: () => set((s) => {
