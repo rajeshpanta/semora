@@ -19,7 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Notifications from 'expo-notifications';
 import * as Haptics from 'expo-haptics';
 import { format, startOfWeek, addDays, differenceInDays, isToday as isDateToday, startOfDay } from 'date-fns';
@@ -44,6 +44,7 @@ import DecisionStrip from '@/components/DecisionStrip';
 import AppHeader from '@/components/AppHeader';
 import CoursesGlance from '@/components/CoursesGlance';
 import GradesWaitingCard from '@/components/GradesWaitingCard';
+import { canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
 import { calculateCourseGrade } from '@/lib/grades';
 import { DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import type { GradeThreshold } from '@/types/database';
@@ -110,6 +111,12 @@ export default function TodayScreen() {
   const { data: semesters = [], isLoading: semestersLoading } = useSemesters();
   const { data: courses = [] } = useCourses(selectedSemesterId);
   const { data: gradeCategories = [] } = useSemesterGradeCategories(selectedSemesterId);
+  // canvasOfferFor takes isPro and answers 'locked' for a free account, which
+  // is what shows the PRO badge and sends the tap to the sheet rather than to
+  // Settings — lms-sync refuses a non-Pro caller server-side, so walking them
+  // to Settings first would dead-end them at the same wall one screen later.
+  const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
+  const { offer: canvasOffer } = canvasOfferFor(lmsConnections, isPro);
   const { data: todayTasks = [] } = useTodayTasks(selectedSemesterId);
   const { data: dueSoonTasks = [], isSuccess: dueSoonLoaded } = useDueSoonTasks(selectedSemesterId);
   const { data: stats } = useTaskStats(selectedSemesterId);
@@ -1171,6 +1178,40 @@ export default function TodayScreen() {
                   <FontAwesome name="camera" size={14} color="#fff" />
                   <Text style={styles.emptyCtaText}>Scan your syllabus</Text>
                 </TouchableOpacity>
+                {/* The other way in, and the one this screen never mentioned.
+                    Scanning is one syllabus at a time and stops mattering the
+                    moment it is done; Canvas brings every class and keeps
+                    bringing them when an instructor moves a date. A student
+                    looking at an empty semester is exactly who should hear
+                    that. Hidden once Canvas is healthy — see canvasOfferFor. */}
+                {canvasOffer !== 'healthy' && (
+                  <TouchableOpacity
+                    style={[styles.emptyCanvas, { borderColor: colors.teal, backgroundColor: colors.teal50 }]}
+                    onPress={() => {
+                      track('canvas_offer_tapped', { screen: 'today_empty', offer: canvasOffer });
+                      if (canvasOffer === 'locked') { showProUpsell('canvas'); return; }
+                      router.push('/settings/lms' as any);
+                    }}
+                    activeOpacity={0.85}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Sync Canvas, Pro feature'
+                    }
+                  >
+                    <FontAwesome name="university" size={13} color={colors.teal} />
+                    <Text style={[styles.emptyCanvasText, { color: colors.ink2 }]}>
+                      {canvasOffer === 'needs_attention'
+                        ? 'Finish Canvas setup — your classes import themselves'
+                        : 'Or sync Canvas — every class imports itself'}
+                    </Text>
+                    {canvasOffer === 'locked' && (
+                      <View style={[styles.emptyCanvasPro, { backgroundColor: colors.brand }]}>
+                        <FontAwesome name="star" size={7} color="#fff" />
+                        <Text style={styles.emptyCanvasProText}>PRO</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity onPress={() => router.push('/semester/new')} activeOpacity={0.7} hitSlop={8}>
                   <Text style={[styles.emptySecondary, { color: colors.ink3 }]}>Or set up manually</Text>
                 </TouchableOpacity>
@@ -1511,6 +1552,17 @@ export default function TodayScreen() {
 }
 
 const styles = StyleSheet.create({
+  emptyCanvas: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderWidth: 1, borderRadius: 11,
+    paddingHorizontal: 13, paddingVertical: 9, marginTop: 12,
+  },
+  emptyCanvasText: { fontSize: 12.5, fontWeight: '600' },
+  emptyCanvasPro: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2,
+  },
+  emptyCanvasProText: { color: '#fff', fontSize: 8, fontWeight: '800', letterSpacing: 0.4 },
   // Desktop browser only. 340px is the narrowest the rail can be before the
   // risk card's recovery steps start wrapping to three lines each.
   deckRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 20 },

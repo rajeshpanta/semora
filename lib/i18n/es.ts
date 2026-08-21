@@ -114,6 +114,11 @@ export const ES: Record<string, string> = {
 
   // ── Desktop dashboard band + redesigned course card (1.9) ──────────────
   'Add class times': 'Añadir horario de clase',
+  // The three states that only appear when there is nothing to report — the
+  // easiest strings to miss, because a seeded test account never reaches them.
+  'Needs triage': 'Requiere revisión',
+  'All steady': 'Todo en orden',
+  'Not graded': 'Sin calificar',
   'Add times': 'Añadir horarios',
   'All clear': 'Todo al día',
   'Nothing outstanding': 'Nada pendiente',
@@ -2187,6 +2192,12 @@ export const ES: Record<string, string> = {
   'Pro turns your notes and lectures into practice questions, with answers, as many times as you want.': 'Pro convierte tus apuntes y clases en preguntas de práctica, con respuestas, las veces que quieras.',
   'Every semester at once': 'Todos tus semestres a la vez',
   'Finish Canvas setup': 'Termina de configurar Canvas',
+  // The empty-semester Canvas prompt on Today. Both branches and the
+  // screen-reader label, which the shallow audit does not reach because they
+  // are ternary arms inside a JSX expression rather than plain text children.
+  'Or sync Canvas — every class imports itself': 'O sincroniza Canvas: cada clase se importa sola',
+  'Finish Canvas setup — your classes import themselves': 'Termina de configurar Canvas: tus clases se importan solas',
+  'Sync Canvas, Pro feature': 'Sincronizar Canvas, función Pro',
   'Connect Canvas instead': 'Mejor conecta Canvas',
   'Study tools': 'Herramientas de estudio',
   'Tasks': 'Tareas',
