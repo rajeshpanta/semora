@@ -38,8 +38,21 @@ export function LanguageSwitcher({ locale }: { locale: SiteLocale }) {
   // visitor on a homepage without the token that brought them here.
   if (!hasLocalePair(locale, pathname)) return null;
 
-  const englishHref = locale === 'es' ? spanishToEnglishPath(pathname) : pathname || '/';
-  const spanishHref = locale === 'es' ? pathname || '/es' : englishToSpanishPath(pathname);
+  // ?setlang= marks this as a DECISION rather than a navigation.
+  //
+  // proxy.ts records the language of whatever page you are on, which is right
+  // for reading but cannot tell "I clicked English" from "I happened to open an
+  // English page". Without that distinction one of the two has to break: either
+  // clicking EN gets undone by the next Spanish page, or a Spanish reader who
+  // opens the bare domain silently loses Spanish — and takes an English app
+  // with them, because the app reads the same cookie. The marker is stripped
+  // from the URL by the redirect in proxy.ts, so nothing shareable carries it.
+  const englishBase = locale === 'es' ? spanishToEnglishPath(pathname) : pathname || '/';
+  const spanishBase = locale === 'es' ? pathname || '/es' : englishToSpanishPath(pathname);
+  const withChoice = (href: string, code: 'en' | 'es') =>
+    `${href}${href.includes('?') ? '&' : '?'}setlang=${code}`;
+  const englishHref = withChoice(englishBase, 'en');
+  const spanishHref = withChoice(spanishBase, 'es');
 
   const options = [
     { code: 'en' as const, href: englishHref, short: 'EN', full: 'English' },
