@@ -84,7 +84,8 @@ export const PRO_ANNUAL_SAVINGS_PCT = Math.round(
 // every AI action is Pro. Never reintroduce "per month" language here.
 export const FREE_FEATURES = [
   'One AI action for the lifetime of the account: a syllabus scan, a lecture recording, or a document turned into notes',
-  'Up to 4 courses within one semester; one semester total on free',
+  'Canvas sync, free and unlimited: connect Canvas and every class you take imports itself, then keeps itself up to date — no Pro, no token, no IT approval',
+  'Up to 1 course you add by hand in one semester (classes that arrive from Canvas do not count towards it); one semester total on free',
   'Full deadline and task tracking',
   'Grade tracking with weighted averages',
   'Same-day reminders',
@@ -95,8 +96,8 @@ export const FREE_FEATURES = [
 // app (app/settings/calendar.tsx gates handleExport behind isPro) — do not
 // move it back to FREE_FEATURES without re-checking the app first.
 export const PRO_FEATURES = [
-  'Unlimited courses and semesters, with no cap on AI actions',
-  'Canvas, Blackboard, and Moodle assignment import',
+  'Unlimited courses you add by hand, unlimited semesters, and no cap on AI actions',
+  'Blackboard and Moodle assignment import (Canvas is free for everyone)',
   'Course Spaces: host your own shared course and invite classmates',
   'Smart Plan: an AI-generated study schedule that adapts to your deadlines',
   'Workload dashboard: see crunch weeks and exam-dense stretches coming',
@@ -199,7 +200,7 @@ export const FEATURES: FeatureFact[] = [
     slug: 'canvas-sync',
     name: 'Canvas Sync',
     shortDescription:
-      'Import assignments from Canvas, Blackboard, or Moodle when your institution permits the connection.',
+      'Connect Canvas free and every class you are enrolled in imports itself, then stays right when an instructor moves a deadline.',
     // Pro, NOT free. Gated in three places in the shipping app: a server-side
     // is_pro() check in supabase/functions/lms-sync (402 PRO_REQUIRED), the
     // provider list in app/settings/lms.tsx, and a paywall bounce in
@@ -207,7 +208,7 @@ export const FEATURES: FeatureFact[] = [
     // user who installs on that promise hits a paywall at the first tap.
     tier: 'pro',
     description:
-      "Learning-platform import is part of Pro. The shipping Canvas connector currently uses a personal access token generated in Canvas. Some institutions disable token creation or prohibit third-party token use, so confirm your school's policy before connecting. If the connector is unavailable or not permitted, scan the syllabus or paste the assignment list into Semora's scanner instead. Blackboard and Moodle setup can also vary by school.",
+      "Canvas sync is free right now, on every account, with no limit on how many classes come across — this is a limited-time offer, and an account that connects while it runs keeps free Canvas sync for good. It uses the private calendar feed Canvas already gives you, so there is no access token to generate and nothing for your IT department to approve. Once connected it re-checks Canvas about hourly on its own: a deadline your instructor moves is right in Semora without anyone doing anything, and an assignment they delete disappears from your list instead of nagging you. One honest limit — the calendar feed carries dates, not marks, so your grades are still yours to enter. Blackboard and Moodle import is a Pro feature, uses a personal access token, and varies by school.",
   },
 ];
 

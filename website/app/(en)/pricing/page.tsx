@@ -21,7 +21,7 @@ const PRICING_FAQ = [
   {
     question: 'Is Semora free?',
     answer:
-      'Yes. The free tier includes one AI action for the lifetime of your account—a syllabus scan, a lecture recording or a document turned into notes, whichever you use it on—plus up to 4 courses in one semester, full deadline and grade tracking, and same-day reminders. No credit card required. Calendar sync (device + .ics export) is a Pro feature.',
+      'Yes. The free tier includes one AI action for the lifetime of your account—a syllabus scan, a lecture recording or a document turned into notes, whichever you use it on—plus unlimited classes synced free from Canvas plus one course you add by hand within one semester, full deadline and grade tracking, and same-day reminders. No credit card required. Calendar sync (device + .ics export) is a Pro feature.',
   },
   {
     question: 'How do I upgrade to Pro?',

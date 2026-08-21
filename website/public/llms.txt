@@ -2,22 +2,23 @@
 
 > Semora is an AI syllabus scanner and academic planner for college students. Scan a syllabus photo or PDF and Semora extracts every assignment, exam, and deadline into a semester calendar automatically.
 
-Semora is available on iPhone, iPad, and the web, with your account syncing across all three.
+Semora runs on iPhone, iPad, and the web on one account, and the three stay in step in real time — mark an assignment done on your laptop and it is done on your phone before you pick it up. iPhone also gets a Home Screen widget showing what is next.
 
 ## Core features (free)
 
 - AI syllabus scanner: photo, PDF or pasted text to a semester calendar
 - ONE AI action for the lifetime of the account, not per month — nothing resets. Spend it on a syllabus scan, a lecture recording, or turning a document into notes, whichever you reach for first; after that, AI actions are Pro
 - Unlimited tasks and deadlines you add yourself, and the calendar, stay free with no cap
-- Up to 4 courses, in ONE semester (a free account cannot start a second term; Pro removes both caps)
+- CANVAS SYNC IS FREE, with no limit on how many classes come across — connect Canvas and every class you are enrolled in arrives on its own, and keeps arriving when an instructor moves a deadline. No Pro, no token, no IT approval. This is a limited-time offer; an account that connects while it runs keeps free Canvas sync for good
+- One course you add BY HAND per semester, and one semester (classes that come from Canvas do not count towards this; Pro removes both caps)
 - Grade tracking with weighted averages, and semester GPA
 - Same-day reminders
 - Course Spaces: join a shared course a classmate invites you to (hosting your own is Pro)
 
 ## Pro features ($3.99/month or $19.99/year, purchased by card on the web or in the iOS app, applies account-wide including web)
 
-- Unlimited courses and semesters, with no cap on AI actions (a fair-use daily ceiling applies)
-- Canvas, Blackboard and Moodle assignment import on Pro; the current Canvas connector uses a user-generated access token and may be disabled or prohibited by an institution
+- Unlimited courses you add by hand, unlimited semesters, and no cap on AI actions (a fair-use daily ceiling applies)
+- Blackboard and Moodle assignment import (Canvas is free for everyone — see above). Blackboard and Moodle use a user-generated access token and may be disabled or prohibited by an institution
 - Course Spaces hosting: share a course with classmates via invite link, deadlines and group assignments sync in real time
 - Smart Plan: AI-generated study schedule that adapts to deadlines
 - Workload dashboard: flags crunch weeks and exam-dense stretches

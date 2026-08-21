@@ -28,7 +28,7 @@ const FAQ = [
   {
     question: 'How many syllabi can I scan for free?',
     answer:
-      'One. The free tier includes a single AI action for the lifetime of the account—spend it on a syllabus scan, a lecture recording, or turning a document into notes—and supports up to 4 courses within one semester, with one semester total on free. Full task tracking and grade tracking are included. Calendar sync (device + .ics export) is a Pro feature.',
+      'One. The free tier includes a single AI action for the lifetime of the account—spend it on a syllabus scan, a lecture recording, or turning a document into notes—and supports unlimited classes synced free from Canvas plus one course you add by hand within one semester, with one semester total on free. Full task tracking and grade tracking are included. Calendar sync (device + .ics export) is a Pro feature.',
   },
   {
     question: 'Does Semora sync with Canvas?',

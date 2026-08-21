@@ -142,7 +142,7 @@ const HOME_FAQ = [
   {
     question: 'Is Semora actually free?',
     answer:
-      'Yes. The free plan includes one AI action for the lifetime of your account—a syllabus scan, a lecture recording or turning a document into notes, whichever you reach for first—plus up to four courses within one semester, deadline tracking, weighted grades and reminders. No credit card required.',
+      'Yes. The free plan includes one AI action for the lifetime of your account—a syllabus scan, a lecture recording or turning a document into notes, whichever you reach for first—plus unlimited classes synced free from Canvas plus one course you add by hand within one semester, deadline tracking, weighted grades and reminders. No credit card required.',
   },
   {
     question: 'What does Pro add?',

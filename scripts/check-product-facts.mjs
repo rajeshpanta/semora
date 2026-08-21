@@ -51,9 +51,20 @@ function mustNotSay(pattern, why) {
   if (m) failures.push(`found "${m[0]}" — ${why}`);
 }
 
+// Singular-aware: at a limit of 1 the old template produced "Up to 1 courses",
+// which is the sentence a limit change writes for you when the plural is
+// hardcoded beside an interpolated number.
 mustSay(
-  `Up to ${app.freeCourses} courses`,
+  `Up to ${app.freeCourses} ${app.freeCourses === 1 ? 'course' : 'courses'}`,
   `lib/syllabus.ts says FREE_COURSE_LIMIT = ${app.freeCourses}`,
+);
+// Canvas sync is free for everyone while the canvas_free promo runs (migration
+// 090), so the site must not sell it as a Pro feature. This is the claim that
+// costs the most when it is wrong: it tells a student the thing they can have
+// for nothing costs money, and they leave.
+mustNotSay(
+  /Canvas[^.]{0,60}(is|part of|requires)\s+Pro|Pro[^.]{0,40}(includes|adds)[^.]{0,30}Canvas import/i,
+  'Canvas sync is free while the canvas_free promo is active (migration 090)',
 );
 mustSay(
   'in one semester',
