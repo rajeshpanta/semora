@@ -1,10 +1,12 @@
-import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import React, { useState } from 'react';
+import { ActivityIndicator, StyleSheet, TextInput, View } from 'react-native';
 import { Text, TouchableOpacity } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import { FONTS, WEB_CARD_SHADOW } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useUpdateTask } from '@/lib/queries';
+import { track } from '@/lib/analytics';
 
 /** How many rows before the card defers to the full screen. */
 const PREVIEW_LIMIT = 5;
@@ -23,6 +25,13 @@ const PREVIEW_LIMIT = 5;
  * it grow without limit. On desktop it belongs in the rail beside Courses,
  * where the other "where do I stand" surfaces already live — capped at five,
  * with the rest one tap away.
+ *
+ * The score is typed HERE. "Add grade" used to open the task screen, which
+ * meant recording four grades cost four navigations and four returns, and the
+ * dashboard you were reading was gone by the second one. A percentage is one
+ * number; asking for a screen to collect it is why this queue grows. The task
+ * screen still exists for points-based entry and everything else — this is the
+ * fast path for the common case.
  */
 export default function GradesWaitingCard({
   tasks,
@@ -32,6 +41,24 @@ export default function GradesWaitingCard({
 }) {
   const colors = useColors();
   const router = useRouter();
+  const updateTask = useUpdateTask();
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [value, setValue] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const save = async (task: any) => {
+    const score = parseFloat(value);
+    if (isNaN(score) || score < 0 || score > 100) return;
+    setSaving(true);
+    try {
+      await updateTask.mutateAsync({ id: task.id, score });
+      track('grade_recorded', { screen: 'today_rail', percent: Math.round(score) });
+      setOpenId(null);
+      setValue('');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (tasks.length === 0) return null;
   const shown = tasks.slice(0, PREVIEW_LIMIT);
@@ -60,26 +87,60 @@ export default function GradesWaitingCard({
       </View>
 
       {shown.map((task) => (
-        <TouchableOpacity
-          key={task.id}
-          style={[styles.row, { borderBottomColor: colors.line }]}
-          onPress={() => router.push(`/task/${task.id}` as any)}
-          accessibilityRole="button"
-          accessibilityLabel={`Add a grade for ${task.title}`}
-        >
+        <View key={task.id} style={[styles.row, { borderBottomColor: colors.line }]}>
           <View style={[styles.dot, { backgroundColor: task.courses?.color ?? colors.ink3 }]} />
-          <View style={{ flex: 1, minWidth: 0 }}>
+          <TouchableOpacity
+            style={{ flex: 1, minWidth: 0 }}
+            onPress={() => router.push(`/task/${task.id}` as any)}
+            accessibilityRole="button"
+            accessibilityLabel={`Open ${task.title}`}
+          >
             <Text style={[styles.name, { color: colors.ink }]} numberOfLines={1}>
               {task.title}
             </Text>
             <Text style={[styles.meta, { color: colors.ink3 }]} numberOfLines={1}>
               {task.courses?.name ?? ''}
             </Text>
-          </View>
-          <View style={[styles.add, { borderColor: colors.brand100 }]}>
-            <Text style={[styles.addText, { color: colors.brand }]}>Add grade</Text>
-          </View>
-        </TouchableOpacity>
+          </TouchableOpacity>
+
+          {openId === task.id ? (
+            <View style={styles.entry}>
+              <TextInput
+                value={value}
+                onChangeText={setValue}
+                keyboardType="numeric"
+                inputMode="numeric"
+                autoFocus
+                placeholder="88"
+                placeholderTextColor={colors.ink3}
+                onSubmitEditing={() => save(task)}
+                style={[styles.input, { color: colors.ink, borderColor: colors.brand100 }]}
+                accessibilityLabel={`Percentage for ${task.title}`}
+              />
+              <Text style={[styles.pct, { color: colors.ink3 }]}>%</Text>
+              <TouchableOpacity
+                onPress={() => save(task)}
+                disabled={saving}
+                style={[styles.save, { backgroundColor: colors.brand }]}
+                accessibilityRole="button"
+                accessibilityLabel="Save grade"
+              >
+                {saving
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <FontAwesome name="check" size={11} color="#fff" />}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={[styles.add, { borderColor: colors.brand100 }]}
+              onPress={() => { setOpenId(task.id); setValue(''); }}
+              accessibilityRole="button"
+              accessibilityLabel={`Add a grade for ${task.title}`}
+            >
+              <Text style={[styles.addText, { color: colors.brand }]}>Add grade</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       ))}
 
       {remaining > 0 && (
@@ -125,6 +186,13 @@ const styles = StyleSheet.create({
   name: { fontSize: 12.5, fontWeight: '500' },
   meta: { fontSize: 11, marginTop: 1 },
   add: { borderWidth: 1, borderRadius: 7, paddingHorizontal: 8, paddingVertical: 4 },
+  entry: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  input: {
+    width: 44, borderWidth: 1, borderRadius: 7,
+    paddingHorizontal: 6, paddingVertical: 3, fontSize: 12.5, textAlign: 'right',
+  },
+  pct: { fontSize: 11.5, marginRight: 2 },
+  save: { width: 24, height: 24, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
   addText: { fontSize: 11, fontWeight: '700' },
   more: {
     flexDirection: 'row',

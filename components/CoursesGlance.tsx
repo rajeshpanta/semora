@@ -23,10 +23,13 @@ import { useColors } from '@/lib/theme';
 export default function CoursesGlance({
   courses,
   outstandingByCourse,
+  gradeByCourse,
 }: {
   courses: { id: string; name: string; color: string }[];
   /** Course id → how many items are still owed. */
   outstandingByCourse: Record<string, number>;
+  /** Course id → the computed grade, or nulls when nothing is scored yet. */
+  gradeByCourse?: Map<string, { percentage: number | null; letter: string | null }>;
 }) {
   const colors = useColors();
   const router = useRouter();
@@ -84,7 +87,19 @@ export default function CoursesGlance({
               </Text>
             </View>
             {revealed ? (
-              <Text style={[styles.grade, { color: colors.ink3 }]}>—</Text>
+              // The whole point of the toggle. This rendered an em dash — the
+              // mask was built and the reveal was never wired to the grade, so
+              // the one control promising to show a number showed nothing.
+              (() => {
+                const g = gradeByCourse?.get(course.id);
+                return (
+                  <Text style={[styles.grade, { color: g?.percentage != null ? colors.ink : colors.ink3 }]}>
+                    {g?.percentage != null
+                      ? `${g.letter ? `${g.letter} · ` : ''}${g.percentage}%`
+                      : 'Not graded'}
+                  </Text>
+                );
+              })()
             ) : (
               <View style={styles.mask}>
                 <View style={[styles.maskDot, { backgroundColor: colors.ink3 }]} />
@@ -127,7 +142,7 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: 4 },
   name: { fontSize: 13, fontWeight: '600' },
   meta: { fontSize: 11, marginTop: 1 },
-  grade: { fontFamily: FONTS.display, fontSize: 16 },
+  grade: { fontFamily: FONTS.display, fontSize: 14 },
   mask: { flexDirection: 'row', gap: 3, alignItems: 'center', paddingRight: 2 },
   maskDot: { width: 6, height: 6, borderRadius: 3, opacity: 0.42 },
   footnote: { fontSize: 10.5, lineHeight: 15, paddingHorizontal: 14, paddingVertical: 10 },

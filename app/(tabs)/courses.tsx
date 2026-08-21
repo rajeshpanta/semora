@@ -44,6 +44,7 @@ export default function CoursesScreen() {
   const { contentMaxWidth, deckMaxWidth, isDesktop, isWide, isXWide, width } = useResponsive();
   const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
+  const [showGrades, setShowGrades] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const queryClient = useQueryClient();
   const onRefresh = useCallback(() => {
@@ -349,6 +350,19 @@ export default function CoursesScreen() {
                     })}
                   </View>
                 )}
+                {courses.length > 0 && (
+                  <TouchableOpacity
+                    style={[styles.gradeToggle, { borderColor: colors.line, backgroundColor: colors.card }]}
+                    onPress={() => setShowGrades((v) => !v)}
+                    accessibilityRole="button"
+                    accessibilityLabel={showGrades ? 'Hide grades' : 'Show grades'}
+                  >
+                    <FontAwesome name={showGrades ? 'eye-slash' : 'eye'} size={12} color={colors.ink3} />
+                    <Text style={[styles.gradeToggleText, { color: colors.ink3 }]}>
+                      {showGrades ? 'Hide grades' : 'Show grades'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 <GlobalSearchButton />
                 <TouchableOpacity style={[styles.addBtn, { backgroundColor: colors.brand }]} onPress={handleAddCourse} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel="Add a course">
                   <FontAwesome name="plus" size={14} color="#fff" />
@@ -604,11 +618,14 @@ export default function CoursesScreen() {
                 nextDue: dueInfo?.text ?? null,
                 nextUrgent: !!dueInfo?.urgent,
                 nextIsExam: nextTask?.type === 'exam',
+                gradeLetter: letter,
+                gradePercent: percentage,
               };
               return (
                 <CourseCard
                   key={course.id}
                   course={cardData}
+                  showGrade={showGrades}
                   width={isXWide ? '32%' : isWide ? '48.5%' : undefined}
                   onPress={() => router.push(`/course/${course.id}` as any)}
                   onAddSchedule={() => router.push(`/course/${course.id}/edit` as any)}
@@ -694,6 +711,11 @@ export default function CoursesScreen() {
 }
 
 const styles = StyleSheet.create({
+  gradeToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    borderWidth: 1, borderRadius: 9, paddingHorizontal: 10, paddingVertical: 7,
+  },
+  gradeToggleText: { fontSize: 12, fontWeight: '600' },
   setupBanner: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, marginBottom: 14,

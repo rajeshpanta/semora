@@ -53,16 +53,22 @@ export type CourseCardData = {
   nextDue: string | null;
   nextUrgent: boolean;
   nextIsExam: boolean;
+  /** Computed grade, or nulls when nothing is scored yet. */
+  gradeLetter?: string | null;
+  gradePercent?: number | null;
 };
 
 export default function CourseCard({
   course,
   width,
+  showGrade = false,
   onPress,
   onAddSchedule,
 }: {
   course: CourseCardData;
   width?: number | string;
+  /** Grades are masked until the student asks — see CoursesGlance for why. */
+  showGrade?: boolean;
   onPress: () => void;
   onAddSchedule: () => void;
 }) {
@@ -70,7 +76,7 @@ export default function CourseCard({
   const {
     name, color, instructor, meetingLabel,
     overdueCount, pendingCount, completedCount, totalCount,
-    nextTitle, nextDue, nextUrgent, nextIsExam,
+    nextTitle, nextDue, nextUrgent, nextIsExam, gradeLetter, gradePercent,
   } = course;
 
   const done = totalCount > 0 ? completedCount / totalCount : 0;
@@ -167,6 +173,23 @@ export default function CourseCard({
           <Text style={[styles.progressText, { color: colors.ink3 }]}>
             {`${completedCount} of ${totalCount} done`}
           </Text>
+          {/* The card carried a grade before this redesign and lost it, which
+              left the whole desktop app with no grade visible anywhere. It
+              belongs here — Courses is a screen you navigate to on purpose —
+              but under the same mask the rail uses, so a glance over a
+              shoulder in a lecture still shows deadlines, not results. */}
+          {gradePercent != null && (
+            showGrade ? (
+              <Text style={[styles.grade, { color: colors.ink2 }]}>
+                {gradeLetter ? `${gradeLetter} · ` : ''}{gradePercent}%
+              </Text>
+            ) : (
+              <View style={styles.mask}>
+                <View style={[styles.maskDot, { backgroundColor: colors.ink3 }]} />
+                <View style={[styles.maskDot, { backgroundColor: colors.ink3 }]} />
+              </View>
+            )
+          )}
         </View>
       )}
     </TouchableOpacity>
@@ -211,4 +234,7 @@ const styles = StyleSheet.create({
   track: { flex: 1, height: 5, borderRadius: 999, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 999 },
   progressText: { fontSize: 11, fontVariant: ['tabular-nums'] },
+  grade: { fontSize: 11.5, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  mask: { flexDirection: 'row', gap: 3, alignItems: 'center' },
+  maskDot: { width: 5, height: 5, borderRadius: 3, opacity: 0.42 },
 });

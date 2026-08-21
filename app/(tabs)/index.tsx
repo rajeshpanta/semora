@@ -44,6 +44,9 @@ import DecisionStrip from '@/components/DecisionStrip';
 import AppHeader from '@/components/AppHeader';
 import CoursesGlance from '@/components/CoursesGlance';
 import GradesWaitingCard from '@/components/GradesWaitingCard';
+import { calculateCourseGrade } from '@/lib/grades';
+import { DEFAULT_GRADE_SCALE } from '@/lib/constants';
+import type { GradeThreshold } from '@/types/database';
 import WeekGlance from '@/components/WeekGlance';
 import { GlobalSearchButton } from '@/components/GlobalSearchButton';
 import { useTaskCompletionFlow } from '@/components/TaskCompletionFlow';
@@ -571,6 +574,32 @@ export default function TodayScreen() {
   // information), then by how many items have slipped. Saying "Biology 101"
   // is actionable; saying "Biology 101, C+" is a number the person sitting
   // behind them in the lecture can read too.
+  // The same computation the Courses screen runs, so the rail's revealed grade
+  // and the course list can never disagree. Only consumed when a student
+  // presses "Show grades"; computing it always is cheap and keeps the toggle
+  // instant.
+  const gradeByCourse = useMemo(() => {
+    const entries = courses.map((course: any) => {
+      const courseTasks = (allSemesterTasks as any[]).filter((t) => t.course_id === course.id);
+      const grade = calculateCourseGrade(
+        courseTasks.map((task: any) => ({
+          id: task.id,
+          grade_category_id: task.grade_category_id,
+          weight: task.weight,
+          score: task.score,
+          points_earned: task.points_earned,
+          points_possible: task.points_possible,
+          is_extra_credit: task.is_extra_credit,
+        })),
+        gradeCategories.filter((category: any) => category.course_id === course.id),
+        (course.grade_scale || DEFAULT_GRADE_SCALE) as GradeThreshold[],
+        course.extra_credit_policy || 'bonus',
+      );
+      return [course.id, grade] as const;
+    });
+    return new Map(entries);
+  }, [courses, allSemesterTasks, gradeCategories]);
+
   const outstandingByCourse = useMemo(() => {
     const out: Record<string, number> = {};
     for (const task of [...(overdueTasks as any[]), ...(upcomingTasks as any[])]) {
@@ -1455,7 +1484,11 @@ export default function TodayScreen() {
               onOpenPlanner={() => router.push('/planner' as any)}
             />
             <WeekGlance tasks={weekTasks} today={today} />
-            <CoursesGlance courses={courses as any} outstandingByCourse={outstandingByCourse} />
+            <CoursesGlance
+              courses={courses as any}
+              outstandingByCourse={outstandingByCourse}
+              gradeByCourse={gradeByCourse as any}
+            />
             {/* Under Courses on purpose: both answer "where do I stand", and a
                 missing score is the reason the answer above it is incomplete. */}
             <GradesWaitingCard tasks={completedWaitingForGrade} />
