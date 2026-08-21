@@ -204,7 +204,7 @@ export const COMPARE_EXTRA: Record<string, CompareExtra> =
       },
       {
         "question": "How many courses does the free plan cover?",
-        "answer": "For a single semester, usually yes: four course slots with unlimited tasks and deadlines inside them covers a standard full-time load. What free gives you only once is the AI — one action for the lifetime of the account, spent on a syllabus scan, a lecture recording, or turning a document into notes — so the other three courses are set up by hand, and nothing resets to give you a second go. The other limit people hit is the semester: a free account supports one in total, enforced by a database trigger, so the free tier covers this term and not the next. Pro lifts all of it: unlimited scans, unlimited courses, and unlimited semesters, with a fair-use ceiling of 20 scans a day."
+        "answer": "For a single semester, yes, and by a wider margin than it used to be: connect Canvas and every class you take arrives free, with no cap on how many, plus one more you can add by hand — with unlimited tasks and deadlines inside all of them. What free gives you only once is the AI — one action for the lifetime of the account, spent on a syllabus scan, a lecture recording, or turning a document into notes — so the other three courses are set up by hand, and nothing resets to give you a second go. The other limit people hit is the semester: a free account supports one in total, enforced by a database trigger, so the free tier covers this term and not the next. Pro lifts all of it: unlimited scans, unlimited courses, and unlimited semesters, with a fair-use ceiling of 20 scans a day."
       },
       {
         "question": "Can I share a course with classmates the way I'd share a team workspace?",

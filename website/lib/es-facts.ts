@@ -7,7 +7,8 @@ export const SITE_DESCRIPTION_ES =
 
 export const FREE_FEATURES_ES = [
   '1 acción con IA para toda la vida de la cuenta: un escaneo, una grabación o un documento en apuntes',
-  'Hasta 4 cursos dentro de un único semestre; una cuenta gratis admite un semestre en total',
+  'Sincronización con Canvas gratis y sin límite: conéctalo y todas tus clases se importan solas y se mantienen al día, sin Pro, sin token y sin permiso de informática',
+  'Hasta 1 curso que añades a mano dentro de un único semestre (las clases que llegan de Canvas no cuentan); una cuenta gratis admite un semestre en total',
   'Seguimiento de tareas y fechas de entrega',
   'Calificaciones con promedios ponderados',
   'Recordatorios el mismo día',
@@ -103,7 +104,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     name: 'Sincronización con Canvas',
     shortDescription: 'Importa tus tareas de Canvas, Blackboard o Moodle y mantenlas al día cuando cambien.',
     tier: 'pro',
-    description: 'El conector actual de Canvas usa un token personal en Pro. Confirma que tu institución permite usarlo con servicios externos; si no, escanea el programa o pega la lista de tareas.',
+    description: 'Conecta Canvas gratis y todas tus clases se importan solas y se mantienen al día, sin token ni permiso de informática.',
   },
 ];
 
@@ -165,7 +166,7 @@ export const SHOWCASE_ES = [
     alt: 'Pantalla de plataformas educativas de Semora con los cursos conectados y el estado de sincronización',
     tier: 'pro' as const,
     title: 'Importa tareas desde Canvas',
-    body: 'La importación desde Canvas forma parte de Pro. El conector actual usa un token de acceso personal generado en Canvas; algunas instituciones desactivan esos tokens o prohíben usarlos con servicios externos. Confirma la política de tu universidad antes de conectarlo. Cuando está permitido, las tareas y calificaciones se importan y los recordatorios se reprograman cuando cambia una fecha.',
+    body: 'La sincronización con Canvas es gratis ahora mismo, en todas las cuentas y sin límite de clases: es una oferta por tiempo limitado, y quien lo conecte mientras dure la conserva gratis para siempre. Usa el calendario privado que Canvas ya te da, así que no hay ningún token que generar ni nada que aprobar en informática. Una vez conectado se revisa solo cada hora: si tu profesor mueve una fecha, en Semora aparece cambiada sin que nadie haga nada, y si borra una tarea, esta desaparece de tu lista en vez de seguir dándote la lata. Un límite honesto: el calendario trae fechas, no notas, así que las calificaciones las sigues poniendo tú. La importación de Blackboard y Moodle sí es de Pro, usa un token personal y depende de cada universidad.',
     bullets: [
       'Uso sujeto a la política de tokens de tu institución',
       'Tareas y calificaciones se importan solas',

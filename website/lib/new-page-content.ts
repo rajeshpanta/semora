@@ -401,12 +401,12 @@ export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
       {
         "heading": "Importing from Blackboard, and when not to",
         "paragraphs": [
-          "Learning-platform import is a Pro feature covering Blackboard, Canvas and Moodle. Setup varies meaningfully by institution: Blackboard deployments differ in version, configuration and what integrations the school allows.",
+          "Canvas import is free for everyone, with no limit on how many classes come across. Blackboard and Moodle import is a Pro feature. Setup varies meaningfully by institution: Blackboard deployments differ in version, configuration and what integrations the school allows.",
           "Before connecting anything, confirm your institution's policy on third-party access. Some schools permit it, some restrict it, and some prohibit it outright in their acceptable-use terms. If it is not permitted, do not connect \u2014 and you have not lost anything, because the syllabus path below covers the same job.",
           "This is stated plainly rather than buried because it is the honest position: the connector's availability is not entirely in the app's control, and a tracker that only works if your school cooperates is not a tracker you should have to gamble on."
         ],
         "bullets": [
-          "Blackboard, Canvas and Moodle import are all part of Pro",
+          "Blackboard, Blackboard and Moodle import are part of Pro, while Canvas import is free",
           "Setup varies by institution and version",
           "Confirm your school's policy before connecting; if unclear, use the free path"
         ]
@@ -456,7 +456,7 @@ export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
     "faq": [
       {
         "question": "Is Blackboard import free?",
-        "answer": "No. Learning-platform import \u2014 Blackboard, Canvas and Moodle \u2014 is part of Pro at $3.99 a month or $19.99 a year. The free plan covers the same job from the syllabus side, including pasting a Blackboard assignment list into the scanner, within the one AI action a free account gets."
+        "answer": "No. Canvas import is free \u2014 no Pro, no token, no limit on classes. Blackboard and Moodle import is part of Pro at $3.99 a month or $19.99 a year. The free plan covers the same job from the syllabus side, including pasting a Blackboard assignment list into the scanner, within the one AI action a free account gets."
       },
       {
         "question": "Will connecting Blackboard work at my school?",
@@ -1156,7 +1156,7 @@ export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
           "You want study material generated from arbitrary uploads. Semora's flashcards (Pro) come from your syllabus and notes you attach, and its AI tutor (Pro) is scoped to what it knows about your course (deadlines, grading scale, structure) rather than a pile of uploaded slides and recordings.",
           "Your courses are not schedule-shaped. Studio work, a thesis, research hours, or a self-paced course with no dated assignments give a syllabus scanner almost nothing to extract.",
           "You need more than one term on the free plan. Free is one semester total, enforced by a database trigger, not one semester at a time. You cannot start a second term without Pro or without deleting the first, and deleting cascades.",
-          "You need the LMS connection without paying. Importing from Canvas, Blackboard, or Moodle is part of Pro and connection availability varies by institution. On free, or when direct Canvas import is unavailable, paste the assignments page into the scanner on the web app.",
+          "You need the LMS connection without paying. Importing from Blackboard or Moodle is part of Pro, while Canvas is free and connection availability varies by institution. On free, or when direct Canvas import is unavailable, paste the assignments page into the scanner on the web app.",
           "You have no Apple device at all. Buying Pro is no longer the problem — a card on the web handles that — but scheduled reminders and device calendar sync belong to the iPhone and iPad app, and a browser tab cannot replace them.",
           "You want your school to deploy it centrally with roster sync. Semora is installed by students, one account at a time."
         ]
@@ -1182,7 +1182,7 @@ export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
         "heading": "Switching without losing a semester in the process",
         "paragraphs": [
           "Do the boring parts first. Cancel the old subscription in whichever store billed it, before the next renewal date rather than after, and screenshot or export anything you want to keep. Deleting an app never cancels a subscription. This is worth doing carefully in this category: third-party reports on StudyFetch's ratings vary by source and by when they were sampled — around 4.8 on the App Store from roughly 8,200 ratings and around 4.5 on Google Play, against Trustpilot snapshots ranging from about 3.9 across 241 reviews to about 4.1 across roughly 255, with the negative share concentrated on surprise charges and difficulty cancelling. Some reports also note the Android app is buggier than iOS. None of that is confirmed first-hand here, and it is the sort of thing worth checking current, for any subscription you are about to start or stop.",
-          "Then budget the AI action. A free account gets exactly one, for the life of the account, so spend it on the syllabus you least want to retype rather than the tidiest one, and know that nothing refills it. Five photographed pages submitted in one pass counts as that one scan, not five — the constraint on that pass is the 10 MB budget, not the page count alone. Courses and AI actions are separate limits: re-scanning a syllabus into a course you already have spends an action but not a course slot. Watch the four-course cap if a classmate invites you to a Course Space, because the course it imports takes one of the four.",
+          "Then budget the AI action. A free account gets exactly one, for the life of the account, so spend it on the syllabus you least want to retype rather than the tidiest one, and know that nothing refills it. Five photographed pages submitted in one pass counts as that one scan, not five — the constraint on that pass is the 10 MB budget, not the page count alone. Courses and AI actions are separate limits: re-scanning a syllabus into a course you already have spends an action but not a course slot. Watch your one hand-added course slot if a classmate invites you to a Course Space, because the course it imports takes one of the four.",
           "Then run a real test instead of a browse. Scan every syllabus in one sitting, in one evening, before the term gets loud. Enter every score you already have, including the ones you would rather not look at. Then leave it alone until week three and ask one question: did it tell you something you did not already know? A converged week you had not spotted, a percentage you had misremembered, an assignment that never made it onto your list. If the answer is yes, it is doing the coordination job. If the answer is no, your semester may be simple enough that you did not need software, and that is a legitimate finding.",
           "One last thing worth saying out loud: these two tools are not mutually exclusive, and for some students the honest answer is both. A materials-first platform for the two courses where the reading is genuinely hard, and a syllabus-first planner holding the semester-wide picture. If you can only justify one subscription, pick the one that matches the failure that costs you more, and do the other job manually for a term."
         ]
@@ -1203,7 +1203,7 @@ export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
       },
       {
         "question": "Does my school need to set anything up for Canvas sync?",
-        "answer": "Possibly. Importing from Canvas, Blackboard, or Moodle is part of Pro. Semora's current Canvas connector uses a personal access token and should be used only where your institution permits third-party token connections. If it is unavailable or not permitted, copy the assignment list and paste it into the scanner on the web, or scan the syllabus instead. StudyFetch documents an LTI 1.3 integration with Canvas, Blackboard, Schoology, D2L Brightspace, and Google Classroom including roster sync, but it is deployed at the institution level rather than connected by an individual student."
+        "answer": "Possibly. Importing from Blackboard or Moodle is part of Pro, while Canvas is free. Semora's current Canvas connector uses a personal access token and should be used only where your institution permits third-party token connections. If it is unavailable or not permitted, copy the assignment list and paste it into the scanner on the web, or scan the syllabus instead. StudyFetch documents an LTI 1.3 integration with Canvas, Blackboard, Schoology, D2L Brightspace, and Google Classroom including roster sync, but it is deployed at the institution level rather than connected by an individual student."
       },
       {
         "question": "What does Semora cost compared with StudyFetch?",
@@ -1488,7 +1488,7 @@ export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
       },
       {
         "question": "What do I get without paying, and what is the catch?",
-        "answer": "One AI action for the life of the account, unlimited classes synced free from Canvas plus one course you add by hand, full deadline and task tracking, grade tracking with weighted averages, a semester GPA, same-day reminders, and joining a Course Space a classmate shares. Nothing expires on a date, and nothing refills either. The catch is stated plainly: that one action is not per month, it is per account, and a free account gets one semester total, enforced by a database trigger, so the four-course cap does not refresh in January. Pro lifts all three."
+        "answer": "One AI action for the life of the account, unlimited classes synced free from Canvas plus one course you add by hand, full deadline and task tracking, grade tracking with weighted averages, a semester GPA, same-day reminders, and joining a Course Space a classmate shares. Nothing expires on a date, and nothing refills either. The catch is stated plainly: that one action is not per month, it is per account, and a free account gets one semester total, enforced by a database trigger, so the one hand-added course does not refresh in January. Canvas classes sit outside all of it — free and uncapped. Pro lifts the rest."
       },
       {
         "question": "Does Semora run on Android or a Mac?",

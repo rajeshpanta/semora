@@ -145,7 +145,7 @@ const FAQ = [
   {
     question: '¿Semora es realmente gratis?',
     answer:
-      'Sí. El plan gratuito incluye una acción con IA para toda la vida de la cuenta —un escaneo del programa, una grabación de clase o un documento convertido en apuntes—, hasta cuatro cursos dentro de un solo semestre, seguimiento de entregas, promedios ponderados y recordatorios. No necesitas tarjeta de crédito.',
+      'Sí. El plan gratuito incluye una acción con IA para toda la vida de la cuenta —un escaneo del programa, una grabación de clase o un documento convertido en apuntes—, clases ilimitadas sincronizadas gratis desde Canvas, más un curso que añades a mano dentro de un solo semestre, seguimiento de entregas, promedios ponderados y recordatorios. No necesitas tarjeta de crédito.',
   },
   {
     question: '¿Qué añade Pro?',

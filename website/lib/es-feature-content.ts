@@ -98,7 +98,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         paragraphs: [
           'Escanear entra en el plan gratuito con un número real detrás: una sola acción con IA para toda la vida de la cuenta. Tú eliges en qué la gastas —escanear un programa, grabar una clase o convertir un documento en apuntes—, y ese mismo límite lo aplican la app, el servidor antes de gastar nada en la extracción, y un disparador de la base de datos.',
           'Y no se renueva: no hay recuento mensual esperando al día 1, así que cuando la gastas el paso siguiente es Pro. Tampoco te quedas adivinando en qué punto estás. La pestaña de escaneo muestra una etiqueta del tipo «Te queda 1 acción con IA gratis», que se pone en rojo al llegar a cero, y antes de que la gastes Semora te interrumpe para avisarte de que es la única.',
-          'Hay otros dos límites que conviene conocer porque son independientes de esa acción: una cuenta gratuita admite hasta cuatro cursos dentro de un único semestre, y un semestre en total. Importa aquí porque un escaneo que crearía un quinto curso topa con el límite de cursos aunque todavía no hayas gastado tu acción gratuita.',
+          'Hay otros dos límites que conviene conocer porque son independientes de esa acción: una cuenta gratuita admite clases ilimitadas sincronizadas gratis desde Canvas, más un curso que añades a mano dentro de un único semestre, y un semestre en total. Importa aquí porque un escaneo que crearía un quinto curso topa con el límite de cursos aunque todavía no hayas gastado tu acción gratuita.',
           'Pro elimina por completo los topes de escaneos y de cursos, por 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes en el plan anual. Pro se compra de dos maneras —con tarjeta en la web, en app.semoraai.com, donde Stripe se encarga del pago, o dentro de la app de iOS a través de la App Store— y en ambos casos la suscripción se aplica a toda la cuenta, incluida la web, así que solo pagas una vez. Lo único que queda por encima es un techo de uso razonable: 20 escaneos en cualquier ventana de 24 horas.',
         ],
       },
@@ -140,7 +140,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         question: '¿Cuántos programas puedo escanear gratis?',
         answer:
-          'Uno. El plan Gratis trae una sola acción con IA para toda la vida de la cuenta, y tú eliges si la gastas en escanear un programa, grabar una clase o convertir un documento en apuntes. Un escaneo con foto de hasta cinco páginas cuenta como uno solo, no como cinco. El plan Gratis también admite hasta cuatro cursos dentro de un semestre, y un semestre en total. Pro elimina ese tope y esos dos límites.',
+          'Uno. El plan Gratis trae una sola acción con IA para toda la vida de la cuenta, y tú eliges si la gastas en escanear un programa, grabar una clase o convertir un documento en apuntes. Un escaneo con foto de hasta cinco páginas cuenta como uno solo, no como cinco. El plan Gratis también admite clases ilimitadas sincronizadas gratis desde Canvas, más un curso que añades a mano dentro de un semestre, y un semestre en total. Pro elimina ese tope y esos dos límites.',
       },
       {
         question: '¿Qué puedo darle al escáner?',
@@ -1004,7 +1004,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         question: '¿Necesito Pro para unirme al curso de un compañero?',
         answer:
-          'No. Unirse a un Espacio de curso es gratis y siempre lo será: sin límite de tiempo y sin Pro para aceptar una invitación, ver las fechas compartidas o encargarte de trabajo en grupo. Puedes sincronizarlo todo con tu planificador mientras te quede sitio bajo el tope de cuatro cursos por semestre del plan Gratis. Alojar tu propio espacio es la mitad Pro, así que en la práctica una persona del grupo necesita Pro y el resto entra gratis.',
+          'No. Unirse a un Espacio de curso es gratis y siempre lo será: sin límite de tiempo y sin Pro para aceptar una invitación, ver las fechas compartidas o encargarte de trabajo en grupo. Puedes sincronizarlo todo con tu planificador si aún te queda libre el único curso a mano que incluye el plan Gratis (las clases que llegan de Canvas nunca ocupan ese sitio). Alojar tu propio espacio es la mitad Pro, así que en la práctica una persona del grupo necesita Pro y el resto entra gratis.',
       },
       {
         question: '¿Cómo funciona el enlace de invitación?',
@@ -1030,7 +1030,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
   },
 
   'canvas-sync': {
-    lede: 'En Pro, la importación de Canvas usa actualmente un token de acceso personal generado en Canvas. Conéctalo solo si tu institución permite usar ese token con servicios externos.',
+    lede: 'Conectar Canvas es gratis: todas tus clases se importan solas y siguen al día sin que vuelvas a tocar nada.',
     intro: [
       'Canvas ya sabe todas las tareas que publicaron tus profesores. Lo que no hace es decirte que tres de ellas caen en las mismas 48 horas, ni avisarte la noche anterior, ni enseñarte cómo va tu nota si entregas tarde una de ellas.',
       'Así que la mayoría acaba copiando a mano. Abres cada asignatura en Canvas, recorres la pestaña de tareas y vuelves a teclear las fechas en una agenda o en el calendario del móvil. Cuesta una hora al principio del semestre y se queda desactualizado en la segunda semana.',
@@ -1048,7 +1048,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Comprobar la disponibilidad e importar asignaturas',
         paragraphs: [
-          'La importación desde plataformas académicas forma parte de Pro. Abre la pantalla de conexiones y elige Canvas solo después de confirmar que tu institución permite usar un token personal con servicios externos.',
+          'Conectar Canvas es gratis para todo el mundo. Abre la pantalla de conexiones, elige Canvas y pega el enlace privado de tu calendario: no hace falta ningún token ni permiso de tu universidad. Blackboard y Moodle siguen siendo de Pro y sí usan un token personal.',
           'Puede que te pida la dirección de Canvas de tu universidad, que suele ser una URL específica de la institución. Semora exige una dirección HTTPS válida y avisa antes de intentar una conexión con una dirección incorrecta.',
           'Cuando se acepte el token, elige las asignaturas activas y el semestre de Semora donde deben entrar. Si el uso del token no está disponible o permitido, usa el escáner del programa o pega la lista de tareas.',
         ],
@@ -1129,7 +1129,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Qué cuesta, para quién es y dónde se pone incómodo',
         paragraphs: [
-          'Conectar una plataforma académica es una función de Pro. El conector actual de Canvas usa un token personal y puede estar desactivado o prohibido por una institución; la configuración de Blackboard y Moodle también varía según la universidad. Pro cuesta 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual. Se compra con tarjeta en la web, en app.semoraai.com, donde Stripe procesa el pago, o dentro de la app de iOS a través de la App Store, y se aplica a toda la cuenta en ambos casos.',
+          'Conectar Canvas es gratis por tiempo limitado, sin Pro y sin límite de clases, y quien lo conecte ahora lo conserva gratis. Blackboard y Moodle son de Pro: usan un token personal y algunas universidades lo desactivan o lo prohíben. Pro cuesta 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual, y se aplica a toda la cuenta lo compres en la web o en la app de iOS.',
           'Sigues teniendo el seguimiento completo de entregas y tareas, las calificaciones con promedios ponderados, los recordatorios el mismo día, unirte al espacio de un compañero y una acción con IA gratuita para toda la vida de la cuenta.',
           'La sincronización con Canvas no es para todo el mundo. Si tu profesor no publica nunca tareas en Canvas y lo deja todo en el programa, escanear el programa es el mejor camino, y la acción con IA gratuita de la cuenta sirve justo para eso.',
         ],
@@ -1147,7 +1147,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         question: '¿La importación desde Canvas es gratis?',
         answer:
-          'No. La importación desde plataformas académicas es una función Pro, a 3,99 USD al mes o 19,99 USD al año. El plan Gratis te deja empezar por el lado del programa: una acción con IA para toda la vida de la cuenta, que puedes gastar escaneando un programa, hasta cuatro cursos dentro de un semestre, seguimiento completo de tareas y fechas, calificaciones con medias ponderadas y recordatorios el mismo día.',
+          'No hace falta. Conectar Canvas es gratis y trae todas tus clases, por muchas que sean, sin gastar tu acción de IA. El plan Gratis incluye además una acción de IA para toda la vida de la cuenta, seguimiento completo de tareas y fechas, calificaciones con medias ponderadas y recordatorios el mismo día.',
       },
       {
         question: '¿Cómo se conecta Semora con Canvas?',

@@ -166,7 +166,7 @@ export default function CanvasDeadlineTrackerPage() {
 
       <h2>How Canvas sync works</h2>
       <p>
-        Canvas import is part of Pro. The current connector uses a personal access token generated
+        Canvas import is free; Blackboard and Moodle import is part of Pro. The current connector uses a personal access token generated
         in Canvas. Some institutions disable or prohibit third-party token use, so confirm your
         school&apos;s policy before connecting. When it is permitted, you can choose courses and bring
         their assignments into Semora. Otherwise, scan the syllabus or paste the Canvas assignment
