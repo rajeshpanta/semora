@@ -43,6 +43,7 @@ import StudySuggestionsCard from '@/components/StudySuggestionsCard';
 import DecisionStrip from '@/components/DecisionStrip';
 import AppHeader from '@/components/AppHeader';
 import CoursesGlance from '@/components/CoursesGlance';
+import GradesWaitingCard from '@/components/GradesWaitingCard';
 import WeekGlance from '@/components/WeekGlance';
 import { GlobalSearchButton } from '@/components/GlobalSearchButton';
 import { useTaskCompletionFlow } from '@/components/TaskCompletionFlow';
@@ -73,7 +74,7 @@ const KIND_LABEL: Record<'lecture' | 'lab' | 'discussion' | 'other', string> = {
 export default function TodayScreen() {
   const colors = useColors();
   const showProUpsell = useProUpsell();
-  const { contentMaxWidth, width, isDesktop } = useResponsive();
+  const { deckMaxWidth, width, isDesktop } = useResponsive();
   const { session } = useSession();
   const router = useRouter();
   const qc = useQueryClient();
@@ -512,30 +513,33 @@ export default function TodayScreen() {
     }
   }
 
-  // Tomorrow preview — surfaced in the evening when there's something to
-  // peek at. Sunday-night use case ("Monday 8am class is in 9 hours") is
-  // the primary motivator. dueSoonTasks already covers today→3 days so it
-  // crosses the week boundary cleanly without a new query.
-  const tomorrowDate = addDays(today, 1);
-  const tomorrowDow = tomorrowDate.getDay();
-  const tomorrowDayName = format(tomorrowDate, 'EEEE');
-  const tomorrowStr = format(tomorrowDate, 'yyyy-MM-dd');
-  const tomorrowsClasses = courses
-    .flatMap((c) => (c.course_meetings ?? []).map((m) => ({ course: c, meeting: m })))
-    .filter(({ meeting }) => meeting.days_of_week.includes(tomorrowDow))
-    .sort((a, b) =>
-      (a.meeting.start_time ?? '99').localeCompare(b.meeting.start_time ?? '99'),
-    );
+  // Still needed by the desktop decision tile ("2 today, 2 tomorrow"). The
+  // classes list, day name and the after-5pm rule that went with the old
+  // Tomorrow section are gone with it.
+  const tomorrowStr = format(addDays(today, 1), 'yyyy-MM-dd');
   const tomorrowsTasks = dueSoonTasks.filter((t) => t.due_date === tomorrowStr);
-  const showTomorrow =
-    today.getHours() >= 17 && (tomorrowsClasses.length > 0 || tomorrowsTasks.length > 0);
 
-  // Today's full task set (complete and not), shared by the Today heading and
-  // the empty-state card below it so the two can never disagree about whether
-  // there is anything due.
-  const totalTodayForEmptyState = weekTasks.filter(
-    (t: any) => t.due_date === format(today, 'yyyy-MM-dd'),
-  ).length;
+  // ── The next day that actually has work ──────────────────────────────────
+  //
+  // There used to be a "Today" section and a "Tomorrow" section, above a
+  // "This Week" list that labels every task by day — so a task due today was
+  // printed three times on one screen, and on a day with nothing due the first
+  // section still claimed its heading and a card to say so.
+  //
+  // One section instead, pointed at whichever day is next: today when today
+  // has something, otherwise the next day that does. This Week below is the
+  // horizon; this is the day you are actually working.
+  const focusTasks: any[] = (() => {
+    const todays = weekTasks.filter((t: any) => t.due_date === todayKey);
+    if (todays.length > 0) return todays;
+    const nextDay = upcomingTasks.find((t: any) => t.due_date > todayKey)?.due_date;
+    return nextDay ? upcomingTasks.filter((t: any) => t.due_date === nextDay) : [];
+  })();
+  const focusDateKey: string = focusTasks[0]?.due_date ?? todayKey;
+  const focusIsToday = focusDateKey === todayKey;
+  const focusDayLabel = focusIsToday
+    ? 'Today'
+    : format(new Date(focusDateKey + 'T00:00:00'), 'EEEE');
 
   // ── Desktop decision band ────────────────────────────────────────────────
   // Everything below is derived from data already fetched for this screen; no
@@ -656,7 +660,7 @@ export default function TodayScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
       <ScrollView
-        contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
+        contentContainerStyle={[styles.content, { maxWidth: deckMaxWidth }]}
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} />}
       >
@@ -939,9 +943,8 @@ export default function TodayScreen() {
             We derive counts from weekTasks so the progress calculation and
             visible list share the same completed + incomplete task set. */}
         {(() => {
-          const todayStr = format(today, 'yyyy-MM-dd');
-          const allTodayTasks = weekTasks.filter((t) => t.due_date === todayStr);
-          const completedToday = allTodayTasks.filter((t) => t.is_completed).length;
+          const allTodayTasks = focusTasks;
+          const completedToday = allTodayTasks.filter((t: any) => t.is_completed).length;
           const totalToday = allTodayTasks.length;
           const allDone = totalToday > 0 && completedToday === totalToday;
 
@@ -962,7 +965,9 @@ export default function TodayScreen() {
               <View style={styles.sectionRow}>
                 <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>
                   {totalToday > 0
-                    ? `Today · ${completedToday} of ${totalToday} done`
+                    ? focusIsToday
+                      ? `Today · ${completedToday} of ${totalToday} done`
+                      : `${focusDayLabel} · ${totalToday} due`
                     : 'Today'}
                 </Text>
                 <View style={styles.sectionRowRight}>
@@ -997,10 +1002,10 @@ export default function TodayScreen() {
             Next Up hero already names what IS coming, this card would repeat
             it. The empty card survives only when there is nothing anywhere,
             because that student needs the import prompt inside it. */}
-        {totalTodayForEmptyState === 0 && nextUp ? null : todayTasks.length > 0 ? (
+        {focusTasks.length === 0 && nextUp ? null : focusTasks.length > 0 ? (
           <View style={[styles.taskCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
-            {todayTasks.map((task, i) => {
-              const isLast = i === todayTasks.length - 1;
+            {focusTasks.map((task: any, i: number) => {
+              const isLast = i === focusTasks.length - 1;
               const urgent = task.due_time && !task.is_completed;
               return (
                 <TouchableOpacity
@@ -1130,7 +1135,10 @@ export default function TodayScreen() {
           </View>
         )}
 
-        {completedWork.length > 0 && (
+        {/* Phones keep it inline — there is no rail there to move it to. On
+            desktop it lives in the right column beside Courses, where the rest
+            of the "where do I stand" surfaces already are, capped at five. */}
+        {!isDesktop && completedWork.length > 0 && (
           <>
             <TouchableOpacity
               style={[styles.sectionRow, { marginTop: 20 }]}
@@ -1219,72 +1227,11 @@ export default function TodayScreen() {
           </>
         )}
 
-        {/* Tomorrow preview — late-evening peek so a Sunday-9pm user doesn't
-            see a dead screen when nothing's left today. Only renders after
-            5pm, and only when tomorrow has a class or task worth surfacing. */}
-        {showTomorrow && (
-          <>
-            <Text style={[styles.sectionTitle, { marginTop: 20, marginBottom: 10, color: colors.ink2 }]}>
-              Tomorrow · {tomorrowDayName}
-            </Text>
-            <View style={[styles.classCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
-              {tomorrowsClasses.map(({ course, meeting }, i) => {
-                const isLastClass = i === tomorrowsClasses.length - 1;
-                const isLast = isLastClass && tomorrowsTasks.length === 0;
-                const kindLabel = meeting.kind !== 'lecture' ? KIND_LABEL[meeting.kind] : null;
-                return (
-                  <View
-                    key={`tc-${meeting.id}`}
-                    style={[
-                      styles.classRow,
-                      !isLast && [styles.taskRowBorder, { borderBottomColor: colors.line }],
-                    ]}
-                  >
-                    <View style={[styles.classDot, { backgroundColor: course.color }]} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.classTitle, { color: colors.ink }]} numberOfLines={1}>
-                        {course.name}
-                      </Text>
-                      <Text style={[styles.classTime, { color: colors.ink3 }]}>
-                        {kindLabel ? `${kindLabel} · ` : ''}
-                        {meeting.start_time ? formatTimeOfDay(meeting.start_time) : 'TBD'}
-                        {meeting.end_time ? ` – ${formatTimeOfDay(meeting.end_time)}` : ''}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })}
-              {tomorrowsTasks.map((task, i) => {
-                const isLast = i === tomorrowsTasks.length - 1;
-                return (
-                  <TouchableOpacity
-                    key={`tt-${task.id}`}
-                    style={[
-                      styles.taskRow,
-                      !isLast && [styles.taskRowBorder, { borderBottomColor: colors.line }],
-                    ]}
-                    onPress={() => router.push(`/task/${task.id}` as any)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.cbx, { borderColor: colors.ink3 }]} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.taskTitle, { color: colors.ink }]} numberOfLines={1}>
-                        {task.title}
-                      </Text>
-                      <View style={styles.taskMeta}>
-                        <View style={[styles.dot, { backgroundColor: task.courses.color }]} />
-                        <Text style={[styles.taskCourse, { color: colors.ink3 }]} numberOfLines={1}>
-                          {task.courses.name}
-                          {task.due_time ? ` · ${task.due_time.slice(0, 5)}` : ''}
-                        </Text>
-                      </View>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </>
-        )}
+        {/* The Tomorrow section lived here. It listed tomorrow's classes and
+            tasks after 5pm — but those tasks were already in This Week below,
+            labelled by day, and the section above now points at whichever day
+            is next, which IS tomorrow whenever today is clear. Three printings
+            of one task became one. */}
 
         {/* This Week — the header taps through to the fuller workload
             dashboard. Kept as a header affordance (not the whole card) so
@@ -1413,6 +1360,9 @@ export default function TodayScreen() {
             />
             <WeekGlance tasks={weekTasks} today={today} />
             <CoursesGlance courses={courses as any} outstandingByCourse={outstandingByCourse} />
+            {/* Under Courses on purpose: both answer "where do I stand", and a
+                missing score is the reason the answer above it is incomplete. */}
+            <GradesWaitingCard tasks={completedWaitingForGrade} />
           </View>
         )}
         </View>
