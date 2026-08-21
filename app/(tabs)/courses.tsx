@@ -41,7 +41,7 @@ const GRID_GAP = 12;
 
 export default function CoursesScreen() {
   const colors = useColors();
-  const { contentMaxWidth, isWide, isXWide, width } = useResponsive();
+  const { deckMaxWidth, isWide, isXWide, width } = useResponsive();
   const router = useRouter();
   const [showPicker, setShowPicker] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -64,7 +64,7 @@ export default function CoursesScreen() {
   // stopped matching the two above it. A computed width makes every tile
   // identical whatever the count, and never reflows to three across on a
   // wider phone — two is the density that keeps a course name readable.
-  const gridColumnWidth = Math.min(width, contentMaxWidth) - CONTENT_PADDING * 2;
+  const gridColumnWidth = Math.min(width, deckMaxWidth) - CONTENT_PADDING * 2;
   const tileWidth = Math.floor((gridColumnWidth - GRID_GAP) / 2);
   // Under ~380pt (SE, mini, a narrow Split View) a half-width tile is about
   // 150pt across. The same type that reads comfortably on a Pro truncates a
@@ -288,7 +288,7 @@ export default function CoursesScreen() {
         onClose={() => setCanvasUpsell(false)}
       />
       <ScrollView
-        contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
+        contentContainerStyle={[styles.content, { maxWidth: deckMaxWidth }]}
         showsVerticalScrollIndicator={false}
         // Courses is a primary tab and was the only one without pull-to-refresh
         // — a student looking at a stale grade had to leave the screen to do

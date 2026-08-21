@@ -26,6 +26,21 @@ export interface Responsive {
   columns: number;
   /** Max width for a centered content column (wider when there's room). */
   contentMaxWidth: number;
+  /**
+   * Max width for DATA-DENSE screens — the dashboard and the course grid.
+   *
+   * contentMaxWidth exists to stop prose from running to unreadable line
+   * lengths, and 114 call sites depend on it doing exactly that. But the same
+   * ceiling was also capping the two-column dashboard, which contains no
+   * prose: task rows with right-aligned metadata, a rail of short labels and
+   * numbers. On a 2560px monitor that pinned the layout to 1120 and left
+   * roughly 590px of empty paper down each side — the narrow-strip problem the
+   * two columns were built to solve, returning one breakpoint up.
+   *
+   * These screens get the window instead. The upper bound is generous rather
+   * than absent so an ultrawide does not stretch a task list to 3000px.
+   */
+  deckMaxWidth: number;
 }
 
 export function useResponsive(): Responsive {
@@ -50,6 +65,10 @@ export function useResponsive(): Responsive {
     isDesktop,
     columns: isXWide ? 3 : isWide ? 2 : 1,
     contentMaxWidth,
+    // Only the desktop shell has the second column worth widening for; below
+    // it, a dense screen is still a single column and keeps the reading
+    // measure so a phone browser is unaffected.
+    deckMaxWidth: isDesktop ? Math.min(availableWidth - 64, 1760) : contentMaxWidth,
   };
 }
 
