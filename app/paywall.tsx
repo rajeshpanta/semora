@@ -27,6 +27,7 @@ import { getProducts, purchaseProduct, restorePurchases, validateAfterPurchase, 
 import { getServerEntitlement } from '@/lib/entitlementServer';
 import { rescheduleAllTaskReminders } from '@/lib/notifications';
 import { track } from '@/lib/analytics';
+import { claimPendingCheckout } from '@/lib/webCheckoutReturn';
 import { supabase } from '@/lib/supabase';
 
 // Titles only. With descriptions this list ran ~490pt on its own and pushed
@@ -100,7 +101,12 @@ export default function PaywallScreen() {
           if (cancelled) return;
           setIsPro(true);
           setSubscriptionPlan(entitlement.plan);
-          track('purchase_success', { screen: 'paywall', context: 'stripe_web' });
+          // Only whichever path gets here first records the sale; the root
+          // resolver in _layout.tsx runs the same race when a redirect
+          // unmounted this screen mid-poll. See lib/webCheckoutReturn.ts.
+          if (claimPendingCheckout()) {
+            track('purchase_success', { screen: 'paywall', context: 'stripe_web' });
+          }
           setAwaitingCheckout(false);
           router.setParams({ checkout: '' });
           handleClose();

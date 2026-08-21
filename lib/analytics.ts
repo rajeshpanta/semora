@@ -142,6 +142,65 @@ export function track(eventName: string, properties: Record<string, any> = {}): 
   }
 }
 
+/**
+ * An event that survives the page navigating away.
+ *
+ * track() is a fire-and-forget PostgREST insert through supabase-js, which is
+ * an ordinary fetch — and the browser cancels in-flight fetches when the tab
+ * navigates. Every web checkout does exactly that: purchaseProduct() sends the
+ * tab to Stripe, so `purchase_checkout_started` was queued and then killed
+ * microseconds later. It has never once been recorded, on any platform, since
+ * the day it was added.
+ *
+ * `keepalive` is the fix and the reason this cannot just call track(): it tells
+ * the browser to finish the request even as the document goes away.
+ * navigator.sendBeacon would be the other candidate and cannot be used here —
+ * it allows no custom headers, and PostgREST needs apikey and Authorization,
+ * the latter being what stamps user_id from the JWT.
+ *
+ * Native has no unload problem, so it just calls track().
+ */
+export async function trackBeforeLeaving(
+  eventName: string,
+  properties: Record<string, any> = {},
+): Promise<void> {
+  if (Platform.OS !== 'web') {
+    track(eventName, properties);
+    return;
+  }
+  try {
+    const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+    const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+    if (!url || !key) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    await fetch(`${url}/rest/v1/analytics_events`, {
+      method: 'POST',
+      // Outlives the document. Without this the request dies with the page.
+      keepalive: true,
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: key,
+        // The JWT is what makes user_id land on the row — analytics_events
+        // defaults that column from auth.uid(), and the anon key alone would
+        // record the sale as belonging to nobody.
+        Authorization: `Bearer ${session?.access_token ?? key}`,
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        app_name: 'semora',
+        event_name: eventName,
+        properties: { ...properties, ...(deviceIdWasEphemeral() ? { ephemeral: true } : {}) },
+        device_id: getDeviceId(),
+        session_id: currentSessionId(),
+        platform: Platform.OS,
+        app_version: Constants.expoConfig?.version ?? null,
+      }),
+    });
+  } catch {
+    // Analytics must never be the reason a purchase does not start.
+  }
+}
+
 // ── Client error capture ────────────────────────────────────────────────────
 //
 // Until now a JS crash was invisible: expo-router's ErrorBoundary renders a

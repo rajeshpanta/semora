@@ -32,6 +32,7 @@ import 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 import type { Session } from '@supabase/supabase-js';
 import * as Localization from 'expo-localization';
+import { hasPendingCheckout, resolvePendingCheckout } from '@/lib/webCheckoutReturn';
 import { useAppStore } from '@/store/appStore';
 import { ThemeColorsProvider, useResolvedScheme, useColors } from '@/lib/theme';
 import { setQueryClient, signOut } from '@/lib/auth';
@@ -291,6 +292,25 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       const wasPro = store.isPro;
       store.setIsPro(isPro);
       store.setSubscriptionPlan(entitlement.plan);
+
+      // A Stripe purchase the tab left to complete.
+      //
+      // Run from the root, not from the paywall, because the return trip is a
+      // cold boot: the auth gate below redirects while the session is still
+      // restoring, the paywall unmounts, and the poll it started is abandoned.
+      // That is why a real customer paid on 2026-08-20, was shown the paywall
+      // anyway, and tried to buy three more times. Nothing here is attached to
+      // a route, so no redirect can interrupt it.
+      //
+      // Skipped when the entitlement already says Pro — the note is only worth
+      // resolving while the answer is still missing.
+      if (Platform.OS === 'web' && !isPro && hasPendingCheckout()) {
+        resolvePendingCheckout((plan) => {
+          const live = useAppStore.getState();
+          live.setIsPro(true);
+          live.setSubscriptionPlan(plan);
+        }).catch(() => {});
+      }
       // Reschedule whenever Pro status CHANGES — scheduleTaskReminders reads isPro
       // at schedule time, so existing tasks' reminders go stale on a change:
       //   • false→true (upgrade / reinstall re-establishing entitlement / a

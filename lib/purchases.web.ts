@@ -1,6 +1,8 @@
 import type { ProductOrSubscription, Purchase, PurchaseError } from 'react-native-iap';
 import { getServerEntitlement, type ProEntitlement } from '@/lib/entitlementServer';
 import { supabase } from '@/lib/supabase';
+import { trackBeforeLeaving } from '@/lib/analytics';
+import { markCheckoutStarted } from '@/lib/webCheckoutReturn';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Web shim for lib/purchases.ts. Metro resolves `.web.ts` ahead of `.ts` when
@@ -90,6 +92,25 @@ export async function purchaseProduct(productId: string): Promise<boolean> {
 
   const url = (data as { url?: string })?.url;
   if (!url) throw new Error('Could not start checkout. Please try again.');
+
+  // BEFORE the navigation, not after.
+  //
+  // Both call sites used to track this once purchaseProduct() returned — which
+  // is after the line below has already sent the tab to Stripe, so the insert
+  // was cancelled with the page every single time. purchase_checkout_started
+  // has zero rows in production as a result, and every real web sale looked
+  // like an abandoned one.
+  //
+  // Awaited, with keepalive, so the request is handed to the browser before the
+  // document starts unloading. It cannot fail the purchase: trackBeforeLeaving
+  // swallows everything.
+  await trackBeforeLeaving('purchase_checkout_started', { plan, screen: 'stripe_redirect' });
+
+  // A payment is about to happen off-site, and the tab that comes back is a
+  // cold boot that may be redirected by the auth gate before any screen reads
+  // the URL. Leave a note where a redirect cannot reach — see
+  // lib/webCheckoutReturn.ts.
+  markCheckoutStarted(plan);
 
   window.location.assign(url);
   return false;
