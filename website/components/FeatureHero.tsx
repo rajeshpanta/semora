@@ -2,7 +2,7 @@ import Link from 'next/link';
 import styles from './FeatureHero.module.css';
 import { FeaturePanel } from './FeaturePanel';
 import { SignupButton } from './SignupButton';
-import { APP_STORE_URL } from '@/lib/semora-facts';
+import { downloadPath } from '@/lib/semora-facts';
 
 /**
  * The top of a feature page: what it is, what it looks like, and a way in.
@@ -44,8 +44,8 @@ export function FeatureHero({
 
           <div className={styles.actions}>
             <SignupButton className={styles.primary}>Get started free</SignupButton>
-            <Link href={APP_STORE_URL} className={styles.secondary}>
-              Get the iPhone app
+            <Link href={downloadPath()} className={styles.secondary}>
+              Get the app
             </Link>
           </div>
 

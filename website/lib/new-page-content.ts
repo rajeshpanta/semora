@@ -55,7 +55,8 @@ export type NewPageKey =
   | 'blackboard-assignment-tracker'
   | 'ai-flashcard-generator'
   | 'ai-tutor-for-college-students'
-  | 'about';
+  | 'about'
+  | 'download';
 
 export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
 {
@@ -1641,6 +1642,75 @@ export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
         "answer": "Not currently. Semora runs as one universal iOS app on iPhone and iPad, plus a web app that works in any browser, including on an Android phone or a Mac. It is the same account and the same data across all of them, syncing in near real time. The practical gaps on the web are the ones tied to hardware: no camera capture path (drag-and-drop a file or paste the text instead), no home-screen widgets, and no device calendar sync, though the .ics export does work in the browser. Buying Pro is not one of those gaps: you can pay by card on the web or subscribe in the iOS app, and it covers the whole account either way."
       }
     ]
+  },
+  download: {
+    metaTitle: 'Download Semora — iPhone, iPad, and web',
+    metaDescription:
+      'Get Semora on iPhone and iPad, or open it in any browser. One account keeps every deadline, grade and course in sync across all of them. Android, Apple Watch, Wear OS and Mac are in development.',
+    h1: 'One account. Every device you study on.',
+    lede:
+      'Semora runs on iPhone, iPad and the web today, and everything you add on one shows up on the others. Scan a syllabus on your phone between classes, and the whole semester is already there when you open your laptop.',
+    intro: [
+      'The reason this matters is not convenience. A deadline you cannot see is a deadline you miss, and students do not sit still — the syllabus arrives as a PDF on a laptop, the reminder has to reach a phone, and the check-in before class happens on whatever is in your hand.',
+      'So the account is the product, not the app. You sign in once, and every surface below reads the same semester.',
+    ],
+    sections: [
+      {
+        heading: 'What runs where',
+        paragraphs: [
+          'The honest state of each surface. Anything marked in development is exactly that — being built, with no release date announced. We would rather list it here than let you find out it is missing after you have set up your semester.',
+        ],
+        table: {
+          columns: ['Device', 'State', 'What you get'],
+          rows: [
+            ['iPhone', 'Available', 'The full app: camera syllabus scanning, reminders, grades, flashcards, AI tutor'],
+            ['iPad', 'Available', 'The same universal download, laid out for the larger screen'],
+            ['Web', 'Available', 'Any browser, including on Android and Mac. Drag a PDF straight onto the page'],
+            ['Home Screen widget', 'Available', "Today's deadlines on the iPhone and iPad Home Screen"],
+            ['Android', 'In development', 'The same account and semester, no release date announced'],
+            ['Apple Watch', 'In development', 'Your next deadline at a glance'],
+            ['Wear OS', 'In development', 'The same glance on an Android watch'],
+            ['Mac', 'In development', 'A desktop window; the web app covers this today'],
+          ],
+        },
+      },
+      {
+        heading: 'You do not buy Semora twice',
+        paragraphs: [
+          'Pro is an account entitlement, not a per-device licence. Buy it with a card on the web or through the App Store in the iOS app, and it applies everywhere you sign in — iPhone, iPad and browser — including on any device added later.',
+          'The free tier works the same way across surfaces: same-day reminders, unlimited manual courses and tasks, grade tracking, and one free AI action on the account.',
+        ],
+      },
+      {
+        heading: 'Getting it onto the right device',
+        paragraphs: [
+          'If you are reading this on a laptop, point your phone camera at the code beside the iPhone card — it opens the App Store listing directly, so you do not have to type anything or search a store that will show you four other apps first.',
+          'If you are reading this on your phone, the buttons go straight there. And if you want to start right now without installing anything, the web app opens in the browser you already have open.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        question: 'Is there an Android app?',
+        answer:
+          'Not yet. An Android build exists and is being worked on, but it has not been released and we are not announcing a date until it is ready to install. In the meantime the web app works fully in Chrome on Android — same account, same semester, same deadlines — and anything you set up there will already be waiting when the Android app arrives.',
+      },
+      {
+        question: 'Will my data sync between my phone and my laptop?',
+        answer:
+          'Yes. Courses, tasks, due dates, grades and flashcards live on your account rather than on a device, and changes propagate in near real time. Check off an assignment on your phone walking out of class and it is checked off in the browser tab you left open.',
+      },
+      {
+        question: 'Do I need to pay again on a second device?',
+        answer:
+          'No. Pro is bought once and applies to the whole account. A subscription purchased in the iOS app also unlocks the web app, and one bought by card on the web also unlocks the iPhone and iPad app.',
+      },
+      {
+        question: 'What can the web app not do?',
+        answer:
+          'The gaps are the ones tied to hardware. There is no camera capture path in the browser, so you drag in a PDF, upload an image or paste text instead; there are no Home Screen widgets; and there is no device calendar sync, though .ics export works. Everything else — scanning, grades, planning, flashcards, the AI tutor — is there.',
+      },
+    ],
   }
 };
 

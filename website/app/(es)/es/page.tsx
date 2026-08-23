@@ -9,7 +9,7 @@ import { Cta } from '@/components/Cta';
 import { JsonLd } from '@/components/JsonLd';
 import { Reveal } from '@/components/Reveal';
 import { softwareApplicationSchema, faqPageSchema } from '@/lib/schema';
-import { APP_STORE_URL } from '@/lib/semora-facts';
+import { downloadPath } from '@/lib/semora-facts';
 import { OG_IMAGE_ES } from '@/lib/og';
 import { PageSections } from '@/components/PageSections';
 import { SPANISH_HOME_SUMMARY } from '@/lib/es-content';
@@ -198,7 +198,7 @@ export default function SpanishHome() {
             </p>
             <div className={styles.heroActions}>
               <SignupButton className={styles.primaryBtn}>Empezar gratis</SignupButton>
-              <a href={APP_STORE_URL} className={styles.secondaryBtn}>Descargar la app</a>
+              <a href={downloadPath('es')} className={styles.secondaryBtn}>Descargar la app</a>
             </div>
             <ul className={styles.chips}>
               {CHIPS.map((chip) => <li key={chip} className={styles.chip}>{chip}</li>)}

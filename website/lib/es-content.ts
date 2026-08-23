@@ -6,6 +6,7 @@ import { ES_FEATURE_CONTENT } from './es-feature-content';
 
 export type SpanishPageKind =
   | 'standard'
+  | 'download'
   | 'features-index'
   | 'feature'
   | 'pricing'
@@ -33,6 +34,75 @@ const page = (
 ): SpanishPageConfig => ({ path, englishPath, kind, content, feature });
 
 const CORE_PAGES: SpanishPageConfig[] = [
+  page('/es/descargar', '/download', 'download', {
+    metaTitle: 'Descargar Semora — iPhone, iPad y web',
+    metaDescription:
+      'Instala Semora en iPhone y iPad, o ábrela en cualquier navegador. Una sola cuenta mantiene sincronizadas tus entregas, calificaciones y materias. Android, Apple Watch, Wear OS y Mac están en desarrollo.',
+    h1: 'Una cuenta. Todos los dispositivos donde estudias.',
+    lede:
+      'Semora funciona hoy en iPhone, iPad y la web, y todo lo que agregas en uno aparece en los demás. Escanea un programa con el teléfono entre clases y el semestre completo ya está ahí cuando abres la computadora.',
+    intro: [
+      'No se trata de comodidad. Una entrega que no ves es una entrega que se te pasa, y los estudiantes no se quedan quietos: el programa llega como PDF a una laptop, el aviso tiene que sonar en un teléfono, y la revisión antes de clase pasa en lo que tengas en la mano.',
+      'Por eso el producto es la cuenta, no la app. Inicias sesión una vez y cada superficie de abajo lee el mismo semestre.',
+    ],
+    sections: [
+      {
+        heading: 'Qué funciona en cada dispositivo',
+        paragraphs: [
+          'El estado real de cada superficie. Lo que dice «en desarrollo» es exactamente eso: se está construyendo y no tiene fecha anunciada. Preferimos decirlo aquí antes de que lo descubras cuando ya organizaste tu semestre.',
+        ],
+        table: {
+          columns: ['Dispositivo', 'Estado', 'Qué obtienes'],
+          rows: [
+            ['iPhone', 'Disponible', 'La app completa: escaneo con cámara, avisos, calificaciones, tarjetas y tutor con IA'],
+            ['iPad', 'Disponible', 'La misma descarga universal, adaptada a la pantalla grande'],
+            ['Web', 'Disponible', 'Cualquier navegador, también en Android y Mac. Arrastra un PDF a la página'],
+            ['Widget de pantalla de inicio', 'Disponible', 'Lo que vence hoy, en la pantalla de inicio del iPhone y del iPad'],
+            ['Android', 'En desarrollo', 'La misma cuenta y el mismo semestre, sin fecha anunciada'],
+            ['Apple Watch', 'En desarrollo', 'Tu próxima entrega de un vistazo'],
+            ['Wear OS', 'En desarrollo', 'La misma mirada rápida en un reloj Android'],
+            ['Mac', 'En desarrollo', 'Una ventana de escritorio; hoy lo cubre la app web'],
+          ],
+        },
+      },
+      {
+        heading: 'No pagas Semora dos veces',
+        paragraphs: [
+          'Pro es un permiso de la cuenta, no una licencia por dispositivo. Págalo con tarjeta en la web o desde la App Store en la app de iOS, y aplica en todo lugar donde inicies sesión: iPhone, iPad y navegador, incluido cualquier dispositivo que agregues después.',
+          'El plan gratuito funciona igual en todas las superficies: avisos el mismo día, materias y tareas manuales sin límite, seguimiento de calificaciones y una acción de IA gratis en la cuenta.',
+        ],
+      },
+      {
+        heading: 'Cómo llevarla al dispositivo correcto',
+        paragraphs: [
+          'Si estás leyendo esto en una laptop, apunta la cámara del teléfono al código que está junto a la tarjeta de iPhone: abre directamente la ficha de la App Store, sin escribir nada ni buscar en una tienda que te mostrará otras cuatro apps primero.',
+          'Si lo lees en el teléfono, los botones van directo. Y si quieres empezar ahora mismo sin instalar nada, la app web se abre en el navegador que ya tienes abierto.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        question: '¿Hay app de Android?',
+        answer:
+          'Todavía no. Existe una versión de Android en la que estamos trabajando, pero no se ha publicado y no anunciamos fecha hasta que se pueda instalar. Mientras tanto la app web funciona completa en Chrome para Android —la misma cuenta, el mismo semestre, las mismas entregas— y todo lo que configures ahí ya estará esperándote cuando llegue la app.',
+      },
+      {
+        question: '¿Se sincronizan mis datos entre el teléfono y la computadora?',
+        answer:
+          'Sí. Materias, tareas, fechas de entrega, calificaciones y tarjetas viven en tu cuenta y no en un dispositivo, y los cambios se propagan casi en tiempo real. Marca una tarea al salir de clase desde el teléfono y aparecerá marcada en la pestaña que dejaste abierta.',
+      },
+      {
+        question: '¿Tengo que pagar otra vez en un segundo dispositivo?',
+        answer:
+          'No. Pro se compra una vez y aplica a toda la cuenta. Una suscripción hecha en la app de iOS también desbloquea la web, y una comprada con tarjeta en la web también desbloquea el iPhone y el iPad.',
+      },
+      {
+        question: '¿Qué no puede hacer la app web?',
+        answer:
+          'Las diferencias son las que dependen del hardware. En el navegador no hay captura con cámara, así que arrastras un PDF, subes una imagen o pegas el texto; no hay widgets de pantalla de inicio; y no hay sincronización con el calendario del dispositivo, aunque la exportación .ics sí funciona. Todo lo demás —escaneo, calificaciones, planificación, tarjetas y el tutor con IA— está ahí.',
+      },
+    ],
+  }),
   page('/es/acerca-de', '/about', 'standard', {
     metaTitle: 'Acerca de Semora',
     metaDescription: 'Descubre cómo Semora organiza programas de clase, entregas, calificaciones y tiempo de estudio para estudiantes universitarios.',

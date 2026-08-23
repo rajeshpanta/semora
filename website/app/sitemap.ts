@@ -16,6 +16,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/features`, lastModified: reviewed, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${SITE_URL}/compare`, lastModified: reviewed, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${SITE_URL}/pricing`, lastModified: reviewed, changeFrequency: 'monthly', priority: 0.9 },
+    // High priority: this is the page every "Get the app" control now lands on,
+    // and the one that answers "is Semora on <device>" — a question people put
+    // into a search box rather than into our navigation.
+    { url: `${SITE_URL}/download`, lastModified: reviewed, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${SITE_URL}/blog`, lastModified: reviewed, changeFrequency: 'weekly', priority: 0.7 },
     { url: `${SITE_URL}/privacy`, lastModified: reviewed, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${SITE_URL}/terms`, lastModified: reviewed, changeFrequency: 'yearly', priority: 0.3 },

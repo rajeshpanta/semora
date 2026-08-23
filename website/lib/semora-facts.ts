@@ -23,6 +23,26 @@ export const SITE_DESCRIPTION =
 
 export const APP_STORE_URL = 'https://apps.apple.com/us/app/semora-ai-syllabus-scanner/id6762589321';
 
+/**
+ * Where every "Get the app" control points.
+ *
+ * NOT the App Store directly. Semora runs on more than one kind of device and
+ * is heading for more, so a button labelled "Get the app" that lands an Android
+ * or Mac visitor on an iOS listing they cannot install is a dead end at the
+ * exact moment they decided to say yes. /download shows every surface, with a
+ * scannable code for the ones that are ready, and tells the truth about the
+ * ones that are not.
+ *
+ * The App Store link itself still lives above, for the places that genuinely
+ * mean the iOS listing (structured data, the support page).
+ */
+export const DOWNLOAD_PATH = '/download';
+export const DOWNLOAD_PATH_ES = '/es/descargar';
+
+export function downloadPath(locale: 'en' | 'es' = 'en'): string {
+  return locale === 'es' ? DOWNLOAD_PATH_ES : DOWNLOAD_PATH;
+}
+
 // The Expo web app, deployed to Vercel (semora1/semora-app) and bound to the
 // app.semoraai.com custom domain. Every CTA on this site links here so a
 // single edit fixes every "Get started" button at once.

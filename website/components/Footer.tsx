@@ -5,7 +5,7 @@ import {
   SITE_NAME,
   TAGLINE,
   SUPPORT_EMAIL,
-  APP_STORE_URL,
+  downloadPath,
   FEATURES,
 } from '@/lib/semora-facts';
 import { COMPETITORS } from '@/lib/competitors';
@@ -99,7 +99,7 @@ export function Footer({ locale = 'en' }: { locale?: SiteLocale }) {
           <div>
             <p className={styles.heading}>{copy.get}</p>
             <SignupButton>{copy.tryFree}</SignupButton>
-            <a href={APP_STORE_URL}>{copy.download}</a>
+            <Link href={downloadPath(locale)}>{copy.download}</Link>
             <Link href={path('/pricing')}>{copy.pricing}</Link>
             <Link href={path('/blog')}>{copy.blog}</Link>
           </div>

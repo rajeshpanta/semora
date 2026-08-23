@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import styles from './ShareLanding.module.css';
-import { APP_STORE_URL, APP_URL, SITE_NAME } from '@/lib/semora-facts';
+import { downloadPath, APP_URL, SITE_NAME } from '@/lib/semora-facts';
 
 /**
  * The public landing page behind every link a Semora user shares.
@@ -65,10 +65,16 @@ export function ShareLanding({ kind, value }: { kind: ShareKind; value: string }
         <p className={styles.body}>{copy.body}</p>
 
         <div className={styles.actions}>
-          {/* Order matters: most recipients do not have the app, so the store
-              link is primary and the app handoff sits just under it for the
-              ones who do. */}
-          <a href={APP_STORE_URL} className={styles.primary}>
+          {/* Order matters: most recipients do not have the app, so getting
+              it is primary and the app handoff sits just under it for the ones
+              who do.
+
+              This points at /download rather than the App Store because the
+              person opening a shared link is, by definition, someone we know
+              nothing about — including which phone they hold. Sending an
+              Android student to an iOS listing ended the invite chain right
+              here, which is the one place it costs a whole new user. */}
+          <a href={downloadPath()} className={styles.primary}>
             Get {SITE_NAME} free
           </a>
           <a href={deepLink} className={styles.secondary}>

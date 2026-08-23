@@ -9,7 +9,7 @@ import { Cta } from '@/components/Cta';
 import { JsonLd } from '@/components/JsonLd';
 import { Reveal } from '@/components/Reveal';
 import { softwareApplicationSchema, faqPageSchema } from '@/lib/schema';
-import { APP_STORE_URL } from '@/lib/semora-facts';
+import { downloadPath } from '@/lib/semora-facts';
 import { OG_IMAGE } from '@/lib/og';
 import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
@@ -193,7 +193,7 @@ export default function Home() {
               <SignupButton className={styles.primaryBtn}>
                 Try it for free
               </SignupButton>
-              <a href={APP_STORE_URL} className={styles.secondaryBtn}>
+              <a href={downloadPath()} className={styles.secondaryBtn}>
                 Get the app
               </a>
             </div>

@@ -14,6 +14,7 @@ export interface LocaleRoutePair {
 export const LOCALE_ROUTE_PAIRS: LocaleRoutePair[] = [
   { en: '/', es: '/es' },
   { en: '/about', es: '/es/acerca-de' },
+  { en: '/download', es: '/es/descargar' },
   { en: '/features', es: '/es/funciones' },
   { en: '/pricing', es: '/es/precios' },
   { en: '/support', es: '/es/ayuda' },

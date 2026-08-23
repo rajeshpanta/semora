@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { SignupButton } from './SignupButton';
 import Link from 'next/link';
 import styles from './Nav.module.css';
-import { FEATURES, APP_STORE_URL, APP_URL } from '@/lib/semora-facts';
+import { FEATURES, downloadPath, APP_URL } from '@/lib/semora-facts';
 import { FEATURES_ES } from '@/lib/es-facts';
 import type { SiteLocale } from '@/lib/i18n';
 
@@ -110,7 +110,7 @@ export function MobileNav({ links, locale = 'en' }: { links: { href: string; lab
             </SignupButton>
           )}
 
-          <a href={APP_STORE_URL} className={styles.sheetGhost} onClick={() => { report(TELEMETRY_EVENTS.appStoreClick, {}); close(); }}>
+          <a href={downloadPath(locale)} className={styles.sheetGhost} onClick={() => { report(TELEMETRY_EVENTS.appStoreClick, {}); close(); }}>
             {copy.getApp}
           </a>
           {fromApp ? (

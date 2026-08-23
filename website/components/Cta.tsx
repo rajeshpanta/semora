@@ -1,6 +1,6 @@
 import { SignupButton } from './SignupButton';
 import styles from './Cta.module.css';
-import { APP_STORE_URL } from '@/lib/semora-facts';
+import { downloadPath } from '@/lib/semora-facts';
 import type { SiteLocale } from '@/lib/i18n';
 
 /**
@@ -28,7 +28,7 @@ export function Cta({
         <SignupButton className={styles.button}>
           {locale === 'es' ? 'Empezar gratis' : 'Try it for free'}
         </SignupButton>
-        <a href={APP_STORE_URL} className={styles.buttonGhost}>
+        <a href={downloadPath(locale)} className={styles.buttonGhost}>
           {locale === 'es' ? 'Descargar la app' : 'Get the app'}
         </a>
       </div>

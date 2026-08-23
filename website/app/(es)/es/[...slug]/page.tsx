@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import styles from './spanish.module.css';
 import { LongFormPage } from '@/components/LongFormPage';
+import { DownloadPageBody } from '@/components/DownloadPageBody';
 import { BlogIndex } from '@/components/BlogIndex';
 import { BlogPostArticle } from '@/components/BlogPostArticle';
 import { PageSections } from '@/components/PageSections';
@@ -10,6 +11,7 @@ import { JsonLd } from '@/components/JsonLd';
 import { RelatedPosts } from '@/components/RelatedPosts';
 import { articleSchema, blogIndexSchema, itemListSchema } from '@/lib/schema';
 import { PricingCards } from '@/components/PricingCards';
+import { DeviceGrid } from '@/components/DeviceGrid';
 import { FeatureShowcase } from '@/components/FeatureShowcase';
 import { GpaCalculator } from '@/components/GpaCalculator';
 import { PomodoroTimer } from '@/components/PomodoroTimer';
@@ -80,6 +82,7 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 function DirectoryWidget({ config }: { config: SpanishPageConfig }) {
+  if (config.kind === 'download') return <DeviceGrid locale="es" />;
   if (config.kind === 'pricing') return <PricingCards locale="es" />;
   if (config.kind === 'gpa') return <GpaCalculator locale="es" />;
   if (config.kind === 'pomodoro') return <PomodoroTimer locale="es" />;
@@ -275,6 +278,15 @@ export default async function SpanishPage({ params }: { params: Params }) {
         </BlogPostArticle>
       </>
     );
+  }
+
+  // The download page has its own layout in both languages — see
+  // DownloadPageBody. Returning here rather than passing a widget into
+  // LongFormPage is the point: the English page left that shell because it is
+  // built for pages you read, and routing Spanish back through it would put
+  // the device grid straight back inside an essay.
+  if (config.kind === 'download') {
+    return <DownloadPageBody content={config.content} locale="es" />;
   }
 
   const hubList = hubListSchema(config);

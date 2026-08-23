@@ -1,0 +1,216 @@
+/* The same semester, on two screens at once.
+ *
+ * The hero's right column was a QR code — a utility graphic, and a duplicate
+ * of the one in the iPhone card below. Every other page on this site puts a
+ * product visual there: the home page a browser window, feature pages a
+ * FeaturePanel. This page's whole claim is that one account follows you
+ * across devices, and that is a claim you can show rather than assert.
+ *
+ * So: a laptop window with a phone overlapping it, both displaying the same
+ * three deadlines. The repetition IS the argument — nobody has to read a
+ * caption to understand what it means. Window chrome, dots, row styling and
+ * shadow are all lifted from FeaturePanel.module.css so it reads as the same
+ * product, photographed twice.
+ */
+.wrap {
+  /* One source of truth for the phone's width. The gutter below is derived
+     from it, so the two can never drift apart — an earlier media query shrank
+     the gutter on small screens while the phone kept its size, which put it
+     straight back on top of the deadlines. */
+  --phone-w: clamp(84px, 14vw, 146px);
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  /* The gutter is the phone's own width less a small bite, so the phone sits
+     beside the window and overlaps only its BORDER. An earlier version let it
+     sit on top of the rows and it covered the very deadlines it was there to
+     duplicate — the argument of the whole illustration, hidden by half of
+     itself. */
+  padding: 0 0 clamp(30px, 4vw, 42px) calc(var(--phone-w) - 16px);
+}
+
+.window {
+  position: relative;
+  border-radius: 13px;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid rgba(28, 27, 31, 0.1);
+  box-shadow: 0 18px 44px -26px rgba(28, 27, 31, 0.34);
+}
+
+.chrome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 13px;
+  background: #f4f1ec;
+  border-bottom: 1px solid rgba(28, 27, 31, 0.08);
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #cfc9c0;
+  flex: none;
+}
+
+.title {
+  margin-left: 8px;
+  font-size: 11.5px;
+  color: #62616b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.body { padding: 14px; }
+
+.rows {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: #faf9f5;
+  border: 1px solid rgba(28, 27, 31, 0.07);
+}
+
+.check {
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  border: 1.5px solid #cecbf6;
+  flex: none;
+}
+
+.rowMain { flex: 1; min-width: 0; }
+
+.rowTitle {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rowSub {
+  display: block;
+  font-size: 11px;
+  color: var(--ink3);
+}
+
+.rowDate {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink2);
+  flex: none;
+}
+
+.rowDateExam { color: var(--brand); }
+
+/* The phone. Overlaps the window's lower-left corner so the two read as one
+   scene rather than two illustrations side by side. */
+/* Anchored to the bottom-left, hanging below the window's baseline so the two
+   read as one scene at different scales rather than two stacked pictures. */
+.phone {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: var(--phone-w);
+  border-radius: 20px;
+  padding: 6px;
+  background: #1c1b1f;
+  box-shadow: 0 20px 40px -18px rgba(28, 27, 31, 0.45);
+}
+
+.phoneScreen {
+  border-radius: 15px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.phoneTop {
+  padding: 9px 10px 6px;
+  background: #f4f1ec;
+  border-bottom: 1px solid rgba(28, 27, 31, 0.07);
+}
+
+.phoneLabel {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--brand);
+}
+
+.phoneRows {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.phoneRow {
+  padding: 6px 7px;
+  border-radius: 6px;
+  background: #faf9f5;
+  border: 1px solid rgba(28, 27, 31, 0.07);
+}
+
+.phoneTitle {
+  display: block;
+  font-size: 9px;
+  font-weight: 650;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.phoneDate {
+  display: block;
+  font-size: 8px;
+  color: var(--ink3);
+}
+
+/* The point, stated once, where the eye lands after the two screens. */
+/* Sits on the window's bottom edge, right side — clear of the phone, and
+   reading as a caption on the scene rather than a floating chip. */
+.syncTag {
+  position: absolute;
+  right: 14px;
+  bottom: clamp(8px, 1.4vw, 16px);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 26px -14px rgba(28, 27, 31, 0.3);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.syncDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--teal);
+  flex: none;
+}
+
+/* No small-screen override: the gutter tracks --phone-w automatically, so the
+   composition holds at every width instead of needing a breakpoint that can
+   fall out of step with it. */

@@ -1,0 +1,65 @@
+/* The download page's own layout.
+   Not the article shell: no sticky contents rail, no 860px prose measure. The
+   device grid is the reason the page exists, so it gets the full 1200px and
+   sits directly under the hero rather than after an argument for installing. */
+.grid {
+  max-width: var(--max-width-wide);
+  margin: 0 auto;
+  padding: clamp(20px, 3vw, 36px) clamp(20px, 4vw, 40px) 0;
+}
+
+.prose {
+  max-width: var(--article-measure);
+  margin: 0 auto;
+  padding: clamp(8px, 2vw, 20px) clamp(20px, 4vw, 40px) clamp(48px, 6vw, 72px);
+}
+
+.section {
+  margin: clamp(36px, 5vw, 56px) 0 0;
+}
+
+.h2 {
+  font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0 0 14px;
+  color: var(--ink);
+}
+
+.p {
+  margin: 0 0 14px;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ink2);
+}
+
+.faqHead {
+  font-size: clamp(1.35rem, 2.6vw, 1.75rem);
+  letter-spacing: -0.02em;
+  margin: clamp(40px, 5vw, 60px) 0 16px;
+  color: var(--ink);
+}
+
+/* The device table, at grid width rather than prose width.
+   A 3-column table squeezed into an 860px reading measure wraps every cell;
+   given the full 1200px it reads as a spec sheet, which is what it is. */
+.tableBand {
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  margin-top: clamp(36px, 5vw, 56px);
+  padding: clamp(36px, 5vw, 60px) clamp(20px, 4vw, 40px);
+}
+
+.tableInner {
+  max-width: var(--max-width-wide);
+  margin: 0 auto;
+}
+
+.pWide {
+  margin: 0 0 22px;
+  max-width: 72ch;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: var(--ink2);
+}

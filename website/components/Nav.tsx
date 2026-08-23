@@ -3,7 +3,7 @@ import { NavAuthActions } from './NavAuthActions';
 import styles from './Nav.module.css';
 import { FeaturesMenu } from './FeaturesMenu';
 import { MobileNav } from './MobileNav';
-import { SITE_NAME, APP_STORE_URL } from '@/lib/semora-facts';
+import { SITE_NAME, downloadPath } from '@/lib/semora-facts';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import type { SiteLocale } from '@/lib/i18n';
 
@@ -50,9 +50,9 @@ export function Nav({ locale = 'en' }: { locale?: SiteLocale }) {
               {l.label}
             </Link>
           ))}
-          <a href={APP_STORE_URL} className={styles.link}>
+          <Link href={downloadPath(locale)} className={styles.link}>
             {copy.getApp}
-          </a>
+          </Link>
         </nav>
 
         <div className={styles.languageSlot}>
