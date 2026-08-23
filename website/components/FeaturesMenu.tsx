@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import styles from './Nav.module.css';
 import { FEATURES } from '@/lib/semora-facts';
 import { FEATURES_ES } from '@/lib/es-facts';
@@ -18,6 +19,10 @@ import type { SiteLocale } from '@/lib/i18n';
  */
 export function FeaturesMenu({ locale = 'en' }: { locale?: SiteLocale }) {
   const [open, setOpen] = useState(false);
+  // The features hub in this locale, and everything beneath it.
+  const featuresHub = locale === 'es' ? '/es/funciones' : '/features';
+  const pathname = usePathname() ?? '';
+  const onFeatures = pathname === featuresHub || pathname.startsWith(`${featuresHub}/`);
   const wrapRef = useRef<HTMLDivElement>(null);
   const closeTimer = useRef<number | undefined>(undefined);
   const panelId = useId();
@@ -66,7 +71,11 @@ export function FeaturesMenu({ locale = 'en' }: { locale?: SiteLocale }) {
     >
       <button
         type="button"
-        className={styles.menuTrigger}
+        // Marked on the hub and on every feature page under it. The trigger is
+        // a button rather than a link (see the note in Nav), so it cannot pick
+        // this up from NavLink and has to say it itself.
+        className={onFeatures ? `${styles.menuTrigger} ${styles.menuTriggerActive}` : styles.menuTrigger}
+        aria-current={onFeatures ? 'page' : undefined}
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((v) => !v)}

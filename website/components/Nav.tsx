@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { NavLink } from './NavLink';
 import { NavAuthActions } from './NavAuthActions';
 import styles from './Nav.module.css';
 import { FeaturesMenu } from './FeaturesMenu';
@@ -46,13 +47,22 @@ export function Nav({ locale = 'en' }: { locale?: SiteLocale }) {
         <nav className={styles.pill} aria-label={copy.aria}>
           <FeaturesMenu locale={locale} />
           {links.map((l) => (
-            <Link key={l.href} href={l.href} className={styles.link}>
+            <NavLink
+              key={l.href}
+              href={l.href}
+              className={styles.link}
+              activeClassName={styles.linkActive}
+            >
               {l.label}
-            </Link>
+            </NavLink>
           ))}
-          <Link href={downloadPath(locale)} className={styles.link}>
+          <NavLink
+            href={downloadPath(locale)}
+            className={styles.link}
+            activeClassName={styles.linkActive}
+          >
             {copy.getApp}
-          </Link>
+          </NavLink>
         </nav>
 
         <div className={styles.languageSlot}>

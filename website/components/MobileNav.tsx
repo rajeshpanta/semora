@@ -5,6 +5,7 @@ import { report, TELEMETRY_EVENTS } from '@/lib/telemetry';
 import { useEffect, useState } from 'react';
 import { SignupButton } from './SignupButton';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import styles from './Nav.module.css';
 import { FEATURES, downloadPath, APP_URL } from '@/lib/semora-facts';
 import { FEATURES_ES } from '@/lib/es-facts';
@@ -17,6 +18,7 @@ import type { SiteLocale } from '@/lib/i18n';
  */
 export function MobileNav({ links, locale = 'en' }: { links: { href: string; label: string }[]; locale?: SiteLocale }) {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname() ?? '';
   // Same reasoning as the desktop nav: someone who arrived from the app is
   // signed in, and "Sign in" / "Try it for free" tells them otherwise. The
   // site cannot see the session — different origin — so the app flags it on
@@ -98,11 +100,23 @@ export function MobileNav({ links, locale = 'en' }: { links: { href: string; lab
             </div>
           </details>
 
-          {links.map((l) => (
-            <Link key={l.href} href={l.href} className={styles.sheetLink} onClick={close}>
-              {l.label}
-            </Link>
-          ))}
+          {/* Same active marking as the desktop bar. The sheet covers the
+              page, so without it a visitor has no way to tell which entry is
+              the one they are already reading. */}
+          {links.map((l) => {
+            const active = pathname === l.href || pathname.startsWith(`${l.href}/`);
+            return (
+              <Link
+                key={l.href}
+                href={l.href}
+                className={active ? `${styles.sheetLink} ${styles.sheetLinkActive}` : styles.sheetLink}
+                aria-current={active ? 'page' : undefined}
+                onClick={close}
+              >
+                {l.label}
+              </Link>
+            );
+          })}
 
           {fromApp ? null : (
             <SignupButton mode="signin" className={styles.sheetLink} onClick={close}>

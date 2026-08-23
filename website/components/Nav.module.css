@@ -145,11 +145,24 @@ a.languageOption:focus-visible {
   transition: background 0.15s ease, color 0.15s ease;
 }
 
+/* The open panel and the page you are on share the hover treatment, so the
+   bar has one visual language rather than three. */
 .link:hover,
 .menuTrigger:hover,
 .menuTrigger[aria-expanded='true'] {
   background: var(--brand-50);
   color: var(--ink);
+}
+
+/* Where you are. Same tint as hover so nothing new has to be learned, but
+   held rather than transient, and a shade heavier in weight and colour so the
+   two are still distinguishable when the cursor is resting on the current
+   item. */
+.linkActive,
+.menuTriggerActive {
+  background: var(--brand-50);
+  color: var(--ink);
+  font-weight: 650;
 }
 
 .caret {
@@ -425,6 +438,15 @@ a.languageOption:focus-visible {
   color: var(--ink2);
   text-decoration: none;
   font-size: 14.5px;
+}
+
+/* The current page in the mobile sheet. A tint alone is weak against a
+   full-width row, so it takes the brand colour and a rule down the left
+   edge — the row reads as marked at a glance without a second look. */
+.sheetLinkActive {
+  color: var(--brand);
+  border-left: 3px solid var(--brand);
+  padding-left: 12px;
 }
 
 .sheetLink {
