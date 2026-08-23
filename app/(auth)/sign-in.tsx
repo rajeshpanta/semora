@@ -59,6 +59,17 @@ export default function SignInScreen() {
     track('sign_in_viewed', { screen: 'auth', mode });
   }, [mode]);
   const [appleAvailable, setAppleAvailable] = useState(false);
+  // Google on Android needs an OAuth client registered in Google Cloud against
+  // the signing certificate's SHA-1. Until that exists the native call fails
+  // with DEVELOPER_ERROR (code 10) — an error message no student can act on,
+  // on the primary account-creation path. Hide the button rather than ship a
+  // door that opens onto a wall; Apple's web flow already works on Android, so
+  // there is still a one-tap way to create an account.
+  //
+  // Flip by setting EXPO_PUBLIC_GOOGLE_ANDROID_READY=1 in .env.local once the
+  // Android client exists. No code change needed at that point.
+  const googleAvailable =
+    Platform.OS !== 'android' || process.env.EXPO_PUBLIC_GOOGLE_ANDROID_READY === '1';
   const [error, setError] = useState('');
   const [errorType, setErrorType] = useState<'confirm' | 'credentials' | 'generic' | ''>('');
   const [resending, setResending] = useState(false);
@@ -325,7 +336,10 @@ export default function SignInScreen() {
                 sign-in-only, for accounts that already exist. */}
             <View style={styles.oauthGroup}>
               {appleAvailable ? (
-                Platform.OS === 'web' ? (
+                // Android gets the same drawn button as the web build: the
+                // native AppleAuthenticationButton is an iOS-only view, and
+                // Android signs in through Apple's web OAuth flow anyway.
+                Platform.OS !== 'ios' ? (
                   <TouchableOpacity
                     accessibilityRole="button"
                     accessibilityLabel="Continue with Apple"
@@ -358,7 +372,7 @@ export default function SignInScreen() {
                 )
               ) : null}
 
-              {Platform.OS === 'web' ? (
+              {!googleAvailable ? null : Platform.OS === 'web' ? (
                 <GoogleWebSignInButton
                   disabled={oauthLoading === 'apple'}
                   theme="outline"
@@ -388,7 +402,11 @@ export default function SignInScreen() {
 
               {mode === 'signup' && (
                 <Text style={[styles.oauthHint, { color: colors.ink3 }]}>
-                  One tap with Apple or Google — your account is created automatically.
+                  {appleAvailable && googleAvailable
+                    ? 'One tap with Apple or Google — your account is created automatically.'
+                    : googleAvailable
+                      ? 'One tap with Google — your account is created automatically.'
+                      : 'One tap with Apple — your account is created automatically.'}
                 </Text>
               )}
             </View>

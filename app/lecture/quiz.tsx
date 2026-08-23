@@ -44,7 +44,7 @@ export default function LectureQuizScreen() {
     setPicked(choiceIndex);
     const correct = choiceIndex === question.answerIndex;
     if (correct) setCorrectCount((c) => c + 1);
-    if (Platform.OS === 'ios') {
+    if (Platform.OS !== 'web') {
       Haptics.notificationAsync(
         correct ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error,
       );

@@ -352,7 +352,7 @@ export default function CourseDetailScreen() {
       }
 
       Keyboard.dismiss();
-      if (Platform.OS === 'ios') {
+      if (Platform.OS !== 'web') {
         Haptics.notificationAsync(
           rejections.length === 0
             ? Haptics.NotificationFeedbackType.Success
@@ -372,7 +372,7 @@ export default function CourseDetailScreen() {
     const sorted = [...scaleRows].sort((a, b) => b.min - a.min);
     try {
       await updateCourse.mutateAsync({ id: course.id, grade_scale: sorted } as any);
-      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setEditingScale(false);
     } catch (err: any) { Alert.alert('Error', err.message); }
   };
@@ -475,7 +475,7 @@ export default function CourseDetailScreen() {
   const handleShareCourse = async () => {
     if (sharing) return;
     setSharing(true);
-    if (Platform.OS === 'ios') {
+    if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     }
     try {
@@ -696,7 +696,7 @@ export default function CourseDetailScreen() {
             accent={course.color}
             locked={false}
             onPress={() => {
-              if (Platform.OS === 'ios') Haptics.selectionAsync();
+              if (Platform.OS !== 'web') Haptics.selectionAsync();
               router.push({
                 pathname: '/lecture',
                 params: { courseId: course.id, courseName: course.name },
@@ -710,7 +710,7 @@ export default function CourseDetailScreen() {
             accent={course.color}
             locked={false}
             onPress={() => {
-              if (Platform.OS === 'ios') Haptics.selectionAsync();
+              if (Platform.OS !== 'web') Haptics.selectionAsync();
               router.push({ pathname: '/lecture/new', params: { courseId: course.id } } as any);
             }}
           />
@@ -721,7 +721,7 @@ export default function CourseDetailScreen() {
             accent={course.color}
             locked={!isPro}
             onPress={() => {
-              if (Platform.OS === 'ios') Haptics.selectionAsync();
+              if (Platform.OS !== 'web') Haptics.selectionAsync();
               if (isPro) {
                 router.push({ pathname: '/tutor', params: { courseId: course.id } } as any);
               } else {
@@ -736,7 +736,7 @@ export default function CourseDetailScreen() {
             accent={course.color}
             locked={!isPro}
             onPress={() => {
-              if (Platform.OS === 'ios') Haptics.selectionAsync();
+              if (Platform.OS !== 'web') Haptics.selectionAsync();
               if (isPro) {
                 handleShareCourse();
               } else {

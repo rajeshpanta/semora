@@ -131,7 +131,7 @@ export default function CalendarSyncSettings() {
         const count = await syncAllTasks(selectedSemesterId);
         setSynced(true);
         track('calendar_sync_enabled', { on: true, screen: 'settings_calendar' });
-        if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Synced!', `${count} task${count !== 1 ? 's' : ''} added to your calendar.`);
       } catch (err: any) {
         Alert.alert('Sync Failed', err.message ?? 'Could not sync tasks. Check calendar permissions and try again.');
@@ -170,7 +170,7 @@ export default function CalendarSyncSettings() {
         const count = await syncAllMeetings(selectedSemesterId);
         setClassSync(true);
         track('class_schedule_sync_enabled', { on: true, screen: 'settings_calendar' });
-        if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert(
           'Class Schedule Synced',
           count > 0
@@ -226,7 +226,7 @@ export default function CalendarSyncSettings() {
     try {
       const { tasks, meetings } = await exportSemesterIcs(selectedSemesterId);
       track('ics_exported', { tasks, meetings, screen: 'settings_calendar' });
-      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err: any) {
       Alert.alert('Export Failed', err.message ?? 'Could not create the calendar file. Please try again.');
     } finally {
@@ -289,7 +289,7 @@ export default function CalendarSyncSettings() {
       invalidateGcal();
       track('google_cal_connected', { on: true, screen: 'settings_calendar' });
       track('google_cal_synced', { tasks: taskCount, screen: 'settings_calendar' });
-      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert('Connected', `${taskCount} task${taskCount !== 1 ? 's' : ''} synced to your Google Calendar.`);
     } catch (err: any) {
       // Silently ignore user-cancel (dismissing the Google sheet).

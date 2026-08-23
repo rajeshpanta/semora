@@ -113,7 +113,7 @@ export default function FlashcardsScreen() {
 
   const handleAddMaterial = async () => {
     if (!courseId) return;
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const result = await DocumentPicker.getDocumentAsync({
       type: SUPPORTED_DOCUMENT_PICKER_TYPE,
       copyToCacheDirectory: true,
@@ -135,7 +135,7 @@ export default function FlashcardsScreen() {
         onProgress: setFileProgress,
       });
       track('flashcards_material_uploaded', { screen: 'flashcards', courseId });
-      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       fileProgressClearRef.current = setTimeout(() => setFileProgress(null), 900);
     } catch (e: any) {
       setFileProgress(null);
@@ -146,7 +146,7 @@ export default function FlashcardsScreen() {
   const handleGenerate = async () => {
     if (!courseId || generationInFlightRef.current || isGenerating) return;
     generationInFlightRef.current = true;
-    if (Platform.OS === 'ios') Haptics.selectionAsync();
+    if (Platform.OS !== 'web') Haptics.selectionAsync();
     try {
       const selectedNotes = courseNotes.filter((note) => selectedNoteIds.includes(note.id));
       if (selectedNotes.length > 0) {
@@ -173,7 +173,7 @@ export default function FlashcardsScreen() {
         screen: 'flashcards', courseId, cardsAdded: result.cardsAdded,
         scoped: !!scopeTaskId,
       });
-      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setGenerateOpen(false);
       setScopeTaskId(null);
       router.push(`/flashcards/${result.deckId}` as any);
@@ -227,7 +227,7 @@ export default function FlashcardsScreen() {
         course_id: courseId ?? null,
       });
       track('deck_created', { screen: 'flashcards', scoped: !!courseId });
-      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Keyboard.dismiss();
       setNewTitle('');
       setCreating(false);
@@ -255,7 +255,7 @@ export default function FlashcardsScreen() {
             <TouchableOpacity
               style={[styles.upgradeBtn, { backgroundColor: colors.brand }]}
               onPress={() => {
-                if (Platform.OS === 'ios') Haptics.selectionAsync();
+                if (Platform.OS !== 'web') Haptics.selectionAsync();
                 showProUpsell('flashcards');
               }}
               activeOpacity={0.85}
@@ -286,7 +286,7 @@ export default function FlashcardsScreen() {
         {!!courseId && !generateOpen && (
           <TouchableOpacity
             style={[styles.generateBtn, { backgroundColor: PROMO_SURFACE }]}
-            onPress={() => { if (Platform.OS === 'ios') Haptics.selectionAsync(); setGenerateOpen(true); }}
+            onPress={() => { if (Platform.OS !== 'web') Haptics.selectionAsync(); setGenerateOpen(true); }}
             activeOpacity={0.85}
           >
             <View style={[styles.generateGlow, { backgroundColor: colors.brand }]} />
@@ -448,7 +448,7 @@ export default function FlashcardsScreen() {
         ) : (
           <TouchableOpacity
             style={[styles.newDeckBtn, { backgroundColor: colors.brand }]}
-            onPress={() => { if (Platform.OS === 'ios') Haptics.selectionAsync(); setCreating(true); }}
+            onPress={() => { if (Platform.OS !== 'web') Haptics.selectionAsync(); setCreating(true); }}
             activeOpacity={0.85}
           >
             <FontAwesome name="plus" size={13} color="#fff" />

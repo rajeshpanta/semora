@@ -89,7 +89,7 @@ export default function TutorScreen() {
             <TouchableOpacity
               style={[styles.upgradeBtn, { backgroundColor: colors.brand }]}
               onPress={() => {
-                if (Platform.OS === 'ios') Haptics.selectionAsync();
+                if (Platform.OS !== 'web') Haptics.selectionAsync();
                 showProUpsell('tutor');
               }}
               activeOpacity={0.85}
@@ -439,7 +439,7 @@ function TutorChat({
     const text = draft.trim();
     if (!text || tutorWorkInFlightRef.current || isTutorWorking || !conversationId) return;
     tutorWorkInFlightRef.current = true;
-    if (Platform.OS === 'ios') Haptics.selectionAsync();
+    if (Platform.OS !== 'web') Haptics.selectionAsync();
     const photo = attachment;
     setDraft('');
     setAttachment(null);
@@ -495,7 +495,7 @@ function TutorChat({
       );
       return;
     }
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const result = await DocumentPicker.getDocumentAsync({
       type: SUPPORTED_DOCUMENT_PICKER_TYPE,
       copyToCacheDirectory: true,
@@ -517,7 +517,7 @@ function TutorChat({
         onProgress: setFileProgress,
       });
       track('tutor_note_uploaded', { screen: 'tutor' });
-      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       fileProgressClearRef.current = setTimeout(() => setFileProgress(null), 900);
     } catch (e: any) {
       setFileProgress(null);
@@ -562,7 +562,7 @@ function TutorChat({
       return;
     }
     setAttachment({ uri: asset.uri, base64: asset.base64, mimeType: asset.mimeType || 'image/jpeg' });
-    if (Platform.OS === 'ios') Haptics.selectionAsync();
+    if (Platform.OS !== 'web') Haptics.selectionAsync();
     track('tutor_photo_attached', { screen: 'tutor', source });
   };
 
@@ -611,23 +611,45 @@ function TutorChat({
       setPractice(null);
       setPracticeFeedback(null);
       setSelectedAnswer(null);
-      if (Platform.OS === 'ios') Haptics.selectionAsync();
+      if (Platform.OS !== 'web') Haptics.selectionAsync();
     } catch (e: any) {
       Alert.alert("Couldn't start a new chat", e?.message || 'Please try again.');
     }
   };
 
+  // Android has no Alert.prompt — React Native only implements it on iOS — so
+  // the rename control used to be hidden there entirely: an Android student
+  // could delete a chat but never retitle one. iOS keeps the native prompt it
+  // already shipped with; Android gets the sheet-local card below.
+  const [renamingThread, setRenamingThread] = useState<TutorConversation | null>(null);
+  const [renameDraft, setRenameDraft] = useState('');
+
+  const commitRename = () => {
+    const target = renamingThread;
+    if (!target) return;
+    const title = renameDraft.trim();
+    setRenamingThread(null);
+    // An empty box means "I changed my mind", not "call this chat nothing".
+    if (!title || title === (target.title ?? '')) return;
+    renameThread.mutate({ id: target.id, title });
+  };
+
   const handleRenameThread = (thread: TutorConversation) => {
-    NativeAlert.prompt?.(
-      'Rename chat',
-      undefined,
-      (value?: string) => {
-        if (value == null) return;
-        renameThread.mutate({ id: thread.id, title: value });
-      },
-      'plain-text',
-      thread.title ?? '',
-    );
+    if (Platform.OS === 'ios') {
+      NativeAlert.prompt?.(
+        'Rename chat',
+        undefined,
+        (value?: string) => {
+          if (value == null) return;
+          renameThread.mutate({ id: thread.id, title: value });
+        },
+        'plain-text',
+        thread.title ?? '',
+      );
+      return;
+    }
+    setRenameDraft(thread.title ?? '');
+    setRenamingThread(thread);
   };
 
   const handleDeleteThread = (thread: TutorConversation) => {
@@ -724,7 +746,7 @@ function TutorChat({
                   courseId === null && { borderColor: colors.brand, backgroundColor: colors.brand50 },
                 ]}
                 onPress={() => {
-                  if (Platform.OS === 'ios') Haptics.selectionAsync();
+                  if (Platform.OS !== 'web') Haptics.selectionAsync();
                   setCourseId(null);
                 }}
                 activeOpacity={0.8}
@@ -744,7 +766,7 @@ function TutorChat({
                       active && { borderColor: colors.brand, backgroundColor: colors.brand50 },
                     ]}
                     onPress={() => {
-                      if (Platform.OS === 'ios') Haptics.selectionAsync();
+                      if (Platform.OS !== 'web') Haptics.selectionAsync();
                       setCourseId(c.id);
                       track('tutor_course_scoped', { screen: 'tutor' });
                     }}
@@ -895,7 +917,7 @@ function TutorChat({
                     key={prompt}
                     style={[styles.starterChip, { borderColor: colors.line, backgroundColor: colors.card }]}
                     onPress={() => {
-                      if (Platform.OS === 'ios') Haptics.selectionAsync();
+                      if (Platform.OS !== 'web') Haptics.selectionAsync();
                       setDraft(prompt);
                       track('tutor_starter_tapped', { screen: 'tutor', scoped: !!courseId });
                     }}
@@ -954,7 +976,7 @@ function TutorChat({
                       <>
                         <TouchableOpacity
                           onPress={() => {
-                            if (Platform.OS === 'ios') Haptics.selectionAsync();
+                            if (Platform.OS !== 'web') Haptics.selectionAsync();
                             rateMessage.mutate({ messageId: m.id, rating: m.rating === 1 ? null : 1 });
                           }}
                           style={styles.answerAction}
@@ -969,7 +991,7 @@ function TutorChat({
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => {
-                            if (Platform.OS === 'ios') Haptics.selectionAsync();
+                            if (Platform.OS !== 'web') Haptics.selectionAsync();
                             rateMessage.mutate({ messageId: m.id, rating: m.rating === -1 ? null : -1 });
                           }}
                           style={styles.answerAction}
@@ -1120,7 +1142,12 @@ function TutorChat({
         visible={threadSheetOpen}
         transparent
         animationType="slide"
-        onRequestClose={() => setThreadSheetOpen(false)}
+        // Android's Back must close the rename card first — otherwise it tears
+        // down the whole sheet and silently discards what was being typed.
+        onRequestClose={() => {
+          if (renamingThread) { setRenamingThread(null); return; }
+          setThreadSheetOpen(false);
+        }}
       >
         <TouchableOpacity
           style={styles.sheetBackdrop}
@@ -1182,16 +1209,14 @@ function TutorChat({
                       {new Date(thread.updated_at || thread.created_at).toLocaleDateString()}
                     </Text>
                   </TouchableOpacity>
-                  {Platform.OS === 'ios' && (
-                    <TouchableOpacity
-                      onPress={() => handleRenameThread(thread)}
-                      style={styles.threadRowAction}
-                      accessibilityRole="button"
-                      accessibilityLabel="Rename chat"
-                    >
-                      <FontAwesome name="pencil" size={13} color={colors.ink3} />
-                    </TouchableOpacity>
-                  )}
+                  <TouchableOpacity
+                    onPress={() => handleRenameThread(thread)}
+                    style={styles.threadRowAction}
+                    accessibilityRole="button"
+                    accessibilityLabel="Rename chat"
+                  >
+                    <FontAwesome name="pencil" size={13} color={colors.ink3} />
+                  </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => handleDeleteThread(thread)}
                     style={styles.threadRowAction}
@@ -1205,6 +1230,42 @@ function TutorChat({
             })}
           </ScrollView>
         </View>
+
+        {renamingThread && (
+          <View style={styles.renameOverlay}>
+            <View style={[styles.renameCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
+              <Text style={[styles.renameTitle, { color: colors.ink }]}>Rename chat</Text>
+              <TextInput
+                value={renameDraft}
+                onChangeText={setRenameDraft}
+                autoFocus
+                selectTextOnFocus
+                maxLength={80}
+                returnKeyType="done"
+                onSubmitEditing={commitRename}
+                placeholder="Chat name"
+                placeholderTextColor={colors.ink3}
+                style={[styles.renameInput, { color: colors.ink, borderColor: colors.line, backgroundColor: colors.paper }]}
+              />
+              <View style={styles.renameActions}>
+                <TouchableOpacity
+                  onPress={() => setRenamingThread(null)}
+                  style={styles.renameBtn}
+                  accessibilityRole="button"
+                >
+                  <Text style={[styles.renameBtnText, { color: colors.ink2 }]}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={commitRename}
+                  style={[styles.renameBtn, styles.renameBtnPrimary, { backgroundColor: colors.brand }]}
+                  accessibilityRole="button"
+                >
+                  <Text style={[styles.renameBtnText, { color: '#fff' }]}>Save</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
       </Modal>
     </SafeAreaView>
   );
@@ -1297,6 +1358,18 @@ const styles = StyleSheet.create({
   threadRowTitle: { fontSize: 14, fontWeight: '600' },
   threadRowMeta: { fontSize: 11 },
   threadRowAction: { padding: 9 },
+  renameOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)', paddingHorizontal: 28,
+  },
+  renameCard: { width: '100%', maxWidth: 380, borderRadius: 18, borderWidth: 1, padding: 18 },
+  renameTitle: { fontSize: 16.5, fontWeight: '700', marginBottom: 12 },
+  renameInput: { borderWidth: 1, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15 },
+  renameActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 14 },
+  renameBtn: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: 10 },
+  renameBtnPrimary: { minWidth: 84, alignItems: 'center' },
+  renameBtnText: { fontSize: 14.5, fontWeight: '700' },
 
   // Answer actions
   answerActions: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 3, marginLeft: 2 },

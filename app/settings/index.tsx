@@ -89,7 +89,7 @@ export default function SettingsScreen() {
       setSubscriptionPlan(entitlement.plan);
       if (entitlement.is_pro) {
         if (expectedUserId) rescheduleAllTaskReminders(expectedUserId);
-        if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Restored', 'Your Pro subscription has been restored.');
       } else if (entitlement.restoreError === 'linked_other_account') {
         Alert.alert(

@@ -76,7 +76,7 @@ export default function SyllabusAddedScreen() {
   }, []);
 
   const goScan = () => {
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     track('next_class_started', { screen: 'syllabus_added', course_count: courseCount });
     router.replace('/(tabs)/scan' as any);
   };

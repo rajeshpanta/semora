@@ -113,7 +113,7 @@ export default function JoinScreen() {
   const handleImport = async () => {
     if (importing || !token) return;
     setImporting(true);
-    if (Platform.OS === 'ios') {
+    if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     }
     try {
@@ -134,7 +134,7 @@ export default function JoinScreen() {
         screen: 'join',
         tasks: result.taskCount,
       });
-      if (Platform.OS === 'ios') {
+      if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
 
@@ -145,7 +145,7 @@ export default function JoinScreen() {
       // route to the paywall instead of a dead-end error, matching the
       // isFreeLimitError handling across the app.
       if (isFreeLimitError(err)) {
-        if (Platform.OS === 'ios') {
+        if (Platform.OS !== 'web') {
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
         }
         Alert.alert(

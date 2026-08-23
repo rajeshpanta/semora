@@ -69,7 +69,7 @@ export default function SemesterDetailScreen() {
         end_date: endDate ? formatLocalDate(endDate) : null,
       });
       Keyboard.dismiss();
-      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (err: any) {
       Alert.alert('Error', err.message ?? 'Something went wrong. Please try again.');

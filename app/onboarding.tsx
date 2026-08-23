@@ -12,6 +12,7 @@ import {
   Platform,
   KeyboardAvoidingView,
   Keyboard,
+  BackHandler,
   Text as RawText,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,7 +32,14 @@ import { useAppStore, type PainPoint } from '@/store/appStore';
 import { useI18n } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
 
-const STEP_COUNT = 5; // hook · live demo · outcome · toolkit · personalize
+const STEP_COUNT = 6; // hook · live demo · outcome · toolkit · personalize · canvas
+/**
+ * Personalize is no longer the last step, but it is still the one Skip lands
+ * on — the whole point of Skip is that even someone in a hurry answers three
+ * questions before the account wall. Hard-coding STEP_COUNT - 1 here would
+ * have sent skippers straight past it to the Canvas step.
+ */
+const PERSONALIZE_STEP = 4;
 
 /** Current + adjacent academic terms, with a sensible default for today. */
 function useTermOptions() {
@@ -79,7 +87,7 @@ export default function OnboardingScreen() {
   const [demoPhase, setDemoPhase] = useState<DemoPhase>('idle');
   const scrollRef = useRef<ScrollView>(null);
 
-  const tap = () => { if (Platform.OS === 'ios') Haptics.selectionAsync(); };
+  const tap = () => { if (Platform.OS !== 'web') Haptics.selectionAsync(); };
 
   // Funnel entry point — without a step-0 event the per-step drop-off has
   // no denominator. Fired once per mount, not per revisit of step 0.
@@ -116,7 +124,7 @@ export default function OnboardingScreen() {
   };
 
   const next = () => {
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Keyboard.dismiss();
     // On the demo step the CTA first RUNS the demo, then advances.
     if (step === 1 && demoPhase === 'idle') {
@@ -129,10 +137,25 @@ export default function OnboardingScreen() {
 
   const back = () => { tap(); if (step > 0) goTo(step - 1, 'back'); };
 
+  // Android's system Back had no handler at all, so it left the app from the
+  // middle of onboarding — and since nothing here is persisted until the last
+  // step, reopening restarted the flow from step 0. iOS has no hardware Back,
+  // which is why this never showed up. Returning false on step 0 keeps the
+  // normal "Back leaves the app" behaviour where it IS the right answer.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (step === 0) return false;
+      back();
+      return true;
+    });
+    return () => sub.remove();
+  }, [step]);
+
   // Skip never bypasses the whole flow — it fast-forwards to the
   // personalize step so even skippers make one small commitment before
   // the account wall. Hidden on the hook and final steps.
-  const skip = () => { tap(); goTo(STEP_COUNT - 1, 'fwd', 'skip'); };
+  const skip = () => { tap(); goTo(PERSONALIZE_STEP, 'fwd', 'skip'); };
 
   const CTA_LABELS: Record<number, string> = {
     0: 'Try it on a real syllabus',
@@ -141,10 +164,10 @@ export default function OnboardingScreen() {
       : 'See what I get',
     2: 'See the whole toolkit',
     3: 'Make it mine',
-    4: 'Save my semester',
+    4: 'One last thing',
+    5: 'Save my semester',
   };
   const ctaDisabled = step === 1 && demoPhase === 'scanning';
-  const isLast = step === STEP_COUNT - 1;
 
   const ctaScale = useSharedValue(1);
   const ctaStyle = useAnimatedStyle(() => ({ transform: [{ scale: ctaScale.value }] }));
@@ -175,7 +198,7 @@ export default function OnboardingScreen() {
                 <TouchableOpacity
                   key={code}
                   onPress={() => {
-                    if (Platform.OS === 'ios') Haptics.selectionAsync();
+                    if (Platform.OS !== 'web') Haptics.selectionAsync();
                     setPreference(code);
                     track('onboarding_language_selected', { locale: code });
                   }}
@@ -192,7 +215,7 @@ export default function OnboardingScreen() {
               );
             })}
           </View>
-        ) : !isLast ? (
+        ) : step < PERSONALIZE_STEP ? (
           <TouchableOpacity onPress={skip} hitSlop={12} activeOpacity={0.7}>
             <Text style={[styles.skip, { color: colors.ink3 }]}>Skip</Text>
           </TouchableOpacity>
@@ -249,6 +272,7 @@ export default function OnboardingScreen() {
             {step === 1 && <LiveDemo colors={colors} phase={demoPhase} onDone={() => setDemoPhase('done')} isWide={isWide} isLandscape={isLandscape} />}
             {step === 2 && <Outcome colors={colors} isWide={isWide} />}
             {step === 3 && <Toolkit colors={colors} isWide={isWide} isLandscape={isLandscape} />}
+            {step === 5 && <CanvasSync colors={colors} isWide={isWide} />}
             {step === 4 && (
               <Personalize
                 colors={colors}
@@ -424,7 +448,7 @@ function LiveDemo({ colors, phase, onDone, isWide, isLandscape }: { colors: C; p
       if (finished) runOnJS(onDone)();
     });
     // Haptic tick as each deadline line is crossed.
-    if (Platform.OS === 'ios') {
+    if (Platform.OS !== 'web') {
       const ticks = DOC_LINES.filter((l) => l.deadline).map((l) =>
         setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}), l.at * SCAN_MS),
       );
@@ -435,7 +459,7 @@ function LiveDemo({ colors, phase, onDone, isWide, isLandscape }: { colors: C; p
   // Count up the found-deadlines number once the scan completes.
   useEffect(() => {
     if (phase !== 'done') { setCount(0); return; }
-    if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+    if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     let n = 0;
     const iv = setInterval(() => {
       n += 1;
@@ -568,7 +592,11 @@ function Outcome({ colors, isWide }: { colors: C; isWide: boolean }) {
           {([
             { icon: 'bell', label: 'Reminders' },
             { icon: 'calendar', label: 'Calendar' },
-            { icon: 'th-large', label: 'Widgets' },
+            // Widgets are built with @bacons/apple-targets, which has no
+            // Android counterpart — promising them here would be a lie.
+            ...(Platform.OS === 'android'
+              ? []
+              : [{ icon: 'th-large', label: 'Widgets' }]),
           ] as { icon: React.ComponentProps<typeof FontAwesome>['name']; label: string }[]).map((p) => (
             <View key={p.label} style={styles.plug}>
               <FontAwesome name={p.icon} size={20} color={colors.brand} accessible={false} />
@@ -694,6 +722,91 @@ function Toolkit({ colors, isWide, isLandscape }: { colors: C; isWide: boolean; 
   );
 }
 
+/* ---------------------------------------------------- step 5: canvas sync */
+
+/**
+ * The last thing said before the account wall, and deliberately so.
+ *
+ * Every step before this one describes work the student still has to start —
+ * point a camera at a syllabus, and Semora does the rest. Canvas is the one
+ * feature where they do nothing at all after the first setup, which makes it
+ * the strongest possible argument for making an account, and it is free: the
+ * plan limits on step 3 cap AI actions and self-added courses, not Canvas
+ * classes.
+ *
+ * Every claim here is checked against lib/lms.ts and the connect screen, and
+ * needs to STAY that way — this is the screen that sets the expectation the
+ * product then has to meet:
+ *   · "read-only link"     — Canvas's private calendar feed (an .ics URL), so
+ *                            Semora genuinely cannot write anything back.
+ *   · "dated"              — the feed lists dated assignments and events only.
+ *   · "about every hour"   — the wording the connect screen already uses.
+ *   · "encrypted"          — the credential lives in Supabase Vault and is
+ *                            never returned to the client (lib/lms.ts).
+ *   · "keeps itself right" — background sync is ON from the moment you
+ *                            connect, which is what makes a moved deadline
+ *                            correct itself without anyone touching it.
+ */
+const CANVAS_POINTS: {
+  icon: React.ComponentProps<typeof FontAwesome>['name'];
+  label: string;
+  note: string;
+}[] = [
+  {
+    icon: 'graduation-cap',
+    label: 'One connection, the whole semester',
+    note: 'Your classes and every dated assignment arrive together — no typing, no importing them one at a time.',
+  },
+  {
+    icon: 'refresh',
+    label: 'It stays right on its own',
+    note: 'Semora re-checks Canvas about every hour. When an instructor moves a due date, yours moves with it.',
+  },
+  {
+    icon: 'lock',
+    label: 'Read-only, and private',
+    note: 'Your private Canvas calendar link, encrypted on our side. Semora can read your deadlines — never post, submit or change anything.',
+  },
+];
+
+function CanvasSync({ colors, isWide }: { colors: C; isWide: boolean }) {
+  return (
+    <View style={styles.stepPad}>
+      <Text style={[styles.kicker, { color: colors.brand }]}>IF YOUR SCHOOL USES CANVAS</Text>
+      <Text style={[styles.display2, { color: colors.ink }]}>
+        {isWide ? 'Connect it once. Then stop thinking about it.' : 'Connect it once.\nThen stop\nthinking about it.'}
+      </Text>
+      <Text style={[styles.lead, { color: colors.ink2, marginBottom: 4 }, isWide && { maxWidth: 700 }]}>
+        The one part of your semester that updates itself.
+      </Text>
+
+      {CANVAS_POINTS.map((point, i) => (
+        <Animated.View key={point.label} entering={FadeInDown.delay(120 + i * 110).springify().damping(18)}>
+          <View
+            accessible
+            accessibilityLabel={`${point.label}. ${point.note}`}
+            style={[styles.canvasCard, { backgroundColor: colors.card, borderColor: colors.line }]}
+          >
+            <View style={[styles.toolIcon, { backgroundColor: colors.brand50 }]}>
+              <FontAwesome name={point.icon} size={15} color={colors.brand} accessible={false} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.toolLabel, { color: colors.ink }]}>{point.label}</Text>
+              <Text style={[styles.toolNote, { color: colors.ink2 }]}>{point.note}</Text>
+            </View>
+          </View>
+        </Animated.View>
+      ))}
+
+      <Animated.View entering={FadeInDown.delay(460).springify().damping(18)}>
+        <Text style={[styles.toolFootnote, { color: colors.ink3, borderTopColor: colors.line }]}>
+          Free on every plan, with no limit on Canvas classes. Semora offers the setup right after you sign in.
+        </Text>
+      </Animated.View>
+    </View>
+  );
+}
+
 /* ------------------------------------------------ step 4: personalize */
 
 const PAIN_OPTIONS: { key: PainPoint; label: string }[] = [
@@ -802,6 +915,7 @@ const styles = StyleSheet.create({
   toolAlsoLabel: { flex: 1, fontSize: 14, fontWeight: '600' },
   // borderTopWidth was 0 while a borderColor was passed, so the rule meant to
   // separate this from the tools never drew and it read as more body copy.
+  canvasCard: { flexDirection: 'row', alignItems: 'flex-start', gap: 11, borderWidth: 1, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 11, marginTop: 10 },
   toolFootnote: { fontSize: 12.5, lineHeight: 18, marginTop: 14, paddingTop: 12, borderTopWidth: 1 },
 
   plugsCaption: { fontSize: 12.5, lineHeight: 18, marginTop: 18, marginBottom: 10 },

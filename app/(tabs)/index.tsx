@@ -353,7 +353,7 @@ export default function TodayScreen() {
           // useToggleTaskComplete's onSuccess so every screen's completions
           // count — no per-screen call needed here.
         }
-        if (Platform.OS === 'ios') {
+        if (Platform.OS !== 'web') {
           // Completing (incl. late) = Success/Warning, un-completing = Warning,
           // matching task/[id].tsx's feedback mapping.
           const type = vars.is_completed

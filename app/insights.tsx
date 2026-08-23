@@ -74,7 +74,7 @@ export default function InsightsScreen() {
       // one-line-per-course text blurb. Mirrors the .ics export pattern.
       await exportSemesterReport(semester?.name ?? 'Current semester', insights);
       track('insights_exported', { screen: 'insights', format: 'csv' });
-      if (Platform.OS === 'ios') {
+      if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
     } catch (err: any) {

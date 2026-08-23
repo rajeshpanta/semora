@@ -171,7 +171,7 @@ export default function TaskDetailScreen() {
         reminder_offsets_minutes: editReminderOffsets,
         });
         Keyboard.dismiss();
-        if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         setEditing(false);
       } catch (err: any) {
         Alert.alert('Error', err.message);
@@ -208,7 +208,7 @@ export default function TaskDetailScreen() {
       });
       // Haptic AFTER the mutation succeeds — firing it first gives false
       // success/warning feedback when the toggle actually fails.
-      if (Platform.OS === 'ios') {
+      if (Platform.OS !== 'web') {
         const feedback = completing && decision?.submitted_late
           ? Haptics.NotificationFeedbackType.Warning
           : completing
@@ -233,7 +233,7 @@ export default function TaskDetailScreen() {
         submitted_late: nextLate,
         late_penalty_percent: nextLate ? decision!.late_penalty_percent : null,
       });
-      if (Platform.OS === 'ios') {
+      if (Platform.OS !== 'web') {
         Haptics.notificationAsync(nextLate ? Haptics.NotificationFeedbackType.Warning : Haptics.NotificationFeedbackType.Success);
       }
     } catch (err: any) {
@@ -282,7 +282,7 @@ export default function TaskDetailScreen() {
         points_possible: pointsPossible,
       });
       Keyboard.dismiss();
-      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setShowScoreInput(false);
       setScoreInput('');
       setScorePossible('');
@@ -333,7 +333,7 @@ export default function TaskDetailScreen() {
           <TouchableOpacity
             style={[styles.tutorCta, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]}
             onPress={() => {
-              if (Platform.OS === 'ios') Haptics.selectionAsync();
+              if (Platform.OS !== 'web') Haptics.selectionAsync();
               track('tutor_offered_tapped', { screen: 'task_detail', type: task.type });
               router.push({
                 pathname: '/tutor',
@@ -728,7 +728,7 @@ export default function TaskDetailScreen() {
             style={[styles.focusBtn, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]}
             activeOpacity={0.8}
             onPress={() => {
-              if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               track('pomodoro_entry_tapped', { screen: 'task_detail' });
               router.push({ pathname: '/pomodoro', params: { taskId: task.id, title: task.title } } as any);
             }}

@@ -130,7 +130,7 @@ export default function NewTaskScreen() {
         _subtasks: submittedSubtasks,
         _courseName: selectedCourse?.name,
       } as any);
-      if (Platform.OS === 'ios') {
+      if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       Keyboard.dismiss();

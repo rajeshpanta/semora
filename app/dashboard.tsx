@@ -122,13 +122,13 @@ export default function DashboardScreen() {
   const maxCourseLoad = Math.max(...courseLoads.map((c) => c.loadScore), 1);
 
   const onTapSuggestion = (taskId: string, tier: UrgencyTier) => {
-    if (Platform.OS === 'ios') Haptics.selectionAsync().catch(() => {});
+    if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
     track('study_suggestion_tapped', { screen: 'dashboard', tier });
     router.push(`/task/${taskId}` as any);
   };
 
   const openPaywall = () => {
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     showProUpsell('dashboard');
   };
 

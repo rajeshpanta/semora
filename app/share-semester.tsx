@@ -79,7 +79,7 @@ export default function ShareSemesterScreen() {
   const handleShare = async () => {
     if (sharing) return;
     setSharing(true);
-    if (Platform.OS === 'ios') {
+    if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     }
     try {
@@ -161,9 +161,7 @@ export default function ShareSemesterScreen() {
         courses: cardCourses.length,
         deadlines: deadlineCount,
       });
-      if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (err: any) {
       // Share.share rejects if the sheet fails to present; user-dismiss does
       // NOT reject on iOS, so anything here is a real failure.

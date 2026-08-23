@@ -182,7 +182,7 @@ export function ProUpsellSheet({
   const canvasEscape = canvasFree && canvasOffer !== 'healthy' && (reason === 'course' || reason === 'scan');
 
   const choose = async () => {
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     track('pro_upsell_continue', { screen: 'upsell_sheet', reason, plan });
 
     // WEB: go straight to Stripe from here.

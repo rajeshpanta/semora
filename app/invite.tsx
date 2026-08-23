@@ -104,7 +104,7 @@ export default function InviteScreen() {
     const result = await redeem(code);
     if (result.status === 'ok') {
       track('referral_redeemed', { screen: 'invite' });
-      if (Platform.OS === 'ios') {
+      if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
       setState('success');

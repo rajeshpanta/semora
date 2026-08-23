@@ -565,6 +565,14 @@ export const ES: Record<string, string> = {
   'Review': 'Revisar',
   'Snooze 1 Hour': 'Posponer 1 hora',
   'Task reminder': 'Recordatorio de tarea',
+  // Android notification channel names and descriptions (lib/notifications.ts).
+  // The channel is created once with the locale in force at first launch;
+  // Android freezes the name at creation, so a later language switch does not
+  // rewrite it. Worth having anyway for Spanish-first installs.
+  'Task reminders': 'Recordatorios de tareas',
+  'Due dates, exams, and same-day nudges.': 'Fechas de entrega, exámenes y avisos del mismo día.',
+  'Updates': 'Novedades',
+  'Course space activity and occasional product news.': 'Actividad de los espacios de curso y novedades ocasionales.',
   'This task still needs your attention.': 'Esta tarea aún necesita tu atención.',
 
   // Syllabus import
@@ -1553,6 +1561,8 @@ export const ES: Record<string, string> = {
   'now': 'ahora',
   'one snap.': 'una sola foto.',
   'One tap with Apple or Google — your account is created automatically.': 'Un toque con Apple o Google y tu cuenta se crea automáticamente.',
+  'One tap with Google — your account is created automatically.': 'Un toque con Google y tu cuenta se crea automáticamente.',
+  'One tap with Apple — your account is created automatically.': 'Un toque con Apple y tu cuenta se crea automáticamente.',
   'or': 'o',
   'organized in': 'organizado con',
   'Problem Set 3': 'Lista de problemas 3',
@@ -1718,6 +1728,35 @@ export const ES: Record<string, string> = {
   'One app for the whole semester': 'Una sola app para todo el semestre',
   'Free every month: 5 scans, 4 courses and same-day reminders. The tools above are part of Pro.':
     'Gratis cada mes: 5 escaneos, 4 cursos y recordatorios el mismo día. Las herramientas de arriba son parte de Pro.',
+
+  // Matches the marketing site nav's own Spanish wording for this action.
+  'Get the app': 'Descargar la app',
+
+  // Android rename-chat card (iOS uses the native Alert.prompt instead).
+  'Chat name': 'Nombre del chat',
+
+  // ── Onboarding step 5: Canvas ──────────────────────────────────────────
+  // The claims are load-bearing, so the Spanish has to carry the same limits
+  // the English does: read-only, private, about hourly, free.
+  'IF YOUR SCHOOL USES CANVAS': 'SI TU UNIVERSIDAD USA CANVAS',
+  // Phone variant uses the hard line breaks; the tablet/landscape headline
+  // wraps on its own, exactly as the toolkit headline above does.
+  'Connect it once.\nThen stop\nthinking about it.': 'Conéctalo una vez.\nY olvídate\ndel tema.',
+  'Connect it once. Then stop thinking about it.': 'Conéctalo una vez. Y olvídate del tema.',
+  'The one part of your semester that updates itself.':
+    'La única parte de tu semestre que se actualiza sola.',
+  'One connection, the whole semester': 'Una sola conexión, todo el semestre',
+  'Your classes and every dated assignment arrive together — no typing, no importing them one at a time.':
+    'Tus clases y todas las tareas con fecha llegan juntas: sin escribir nada y sin importarlas una por una.',
+  'It stays right on its own': 'Se mantiene correcto solo',
+  'Semora re-checks Canvas about every hour. When an instructor moves a due date, yours moves with it.':
+    'Semora vuelve a consultar Canvas más o menos cada hora. Si un profesor cambia una fecha de entrega, la tuya cambia con ella.',
+  'Read-only, and private': 'Solo lectura, y privado',
+  'Your private Canvas calendar link, encrypted on our side. Semora can read your deadlines — never post, submit or change anything.':
+    'Tu enlace privado del calendario de Canvas, cifrado de nuestro lado. Semora puede leer tus fechas de entrega, nunca publicar, entregar ni cambiar nada.',
+  'Free on every plan, with no limit on Canvas classes. Semora offers the setup right after you sign in.':
+    'Gratis en cualquier plan y sin límite de clases de Canvas. Semora te ofrece la configuración justo después de iniciar sesión.',
+  'One last thing': 'Una última cosa',
 
   // ── Onboarding step 2: the three things it plugs into ──────────────────
   'And it plugs into the phone you already use.': 'Y se conecta con el teléfono que ya usas.',

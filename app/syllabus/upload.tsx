@@ -273,7 +273,7 @@ export default function SyllabusUploadScreen() {
       // free-scan count changed. Refresh it now so the scan tab shows the new
       // usage immediately instead of a stale "N free scans left".
       qc.invalidateQueries({ queryKey: ['freeActionUsed'] });
-      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // Auto-select the semester
       setSelectedSemester(result.semesterId);

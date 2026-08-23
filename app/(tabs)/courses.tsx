@@ -92,7 +92,7 @@ export default function CoursesScreen() {
   const activeSemester = semesters.find((s) => s.id === selectedSemesterId);
 
   const handleNav = (route: string) => {
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push(route as any);
   };
 
@@ -154,7 +154,7 @@ export default function CoursesScreen() {
   const handleSelectSemester = (id: string) => {
     setSelectedSemester(id);
     setShowPicker(false);
-    if (Platform.OS === 'ios') Haptics.selectionAsync();
+    if (Platform.OS !== 'web') Haptics.selectionAsync();
   };
 
   // Per-row management menu in the picker modal. Single hub for edit /

@@ -16,6 +16,68 @@ export const REVIEW_TASK_ACTION = 'review-task';
 export const SNOOZE_TASK_ACTION = 'snooze-task';
 const NOTIFICATION_HEALTH_KEY = 'semora.notification-health.v2';
 
+/**
+ * Android notification channels.
+ *
+ * Android 8+ takes importance, sound, vibration and the name the user sees in
+ * Settings from the CHANNEL, not from the notification — and an app that never
+ * creates one gets a single system-made fallback called "Miscellaneous" at
+ * default importance. Two consequences we were shipping: a due-date reminder
+ * could not post as a heads-up alert, and the only switch a student had was one
+ * that silences everything Semora ever sends.
+ *
+ * A channel's settings are frozen at creation — re-creating with new values is
+ * a no-op once the user has the app, and the user's own overrides always win.
+ * So the split has to be right the first time, which is why there are exactly
+ * two and not one per reminder offset: deadlines, which are the product, and
+ * everything else.
+ */
+export const TASK_REMINDER_CHANNEL = 'task-reminders';
+export const GENERAL_CHANNEL = 'general';
+
+let channelsReady: Promise<void> | null = null;
+
+/**
+ * Idempotent and memoised, so the scheduling paths below can await it on every
+ * call without paying for it more than once. After the first invocation this is
+ * an already-resolved promise.
+ */
+export function ensureAndroidChannels(): Promise<void> {
+  if (Platform.OS !== 'android') return Promise.resolve();
+  if (!channelsReady) channelsReady = createAndroidChannels();
+  return channelsReady;
+}
+
+async function createAndroidChannels(): Promise<void> {
+  try {
+    await Notifications.setNotificationChannelAsync(TASK_REMINDER_CHANNEL, {
+      name: translate('Task reminders'),
+      description: translate('Due dates, exams, and same-day nudges.'),
+      // HIGH, not MAX: heads-up when the screen is on, without the full-screen
+      // intent MAX implies. A deadline is urgent, not an incoming call.
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'default',
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#6B46C1',
+      // lightColor alone does nothing — the channel has to have lights turned
+      // on for the colour to ever be used.
+      enableLights: true,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
+      enableVibrate: true,
+    });
+    await Notifications.setNotificationChannelAsync(GENERAL_CHANNEL, {
+      name: translate('Updates'),
+      description: translate('Course space activity and occasional product news.'),
+      importance: Notifications.AndroidImportance.DEFAULT,
+      sound: 'default',
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,
+    });
+  } catch {
+    // A channel we could not create costs us the heads-up presentation, not
+    // the notification: Android falls back to its own default channel.
+  }
+}
+
 export interface QuietHoursPreferences {
   quiet_hours_enabled: boolean;
   quiet_hours_start: string;
@@ -125,6 +187,7 @@ export function moveOutsideQuietHours(date: Date, quiet?: QuietHoursPreferences 
 }
 
 export async function snoozeNotification(response: Notifications.NotificationResponse, minutes = 60) {
+  await ensureAndroidChannels();
   const content = response.notification.request.content;
   const data = content.data || {};
   const userId = typeof data.userId === 'string' ? data.userId : undefined;
@@ -146,7 +209,11 @@ export async function snoozeNotification(response: Notifications.NotificationRes
       sound: true,
       categoryIdentifier: TASK_NOTIFICATION_CATEGORY,
     },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: triggerDate,
+      channelId: TASK_REMINDER_CHANNEL,
+    },
   });
   writeHealthState({ lastScheduledAt: new Date().toISOString(), lastError: null });
 }
@@ -320,6 +387,12 @@ export async function scheduleTaskReminders(
   customOffsetsMinutes?: number[] | null,
 ) {
   if (Platform.OS === 'web') return;
+  // Before the first scheduleNotificationAsync below, always. Android 8+ drops
+  // a notification posted to a channel id that does not exist yet, silently —
+  // nothing throws and nothing is logged, the reminder simply never arrives.
+  // Relying on the mount-time call in _layout winning that race would make
+  // every reminder depend on effect ordering.
+  await ensureAndroidChannels();
   const locale = getAppLocale();
   // Schema marks tasks.due_date NOT NULL, but a malformed row coming
   // from direct DB manipulation would crash split('-') below. Bail
@@ -393,7 +466,11 @@ export async function scheduleTaskReminders(
           sound: true,
           categoryIdentifier: TASK_NOTIFICATION_CATEGORY,
         },
-        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: triggerDate },
+        trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: triggerDate,
+        channelId: TASK_REMINDER_CHANNEL,
+      },
       });
     }
     await pruneToCapIfNeeded();
@@ -495,6 +572,7 @@ export async function scheduleTaskReminders(
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
         date: triggerDate,
+        channelId: TASK_REMINDER_CHANNEL,
       },
     });
   }
@@ -526,6 +604,7 @@ export async function scheduleTaskReminders(
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
           date: lastCall,
+          channelId: TASK_REMINDER_CHANNEL,
         },
       });
     }

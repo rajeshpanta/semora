@@ -135,7 +135,7 @@ export default function NewCourseScreen() {
         }
       }
 
-      if (Platform.OS === 'ios') {
+      if (Platform.OS !== 'web') {
         Haptics.notificationAsync(
           meetingsFailed === 0
             ? Haptics.NotificationFeedbackType.Success

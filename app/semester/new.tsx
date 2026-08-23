@@ -74,7 +74,7 @@ export default function NewSemesterScreen() {
         start_date: startDate ? formatLocalDate(startDate) : null,
         end_date: endDate ? formatLocalDate(endDate) : null,
       });
-      if (Platform.OS === 'ios') {
+      if (Platform.OS !== 'web') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
       Keyboard.dismiss();

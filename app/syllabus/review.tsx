@@ -137,7 +137,7 @@ export default function SyllabusReviewScreen() {
     setItems((prev) => prev.map((item, i) =>
       i === index ? { ...item, accepted: !item.accepted } : item
     ));
-    if (Platform.OS === 'ios') Haptics.selectionAsync();
+    if (Platform.OS !== 'web') Haptics.selectionAsync();
   };
 
   const toggleEdit = (index: number) => {
@@ -245,7 +245,7 @@ export default function SyllabusReviewScreen() {
       if (error || !tasks) {
         // Do NOT navigate away or touch parse_runs/paywall — leave the screen
         // exactly as it was so the user can retry with their selections intact.
-        if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
         Alert.alert(
           "Couldn't save",
           'Your deadlines weren’t saved. Check your connection and try again — your selections are still here.',
@@ -288,7 +288,7 @@ export default function SyllabusReviewScreen() {
       // Invalidate ALL queries so everything refreshes immediately
       await qc.invalidateQueries();
 
-      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
       // A FULLY successful save is the bar for both of the things below. On a
       // partial failure the user must see the "Saved! (N failed)" alert rather

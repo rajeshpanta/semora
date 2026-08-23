@@ -261,7 +261,7 @@ export default function ScanScreen() {
     // after the gate would make the paywall look like disinterest.
     track('scan_started', { screen: 'scan', method: 'camera' });
     if (!(await checkScanLimit())) return;
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
@@ -335,7 +335,7 @@ export default function ScanScreen() {
       }
       totalBytes += size;
       pages.push({ uri: asset.uri, mimeType: assetMimeType(asset) });
-      if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
       if (pages.length >= MAX_SCAN_PAGES) {
         // Cap with clear messaging instead of a silently disabled option.
@@ -373,7 +373,7 @@ export default function ScanScreen() {
     // after the gate would make the paywall look like disinterest.
     track('scan_started', { screen: 'scan', method: 'document' });
     if (!(await checkScanLimit())) return;
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const result = await safePick(() => DocumentPicker.getDocumentAsync({
       type: SUPPORTED_DOCUMENT_PICKER_TYPE,
@@ -423,7 +423,7 @@ export default function ScanScreen() {
     // after the gate would make the paywall look like disinterest.
     track('scan_started', { screen: 'scan', method: 'photos' });
     if (!(await checkScanLimit())) return;
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {

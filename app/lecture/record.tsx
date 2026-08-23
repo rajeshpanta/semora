@@ -126,7 +126,7 @@ export default function RecordLectureScreen() {
   }, [recorder.warnedNearLimit]);
 
   const haptic = (style: Haptics.ImpactFeedbackStyle = Haptics.ImpactFeedbackStyle.Medium) => {
-    if (Platform.OS === 'ios') Haptics.impactAsync(style);
+    if (Platform.OS !== 'web') Haptics.impactAsync(style);
   };
 
   const beginRecording = useCallback(async () => {

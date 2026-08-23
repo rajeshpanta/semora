@@ -205,7 +205,7 @@ export default function DeckDetailScreen() {
       } else {
         await createCard.mutateAsync({ deck_id: deck.id, front: f, back: b });
       }
-      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Keyboard.dismiss();
       setFormOpen(false);
       setFront('');
@@ -224,7 +224,7 @@ export default function DeckDetailScreen() {
         onPress: async () => {
           try {
             await deleteCard.mutateAsync({ id: card.id, deckId: deck.id });
-            if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           } catch (err: any) {
             Alert.alert('Delete Failed', err.message ?? 'Something went wrong.');
           }
@@ -273,7 +273,7 @@ export default function DeckDetailScreen() {
   const gradeCurrent = async (grade: Grade) => {
     const card = queue[studyIndex];
     if (!card) return;
-    if (Platform.OS === 'ios') Haptics.selectionAsync();
+    if (Platform.OS !== 'web') Haptics.selectionAsync();
     // Fire-and-forget the persist so the UI advances instantly; a failed
     // write just leaves the card due next session (the scheduler is pure,
     // no local state depends on the round-trip).
@@ -282,7 +282,7 @@ export default function DeckDetailScreen() {
     setReviewedCount((n) => n + 1);
     if (studyIndex + 1 >= queue.length) {
       // Session complete.
-      if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setStudyIndex(queue.length); // sentinel → completion screen
     } else {
       setStudyIndex((i) => i + 1);
@@ -331,7 +331,7 @@ export default function DeckDetailScreen() {
                 style={[styles.studyCard, { backgroundColor: colors.card, borderColor: colors.line }]}
                 activeOpacity={0.85}
                 onPress={() => {
-                  if (Platform.OS === 'ios') Haptics.selectionAsync();
+                  if (Platform.OS !== 'web') Haptics.selectionAsync();
                   setRevealed((v) => {
                     if (!v) setSeenAnswer(true);
                     return !v;
@@ -376,7 +376,7 @@ export default function DeckDetailScreen() {
               ) : (
                 <TouchableOpacity
                   style={[styles.revealBtn, { backgroundColor: colors.brand }]}
-                  onPress={() => { if (Platform.OS === 'ios') Haptics.selectionAsync(); setRevealed(true); }}
+                  onPress={() => { if (Platform.OS !== 'web') Haptics.selectionAsync(); setRevealed(true); }}
                 >
                   <Text style={styles.upgradeText}>Show Answer</Text>
                 </TouchableOpacity>
@@ -446,7 +446,7 @@ export default function DeckDetailScreen() {
         ) : (
           <TouchableOpacity
             style={[styles.addCardBtn, { borderColor: colors.line, backgroundColor: colors.card }]}
-            onPress={() => { if (Platform.OS === 'ios') Haptics.selectionAsync(); openAdd(); }}
+            onPress={() => { if (Platform.OS !== 'web') Haptics.selectionAsync(); openAdd(); }}
             activeOpacity={0.8}
           >
             <FontAwesome name="plus" size={13} color={colors.brand} />

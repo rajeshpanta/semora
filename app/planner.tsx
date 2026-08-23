@@ -187,7 +187,7 @@ export default function PlannerScreen() {
         unscheduled_minutes: generated.unscheduledMinutes,
         at_risk_minutes: generated.atRiskMinutes,
       });
-      if (Platform.OS === 'ios' && reason !== 'automatic') {
+      if (Platform.OS !== 'web' && reason !== 'automatic') {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
     } catch (error: any) {

@@ -46,6 +46,9 @@ type NavigationItem = {
 // Not a route. The sidebar highlights by pathname and this opens an external
 // page, so it must never match anything isActive() compares against.
 const SUPPORT_PATH = '__support__';
+// Same sentinel trick as SUPPORT_PATH: this leaves the app for the marketing
+// site's /download page, so it must never match anything isActive() compares.
+const GET_APP_PATH = '__get_app__';
 
 const CANVAS_ITEM: NavigationItem = { label: 'Connect Canvas', icon: 'university', path: '/settings/lms' };
 const CANVAS_FIX_ITEM: NavigationItem = { label: 'Finish Canvas setup', icon: 'refresh', path: '/settings/lms' };
@@ -412,6 +415,28 @@ function DesktopSidebar({ session }: { session: Session }) {
 
             New tab: someone mid-scan should not lose the page they were on in order
             to ask a question about it. */}
+        {/* The browser is where students land, but the phone is where the app is
+            actually used — a syllabus gets photographed, not uploaded from a
+            laptop. The marketing site has carried a "Get the app" link in its
+            nav all along; the signed-in app never did, so the people most
+            likely to install it were the only ones never asked.
+
+            Sits directly above Help & feedback because both leave the app for
+            semoraai.com, and grouping the two exits keeps the rail's routes and
+            its off-ramps visually separate. */}
+        <SidebarItem
+          item={{ label: 'Get the app', icon: 'mobile', path: GET_APP_PATH }}
+          active={false}
+          onPress={() => {
+            track('get_app_opened', { screen: 'web_sidebar' });
+            if (typeof window !== 'undefined') {
+              // `from=app` for the same reason as support below: the site is a
+              // different origin and cannot see that this visitor is signed in.
+              const path = locale === 'es' ? '/es/descargar' : '/download';
+              window.open(`${MARKETING_URL}${path}?from=app`, '_blank', 'noopener,noreferrer');
+            }
+          }}
+        />
         <SidebarItem
           item={{ label: 'Help & feedback', icon: 'life-ring', path: SUPPORT_PATH }}
           active={false}

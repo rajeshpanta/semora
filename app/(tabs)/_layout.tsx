@@ -71,7 +71,7 @@ export default function TabLayout() {
       }}
       screenListeners={{
         tabPress: () => {
-          if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         },
       }}
     >
@@ -100,7 +100,7 @@ export default function TabLayout() {
           tabPress: (e) => {
             // Open the action menu instead of navigating to the scan tab.
             e.preventDefault();
-            if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
             setMenuOpen(true);
           },
         }}

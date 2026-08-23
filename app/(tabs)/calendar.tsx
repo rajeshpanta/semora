@@ -120,7 +120,7 @@ export default function CalendarScreen() {
       try {
         await toggleComplete.mutateAsync(vars);
         if (vars.is_completed) track('task_completed', { screen: 'calendar', late: !!vars.submitted_late });
-        if (Platform.OS === 'ios') {
+        if (Platform.OS !== 'web') {
           const type = vars.is_completed
             ? (vars.submitted_late
                 ? Haptics.NotificationFeedbackType.Warning

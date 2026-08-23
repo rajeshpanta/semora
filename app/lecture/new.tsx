@@ -88,7 +88,7 @@ export default function NewNotesFromDocument() {
   } as const;
 
   const pick = async () => {
-    if (Platform.OS === 'ios') Haptics.selectionAsync();
+    if (Platform.OS !== 'web') Haptics.selectionAsync();
 
     // Stop at the picker rather than after the upload: the insert would fail
     // anyway, but only after the student had chosen and uploaded a file.
@@ -145,7 +145,7 @@ export default function NewNotesFromDocument() {
 
   const choose = (outcome: Outcome) => {
     if (!lectureId) return;
-    if (Platform.OS === 'ios') Haptics.selectionAsync();
+    if (Platform.OS !== 'web') Haptics.selectionAsync();
     // Stop here rather than routing into a screen that would only bounce the
     // student to the paywall a moment later, having also consumed their notes.
     const spec = OUTCOMES.find((o) => o.key === outcome);
@@ -224,7 +224,7 @@ export default function NewNotesFromDocument() {
                     <TouchableOpacity
                       key={c.id}
                       onPress={() => {
-                        if (Platform.OS === 'ios') Haptics.selectionAsync();
+                        if (Platform.OS !== 'web') Haptics.selectionAsync();
                         setCourseId(c.id);
                       }}
                       activeOpacity={0.8}

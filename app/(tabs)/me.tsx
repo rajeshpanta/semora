@@ -177,7 +177,7 @@ export default function MeScreen() {
     }
     if (!referralCode) setReferralCode(code);
     setSharingInvite(true);
-    if (Platform.OS === 'ios') {
+    if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     }
     try {

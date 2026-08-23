@@ -47,7 +47,7 @@ export default function PomodoroScreen() {
     _completedTaskId: string | null,
     completedBlockId: string | null,
   ) => {
-    if (Platform.OS === 'ios') {
+    if (Platform.OS !== 'web') {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
     if (phase === 'focus') {
@@ -68,23 +68,23 @@ export default function PomodoroScreen() {
   );
 
   const handleStart = useCallback(async () => {
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await controls.start();
     track('pomodoro_started', { linked: !!state.taskId, screen: 'pomodoro' });
   }, [controls, state.taskId]);
 
   const handleResume = useCallback(async () => {
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     await controls.resume();
   }, [controls]);
 
   const handlePause = useCallback(async () => {
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await controls.pause();
   }, [controls]);
 
   const handleReset = useCallback(async () => {
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     await controls.reset();
   }, [controls]);
 
@@ -110,7 +110,7 @@ export default function PomodoroScreen() {
             style={[styles.lockCta, { backgroundColor: colors.brand }]}
             activeOpacity={0.85}
             onPress={() => {
-              if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
               showProUpsell('pomodoro');
             }}
           >
@@ -222,7 +222,7 @@ export default function PomodoroScreen() {
                     key={m}
                     style={[styles.chip, { borderColor: colors.line }, active && { backgroundColor: colors.brand, borderColor: colors.brand }]}
                     onPress={() => {
-                      if (Platform.OS === 'ios') Haptics.selectionAsync();
+                      if (Platform.OS !== 'web') Haptics.selectionAsync();
                       controls.setFocusMinutes(m);
                     }}
                     activeOpacity={0.8}
@@ -244,7 +244,7 @@ export default function PomodoroScreen() {
                     key={m}
                     style={[styles.chip, { borderColor: colors.line }, active && { backgroundColor: colors.brand, borderColor: colors.brand }]}
                     onPress={() => {
-                      if (Platform.OS === 'ios') Haptics.selectionAsync();
+                      if (Platform.OS !== 'web') Haptics.selectionAsync();
                       controls.setBreakMinutes(m);
                     }}
                     activeOpacity={0.8}

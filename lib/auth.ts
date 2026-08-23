@@ -14,6 +14,8 @@ import { clearPersistedQueryCache } from '@/lib/queryPersistence';
 import { clearOfflineUserState } from '@/lib/offlineSync';
 import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
 import { MARKETING_URL } from '@/lib/constants';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 
 /**
  * Web Client ID from Google Cloud Console (Authentication → Credentials).
@@ -57,7 +59,35 @@ export async function signIn(email: string, password: string) {
 // path for existing accounts only.
 
 /**
- * Sign in with Apple (iOS).
+ * Where Apple's web OAuth flow returns to on Android. Must match the deep
+ * link `app/_layout.tsx` already exchanges (hostname `auth`, path `callback`),
+ * and must be listed under Supabase → Authentication → URL Configuration →
+ * Redirect URLs, or Supabase drops the code and falls back to SITE_URL.
+ */
+const NATIVE_OAUTH_REDIRECT = 'semora://auth/callback';
+
+/**
+ * A PKCE code may be exchanged exactly once. On Android the OAuth redirect
+ * arrives TWICE — `openAuthSessionAsync` resolves with it, and the OS also
+ * delivers it to the `Linking` listener in `app/_layout.tsx`. Whichever gets
+ * here first does the exchange; the loser backs off, instead of firing a
+ * second exchange that fails and shows the user a bogus "sign-in failed".
+ */
+const consumedAuthCodes = new Set<string>();
+
+export function claimAuthCode(code: string): boolean {
+  if (consumedAuthCodes.has(code)) return false;
+  consumedAuthCodes.add(code);
+  // Unbounded growth would be a slow leak across a long session; the set only
+  // needs to cover the seconds between the two deliveries of the same code.
+  if (consumedAuthCodes.size > 20) {
+    consumedAuthCodes.delete(consumedAuthCodes.values().next().value as string);
+  }
+  return true;
+}
+
+/**
+ * Sign in with Apple.
  *
  * Native Apple sheet → returns identityToken (JWT) → handed to Supabase
  * which verifies it against Apple's public keys and creates/finds the
@@ -81,6 +111,46 @@ export async function signInWithApple() {
       options: { redirectTo },
     });
     if (error) throw error;
+    return;
+  }
+
+  if (Platform.OS === 'android') {
+    // Apple ships no native Android SDK, so Android runs the same Apple web
+    // OAuth flow the browser build uses — through Supabase, whose Apple
+    // provider is already configured — and comes back via the app's deep link.
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: { redirectTo: NATIVE_OAUTH_REDIRECT, skipBrowserRedirect: true },
+    });
+    if (error) throw error;
+    if (!data?.url) throw new Error('Apple sign-in could not be started.');
+
+    const result = await WebBrowser.openAuthSessionAsync(data.url, NATIVE_OAUTH_REDIRECT);
+    if (result.type !== 'success') {
+      // Dismissing the custom tab is a decision, not a failure. Report it with
+      // the code every caller already filters, so backing out stays silent.
+      const cancelled: any = new Error('Apple sign-in was cancelled.');
+      cancelled.code = 'ERR_REQUEST_CANCELED';
+      throw cancelled;
+    }
+
+    const returned = Linking.parse(result.url);
+    const providerError =
+      returned.queryParams?.error_description ?? returned.queryParams?.error;
+    if (providerError) throw new Error(String(providerError));
+
+    const code =
+      typeof returned.queryParams?.code === 'string' ? returned.queryParams.code : '';
+    if (!code || code.length > 512) {
+      throw new Error('Apple sign-in returned no authorization code.');
+    }
+    if (claimAuthCode(code)) {
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) throw exchangeError;
+    }
+    // Apple sends the display name only on the very first authorization, and
+    // in the web flow it posts to Supabase rather than to us — so unlike the
+    // iOS path below there is no name to capture here.
     return;
   }
 
@@ -246,6 +316,9 @@ export async function refreshGoogleClassroomAccessToken(
  */
 export async function isAppleSignInAvailable(): Promise<boolean> {
   if (Platform.OS === 'web') return true;
+  // Android has no native sheet to probe — it uses Apple's web OAuth flow,
+  // which is available on every device.
+  if (Platform.OS === 'android') return true;
   if (Platform.OS !== 'ios') return false;
   try {
     return await AppleAuthentication.isAvailableAsync();

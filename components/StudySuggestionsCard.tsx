@@ -77,7 +77,7 @@ export default function StudySuggestionsCard({ limit }: { limit?: number }) {
   }
 
   const onTapSuggestion = (s: Suggestion) => {
-    if (Platform.OS === 'ios') Haptics.selectionAsync().catch(() => {});
+    if (Platform.OS !== 'web') Haptics.selectionAsync().catch(() => {});
     track('study_suggestion_tapped', { screen: 'today', tier: s.tier });
     router.push(`/task/${s.taskId}` as any);
   };

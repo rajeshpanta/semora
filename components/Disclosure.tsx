@@ -64,7 +64,7 @@ export default function Disclosure({
   const tint = accent ?? colors.brand;
 
   const toggle = () => {
-    if (Platform.OS === 'ios') Haptics.selectionAsync();
+    if (Platform.OS !== 'web') Haptics.selectionAsync();
     // Native gets a spring; web treats this as a no-op and simply swaps.
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setOpen((v) => !v);

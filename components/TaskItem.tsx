@@ -81,7 +81,7 @@ export function TaskItem({ task, onToggle, onPress }: TaskItemProps) {
   const isUrgent = dueLabel.includes('left') || dueLabel === 'Due today' || dueLabel === 'Tomorrow';
 
   const handleToggle = async () => {
-    if (Platform.OS === 'ios') {
+    if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
 

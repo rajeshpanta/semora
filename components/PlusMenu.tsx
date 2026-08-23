@@ -154,12 +154,12 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
 
   const go = (pathname: string, params?: Record<string, string>) => {
     onClose();
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.push({ pathname, params } as any);
   };
 
   const openScanPage = () => {
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPage('scan');
   };
 
@@ -178,14 +178,14 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
     // this picker exists to prevent — because an unresolved query and an empty
     // semester look identical from here. When in doubt, ask.
     if (coursesLoading) {
-      if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setPendingPath(path);
       setPage('course');
       return;
     }
     if (courses.length === 0) return go(path);
     if (courses.length === 1) return go(path, { courseId: courses[0].id });
-    if (Platform.OS === 'ios') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPendingPath(path);
     setPage('course');
   };
