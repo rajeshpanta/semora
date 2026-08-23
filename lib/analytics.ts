@@ -13,6 +13,21 @@ import { supabase } from '@/lib/supabase';
 // no INSERT grant on it. That is what makes attribution trustworthy rather than
 // merely present. Signed-out events keep a null user and are still recorded.
 
+// A development build must not write to production analytics.
+//
+// Two rows in analytics_events are a Metro TransformError carrying
+// /Users/…/semora/app/(tabs)/index.tsx with source lines, and a missing native
+// module from http://localhost:8081. Both are from a laptop mid-edit, both are
+// filed as production client_error, and one leaks a local filesystem path into
+// a shared table. Neither describes anything a user experienced.
+//
+// Dropped rather than tagged: a tag only helps if every future query remembers
+// to filter on it, and the queries that matter are written months later by
+// someone counting errors. Set EXPO_PUBLIC_ANALYTICS_IN_DEV=true to opt a dev
+// build back in when you are specifically testing instrumentation.
+const ANALYTICS_ENABLED =
+  !__DEV__ || process.env.EXPO_PUBLIC_ANALYTICS_IN_DEV === 'true';
+
 const DEVICE_ID_KEY = 'semora_device_id';
 let cachedDeviceId: string | null = null;
 
@@ -120,6 +135,7 @@ function currentSessionId(): string {
  * analytics failing must never affect the app.
  */
 export function track(eventName: string, properties: Record<string, any> = {}): void {
+  if (!ANALYTICS_ENABLED) return;
   try {
     supabase
       .from('analytics_events')
@@ -164,6 +180,9 @@ export async function trackBeforeLeaving(
   eventName: string,
   properties: Record<string, any> = {},
 ): Promise<void> {
+  // Gated here as well as in track(): the web branch below bypasses track()
+  // entirely, so guarding only there would let dev events through on web.
+  if (!ANALYTICS_ENABLED) return;
   if (Platform.OS !== 'web') {
     track(eventName, properties);
     return;

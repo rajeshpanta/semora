@@ -35,12 +35,12 @@ import * as Localization from 'expo-localization';
 import { hasPendingCheckout, resolvePendingCheckout } from '@/lib/webCheckoutReturn';
 import { useAppStore } from '@/store/appStore';
 import { ThemeColorsProvider, useResolvedScheme, useColors } from '@/lib/theme';
-import { setQueryClient, signOut } from '@/lib/auth';
+import { claimAuthCode, setQueryClient, signOut } from '@/lib/auth';
 import { loadLastServerRead, trackServerReads } from '@/lib/dataFreshness';
 import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateAfterPurchase, setupPurchaseListeners } from '@/lib/purchases';
 import {
   COMPLETE_TASK_ACTION, SNOOZE_TASK_ACTION, cancelAllRemindersOnSignOut,
-  cancelTaskReminders, registerTaskNotificationActions, rescheduleAllTaskReminders,
+  cancelTaskReminders, ensureAndroidChannels, registerTaskNotificationActions, rescheduleAllTaskReminders,
   snoozeNotification, startWebDueSoonReminders,
 } from '@/lib/notifications';
 import { registerForPushNotificationsAsync } from '@/lib/push';
@@ -608,6 +608,10 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         // ~32 chars; a 10MB `?code=` would otherwise be passed straight
         // to exchangeCodeForSession.
         if (!code || code.length > 512) return;
+        // Android's Apple flow resolves this same code inside signInWithApple.
+        // Whoever claims it first exchanges it; a second exchange would fail
+        // and pop a "Confirmation failed" alert over a sign-in that worked.
+        if (!claimAuthCode(code)) return;
         // If somebody is already signed in, sign them out before exchanging
         // the code — otherwise this would silently swap their session for
         // whoever owns the email link (potential takeover vector).
@@ -727,6 +731,42 @@ async function syncProfileSettings(session: Session) {
   }
 }
 
+// --- Screen views ---
+//
+// One hook instead of a track() call hand-placed on each screen. Twenty-five
+// routes had no instrumentation at all — including `welcome`, the very first
+// screen a new install shows, and course/new, task/new and semester/new, which
+// is why "did this course come from a scan or was it typed in?" could not be
+// answered. Hand-placed calls also rot: every screen added later starts
+// invisible until someone remembers.
+//
+// Segments, not the resolved path. expo-router reports the route PATTERN, so
+// /course/8f3a-… arrives as ['course', '[id]'] and aggregates by itself. The
+// sanitiser below is belt-and-braces: if a version ever hands back resolved
+// values instead, anything that looks like an id is replaced rather than
+// written into a shared analytics table.
+const ID_LIKE = /^[0-9a-f]{8}-[0-9a-f]{4}-|^\d+$|^[0-9a-f]{16,}$/i;
+
+function screenPathFromSegments(segments: string[]): string {
+  if (!segments.length) return '/';
+  return '/' + segments
+    .map((seg) => (seg.startsWith('[') || !ID_LIKE.test(seg) ? seg : '[id]'))
+    .join('/');
+}
+
+function useScreenViewTracking(segments: string[]) {
+  const lastPath = useRef<string | null>(null);
+  const path = screenPathFromSegments(segments as string[]);
+  useEffect(() => {
+    // Layout remounts and re-renders both re-run this; only a genuine route
+    // CHANGE is a screen view. Without this the planner's focus rebuild alone
+    // would have logged hundreds of views a minute.
+    if (lastPath.current === path) return;
+    lastPath.current = path;
+    track('screen_viewed', { screen: path });
+  }, [path]);
+}
+
 // --- Auth gate (routing) ---
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { session, loading } = useSession();
@@ -734,6 +774,8 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const inPasswordReset = useAppStore((s) => s.inPasswordReset);
   const hasOnboarded = useAppStore((s) => s.hasOnboarded);
+
+  useScreenViewTracking(segments as string[]);
 
   useEffect(() => {
     if (loading) return;
@@ -879,6 +921,17 @@ function NotificationActionBridge() {
     if (Platform.OS === 'web') return;
     registerTaskNotificationActions(isPro).catch(() => {});
   }, [isPro]);
+
+  // Android channels, created once per launch and idempotent.
+  //
+  // The scheduling paths in lib/notifications.ts await this themselves, so
+  // correctness does not depend on this effect winning any race. It runs here
+  // so the channels also exist for a user who has not scheduled anything yet —
+  // Settings → Notifications on Android lists an app's channels, and an empty
+  // list is what makes reminder settings look missing.
+  useEffect(() => {
+    ensureAndroidChannels().catch(() => {});
+  }, []);
 
   // Web has no OS-level scheduler to hand future reminders off to, so instead
   // of the native register-actions/response-listener pair below, it gets a
