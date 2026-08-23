@@ -158,11 +158,35 @@ export default function PaywallScreen() {
       if (products) {
         setMonthlySub(products.monthly);
         setAnnualSub(products.annual);
-        const groupId = (products.monthly as any)?.subscriptionInfoIOS?.subscriptionGroupId;
+        // react-native-iap 15 exposes the subscription group as a TOP-LEVEL
+        // `subscriptionGroupIdIOS` — its own docs call that field the one "for
+        // intro-offer eligibility checks" — and deprecates the nested
+        // `subscriptionInfoIOS.subscriptionGroupId` this used to read.
+        //
+        // Reading only the deprecated path meant groupId was undefined, the
+        // eligibility check never ran, and trialEligible stayed false forever.
+        // Apple went on granting the 7-day trial anyway (six subscribers have a
+        // seven-day first term recorded), so the paywall was showing "Subscribe
+        // Now" and "Auto-renews monthly" to people who were about to get a free
+        // week. We advertised none of it, and `trial_started` never fired once.
+        //
+        // Both paths are read so this works whichever shape the installed
+        // version returns.
+        const monthly = products.monthly as any;
+        const groupId: string | undefined =
+          monthly?.subscriptionGroupIdIOS
+          ?? monthly?.subscriptionInfoIOS?.subscriptionGroupId
+          ?? undefined;
         if (groupId) {
           isEligibleForIntroOffer(groupId)
             .then((ok: boolean) => setTrialEligible(ok === true))
-            .catch(() => {});
+            // Previously swallowed. A silent catch here is indistinguishable
+            // from "not eligible", which is exactly how this hid for weeks.
+            .catch(() => track('trial_eligibility_unknown', { reason: 'check_threw' }));
+        } else {
+          // Never silent again: if a future version renames the field, this
+          // says so instead of quietly disabling the trial everywhere.
+          track('trial_eligibility_unknown', { reason: 'no_group_id' });
         }
       }
     });
@@ -202,7 +226,7 @@ export default function PaywallScreen() {
           // Newly Pro: existing tasks only have same-day reminders (scheduled
           // while free). Reschedule so the 1-/3-day advance reminders appear.
           if (expectedUserId) rescheduleAllTaskReminders(expectedUserId);
-          if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           handleClose();
           // Only ack the StoreKit transaction once the server entitlement
           // is written. Otherwise a crash here would charge the user
@@ -419,7 +443,7 @@ export default function PaywallScreen() {
       setSubscriptionPlan(entitlement.plan);
       if (entitlement.is_pro) {
         if (expectedUserId) rescheduleAllTaskReminders(expectedUserId);
-        if (Platform.OS === 'ios') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Restored', 'Your Pro subscription has been restored.', [
           { text: 'OK', onPress: handleClose },
         ]);
