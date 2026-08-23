@@ -41,6 +41,21 @@ export function Breadcrumb({
   const parents = trail.slice(0, -1);
   const current = trail[trail.length - 1];
 
+  // "Home / Compare" on /compare tells a visitor nothing they cannot already
+  // see: the wordmark goes home, and the second item is the page they are on.
+  // A trail earns its place when it names a real parent — "Compare / Semora vs
+  // Notion", "Blog / <post>" — so those still render.
+  //
+  // The JSON-LD goes with it rather than staying behind. Google treats
+  // BreadcrumbList markup describing navigation the page does not show as a
+  // mismatch, and keeping the two in step is the reason this component emits
+  // both from one `trail` in the first place. What is lost is a rich result
+  // reading "semoraai.com › Compare", which is barely more than the URL it
+  // replaces.
+  const parentIsHome =
+    parents.length === 1 && (parents[0].path === '/' || parents[0].path === '/es');
+  if (parentIsHome) return null;
+
   return (
     <>
       <JsonLd data={breadcrumbListSchema(trail)} />
