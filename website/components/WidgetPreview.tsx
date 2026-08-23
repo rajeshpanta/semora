@@ -22,11 +22,11 @@ const COPY = {
   },
   es: {
     day: 'Mar',
-    count: '3 hoy',
+    count: '3 pendientes',
     label: 'En tu pantalla de inicio',
     note: 'Se añade desde la galería de widgets al instalar la app. No hay nada que descargar aparte.',
     rows: [
-      { title: 'Serie de problemas 5', sub: 'QUÍM 101 · hoy' },
+      { title: 'Tarea 5', sub: 'QUÍM 101 · hoy' },
       { title: 'Examen parcial', sub: 'QUÍM 101 · 14 oct', exam: true },
     ],
   },

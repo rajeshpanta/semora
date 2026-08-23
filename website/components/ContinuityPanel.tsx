@@ -29,7 +29,7 @@ const COPY = {
     rows: [
       { title: 'Serie de problemas 5', sub: 'Tarea · 5%', date: '27 oct' },
       { title: 'Examen parcial', sub: 'Examen · 25%', date: '14 oct', exam: true },
-      { title: 'Informe de lab 3', sub: 'Laboratorio · 10%', date: '3 nov' },
+      { title: 'Informe de lab. 3', sub: 'Laboratorio · 10%', date: '3 nov' },
     ],
   },
 } as const;

@@ -105,7 +105,7 @@ export const DEVICE_COPY_ES: Record<string, DeviceCopy> = {
   ipad: {
     name: 'iPad',
     body: 'La misma descarga, adaptada a la pantalla grande. Una app, los dos dispositivos.',
-    action: 'Descargar en el App Store',
+    action: 'Descargar en la App Store',
   },
   web: {
     name: 'Web',
@@ -119,6 +119,6 @@ export const DEVICE_COPY_ES: Record<string, DeviceCopy> = {
   },
   android: { name: 'Android', body: 'En desarrollo. La misma cuenta, el mismo semestre, las mismas entregas.' },
   watch: { name: 'Apple Watch', body: 'Tu próxima entrega en la muñeca.' },
-  wearos: { name: 'Wear OS', body: 'La misma mirada rápida, para un reloj Android.' },
-  mac: { name: 'Mac', body: 'Una ventana de escritorio para el trabajo que haces sentado.' },
+  wearos: { name: 'Wear OS', body: 'Lo mismo, de un vistazo, en un reloj Android.' },
+  mac: { name: 'Mac', body: 'Una ventana de escritorio para cuando trabajas desde la computadora.' },
 };

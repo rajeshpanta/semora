@@ -215,24 +215,44 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(216px, 1fr));
+  gap: 14px;
 }
 
 .soonItem {
-  display: grid;
-  grid-template-columns: 34px 1fr;
-  grid-template-rows: auto auto;
-  column-gap: 12px;
-  align-items: center;
-  padding: 14px 16px;
-  border-radius: 14px;
+  display: block;
+  padding: 14px;
+  border-radius: 16px;
   background: #fff;
   border: 1px solid var(--border);
 }
 
+.soonHeadLine {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 6px;
+}
+
+.soonStage { position: relative; }
+
+.chipSoon {
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border);
+  color: var(--ink2);
+  white-space: nowrap;
+}
+
 .soonIcon {
-  grid-row: span 2;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -244,12 +264,14 @@
 }
 
 .soonName {
+  white-space: nowrap;
   font-size: 0.94rem;
   font-weight: 650;
   color: var(--ink);
 }
 
 .soonBody {
+  display: block;
   font-size: 0.82rem;
   line-height: 1.45;
   color: var(--ink3);

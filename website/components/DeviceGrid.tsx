@@ -2,6 +2,7 @@ import { DEVICES, DEVICE_COPY_EN, DEVICE_COPY_ES, type DeviceCard } from '@/lib/
 import { qrSvg } from '@/lib/qr';
 import { CopyLinkButton } from './CopyLinkButton';
 import { WidgetPreview } from './WidgetPreview';
+import { SoonPreview } from './SoonPreview';
 import { AppleIcon, AndroidIcon, BrowserIcon, TabletIcon, WatchIcon, LaptopIcon, WidgetIcon } from './DeviceIcons';
 import styles from './DeviceGrid.module.css';
 import type { SiteLocale } from '@/lib/i18n';
@@ -46,7 +47,6 @@ const COPY = {
     copied: 'Link copied',
     copy: 'Copy link',
     included: 'Included',
-    alsoHead: 'Comes with it',
     soonHead: 'On the way',
     soonNote: 'One account covers each of these the day it lands — nothing extra to buy.',
   },
@@ -57,9 +57,8 @@ const COPY = {
     copied: 'Enlace copiado',
     copy: 'Copiar enlace',
     included: 'Incluido',
-    alsoHead: 'Viene incluido',
     soonHead: 'En camino',
-    soonNote: 'Tu misma cuenta cubrirá cada uno el día que llegue, sin pagar nada más.',
+    soonNote: 'Tu misma cuenta los cubre en cuanto estén listos, sin pagar nada más.',
   },
 } as const;
 
@@ -139,11 +138,23 @@ export async function DeviceGrid({ locale = 'en' }: { locale?: SiteLocale }) {
             <h3 className={styles.soonHead}>{t.soonHead}</h3>
             <p className={styles.soonNote}>{t.soonNote}</p>
           </div>
+          {/* Cards with artwork rather than a text strip. A list of names
+              reads as a wish; showing the screen reads as work in progress —
+              which is what it is. */}
           <ul className={styles.soonList}>
             {soon.map((d) => (
               <li key={d.id} className={styles.soonItem}>
-                <span className={styles.soonIcon} aria-hidden="true">{ICONS[d.id]}</span>
-                <span className={styles.soonName}>{copyFor[d.id].name}</span>
+                {/* Badge over the artwork, not beside the name. On the same
+                    line it squeezed "Apple Watch" and "Wear OS" into two words
+                    each at common card widths. */}
+                <div className={styles.soonStage}>
+                  <SoonPreview id={d.id} locale={locale} />
+                  <span className={styles.chipSoon}>{t.soon}</span>
+                </div>
+                <div className={styles.soonHeadLine}>
+                  <span className={styles.soonIcon} aria-hidden="true">{ICONS[d.id]}</span>
+                  <span className={styles.soonName}>{copyFor[d.id].name}</span>
+                </div>
                 <span className={styles.soonBody}>{copyFor[d.id].body}</span>
               </li>
             ))}

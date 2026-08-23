@@ -32,8 +32,8 @@ const COPY = {
   },
   es: {
     faqHead: 'Preguntas',
-    ctaHeading: 'Pruébalo con el programa de tu materia',
-    ctaSub: 'Descubre cómo Semora organiza tus cursos. Gratis y sin tarjeta.',
+    ctaHeading: 'Organiza el programa de tu próxima materia',
+    ctaSub: 'Descubre cómo Semora organiza tus cursos. Puedes empezar gratis y sin tarjeta de crédito.',
   },
 } as const;
 
