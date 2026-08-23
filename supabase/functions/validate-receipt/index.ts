@@ -62,6 +62,12 @@ async function logCall(
   status: 'success' | 'failed' | 'rate_limited',
   durationMs: number,
   errorCode?: string,
+  // The Apple transaction this call concerned, when one was identified.
+  // Only the ownership conflicts have it, and only they need it: those are
+  // the failures that strand a paying customer, and resolving one means
+  // finding the OTHER account holding the same transaction. Without this the
+  // log records that a collision happened and nothing about what collided.
+  originalTransactionId?: string,
 ) {
   try {
     await adminClient.from('receipt_validation_log').insert({
@@ -69,6 +75,7 @@ async function logCall(
       status,
       error_code: errorCode ?? null,
       duration_ms: durationMs,
+      original_transaction_id: originalTransactionId ?? null,
     });
   } catch (err) {
     // console, NOT `log` — this is a module-level helper and the structured
@@ -673,6 +680,7 @@ async function writeEntitlementAndRespond(
           'failed',
           Date.now() - startTime,
           'cross_account_oti',
+          oti,
         );
         return jsonResponse(
           {
@@ -706,6 +714,7 @@ async function writeEntitlementAndRespond(
             'failed',
             Date.now() - startTime,
             'oti_held_by_other_account',
+            oti,
           );
           return jsonResponse(
             {
