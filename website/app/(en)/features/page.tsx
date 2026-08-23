@@ -123,7 +123,6 @@ export default function FeaturesPage() {
               { name: 'Features', path: '/features' },
             ]}
           />
-          <span className={styles.eyebrow}>Features</span>
           <h1 className={styles.h1}>
             Everything you need for <span className={styles.gradient}>the semester</span>
           </h1>

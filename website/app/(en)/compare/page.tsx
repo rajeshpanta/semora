@@ -42,7 +42,6 @@ export default function CompareIndexPage() {
               { name: 'Compare', path: '/compare' },
             ]}
           />
-          <span className={styles.eyebrow}>Compare</span>
           <h1 className={styles.h1}>
             See exactly how Semora <span className={styles.gradient}>stacks up</span>
           </h1>

@@ -28,27 +28,8 @@
 
 .copy { min-width: 0; }
 
-.crumbs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  margin: 0 0 clamp(14px, 2.4vw, 22px);
-  color: var(--ink3);
-}
 
-.crumbs a { color: var(--ink2); text-decoration: none; }
-.crumbs a:hover { color: var(--brand); }
 
-.eyebrow {
-  display: block;
-  font-size: clamp(11px, 2.6vw, 13px);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--brand);
-  margin-bottom: clamp(14px, 2.4vw, 22px);
-}
 
 /* Smaller than the home h1's 5.4rem ceiling: this is a second-level page and
    the device grid below is the thing that should pull the eye, not the words. */

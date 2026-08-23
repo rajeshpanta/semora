@@ -62,8 +62,6 @@ export default async function ComparePage({
           { name: `Semora vs ${competitor.name}`, path: `/compare/${competitor.slug}` },
         ]}
       />
-
-      <p className={styles.eyebrow}>Comparison</p>
       <h1>
         Semora vs {competitor.name}: which is right for you?
       </h1>
