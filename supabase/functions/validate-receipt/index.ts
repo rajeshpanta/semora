@@ -82,6 +82,71 @@ async function logCall(
   }
 }
 
+/**
+ * Raise a support ticket when two accounts claim one Apple subscription.
+ *
+ * This exists because the refusal was previously invisible. Twenty-six
+ * failed restores across five people produced exactly ZERO support requests:
+ * a student who taps Restore, reads an error and closes the app does not
+ * then go and write in. The only reason any of it was ever found was a
+ * manual trawl through receipt_validation_log.
+ *
+ * Deliberately fire-and-forget and fully swallowed. This runs on the
+ * purchase path, and a telemetry insert must never be the reason a
+ * validation fails — the caller has already decided to return 409.
+ *
+ * Deduped on the transaction id while a ticket is still unhandled, because
+ * the client retries: one subscriber hit this eighteen times in an hour.
+ */
+async function fileOwnershipConflict(
+  // deno-lint-ignore no-explicit-any
+  adminClient: any,
+  // deno-lint-ignore no-explicit-any
+  log: any,
+  claimantId: string,
+  oti: string,
+  holderId: string,
+) {
+  try {
+    const { count } = await adminClient
+      .from('support_requests')
+      .select('id', { count: 'exact', head: true })
+      .is('handled_at', null)
+      .eq('source', 'auto:subscription_conflict')
+      .like('message', `%${oti}%`);
+    if ((count ?? 0) > 0) return; // already raised and still open
+
+    const { data: claimant } = await adminClient.auth.admin.getUserById(claimantId);
+    const email = claimant?.user?.email ?? 'unknown@semora.invalid';
+
+    await adminClient.from('support_requests').insert({
+      name: 'Semora (automatic)',
+      email,
+      topic: 'Billing',
+      // Everything needed to resolve it without another investigation.
+      message:
+        'An Apple subscription is claimed by two accounts, so the person ' +
+        'paying for it cannot use it.\n\n' +
+        `original_transaction_id: ${oti}\n` +
+        `claimed by (blocked):    ${claimantId} <${email}>\n` +
+        `currently held by:       ${holderId}\n\n` +
+        'Usually one human with two sign-in methods (Apple vs Google) — but ' +
+        'confirm before transferring, because a shared Family Sharing Apple ' +
+        'ID looks identical from here and moving it would strip a real ' +
+        "person's access.",
+      locale: 'en',
+      source: 'auto:subscription_conflict',
+      // Nothing sends mail on this path — submit-support owns SMTP. Marking
+      // it 'skipped' rather than 'pending' keeps that honest, so the row is
+      // never mistaken for one that is still waiting on a mailer.
+      email_status: 'skipped',
+    });
+    log.info('ownership_conflict_ticket_filed', { user_id: claimantId });
+  } catch (err) {
+    console.error('[validate-receipt] failed_to_file_conflict:', errorFields(err));
+  }
+}
+
 interface AppleReceiptInfo {
   product_id?: string;
   expires_date_ms?: string;
@@ -176,11 +241,38 @@ interface JwsTransaction {
   environment?: string;
 }
 
-async function verifyAppleJws(jws: string): Promise<{
-  productId: string;
-  expiresAt: Date;
-  originalTransactionId: string;
-} | null> {
+/**
+ * What a credential actually told us about this account's subscription.
+ *
+ * The distinction that matters is 'ended' vs 'unknown'. Both used to be a
+ * bare `null`, and both therefore wrote is_pro:false — so a receipt that
+ * simply carries no transaction for our products yet was indistinguishable
+ * from a cancellation, and silently de-Pro'd a payer who had done nothing
+ * wrong. Seen in production 2026-08-22: a subscriber bought, was granted
+ * Pro, and lost it ~13 minutes later to exactly this confusion — and then
+ * could not re-buy, because the app only finalises a StoreKit transaction
+ * once the server confirms Pro, so the unfinished purchase blocked every
+ * retry. The purchase itself became the thing preventing the purchase.
+ *
+ *   active  — Apple returned a live, unexpired transaction for our product.
+ *   ended   — Apple returned OUR product, lapsed or revoked. A positive
+ *             statement that the subscription is over.
+ *   unknown — the credential said nothing about our products at all. NOT
+ *             evidence of anything, and must never downgrade.
+ */
+type ValidationOutcome =
+  | {
+      kind: 'active';
+      productId: string;
+      expiresAt: Date;
+      originalTransactionId: string;
+    }
+  | { kind: 'ended' }
+  | { kind: 'unknown' };
+
+async function verifyAppleJws(
+  jws: string,
+): Promise<{ outcome: ValidationOutcome; environment: string | null }> {
   const parts = jws.split('.');
   if (parts.length !== 3) throw new Error('Malformed transaction token');
 
@@ -226,25 +318,39 @@ async function verifyAppleJws(jws: string): Promise<{
   // 4. Only now read the payload.
   const tx: JwsTransaction = JSON.parse(new TextDecoder().decode(b64urlToBytes(parts[1])));
   if (tx.bundleId !== 'com.rajeshpanta.syllabussnap') throw new Error('Wrong app');
+  const environment = tx.environment ?? null;
+
   // Don't let a Sandbox/TestFlight transaction grant production Pro (gated so
   // App Review's sandbox purchase still works until BLOCK_SANDBOX_PRO is set).
-  if (BLOCK_SANDBOX && tx.environment && tx.environment !== 'Production') return null;
-  if (tx.productId !== PRODUCT_MONTHLY && tx.productId !== PRODUCT_ANNUAL) return null;
-  if (tx.revocationDate) return null; // refunded/revoked
-  if (!tx.expiresDate || tx.expiresDate <= Date.now()) return null; // lapsed
+  // 'unknown', not 'ended': declining to HONOUR a sandbox token is our policy
+  // choice, not Apple reporting a cancellation, so it must never downgrade a
+  // production subscriber who happened to send one.
+  if (BLOCK_SANDBOX && environment && environment !== 'Production') {
+    return { outcome: { kind: 'unknown' }, environment };
+  }
+  // Someone else's product under the same Apple ID — says nothing about ours.
+  if (tx.productId !== PRODUCT_MONTHLY && tx.productId !== PRODUCT_ANNUAL) {
+    return { outcome: { kind: 'unknown' }, environment };
+  }
+  // Refunded/revoked: Apple positively telling us this one is over.
+  if (tx.revocationDate) return { outcome: { kind: 'ended' }, environment };
+  // An auto-renewable with no expiry date is anomalous, not expired. Reading
+  // it as 'ended' would invent a cancellation out of a malformed payload.
+  if (!tx.expiresDate) return { outcome: { kind: 'unknown' }, environment };
+  if (tx.expiresDate <= Date.now()) return { outcome: { kind: 'ended' }, environment };
 
   return {
-    productId: tx.productId,
-    expiresAt: new Date(tx.expiresDate),
-    originalTransactionId: tx.originalTransactionId ?? tx.transactionId ?? '',
+    outcome: {
+      kind: 'active',
+      productId: tx.productId,
+      expiresAt: new Date(tx.expiresDate),
+      originalTransactionId: tx.originalTransactionId ?? tx.transactionId ?? '',
+    },
+    environment,
   };
 }
 
-function pickLatestActive(resp: AppleVerifyResponse): {
-  productId: string;
-  expiresAt: Date;
-  originalTransactionId: string;
-} | null {
+function pickLatestActive(resp: AppleVerifyResponse): ValidationOutcome {
   const candidates = [
     ...(resp.latest_receipt_info ?? []),
     ...(resp.receipt?.in_app ?? []),
@@ -257,6 +363,13 @@ function pickLatestActive(resp: AppleVerifyResponse): {
     originalTransactionId: string;
   } | null = null;
 
+  // Did this receipt DEFINITELY tell us one of our subscriptions is over —
+  // a cancellation, or an expiry date already in the past? That is the only
+  // thing that may downgrade. A receipt that merely fails to mention our
+  // product (the stale-receipt case StoreKit 2 produces routinely) carries
+  // no signal at all. See ValidationOutcome.
+  let sawDefiniteEnd = false;
+
   for (const tx of candidates) {
     if (
       tx.product_id !== PRODUCT_MONTHLY &&
@@ -265,9 +378,17 @@ function pickLatestActive(resp: AppleVerifyResponse): {
       continue;
     }
     // Refunded/revoked by Apple — does not grant Pro regardless of expiry.
-    if (tx.cancellation_date_ms) continue;
+    if (tx.cancellation_date_ms) {
+      sawDefiniteEnd = true;
+      continue;
+    }
     const expiresMs = tx.expires_date_ms ? Number(tx.expires_date_ms) : NaN;
-    if (!Number.isFinite(expiresMs) || expiresMs <= now) continue;
+    // Unparseable expiry: anomalous, not expired. Says nothing either way.
+    if (!Number.isFinite(expiresMs)) continue;
+    if (expiresMs <= now) {
+      sawDefiniteEnd = true;
+      continue;
+    }
 
     if (!best || expiresMs > best.expiresAt.getTime()) {
       best = {
@@ -278,7 +399,8 @@ function pickLatestActive(resp: AppleVerifyResponse): {
     }
   }
 
-  return best;
+  if (best) return { kind: 'active', ...best };
+  return sawDefiniteEnd ? { kind: 'ended' } : { kind: 'unknown' };
 }
 
 serve(withRequestLogging('validate-receipt', async (req, log) => {
@@ -396,26 +518,30 @@ serve(withRequestLogging('validate-receipt', async (req, log) => {
 
     // ── Path A: signed JWS transaction ────────────────────────────
     if (jwsUsable) {
-      let jwsActive: Awaited<ReturnType<typeof verifyAppleJws>>;
+      let jwsResult: Awaited<ReturnType<typeof verifyAppleJws>> | null = null;
       try {
-        jwsActive = await verifyAppleJws(jws!);
+        jwsResult = await verifyAppleJws(jws!);
       } catch (err) {
         log.error('jws_verification_failed', errorFields(err));
         await logCall(adminClient, userId, 'failed', Date.now() - startTime, 'jws_invalid');
         // If a legacy receipt was also provided, fall through to it below
         // instead of failing the whole request.
-        jwsActive = null;
+        jwsResult = null;
         if (!receiptUsable) {
           return jsonResponse({ error: 'Invalid purchase token' }, 400);
         }
       }
-      if (jwsActive) {
-        return await writeEntitlementAndRespond(adminClient, userId, platform, jwsActive, startTime, log);
+      if (jwsResult?.outcome.kind === 'active') {
+        return await writeEntitlementAndRespond(
+          adminClient, userId, platform, jwsResult.outcome, jwsResult.environment, startTime, log);
       }
-      // jws verified but inactive (lapsed/revoked/foreign product):
-      // when no receipt fallback, record the inactive state honestly.
-      if (!receiptUsable) {
-        return await writeEntitlementAndRespond(adminClient, userId, platform, null, startTime, log);
+      // Verified but not active. With no receipt to fall back on, record what
+      // the token ACTUALLY said: 'ended' writes the downgrade, 'unknown'
+      // leaves the row alone rather than inventing a cancellation from a
+      // token that never mentioned our products.
+      if (jwsResult && !receiptUsable) {
+        return await writeEntitlementAndRespond(
+          adminClient, userId, platform, jwsResult.outcome, jwsResult.environment, startTime, log);
       }
     }
 
@@ -474,13 +600,16 @@ serve(withRequestLogging('validate-receipt', async (req, log) => {
       );
     }
 
-    // Legacy receipt path: same Sandbox gate (write an inactive entitlement
-    // rather than grant Pro from a sandbox receipt when blocking is enabled).
-    const active =
-      BLOCK_SANDBOX && appleResp.environment && appleResp.environment !== 'Production'
-        ? null
+    // Legacy receipt path: same Sandbox gate. 'unknown' rather than a bare
+    // null for the same reason as the JWS path — declining to honour a
+    // sandbox receipt is our policy, not Apple reporting a cancellation.
+    const environment = appleResp.environment ?? null;
+    const outcome: ValidationOutcome =
+      BLOCK_SANDBOX && environment && environment !== 'Production'
+        ? { kind: 'unknown' }
         : pickLatestActive(appleResp);
-    return await writeEntitlementAndRespond(adminClient, userId, platform, active, startTime, log);
+    return await writeEntitlementAndRespond(
+      adminClient, userId, platform, outcome, environment, startTime, log);
   } catch (err) {
     log.error('handler_error', errorFields(err));
     return jsonResponse({ error: 'An unexpected error occurred. Please try again.' }, 500);
@@ -496,7 +625,8 @@ async function writeEntitlementAndRespond(
   adminClient: any,
   userId: string,
   platform: string,
-  active: { productId: string; expiresAt: Date; originalTransactionId: string } | null,
+  outcome: ValidationOutcome,
+  environment: string | null,
   startTime: number,
   // Passed in rather than closed over: `log` is bound as the handler's second
   // parameter, and this function lives at module scope. Referencing it here
@@ -509,12 +639,17 @@ async function writeEntitlementAndRespond(
 
     // 5. Upsert entitlement row (adminClient created above for rate-limit check)
     // Block cross-account claim. Two things to check:
-    //   1. Is this OTI currently bound to a *different* Semora user?
-    //   2. Was this OTI ever consumed by an account that's now deleted?
-    //      (Entitlement row CASCADEd, but the consumed_transactions
-    //      ledger row survives — that's its whole purpose.)
-    if (active && active.originalTransactionId) {
-      const oti = active.originalTransactionId;
+    //   1. Is this OTI currently bound to a *different*, LIVE Semora user?
+    //   2. Is the ledger row still held by someone?
+    //
+    // (2) used to be "was this ever consumed", full stop — which made the
+    // ledger row a permanent tombstone that locked the rightful Apple ID out
+    // of its own subscription once the original account was deleted. Since
+    // 094 the row records its holder, and `on delete set null` clears that
+    // holder exactly when the account goes away, so an orphan is now
+    // recognisable and reclaimable. See the ledger write at the end.
+    if (outcome.kind === 'active' && outcome.originalTransactionId) {
+      const oti = outcome.originalTransactionId;
 
       const { data: existing } = await adminClient
         .from('entitlements')
@@ -523,6 +658,15 @@ async function writeEntitlementAndRespond(
         .maybeSingle();
 
       if (existing && existing.user_id !== userId) {
+        // Deliberately NOT auto-transferred. A live account is holding this,
+        // and an Apple ID can legitimately be shared (Family Sharing), so
+        // handing Pro to whoever validated most recently would let one member
+        // of a household silently strip another's access. A human decides.
+        //
+        // But it must stop being SILENT: 26 refusals in this project produced
+        // zero support tickets, because a student who taps Restore, sees an
+        // error and closes the app does not write in. File it ourselves.
+        await fileOwnershipConflict(adminClient, log, userId, oti, existing.user_id);
         await logCall(
           adminClient,
           userId,
@@ -534,38 +678,55 @@ async function writeEntitlementAndRespond(
           {
             error:
               'This subscription is already linked to a different Semora account. ' +
-              'Sign in with that account, or contact support to transfer it.',
+              'Sign in with that account, or contact support to transfer it — ' +
+              'we have been notified and will sort it out.',
+            code: 'SUBSCRIPTION_ON_OTHER_ACCOUNT',
           },
           409,
         );
       }
 
-      // No live entitlement for this OTI — but maybe one was deleted.
-      // Only check the ledger when there's no current entitlement,
-      // otherwise we'd block the legitimate same-user re-validation.
+      // No live entitlement for this OTI — check the ledger. Only when there
+      // is no current entitlement, otherwise we'd block the legitimate
+      // same-user re-validation.
       if (!existing) {
         const { data: consumed } = await adminClient
           .from('consumed_transactions')
-          .select('original_transaction_id')
+          .select('original_transaction_id, claimed_by')
           .eq('original_transaction_id', oti)
           .maybeSingle();
 
-        if (consumed) {
+        if (consumed?.claimed_by && consumed.claimed_by !== userId) {
+          // Held by a live account that somehow has no entitlement row.
+          // Treat exactly like the cross-account case above.
+          await fileOwnershipConflict(adminClient, log, userId, oti, consumed.claimed_by);
           await logCall(
             adminClient,
             userId,
             'failed',
             Date.now() - startTime,
-            'oti_consumed_deleted_account',
+            'oti_held_by_other_account',
           );
           return jsonResponse(
             {
               error:
-                'This subscription was previously linked to a Semora account that has been deleted. ' +
-                'Please contact support to transfer it to your current account.',
+                'This subscription is already linked to a different Semora account. ' +
+                'Sign in with that account, or contact support to transfer it — ' +
+                'we have been notified and will sort it out.',
+              code: 'SUBSCRIPTION_ON_OTHER_ACCOUNT',
             },
             409,
           );
+        }
+
+        if (consumed && !consumed.claimed_by) {
+          // ORPHANED: the account that consumed this transaction is gone.
+          // Nobody holds it, nobody loses it, and Apple only ever issues a
+          // valid signed receipt for this transaction to the Apple ID that
+          // owns the subscription — so the caller IS the owner. Hand it back
+          // instead of refusing them forever. The ledger write below re-points
+          // the row at them.
+          log.info('orphaned_transaction_reclaimed', { user_id: userId });
         }
       }
     }
@@ -594,7 +755,7 @@ async function writeEntitlementAndRespond(
       (!currentRow.expires_at || new Date(currentRow.expires_at) > new Date());
 
     if (webBilled) {
-      if (active) {
+      if (outcome.kind === 'active') {
         // Both billers think they own this account. Say so rather than
         // picking a winner and quietly cancelling someone's access.
         log.warn('apple_receipt_over_web_subscription', { user_id: userId });
@@ -622,15 +783,59 @@ async function writeEntitlementAndRespond(
       );
     }
 
-    const entitlement = active
+    // ── 'unknown': the credential said nothing about our products ────────
+    // NOT a cancellation, and the single most expensive confusion in this
+    // file. Writing is_pro:false here is what took Pro away from a paying
+    // subscriber thirteen minutes after they bought it, and then wedged
+    // them out of re-buying: the app leaves a StoreKit transaction
+    // unfinished until the server confirms Pro, so every retry collided
+    // with the purchase that had already succeeded.
+    //
+    // Touch last_validated_at (and the environment label) so the row still
+    // shows we checked — and ONLY on a row that already exists. Never
+    // conjure one just to record an absence of evidence.
+    if (outcome.kind === 'unknown') {
+      if (currentRow) {
+        const { error: touchError } = await adminClient
+          .from('entitlements')
+          .update({
+            last_validated_at: new Date().toISOString(),
+            ...(environment ? { environment } : {}),
+          })
+          .eq('user_id', userId);
+        if (touchError) log.warn('touch_failed', errorFields(touchError));
+      }
+      log.info('no_signal_row_left_intact', {
+        user_id: userId,
+        had_row: !!currentRow,
+        environment,
+      });
+      await logCall(adminClient, userId, 'success', Date.now() - startTime);
+      // Answer from the row that stands, honouring its own expiry so a
+      // stale date can never read back as active.
+      const stillValid =
+        currentRow?.is_pro === true &&
+        (!currentRow.expires_at || new Date(currentRow.expires_at) > new Date());
+      return jsonResponse(
+        {
+          is_pro: stillValid,
+          plan: stillValid ? currentRow?.plan ?? null : null,
+          expires_at: currentRow?.expires_at ?? null,
+        },
+        200,
+      );
+    }
+
+    const entitlement = outcome.kind === 'active'
       ? {
           user_id: userId,
           is_pro: true,
-          plan: active.productId === PRODUCT_ANNUAL ? 'annual' : 'monthly',
-          expires_at: active.expiresAt.toISOString(),
-          original_transaction_id: active.originalTransactionId,
-          product_id: active.productId,
+          plan: outcome.productId === PRODUCT_ANNUAL ? 'annual' : 'monthly',
+          expires_at: outcome.expiresAt.toISOString(),
+          original_transaction_id: outcome.originalTransactionId,
+          product_id: outcome.productId,
           platform,
+          ...(environment ? { environment } : {}),
           last_validated_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }
@@ -649,6 +854,7 @@ async function writeEntitlementAndRespond(
           // the columns provided, so omitting them preserves the binding
           // across lapses while is_pro correctly goes false.
           platform,
+          ...(environment ? { environment } : {}),
           last_validated_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -674,11 +880,18 @@ async function writeEntitlementAndRespond(
     // of their own subscription on retry. Ledger write failure is
     // logged but non-fatal — the entitlement uniqueness on OTI still
     // blocks cross-account claim while both rows exist.
-    if (active && active.originalTransactionId) {
+    if (outcome.kind === 'active' && outcome.originalTransactionId) {
       const { error: ledgerError } = await adminClient
         .from('consumed_transactions')
         .upsert(
-          { original_transaction_id: active.originalTransactionId },
+          {
+            original_transaction_id: outcome.originalTransactionId,
+            // Re-points an orphaned row at its reclaiming owner, and keeps
+            // every row's holder current so `claimed_by is null` never means
+            // anything except "the account that held this was deleted".
+            claimed_by: userId,
+            claimed_at: new Date().toISOString(),
+          },
           { onConflict: 'original_transaction_id' },
         );
       if (ledgerError) {
