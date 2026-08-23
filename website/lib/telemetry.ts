@@ -105,13 +105,26 @@ export function report(event: TelemetryEvent, props: Props = {}): void {
   };
 
   try {
-    vercelTrack(event, payload);
+    vercelTrack(event, { ...payload, ...identity });
   } catch {
     // Custom events unavailable on this plan, or the script was blocked.
   }
 
   try {
-    const body = JSON.stringify({ event, props: payload });
+    // identity is spread at the TOP level, not inside props: /api/telemetry
+    // reads body.device_id and gates the entire Supabase insert on it
+    // (`if (… && deviceId && …)`). It was being built above and then dropped,
+    // so device_id arrived undefined on every request, the gate never opened,
+    // and app_name='semora_site' had zero rows for the life of the site —
+    // while the console.log above kept succeeding, so the endpoint looked
+    // healthy the whole time.
+    //
+    // The consequence was that website and app analytics could not be joined
+    // at all: visits, download clicks and signups sat in Vercel while
+    // everything after signup sat in Supabase, with no shared key. device_id
+    // is that key — the same person reading a blog post and later opening the
+    // app is one row in the funnel, which is the entire point of the column.
+    const body = JSON.stringify({ event, props: payload, ...identity });
     // sendBeacon survives the page unload that follows an outbound CTA click,
     // which a normal fetch does not — an app-store click reported with fetch is
     // frequently cancelled before it leaves.
