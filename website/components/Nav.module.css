@@ -3,6 +3,13 @@
   top: 0;
   z-index: 60;
   background: rgba(250, 249, 245, 0.86);
+  /* Prefixed first: Safari only dropped the prefix in 18, so every iPhone and
+     Mac on 17 or earlier reads the unprefixed line as invalid and shows a
+     translucent bar with no blur — page content sliding under it stays sharp
+     and legible through the header. The rest of this stylesheet already
+     prefixes ::-webkit-details-marker, and page.module.css pairs mask-image;
+     this declaration was the one that got missed. */
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
   transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
@@ -385,6 +392,12 @@ a.languageOption:focus-visible {
   top: 100%;
   left: 0;
   right: 0;
+  /* vh first as the floor. Safari only understands svh from 15.4, and an
+     unsupported unit invalidates the whole calc() — leaving the sheet with no
+     max-height at all, so a long menu would run past the bottom of the screen
+     with nothing to scroll. svh is the better answer where it exists because
+     it ignores the collapsing browser chrome. */
+  max-height: calc(100vh - 100%);
   max-height: calc(100svh - 100%);
   overflow-y: auto;
   overscroll-behavior: contain;
