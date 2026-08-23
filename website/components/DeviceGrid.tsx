@@ -1,6 +1,7 @@
 import { DEVICES, DEVICE_COPY_EN, DEVICE_COPY_ES, type DeviceCard } from '@/lib/devices';
 import { qrSvg } from '@/lib/qr';
 import { CopyLinkButton } from './CopyLinkButton';
+import { WidgetPreview } from './WidgetPreview';
 import { AppleIcon, AndroidIcon, BrowserIcon, TabletIcon, WatchIcon, LaptopIcon, WidgetIcon } from './DeviceIcons';
 import styles from './DeviceGrid.module.css';
 import type { SiteLocale } from '@/lib/i18n';
@@ -62,27 +63,6 @@ const COPY = {
   },
 } as const;
 
-/** Arrives with the iPhone download rather than separately. Half-height, no
- *  button — the hole where a button would go is what made these look broken
- *  as full-size cards, and a tile that says "you already have this" does not
- *  need one. Still shown rather than folded away: the range is the argument
- *  this page is making. */
-function IncludedCard({ device, locale }: { device: DeviceCard; locale: SiteLocale }) {
-  const copy = (locale === 'es' ? DEVICE_COPY_ES : DEVICE_COPY_EN)[device.id];
-  const t = COPY[locale];
-  return (
-    <section className={`${styles.card} ${styles.cardIncluded}`}>
-      <div className={styles.cardHead}>
-        <span className={styles.icon} aria-hidden="true">{ICONS[device.id]}</span>
-        <span className={styles.chipIncluded}>{t.included}</span>
-      </div>
-      <h3 className={styles.name}>{copy.name}</h3>
-      <p className={styles.body}>{copy.body}</p>
-      <p className={styles.includedNote}>{copy.action}</p>
-    </section>
-  );
-}
-
 /** A platform you can actually get right now. */
 async function PrimaryCard({
   device,
@@ -112,6 +92,9 @@ async function PrimaryCard({
         <a className={styles.action} href={device.href}>{copy.action}</a>
       )}
 
+      {/* Nothing to link to, so it shows itself instead — see WidgetPreview. */}
+      {device.preview === 'widget' && <WidgetPreview locale={locale} />}
+
       {qr && device.href && (
         <div className={styles.qrRow}>
           {/* Built at request time from a URL we control — no user input goes
@@ -129,21 +112,24 @@ async function PrimaryCard({
 export async function DeviceGrid({ locale = 'en' }: { locale?: SiteLocale }) {
   const copyFor = locale === 'es' ? DEVICE_COPY_ES : DEVICE_COPY_EN;
   const t = COPY[locale];
-  const byId = (id: string) => DEVICES.find((d) => d.id === id)!;
 
-  const iphone = byId('iphone');
-  const web = byId('web');
-  // Included with the iPhone download rather than obtained separately.
-  const bundled = DEVICES.filter((d) => d.included);
+  // Every ready surface is a full card now. iPad and the widget used to be
+  // half-height "Included" tiles, which made them look like footnotes to the
+  // iPhone rather than places the product runs — and left the widget as the
+  // one card with a blank space where its neighbours have a code.
+  const ready = DEVICES.filter((d) => d.status !== 'soon');
   const soon = DEVICES.filter((d) => d.status === 'soon');
 
   return (
     <div className={styles.wrap}>
       <div className={styles.bento}>
-        <PrimaryCard device={iphone} locale={locale} featured />
-        <PrimaryCard device={web} locale={locale} />
-        {bundled.map((d) => (
-          <IncludedCard key={d.id} device={d} locale={locale} />
+        {ready.map((device) => (
+          <PrimaryCard
+            key={device.id}
+            device={device}
+            locale={locale}
+            featured={device.id === 'iphone'}
+          />
         ))}
       </div>
 

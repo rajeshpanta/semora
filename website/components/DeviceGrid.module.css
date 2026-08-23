@@ -55,18 +55,13 @@
 
 .cardFeatured .name { font-size: 1.35rem; }
 
+/* iPhone leads at 7; Web takes the remaining 5; iPad and the widget split the
+   row beneath. Four ready surfaces, none of them a footnote. */
 .card:nth-of-type(2) { grid-column: span 5; }
+.card:nth-of-type(3),
+.card:nth-of-type(4) { grid-column: span 6; }
 
 /* Included surfaces: half width, no button, quieter. */
-/* Half-height by nature now: heading, one line, one note. No button, and
-   nothing stretching it to match the tall tiles above. */
-.cardIncluded {
-  grid-column: span 6;
-  background: rgba(255, 255, 255, 0.62);
-}
-
-.cardIncluded .body { margin-bottom: 12px; }
-
 .cardHead {
   display: flex;
   align-items: center;
