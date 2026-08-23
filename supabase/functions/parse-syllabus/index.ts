@@ -479,7 +479,15 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
       if (usedResult === true) {
         return jsonResponse(
           {
-            error: "You've used your free scan. Upgrade to Pro for unlimited syllabus scanning and lecture recordings.",
+            // Opens with "Free accounts support" on purpose, and it is load-bearing.
+            // The client decides whether to show the upgrade sheet by matching this
+            // string, and 1.7 — 105 of roughly 160 active devices — matches only
+            // /free accounts support|\d+ free scans/. "You've used your free scan"
+            // satisfies neither, so on 1.7 the sheet never opened: 23 devices in
+            // seven days met a bare "Scan Failed" alert at the exact moment they
+            // were ready to pay. The build that fixes the matcher is in App Store
+            // review; this fixes the same users today, from the server.
+            error: "Free accounts support one AI action, and you have used it. Upgrade to Pro for unlimited syllabus scanning and lecture recordings.",
             code: 'FREE_ACTION_USED',
           },
           402,

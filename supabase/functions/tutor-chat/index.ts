@@ -399,7 +399,9 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       if (spent === true) {
         return jsonResponse(
           {
-            error: "You've already used your free action — a syllabus scan, a lecture recording, or a document turned into notes. Upgrade to Pro for unlimited.",
+            // Same reason as parse-syllabus: 1.7 has no `free action` alternative in
+            // its matcher, so this wording never opened the sheet either.
+            error: "Free accounts support one AI action — a syllabus scan, a lecture recording, or a document turned into notes — and you have used it. Upgrade to Pro for unlimited.",
             code: 'FREE_ACTION_USED',
           },
           402,

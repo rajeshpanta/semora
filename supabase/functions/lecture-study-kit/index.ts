@@ -123,7 +123,9 @@ const MSG = {
     es: 'Esta clase todavía no tiene transcripción.',
   },
   freeUsed: {
-    en: "You've used your free action. Upgrade to Pro for unlimited notes, lectures and scans.",
+    // "Free accounts support" is what every shipped client matches on; see
+    // the note in parse-syllabus.
+    en: 'Free accounts support one AI action, and you have used it. Upgrade to Pro for unlimited notes, lectures and scans.',
     es: 'Ya usaste tu acción gratuita. Hazte Pro para generar apuntes, clases y escaneos sin límite.',
   },
   noNotes: {
