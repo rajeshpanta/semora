@@ -80,8 +80,7 @@
   color: var(--brand);
 }
 
-.chipReady,
-.chipIncluded {
+.chipReady {
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.05em;
@@ -92,7 +91,6 @@
 }
 
 .chipReady { background: var(--teal-50); color: var(--teal); }
-.chipIncluded { background: var(--brand-50); color: var(--brand); }
 
 .name {
   font-size: 1.1rem;
@@ -128,12 +126,6 @@
 
 .action:hover { background: var(--brand); }
 
-.includedNote {
-  margin: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--brand);
-}
 
 /* One panel, not three floating pieces. A bare code, a caption and an
    underlined link sitting loose on the card had nothing aligning them to each

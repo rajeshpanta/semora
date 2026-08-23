@@ -148,46 +148,6 @@
   flex: none;
 }
 
-/* The scan panel fills the right column with the one thing a download page can
-   put there that is useful rather than decorative: the install, in the form
-   the visitor's phone can actually take. Someone reading on a laptop cannot
-   tap an App Store link usefully; they can point a camera at this. */
-.scan {
-  justify-self: center;
-  width: min(320px, 100%);
-  background: #fff;
-  border: 1px solid var(--border);
-  border-radius: 22px;
-  padding: clamp(22px, 3vw, 30px);
-  text-align: center;
-  box-shadow: 0 18px 44px rgba(28, 27, 31, 0.07);
-}
-
-.scanCode {
-  width: 168px;
-  height: 168px;
-  margin: 0 auto 16px;
-}
-
-.scanCode svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.scanTitle {
-  margin: 0 0 6px;
-  font-size: 1rem;
-  font-weight: 650;
-  color: var(--ink);
-}
-
-.scanNote {
-  margin: 0;
-  font-size: 0.86rem;
-  line-height: 1.5;
-  color: var(--ink2);
-}
 
 @media (max-width: 900px) {
   .inner { grid-template-columns: 1fr; gap: 32px; }
@@ -197,35 +157,3 @@
   .scan { order: 2; }
 }
 
-/* The code is the action; this is the argument. A panel that is only a QR
-   asks a desktop visitor to reach for their phone and gives them no reason
-   to. Three lines is enough to say the range is real. */
-.scanList {
-  list-style: none;
-  margin: 18px 0 0;
-  padding: 16px 0 0;
-  border-top: 1px solid var(--border);
-  display: grid;
-  gap: 9px;
-  text-align: left;
-}
-
-.scanList li {
-  position: relative;
-  padding-left: 22px;
-  font-size: 0.84rem;
-  line-height: 1.45;
-  color: var(--ink2);
-}
-
-.scanList li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0.42em;
-  width: 11px;
-  height: 6px;
-  border-left: 2px solid var(--brand);
-  border-bottom: 2px solid var(--brand);
-  transform: rotate(-45deg);
-}

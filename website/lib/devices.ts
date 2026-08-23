@@ -27,7 +27,6 @@ export interface DeviceCard {
   qr?: string;
   status: DeviceStatus;
   /** True for things that arrive WITH another download rather than on their own. */
-  included?: boolean;
   /** Renders an illustrative preview in place of the scan panel, for a
    *  surface that has nothing to link to. */
   preview?: 'widget';
@@ -43,7 +42,7 @@ export const DEVICES: DeviceCard[] = [
   // work out that the iPhone card's control is the one that installs it for
   // them too, and a card without the code its neighbours have reads as a
   // surface we support less.
-  { id: 'ipad', status: 'available', href: APP_STORE_URL, qr: APP_STORE_URL, included: true },
+  { id: 'ipad', status: 'available', href: APP_STORE_URL, qr: APP_STORE_URL },
 
   // /sign-in, not the bare root. app.semoraai.com sends a first-time visitor
   // into the APP's onboarding flow — a sequence written for someone who just
@@ -55,7 +54,7 @@ export const DEVICES: DeviceCard[] = [
   // Nothing to download and nothing to scan, so it shows the thing itself
   // instead. A card that is the only one with an empty space where its
   // neighbours have a code reads as unfinished.
-  { id: 'widget', status: 'available', preview: 'widget', included: true },
+  { id: 'widget', status: 'available', preview: 'widget' },
   { id: 'android', status: 'soon' },
   { id: 'watch', status: 'soon' },
   { id: 'wearos', status: 'soon' },
