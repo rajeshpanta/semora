@@ -143,8 +143,18 @@ export async function POST(request: NextRequest) {
     // runtime the instance can be frozen the moment the response is returned,
     // so an un-awaited insert is a coin flip. The visitor already has their 204
     // either way — this costs the request nothing the visitor can perceive.
+    // Belt as well as braces. report() already refuses to send from a dev
+    // build, but that only helps when the client is the one you just built —
+    // a browser tab left open from an earlier session, or anything else
+    // posting here by hand, would still land rows in production analytics.
+    // The console.log above still runs, so local work stays observable; it is
+    // only the durable copy that a laptop has no business writing.
+    const persist =
+      process.env.NODE_ENV === 'production' ||
+      process.env.TELEMETRY_IN_DEV === 'true';
+
     const deviceId = typeof body.device_id === 'string' ? body.device_id.slice(0, 64) : null;
-    if (SUPABASE_URL && SUPABASE_ANON_KEY && deviceId && !rateLimited(deviceId)) {
+    if (persist && SUPABASE_URL && SUPABASE_ANON_KEY && deviceId && !rateLimited(deviceId)) {
       const sessionIdValue = typeof body.session_id === 'string' ? body.session_id.slice(0, 64) : null;
       await fetch(`${SUPABASE_URL}/rest/v1/analytics_events`, {
         method: 'POST',

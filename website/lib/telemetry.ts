@@ -88,8 +88,27 @@ function clean(props: Props): Props {
  * Fire-and-forget. Never throws and never awaits anything the caller needs —
  * telemetry failing must not be able to affect a render or a navigation.
  */
+/**
+ * A local dev session is not a visitor.
+ *
+ * This mattered the moment the identity fix landed. Before it, /api/telemetry
+ * gated its insert on a device_id that was never sent, so nothing written from
+ * a laptop ever reached the table and the absence of a guard here went
+ * unnoticed. With the gate open, an afternoon of local work put 51 rows into
+ * production analytics under app_name='semora_site' — page views of /compare
+ * and /blog that no visitor ever made.
+ *
+ * Dropped rather than tagged, matching lib/analytics.ts in the app: a tag only
+ * helps if every future query remembers to filter on it, and the queries that
+ * matter get written months later by someone counting visits.
+ */
+const TELEMETRY_ENABLED =
+  process.env.NODE_ENV === 'production' ||
+  process.env.NEXT_PUBLIC_TELEMETRY_IN_DEV === 'true';
+
 export function report(event: TelemetryEvent, props: Props = {}): void {
   if (typeof window === 'undefined') return;
+  if (!TELEMETRY_ENABLED) return;
   const payload = clean({ ...props, path: window.location.pathname });
 
   // Identity is attached HERE rather than at each call site so no event can
