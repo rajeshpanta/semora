@@ -319,6 +319,36 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
       return jsonResponse({ error: 'File too large. Maximum size is approximately 11 MB.' }, 413);
     }
 
+    // 0b. READ THE BODY NOW, before any rejection that a real user can hit.
+    //
+    // Every check below used to answer without ever consuming the request,
+    // and the client is an XMLHttpRequest still pushing several megabytes of
+    // base64 into a connection nobody was reading. The reply never reached
+    // it; the upload sat there until xhr.timeout fired at 90 seconds and
+    // reported "The upload timed out. Please try again."
+    //
+    // Which meant the FREE-LIMIT PAYWALL never arrived. Five students in four
+    // days scanned one syllabus, came back to scan a second, waited a minute
+    // and a half, and were told the network had failed. Three of them
+    // retried at ~95-second intervals and then stopped opening the app. The
+    // one moment the paywall exists for, spent on a fake error.
+    //
+    // Reading here costs nothing extra: Content-Length is already capped
+    // above, and the bytes are on the wire either way — declining to read
+    // them never saved the upload, it only broke the answer.
+    //
+    // The three guards above stay header-only on purpose. They are the
+    // defensive ones (no Content-Length, a nonsense value, or a body over
+    // the cap), and buffering an oversized or unbounded request to be polite
+    // about it is exactly what they exist to prevent.
+    let rawBody: string;
+    try {
+      rawBody = await req.text();
+    } catch (err) {
+      log.error('body_read_failed', errorFields(err));
+      return jsonResponse({ error: 'Could not read the upload. Please try again.' }, 400);
+    }
+
     // 1. Validate JWT against Supabase auth
     const authHeader = req.headers.get('Authorization');
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -475,7 +505,9 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
       locale?: unknown;
     };
     try {
-      body = await req.json();
+      // Parsed from the string read at step 0b, not from req — the request
+      // stream has already been consumed by design.
+      body = JSON.parse(rawBody);
     } catch {
       return jsonResponse({ error: 'Invalid request body' }, 400);
     }
