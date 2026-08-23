@@ -11,7 +11,6 @@ import { JsonLd } from '@/components/JsonLd';
 import { RelatedPosts } from '@/components/RelatedPosts';
 import { articleSchema, blogIndexSchema, itemListSchema } from '@/lib/schema';
 import { PricingCards } from '@/components/PricingCards';
-import { DeviceGrid } from '@/components/DeviceGrid';
 import { FeatureShowcase } from '@/components/FeatureShowcase';
 import { GpaCalculator } from '@/components/GpaCalculator';
 import { PomodoroTimer } from '@/components/PomodoroTimer';
@@ -82,7 +81,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 }
 
 function DirectoryWidget({ config }: { config: SpanishPageConfig }) {
-  if (config.kind === 'download') return <DeviceGrid locale="es" />;
+  // No 'download' branch: that page has its own layout and returns before this
+  // is ever reached. Leaving one here would tell the next reader the widget
+  // path still serves it.
   if (config.kind === 'pricing') return <PricingCards locale="es" />;
   if (config.kind === 'gpa') return <GpaCalculator locale="es" />;
   if (config.kind === 'pomodoro') return <PomodoroTimer locale="es" />;
@@ -209,6 +210,16 @@ export default async function SpanishPage({ params }: { params: Params }) {
   const { slug } = await params;
   const config = getSpanishPage(pathFromSlug(slug));
   if (!config) notFound();
+
+  // Before `widget` is computed, deliberately. The download page has its own
+  // layout (DownloadPageBody) and never reaches LongFormPage, so building a
+  // DirectoryWidget for it constructed an element on every request only to
+  // throw it away — and left a 'download' branch in DirectoryWidget implying
+  // the widget path still handled this page.
+  if (config.kind === 'download') {
+    return <DownloadPageBody content={config.content} locale="es" />;
+  }
+
   const widget = config.kind === 'standard' ? undefined : <DirectoryWidget config={config} />;
 
   // Blog posts carry the same illustration their card uses on the index. The
@@ -278,15 +289,6 @@ export default async function SpanishPage({ params }: { params: Params }) {
         </BlogPostArticle>
       </>
     );
-  }
-
-  // The download page has its own layout in both languages — see
-  // DownloadPageBody. Returning here rather than passing a widget into
-  // LongFormPage is the point: the English page left that shell because it is
-  // built for pages you read, and routing Spanish back through it would put
-  // the device grid straight back inside an essay.
-  if (config.kind === 'download') {
-    return <DownloadPageBody content={config.content} locale="es" />;
   }
 
   const hubList = hubListSchema(config);
