@@ -7,6 +7,7 @@ import { SignupButton } from './SignupButton';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import styles from './Nav.module.css';
+import { useFromApp } from '@/lib/useFromApp';
 import { FEATURES, downloadPath, APP_URL } from '@/lib/semora-facts';
 import { FEATURES_ES } from '@/lib/es-facts';
 import type { SiteLocale } from '@/lib/i18n';
@@ -23,14 +24,7 @@ export function MobileNav({ links, locale = 'en' }: { links: { href: string; lab
   // signed in, and "Sign in" / "Try it for free" tells them otherwise. The
   // site cannot see the session — different origin — so the app flags it on
   // the way out. Read after mount so the default markup stays static.
-  const [fromApp, setFromApp] = useState(false);
-  useEffect(() => {
-    try {
-      setFromApp(new URLSearchParams(window.location.search).get('from') === 'app');
-    } catch {
-      // A malformed query string is not a reason to break the menu.
-    }
-  }, []);
+  const fromApp = useFromApp();
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';

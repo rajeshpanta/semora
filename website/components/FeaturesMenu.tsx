@@ -102,11 +102,18 @@ export function FeaturesMenu({ locale = 'en' }: { locale?: SiteLocale }) {
 
       <div id={panelId} className={styles.menuPanel} data-open={open}>
         <div className={styles.menuGrid}>
-          {features.map((f) => (
+          {features.map((f) => {
+            // The trigger already says you are somewhere under Features; this
+            // says which one. Without it the panel looks identical whether you
+            // opened it from the hub or from the middle of a feature page.
+            const href = `${copy.base}/${f.slug}`;
+            const current = pathname === href;
+            return (
             <Link
               key={f.slug}
-              href={`${copy.base}/${f.slug}`}
-              className={styles.menuItem}
+              href={href}
+              className={current ? `${styles.menuItem} ${styles.menuItemActive}` : styles.menuItem}
+              aria-current={current ? 'page' : undefined}
               onClick={() => setOpen(false)}
             >
               <span className={styles.menuItemTop}>
@@ -121,7 +128,8 @@ export function FeaturesMenu({ locale = 'en' }: { locale?: SiteLocale }) {
               </span>
               <span className={styles.menuItemDesc}>{f.shortDescription}</span>
             </Link>
-          ))}
+            );
+          })}
         </div>
         <Link href={copy.base} className={styles.menuFooter} onClick={() => setOpen(false)}>
           {copy.all}

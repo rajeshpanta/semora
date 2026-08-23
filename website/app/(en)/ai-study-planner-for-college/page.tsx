@@ -104,7 +104,6 @@ export default function AiStudyPlannerPage() {
           { name: 'AI Study Planner', path: '/ai-study-planner-for-college' },
         ]}
       />
-      <p className={styles.eyebrow}>Semora</p>
 
       <h1>An AI Study Planner for College Students, Built From Your Syllabus</h1>
       <p className={styles.lede}>

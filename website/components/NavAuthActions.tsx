@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { SignupButton } from './SignupButton';
 import { APP_URL } from '@/lib/semora-facts';
+import { useFromApp } from '@/lib/useFromApp';
 
 /**
  * The right-hand end of the nav: either the signed-out CTAs, or a single way
@@ -37,15 +37,7 @@ export function NavAuthActions({
   ghostClassName?: string;
   ctaClassName?: string;
 }) {
-  const [fromApp, setFromApp] = useState(false);
-
-  useEffect(() => {
-    try {
-      setFromApp(new URLSearchParams(window.location.search).get('from') === 'app');
-    } catch {
-      // A malformed query string is not a reason to break the header.
-    }
-  }, []);
+  const fromApp = useFromApp();
 
   if (fromApp) {
     return (

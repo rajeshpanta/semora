@@ -158,6 +158,11 @@ a.languageOption:focus-visible {
    held rather than transient, and a shade heavier in weight and colour so the
    two are still distinguishable when the cursor is resting on the current
    item. */
+/* The feature you are reading, inside the open panel. */
+.menuItemActive {
+  background: var(--brand-50);
+}
+
 .linkActive,
 .menuTriggerActive {
   background: var(--brand-50);
