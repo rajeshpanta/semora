@@ -45,7 +45,7 @@ export function errorCodeOf(err: any): string {
  * Diagnostics that identify the failure without identifying the person beyond
  * their own account. No receipts, no tokens, no file contents.
  */
-async function diagnostics(code: string, screen?: string): Promise<string> {
+async function diagnostics(code: string, screen?: string, raw?: string): Promise<string> {
   let userId = 'signed-out';
   try {
     const { data } = await supabase.auth.getSession();
@@ -55,6 +55,7 @@ async function diagnostics(code: string, screen?: string): Promise<string> {
   }
   return [
     `Error code: ${code}`,
+    raw ? `Detail: ${raw}` : null,
     screen ? `Screen: ${screen}` : null,
     `App: ${Constants.expoConfig?.version ?? 'unknown'} (${Platform.OS})`,
     `Account: ${userId}`,
@@ -63,8 +64,8 @@ async function diagnostics(code: string, screen?: string): Promise<string> {
 }
 
 /** Open the support form, falling back to a prefilled email. */
-export async function contactSupport(code: string, screen: string | undefined, summary: string): Promise<void> {
-  const details = await diagnostics(code, screen);
+export async function contactSupport(code: string, screen: string | undefined, summary: string, raw?: string): Promise<void> {
+  const details = await diagnostics(code, screen, raw);
   const subject = `Semora issue: ${code}`;
   const body = `Hi Semora team,\n\nI hit this problem:\n${summary}\n\n---- please keep these details ----\n${details}\n`;
   const mailto = `mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -106,6 +107,7 @@ export interface ReportErrorOptions {
  */
 export function reportError(err: any, opts: ReportErrorOptions = {}): void {
   const code = errorCodeOf(err);
+  const rawText = typeof err?.message === 'string' ? err.message : undefined;
   const { screen, onRetry } = opts;
   const summary =
     opts.message ||
@@ -115,11 +117,23 @@ export function reportError(err: any, opts: ReportErrorOptions = {}): void {
 
   // Record it whether or not the student chooses to write in. An error nobody
   // reports is still an error we need to see in the funnel.
+  //
+  // `raw` is the ACTUAL error text and is the whole point. The first version of
+  // this logged `summary`, which is the friendly sentence WE wrote — so the
+  // first TypeError it caught recorded "We couldn't save that change" and told
+  // us nothing at all. The kind sentence is for the student; the raw one is for
+  // whoever has to fix it, and both have to survive.
   track('error_shown', {
     screen,
     code,
     status: typeof err?.status === 'number' ? err.status : undefined,
     message: String(summary).slice(0, 120),
+    raw: typeof err?.message === 'string' ? err.message.slice(0, 200) : String(err ?? '').slice(0, 200),
+    name: err?.name ? String(err.name).slice(0, 40) : undefined,
+    // First stack frame only: enough to name the function, never a payload.
+    at: typeof err?.stack === 'string'
+      ? (err.stack.split('\n')[1] ?? '').trim().slice(0, 120) || undefined
+      : undefined,
   });
 
   // The code goes in the body, not the title: it must be visible without being
@@ -130,7 +144,7 @@ export function reportError(err: any, opts: ReportErrorOptions = {}): void {
   if (onRetry) buttons.push({ text: 'Try Again', onPress: onRetry });
   buttons.push({
     text: 'Contact Support',
-    onPress: () => { void contactSupport(code, screen, summary); },
+    onPress: () => { void contactSupport(code, screen, summary, rawText); },
   });
   buttons.push({ text: 'Close', style: 'cancel' });
 
