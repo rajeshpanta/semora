@@ -23,7 +23,30 @@ type ConnectionMethod = 'legacy_token' | 'calendar_feed' | 'oauth';
 // Keep its service client type local instead of coupling this function to a
 // generated database schema that is not bundled into Supabase deployments.
 type AdminClient = any;
-type LmsCourse = { id: string; name: string; code?: string; instructor?: string };
+type LmsCourse = {
+  id: string;
+  name: string;
+  code?: string;
+  instructor?: string;
+  // Evidence for "which semester is this?", carried back to the client so the
+  // connect screen can propose an answer instead of filing everything under
+  // whichever semester happened to be selected in the app.
+  //
+  // Populated only where the provider gives it away cheaply: a Canvas calendar
+  // feed is parsed in full at discovery, so counts and date spans are free. The
+  // token/API providers list courses without their assignments, and fetching
+  // every course's work just to show a number would turn a connect into dozens
+  // of extra requests.
+  item_count?: number;
+  first_due?: string | null;
+  last_due?: string | null;
+  // Canvas's OWN term, from the API. Authoritative — when the school says
+  // "Fall 2026" there is nothing left to infer. Never present on a calendar
+  // feed: RFC 5545 has no term property and Canvas adds none.
+  term_name?: string | null;
+  term_start?: string | null;
+  term_end?: string | null;
+};
 type LmsAssignment = {
   external_id: string;
   external_course_id: string;
@@ -282,14 +305,32 @@ async function canvasPages(base: string, path: string, token: string): Promise<a
 }
 
 async function canvasDiscover(base: string, token: string): Promise<LmsCourse[]> {
-  const rows = await canvasPages(base, '/api/v1/courses?enrollment_state=active', token);
+  // include[]=term is the whole reason a token connection is better than a
+  // calendar feed at answering "which semester". Canvas returns the school's
+  // own enrollment term — name, start and end — so nothing has to be inferred
+  // from due dates. One extra query parameter, no extra requests.
+  const rows = await canvasPages(
+    base,
+    '/api/v1/courses?enrollment_state=active&include[]=term',
+    token,
+  );
   return rows
     .filter((row) => row?.id != null && row?.name)
     .map((row) => ({
       id: String(row.id),
       name: cleanText(row.name, 240) ?? 'Untitled course',
       code: cleanText(row.course_code, 120) ?? undefined,
+      term_name: cleanText(row?.term?.name, 120) ?? null,
+      term_start: isoDay(row?.term?.start_at),
+      term_end: isoDay(row?.term?.end_at),
     }));
+}
+
+/** 'YYYY-MM-DD' from whatever Canvas put in a timestamp field, or null. */
+function isoDay(raw: unknown): string | null {
+  if (typeof raw !== 'string' || !raw) return null;
+  const time = Date.parse(raw);
+  return Number.isNaN(time) ? null : new Date(time).toISOString().slice(0, 10);
 }
 
 async function canvasAssignments(
@@ -701,7 +742,7 @@ async function loadConnection(
 async function fetchAssignmentsForConnection(
   connection: SyncConnection,
   token: string,
-): Promise<{ assignments: LmsAssignment[]; removalSafe: boolean }> {
+): Promise<{ assignments: LmsAssignment[]; removalSafe: boolean; discovered: LmsCourse[] }> {
   const links = connection.links.filter((link) => link.sync_enabled);
   if (!links.length) throw new Error('This LMS connection has no enabled courses.');
   const courseIds = links.map((link) => link.external_course_id);
@@ -710,6 +751,11 @@ async function fetchAssignmentsForConnection(
     const selected = new Set(courseIds);
     const assignments = feed.assignments.filter((assignment) => selected.has(assignment.external_course_id));
     return {
+      // Everything the feed listed, linked or not. The caller compares this
+      // against the links to find courses from a term that started after this
+      // connection was made — the ones that used to be discarded here without
+      // a trace.
+      discovered: feed.courses,
       assignments,
       // Canvas bounds feeds to 1,000 items, and an empty response can be
       // transient. Reconcile missing in-window items only from a clearly
@@ -723,10 +769,27 @@ async function fetchAssignmentsForConnection(
   else if (connection.provider === 'blackboard') assignments = await blackboardAssignments(base, token, courseIds);
   else if (connection.provider === 'moodle') assignments = await moodleAssignments(base, token, courseIds);
   else assignments = await googleAssignments(token, courseIds);
+
+  // One extra listing call per sync so a token connection can notice a new
+  // term too, and — for Canvas — learn the school's own name for it. Courses
+  // are one bounded paginated request; assignments are not, which is why this
+  // asks what exists and never what is in it.
+  let discovered: LmsCourse[] = [];
+  try {
+    if (connection.provider === 'canvas') discovered = await canvasDiscover(base, token);
+    else if (connection.provider === 'blackboard') discovered = await blackboardDiscover(base, token);
+    else if (connection.provider === 'moodle') discovered = await moodleDiscover(base, token);
+    else discovered = await googleDiscover(token);
+  } catch {
+    // Never fail a sync over this. Assignments for the courses the student
+    // already chose are the job; noticing new ones is the improvement.
+    discovered = [];
+  }
+
   // Current provider pagination is bounded; no result is trusted as a complete
   // deletion feed. Imported work is therefore preserved when an API response is
   // truncated or restricted by a school.
-  return { assignments: assignments.slice(0, 5000), removalSafe: false };
+  return { assignments: assignments.slice(0, 5000), removalSafe: false, discovered };
 }
 
 function timeZoneParts(value: string, timeZone: string): { due_date: string; due_time: string } | null {
@@ -794,7 +857,45 @@ async function performConnectionSync(
   }).eq('id', connection.id);
 
   try {
-    const { assignments, removalSafe } = await fetchAssignmentsForConnection(connection, token);
+    const { assignments, removalSafe, discovered } = await fetchAssignmentsForConnection(connection, token);
+
+    // ── New-term detection ──────────────────────────────────────────────
+    // Courses the provider is listing that this connection has never linked.
+    // Their assignments are still not imported — nothing arrives in a
+    // student's semester without them saying so — but they stop being thrown
+    // away in silence. Recording them is what lets the app say "4 new Canvas
+    // courses found for Spring 2027" instead of a connection that reports
+    // perfect health while importing nothing for four months.
+    //
+    // Deliberately outside the try/catch-free path below: a failure to record
+    // a question must never fail the sync that answers the existing ones.
+    try {
+      const linked = new Set(connection.links.map((link) => link.external_course_id));
+      const unlinked = discovered.filter((course) => !linked.has(course.id));
+      // Called even when the list is empty: that is how a course the student
+      // has since linked, or one the provider stopped listing, gets its
+      // pending row cleared and the badge count brought back to zero.
+      const { error: pendingError } = await admin.rpc('record_lms_pending_courses', {
+        p_connection_id: connection.id,
+        p_courses: unlinked.map((course) => ({
+          external_course_id: course.id,
+          external_name: course.name,
+          code: course.code ?? null,
+          item_count: course.item_count ?? 0,
+          first_due: course.first_due ?? null,
+          last_due: course.last_due ?? null,
+          term_name: course.term_name ?? null,
+          term_start: course.term_start ?? null,
+          term_end: course.term_end ?? null,
+        })),
+      });
+      if (pendingError) log.error('pending_courses_record_failed', errorFields(pendingError));
+      else if (unlinked.length) {
+        log.info('pending_courses_detected', { connection_id: connection.id, count: unlinked.length });
+      }
+    } catch (error) {
+      log.error('pending_courses_record_threw', errorFields(error));
+    }
     let timeZone = 'UTC';
     if (connection.provider === 'canvas' && connection.connection_method === 'calendar_feed') {
       const { data: profile } = await admin

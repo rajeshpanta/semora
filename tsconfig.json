@@ -26,6 +26,11 @@
     "android",
     "ios",
     "website",
-    "supabase/functions"
+    "supabase/functions",
+    // Deno test files. Same reason as supabase/functions: these run under Deno
+    // (Deno globals, https: imports, explicit .ts extensions), not under the
+    // app's bundler. `~/.deno/bin/deno test --no-lock --unstable-sloppy-imports
+    // lib/termMatch.test.ts` typechecks and runs them.
+    "lib/**/*.test.ts"
   ]
 }

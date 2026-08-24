@@ -45,6 +45,9 @@ import { useI18n } from '@/lib/i18n';
 import { findOrCreateSemester } from '@/lib/syllabus';
 import { supabase } from '@/lib/supabase';
 import { useProUpsell } from '@/components/ProUpsellHost';
+import { CanvasCourseReview, confirmSemesterConflict } from '@/components/CanvasCourseReview';
+import { courseFactsOf } from '@/lib/lms';
+import { formatSpan, matchSemester, spanOf } from '@/lib/termMatch';
 import { useAppStore } from '@/store/appStore';
 import type { LmsProvider } from '@/types/database';
 
@@ -63,7 +66,7 @@ const HELP: Record<Exclude<LmsProvider, 'google_classroom' | 'canvas'>, { url: s
 
 export default function LmsConnectScreen() {
   const colors = useColors();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const showProUpsell = useProUpsell();
   const { contentMaxWidth } = useResponsive();
   const { session } = useSession();
@@ -112,7 +115,13 @@ export default function LmsConnectScreen() {
   useEffect(() => {
     if (gateResolved && !lmsAllowed) openPaywall();
   }, [gateResolved, lmsAllowed, openPaywall]);
-  const [semesterId, setSemesterId] = useState(selectedSemesterId ?? '');
+  // Deliberately NOT seeded from selectedSemesterId.
+  //
+  // That is what the app happened to be showing, which is not evidence about
+  // the coursework — and it is exactly how a student's Fall term ended up
+  // inside their Summer semester. This is filled in after discovery, from what
+  // Canvas actually returned. See the effect below.
+  const [semesterId, setSemesterId] = useState('');
   const [displayName, setDisplayName] = useState(LMS_PROVIDER_LABELS[provider]);
   const [baseUrl, setBaseUrl] = useState(params.baseUrl ?? '');
   const [token, setToken] = useState('');
@@ -122,11 +131,24 @@ export default function LmsConnectScreen() {
   const [working, setWorking] = useState(false);
   const [showPrivateUrl, setShowPrivateUrl] = useState(false);
 
+  // Propose from the data, or propose nothing.
+  //
+  // A strong match — the semester's window holds this coursework, or Canvas
+  // named the term outright — is pre-selected, because making someone pick the
+  // obviously-correct option is friction dressed as safety. A weak or absent
+  // match selects NOTHING and the Connect button stays disabled, because a
+  // coin-flip default is the bug being fixed.
+  //
+  // One exception: a single semester on the account has nothing to get wrong.
   useEffect(() => {
-    if (!semesterId && semesters.length) {
-      setSemesterId(semesters.find((row) => row.is_active)?.id ?? semesters[0].id);
+    if (semesterId || !courses.length || !semesters.length) return;
+    if (semesters.length === 1) {
+      setSemesterId(semesters[0].id);
+      return;
     }
-  }, [semesterId, semesters]);
+    const match = matchSemester(courses.map(courseFactsOf), semesters);
+    if (match.confidence === 'strong' && match.semesterId) setSemesterId(match.semesterId);
+  }, [courses, semesters, semesterId]);
 
   const normalizedBase = useMemo(() => {
     if (isCanvasCalendar) {
@@ -168,24 +190,14 @@ export default function LmsConnectScreen() {
     // derived from today's date. A student connecting Canvas wants their
     // current term; asking them to name a container first is a question our
     // schema needs, not one they have an opinion about.
-    if (!reconnecting && semesters.length === 0) {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const uid = session?.user?.id;
-        if (!uid) throw new Error('Not signed in');
-        const created = await findOrCreateSemester(uid, null, null, null);
-        setSemesterId(created.semesterId);
-        await refetchSemesters();
-      } catch (error) {
-        // The free-semester cap raises here for a lapsed-Pro account with a
-        // semester already archived. Its message already says what to do.
-        Alert.alert(
-          'Could not start a semester',
-          error instanceof Error ? error.message : 'Please try again.',
-        );
-        return;
-      }
-    }
+    // No semester is created here any more.
+    //
+    // This used to call findOrCreateSemester() BEFORE discovery, naming a
+    // semester from the onboarding term or today's date — so a student
+    // connecting a Fall feed in a summer session got a "Summer 2026" container
+    // manufactured for them, and the import went into it. The review step now
+    // creates the semester AFTER the feed has been read, prefilled with the
+    // term those deadlines actually fall in.
     setWorking(true);
     try {
       const nextCredential = await obtainCredential();
@@ -245,6 +257,19 @@ export default function LmsConnectScreen() {
       Alert.alert('Select courses', 'Choose at least one course to import.');
       return;
     }
+    // BLOCK. The one action this flow must not let someone take by accident is
+    // filing a term's work into a semester that cannot contain it — the exact
+    // thing that happened before any of this existed. Only raised when both
+    // windows are known and they do not touch at all, so it never fires on a
+    // guess.
+    const target = semesters.find((semester) => semester.id === semesterId) ?? null;
+    const range = formatSpan(spanOf(chosen.map(courseFactsOf)), locale === 'es' ? 'es' : 'en');
+    if (!confirmSemesterConflict(chosen, target, range, () => { void commit(chosen); })) return;
+    await commit(chosen);
+  };
+
+  const commit = async (chosen: DiscoveredLmsCourse[]) => {
+    if (!credential || !session) return;
     setWorking(true);
     try {
       const result = await connectLms({
@@ -256,6 +281,9 @@ export default function LmsConnectScreen() {
         baseUrl: normalizedBase || null,
         credential,
         courses: chosen,
+        // Everything shown and left unticked. Remembered as a decision, so the
+        // first sync does not offer them straight back.
+        declined: courses.filter((course) => !selected.has(course.id)),
       });
       Alert.alert(
         isCanvasCalendar ? 'Canvas connected' : 'Connected',
@@ -491,51 +519,29 @@ export default function LmsConnectScreen() {
                 onChangeText={setDisplayName}
                 style={[styles.input, { color: colors.ink, backgroundColor: colors.card, borderColor: colors.line }]}
               />
-              <Text style={[styles.label, { color: colors.ink2 }]}>Semester</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-                {semesters.map((semester) => (
-                  <TouchableOpacity
-                    key={semester.id}
-                    onPress={() => setSemesterId(semester.id)}
-                    style={[styles.chip, { borderColor: semesterId === semester.id ? colors.brand : colors.line, backgroundColor: semesterId === semester.id ? colors.brand50 : colors.card }]}
-                  >
-                    <Text style={[styles.chipText, { color: semesterId === semester.id ? colors.brand : colors.ink2 }]}>{semester.name}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-              {semesters.length === 0 && (
-                <TouchableOpacity onPress={() => router.push('/semester/new')}>
-                  <Text style={[styles.link, { color: colors.brand }]}>Create a semester first →</Text>
-                </TouchableOpacity>
-              )}
 
-              <View style={styles.selectHead}>
-                <Text style={[styles.label, { color: colors.ink2, marginTop: 0 }]}>Courses ({selected.size} selected)</Text>
-                <TouchableOpacity onPress={() => setSelected(selected.size === courses.length ? new Set() : new Set(courses.map((row) => row.id)))}>
-                  <Text style={[styles.link, { color: colors.brand }]}>{selected.size === courses.length ? 'Clear' : 'Select all'}</Text>
-                </TouchableOpacity>
-              </View>
-              {courses.map((course) => (
-                <TouchableOpacity
-                  key={course.id}
-                  onPress={() => toggleCourse(course.id)}
-                  style={[styles.course, { backgroundColor: colors.card, borderColor: selected.has(course.id) ? colors.brand : colors.line }]}
-                >
-                  <View style={[styles.checkbox, { backgroundColor: selected.has(course.id) ? colors.brand : 'transparent', borderColor: selected.has(course.id) ? colors.brand : colors.line }]}>
-                    {selected.has(course.id) && <FontAwesome name="check" size={11} color="#fff" />}
+              {/* Everything below — the evidence line, the semester question,
+                  the inline create, the course list — is the SAME component the
+                  new-term prompt uses. A term arriving in January is this exact
+                  decision asked later, so it must not get a second
+                  implementation that can drift from this one. */}
+              <CanvasCourseReview
+                courses={courses}
+                semesters={semesters}
+                selected={selected}
+                onToggle={toggleCourse}
+                onSelectAll={(ids) => setSelected(new Set(ids))}
+                semesterId={semesterId}
+                onSemesterChange={setSemesterId}
+                onSemesterCreated={() => { refetchSemesters(); }}
+                footer={isCanvasCalendar ? (
+                  <View style={[styles.afterConnect, { backgroundColor: colors.brand50 }]}>
+                    <FontAwesome name="check-circle" size={14} color={colors.brand} />
+                    <Text style={[styles.afterConnectText, { color: colors.ink2 }]}>After connecting, Semora keeps watching this feed — including for next semester's courses. You will not have to reconnect Canvas.</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.courseName, { color: colors.ink }]}>{course.name}</Text>
-                    {!!course.code && <Text style={[styles.courseCode, { color: colors.ink3 }]}>{course.code}</Text>}
-                  </View>
-                </TouchableOpacity>
-              ))}
-              {isCanvasCalendar && (
-                <View style={[styles.afterConnect, { backgroundColor: colors.brand50 }]}>
-                  <FontAwesome name="check-circle" size={14} color={colors.brand} />
-                  <Text style={[styles.afterConnectText, { color: colors.ink2 }]}>After connecting, you can see the last update time or run Sync now from Settings → Connect Canvas.</Text>
-                </View>
-              )}
+                ) : null}
+              />
+
               <TouchableOpacity onPress={save} disabled={working} style={[styles.primary, { backgroundColor: colors.brand }]}>
                 {working ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{isCanvasCalendar ? 'Connect Canvas and start syncing' : 'Import and sync'}</Text>}
               </TouchableOpacity>

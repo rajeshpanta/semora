@@ -52,6 +52,13 @@ const GET_APP_PATH = '__get_app__';
 
 const CANVAS_ITEM: NavigationItem = { label: 'Connect Canvas', icon: 'university', path: '/settings/lms' };
 const CANVAS_FIX_ITEM: NavigationItem = { label: 'Finish Canvas setup', icon: 'refresh', path: '/settings/lms' };
+// A connection that is syncing fine AND sitting on courses it has not imported.
+// This is what a term change looks like: Canvas starts listing next semester's
+// classes, none of them are linked, and their deadlines go nowhere. It gets a
+// row of its own rather than hiding behind "healthy", because the whole point
+// is that the student never has to work out on their own that Canvas needs
+// attention again.
+const CANVAS_NEW_ITEM: NavigationItem = { label: 'New Canvas courses', icon: 'plus-circle', path: '/settings/lms/new-courses' };
 // Free accounts go straight to the paywall. lms-sync refuses them server-side,
 // so routing to Settings first only adds a step before the same answer.
 // The path is a sentinel, not a destination: SidebarItem's press handler
@@ -255,6 +262,7 @@ function DesktopSidebar({ session }: { session: Session }) {
     if (canvasOffer === 'healthy') return PRIMARY_ITEMS;
     const item =
       canvasOffer === 'needs_attention' ? CANVAS_FIX_ITEM
+      : canvasOffer === 'new_courses' ? CANVAS_NEW_ITEM
       : canvasOffer === 'locked' ? CANVAS_PRO_ITEM
       : canvasFree ? CANVAS_FREE_ITEM
       : CANVAS_ITEM;

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import type { CourseFacts } from '@/lib/termMatch';
 import {
   getGoogleClassroomAccessToken,
   refreshGoogleClassroomAccessToken,
@@ -13,6 +14,7 @@ import type {
   LmsConnection,
   LmsConnectionMethod,
   LmsCourseLink,
+  LmsPendingCourse,
   LmsProvider,
 } from '@/types/database';
 
@@ -21,6 +23,37 @@ export interface DiscoveredLmsCourse {
   name: string;
   code?: string;
   instructor?: string;
+  /**
+   * What the provider told us about this course's dated work. Present for
+   * Canvas calendar feeds (parsed in full at discovery) and absent for the
+   * token providers, which list courses without their assignments.
+   *
+   * This is the evidence lib/termMatch.ts uses to propose a semester. Before
+   * it existed, imports were filed under whichever semester was selected in
+   * the app — which put a real student's Fall term inside their Summer one.
+   */
+  item_count?: number | null;
+  first_due?: string | null;
+  last_due?: string | null;
+  /** Canvas's own enrollment term, from the API. Authoritative when present. */
+  term_name?: string | null;
+  term_start?: string | null;
+  term_end?: string | null;
+}
+
+/** Adapt a discovered course to the shape lib/termMatch.ts reasons about. */
+export function courseFactsOf(course: DiscoveredLmsCourse): CourseFacts {
+  return {
+    id: course.id,
+    name: course.name,
+    code: course.code,
+    itemCount: course.item_count ?? null,
+    firstDue: course.first_due ?? null,
+    lastDue: course.last_due ?? null,
+    termName: course.term_name ?? null,
+    termStart: course.term_start ?? null,
+    termEnd: course.term_end ?? null,
+  };
 }
 
 interface LmsAssignment {
@@ -162,6 +195,15 @@ export async function connectLms(input: {
   baseUrl?: string | null;
   credential: LmsCredential;
   courses: DiscoveredLmsCourse[];
+  /**
+   * Courses that were discovered and deliberately NOT ticked.
+   *
+   * Recorded as already-dismissed so the initial sync — which now reports
+   * every unlinked course it sees — does not immediately hand them back as
+   * "new courses found". A choice the student just made must not reappear as
+   * a notification thirty seconds later.
+   */
+  declined?: DiscoveredLmsCourse[];
 }): Promise<{ connectionId: string; processed: number; skipped: number }> {
   if (!input.courses.length) throw new Error('Select at least one course to import.');
 
@@ -248,6 +290,20 @@ export async function connectLms(input: {
     } catch {
       // Left off deliberately: the student hears about it from the "Finish
       // Canvas setup" prompt, not from a connection that vanished.
+    }
+    // Before the first sync, not after: the sync is what records unlinked
+    // courses, so these have to be on the ignore list by the time it runs.
+    if (input.declined?.length) {
+      try {
+        await setLmsCoursesIgnored({
+          connectionId: connection.id,
+          courses: input.declined,
+          ignored: true,
+        });
+      } catch {
+        // Worst case they are offered again under "new courses", where the
+        // same dismiss button is one tap away. Not worth failing a connect.
+      }
     }
     const result = await syncLmsConnection(connection.id, 'initial');
     return { connectionId: connection.id, ...result };
@@ -448,7 +504,7 @@ export async function disconnectLms(connectionId: string): Promise<void> {
 //                     a prompt to do it again — that is how a useful feature
 //                     turns into nagging.
 
-export type CanvasOffer = 'none' | 'needs_attention' | 'healthy' | 'locked';
+export type CanvasOffer = 'none' | 'needs_attention' | 'new_courses' | 'healthy' | 'locked';
 
 /**
  * Is Canvas sync free for everyone right now?
@@ -539,8 +595,21 @@ export function canvasOfferFor(
   const stalled =
     !canvas.background_sync_enabled ||
     ['error', 'credentials_required'].includes(canvas.last_sync_status ?? '');
+  if (stalled) return { offer: 'needs_attention', connection: canvas, free };
 
-  return { offer: stalled ? 'needs_attention' : 'healthy', connection: canvas, free };
+  // Syncing perfectly AND holding courses back is not healthy.
+  //
+  // This is the state a connection lands in when the term turns over: the feed
+  // fills with next semester's classes, none of them are linked, and every
+  // deadline in them is discarded. The sync reports success the whole time,
+  // because nothing it was asked to do failed. Ranked below needs_attention —
+  // a broken connection is the bigger problem — but above healthy, because a
+  // connection quietly ignoring a semester of work must never render as fine.
+  if ((canvas.pending_courses_count ?? 0) > 0) {
+    return { offer: 'new_courses', connection: canvas, free };
+  }
+
+  return { offer: 'healthy', connection: canvas, free };
 }
 
 /**
@@ -554,3 +623,106 @@ export const lmsConnectionsQuery = {
   // answer here shows the wrong call to action.
   staleTime: 30_000,
 };
+
+// ── New-term courses ────────────────────────────────────────────────────────
+
+/**
+ * Courses a sync found that are not linked yet, newest term first.
+ *
+ * Read straight from the table rather than through the edge function: it is
+ * the student's own data, RLS-scoped, and the review screen needs it to render
+ * before any network round-trip to Canvas would finish.
+ */
+export const pendingLmsCoursesQuery = {
+  queryKey: ['lmsPendingCourses'] as const,
+  queryFn: async (): Promise<LmsPendingCourse[]> => {
+    const { data, error } = await supabase
+      .from('lms_pending_courses')
+      .select('*')
+      .is('ignored_at', null)
+      .is('resolved_at', null)
+      .order('first_due', { ascending: true, nullsFirst: false })
+      .order('external_name', { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as LmsPendingCourse[];
+  },
+};
+
+/** Everything ever dismissed on a connection, for the "not mine" list. */
+export async function ignoredLmsCourses(connectionId: string): Promise<LmsPendingCourse[]> {
+  const { data, error } = await supabase
+    .from('lms_pending_courses')
+    .select('*')
+    .eq('connection_id', connectionId)
+    .not('ignored_at', 'is', null)
+    .order('external_name');
+  if (error) throw error;
+  return (data ?? []) as LmsPendingCourse[];
+}
+
+/** Pending rows read as discovered courses, so one review component serves both. */
+export function pendingAsDiscovered(pending: LmsPendingCourse): DiscoveredLmsCourse {
+  return {
+    id: pending.external_course_id,
+    name: pending.external_name,
+    code: pending.code ?? undefined,
+    item_count: pending.item_count,
+    first_due: pending.first_due,
+    last_due: pending.last_due,
+    term_name: pending.term_name,
+    term_start: pending.term_start,
+    term_end: pending.term_end,
+  };
+}
+
+/**
+ * Turn reviewed courses into real ones, in the semester the student chose.
+ *
+ * One database call, one transaction: a half-applied import would leave either
+ * courses with no link (never synced again) or links with no course (skipped by
+ * the sync RPC forever), and both are invisible failures.
+ */
+export async function linkPendingCourses(input: {
+  connectionId: string;
+  semesterId: string;
+  externalCourseIds: string[];
+}): Promise<number> {
+  const { data, error } = await supabase.rpc('link_lms_pending_courses', {
+    p_connection_id: input.connectionId,
+    p_semester_id: input.semesterId,
+    p_external_course_ids: input.externalCourseIds,
+  });
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
+/**
+ * "Not mine" — and its undo.
+ *
+ * Also called at connect time for the courses a student did NOT tick. Without
+ * that, the very first sync would re-offer them as new discoveries and turn a
+ * deliberate choice into a nag.
+ */
+export async function setLmsCoursesIgnored(input: {
+  connectionId: string;
+  courses: DiscoveredLmsCourse[];
+  ignored: boolean;
+}): Promise<void> {
+  if (!input.courses.length) return;
+  const { error } = await supabase.rpc('set_lms_pending_ignored', {
+    p_connection_id: input.connectionId,
+    p_courses: input.courses.map((course) => ({
+      external_course_id: course.id,
+      external_name: course.name,
+      code: course.code ?? null,
+      item_count: course.item_count ?? 0,
+      first_due: course.first_due ?? null,
+      last_due: course.last_due ?? null,
+      term_name: course.term_name ?? null,
+      term_start: course.term_start ?? null,
+      term_end: course.term_end ?? null,
+    })),
+    p_ignored: input.ignored,
+  });
+  if (error) throw error;
+}

@@ -489,6 +489,21 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (session) {
+        // Captured BEFORE the assignment below, because it is the only thing
+        // that can tell a real sign-in from a replay of one.
+        //
+        // supabase-js re-emits SIGNED_IN on web far more often than a person
+        // signs in — token refresh and tab re-focus both replay it — so this
+        // event counted browser lifecycle, not logins. Measured on web 1.8:
+        // 163 events from 22 devices, one of them firing 27 in a single day,
+        // against 1.1 per device on iOS where the replay does not happen.
+        // Every funnel with signed_in as a step read ~7x high on web.
+        //
+        // Only the ANALYTICS call is gated. The side effects below it —
+        // revalidation, cache wipe, push binding — still run on every
+        // SIGNED_IN exactly as before, because a replayed event can carry a
+        // genuinely new token and those paths are what keep it applied.
+        const previousSignedInUserId = lastSignedInUserId;
         lastSignedInUserId = session.user.id;
         rememberLmsConnections(session.user.id);
         syncProfileSettings(session).catch(() => {});
@@ -499,7 +514,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           // plus wipe cached queries so tabs render the new user's data.
           refreshProForSession(session.user.id, true);
           queryClient.removeQueries();
-          track('signed_in', { screen: 'auth' });
+          if (previousSignedInUserId !== session.user.id) {
+            track('signed_in', { screen: 'auth' });
+          }
           // Bind this device's push token to the freshly signed-in user for
           // server-side re-engagement. No-op unless permission is already
           // granted (never prompts); fire-and-forget.
@@ -1160,6 +1177,7 @@ function RootLayoutNav() {
               <Stack.Screen name="settings/calendar" options={{ title: t('Calendar Sync') }} />
               <Stack.Screen name="settings/lms" options={{ title: t('Canvas & LMS') }} />
               <Stack.Screen name="settings/lms-connect" options={{ title: t('Connect Canvas') }} />
+              <Stack.Screen name="settings/lms/new-courses" options={{ title: t('New Canvas courses') }} />
               <Stack.Screen name="settings/sync" options={{ title: t('Offline & Sync') }} />
               <Stack.Screen name="settings/widgets" options={{ title: t('Widgets') }} />
               <Stack.Screen name="dashboard" options={{ title: t('Workload') }} />

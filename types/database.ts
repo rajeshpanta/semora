@@ -259,8 +259,44 @@ export interface LmsConnection {
    * connection keeps syncing after the offer closes.
    */
   free_promo_claimed_at: string | null;
+  /**
+   * Courses this connection has found that are not linked yet — a new term's
+   * classes, or ones the student did not tick when connecting.
+   *
+   * Non-zero means the connection is working but is NOT fully healthy: it is
+   * holding courses back awaiting review. Denormalised onto the connection so
+   * the six screens that render off `canvasOfferFor` can show the badge
+   * without a second query.
+   */
+  pending_courses_count: number;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * A course an LMS is listing that Semora has not imported.
+ *
+ * Created by the sync, never by the app: it is a statement about what the
+ * provider returned. It becomes a course only when a student reviews it and
+ * picks a semester — nothing lands in someone's term without them saying so.
+ */
+export interface LmsPendingCourse {
+  id: string;
+  user_id: string;
+  connection_id: string;
+  external_course_id: string;
+  external_name: string;
+  code: string | null;
+  item_count: number;
+  first_due: string | null;
+  last_due: string | null;
+  term_name: string | null;
+  term_start: string | null;
+  term_end: string | null;
+  detected_at: string;
+  last_seen_at: string;
+  ignored_at: string | null;
+  resolved_at: string | null;
 }
 
 export interface LmsCourseLink {
