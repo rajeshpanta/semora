@@ -113,6 +113,9 @@ export default function CoursesScreen() {
         : [{
             text:
               canvasOffer === 'needs_attention' ? 'Finish Canvas setup'
+              // Adding a course is exactly when someone would want to know
+              // Canvas already has classes waiting to be imported.
+              : canvasOffer === 'new_courses' ? 'Import new Canvas courses'
               : canvasOffer === 'locked' ? 'Connect Canvas (Pro)'
               : 'Connect Canvas',
             onPress: () => {
@@ -124,7 +127,7 @@ export default function CoursesScreen() {
                 setCanvasUpsell(true);
                 return;
               }
-              handleNav('/settings/lms');
+              handleNav(canvasOffer === 'new_courses' ? '/settings/lms/new-courses' : '/settings/lms');
             },
           }];
     Alert.alert(

@@ -101,3 +101,48 @@ export function suggestSemesters(now: Date = new Date()): Array<{
   }
   return out;
 }
+
+/**
+ * The rough calendar window for a named term, as ISO dates.
+ *
+ * Exposed so term matching (lib/termMatch.ts) can answer "does this Canvas
+ * coursework belong to the semester the student called 'Fall 2026'?" for the
+ * many semesters that carry no start_date/end_date — those fields are
+ * optional on the create form, so a large share of real rows have neither.
+ * The constants stay private to this file; everything that needs a term's
+ * boundaries asks for them here rather than re-deriving its own.
+ */
+export function termWindow(term: Term, year: number): { start: string; end: string } {
+  const [sm, sd] = TERM_STARTS[term];
+  const [em, ed] = TERM_ENDS[term];
+  const iso = (y: number, m: number, d: number) =>
+    `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  return { start: iso(year, sm, sd), end: iso(year, em, ed) };
+}
+
+/**
+ * Read a term out of a human-written name: "Fall 2026", "FALL26", "2026 Fall",
+ * "Otoño 2026". Returns null for anything that is not recognisably one of the
+ * three US terms with a year — "Term 3", "Michaelmas", "My classes" — because
+ * a wrong guess here silently files a semester's worth of work in the wrong
+ * place, and no answer is the safe answer.
+ */
+export function parseTermName(raw: string | null | undefined): { term: Term; year: number } | null {
+  if (!raw) return null;
+  const text = raw.toLowerCase();
+  const term: Term | null =
+    /\b(fall|autumn|oto[ñn]o)\b|\bfa\d/.test(text) ? 'Fall'
+    : /\b(spring|primavera)\b|\bsp\d/.test(text) ? 'Spring'
+    : /\b(summer|verano)\b|\bsu\d/.test(text) ? 'Summer'
+    : null;
+  if (!term) return null;
+  // Four-digit year first. A bare two-digit year ("FA26") is only read when no
+  // four-digit one is present, and only in the 2000s — "Fall 99" in a student
+  // planner means 2099 far less often than it means a typo, but either way a
+  // 1999 semester is not a thing anyone is importing Canvas into.
+  const four = text.match(/\b(20\d{2})\b/);
+  if (four) return { term, year: Number(four[1]) };
+  const two = text.match(/(?:fa|sp|su|fall|spring|summer)\s*'?(\d{2})\b/);
+  if (two) return { term, year: 2000 + Number(two[1]) };
+  return null;
+}

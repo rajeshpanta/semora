@@ -4,6 +4,21 @@ export interface CanvasCalendarCourse {
   id: string;
   name: string;
   code?: string;
+  /**
+   * What this course's dated work looks like, summarised while the feed is
+   * already being walked.
+   *
+   * A calendar feed carries no term field — RFC 5545 has none and Canvas adds
+   * none — so these three numbers are the only evidence available for deciding
+   * which Semora semester a course belongs to. Semora used to file imports
+   * under whichever semester happened to be selected in the app, which put a
+   * real student's Fall term inside their Summer one. The dates were in the
+   * feed the whole time; nothing was looking at them.
+   */
+  item_count: number;
+  /** 'YYYY-MM-DD' of the earliest and latest dated item in this course. */
+  first_due: string | null;
+  last_due: string | null;
 }
 
 export interface CanvasCalendarAssignment {
@@ -237,12 +252,25 @@ export function parseCanvasCalendarFeed(ics: string): ParsedCanvasCalendar {
         id: context.courseId,
         name: courseCode || `Canvas course ${context.courseId}`,
         code: courseCode || undefined,
+        item_count: 0,
+        first_due: null,
+        last_due: null,
       });
     }
 
     const stamp = first(properties, 'LAST-MODIFIED') ?? first(properties, 'DTSTAMP');
     const updated = stamp ? dateParts(stamp)?.due_at ?? null : null;
     const key = `${context.courseId}:${uid}`;
+    const known = courses.get(context.courseId)!;
+    // Guarded on the key, not just on due_date: a feed can repeat a UID, and
+    // counting it twice would inflate the number shown to the student before
+    // they decide whether to import.
+    const dueOn = due.due_date;
+    if (!assignments.has(key) && dueOn) {
+      known.item_count += 1;
+      if (!known.first_due || dueOn < known.first_due) known.first_due = dueOn;
+      if (!known.last_due || dueOn > known.last_due) known.last_due = dueOn;
+    }
     assignments.set(key, {
       external_id: uid,
       external_course_id: context.courseId,
