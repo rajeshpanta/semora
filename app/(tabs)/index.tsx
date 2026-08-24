@@ -36,7 +36,7 @@ import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { formatTimeOfDay, classTimeStatus } from '@/lib/schedule';
 import { updateTodayWidget, type DueThisWeekItem } from '@/lib/widgetBridge';
-import { rescheduleAllTaskReminders, requestNotificationPermission } from '@/lib/notifications';
+import { getNotificationPermissionStatus, rescheduleAllTaskReminders, requestNotificationPermission } from '@/lib/notifications';
 import { track } from '@/lib/analytics';
 import { computeStreak } from '@/lib/streaks';
 import StudySuggestionsCard from '@/components/StudySuggestionsCard';
@@ -287,13 +287,16 @@ export default function TodayScreen() {
   const prevNotifStatus = useRef<string | null>(null);
   const refreshNotifPerm = useCallback(() => {
     if (Platform.OS === 'web') return;
-    Notifications.getPermissionsAsync()
+    // Not Notifications.getPermissionsAsync directly: on Android that reports a
+    // never-asked user as 'denied', which sent them to Settings instead of the
+    // prompt they had never actually been shown. See the note on the helper.
+    getNotificationPermissionStatus()
       // Only true DENIED shows the banner. 'undetermined' (fresh install,
       // OS prompt never shown) must NOT: the banner's openSettings() leads
       // to a Settings page with no Notifications row until the app has
       // requested authorization once — a dead-end. Those users get the
       // primed ask during their first syllabus save instead.
-      .then(({ status }) => {
+      .then((status) => {
         setNotifPermDenied(status === 'denied');
         setNotifPermUndetermined(status === 'undetermined');
         const prev = prevNotifStatus.current;
@@ -364,7 +367,9 @@ export default function TodayScreen() {
           Haptics.notificationAsync(type);
         }
       } catch {
-        Alert.alert('Couldn\'t update', 'Something went wrong — try again.');
+        // Silent BY DESIGN, not by neglect: useToggleTaskComplete's onError
+        // already named this failure, recorded it and offered the retry. A
+        // second alert here would just make the student dismiss two.
       }
     },
     [toggleComplete],

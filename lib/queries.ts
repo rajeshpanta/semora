@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRef } from 'react';
+import { reportError } from '@/lib/errorReport';
 import { supabase } from '@/lib/supabase';
 import type {
   Semester, Course, Task, NewSemester, NewCourse, NewTask,
@@ -1156,7 +1158,9 @@ export function useDeleteTask() {
 
 export function useToggleTaskComplete() {
   const qc = useQueryClient();
-  return useMutation({
+  // Lets onError re-run the exact mutation that failed.
+  const selfRef = useRef<{ mutate: (v: any) => void } | null>(null);
+  const mutation = useMutation({
     mutationFn: async ({
       id, is_completed, submitted_late, late_penalty_percent,
     }: {
@@ -1285,7 +1289,29 @@ export function useToggleTaskComplete() {
       qc.invalidateQueries({ queryKey: ['task'] });
       qc.invalidateQueries({ queryKey: ['studyBlocks'] });
     },
+    // ONE place, so no caller can fail silently.
+    //
+    // Reporting used to live in each screen's catch block, which meant it only
+    // existed where someone had remembered to write it. Today and Calendar used
+    // mutateAsync inside try/catch and showed an alert; the course screen and
+    // search used .mutate(), which never rejects — so a failed completion there
+    // produced no alert, no log and no change, and the student was left believing
+    // the task was ticked off. That is why marking a task done "works from inside
+    // the course": it does not fail more quietly there, it fails invisibly.
+    //
+    // Living on the mutation, this covers every current caller and every future
+    // one, including the two that never asked for it.
+    onError: (err, vars) => {
+      reportError(err, {
+        screen: 'task_toggle',
+        title: 'Couldn\u2019t update',
+        message: 'We couldn\u2019t save that change. Your task has not been altered.',
+        onRetry: () => selfRef.current?.mutate(vars),
+      });
+    },
   });
+  selfRef.current = mutation;
+  return mutation;
 }
 
 export function useCreateTaskSubtask() {

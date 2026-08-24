@@ -216,8 +216,9 @@ export default function TaskDetailScreen() {
             : Haptics.NotificationFeedbackType.Warning;
         Haptics.notificationAsync(feedback);
       }
-    } catch (err: any) {
-      Alert.alert('Error', err.message ?? 'Failed to update task.');
+    } catch {
+      // useToggleTaskComplete's onError already reported this with a code and
+      // a retry; a second alert would only be dismissed twice.
     }
   };
 

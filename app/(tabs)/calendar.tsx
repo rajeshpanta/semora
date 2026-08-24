@@ -1,9 +1,6 @@
 import { TouchableOpacity } from '@/components/LocalizedReactNative';
 import { Alert, Text } from '@/components/LocalizedReactNative';
-import {
-  useState,
-  useEffect,
-  useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   RefreshControl,
   View,
@@ -129,7 +126,9 @@ export default function CalendarScreen() {
           Haptics.notificationAsync(type);
         }
       } catch {
-        Alert.alert('Couldn\'t update', 'Something went wrong — try again.');
+        // Silent BY DESIGN, not by neglect: useToggleTaskComplete's onError
+        // already named this failure, recorded it and offered the retry. A
+        // second alert here would just make the student dismiss two.
       }
     },
     [toggleComplete],
