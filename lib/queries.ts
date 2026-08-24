@@ -489,8 +489,23 @@ function useInvalidateAll() {
 function findCachedTask(qc: QueryClient, id: string): TaskWithCourse | Task | null {
   const detail = qc.getQueryData<TaskWithCourse>(queryKeys.task(id));
   if (detail) return detail;
+  // Array.isArray, not `rows?.` — and this is the whole bug.
+  //
+  // getQueriesData returns EVERY query whose key starts with ['tasks'], and one
+  // of them is useHasPendingTasks, which rides that prefix deliberately (so task
+  // mutations invalidate it for free) and stores a BOOLEAN. Optional chaining
+  // guards null and undefined; it does not guard `true`. So once that query had
+  // resolved, `rows?.find(...)` evaluated `true.find` and threw
+  // "rows.find is not a function" — a TypeError raised on the first line of the
+  // toggle mutation, before the UPDATE was ever attempted.
+  //
+  // That is why completing a task worked right after a page load and failed
+  // forever after: it depended entirely on whether that one boolean had landed
+  // in the cache yet. insertCachedTask and patchCachedTask walk the same prefix
+  // and both already check Array.isArray. This one place did not.
   for (const [, rows] of qc.getQueriesData<TaskWithCourse[]>({ queryKey: ['tasks'] })) {
-    const match = rows?.find((task) => task.id === id);
+    if (!Array.isArray(rows)) continue;
+    const match = rows.find((task) => task?.id === id);
     if (match) return match;
   }
   return null;
