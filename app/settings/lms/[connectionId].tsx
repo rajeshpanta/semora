@@ -21,12 +21,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
+  ignoredLmsCourses,
   listLmsConnections,
   listLmsSyncRuns,
   LMS_PROVIDER_LABELS,
+  lmsConnectionsQuery,
+  pendingAsDiscovered,
+  pendingLmsCoursesQuery,
   setLmsCourseMapping,
+  setLmsCoursesIgnored,
   syncLmsConnection,
 } from '@/lib/lms';
+import { formatSpan, spanOf } from '@/lib/termMatch';
+import { courseFactsOf } from '@/lib/lms';
 import { supabase } from '@/lib/supabase';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
@@ -45,6 +52,42 @@ export default function LmsConnectionDetailScreen() {
   const queryClient = useQueryClient();
   const { connectionId } = useLocalSearchParams<{ connectionId: string }>();
   const [mappingLink, setMappingLink] = useState<LmsCourseLink | null>(null);
+
+  // Everything this connection was told was "not mine".
+  //
+  // Dismissing has to be reversible. A student clearing a list of new courses
+  // in a hurry, or tapping the wrong row, must not have to disconnect and
+  // reconnect Canvas to undo it — that is the exact "reconnect every semester"
+  // experience this whole feature exists to remove. So dismissal sets a
+  // timestamp, never deletes, and everything dismissed stays listed here with
+  // its dates intact.
+  const dismissedQuery = useQuery({
+    queryKey: ['lmsIgnoredCourses', connectionId],
+    queryFn: () => ignoredLmsCourses(String(connectionId)),
+    enabled: !!connectionId,
+  });
+
+  const restore = useMutation({
+    mutationFn: async (externalCourseId: string) => {
+      const row = (dismissedQuery.data ?? []).find(
+        (item) => item.external_course_id === externalCourseId,
+      );
+      if (!row) return;
+      await setLmsCoursesIgnored({
+        connectionId: String(connectionId),
+        courses: [pendingAsDiscovered(row)],
+        ignored: false,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lmsIgnoredCourses', connectionId] });
+      queryClient.invalidateQueries({ queryKey: pendingLmsCoursesQuery.queryKey });
+      queryClient.invalidateQueries({ queryKey: lmsConnectionsQuery.queryKey });
+    },
+    onError: (error: unknown) => {
+      Alert.alert('Could not restore', error instanceof Error ? error.message : 'Please try again.');
+    },
+  });
 
   const connectionQuery = useQuery({
     queryKey: ['lmsConnection', connectionId],
@@ -194,6 +237,40 @@ export default function LmsConnectionDetailScreen() {
             </View>
           );
         })}
+
+        {(dismissedQuery.data?.length ?? 0) > 0 && (
+          <>
+            <View style={styles.sectionHead}>
+              <Text style={[styles.sectionTitle, { color: colors.ink }]}>Dismissed courses</Text>
+              <Text style={[styles.sectionNote, { color: colors.ink3 }]}>
+                Courses you told Semora were not yours. Nothing was deleted — restore one and it goes back on the list of courses waiting to be imported.
+              </Text>
+            </View>
+            {dismissedQuery.data!.map((row) => {
+              const range = formatSpan(spanOf([courseFactsOf(pendingAsDiscovered(row))]));
+              const detail = [
+                row.item_count ? `${row.item_count} ${row.item_count === 1 ? 'deadline' : 'deadlines'}` : null,
+                range || null,
+              ].filter(Boolean).join(' · ');
+              return (
+                <View key={row.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+                  <Text style={[styles.externalName, { color: colors.ink }]}>{row.external_name}</Text>
+                  {!!detail && <Text style={[styles.sectionNote, { color: colors.ink3 }]}>{detail}</Text>}
+                  <TouchableOpacity
+                    disabled={restore.isPending}
+                    onPress={() => restore.mutate(row.external_course_id)}
+                    style={styles.syncToggle}
+                  >
+                    <FontAwesome name="undo" size={13} color={colors.brand} />
+                    <Text style={[styles.toggleText, { color: colors.brand }]}>
+                      {restore.isPending && restore.variables === row.external_course_id ? 'Restoring…' : 'Restore'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </>
+        )}
 
         <TouchableOpacity
           onPress={() => sync.mutate()}

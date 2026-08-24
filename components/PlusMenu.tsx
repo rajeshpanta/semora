@@ -241,6 +241,18 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
             sub: 'Connected, but not syncing on its own yet',
             route: { pathname: '/settings/lms' },
           }
+      // Syncing perfectly, and holding a term's worth of classes it could not
+      // place. Same rank as the other two problems on purpose: from here it is
+      // indistinguishable from a broken connection in what it costs the
+      // student — deadlines they cannot see.
+      : canvasOffer === 'new_courses'
+        ? {
+            icon: 'plus-circle',
+            tint: 'teal',
+            title: 'New Canvas courses',
+            sub: 'Canvas has classes Semora has not imported yet',
+            route: { pathname: '/settings/lms/new-courses' },
+          }
         : {
             icon: 'university',
             tint: 'teal',

@@ -240,6 +240,12 @@ export default function LmsSettingsScreen() {
             <Text style={[styles.sectionTitle, { color: colors.ink }]}>Connected</Text>
             {query.data!.map((connection) => {
               const needsAttention = ['error', 'credentials_required'].includes(connection.last_sync_status);
+              // Syncing perfectly and still not doing its job. The status word
+              // beside it will read "success", and it is telling the truth
+              // about the sync — every course it was asked to import, it
+              // imported. It just also found a term's worth it was not asked
+              // about, and without this the card would look finished.
+              const pendingCount = connection.pending_courses_count ?? 0;
               return (
                 <View key={connection.id} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
                   <View style={styles.connectionHead}>
@@ -267,6 +273,26 @@ export default function LmsSettingsScreen() {
                     <Text style={[styles.error, { color: needsAttention ? colors.coral : colors.ink3 }]} numberOfLines={3}>
                       {connection.last_error}
                     </Text>
+                  )}
+                  {pendingCount > 0 && (
+                    <TouchableOpacity
+                      onPress={() => router.push({
+                        pathname: '/settings/lms/new-courses',
+                        params: { connectionId: connection.id },
+                      } as any)}
+                      style={[styles.pendingBanner, { backgroundColor: colors.brand50 }]}
+                    >
+                      <FontAwesome name="plus-circle" size={14} color={colors.brand} />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.pendingTitle, { color: colors.ink }]}>
+                          Action required · {pendingCount} new {pendingCount === 1 ? 'course' : 'courses'}
+                        </Text>
+                        <Text style={[styles.pendingBody, { color: colors.ink3 }]}>
+                          Canvas is listing {pendingCount === 1 ? 'a course' : 'courses'} Semora has not imported. Review and choose a semester.
+                        </Text>
+                      </View>
+                      <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
+                    </TouchableOpacity>
                   )}
                   <View style={[styles.connectionActions, { borderTopColor: colors.line }]}>
                     <TouchableOpacity
@@ -395,6 +421,16 @@ const styles = StyleSheet.create({
   meta: { fontSize: 12, marginTop: 3, lineHeight: 17 },
   syncMeta: { fontSize: 11, marginTop: 4, lineHeight: 16 },
   status: { fontSize: 11, fontWeight: '800', textTransform: 'capitalize' },
+  pendingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+  },
+  pendingTitle: { fontSize: 13.5, fontWeight: '700' },
+  pendingBody: { fontSize: 12, lineHeight: 16, marginTop: 2 },
   error: { fontSize: 12, lineHeight: 17, marginTop: 10 },
   connectionActions: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 11, marginTop: 11 },
   textButton: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 30 },
