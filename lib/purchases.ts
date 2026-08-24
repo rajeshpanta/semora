@@ -146,7 +146,9 @@ export async function purchaseProduct(productId: string): Promise<boolean> {
   if (!connected) {
     await initIAP();
     if (!connected) {
-      throw new Error('Cannot reach the App Store right now. Please try again in a moment.');
+      throw new Error(Platform.OS === 'android'
+        ? 'Cannot reach Google Play right now. Please try again in a moment.'
+        : 'Cannot reach the App Store right now. Please try again in a moment.');
     }
   }
   // Warm the native product cache so the SKU is known as a SUBSCRIPTION
@@ -155,7 +157,9 @@ export async function purchaseProduct(productId: string): Promise<boolean> {
   if (!productsFetched) {
     await getProducts();
     if (!productsFetched) {
-      throw new Error('Could not load subscription details from the App Store. Please try again in a moment.');
+      throw new Error(Platform.OS === 'android'
+        ? 'Could not load subscription details from Google Play. Please try again in a moment.'
+        : 'Could not load subscription details from the App Store. Please try again in a moment.');
     }
   }
   try {

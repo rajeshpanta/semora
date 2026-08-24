@@ -100,7 +100,9 @@ const SCAN_ACTIONS: MenuRow[] = [
     // Files, iCloud Drive and Google Drive. Two labels for one action is a
     // choice the user cannot get right, so the subtitle covers both mental
     // models instead.
-    sub: 'PDF or Word — Files, iCloud, Drive',
+    sub: Platform.OS === 'android'
+      ? 'PDF or Word — Drive, Downloads, Files'
+      : 'PDF or Word — Files, iCloud, Drive',
     route: { pathname: '/scan', params: { action: 'document' } },
   },
   {

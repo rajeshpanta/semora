@@ -263,7 +263,9 @@ export default function DeleteAccountScreen() {
                     // (see the stripe-portal cancel call above), so the Apple
                     // warning would be both wrong and alarming here.
                     ? '\n\nYour card subscription will be cancelled as part of deleting your account.'
-                    : '\n\nIf you subscribed through the App Store, deleting your account does NOT cancel it — Apple keeps billing until you cancel in Settings → Apple Account → Subscriptions. A subscription bought by card on the web is cancelled automatically.')
+                    : Platform.OS === 'android'
+                      ? '\n\nIf you subscribed through Google Play, deleting your account does NOT cancel it — Google keeps billing until you cancel in Play Store → Subscriptions. A subscription bought by card on the web is cancelled automatically.'
+                      : '\n\nIf you subscribed through the App Store, deleting your account does NOT cancel it — Apple keeps billing until you cancel in Settings → Apple Account → Subscriptions. A subscription bought by card on the web is cancelled automatically.')
                 : ''}
             </Text>
           </View>

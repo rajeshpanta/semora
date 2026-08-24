@@ -815,7 +815,11 @@ export default function ScanScreen() {
             </View>
             <View style={styles.actionContent}>
               <Text style={[styles.actionTitle, { color: colors.ink }]}>Upload a document</Text>
-              <Text style={[styles.actionSub, { color: colors.ink3 }]}>PDF or Word — Files, iCloud, Drive</Text>
+              <Text style={[styles.actionSub, { color: colors.ink3 }]}>
+                {Platform.OS === 'android'
+                  ? 'PDF or Word — Drive, Downloads, Files'
+                  : 'PDF or Word — Files, iCloud, Drive'}
+              </Text>
             </View>
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>

@@ -1729,6 +1729,23 @@ export const ES: Record<string, string> = {
   'Free every month: 5 scans, 4 courses and same-day reminders. The tools above are part of Pro.':
     'Gratis cada mes: 5 escaneos, 4 cursos y recordatorios el mismo día. Las herramientas de arriba son parte de Pro.',
 
+  // ── Android store wording ─────────────────────────────────────────────
+  // Mirrors the App Store variants above; Google Play keeps its brand name
+  // untranslated in Spanish, exactly as App Store does.
+  'Cannot reach Google Play right now. Please try again in a moment.':
+    'No se puede conectar con Google Play en este momento. Inténtalo de nuevo en un momento.',
+  'Could not load subscription details from Google Play. Please try again in a moment.':
+    'No se pudieron cargar los detalles de la suscripción desde Google Play. Inténtalo de nuevo en un momento.',
+  'Your purchase went through but we couldn\'t verify it with Google Play yet. Tap Restore in a moment to retry.':
+    'La compra se completó, pero todavía no pudimos verificarla con Google Play. Toca Restaurar dentro de un momento.',
+  'Could not open Google Play. You can search for Semora there to leave a review.':
+    'No se pudo abrir Google Play. Puedes buscar Semora allí para dejar tu reseña.',
+  'PDF or Word — Drive, Downloads, Files': 'PDF o Word: Drive, Descargas, Archivos',
+  'Reminders can\'t be delivered. Tap to enable them in Android Settings.':
+    'Los recordatorios no se pueden entregar. Toca para activarlos en la Configuración de Android.',
+  '\n\nIf you subscribed through Google Play, deleting your account does NOT cancel it — Google keeps billing until you cancel in Play Store → Subscriptions. A subscription bought by card on the web is cancelled automatically.':
+    '\n\nSi te suscribiste por Google Play, eliminar tu cuenta NO cancela la suscripción: Google seguirá cobrando hasta que la canceles en Play Store → Suscripciones. Una suscripción pagada con tarjeta en la web se cancela automáticamente.',
+
   // Matches the marketing site nav's own Spanish wording for this action.
   'Get the app': 'Descargar la app',
 

@@ -20,6 +20,13 @@ export const SUPPORT_EMAIL = 'semora365@gmail.com';
 export const APP_STORE_URL = 'https://apps.apple.com/us/app/semora-ai-syllabus-scanner/id6762589321';
 export const APP_STORE_REVIEW_URL = `${APP_STORE_URL}?action=write-review`;
 
+// Android's equivalents. `showAllReviews=true` is Play's nearest thing to
+// Apple's write-review composer — Play has no URL that opens the star picker
+// directly, so this lands on the reviews sheet instead of the listing top.
+// Keyed off the applicationId in app.json, not a numeric id like Apple's.
+export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.rajeshpanta.syllabussnap';
+export const PLAY_STORE_REVIEW_URL = `${PLAY_STORE_URL}&showAllReviews=true`;
+
 import { Platform } from 'react-native';
 
 // Caps main content width so screens read well on iPad (portrait, full
