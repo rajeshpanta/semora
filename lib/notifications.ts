@@ -279,6 +279,33 @@ async function pruneToCapIfNeeded() {
  *
  * @returns whether notifications are usable when this resolves.
  */
+/**
+ * Android reports "never asked" as DENIED.
+ *
+ * expo-notifications derives Android's status from
+ * `NotificationManagerCompat.areNotificationsEnabled()`, which is false both
+ * for a fresh install that has never seen the POST_NOTIFICATIONS dialog and
+ * for someone who turned notifications off on purpose. iOS distinguishes the
+ * two; Android does not, so every caller that keyed off 'undetermined' — the
+ * primed ask, and the Today banner — treated a brand-new Android user as
+ * somebody who had already said no. The OS prompt was never requested at all,
+ * and reminders (the free tier's headline promise) could only be switched on
+ * by finding the Settings toggle unaided.
+ *
+ * `canAskAgain` is the signal Android actually has: true while the system will
+ * still show the dialog (never asked, or denied once), false once it is
+ * permanently refused. iOS is untouched — there `canAskAgain` is already false
+ * on a real denial, so this never rewrites its answer.
+ */
+export type NotificationPermissionStatus = 'granted' | 'undetermined' | 'denied';
+
+export async function getNotificationPermissionStatus(): Promise<NotificationPermissionStatus> {
+  const { status, canAskAgain } = await Notifications.getPermissionsAsync();
+  if (status === 'granted') return 'granted';
+  if (Platform.OS === 'android' && canAskAgain) return 'undetermined';
+  return status === 'undetermined' ? 'undetermined' : 'denied';
+}
+
 export async function primeNotificationPermission(copy: {
   title: string;
   message: string;
@@ -287,7 +314,7 @@ export async function primeNotificationPermission(copy: {
 }): Promise<boolean> {
   if (Platform.OS === 'web') return false;
   try {
-    const { status } = await Notifications.getPermissionsAsync();
+    const status = await getNotificationPermissionStatus();
     if (status === 'granted') return true;
     if (status !== 'undetermined') return false;
 
@@ -328,7 +355,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
       return false;
     }
   }
-  const { status: existing } = await Notifications.getPermissionsAsync();
+  const existing = await getNotificationPermissionStatus();
   if (existing === 'granted') return true;
   const { status } = await Notifications.requestPermissionsAsync();
   const granted = status === 'granted';

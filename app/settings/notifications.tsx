@@ -18,6 +18,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import {
   getNotificationDeliveryHealth, requestNotificationPermission,
   rescheduleAllTaskReminders, type NotificationDeliveryHealth,
+  getNotificationPermissionStatus,
 } from '@/lib/notifications';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -81,8 +82,11 @@ export default function NotificationSettings() {
 
   const refreshOsPermission = () => {
     if (Platform.OS === 'web') return;
-    Notifications.getPermissionsAsync()
-      .then(({ status }) => setOsPermission(status as any))
+    // Normalised, not raw: Android reports a never-asked user as 'denied',
+    // which showed them "enable it in Settings" for a prompt they were never
+    // offered. See getNotificationPermissionStatus.
+    getNotificationPermissionStatus()
+      .then((status) => setOsPermission(status))
       .catch(() => {});
   };
 
@@ -249,7 +253,9 @@ export default function NotificationSettings() {
               <Text style={[styles.permBannerSub, { color: colors.ink2 }]}>
                 {osPermission === 'undetermined'
                   ? 'Tap to allow notifications so reminders can reach you.'
-                  : 'Reminders can\'t be delivered. Tap to enable them in iOS Settings.'}
+                  : Platform.OS === 'android'
+                    ? 'Reminders can\'t be delivered. Tap to enable them in Android Settings.'
+                    : 'Reminders can\'t be delivered. Tap to enable them in iOS Settings.'}
               </Text>
             </View>
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
