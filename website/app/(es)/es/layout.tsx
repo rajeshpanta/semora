@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next';
 import { PageTelemetry } from '@/components/PageTelemetry';
 import { InteractionTelemetry } from '@/components/InteractionTelemetry';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { GoogleAnalytics } from '@/components/GoogleAnalytics';
 import '../../globals.css';
 import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
@@ -51,6 +52,7 @@ export default function SpanishRootLayout({ children }: Readonly<{ children: Rea
         <PageTelemetry />
         <InteractionTelemetry />
         <SpeedInsights />
+        <GoogleAnalytics />
       </body>
     </html>
   );

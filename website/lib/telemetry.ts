@@ -1,6 +1,7 @@
 'use client';
 
 import { track as vercelTrack } from '@vercel/analytics';
+import { gaEvent } from './ga';
 import { looksAutomated, sessionId, storageWorks, visitorId } from './visitor';
 
 /**
@@ -10,7 +11,7 @@ import { looksAutomated, sessionId, storageWorks, visitorId } from './visitor';
  * many" and "how fast" and nothing about "what went wrong". A client-side crash
  * rendered Next's default error screen and reported nothing at all.
  *
- * Events go to two places on purpose:
+ * Events go to three places on purpose:
  *
  *   1. Vercel Analytics custom events — good for funnels, but custom events are
  *      gated by plan tier and no-op silently when unavailable. Fine as the
@@ -19,9 +20,15 @@ import { looksAutomated, sessionId, storageWorks, visitorId } from './visitor';
  *      log. That works on every plan and lands in the same queryable shape the
  *      Supabase edge functions now use, so both halves of the stack are read
  *      the same way.
+ *   3. Google Analytics 4, which is where acquisition actually gets answered:
+ *      channel, campaign and landing page joined to whether the visit ended in
+ *      a signup click. That is the one report neither of the other two legs
+ *      produces, and it is why the property exists at all.
  *
- * Nothing here identifies a person. No cookie, no id, no form contents — the
- * fields are a route, an event name, and bounded diagnostic values.
+ * The first two carry a random visitor id; the third deliberately does not —
+ * see the call site below. Nothing here identifies a person. No name, no email,
+ * no form contents — the fields are a route, an event name, and bounded
+ * diagnostic values.
  */
 
 /**
@@ -128,6 +135,20 @@ export function report(event: TelemetryEvent, props: Props = {}): void {
   } catch {
     // Custom events unavailable on this plan, or the script was blocked.
   }
+
+  // 3. Google Analytics 4. Added because a GA property fed only by the gtag
+  //    snippet records page views and nothing else — which is the one thing
+  //    Vercel Analytics already gives us. The events below are what make it
+  //    worth having: signup_click and app_store_click can be marked as key
+  //    events in the property and then read as conversion rates per source,
+  //    which is the question ("where do the people who actually install come
+  //    from") neither of the other two legs can answer on its own.
+  //
+  //    device_id is deliberately NOT passed. It is our join key across the
+  //    site and the app, and handing a stable per-visitor identifier to a
+  //    third party is a materially different privacy posture from keeping it
+  //    in our own table. GA gets the event and its shape, not the person.
+  gaEvent(event, { ...payload, automated: identity.automated });
 
   try {
     // identity is spread at the TOP level, not inside props: /api/telemetry

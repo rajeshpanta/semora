@@ -79,8 +79,12 @@ export default function PrivacyPage() {
           identifier is stored in a first-party cookie named <code>semora_device_id</code>, set on
           <code>semoraai.com</code> so the website and the app recognise the same browser and we
           can tell whether a page actually helped someone get started. It is a random number, it is
-          never sold or shared, no advertising or third-party tracking cookie is set, and clearing
-          your browser data removes it.
+          never sold, and clearing your browser data removes it. The website also uses Google
+          Analytics, which sets its own first-party cookies (their names begin <code>_ga</code>) to
+          count visits and tell one visit apart from the next; the <code>semora_device_id</code>
+          above is deliberately not sent to Google, so the two measurements cannot be joined into a
+          profile of you. No advertising cookie is set on any Semora site, and nothing measured here
+          is used for ad targeting.
         </li>
         <li>
           <strong>Push notification token:</strong> If you grant notification permission, a device
@@ -146,6 +150,14 @@ export default function PrivacyPage() {
           Transcription is the only purpose your audio is used for, and Groq is the only service it
           is sent to. Nothing else from your account — no syllabus, no notes, no tutor messages — is
           sent to Groq.
+        </li>
+        <li>
+          <strong>Google Analytics (website only):</strong> Used on <code>semoraai.com</code> to
+          measure which pages and which channels actually bring people to Semora. Google receives
+          the address of the page viewed, the events described above, and the technical data any web
+          request carries — including the request&apos;s IP address, which Google Analytics 4 uses to
+          derive an approximate location and does not store. It does not run inside the app, and it
+          never receives your account data.
         </li>
         <li>
           <strong>Apple StoreKit:</strong> For processing in-app subscription purchases.
