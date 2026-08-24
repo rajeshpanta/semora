@@ -54,10 +54,31 @@ third one does not exist until after the first Play upload:
 | --- | --- | --- |
 | Upload key | `6B:07:F2:13:5B:0E:75:03:16:31:FC:F5:D4:89:CB:3E:7B:20:73:D8` | Builds you sign locally |
 | Debug key (`android/app/debug.keystore`) | `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25` | `bundleDebug` / emulator testing |
-| Play App Signing | issued by Google after the first upload | Anything installed **from Play** |
+| Play App Signing | `A8:27:FB:F1:30:6D:56:2D:66:3B:87:45:57:7C:83:05:FB:0D:56:B6` | Anything installed **from Play** |
 
 Miss the third and Google sign-in works everywhere except the builds real users
 get, which is the worst possible place to find out.
+
+All three exist as of 2026-08-24: two Android OAuth clients in Google Cloud
+(`Semora Android (upload key)` and `Semora Android (Play signing)`), both under
+the same package name, which is expected — Google matches on package + one
+fingerprint per client. The debug fingerprint is deliberately NOT registered;
+add a third client for it only if Google sign-in is wanted on local debug
+builds.
+
+Contrary to what this file said before: the Play App Signing certificate is
+issued when the Play Console app is CREATED, not after the first upload. Find it
+under Protected with Play > Play Store protection > Manage Play app signing, in
+the **Classical key** column (the Post-quantum key is a separate beta and is not
+what Google Sign-In validates against).
+
+None of these client IDs go into the app. `GoogleSignin.configure()` passes only
+`webClientId` and `iosClientId`; the Android clients simply need to exist so
+Google recognises the signature. The only app-side switch is
+`EXPO_PUBLIC_GOOGLE_ANDROID_READY=1` in `.env.local`, which reveals the Google
+button on Android (see `googleAvailable` in app/(auth)/sign-in.tsx). That file
+is gitignored, so the flag must be set again on any other machine and on
+whatever builds the Play release.
 
 Re-read a fingerprint with:
 
