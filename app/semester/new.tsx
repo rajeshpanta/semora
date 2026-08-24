@@ -23,6 +23,7 @@ import { useColors } from '@/lib/theme';
 import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { FREE_SEMESTER_LIMIT, isFreeLimitError } from '@/lib/syllabus';
+import { reportError } from '@/lib/errorReport';
 import { formatLocalDate } from '@/lib/dates';
 import { suggestSemesters } from '@/lib/semesters';
 
@@ -89,7 +90,7 @@ export default function NewSemesterScreen() {
         showProUpsell('semester');
         return;
       }
-      Alert.alert('Error', err.message || 'Failed to create semester.');
+      reportError(err, { screen: 'semester_new', title: 'Could Not Create Semester', message: err.message || 'Failed to create semester.' });
     }
   };
 

@@ -25,6 +25,7 @@ import {
 } from '@/lib/syllabus';
 import { MAX_SCAN_PAGES, type SyllabusPage } from '@/lib/ai-extraction';
 import { takePendingScanText } from '@/lib/pendingScanText';
+import { reportError, errorCodeOf } from '@/lib/errorReport';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
 import { track } from '@/lib/analytics';
@@ -318,7 +319,7 @@ export default function SyllabusUploadScreen() {
                     setUpsellReason('course');
                     setUpsellVisible(true);
                   } else {
-                    Alert.alert('Error', err.message);
+                    reportError(err, { screen: 'scan', title: 'Could Not Add Course' });
                     router.back();
                   }
                 }
@@ -412,15 +413,21 @@ export default function SyllabusUploadScreen() {
         return;
       }
       // A real failure (network, AI provider, parse, timeout) — capture why.
-      track('scan_failed', { screen: 'scan', reason: String(error?.message ?? error).slice(0, 200) });
-      Alert.alert(
-        'Scan Failed',
-        error.message || 'Failed to process syllabus. Please try again.',
-        [
-          { text: 'Try Again', onPress: () => handleProcess() },
-          { text: 'Go Back', onPress: () => router.back(), style: 'cancel' },
-        ],
-      );
+      track('scan_failed', {
+        screen: 'scan',
+        code: errorCodeOf(error),
+        status: (error as { status?: number })?.status,
+        reason: String(error?.message ?? error).slice(0, 200),
+      });
+      // Named, not anonymous. A scan that dies here is the moment a student
+      // decides whether Semora works, and "Scan Failed" with no code and no
+      // way to reach us is how six of them left in a single day.
+      reportError(error, {
+        screen: 'scan',
+        title: 'Scan Failed',
+        message: error.message || 'Failed to process syllabus. Please try again.',
+        onRetry: () => handleProcess(),
+      });
     }
   };
 

@@ -49,14 +49,47 @@ export const FREE_COURSE_PHRASE =
 // table so the client surfaces an Upgrade prompt instead of a generic
 // error when the client-cached isPro state is stale.
 export function isFreeLimitError(err: any): boolean {
-  // `free scan` (singular) matches the one-free-action wording; the older
-  // `\d+ free scans` pattern stays because the DB trigger, the edge function
-  // and shipped builds can each still be a deploy behind one another, and a
-  // missed match here means the paywall never opens — the user just sees a
-  // raw error and no way to upgrade.
-  return err?.code === 'P0001'
-    || /free accounts support|\d+ free scans|free scan\b|free action/i.test(err?.message ?? '');
+  // DECIDE ON CODES, NEVER ON PROSE.
+  //
+  // This function used to ask only whether an English sentence matched a
+  // regex. That coupling is unfixable by construction: the regex ships inside
+  // a binary that can never be updated, while the sentence it must match lives
+  // on a server that redeploys weekly. When the two drifted apart, 18 students
+  // over 30 days hit their limit, the server correctly answered "payment
+  // required", and the app showed a bare "Scan Failed" with no way to pay.
+  //
+  // The signals below are ordered most-reliable first. scanError() in
+  // lib/ai-extraction.ts has always copied the server's `code` and HTTP
+  // `status` onto the error object — they were simply never read.
+  return (
+    // 1. Postgres RAISE from the enforce_free_*_limit triggers.
+    err?.code === 'P0001'
+    // 2. The machine code the edge functions already send in the JSON body.
+    || FREE_LIMIT_CODES.has(err?.code)
+    // 3. HTTP 402. Every 402 this API returns — FREE_ACTION_USED,
+    //    FREE_LECTURE_USED, PRO_REQUIRED — resolves to the same user-facing
+    //    answer: this account has to upgrade to continue. The specific code
+    //    only changes the wording of the sheet, never whether it opens.
+    || err?.status === 402
+    // 4. Prose, last and only as a safety net for paths that raise a bare
+    //    Error with no code (the client-side pre-checks, older triggers).
+    //    Never the only signal again.
+    || /free accounts support|\d+ free scans|free scan\b|free action/i.test(err?.message ?? '')
+  );
 }
+
+/**
+ * Machine codes that mean "this account has used its free allowance".
+ * Mirrors the `code` values the edge functions return alongside a 402.
+ * Adding a code here is how a new gated feature opts into the upgrade sheet —
+ * no wording anywhere needs to agree with anything.
+ */
+export const FREE_LIMIT_CODES = new Set([
+  'FREE_ACTION_USED',    // parse-syllabus, tutor-chat, lecture-study-kit
+  'FREE_LECTURE_USED',   // lecture-transcribe
+  'PRO_REQUIRED',        // lecture-study-kit, lms-sync — a Pro-only surface
+  'FREE_SCAN_USED',      // legacy alias
+]);
 
 export interface ProcessResult {
   uploadId: string;

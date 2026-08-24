@@ -868,9 +868,36 @@ async function writeEntitlementAndRespond(
           updated_at: new Date().toISOString(),
         };
 
-    const { error: upsertError } = await adminClient
-      .from('entitlements')
-      .upsert(entitlement, { onConflict: 'user_id' });
+    // RETRY, BECAUSE THE LOSER OF A RACE IS NOT A FAILURE.
+    //
+    // A single purchase fans out into several concurrent validate-receipt
+    // calls — the paywall listener, the global _layout listener, and the
+    // restore path can all fire within milliseconds of one another. On
+    // 2026-08-23 one subscriber's purchase produced five calls in 280ms; two
+    // of them lost the write race and returned 500 while a third succeeded.
+    // She got Pro only because the winner happened to be last. Had the order
+    // been reversed she would have paid and been told "Could not save
+    // entitlement", which is precisely the paid-with-no-access case this
+    // function exists to prevent.
+    //
+    // The contended write is idempotent — same user, same subscription, same
+    // expiry — so simply doing it again resolves the conflict rather than
+    // reporting it. Two short retries cover a contention window measured in
+    // milliseconds; anything still failing after that is a real fault.
+    let upsertError: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { error } = await adminClient
+        .from('entitlements')
+        .upsert(entitlement, { onConflict: 'user_id' });
+      upsertError = error;
+      if (!error) break;
+      if (attempt < 2) {
+        log.warn('upsert_retry', { attempt: attempt + 1, ...errorFields(error) });
+        // 40ms then 120ms. Long enough for the competing transaction to
+        // commit, short enough that the client is still waiting.
+        await new Promise((r) => setTimeout(r, attempt === 0 ? 40 : 120));
+      }
+    }
 
     if (upsertError) {
       log.error('upsert_failed', errorFields(upsertError));
@@ -881,7 +908,20 @@ async function writeEntitlementAndRespond(
         Date.now() - startTime,
         'entitlement_upsert_failed',
       );
-      return jsonResponse({ error: 'Could not save entitlement. Please try again.' }, 500);
+      // The message is the ONLY thing older clients render — 1.7 shows
+      // err.message verbatim in a bare alert with no code and no support
+      // route, and cannot be updated. So the guidance a newer build would
+      // put in its error sheet has to travel inside this sentence instead.
+      return jsonResponse(
+        {
+          error:
+            'We could not finish activating Pro on this account. Your payment is safe and has not been lost. ' +
+            'Please tap Restore Purchases in Settings in a moment — that usually completes it. ' +
+            'If it still fails, email semora365@gmail.com and quote code ENTITLEMENT_WRITE_FAILED.',
+          code: 'ENTITLEMENT_WRITE_FAILED',
+        },
+        500,
+      );
     }
 
     // Record this OTI in the ledger. Done AFTER the entitlement upsert

@@ -21,6 +21,7 @@ import { COURSE_COLORS, COURSE_ICONS, COLORS, SCREEN_MAX_WIDTH } from '@/lib/con
 import { SemesterPicker } from '@/components/SemesterPicker';
 import { ScheduleEditor, type ScheduleBlock } from '@/components/ScheduleEditor';
 import { FREE_COURSE_LIMIT, isFreeLimitError } from '@/lib/syllabus';
+import { reportError } from '@/lib/errorReport';
 import { useColors } from '@/lib/theme';
 import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
@@ -167,7 +168,7 @@ export default function NewCourseScreen() {
         showProUpsell('course');
         return;
       }
-      Alert.alert('Error', err.message || 'Failed to create course.');
+      reportError(err, { screen: 'course_new', title: 'Could Not Create Course', message: err.message || 'Failed to create course.' });
     }
   };
 

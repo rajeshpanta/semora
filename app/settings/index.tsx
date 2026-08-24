@@ -29,6 +29,7 @@ import { useResponsive } from '@/lib/responsive';
 import { accountSubtitle, displayName, hasEmailPassword } from '@/lib/user';
 import { useOfflineSyncStatus } from '@/components/OfflineSyncBridge';
 import { track } from '@/lib/analytics';
+import { reportError } from '@/lib/errorReport';
 import Constants from 'expo-constants';
 import { languageName, translate, useI18n } from '@/lib/i18n';
 
@@ -100,7 +101,7 @@ export default function SettingsScreen() {
         Alert.alert('No Subscription Found', 'We couldn\'t find an active subscription for this account.');
       }
     } catch (err: any) {
-      Alert.alert('Restore Failed', err.message ?? 'Something went wrong. Please try again.');
+      reportError(err, { screen: 'settings', title: 'Restore Failed' });
     } finally {
       setRestoring(false);
     }

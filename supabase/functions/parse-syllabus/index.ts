@@ -993,7 +993,22 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
     return jsonResponse(extraction, 200);
   } catch (err) {
     log.error('unhandled_error', errorFields(err));
-    return jsonResponse({ error: 'An unexpected error occurred. Please try again.' }, 500);
+    // The sentence carries the support route because on 1.7 it IS the whole
+    // error UI: that build renders err.message in a bare alert with no code
+    // and no way to reach us, and no update can change it. Newer builds show
+    // the same guidance in their own error sheet and use `code` instead, so
+    // this stays correct in both places.
+    return jsonResponse(
+      {
+        error:
+          'Something went wrong on our side while reading this file — this is not a problem with your syllabus. ' +
+          'Please try again in a moment. ' +
+          'If it keeps happening, or if this used up your free scan, email semora365@gmail.com ' +
+          'and quote code SCAN_SERVER_ERROR — we will put it back.',
+        code: 'SCAN_SERVER_ERROR',
+      },
+      500,
+    );
   }
 }
 

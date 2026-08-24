@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useMemo,
+  useCallback,
   useRef } from 'react';
 import {
   View,
@@ -29,6 +30,12 @@ import { rescheduleAllTaskReminders } from '@/lib/notifications';
 import { track } from '@/lib/analytics';
 import { claimPendingCheckout } from '@/lib/webCheckoutReturn';
 import { supabase } from '@/lib/supabase';
+import { reportError, errorCodeOf, contactSupport } from '@/lib/errorReport';
+import {
+  openWebCheckout,
+  WEB_CHECKOUT_FALLBACK_ENABLED,
+  WEB_FALLBACK_AFTER_FAILURES,
+} from '@/lib/webCheckout';
 
 // Titles only. With descriptions this list ran ~490pt on its own and pushed
 // the plan cards and the Subscribe button below the fold, so the screen that
@@ -47,6 +54,37 @@ const FEATURES = [
 ];
 
 const APP_STORE_URL = 'https://apps.apple.com/us/app/semora-ai-syllabus-scanner/id6762589321';
+
+/**
+ * Everything we can learn about why a purchase failed.
+ *
+ * `reason` alone used to be the whole record, and on iOS it is almost always
+ * the string "purchase-error" — react-native-iap's catch-all bucket, which
+ * distinguishes a declined card from a restricted device from an unavailable
+ * storefront not at all. Eleven consecutive failures by one student in August
+ * 2026 produced eleven identical rows and no way to help her.
+ *
+ * These fields are all non-PII: codes, response numbers and library messages.
+ * No receipts, no tokens, no account identifiers.
+ */
+function purchaseFailureFields(err: any): Record<string, unknown> {
+  const underlying =
+    err?.underlyingError?.code ??
+    err?.userInfo?.NSUnderlyingError?.code ??
+    err?.nativeStackIOS?.[0] ??
+    undefined;
+  return {
+    // Kept first and unchanged so existing funnel queries keep working.
+    reason: String(err?.code ?? err?.message ?? 'unknown').slice(0, 100),
+    code: err?.code != null ? String(err.code).slice(0, 60) : undefined,
+    detail: err?.message ? String(err.message).slice(0, 160) : undefined,
+    response_code: err?.responseCode ?? undefined,
+    debug: err?.debugMessage ? String(err.debugMessage).slice(0, 160) : undefined,
+    underlying: underlying != null ? String(underlying).slice(0, 60) : undefined,
+    product_id: err?.productId ? String(err.productId).slice(0, 60) : undefined,
+    os: Platform.OS,
+  };
+}
 
 export default function PaywallScreen() {
   const router = useRouter();
@@ -143,6 +181,76 @@ export default function PaywallScreen() {
   // risk. Flipped true only once isEligibleForIntroOfferIOS confirms it.
   const [trialEligible, setTrialEligible] = useState(false);
 
+  // Consecutive StoreKit refusals for this visit. Reset on success, because a
+  // student who buys after one hiccup is not the student this counter is for.
+  const purchaseFailures = useRef(0);
+  // Read through a ref: the purchase-error listener is installed once, with []
+  // deps, so anything it closes over from render is frozen at the first one.
+  const selectedPlanRef = useRef<'annual' | 'monthly'>('annual');
+  selectedPlanRef.current = selectedPlan;
+  // Same reason as selectedPlanRef: the listener closes over the first render.
+  const handlePurchaseRef = useRef<() => void>(() => {});
+
+  /**
+   * The single exit for a failed purchase.
+   *
+   * First failure: say what happened, name the code, offer support. Second and
+   * beyond: the App Store has now refused twice, so stop insisting on the rail
+   * that is not working and offer the one that does. Web-billed Pro lands on
+   * this same iPhone through the entitlements row the Stripe webhook writes.
+   */
+  const showPurchaseFailure = useCallback((err: any, title: string) => {
+    purchaseFailures.current += 1;
+    const summary = err?.message ?? 'Something went wrong. Please try again.';
+    const code = errorCodeOf(err);
+    const offerWeb =
+      WEB_CHECKOUT_FALLBACK_ENABLED &&
+      Platform.OS !== 'web' &&
+      purchaseFailures.current >= WEB_FALLBACK_AFTER_FAILURES;
+
+    if (!offerWeb) {
+      reportError(err, {
+        screen: 'paywall',
+        title,
+        message: summary,
+        onRetry: () => handlePurchaseRef.current(),
+      });
+      return;
+    }
+
+    track('purchase_web_fallback_offered', {
+      screen: 'paywall',
+      code,
+      attempts: purchaseFailures.current,
+    });
+    Alert.alert(
+      'Still Not Going Through',
+      `The App Store couldn't complete this purchase.\n\nYou can try again, or subscribe at semoraai.com instead — a subscription bought there unlocks Pro on this device right away, with nothing to restore.\n\nError code: ${code}`,
+      [
+        { text: 'Try Again', onPress: () => handlePurchaseRef.current() },
+        {
+          text: 'Subscribe on the Web',
+          onPress: () => {
+            void (async () => {
+              const result = await openWebCheckout(selectedPlanRef.current, 'paywall_fallback');
+              if (!result.ok) {
+                reportError(
+                  { message: result.message, code: result.code },
+                  { screen: 'paywall', title: 'Could Not Open Checkout' },
+                );
+              }
+            })();
+          },
+        },
+        {
+          text: 'Contact Support',
+          onPress: () => { void contactSupport(code, 'paywall', summary); },
+        },
+        { text: 'Close', style: 'cancel' },
+      ],
+    );
+  }, []);
+
   // A sheet dismissal can surface BOTH as a requestPurchase rejection
   // (handled in handlePurchase) and via the error listener — dedupe so one
   // cancel never logs purchase_cancelled twice.
@@ -223,6 +331,8 @@ export default function PaywallScreen() {
         setSubscriptionPlan(entitlement.plan);
         setLoading(false);
         if (entitlement.is_pro) {
+          // The streak is about a student who cannot buy. This one just did.
+          purchaseFailures.current = 0;
           // Newly Pro: existing tasks only have same-day reminders (scheduled
           // while free). Reschedule so the 1-/3-day advance reminders appear.
           if (expectedUserId) rescheduleAllTaskReminders(expectedUserId);
@@ -244,7 +354,9 @@ export default function PaywallScreen() {
         }
         Alert.alert(
           'Verification Pending',
-          'Your purchase went through but we couldn\'t verify it with the App Store yet. Tap Restore in a moment to retry.',
+          Platform.OS === 'android'
+            ? 'Your purchase went through but we couldn\'t verify it with Google Play yet. Tap Restore in a moment to retry.'
+            : 'Your purchase went through but we couldn\'t verify it with the App Store yet. Tap Restore in a moment to retry.',
         );
         return false;
       },
@@ -280,7 +392,7 @@ export default function PaywallScreen() {
           // Recoverable, but still a failed ATTEMPT — track it with its code
           // so the funnel shows how often users hit the stuck-transaction
           // path (vs. silently losing them to the Later button).
-          track('purchase_failed', { screen: 'paywall', reason: String(code) });
+          track('purchase_failed', { screen: 'paywall', ...purchaseFailureFields(err) });
           Alert.alert(
             'Almost There',
             'Your earlier purchase is still being finalized. Tap Complete Purchase to finish activating Pro.',
@@ -293,11 +405,8 @@ export default function PaywallScreen() {
         }
         // Real failure. Prefer the machine code; fall back to a truncated
         // message. No receipts/identifiers — reasons stay small and non-PII.
-        track('purchase_failed', {
-          screen: 'paywall',
-          reason: String(code ?? err?.message ?? 'unknown').slice(0, 100),
-        });
-        Alert.alert('Purchase Failed', err?.message ?? 'Something went wrong. Please try again.');
+        track('purchase_failed', { screen: 'paywall', ...purchaseFailureFields(err) });
+        showPurchaseFailure(err, 'Purchase Failed');
       },
     );
 
@@ -406,10 +515,7 @@ export default function PaywallScreen() {
       setPurchaseAnalyticsContext(null);
       // Pre-flight failures (store unreachable, product cache empty) never
       // reach the error listener — track them here.
-      track('purchase_failed', {
-        screen: 'paywall',
-        reason: String(err?.code ?? err?.message ?? 'unknown').slice(0, 100),
-      });
+      track('purchase_failed', { screen: 'paywall', ...purchaseFailureFields(err) });
       // SUBSCRIPTION_PENDING means the card WAS charged and Stripe is still
       // settling — titling that "Purchase Failed" would send a paying customer
       // to support, or to buy again somewhere else.
@@ -418,9 +524,20 @@ export default function PaywallScreen() {
         : err?.code === 'SUBSCRIPTION_PENDING' ? 'Payment received'
         : err?.code === 'SUBSCRIPTION_PAST_DUE' ? 'Payment needs updating'
         : 'Purchase Failed';
-      Alert.alert(title, err.message ?? 'Something went wrong. Please try again.');
+      // ALREADY_PRO / SUBSCRIPTION_PENDING / PAST_DUE are not failures to
+      // recover from — they are states with their own correct instruction, and
+      // must never trigger the web-checkout fallback (the student has already
+      // paid). Only a genuine refusal counts toward the failure streak.
+      if (err?.code === 'ALREADY_PRO' || err?.code === 'SUBSCRIPTION_PENDING' || err?.code === 'SUBSCRIPTION_PAST_DUE') {
+        reportError(err, { screen: 'paywall', title, message: err.message });
+      } else {
+        showPurchaseFailure(err, title);
+      }
     }
   };
+
+  // Wired after definition so the listener's retry always calls the live one.
+  handlePurchaseRef.current = () => { void handlePurchase(); };
 
   const handleRestore = async () => {
     setRestoring(true);
@@ -456,7 +573,7 @@ export default function PaywallScreen() {
         Alert.alert('No Subscription Found', 'We couldn\'t find an active subscription for this account.');
       }
     } catch (err: any) {
-      Alert.alert('Restore Failed', err.message ?? 'Something went wrong. Please try again.');
+      reportError(err, { screen: 'paywall', title: 'Restore Failed', onRetry: () => { void handleRestore(); } });
     } finally {
       setRestoring(false);
     }

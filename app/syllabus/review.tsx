@@ -28,6 +28,7 @@ import { isSyncEnabled, syncTaskToCalendar } from '@/lib/calendarSync';
 import { useAppStore } from '@/store/appStore';
 import { useSession } from '@/app/_layout';
 import { track } from '@/lib/analytics';
+import { reportError } from '@/lib/errorReport';
 import type { ExtractedItem } from '@/lib/ai-extraction';
 
 interface ReviewItem extends ExtractedItem {
@@ -339,7 +340,7 @@ export default function SyllabusReviewScreen() {
          { text: 'Go Home', onPress: () => router.replace('/(tabs)' as any) }],
       );
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to save tasks.');
+      reportError(error, { screen: 'review', title: 'Could Not Save Your Tasks', message: error.message || 'Failed to save tasks.', onRetry: () => { void handleSave(); } });
     } finally {
       setSaving(false);
     }
