@@ -1,4 +1,4 @@
-import { calculateGrade, DEFAULT_GRADE_SCALE } from '@/lib/constants';
+import { calculateGrade, taskScorePercent, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import type {
   ExtraCreditPolicy, GpaScaleEntry, GradeCategory, GradeThreshold,
 } from '@/types/database';
@@ -30,6 +30,20 @@ export interface CategoryGradeBreakdown {
   droppedTaskIds: string[];
 }
 
+/**
+ * Graded work that belongs to no category, in a course that uses them.
+ *
+ * `counted: false` means the percentage above was computed without this work.
+ * It is never silently true or false — GradeCard renders both cases.
+ */
+export interface UncategorizedGradeSummary {
+  gradedCount: number;
+  average: number | null;
+  counted: boolean;
+  /** Weight this work was given when counted; 0 when it could not be. */
+  weight: number;
+}
+
 export interface CourseGradeResult {
   percentage: number | null;
   letter: string | null;
@@ -39,7 +53,16 @@ export interface CourseGradeResult {
   droppedTaskIds: string[];
   categoryBreakdown: CategoryGradeBreakdown[];
   usesCategories: boolean;
+  /** Category courses: graded work sitting outside every category. */
+  uncategorized: UncategorizedGradeSummary;
+  /** Weightless courses: graded tasks whose weight had to be imputed. */
+  unweightedGradedCount: number;
+  imputedWeight: number;
 }
+
+const NO_UNCATEGORIZED: UncategorizedGradeSummary = {
+  gradedCount: 0, average: null, counted: false, weight: 0,
+};
 
 function round(value: number, digits = 2) {
   const power = 10 ** digits;
@@ -53,16 +76,11 @@ function letterFor(percentage: number | null, scale: GradeThreshold[]) {
   return sorted.find((entry) => percentage >= entry.min)?.letter ?? 'F';
 }
 
-function taskPercent(task: GradeTask): number | null {
-  if (task.score != null && Number.isFinite(task.score)) return task.score;
-  if (
-    task.points_earned != null && task.points_possible != null &&
-    task.points_possible > 0
-  ) {
-    return (task.points_earned / task.points_possible) * 100;
-  }
-  return null;
-}
+// One definition of "this task has a grade", shared with the weight-based
+// path in lib/constants.ts. They used to be two, and disagreed about a
+// points-only row: the category path counted it, the legacy path called the
+// course ungraded.
+const taskPercent = (task: GradeTask): number | null => taskScorePercent(task);
 
 function averageTasks(tasks: GradeTask[]): number | null {
   if (!tasks.length) return null;
@@ -97,6 +115,7 @@ export function calculateCourseGrade(
       droppedTaskIds: [],
       categoryBreakdown: [],
       usesCategories: false,
+      uncategorized: NO_UNCATEGORIZED,
     };
   }
 
@@ -140,16 +159,55 @@ export function calculateCourseGrade(
     });
   }
 
+  // ── Graded work that belongs to no category ────────────────────────────
+  //
+  // The loop above only ever looks at tasks matching a category id, so a
+  // graded task with `grade_category_id = null` contributed nothing and was
+  // reported nowhere. That is not a rare shape: lms-sync never sets a category
+  // on an imported assignment, so every Canvas task in a categorised course
+  // lands here. A course could read 100% A while a zero sat outside the
+  // categories, and no screen could say why.
+  //
+  // It is folded in as an implicit category carrying the weight the syllabus
+  // has not assigned (`100 − Σ category weights`). When the categories already
+  // account for 100%, there is no honest weight to give it — inventing one
+  // would silently move a grade that is currently correct for every student
+  // whose categories are complete. So it stays out of the arithmetic and
+  // `counted: false` travels to GradeCard, which says so on screen. Either
+  // way the work is visible; it is never dropped in silence.
+  const categoryWeightTotal = ordered.reduce((sum, category) => sum + category.weight_percent, 0);
+  const uncategorizedTasks = tasks.filter((task) =>
+    !task.grade_category_id &&
+    taskPercent(task) != null &&
+    (extraCreditPolicy === 'category' || !task.is_extra_credit),
+  );
+  const uncategorizedAverage = averageTasks(uncategorizedTasks);
+  const uncategorizedWeight = Math.max(0, round(100 - categoryWeightTotal, 1));
+  const countUncategorized = uncategorizedAverage != null && uncategorizedWeight > 0;
+  if (countUncategorized) {
+    attemptedWeight += uncategorizedWeight;
+    earnedPoints += uncategorizedWeight * uncategorizedAverage! / 100;
+  }
+  const uncategorized: UncategorizedGradeSummary = {
+    gradedCount: uncategorizedTasks.length,
+    average: uncategorizedAverage == null ? null : round(uncategorizedAverage),
+    counted: countUncategorized,
+    weight: countUncategorized ? uncategorizedWeight : 0,
+  };
+
   if (attemptedWeight <= 0) {
     return {
       percentage: null,
       letter: null,
       weightAttempted: 0,
-      weightTotal: round(ordered.reduce((sum, category) => sum + category.weight_percent, 0), 1),
+      weightTotal: round(categoryWeightTotal, 1),
       earnedPoints: 0,
       droppedTaskIds,
       categoryBreakdown: breakdown,
       usesCategories: true,
+      uncategorized,
+      unweightedGradedCount: 0,
+      imputedWeight: 0,
     };
   }
 
@@ -178,11 +236,14 @@ export function calculateCourseGrade(
     percentage: round(percentage),
     letter: letterFor(percentage, scale),
     weightAttempted: round(attemptedWeight, 1),
-    weightTotal: round(ordered.reduce((sum, category) => sum + category.weight_percent, 0), 1),
+    weightTotal: round(categoryWeightTotal, 1),
     earnedPoints: round(earnedPoints),
     droppedTaskIds,
     categoryBreakdown: breakdown,
     usesCategories: true,
+    uncategorized,
+    unweightedGradedCount: 0,
+    imputedWeight: 0,
   };
 }
 

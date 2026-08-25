@@ -1,0 +1,8 @@
+{
+  "//": "Deno test config for the pure-logic modules in lib/. Passed explicitly with --config so it is NEVER auto-discovered: a deno.json at the repo root changes how Deno treats node_modules, which breaks `expo export` and therefore the web deploy (see DEPLOY_CHECKLIST.md).",
+  "imports": {
+    "@/lib/": "./",
+    "@/types/": "../types/",
+    "react-native": "./__testing__/react-native.stub.ts"
+  }
+}

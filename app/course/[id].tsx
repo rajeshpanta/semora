@@ -151,7 +151,8 @@ export default function CourseDetailScreen() {
   }));
   const {
     percentage, letter, weightAttempted, weightTotal, earnedPoints,
-    categoryBreakdown, droppedTaskIds, usesCategories,
+    categoryBreakdown, droppedTaskIds, usesCategories, uncategorized,
+    unweightedGradedCount,
   } = calculateCourseGrade(
     gradeTasks,
     gradeCategories,
@@ -541,7 +542,7 @@ export default function CourseDetailScreen() {
 
   const gradesSection = (
         <View style={[styles.gradeCard, isWide && styles.cardPadWide, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <GradeCard percentage={percentage} letter={letter} gradedCount={gradedCount} totalCount={tasks.length} weightAttempted={weightAttempted} weightTotal={weightTotal} categoryMode={usesCategories} />
+          <GradeCard percentage={percentage} letter={letter} gradedCount={gradedCount} totalCount={tasks.length} weightAttempted={weightAttempted} weightTotal={weightTotal} categoryMode={usesCategories} uncategorized={uncategorized} unweightedGradedCount={unweightedGradedCount} />
 
           {usesCategories && (
             <View style={[styles.categorySummary, { borderTopColor: colors.line }]}>

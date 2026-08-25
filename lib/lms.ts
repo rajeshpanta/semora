@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+import * as Localization from 'expo-localization';
 import { supabase } from '@/lib/supabase';
 import type { CourseFacts } from '@/lib/termMatch';
 import {
@@ -186,6 +188,35 @@ export async function listLmsConnections(): Promise<
   return (data ?? []).map((row: any) => ({ ...row, links: row.links ?? [] }));
 }
 
+/**
+ * Guarantee the account has a timezone before an LMS connection depends on it.
+ *
+ * Reads first and only writes when the column is empty, so a student who has
+ * deliberately set a timezone (or is travelling) is never overwritten by the
+ * device's current one. Every failure is swallowed: the worst case is the
+ * status quo, and the best case is a deadline that lands on the right day.
+ */
+async function ensureProfileTimezone(userId: string): Promise<void> {
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('timezone')
+      .eq('id', userId)
+      .maybeSingle();
+    if (profile?.timezone) return;
+
+    const detected = Platform.OS === 'web'
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone
+      : Localization.getCalendars()[0]?.timeZone
+        ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (!detected) return;
+
+    await supabase.from('profiles').upsert({ id: userId, timezone: detected });
+  } catch {
+    // Never block a connection on this.
+  }
+}
+
 export async function connectLms(input: {
   userId: string;
   semesterId: string;
@@ -206,6 +237,21 @@ export async function connectLms(input: {
   declined?: DiscoveredLmsCourse[];
 }): Promise<{ connectionId: string; processed: number; skipped: number }> {
   if (!input.courses.length) throw new Error('Select at least one course to import.');
+
+  // A profile timezone is a precondition for correct Canvas due dates, not a
+  // preference. lms-sync converts every `due_at` into local wall-clock time
+  // with `profiles.timezone`, and falls back to UTC when it is missing — which
+  // for anyone west of Greenwich moves an 11:59pm deadline onto the following
+  // day, in every list, on the calendar, and in the reminders.
+  //
+  // syncProfileSettings already writes it on sign-in, so today no account with
+  // an LMS connection is missing one (checked: 19 of 273 profiles have no
+  // timezone, and none of them has ever connected an LMS). This closes the
+  // door rather than trusting that to hold: the one moment the value becomes
+  // load-bearing is the moment a connection is created, so it is written here
+  // if it is absent. Best-effort — a profile write must never be the reason a
+  // student cannot connect Canvas.
+  await ensureProfileTimezone(input.userId);
 
   const { data: connection, error: connectionError } = await supabase
     .from('lms_connections')

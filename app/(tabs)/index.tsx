@@ -45,6 +45,7 @@ import CoursesGlance from '@/components/CoursesGlance';
 import GradesWaitingCard from '@/components/GradesWaitingCard';
 import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
 import { calculateCourseGrade } from '@/lib/grades';
+import { stillNeedsAttention } from '@/lib/taskStatus';
 import { DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import type { GradeThreshold } from '@/types/database';
 import WeekGlance from '@/components/WeekGlance';
@@ -493,6 +494,14 @@ export default function TodayScreen() {
   // Next up: most urgent incomplete task
   const nextUp = dueSoonTasks.length > 0 ? dueSoonTasks[0] : null;
   const nextUpDays = nextUp ? Math.max(0, differenceInDays(new Date(nextUp.due_date + 'T00:00:00'), todayStart)) : 0;
+  // The hero exists to name work the day's own list does not already show.
+  // Today's tasks now render ABOVE it, so when the soonest thing is due today
+  // the hero was printing the same row a second time, one card apart.
+  const showNextUpHero = !!nextUp && nextUp.due_date !== todayKey;
+  // Unfinished work due today. `todayTasks` deliberately includes completed
+  // rows so the Today list can keep them visible with a progress bar; anything
+  // COUNTING what still needs attention has to filter them out first.
+  const todayRemaining = stillNeedsAttention(todayTasks as any[]);
 
   // Weekly stats
   const weekExams = weekTasks.filter((t) => t.type === 'exam').length;
@@ -756,7 +765,7 @@ export default function TodayScreen() {
         {isDesktop && (
           <DecisionStrip
             overdue={overdueTasks}
-            dueToday={todayTasks}
+            dueToday={todayRemaining}
             dueTomorrow={tomorrowsTasks}
             weekTasks={weekRemaining}
             attentionCourse={attentionCourse}
@@ -957,59 +966,39 @@ export default function TodayScreen() {
           );
         })()}
 
-        {/* Next Up Hero — forward-looking pointer to the most urgent
-            upcoming task. Sits below Overdue so emergencies surface first. */}
-        {nextUp && (
-          <View style={[styles.heroCard, { backgroundColor: colors.brand }]}>
-            <View style={styles.heroTop}>
-              <Text style={styles.heroEye}>NEXT UP</Text>
-              <View style={styles.heroBadge}>
-                <Text style={styles.heroBadgeText}>
-                  {nextUpDays === 0 ? 'TODAY' : nextUpDays === 1 ? 'TOMORROW' : `${nextUpDays} DAYS`}
-                </Text>
-              </View>
+        {/* Exam within a week.
+            `nextExam` has existed for a while but only ever rendered in two
+            places a busy student never reaches: the empty-day card (which
+            requires nothing due AND nothing overdue) and the This Week
+            highlight at the bottom of the screen. So on exactly the days that
+            matter — the ones with work on them — the highest-stakes item in
+            the app was invisible. This is the same data, given one row near
+            the top. Seven days, not fourteen: a fortnight out it is not yet a
+            "today" concern, and the week highlight still covers it. */}
+        {nextExam && nextExamDays !== null && nextExamDays <= 7 && (
+          <TouchableOpacity
+            style={[styles.examAlert, { backgroundColor: colors.coral50, borderColor: colors.coral }]}
+            onPress={() => router.push(`/task/${nextExam.id}` as any)}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Exam ${nextExam.title} for ${nextExam.courses.name}, ${nextExamDays === 0 ? 'today' : `in ${nextExamDays} days`}`}
+          >
+            <FontAwesome name="flag" size={13} color={colors.coral} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.examAlertTitle, { color: colors.coral }]} numberOfLines={1}>
+                {nextExamDays === 0
+                  ? `Exam today · ${nextExam.courses.name}`
+                  : nextExamDays === 1
+                    ? `Exam tomorrow · ${nextExam.courses.name}`
+                    : `Exam in ${nextExamDays} days · ${nextExam.courses.name}`}
+              </Text>
+              <Text style={[styles.examAlertSub, { color: colors.ink2 }]} numberOfLines={1}>
+                {nextExam.title} — {format(new Date(nextExam.due_date + 'T00:00:00'), 'EEE, MMM d')}
+              </Text>
             </View>
-            <Text style={styles.heroTitle} numberOfLines={2}>{nextUp.courses.name} · {nextUp.title}</Text>
-            <Text style={styles.heroSub}>
-              {format(new Date(nextUp.due_date + 'T00:00:00'), 'EEEE, MMMM d')}
-              {nextUp.due_time ? ` · ${nextUp.due_time.slice(0, 5)}` : ''}
-            </Text>
-            {/* The tutor's only entry points were a settings list, the + menu
-                and a course toolbar — none of which a student visits because
-                they are stuck. This is the most-read card in the app, and it
-                is already naming the exact thing they are worried about, so
-                the offer belongs here and nowhere earlier. */}
-            {['exam', 'quiz', 'assignment', 'project'].includes(nextUp.type) && (
-              <TouchableOpacity
-                style={styles.heroTutor}
-                onPress={() => {
-                  track('tutor_offered_tapped', { screen: 'dashboard', type: nextUp.type });
-                  router.push({
-                    pathname: '/tutor',
-                    params: { courseId: nextUp.course_id, assignmentId: nextUp.id },
-                  } as any);
-                }}
-                activeOpacity={0.8}
-                accessibilityRole="button"
-                accessibilityLabel="Ask your tutor about this"
-              >
-                <FontAwesome name="comments" size={12} color="#fff" />
-                <Text style={styles.heroTutorText}>
-                  {nextUp.type === 'exam' || nextUp.type === 'quiz'
-                    ? 'Help me study for this'
-                    : 'Where do I start?'}
-                </Text>
-                <FontAwesome name="angle-right" size={15} color="rgba(255,255,255,0.8)" />
-              </TouchableOpacity>
-            )}
-          </View>
+            <FontAwesome name="chevron-right" size={11} color={colors.coral} />
+          </TouchableOpacity>
         )}
-
-        {/* Study suggestions — self-gating, self-fetching intelligence card
-            (built by another agent). Placed high, just below the Next Up
-            hero, so the "what should I work on" nudge sits above the fuller
-            week roadmap. Renders nothing when it has nothing to suggest. */}
-        <StudySuggestionsCard limit={3} />
 
         {/* Today's tasks — header shows progress when there's anything to do.
             The horizontal bar gives the momentum signal (vs SVG ring,
@@ -1026,8 +1015,8 @@ export default function TodayScreen() {
 
           // Nothing due today, but something IS coming: say nothing here.
           //
-          // The Next Up hero directly above already names the next task and how
-          // far away it is ("TODAY" / "TOMORROW" / "4 DAYS"). Rendering a
+          // The Next Up hero (now BELOW this section) names the next task and
+          // how far away it is ("TODAY" / "TOMORROW" / "4 DAYS"). Rendering a
           // "Today" heading over a card reading "You're free today!" is a
           // second answer to a question already answered, and it costs a
           // screenful to give it. The section earns its space when there is
@@ -1142,9 +1131,10 @@ export default function TodayScreen() {
               <Text style={[styles.emptySub, { color: colors.ink3 }]}>
                 Next exam: {nextExam.courses.name} · {nextExam.title} — {format(new Date(nextExam.due_date + 'T00:00:00'), 'EEE, MMM d')} ({nextExamDays === 0 ? 'today' : `${nextExamDays} day${nextExamDays > 1 ? 's' : ''}`}). A good time to start preparing.
               </Text>
-            ) : !nextUp && nextTask ? (
-              // Only when the hero "Next Up" card isn't already showing this
-              // exact task (nextUp === upcomingTasks[0] whenever it exists).
+            ) : !showNextUpHero && nextTask ? (
+              // Only when the hero "Next Up" card isn't going to show this
+              // exact task. The hero is now suppressed for work due today, so
+              // this tracks `showNextUpHero`, not the presence of `nextUp`.
               <Text style={[styles.emptySub, { color: colors.ink3 }]}>
                 Next up: {nextTask.title} ({nextTask.courses.name}) — due {format(new Date(nextTask.due_date + 'T00:00:00'), 'EEE, MMM d')}
               </Text>
@@ -1256,6 +1246,66 @@ export default function TodayScreen() {
             )}
           </View>
         )}
+
+        {/* Next Up Hero — forward-looking pointer to the most urgent
+            upcoming task. Sits BELOW today's work: what is due today is the
+            question this screen exists to answer, and the hero was pushing it
+            under a card, a tutor pitch and a suggestions list. Hidden entirely
+            when the soonest task is due today, because the list above has
+            already shown that exact row. */}
+        {showNextUpHero && nextUp && (
+          <View style={[styles.heroCard, { backgroundColor: colors.brand }]}>
+            <View style={styles.heroTop}>
+              <Text style={styles.heroEye}>NEXT UP</Text>
+              <View style={styles.heroBadge}>
+                <Text style={styles.heroBadgeText}>
+                  {nextUpDays === 0 ? 'TODAY' : nextUpDays === 1 ? 'TOMORROW' : `${nextUpDays} DAYS`}
+                </Text>
+              </View>
+            </View>
+            <Text style={styles.heroTitle} numberOfLines={2}>{nextUp.courses.name} · {nextUp.title}</Text>
+            <Text style={styles.heroSub}>
+              {format(new Date(nextUp.due_date + 'T00:00:00'), 'EEEE, MMMM d')}
+              {nextUp.due_time ? ` · ${nextUp.due_time.slice(0, 5)}` : ''}
+            </Text>
+            {/* The tutor's only entry points were a settings list, the + menu
+                and a course toolbar — none of which a student visits because
+                they are stuck. This is the most-read card in the app, and it
+                is already naming the exact thing they are worried about, so
+                the offer belongs here and nowhere earlier. */}
+            {['exam', 'quiz', 'assignment', 'project'].includes(nextUp.type) && (
+              <TouchableOpacity
+                style={styles.heroTutor}
+                onPress={() => {
+                  track('tutor_offered_tapped', { screen: 'dashboard', type: nextUp.type });
+                  router.push({
+                    pathname: '/tutor',
+                    params: { courseId: nextUp.course_id, assignmentId: nextUp.id },
+                  } as any);
+                }}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Ask your tutor about this"
+              >
+                <FontAwesome name="comments" size={12} color="#fff" />
+                <Text style={styles.heroTutorText}>
+                  {nextUp.type === 'exam' || nextUp.type === 'quiz'
+                    ? 'Help me study for this'
+                    : 'Where do I start?'}
+                </Text>
+                <FontAwesome name="angle-right" size={15} color="rgba(255,255,255,0.8)" />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
+        {/* Study suggestions — self-gating, self-fetching intelligence card.
+            Sits below the day's own work and the Next Up hero: "what should I
+            start next" is a useful question, but never the first one, and it
+            was pushing today's actual deadlines down the screen. Still above
+            the fuller week roadmap. Renders nothing when it has nothing to
+            suggest. */}
+        <StudySuggestionsCard limit={3} />
 
         {/* Phones keep it inline — there is no rail there to move it to. On
             desktop it lives in the right column beside Courses, where the rest
@@ -1605,6 +1655,15 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   notifBannerText: { flex: 1, fontSize: 13, fontWeight: '500' },
+  // Exam-within-a-week alert
+  examAlert: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 12, paddingVertical: 10,
+    borderRadius: 12, borderWidth: 1,
+    marginBottom: 16,
+  },
+  examAlertTitle: { fontSize: 13.5, fontWeight: '700' },
+  examAlertSub: { fontSize: 12, marginTop: 1 },
   // Hero
   heroCard: {
     backgroundColor: COLORS.brand, borderRadius: 22, padding: 16, marginBottom: 18,

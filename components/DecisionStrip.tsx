@@ -108,11 +108,15 @@ export default function DecisionStrip({
   tiles.push({
     key: 'due',
     label: 'Due today & tomorrow',
+    // Both counts are UNFINISHED work — a tile that answers "what still needs
+    // doing" must not include what has already been done. `dueToday` used to
+    // arrive unfiltered, so a student who finished all three of today's tasks
+    // still read "3 today" all evening.
     value: String(dueToday.length),
     valueSuffix: dueTomorrow.length > 0 ? `+${dueTomorrow.length}` : undefined,
     detail:
       dueToday.length === 0 && dueTomorrow.length === 0
-        ? 'Nothing new due'
+        ? 'Nothing left due'
         : `${dueToday.length} today, ${dueTomorrow.length} tomorrow`,
     tone: dueToday.length > 0 ? 'brand' : 'teal',
   });

@@ -11,6 +11,7 @@ import { Platform, Share } from 'react-native';
 import { getAppLocale, localeTag, translate } from '@/lib/i18n';
 import * as FileSystem from 'expo-file-system/legacy';
 import { calculateCourseGrade } from '@/lib/grades';
+import { isCompletedOnTime } from '@/lib/taskStatus';
 import type { Course, GradeCategory, Task } from '@/types/database';
 
 export interface CourseProgressInsight {
@@ -55,14 +56,11 @@ function dueAt(task: Pick<Task, 'due_date' | 'due_time'>) {
   return new Date(`${task.due_date}T${task.due_time || '23:59:59'}`);
 }
 
-function isOnTime(task: Task) {
-  if (!task.is_completed || !task.completed_at) return null;
-  if (task.submitted_late) return false;
-  const completed = parseISO(task.completed_at);
-  const due = dueAt(task);
-  if (!Number.isFinite(completed.getTime()) || !Number.isFinite(due.getTime())) return null;
-  return completed <= due;
-}
+// Lateness has one definition, in lib/taskStatus.ts, and this used to be a
+// second one: it re-derived late from `completed_at > due` and overrode the
+// stored answer, so Insights called a task late while Task detail called the
+// same row on time.
+const isOnTime = (task: Task) => isCompletedOnTime(task);
 
 function taskScore(task: Task): number | null {
   if (task.score != null && Number.isFinite(task.score)) return task.score;

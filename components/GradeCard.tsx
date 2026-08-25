@@ -20,6 +20,10 @@ interface GradeCardProps {
   weightAttempted: number;
   weightTotal: number;
   categoryMode?: boolean;
+  /** Graded work outside every category, in a course that uses categories. */
+  uncategorized?: { gradedCount: number; counted: boolean; weight: number };
+  /** Graded tasks whose weight the engine had to impute (weight-based mode). */
+  unweightedGradedCount?: number;
 }
 
 function getGradeColor(letter: string | null): [string, string] {
@@ -31,7 +35,10 @@ function getGradeColor(letter: string | null): [string, string] {
   return ['#ef4444', '#dc2626'];
 }
 
-export function GradeCard({ percentage, letter, gradedCount, totalCount, weightAttempted, weightTotal, categoryMode = false }: GradeCardProps) {
+export function GradeCard({
+  percentage, letter, gradedCount, totalCount, weightAttempted, weightTotal,
+  categoryMode = false, uncategorized, unweightedGradedCount = 0,
+}: GradeCardProps) {
   const colors = useColors();
   const [color1, color2] = getGradeColor(letter);
   const barWidth = percentage != null ? Math.min(percentage, 100) : 0;
@@ -78,6 +85,30 @@ export function GradeCard({ percentage, letter, gradedCount, totalCount, weightA
           </Text>
         )}
       </View>
+
+      {/* Incomplete grading setup.
+          A course grade is only as honest as the weights behind it, and both
+          of these used to be invisible: graded work with no category was
+          dropped from a category course, and graded work with no weight was
+          dropped from a weighted one. The arithmetic now includes them where
+          it defensibly can, but the student still has to know their setup is
+          unfinished — the number moves when they finish it. */}
+      {uncategorized != null && uncategorized.gradedCount > 0 && (
+        <View style={[styles.contextBox, { backgroundColor: colors.amber50 }]}>
+          <Text style={[styles.contextText, { color: colors.amber }]}>
+            {uncategorized.counted
+              ? `${uncategorized.gradedCount} graded item${uncategorized.gradedCount === 1 ? '' : 's'} ${uncategorized.gradedCount === 1 ? 'is' : 'are'} not in a category — counted as the remaining ${uncategorized.weight}%. Assign ${uncategorized.gradedCount === 1 ? 'it' : 'them'} for an exact grade.`
+              : `${uncategorized.gradedCount} graded item${uncategorized.gradedCount === 1 ? '' : 's'} ${uncategorized.gradedCount === 1 ? 'is' : 'are'} not in a category, and your categories already total ${weightTotal}% — so ${uncategorized.gradedCount === 1 ? 'it is' : 'they are'} not in this grade. Assign ${uncategorized.gradedCount === 1 ? 'it' : 'them'} to a category to include ${uncategorized.gradedCount === 1 ? 'it' : 'them'}.`}
+          </Text>
+        </View>
+      )}
+      {!categoryMode && unweightedGradedCount > 0 && (
+        <View style={[styles.contextBox, { backgroundColor: colors.amber50 }]}>
+          <Text style={[styles.contextText, { color: colors.amber }]}>
+            {unweightedGradedCount} graded item{unweightedGradedCount === 1 ? '' : 's'} {unweightedGradedCount === 1 ? 'has' : 'have'} no weight set. {unweightedGradedCount === 1 ? 'It is' : 'They are'} counted using an even share of the weight your syllabus has not assigned — add weights for an exact grade.
+          </Text>
+        </View>
+      )}
 
       {/* Helpful context when early in semester */}
       {hasGrades && !categoryMode && weightAttempted < weightTotal && weightAttempted > 0 && (

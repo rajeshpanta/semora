@@ -132,51 +132,113 @@ export const DEFAULT_GRADE_SCALE = [
   { letter: 'F', min: 0 },
 ] as const;
 
+export interface GradeCalcTask {
+  weight: number | null;
+  score: number | null;
+  points_earned?: number | null;
+  points_possible?: number | null;
+  is_extra_credit: boolean;
+}
+
+/**
+ * The percentage a task actually earned, from whichever field carries it.
+ *
+ * `score` is authoritative when present — the app writes it on every grade
+ * entry (task/[id].tsx converts a points entry to a percentage before saving)
+ * and lms-sync computes it from Canvas's earned/possible. The points fallback
+ * exists for the one case that produces points without a percentage: a Canvas
+ * assignment whose `points_possible` is 0 or absent on the assignment record
+ * but whose submission carries a score. Reading only `score` used to drop
+ * those rows out of the course grade while the category path counted them —
+ * the same task graded, or not, depending on which branch ran.
+ */
+export function taskScorePercent(task: GradeCalcTask): number | null {
+  if (task.score != null && Number.isFinite(task.score)) return task.score;
+  if (
+    task.points_earned != null && task.points_possible != null &&
+    task.points_possible > 0
+  ) {
+    return (task.points_earned / task.points_possible) * 100;
+  }
+  return null;
+}
+
 export function calculateGrade(
-  tasks: { weight: number | null; score: number | null; is_extra_credit: boolean }[],
+  tasks: GradeCalcTask[],
   scale: { letter: string; min: number }[],
 ) {
-  const allWithWeight = tasks.filter((t) => t.weight != null);
-  const graded = allWithWeight.filter((t) => t.score != null);
-  const allGraded = tasks.filter((t) => t.score != null);
   const sorted = [...(scale?.length ? scale : DEFAULT_GRADE_SCALE)].sort((a, b) => b.min - a.min);
+  const regular = tasks.filter((t) => !t.is_extra_credit);
 
-  // Total weight across ALL tasks (graded + ungraded)
-  const weightTotal = allWithWeight
-    .filter((t) => !t.is_extra_credit)
+  // weightTotal stays the sum of DECLARED non-EC weights and nothing else.
+  // lib/workload.ts reads it alone to answer "how much of this course is still
+  // in play", and an imputed weight is not a commitment the syllabus made.
+  const weightTotal = regular
+    .filter((t) => t.weight != null)
     .reduce((sum, t) => sum + t.weight!, 0);
 
-  if (graded.length === 0) {
-    // Many instructors do not publish category weights. In that case, keep
-    // grade and GPA tracking useful with a straight average of posted grades.
-    if (allGraded.length > 0) {
-      const rawPercentage = allGraded.reduce((sum, task) => sum + task.score!, 0) / allGraded.length;
-      const percentage = Math.min(rawPercentage, 100);
-      const letter = sorted.find((grade) => percentage >= grade.min)?.letter ?? 'F';
-      return {
-        percentage: Math.round(percentage * 100) / 100,
-        letter,
-        weightAttempted: 0,
-        weightTotal,
-        earnedPoints: 0,
-      };
-    }
-    return { percentage: null, letter: null, weightAttempted: 0, weightTotal, earnedPoints: 0 };
+  // ── Imputed weights ────────────────────────────────────────────────────
+  //
+  // A graded task must never be dropped for lacking a weight. It used to be:
+  // `graded` was built from tasks that HAD a weight, so one weighted task made
+  // every unweighted graded task vanish from the course grade. Five quizzes at
+  // 60 plus one 20%-weighted midterm at 100 reported 100% — an A built by
+  // discarding five of the six grades, with nothing on screen saying so.
+  //
+  // Instead, unweighted non-EC tasks share whatever weight the syllabus has
+  // not already assigned: `100 − declared`. This subsumes both of the old
+  // behaviours exactly rather than replacing them:
+  //
+  //   fully weighted    no unweighted tasks, so nothing is imputed and the
+  //                     arithmetic below is unchanged, to the digit.
+  //   fully unweighted  declared = 0, so every task gets 100/N and a weighted
+  //                     average with equal weights IS the straight average the
+  //                     old `allGraded` branch returned.
+  //   mixed             the example above becomes 20×100 + 5×(16×60) over a
+  //                     weight of 100 → 68%, which is what the six grades say.
+  //
+  // Ungraded unweighted tasks are counted in the divisor so a task earns its
+  // share whether or not it has been marked yet — the same treatment a
+  // declared weight already gets.
+  //
+  // When declared weights already reach 100 there is nothing left to share
+  // out. Rather than resurrect the silent drop, each unweighted task takes the
+  // mean declared weight; the total then exceeds 100, which is harmless
+  // because the percentage divides by weightAttempted, not by 100. It is also
+  // a real signal that the weights are misconfigured, and
+  // `unweightedGradedCount` below is what the UI says that with.
+  const unweighted = regular.filter((t) => t.weight == null);
+  const declaredCount = regular.length - unweighted.length;
+  const unassigned = Math.max(0, 100 - weightTotal);
+  let imputedWeight = 0;
+  if (unweighted.length > 0) {
+    imputedWeight = unassigned > 0
+      ? unassigned / unweighted.length
+      : (declaredCount > 0 ? weightTotal / declaredCount : 100 / unweighted.length);
   }
+  // An EC task without a weight contributes no bonus, exactly as before.
+  const effectiveWeight = (t: GradeCalcTask) =>
+    t.weight != null ? t.weight : (t.is_extra_credit ? 0 : imputedWeight);
 
-  // Weight attempted = only graded tasks (what's been scored so far)
+  const graded = tasks.filter((t) => taskScorePercent(t) != null);
+  const unweightedGradedCount = graded.filter(
+    (t) => !t.is_extra_credit && t.weight == null,
+  ).length;
+
   const weightAttempted = graded
     .filter((t) => !t.is_extra_credit)
-    .reduce((sum, t) => sum + t.weight!, 0);
+    .reduce((sum, t) => sum + effectiveWeight(t), 0);
 
-  // Weighted sum of scores
-  let weightedSum = 0;
-  for (const t of graded) {
-    weightedSum += (t.weight! * t.score!);
-  }
-
-  if (weightAttempted === 0) {
-    return { percentage: null, letter: null, weightAttempted: 0, weightTotal, earnedPoints: 0 };
+  if (graded.length === 0 || weightAttempted === 0) {
+    return {
+      percentage: null,
+      letter: null,
+      weightAttempted: 0,
+      weightTotal,
+      earnedPoints: 0,
+      unweightedGradedCount,
+      imputedWeight: 0,
+    };
   }
 
   // Current grade = base weighted average + extra-credit bonus.
@@ -189,12 +251,19 @@ export function calculateGrade(
   //   weightedSum     = 30*80 + 20*100 + 5*100 = 4900
   //   weightAttempted = 30 + 20 = 50   (EC excluded)
   //   raw %           = 4900 / 50 = 98%   (= 88% base + 10% EC bonus)
+  const weightedSum = graded.reduce(
+    (sum, t) => sum + effectiveWeight(t) * taskScorePercent(t)!,
+    0,
+  );
   const rawPercentage = weightedSum / weightAttempted;
   const percentage = Math.min(rawPercentage, 100);
   const letter = sorted.find((g) => percentage >= g.min)?.letter ?? 'F';
 
   // Earned points toward final grade = sum(weight * score / 100)
-  const earnedPoints = graded.reduce((sum, t) => sum + (t.weight! * t.score! / 100), 0);
+  const earnedPoints = graded.reduce(
+    (sum, t) => sum + (effectiveWeight(t) * taskScorePercent(t)! / 100),
+    0,
+  );
 
   return {
     percentage: Math.round(percentage * 100) / 100,
@@ -202,6 +271,9 @@ export function calculateGrade(
     weightAttempted: Math.round(weightAttempted * 10) / 10,
     weightTotal: Math.round(weightTotal * 10) / 10,
     earnedPoints: Math.round(earnedPoints * 100) / 100,
+    /** Graded non-EC tasks whose weight had to be imputed — the UI says so. */
+    unweightedGradedCount,
+    imputedWeight: Math.round(imputedWeight * 10) / 10,
   };
 }
 
