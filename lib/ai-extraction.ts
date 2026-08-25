@@ -98,6 +98,41 @@ const SERVER_BASE64_CHAR_CAP = 15_000_000;
 // padding and JSON framing under the server's separate 16MB body cap.
 export const MAX_SCAN_RAW_BYTES = 10 * 1024 * 1024;
 
+/**
+ * ONE deadline for a scan, owned here.
+ *
+ * There used to be two, and they disagreed. httpUpload defaulted `xhr.timeout`
+ * to 90s and no scan call site ever overrode it, while upload.tsx set its own
+ * 120s AbortController ceiling. The shorter one always won, so the 120s path
+ * was unreachable code and students saw "The upload timed out" at 90 seconds —
+ * a message about the transport for what is really the scan's deadline.
+ *
+ * 90s was too short for the actual work. Server-side parse duration over 30
+ * days: p50 14.5s, p90 22.7s, p99 62.3s, max 78.0s. That budget has to cover
+ * uploading the file AND waiting out the extraction on the same request,
+ * because the file is posted as base64 in the request body and the response is
+ * the parse result. On campus wifi the upload alone can spend most of 90s.
+ *
+ * Raising the number is only half of it, and on its own would just make people
+ * wait longer for the same failure — which is why this lands together with the
+ * image normalisation above that shrinks what gets sent. Evidence that the
+ * cause is upload-side and not parse-side: of 11 client timeouts, 9 have no
+ * parse_runs row at all. The server never received enough body to begin.
+ */
+export const SCAN_DEADLINE_MS = 120_000;
+
+/**
+ * The transport backstop, deliberately LATER than the deadline above.
+ *
+ * SCAN_DEADLINE_MS is the authoritative one: its AbortController cancels the
+ * in-flight request so processSyllabus bails before any DB write, which is what
+ * keeps a timed-out scan from leaving an orphan course behind. If xhr.timeout
+ * fired first it would preempt that path and reject with the transport's own
+ * message instead — exactly the bug being fixed. The grace exists so this can
+ * only ever catch a hung socket that the abort somehow failed to tear down.
+ */
+export const SCAN_TRANSPORT_TIMEOUT_MS = SCAN_DEADLINE_MS + 15_000;
+
 // Copy for the payload-size gate, shared between the add-time budget check
 // in scan.tsx and the pre-flight in extractFromPages so the user sees one
 // consistent message wherever the limit bites. `fittedPages` = how many
@@ -259,6 +294,7 @@ export async function extractFromPages(
     },
     body,
     signal,
+    timeoutMs: SCAN_TRANSPORT_TIMEOUT_MS,
     onProgress: (percent) => onProgress?.({ stage: 'uploading', percent }),
     onUploadComplete: () => onProgress?.({ stage: 'reading' }),
   });
@@ -312,6 +348,7 @@ export async function extractFromText(
     },
     body: JSON.stringify({ text: trimmed, apiVersion: 2, locale: getAppLocale() }),
     signal,
+    timeoutMs: SCAN_TRANSPORT_TIMEOUT_MS,
     onProgress: (percent) => onProgress?.({ stage: 'uploading', percent }),
     onUploadComplete: () => onProgress?.({ stage: 'reading' }),
   });

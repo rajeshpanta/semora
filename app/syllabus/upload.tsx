@@ -23,7 +23,7 @@ import {
   FREE_COURSE_PHRASE,
   isFreeLimitError,
 } from '@/lib/syllabus';
-import { MAX_SCAN_PAGES, type SyllabusPage } from '@/lib/ai-extraction';
+import { MAX_SCAN_PAGES, SCAN_DEADLINE_MS, type SyllabusPage } from '@/lib/ai-extraction';
 import { takePendingScanText } from '@/lib/pendingScanText';
 import { reportError, errorCodeOf } from '@/lib/errorReport';
 import { supabase } from '@/lib/supabase';
@@ -253,7 +253,11 @@ export default function SyllabusUploadScreen() {
       // double-burned scan that the old Promise.race timeout left behind.
       const controller = new AbortController();
       let timedOut = false;
-      const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 120_000);
+      // The one authoritative scan deadline, defined next to the payload limits
+      // it has to accommodate. httpUpload's transport timeout is set from the
+      // same file and sits deliberately later, so this abort always wins and
+      // the bail-before-DB-writes path below stays reachable.
+      const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, SCAN_DEADLINE_MS);
       const result = await processSyllabus(
         params.fileUri ?? '',
         params.fileName || 'syllabus.pdf',

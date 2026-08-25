@@ -16,6 +16,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { signIn, signInWithApple, signInWithGoogle, isAppleSignInAvailable } from '@/lib/auth';
 import { track } from '@/lib/analytics';
+import { collectAuthFailureDiagnostics } from '@/lib/authDiagnostics';
 import { GoogleWebSignInButton } from '@/components/GoogleWebSignInButton';
 import { supabase } from '@/lib/supabase';
 import { useAppStore } from '@/store/appStore';
@@ -60,16 +61,20 @@ export default function SignInScreen() {
   }, [mode]);
   const [appleAvailable, setAppleAvailable] = useState(false);
   // Google on Android needs an OAuth client registered in Google Cloud against
-  // the signing certificate's SHA-1. Until that exists the native call fails
-  // with DEVELOPER_ERROR (code 10) — an error message no student can act on,
-  // on the primary account-creation path. Hide the button rather than ship a
-  // door that opens onto a wall; Apple's web flow already works on Android, so
-  // there is still a one-tap way to create an account.
+  // the signing certificate's SHA-1, or the native call fails with
+  // DEVELOPER_ERROR (code 10) on the primary account-creation path. That gate
+  // used to be `EXPO_PUBLIC_GOOGLE_ANDROID_READY` read from .env.local.
   //
-  // Flip by setting EXPO_PUBLIC_GOOGLE_ANDROID_READY=1 in .env.local once the
-  // Android client exists. No code change needed at that point.
-  const googleAvailable =
-    Platform.OS !== 'android' || process.env.EXPO_PUBLIC_GOOGLE_ANDROID_READY === '1';
+  // Two Android clients now exist permanently — one for the upload key, one for
+  // Play App Signing (see ANDROID_RELEASE.md) — so the precondition is met and
+  // the flag is gone. It had to go: .env.local is gitignored, so the flag was
+  // absent on any machine that had not been told about it, and the failure was
+  // silent. Closed-testing release 1 (1.8) shipped that way — Android testers
+  // reached an account screen offering only Apple, and account creation is
+  // OAuth-only, so anyone without an Apple ID could not sign up at all.
+  //
+  // A build-machine environment variable is the wrong place for a fact that is
+  // now always true.
   const [error, setError] = useState('');
   const [errorType, setErrorType] = useState<'confirm' | 'credentials' | 'generic' | ''>('');
   const [resending, setResending] = useState(false);
@@ -135,9 +140,26 @@ export default function SignInScreen() {
         track('sign_in_abandoned', { screen: 'auth', provider: 'apple', mode });
         return;
       }
-      track('sign_in_failed', { screen: 'auth', provider: 'apple', code: String(err?.code ?? 'unknown').slice(0, 60) });
+      // The student's answer comes first. Diagnostics are collected AFTER the
+      // error is on screen so that instrumenting this failure can never delay
+      // the person experiencing it — the collector is bounded too, but ordering
+      // is the part that does not depend on remembering the bound.
       setError(err?.message ?? 'Sign in with Apple failed. Please try again.');
       setErrorType('generic');
+      // The code alone could not tell a broken build from a Simulator from a
+      // provider outage — see lib/authDiagnostics.ts.
+      // Not awaited. track() is already a fire-and-forget insert, so awaiting
+      // here would buy nothing and would hold the `finally` that clears the
+      // button spinner — making the act of measuring the failure visible to the
+      // person suffering it. Resolves and reports even if the screen unmounts.
+      void collectAuthFailureDiagnostics('apple', err).then((diagnostics) => {
+        track('sign_in_failed', {
+          screen: 'auth',
+          provider: 'apple',
+          code: String(err?.code ?? 'unknown').slice(0, 60),
+          ...diagnostics,
+        });
+      });
     } finally {
       setOauthLoading(null);
     }
@@ -162,9 +184,20 @@ export default function SignInScreen() {
         track('sign_in_abandoned', { screen: 'auth', provider: 'google', mode });
         return;
       }
-      track('sign_in_failed', { screen: 'auth', provider: 'google', code: String(code ?? 'unknown').slice(0, 60) });
       setError(err?.message ?? 'Sign in with Google failed. Please try again.');
       setErrorType('generic');
+      // Not awaited. track() is already a fire-and-forget insert, so awaiting
+      // here would buy nothing and would hold the `finally` that clears the
+      // button spinner — making the act of measuring the failure visible to the
+      // person suffering it. Resolves and reports even if the screen unmounts.
+      void collectAuthFailureDiagnostics('google', err).then((diagnostics) => {
+        track('sign_in_failed', {
+          screen: 'auth',
+          provider: 'google',
+          code: String(code ?? 'unknown').slice(0, 60),
+          ...diagnostics,
+        });
+      });
     } finally {
       setOauthLoading(null);
     }
@@ -372,7 +405,7 @@ export default function SignInScreen() {
                 )
               ) : null}
 
-              {!googleAvailable ? null : Platform.OS === 'web' ? (
+              {Platform.OS === 'web' ? (
                 <GoogleWebSignInButton
                   disabled={oauthLoading === 'apple'}
                   theme="outline"
@@ -402,11 +435,9 @@ export default function SignInScreen() {
 
               {mode === 'signup' && (
                 <Text style={[styles.oauthHint, { color: colors.ink3 }]}>
-                  {appleAvailable && googleAvailable
+                  {appleAvailable
                     ? 'One tap with Apple or Google — your account is created automatically.'
-                    : googleAvailable
-                      ? 'One tap with Google — your account is created automatically.'
-                      : 'One tap with Apple — your account is created automatically.'}
+                    : 'One tap with Google — your account is created automatically.'}
                 </Text>
               )}
             </View>
