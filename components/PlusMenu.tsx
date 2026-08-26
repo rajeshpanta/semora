@@ -312,6 +312,21 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
                 activeOpacity={0.7}
                 onPress={() => {
                   if (a.expands) return openScanPage();
+                  // An upsell row carries no route on purpose (see canvasRow
+                  // below: a free account gets the Pro sheet, not a screen).
+                  // Without this branch the two lines under it dereferenced
+                  // `a.route!` on a row that never had one, so the tap threw
+                  // "Cannot read property 'pathname' of undefined" and the
+                  // student got nothing — no sheet, no navigation, no error
+                  // they could see. `onClose()` first because ProUpsellSheet
+                  // is its own Modal rendered as a sibling of this one, and
+                  // the menu would otherwise sit on top of the sheet it just
+                  // opened.
+                  if (a.opensUpsell) {
+                    onClose();
+                    setCanvasUpsell(true);
+                    return;
+                  }
                   if (a.needsCourse) return goWithCourse(a.route!.pathname);
                   return go(a.route!.pathname, a.route!.params);
                 }}
