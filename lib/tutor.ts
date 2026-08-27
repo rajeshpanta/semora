@@ -11,6 +11,7 @@ import {
 import { parseUploadJson, requestWithUploadProgress } from '@/lib/httpUpload';
 import { track } from '@/lib/analytics';
 import { streamSse } from '@/lib/sse';
+import { fetchWithTimeout, isTimeoutError } from '@/lib/requestTimeout';
 
 // ── AI Tutor client ─────────────────────────────────────────
 // Talks to the tutor-chat edge function (Pro-gated, grounded on the course's
@@ -166,7 +167,12 @@ async function callTutor(payload: Record<string, unknown>) {
   const session = await getSession();
   const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
   if (!supabaseUrl) throw new Error('Supabase URL not configured');
-  const response = await fetch(`${supabaseUrl}/functions/v1/tutor-chat`, {
+  // Bounded, because React Native's fetch is not. An unbounded await here is
+  // what left the tutor spinning forever on a stalled prepare_note: the
+  // caller's finally never ran, so the "thinking" state was never cleared and
+  // every later attempt was refused as already-in-flight. Same 120s the
+  // streaming transport already used.
+  const response = await fetchWithTimeout(`${supabaseUrl}/functions/v1/tutor-chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
     body: JSON.stringify({ ...payload, locale: getAppLocale() }),
@@ -195,12 +201,37 @@ export async function prepareCourseNotes(
   const pendingNotes = notes.filter(
     (note) => note.extracted !== true && !preparedCourseNoteIds.has(note.id),
   );
-  for (let index = 0; index < pendingNotes.length; index++) {
-    const note = pendingNotes[index];
-    onProgress?.({ completed: index, total: pendingNotes.length, filename: note.filename });
-    await callTutor({ action: 'prepare_note', courseId, noteId: note.id });
-    preparedCourseNoteIds.add(note.id);
-    onProgress?.({ completed: index + 1, total: pendingNotes.length, filename: note.filename });
+  // Nothing to read means nothing to report. A course with no uploaded
+  // documents — or one whose documents are already cached — never enters this
+  // loop at all, which is why plain chat could not be affected by the hang
+  // this instrumentation exists to measure.
+  if (pendingNotes.length === 0) return;
+
+  const startedAt = Date.now();
+  track('tutor_doc_prepare_started', { screen: 'tutor', notes: pendingNotes.length });
+  try {
+    for (let index = 0; index < pendingNotes.length; index++) {
+      const note = pendingNotes[index];
+      onProgress?.({ completed: index, total: pendingNotes.length, filename: note.filename });
+      await callTutor({ action: 'prepare_note', courseId, noteId: note.id });
+      preparedCourseNoteIds.add(note.id);
+      onProgress?.({ completed: index + 1, total: pendingNotes.length, filename: note.filename });
+    }
+    track('tutor_doc_prepare_completed', {
+      screen: 'tutor', notes: pendingNotes.length, ms: Date.now() - startedAt,
+    });
+  } catch (error) {
+    // A timeout is reported separately from every other failure on purpose:
+    // it is the one that used to be invisible, and the only one that tells us
+    // the request never came back at all rather than coming back wrong.
+    const code = (error as { code?: string })?.code ?? 'UNKNOWN';
+    track(
+      isTimeoutError(error) ? 'tutor_doc_prepare_timed_out' : 'tutor_doc_prepare_failed',
+      { screen: 'tutor', notes: pendingNotes.length, ms: Date.now() - startedAt, code },
+    );
+    // Rethrown, always. The caller's catch/finally is what clears the spinner
+    // and shows the student something they can act on.
+    throw error;
   }
 }
 
