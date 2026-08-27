@@ -22,8 +22,11 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as Haptics from 'expo-haptics';
 import {
+  AppState,
+  InteractionManager,
   Platform,
 } from 'react-native';
+import Constants from 'expo-constants';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
@@ -43,6 +46,74 @@ import {
   unsupportedDocumentMessage,
 } from '@/lib/documentFiles';
 import { GlobalSearchButton } from '@/components/GlobalSearchButton';
+import {
+  describePickerFailure,
+  isPickerStrandedError,
+  type PickerMethod,
+} from '@/lib/pickerDiagnostics';
+import { runPick, shouldTrackCancelled } from '@/lib/pickerFlow';
+
+/**
+ * Wait until every running transition has finished before presenting a picker.
+ *
+ * This is the fix for the failure two paying subscribers hit repeatedly on
+ * 2026-08-26, and it is worth writing down because the symptom pointed
+ * somewhere else entirely.
+ *
+ * expo-document-picker sets a native `pickingContext` BEFORE it presents, and
+ * clears it only from the picker's own delegate callbacks — didPick,
+ * wasCancelled, or presentationControllerDidDismiss. All three require the
+ * picker to have actually appeared. UIKit refuses to present onto a view
+ * controller that is already presenting something, and it refuses SILENTLY:
+ * no throw, no completion, no delegate call. Expo's currentViewController()
+ * walks the presentation chain but stops at a controller that
+ * `isBeingDismissed`, handing back a parent that UIKit still considers busy.
+ *
+ * So presenting during a dismissal strands the context permanently. Every
+ * later call then hits `if pickingContext != nil { throw
+ * PickingInProgressException() }` and rejects synchronously — which is exactly
+ * the 0.00s and 0.04s "cancellations" the telemetry recorded, and exactly why
+ * the photo and camera pickers kept working on the same device seconds later:
+ * they are a different module with different state.
+ *
+ * Semora had a direct route into that race. PlusMenu's `go()` calls onClose()
+ * and router.push() in the same tick, and this screen fires a picker from the
+ * deep-link effect on its first commit — while the menu's modal is still
+ * animating away. Pro accounts hit it hardest because checkScanLimit returns
+ * synchronously for them (`if (isPro) return true`), skipping the network wait
+ * that was accidentally protecting free users. All four affected devices were
+ * Pro.
+ *
+ * InteractionManager is the lifecycle-correct answer rather than a fixed
+ * delay: it resolves when the animations and gestures actually finish, however
+ * long they take, and immediately when nothing is running — so the ordinary
+ * "tap the card on an idle screen" path costs a frame, not a timeout. It is
+ * placed inside safePick rather than at any one call site so that every entry
+ * point is covered by one guarantee: the deep-link, the cards, and a tap that
+ * lands while an alert or the Pro sheet is still dismissing.
+ */
+function waitForTransitions(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    InteractionManager.runAfterInteractions(() => resolve());
+  });
+}
+
+// The only instruction that actually works once the native context is
+// stranded: JS cannot reset it, and neither can signing out or re-navigating.
+// A fresh process can.
+const STRANDED_PICKER_MESSAGE =
+  'Semora needs a restart before it can open your files again. Close the app '
+  + 'completely (swipe it away from the app switcher) and reopen it.';
+
+// Said when the picker itself refused to open. Names the surface that failed
+// rather than the file, because at this point no file has been chosen — the
+// old copy ("try a different one — PDF works best") sent students hunting for
+// a better document to fix a problem no document could have caused.
+const PICKER_FAILURE_MESSAGE: Record<PickerMethod, string> = {
+  document: "Semora couldn't open your files just now. Please try again.",
+  photos: "Semora couldn't open your photo library just now. Please try again.",
+  camera: "Semora couldn't open the camera just now. Please try again.",
+};
 
 // Best-effort raw file size for the multi-page upload budget. Returns 0 when
 // the size can't be read (rare — picker URIs are local files), so the budget
@@ -221,6 +292,11 @@ export default function ScanScreen() {
     } as any);
   };
 
+  // Guards against a second picker being asked for while one is already open.
+  // A ref, not state: this must be readable and writable synchronously inside
+  // safePick, before React could ever re-render.
+  const pickerInFlight = useRef(false);
+
   // expo-image-picker's WEB build resolves its promise from inside a `change`
   // listener that has no reject path: if the picked file has no MIME mapping
   // (or the user defeats the accept filter with "All Files"), it throws in
@@ -228,32 +304,54 @@ export default function ScanScreen() {
   // forever — no result, no error, no spinner — and the card looks dead.
   // Every picker call goes through here so a hang or a throw becomes an
   // honest message and a cancelled result instead of a stuck screen.
-  const safePick = async (work: () => Promise<any>): Promise<any> => {
-    const CANCELLED = { canceled: true, assets: [] };
-    let timer: any;
-    try {
-      const result = await Promise.race([
-        work(),
-        new Promise((resolve) => { timer = setTimeout(() => resolve('__timeout__'), 120_000); }),
-      ]);
-      if (result === '__timeout__') {
-        Alert.alert(
-          "Couldn't open that file",
-          'Semora could not read that file. Please try a different one — PDF works best.',
-        );
-        return CANCELLED;
-      }
-      return result;
-    } catch {
+  //
+  // Two things changed here on 2026-08-26, both because the old version could
+  // not tell a broken picker from a student who changed their mind.
+  //
+  // 1. The failure is now REPORTED. It used to end in `catch {}` — not even
+  //    binding the error — and the caller then logged `scan_cancelled`,
+  //    exactly what a real dismissal logs. Two paying subscribers failed eight
+  //    times each and left behind nothing to diagnose.
+  // 2. The message no longer blames the file. Nothing has been selected at
+  //    this point, so "try a different one — PDF works best" advised a fix for
+  //    a problem the student did not have.
+  const safePick = async (
+    method: PickerMethod,
+    work: () => Promise<any>,
+  ): Promise<any> => runPick({
+    work,
+    inFlight: pickerInFlight,
+    // See waitForTransitions above: presenting during a dismissal is what
+    // strands the native picking context.
+    waitForTransitions,
+    onFailure: (err, reason, elapsedMs) => {
+      track('scan_picker_failed', describePickerFailure(err, {
+        method,
+        reason,
+        // The number that separated a throw from a choice in the incident:
+        // 0.00s and 0.04s "cancellations" nobody could have performed.
+        elapsedMs,
+        platform: Platform.OS,
+        appVersion: Constants.expoConfig?.version ?? null,
+        nativeBuild: Constants.nativeBuildVersion ?? null,
+        osVersion: Platform.Version != null ? String(Platform.Version) : null,
+        // Stands in for a device model: reading the real one needs expo-device,
+        // and a new native dependency is not worth adding for telemetry.
+        interfaceIdiom: (Platform.constants as any)?.interfaceIdiom ?? null,
+        appState: AppState.currentState ?? null,
+      }));
+      // A stranded native context cannot be cleared from JS at all — only a
+      // fresh app process clears it. Saying "try again" to someone in that
+      // state is advice that cannot work, so the one instruction that does
+      // is given instead.
       Alert.alert(
-        "Couldn't open that file",
-        'Semora could not read that file. Please try a different one — PDF works best.',
+        "Couldn't open the picker",
+        isPickerStrandedError(err)
+          ? STRANDED_PICKER_MESSAGE
+          : PICKER_FAILURE_MESSAGE[method],
       );
-      return CANCELLED;
-    } finally {
-      clearTimeout(timer);
-    }
-  };
+    },
+  });
 
   const handleTakePhoto = async () => {
     // Fired BEFORE the free-tier gate on purpose: a student who taps this
@@ -286,7 +384,7 @@ export default function ScanScreen() {
     // five and then watching the whole scan fail with "File too large".
     let totalBytes = 0;
     while (pages.length < MAX_SCAN_PAGES) {
-      const result = await safePick(() => ImagePicker.launchCameraAsync({
+      const result = await safePick('camera', () => ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
         // First page keeps 0.8 for maximum OCR fidelity on single-page
         // scans. Once the user opts into multi-page, later shots drop to
@@ -296,6 +394,15 @@ export default function ScanScreen() {
         // ab79b84), and 0.5 JPEG is still ample for printed syllabus text.
         quality: pages.length === 0 ? 0.8 : 0.5,
       }));
+
+      // The camera failed to open (safePick has alerted and reported it). Keep
+      // whatever was already captured rather than stacking a second prompt on
+      // top of the failure alert, and stop looping — retrying a camera that
+      // just refused would only produce the same alert again.
+      if (result.failed || result.duplicate) {
+        if (pages.length === 0) return;
+        break;
+      }
 
       if (result.canceled || !result.assets[0]) {
         // Backed out of the camera. Nothing captured yet -> plain cancel;
@@ -375,18 +482,24 @@ export default function ScanScreen() {
     if (!(await checkScanLimit())) return;
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-    const result = await safePick(() => DocumentPicker.getDocumentAsync({
+    const result = await safePick('document', () => DocumentPicker.getDocumentAsync({
       type: SUPPORTED_DOCUMENT_PICKER_TYPE,
       copyToCacheDirectory: true,
     }));
 
-    if (result.canceled || !result.assets?.[0]) {
+    // A picker that failed, or a duplicate tap that was swallowed, is not a
+    // cancellation. safePick has already reported the failure; logging
+    // scan_cancelled on top of it is what made the two indistinguishable.
+    // classifyPick (lib/pickerFlow.ts) owns that distinction so no call site
+    // can get the order wrong.
+    if (shouldTrackCancelled(result)) {
       // The picker opening and being dismissed was previously invisible: the
       // funnel went straight from intent to nothing, so an abandoned scan and
       // a scan that was never attempted looked identical.
       track('scan_cancelled', { screen: 'scan', method: 'document' });
       return;
     }
+    if (!result.assets?.[0]) return;
     {
       const asset = result.assets[0];
       track('scan_source_selected', {
@@ -438,7 +551,7 @@ export default function ScanScreen() {
       return;
     }
 
-    const result = await safePick(() => ImagePicker.launchImageLibraryAsync({
+    const result = await safePick('photos', () => ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       // 0.5 rather than the single-file 0.8: quality is fixed BEFORE we know
       // how many photos the user picks, and a multi-select of up to
@@ -463,10 +576,13 @@ export default function ScanScreen() {
       selectionLimit: MAX_SCAN_PAGES,
     }));
 
-    if (result.canceled || result.assets.length === 0) {
+    // See handleUploadDocument: a failure is already reported by safePick and
+    // must not also be counted as the student changing their mind.
+    if (shouldTrackCancelled(result)) {
       track('scan_cancelled', { screen: 'scan', method: 'photos' });
       return;
     }
+    if (!result.assets || result.assets.length === 0) return;
     {
       // selectionLimit caps the native picker, but guard anyway (Android and
       // older iOS builds don't always honor it) — with clear messaging

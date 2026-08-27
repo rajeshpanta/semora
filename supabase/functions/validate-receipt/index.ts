@@ -30,6 +30,9 @@ const APPLE_SHARED_SECRET = Deno.env.get('APPLE_SHARED_SECRET') ?? '';
 // launch + each update review, then set BLOCK_SANDBOX_PRO=true once live so
 // sandbox receipts can't mint real entitlements for TestFlight testers.
 const BLOCK_SANDBOX = Deno.env.get('BLOCK_SANDBOX_PRO') === 'true';
+// Shared with the Stripe alerting path (migrations 095-098) and with
+// send-push: ops-alert authenticates callers with this one secret.
+const ALERT_SECRET = Deno.env.get('PUSH_SEND_SECRET') ?? '';
 
 const APPLE_PROD_URL = 'https://buy.itunes.apple.com/verifyReceipt';
 const APPLE_SANDBOX_URL = 'https://sandbox.itunes.apple.com/verifyReceipt';
@@ -90,6 +93,77 @@ async function logCall(
 }
 
 /**
+ * Tell a human that a purchase is stuck.
+ *
+ * The ownership guard itself is correct and must not change: refusing to move
+ * a subscription onto a second account is what stops one person's purchase
+ * being taken over by another. What was missing is that nobody found out it
+ * had fired. The conflict ticket was written straight to support_requests with
+ * email_status 'skipped' and no notification of any kind — no mail, no push,
+ * no ops alert — so it sat in a table until someone happened to query it.
+ *
+ * ops-alert is reused rather than submit-support: submit-support is the public
+ * web form, rate-limits by IP hash and stamps rows source:'website', which
+ * would file operational alerts as though a student had written in.
+ *
+ * The alert deliberately carries NO receipt: no full transaction id, no
+ * account addresses, no user ids. All of that is already on the ticket, behind
+ * the database's access controls. The mail exists to say "go read ticket X",
+ * and an inbox is the wrong place for a billing identifier.
+ */
+async function alertOpsOfConflict(
+  // deno-lint-ignore no-explicit-any
+  log: any,
+  ticketId: string | null,
+  oti: string,
+): Promise<'sent' | 'failed' | 'skipped'> {
+  // A deployment without the secret is degraded, not broken. Say 'skipped' so
+  // the ledger stays honest rather than claiming mail that never left.
+  if (!ALERT_SECRET || !SUPABASE_URL) {
+    log.warn('conflict_alert_not_configured', {});
+    return 'skipped';
+  }
+  // Last four only — enough to match this alert to the right ticket at a
+  // glance, useless to anyone who intercepts the mail.
+  const tail = oti.length > 4 ? oti.slice(-4) : '****';
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/ops-alert`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${ALERT_SECRET}`,
+      },
+      body: JSON.stringify({
+        subject: 'Apple subscription claimed by two accounts',
+        body: [
+          'A paying subscriber has been blocked from using their subscription',
+          'because it is already linked to a different Semora account.',
+          '',
+          `Support ticket: ${ticketId ?? '(see support_requests, source auto:subscription_conflict)'}`,
+          `Transaction ending: ...${tail}`,
+          '',
+          'The ticket has both account ids and what to check. Usually this is',
+          'one person with two sign-in methods (Apple vs Google) — confirm that',
+          'before moving anything, because a shared Family Sharing Apple ID',
+          'looks identical from here and transferring would strip a real',
+          "person's access.",
+          '',
+          'Nothing has been changed automatically. No ownership was moved and',
+          'no Pro was removed.',
+        ].join('\n'),
+      }),
+    });
+    const payload = await resp.json().catch(() => null);
+    const sent = resp.ok && (payload as { sent?: boolean } | null)?.sent === true;
+    if (!sent) log.warn('conflict_alert_not_sent', { status: resp.status });
+    return sent ? 'sent' : 'failed';
+  } catch (err) {
+    log.error('conflict_alert_failed', errorFields(err));
+    return 'failed';
+  }
+}
+
+/**
  * Raise a support ticket when two accounts claim one Apple subscription.
  *
  * This exists because the refusal was previously invisible. Twenty-six
@@ -126,7 +200,7 @@ async function fileOwnershipConflict(
     const { data: claimant } = await adminClient.auth.admin.getUserById(claimantId);
     const email = claimant?.user?.email ?? 'unknown@semora.invalid';
 
-    await adminClient.from('support_requests').insert({
+    const { data: inserted } = await adminClient.from('support_requests').insert({
       name: 'Semora (automatic)',
       email,
       topic: 'Billing',
@@ -143,12 +217,44 @@ async function fileOwnershipConflict(
         "person's access.",
       locale: 'en',
       source: 'auto:subscription_conflict',
-      // Nothing sends mail on this path — submit-support owns SMTP. Marking
-      // it 'skipped' rather than 'pending' keeps that honest, so the row is
-      // never mistaken for one that is still waiting on a mailer.
+      // Provisional. The row has to exist before anyone can be told to go read
+      // it, so the real outcome is written below once the alert has been
+      // attempted. 'skipped' remains the honest value if it never leaves.
       email_status: 'skipped',
-    });
+    })
+      .select('id')
+      .single();
+
+    // Only reached when the dedupe above found no open ticket for this
+    // transaction, so a client retrying its receipt eighteen times in an hour
+    // still produces exactly one alert.
+    const ticketId = (inserted as { id?: string } | null)?.id ?? null;
     log.info('ownership_conflict_ticket_filed', { user_id: claimantId });
+
+    // The ticket is now safely written, and that is the part that must not be
+    // lost. Sending the mail is an SMTP round trip, and this whole function is
+    // awaited on the purchase path before the user is told their subscription
+    // is linked elsewhere — so blocking on it would make an error message the
+    // student is already unhappy to see arrive seconds later still.
+    const notify = (async () => {
+      const emailStatus = await alertOpsOfConflict(log, ticketId, oti);
+      if (emailStatus !== 'skipped' && ticketId) {
+        await adminClient
+          .from('support_requests')
+          .update({ email_status: emailStatus })
+          .eq('id', ticketId);
+      }
+    })().catch((err) => {
+      console.error('[validate-receipt] conflict_alert_failed:', errorFields(err));
+    });
+
+    // waitUntil keeps the isolate alive for the send after the response has
+    // gone out. Where it isn't available, awaiting is the correct fallback:
+    // a slower error beats an alert nobody receives.
+    const runtime = (globalThis as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } })
+      .EdgeRuntime;
+    if (typeof runtime?.waitUntil === 'function') runtime.waitUntil(notify);
+    else await notify;
   } catch (err) {
     console.error('[validate-receipt] failed_to_file_conflict:', errorFields(err));
   }

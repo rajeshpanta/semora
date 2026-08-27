@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { hasPendingOfflineEdit } from '@/lib/offlineSync';
+import { reconcileTaskReminders } from '@/lib/notifications';
 
 // Personal-data counterpart to subscribeToCollaboration (lib/collaboration.ts):
 // pushes tasks/courses/semesters changes from one device to another (e.g. web
@@ -45,6 +46,13 @@ export function subscribeToUserData(userId: string, queryClient: QueryClient): (
     queryClient.invalidateQueries({ queryKey: ['tasks'] });
     queryClient.invalidateQueries({ queryKey: ['task'] });
     queryClient.invalidateQueries({ queryKey: ['taskStats'] });
+    // This fires for tasks changed ANYWHERE — the web app, a second device, or
+    // the Canvas background sync marking an assignment submitted. Those are
+    // exactly the completions that leave a stale local reminder on this phone,
+    // because cancelTaskReminders only ever runs on the device that did the
+    // completing. Debounced with the invalidate above, so a bulk import costs
+    // one reconciliation rather than one per row.
+    reconcileTaskReminders(userId).catch(() => {});
   };
 
   const scheduleTasksInvalidate = () => {

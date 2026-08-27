@@ -6,7 +6,7 @@ import {
   getGoogleClassroomAccessToken,
   refreshGoogleClassroomAccessToken,
 } from '@/lib/auth';
-import { rescheduleAllTaskReminders } from '@/lib/notifications';
+import { reconcileTaskReminders, rescheduleAllTaskReminders } from '@/lib/notifications';
 import {
   readLmsCredential,
   removeLmsCredential,
@@ -412,6 +412,12 @@ export async function syncLmsConnection(
       trigger,
     });
     rescheduleAllTaskReminders(connection.user_id).catch(() => {});
+    // A sync can mark assignments submitted (the apply RPC ORs is_completed in
+    // from Canvas's submission state), and rescheduleAllTaskReminders above
+    // cannot clear those: it iterates INCOMPLETE tasks, so an assignment that
+    // just became complete is not in its list to be cancelled. Reconciliation
+    // is the half that withdraws the reminder.
+    reconcileTaskReminders(connection.user_id).catch(() => {});
     return {
       processed: Number(data?.processed ?? 0),
       skipped: Number(data?.skipped ?? 0),

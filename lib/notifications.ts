@@ -6,6 +6,16 @@ import { useAppStore } from '@/store/appStore';
 import { registerForPushNotificationsAsync } from '@/lib/push';
 import * as SecureStore from 'expo-secure-store';
 import { getAppLocale, translate, type AppLocale } from '@/lib/i18n';
+import {
+  groupRemindersByTask,
+  planReminderReconciliation,
+  type ScheduledLike,
+} from '@/lib/reminderReconcile';
+// Call-time only, on both sides: offlineSync imports rescheduleAllTaskReminders
+// from here and calls it inside functions, and this module only ever reads the
+// snapshot inside reconcileTaskReminders. Neither touches the other during
+// module evaluation, so the cycle never resolves to undefined at init.
+import { getOfflineSyncSnapshot } from '@/lib/offlineSync';
 
 // iOS silently drops new notifications once a single app has 64 pending.
 // Stay a few under to leave headroom for re-schedules that race with prune.
@@ -652,6 +662,103 @@ export async function cancelTaskReminders(taskId: string) {
 }
 
 /**
+ * Remove reminders for tasks that are no longer open.
+ *
+ * cancelTaskReminders above only ever runs on the device that performed the
+ * completion. When a task is completed somewhere else — Canvas marking it
+ * submitted server-side, the web app, a second phone — this device still holds
+ * a scheduled local notification for finished work, and every other mechanism
+ * misses it: rescheduleAllTaskReminders iterates INCOMPLETE tasks, so a task
+ * that just became complete is not in its list to be cancelled, and the
+ * notification handler shows whatever the OS delivers without consulting the
+ * database. Display-time suppression cannot cover this either — the handler
+ * runs only while the app is in the foreground, and a due reminder's whole
+ * purpose is to arrive when it is not.
+ *
+ * So the reminder has to be withdrawn ahead of time, which is what this does.
+ * It cancels ONLY notifications carrying a data.taskId (see
+ * lib/reminderReconcile.ts for why that is exactly the set of task reminders)
+ * whose task is no longer an incomplete task of this user. Anything else the
+ * app or another feature has scheduled is left untouched.
+ *
+ * Fails closed: if the tasks read fails or the device is offline, nothing is
+ * cancelled. Losing a stale reminder is a small win; silently deleting a valid
+ * one because a query timed out would be a real regression.
+ *
+ * @returns how many notifications were cancelled.
+ */
+// Bumped on every sign-out (via cancelAllRemindersOnSignOut). An in-flight
+// reschedule or reconciliation captures this at start and bails the moment it
+// changes, so a sign-out that races either loop can't keep mutating the
+// signed-out user's reminders AFTER the cancel-all — which would leak A's task
+// titles to user B on the same device.
+let rescheduleGeneration = 0;
+
+let reconcileInFlight = false;
+
+export async function reconcileTaskReminders(userId: string): Promise<number> {
+  if (Platform.OS === 'web' || !userId || reconcileInFlight) return 0;
+  reconcileInFlight = true;
+  // Same sign-out guard as rescheduleAllTaskReminders: if the user signs out
+  // mid-run we stop rather than keep mutating the next user's notifications.
+  const gen = rescheduleGeneration;
+  try {
+    // A task created while offline has a reminder on this device and NO row in
+    // the database yet, so it would read as deleted and lose its reminder. Wait
+    // for the queue to drain before trusting the database to be the whole
+    // truth. Deliberately fail-safe: any trouble reading the queue is treated
+    // as "there is pending work", which can only make this a no-op.
+    let pending = 1;
+    try {
+      const snapshot = getOfflineSyncSnapshot();
+      pending = (snapshot?.pendingCount ?? 0) + (snapshot?.failedCount ?? 0);
+    } catch {
+      pending = 1;
+    }
+    if (pending > 0) return 0;
+
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    const byTask = groupRemindersByTask(scheduled as unknown as ScheduledLike[]);
+    if (byTask.size === 0) return 0;
+
+    const scheduledIds = [...byTask.keys()];
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('is_completed', false)
+      .in('id', scheduledIds);
+    // An unreachable or erroring database is NOT evidence that every task is
+    // finished. Treating it as such would cancel every pending reminder on the
+    // phone the first time the network dropped.
+    if (error || !data) return 0;
+
+    const { cancel } = planReminderReconciliation(
+      scheduled as unknown as ScheduledLike[],
+      data.map((row: { id: string }) => row.id),
+    );
+
+    let cancelled = 0;
+    for (const identifier of cancel) {
+      if (rescheduleGeneration !== gen) break;
+      try {
+        await Notifications.cancelScheduledNotificationAsync(identifier);
+        cancelled += 1;
+      } catch {
+        // One bad identifier must not abandon the rest of the sweep.
+      }
+    }
+    return cancelled;
+  } catch {
+    // Best-effort: reconciliation runs on app resume and must never be able to
+    // break the resume path.
+    return 0;
+  } finally {
+    reconcileInFlight = false;
+  }
+}
+
+/**
  * Re-schedule reminders for every incomplete task. Call this the moment Pro
  * is newly activated: scheduleTaskReminders reads isPro at schedule time, so
  * tasks created while free only ever got the same-day reminder. Without this,
@@ -659,12 +766,6 @@ export async function cancelTaskReminders(taskId: string) {
  * existing tasks until each one is edited. Idempotent (cancel + reschedule).
  */
 let rescheduleInFlight = false;
-// Bumped on every sign-out (via cancelAllRemindersOnSignOut). An in-flight
-// reschedule captures this at start and bails the moment it changes, so a
-// sign-out that races the per-task loop can't re-create the signed-out user's
-// reminders AFTER the cancel-all — which would leak A's task titles to user B
-// on the same device.
-let rescheduleGeneration = 0;
 
 /**
  * Cancel all scheduled reminders on sign-out AND invalidate any in-flight

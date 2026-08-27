@@ -28,6 +28,12 @@ import { isSyncEnabled, syncTaskToCalendar } from '@/lib/calendarSync';
 import { useAppStore } from '@/store/appStore';
 import { useSession } from '@/app/_layout';
 import { track } from '@/lib/analytics';
+import {
+  countStillMissingDates,
+  invalidAcceptedItems,
+  isRealDate,
+  saveableItems,
+} from '@/lib/reviewDates';
 import { reportError } from '@/lib/errorReport';
 import type { ExtractedItem } from '@/lib/ai-extraction';
 
@@ -50,16 +56,6 @@ function formatDateSafe(d: string): string {
   return isNaN(dt.getTime()) ? d : format(dt, 'MMM d, yyyy');
 }
 
-// Shared by save validation, the accept gate, and select-all. Round-trip
-// check catches impossible calendar dates (2026-02-30 parses but rolls to
-// Mar 2). null — the server found no date — fails by design: tasks.due_date
-// is NOT NULL in the DB, so a dateless item can never reach the insert.
-function isRealDate(s: string | null): s is string {
-  if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
-  const [y, m, d] = s.split('-').map(Number);
-  const dt = new Date(y, m - 1, d);
-  return dt.getFullYear() === y && dt.getMonth() === m - 1 && dt.getDate() === d;
-}
 
 export default function SyllabusReviewScreen() {
   const router = useRouter();
@@ -170,7 +166,7 @@ export default function SyllabusReviewScreen() {
     // instead of silently dropping rows mid-save. isRealDate (module scope)
     // also rejects null, so a dateless item that somehow got accepted can
     // never reach the NOT NULL due_date column.
-    const badDates = accepted.filter((i) => !isRealDate(i.due_date));
+    const badDates = invalidAcceptedItems(accepted);
     if (badDates.length > 0) {
       const names = badDates.slice(0, 3).map((b) => `"${b.title}"`).join(', ');
       Alert.alert(
@@ -355,7 +351,10 @@ export default function SyllabusReviewScreen() {
   const datelessEntries = indexed.filter((e) => e.item.needsDate);
   // Select-all only covers items that can actually be saved (real date) —
   // it must never sweep a dateless item into the save set.
-  const selectableItems = items.filter((i) => isRealDate(i.due_date));
+  // Drives the section copy: how many rows are still unsaveable. Recomputed
+  // from live state, so it falls to zero as the student dates them.
+  const stillMissingDates = countStillMissingDates(items);
+  const selectableItems = saveableItems(items);
   const allSelected = selectableItems.length > 0 && selectableItems.every((i) => i.accepted);
 
   return (
@@ -409,7 +408,7 @@ export default function SyllabusReviewScreen() {
               if (selectableItems.length === 0) {
                 Alert.alert(
                   'Needs a date',
-                  "These items don't have due dates yet. Tap the pencil to set a date on each one you want to save, or leave them deselected.",
+                  "These items don't have due dates yet. Tap the pencil to add a date to the ones you need — you don't have to date all of them.",
                 );
                 return;
               }
@@ -431,8 +430,29 @@ export default function SyllabusReviewScreen() {
           {datelessEntries.length > 0 && pos === datedEntries.length && (
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.ink }]}>Needs a date</Text>
+              {/*
+                No bulk action here, deliberately.
+
+                A "set all" control was built and removed on 2026-08-26 after
+                the extraction data was checked: the all-dateless scans in
+                production carried 38, 29 and 25 items with ALL titles
+                distinct, spanning exams, quizzes, readings and assignments —
+                a whole semester of coursework that cannot share one deadline.
+                Applying a single date to them would have turned an inert
+                failure (a dateless item simply cannot be saved) into durable
+                wrong data: reminders firing together, a false Today count,
+                and every one of them overdue the next morning.
+
+                So the screen asks for what it actually needs — a date on the
+                items the student cares about — and says plainly that finishing
+                all of them is not required. That last sentence is the fix:
+                students were abandoning because a dead "Select all" and a
+                "Save 0 tasks" button read as all-or-nothing.
+              */}
               <Text style={[styles.sectionSub, { color: colors.ink3 }]}>
-                Found in the syllabus without a due date (e.g. "TBA"). Tap the pencil to set one — an item can't be saved without a date.
+                {stillMissingDates === 0
+                  ? 'All of these now have a date. Adjust any of them with the pencil before saving.'
+                  : "Semora couldn't find dates for these items. Add dates to the ones you need — you don't have to complete all of them."}
               </Text>
             </View>
           )}
@@ -600,7 +620,7 @@ export default function SyllabusReviewScreen() {
               so say why instead of leaving a mystery dead button. */}
           {selectableItems.length === 0 && (
             <Text style={[styles.footerHint, { color: colors.ink3 }]}>
-              Add dates to include these tasks
+              Add a date to any item you want to save — you don’t have to do all of them
             </Text>
           )}
           <TouchableOpacity

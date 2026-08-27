@@ -246,6 +246,9 @@ async function logCall(
   // only be diagnosed from edge-function logs, which are gone in ~24h — and
   // that is exactly how 16 of these became unreadable before anyone looked.
   detail?: { errorBody?: string; attempts?: number },
+  // True when a real syllabus was extracted but not one item carried a date.
+  // Only meaningful alongside status 'success'; see the charge block below.
+  zeroDated?: boolean,
 ) {
   try {
     // Legacy table name retained for production compatibility. It is the
@@ -279,12 +282,19 @@ async function logCall(
     // and about to be handed back; turning a bookkeeping error into a failed
     // request would take the student's work away over our accounting.
     if (status === 'success') {
-      const { error: chargeErr } = await adminClient.from('scan_usage_log').insert({
-        user_id: userId,
-        status: 'success',
+      // Through the RPC, not a direct insert: the one-time zero-dated courtesy
+      // has to be decided and recorded in a single atomic step, or two
+      // concurrent zero-dated parses on one account would both be excused.
+      // record_scan_usage (migration 104) leans on a unique partial index to
+      // make that impossible, and returns the status it actually wrote.
+      const { data: charged, error: chargeErr } = await adminClient.rpc('record_scan_usage', {
+        p_user_id: userId,
+        p_zero_dated: zeroDated === true,
       });
       if (chargeErr) {
         console.error(JSON.stringify({ lvl: 'error', fn: 'parse-syllabus', evt: 'free_action_charge_failed', err_message: String(chargeErr.message ?? chargeErr).slice(0, 200) }));
+      } else if (charged === 'zero_dated') {
+        console.log(JSON.stringify({ lvl: 'info', fn: 'parse-syllabus', evt: 'zero_dated_courtesy_granted' }));
       }
     }
   } catch (err) {
@@ -988,7 +998,14 @@ async function handleRequest(req: Request, log: EdgeLogger, startTime: number): 
       suspect_dates: items.filter((i: any) => i.date_suspect).length,
       model: servedModel || null,
     });
-    await logCall(adminClient, userId, 'success', Date.now() - startTime);
+    // Zero DATED items — not zero items. A syllabus that lists 29 assignments
+    // with no dates produced nothing saveable (tasks.due_date is NOT NULL),
+    // which is exactly the case the courtesy exists for.
+    const datedItemCount = items.filter((i: any) => i.due_date).length;
+    await logCall(
+      adminClient, userId, 'success', Date.now() - startTime,
+      undefined, undefined, datedItemCount === 0,
+    );
 
     return jsonResponse(extraction, 200);
   } catch (err) {

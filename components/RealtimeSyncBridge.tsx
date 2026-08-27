@@ -3,6 +3,7 @@ import { AppState } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { subscribeToUserData } from '@/lib/realtimeSync';
 import { getOfflineSyncSnapshot, subscribeOfflineSync } from '@/lib/offlineSync';
+import { reconcileTaskReminders } from '@/lib/notifications';
 
 const CATCH_UP_KEYS = ['tasks', 'task', 'taskStats', 'courses', 'semesters'];
 
@@ -18,6 +19,12 @@ export function RealtimeSyncBridge({ userId }: { userId: string | null }) {
   const catchUp = useRef<() => void>(() => {});
   catchUp.current = () => {
     CATCH_UP_KEYS.forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
+    // Resuming is the moment a phone finds out what happened while it was
+    // away — including a task the student finished on the web app or that
+    // Canvas marked submitted. Those completions cancel nothing on this
+    // device, so any reminder they left behind is withdrawn here. No-ops on
+    // web and when nothing is stale.
+    if (userId) reconcileTaskReminders(userId).catch(() => {});
   };
 
   useEffect(() => {

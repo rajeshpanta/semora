@@ -9,6 +9,7 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
@@ -36,10 +37,59 @@ export default function ChangePasswordScreen() {
     }
   }, [canChangePassword, session]);
 
+  // Which button this person actually taps to get in. "You normally sign in
+  // with Apple" is the sentence that makes an unknown password make sense —
+  // without it, being asked for a password you never chose just reads as a bug.
+  const oauthProviders = (session?.user?.identities ?? [])
+    .map((identity) => identity.provider)
+    .filter((provider): provider is string => !!provider && provider !== 'email');
+  const hasOAuthIdentity = oauthProviders.length > 0;
+  const oauthLabel = oauthProviders
+    .map((provider) =>
+      provider === 'apple' ? 'Apple' : provider === 'google' ? 'Google' : provider)
+    .join(' and ');
+
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
+
+  /**
+   * Email a reset link to the address already on the session.
+   *
+   * Same call and same redirect as the signed-out Forgot Password screen, so
+   * there is one reset mechanism rather than two that can drift. Nothing about
+   * the account changes here — the link is what lets the user set a password,
+   * and it goes only to the address they already own.
+   */
+  const handleSendReset = async () => {
+    if (!email) {
+      Alert.alert('Error', 'Could not determine your account. Please sign in again.');
+      return;
+    }
+    setSendingReset(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo:
+          Platform.OS === 'web' && typeof window !== 'undefined'
+            ? `${window.location.origin}/reset-password`
+            : 'semora://auth/reset',
+      });
+      if (error) throw error;
+      Alert.alert(
+        'Check your email',
+        `We sent a password reset link to ${email}. Open it to choose a new password — you don't need to stay on this screen.`,
+      );
+    } catch (err: any) {
+      Alert.alert(
+        'Could not send reset link',
+        err.message ?? 'Please try again in a moment.',
+      );
+    } finally {
+      setSendingReset(false);
+    }
+  };
 
   const handleChangePassword = async () => {
     if (!currentPassword.trim()) {
@@ -115,6 +165,35 @@ export default function ChangePasswordScreen() {
           />
         </View>
 
+        {/*
+          The way out for someone who cannot answer the field above.
+
+          This screen is shown to anyone with an email/password identity — but
+          having one and REMEMBERING it are different things. A student who
+          signed up with a password and has tapped "Sign in with Apple" every
+          day since has no reason to know it, and the only response the screen
+          could give them was "Your current password is incorrect", forever.
+          A reset link existed the whole time and was reachable only from the
+          signed-OUT sign-in screen, so the escape was to log out of the
+          account they were trying to secure.
+        */}
+        <TouchableOpacity
+          onPress={handleSendReset}
+          disabled={loading || sendingReset}
+          style={styles.forgotRow}
+          accessibilityRole="button"
+        >
+          <Text style={[styles.forgotLink, { color: colors.brand }, (loading || sendingReset) && styles.forgotDisabled]}>
+            {sendingReset ? 'Sending reset link…' : 'Forgot your current password?'}
+          </Text>
+        </TouchableOpacity>
+        {hasOAuthIdentity && (
+          <Text style={[styles.hint, { color: colors.ink3 }]}>
+            You normally sign in with {oauthLabel}. Your account also has a password, and
+            we can email you a link to set a new one.
+          </Text>
+        )}
+
         <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>New Password</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <TextInput
@@ -170,6 +249,18 @@ const styles = StyleSheet.create({
   card: { backgroundColor: COLORS.card, borderRadius: 18, paddingHorizontal: 16, borderWidth: 0.5, borderColor: COLORS.line, marginBottom: 12 },
   input: { fontSize: 15, color: COLORS.ink, paddingVertical: 14 },
   divider: { height: 0.5, backgroundColor: COLORS.line },
+  forgotRow: {
+    paddingVertical: 10,
+    paddingHorizontal: 2,
+    alignSelf: 'flex-start',
+  },
+  forgotLink: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  forgotDisabled: {
+    opacity: 0.5,
+  },
   hint: { fontSize: 13, color: COLORS.ink3, lineHeight: 18, paddingHorizontal: 4, marginBottom: 24 },
   button: { backgroundColor: COLORS.brand, borderRadius: 14, padding: 15, alignItems: 'center' },
   buttonDisabled: { opacity: 0.6 },
