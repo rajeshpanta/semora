@@ -64,10 +64,16 @@ export default async function FeaturePage({
       { href: '/ai-study-planner-for-college', label: 'An AI study planner built from real deadlines' },
       { href: '/blog/finals-week-study-plan', label: 'Planning finals week' },
     ],
+    // The two free tools sit here rather than only in the footer. Search
+    // Console had both stuck at "Discovered - currently not indexed" for
+    // weeks: they were linked, but only site-wide from the footer, which
+    // Google discounts. A contextual link from the indexed feature page that
+    // shares their topic is the signal that actually carries crawl priority.
     'grade-tracking': [
-      { href: '/blog/weighted-gpa-calculator', label: 'How a weighted GPA is actually calculated' },
+      { href: '/gpa-calculator', label: 'Work out a weighted course grade with the free calculator' },
     ],
     'focus-timer': [
+      { href: '/pomodoro-timer', label: 'Run a focus session with the free Pomodoro timer' },
       { href: '/blog/pomodoro-technique-between-classes', label: 'Pomodoro sessions between classes' },
     ],
   };

@@ -42,7 +42,6 @@ export const LOCALE_ROUTE_PAIRS: LocaleRoutePair[] = [
   { en: '/features/canvas-sync', es: '/es/funciones/sincronizacion-canvas' },
 
   { en: '/blog/syllabus-to-semester-calendar', es: '/es/blog/convertir-programa-en-calendario' },
-  { en: '/blog/weighted-gpa-calculator', es: '/es/blog/calcular-gpa-ponderado' },
   { en: '/blog/best-college-deadline-tracking-apps-2026', es: '/es/blog/mejores-apps-fechas-universidad-2026' },
   { en: '/blog/canvas-deadline-reminders', es: '/es/blog/recordatorios-fechas-canvas' },
   { en: '/blog/pomodoro-technique-between-classes', es: '/es/blog/tecnica-pomodoro-entre-clases' },

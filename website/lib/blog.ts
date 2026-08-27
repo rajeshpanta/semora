@@ -25,16 +25,6 @@ export const BLOG_POSTS: BlogPostMeta[] = [
     imageAlt: 'A friendly character waving beside a syllabus page turning into a month grid, one date highlighted',
   },
   {
-    slug: 'weighted-gpa-calculator',
-    title: 'How to Calculate a Weighted Course Grade',
-    description:
-      'Calculate a weighted course grade with worked category examples, drop-the-lowest rules, rounding policies, and current-grade math.',
-    date: '2026-07-21',
-    modified: '2026-08-09',
-    image: '/illustrations/grade-card.svg',
-    imageAlt: 'A friendly character cheering beside a rising bar chart and a grade badge reading 88.4',
-  },
-  {
     slug: 'best-college-deadline-tracking-apps-2026',
     title: 'Best Apps for Tracking College Deadlines in 2026',
     description:
@@ -125,12 +115,7 @@ const RELATED_POST_SLUGS: Record<string, string[]> = {
   'syllabus-to-semester-calendar': [
     'best-college-deadline-tracking-apps-2026',
     'canvas-deadline-reminders',
-    'weighted-gpa-calculator',
-  ],
-  'weighted-gpa-calculator': [
     'grade-needed-on-final-exam',
-    'finals-week-study-plan',
-    'syllabus-to-semester-calendar',
   ],
   'best-college-deadline-tracking-apps-2026': [
     'best-ai-study-apps-for-college-2026',
@@ -150,7 +135,7 @@ const RELATED_POST_SLUGS: Record<string, string[]> = {
   'finals-week-study-plan': [
     'pomodoro-technique-between-classes',
     'grade-needed-on-final-exam',
-    'weighted-gpa-calculator',
+    'syllabus-to-semester-calendar',
   ],
   'best-ai-study-apps-for-college-2026': [
     'ai-flashcards-from-lecture-notes',
@@ -163,9 +148,9 @@ const RELATED_POST_SLUGS: Record<string, string[]> = {
     'finals-week-study-plan',
   ],
   'grade-needed-on-final-exam': [
-    'weighted-gpa-calculator',
     'finals-week-study-plan',
     'syllabus-to-semester-calendar',
+    'best-college-deadline-tracking-apps-2026',
   ],
 };
 

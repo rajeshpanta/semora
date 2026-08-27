@@ -51,16 +51,20 @@ const VERCEL_JSON = {
   ],
 };
 
-const ROBOTS_TXT = `# app.semoraai.com is the signed-in application, not content.
+const ROBOTS_TXT = `# app.semoraai.com is the signed-in application, not content. The marketing
+# site at https://semoraai.com is the indexable surface.
 #
-# Every path here resolves to the same SPA shell, so without this file the
-# host is an unbounded soft-404 farm: any URL returns HTTP 200 with an
-# identical page titled "Semora". That competes with semoraai.com for the
-# brand term and wastes crawl budget on infinite non-pages.
+# Crawling is deliberately ALLOWED here even though nothing on this host
+# should rank. The X-Robots-Tag: noindex header above is what keeps these
+# pages out of the index, and a crawler can only obey a header it is allowed
+# to fetch. An earlier "Disallow: /" defeated exactly that: Google never read
+# the noindex, so it indexed the bare URL from inbound links with no title and
+# no snippet, and that entry then competed with semoraai.com on the brand
+# term. Search Console reported it as "Indexed, though blocked by robots.txt".
 #
-# The marketing site at https://semoraai.com is the indexable surface.
+# Do not re-add a Disallow rule unless the noindex header is removed first.
 User-agent: *
-Disallow: /
+Allow: /
 `;
 
 const VERCELIGNORE = `# Deploy everything in this static export as-is — do not inherit the

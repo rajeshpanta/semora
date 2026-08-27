@@ -1651,9 +1651,14 @@ export const SPANISH_BLOG_POSTS = [
     image: '/illustrations/syllabus-calendar.svg',
     imageAlt: 'Ilustración de la página de un programa que se convierte en un calendario con una fecha de entrega marcada',
   },
+  // Retired 2026-08-27: this post 301s to /es/calculadora-gpa (see
+  // website/next.config.ts) and its English pair was removed, so it no longer
+  // reaches the sitemap. The entry itself stays because the page configs below
+  // address this array by positional index — SPANISH_BLOG_POSTS[8] and
+  // friends — and deleting it would silently repoint all of them.
   {
     path: '/es/blog/calcular-gpa-ponderado',
-    englishPath: '/blog/weighted-gpa-calculator',
+    englishPath: '/gpa-calculator',
     title: 'Cómo calcular una calificación ponderada',
     description: 'La fórmula para una materia, con categorías, reglas de eliminar la nota más baja, redondeo y ejemplos resueltos.',
     date: '21 de julio de 2026',
