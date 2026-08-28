@@ -15,7 +15,15 @@ module.exports = {
   // Leading dot appends to the host identifier. Apple requires an extension's
   // identifier to be prefixed by its containing app's, so this must sit under
   // .watchkitapp — the Watch app — not beside it.
-  bundleIdentifier: '.watchkitapp.complication',
+  // .widget, not .complication.
+  //
+  // Apple refused to register …watchkitapp.complication — "cannot be registered
+  // to your development team because it is not available" — even though no such
+  // identifier exists on this team. The portal appears to reserve that suffix
+  // under a .watchkitapp identifier. The name has no functional meaning; what
+  // matters is only that an extension's identifier is prefixed by its
+  // containing app's, so this mirrors the iPhone widget's .widget suffix.
+  bundleIdentifier: '.watchkitapp.widget',
 
   // Matches targets/watch. Accessory widget families arrived in watchOS 9, so
   // 10.0 is comfortably inside what this needs.
