@@ -23,6 +23,8 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { describeLadder } from '@/lib/reminderPlan';
+import { CLASS_LEAD_OPTIONS, hasUsableMeetings, type ClassMeetingRow } from '@/lib/classReminders';
+import { rescheduleClassReminders } from '@/lib/notifications';
 import { useSession } from '@/app/_layout';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
@@ -33,6 +35,7 @@ import { track } from '@/lib/analytics';
 import { DatePicker } from '@/components/DatePicker';
 
 interface ReminderPrefs {
+  class_reminder_minutes: number | null;
   reminder_same_day: boolean;
   reminder_1day: boolean;
   reminder_3day: boolean;
@@ -43,6 +46,7 @@ interface ReminderPrefs {
 }
 
 const DEFAULT_PREFS: ReminderPrefs = {
+  class_reminder_minutes: null,
   reminder_same_day: true,
   reminder_1day: true,
   reminder_3day: true,
@@ -107,7 +111,7 @@ export default function NotificationSettings() {
       try {
         const { data } = await supabase
           .from('profiles')
-          .select('reminder_same_day, reminder_1day, reminder_3day, quiet_hours_enabled, quiet_hours_start, quiet_hours_end, flashcards_due_push_enabled')
+          .select('reminder_same_day, reminder_1day, reminder_3day, quiet_hours_enabled, quiet_hours_start, quiet_hours_end, flashcards_due_push_enabled, class_reminder_minutes')
           .eq('id', userId)
           .maybeSingle();
         if (data) setPrefs(data);
@@ -220,6 +224,85 @@ export default function NotificationSettings() {
 
   // Now only the flashcards switch. The reminder columns are written by
   // setIntensity above, which carries the Pro gate for the advance rungs.
+  /**
+   * The active semester's meetings, and whether the term has a known end.
+   *
+   * Both are needed before class reminders can be offered at all: a timetable
+   * with no usable times has nothing to remind about, and a repeating trigger
+   * with no term end would keep announcing a class that finished in December.
+   */
+  const [meetings, setMeetings] = useState<ClassMeetingRow[]>([]);
+  const [semester, setSemester] = useState<{ id: string; name: string; end_date: string | null } | null>(null);
+  useEffect(() => {
+    if (!userId || Platform.OS === 'web') return;
+    let alive = true;
+    (async () => {
+      const { data: sem } = await supabase
+        .from('semesters')
+        .select('id, name, end_date')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!alive || !sem) return;
+      setSemester(sem as any);
+      const { data: rows } = await supabase
+        .from('course_meetings')
+        .select('id, course_id, days_of_week, start_time, location, courses!inner(name, semester_id)')
+        .eq('user_id', userId)
+        .eq('courses.semester_id', (sem as any).id);
+      if (!alive) return;
+      setMeetings(((rows as any[]) ?? []).map((m) => ({
+        id: m.id,
+        courseId: m.course_id,
+        courseName: (Array.isArray(m.courses) ? m.courses[0]?.name : m.courses?.name) || 'Class',
+        daysOfWeek: m.days_of_week,
+        startTime: m.start_time,
+        location: m.location,
+      })));
+    })();
+    return () => { alive = false; };
+  }, [userId]);
+
+  const canOfferClassReminders = hasUsableMeetings(meetings);
+
+  const setClassLead = async (minutes: number | null) => {
+    if (!userId) return;
+    // A repeating weekly trigger has no end date of its own, so a term end is
+    // the one thing this feature cannot run safely without. Ask for it here,
+    // once, instead of silently reminding a student about a class that ended.
+    if (minutes !== null && !semester?.end_date) {
+      Alert.alert(
+        'When does this term end?',
+        `Class reminders repeat every week, so Semora needs to know when ${semester?.name || 'this term'} finishes. Add an end date to the semester and turn these on again.`,
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Add end date', onPress: () => router.push(`/semester/${semester?.id}` as any) },
+        ],
+      );
+      return;
+    }
+    const previous = prefs.class_reminder_minutes;
+    setPrefs({ ...prefs, class_reminder_minutes: minutes });
+    const { error } = await supabase
+      .from('profiles')
+      .update({ class_reminder_minutes: minutes })
+      .eq('id', userId);
+    if (error) {
+      setPrefs({ ...prefs, class_reminder_minutes: previous });
+      Alert.alert('Couldn\u2019t save', 'Class reminders were not updated.');
+      return;
+    }
+    track('class_reminders_changed', {
+      screen: 'settings_notifications',
+      lead_minutes: minutes,
+      enabled: minutes !== null,
+      meetings: meetings.length,
+    });
+    rescheduleClassReminders(userId).catch(() => {});
+  };
+
   const toggle = async (key: keyof ReminderPrefs) => {
 
     const previous = { ...prefs };
@@ -370,6 +453,46 @@ export default function NotificationSettings() {
           Semora gives more warning to work that matters more. Mark any task High
           priority to give it an exam's reminders, or set your own times on a task.
         </Text>
+
+        {/*
+          Class reminders.
+          Hidden entirely when the student has no usable meeting times — 44% of
+          accounts — because a control that cannot work is worse than no control.
+        */}
+        {canOfferClassReminders && (
+          <>
+            <Text style={[styles.sectionTitle, { color: colors.ink2, marginTop: 24 }]}>Before class</Text>
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+              {([{ value: null as number | null, label: 'Off', sub: 'No class reminders' }]
+                .concat(CLASS_LEAD_OPTIONS.map((m) => ({
+                  value: m as number | null,
+                  label: m >= 60 ? `${m / 60} hour before` : `${m} minutes before`,
+                  sub: '',
+                })))
+              ).map((option, i, all) => {
+                const selected = prefs.class_reminder_minutes === option.value;
+                return (
+                  <TouchableOpacity
+                    key={String(option.value)}
+                    style={[styles.row, i < all.length - 1 && styles.rowBorder, i < all.length - 1 && { borderBottomColor: colors.line }]}
+                    onPress={() => setClassLead(option.value)}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.rowLabel, { color: colors.ink }]}>{option.label}</Text>
+                      {!!option.sub && <Text style={[styles.rowSub, { color: colors.ink3 }]}>{option.sub}</Text>}
+                    </View>
+                    {selected && <FontAwesome name="check" size={15} color={colors.brand} />}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={[styles.hint, { color: colors.ink3 }]}>
+              Repeats every week for your scheduled classes, and stops at the end
+              of the term. Semora doesn{'\u2019'}t know your school{'\u2019'}s holidays, so
+              you{'\u2019'}ll still be reminded on break days.
+            </Text>
+          </>
+        )}
 
         {/* Sent from the server (supabase/cron/flashcards_due_push.sql), not
             scheduled on-device like the reminders above — so it sits in its own

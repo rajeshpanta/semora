@@ -17,9 +17,25 @@ import {
   REMINDER_HORIZON_DAYS,
   ONE_DAY_BEFORE,
   TWO_HOURS_BEFORE,
+  REMINDER_BUDGET,
   type PlanTask,
 } from '@/lib/reminderPlan';
+
+/**
+ * The fewest slots deadlines keep, however full a timetable is.
+ *
+ * Comfortably above the measured worst case for protected reminders, so the
+ * things that must never be shed cannot be squeezed by a pathological
+ * timetable.
+ */
+const REMINDER_BUDGET_FLOOR = 24;
 import { track } from '@/lib/analytics';
+import {
+  buildClassPlan,
+  classReminderBody,
+  semesterStillRunning,
+  type ClassMeetingRow,
+} from '@/lib/classReminders';
 // Call-time only, on both sides: offlineSync imports rescheduleAllTaskReminders
 // from here and calls it inside functions, and this module only ever reads the
 // snapshot inside reconcileTaskReminders. Neither touches the other during
@@ -52,6 +68,15 @@ const NOTIFICATION_HEALTH_KEY = 'semora.notification-health.v2';
  * everything else.
  */
 export const TASK_REMINDER_CHANNEL = 'task-reminders';
+/**
+ * Marks a pending notification as a class reminder.
+ *
+ * Task reminders are identified by a taskId in their payload; class reminders
+ * need their own key so cancellation, reconciliation and the budget can tell
+ * the two apart without guessing. Everything that sweeps notifications already
+ * filters on taskId, so class triggers are invisible to it by construction.
+ */
+export const CLASS_REMINDER_KEY = 'meetingId';
 export const GENERAL_CHANNEL = 'general';
 
 let channelsReady: Promise<void> | null = null;
@@ -303,12 +328,22 @@ async function pruneToCapIfNeeded() {
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
     if (scheduled.length <= MAX_SCHEDULED_NOTIFICATIONS) return;
 
-    // Least valuable first, and cancel from that end.
-    const sorted = [...scheduled].sort(
-      (a, b) => reminderValue(a as any) - reminderValue(b as any),
+    // Class reminders are out of scope here, and deliberately so. They are
+    // repeating triggers that iOS re-arms on its own; cancelling one does not
+    // free a slot for a week, it silently ends a standing promise that would
+    // only be rebuilt the next time the app happened to be opened. The task
+    // planner already sizes itself around however many of them exist.
+    const candidates = scheduled.filter(
+      (n) => typeof n.content.data?.[CLASS_REMINDER_KEY] !== 'string',
     );
     const overflow = scheduled.length - MAX_SCHEDULED_NOTIFICATIONS;
-    for (let i = 0; i < overflow; i++) {
+    if (overflow <= 0 || candidates.length === 0) return;
+
+    // Least valuable first, and cancel from that end.
+    const sorted = [...candidates].sort(
+      (a, b) => reminderValue(a as any) - reminderValue(b as any),
+    );
+    for (let i = 0; i < Math.min(overflow, sorted.length); i++) {
       await Notifications.cancelScheduledNotificationAsync(sorted[i].identifier);
     }
   } catch {}
@@ -921,7 +956,20 @@ export async function rescheduleAllTaskReminders(
     // also removes the previous shape's cost: the per-task pruner re-read every
     // pending notification inside each task's scheduling, which is quadratic in
     // the number of tasks and ran on the JS thread for students with hundreds.
+    // Whatever the timetable already holds is not available to deadlines.
+    //
+    // Class triggers are permanent residents — one slot each, forever — so the
+    // task budget has to be measured against what is left rather than the whole
+    // ceiling. The floor matters: protected reminders (an exam inside a
+    // fortnight, anything due within two days, a student's own choice) are
+    // never shed whatever the budget says, and the measured worst case for
+    // those is 16 slots against a timetable's worst case of 28. Neither can
+    // starve the other.
+    const classSlots = await countScheduledClassReminders();
+    const taskBudget = Math.max(REMINDER_BUDGET_FLOOR, REMINDER_BUDGET - classSlots);
+
     const plan = buildReminderPlan({
+      budget: taskBudget,
       tasks: (data as any[]).map((t): PlanTask => ({
         id: t.id,
         type: t.type,
@@ -998,6 +1046,10 @@ export async function rescheduleAllTaskReminders(
       high_priority_slots: plan.highPrioritySlots,
       // Whether the automatic defaults are good enough to leave alone.
       tasks_with_override: plan.tasksWithOverride,
+      // How much of the ceiling the timetable is holding, so the two features
+      // can be reasoned about together rather than separately.
+      class_slots: classSlots,
+      budget: taskBudget,
       ms: Date.now() - startedAt,
     });
     if (plan.pruned.length > 0) {
@@ -1021,6 +1073,179 @@ export async function rescheduleAllTaskReminders(
     // Best-effort — a failed reschedule must never break the purchase flow.
   } finally {
     rescheduleInFlight = false;
+  }
+}
+
+
+// ── Class reminders ─────────────────────────────────────────────────────────
+
+/**
+ * Cancel every class reminder on this device, in one pass.
+ *
+ * Mirrors cancelAllTaskRemindersOnce: reading the pending list once and
+ * cancelling everything that carries a meetingId costs the same as cancelling
+ * one, and a timetable rebuild always replaces the whole set rather than
+ * diffing it — an edited meeting time, a deleted row and a changed lead time
+ * are all the same operation.
+ */
+async function cancelAllClassRemindersOnce(): Promise<number> {
+  if (Platform.OS === 'web') return 0;
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    let cancelled = 0;
+    for (const notif of scheduled) {
+      if (typeof notif.content.data?.[CLASS_REMINDER_KEY] !== 'string') continue;
+      try {
+        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+        cancelled += 1;
+      } catch {
+        // One bad identifier must not abandon the sweep.
+      }
+    }
+    return cancelled;
+  } catch {
+    return 0;
+  }
+}
+
+/** How many class reminders are currently pending. Used to size the task budget. */
+async function countScheduledClassReminders(): Promise<number> {
+  if (Platform.OS === 'web') return 0;
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    return scheduled.filter(
+      (n) => typeof n.content.data?.[CLASS_REMINDER_KEY] === 'string',
+    ).length;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Rebuild the whole class-reminder set from the student's timetable.
+ *
+ * Scheduled as REPEATING weekly triggers, which is the entire point: iOS
+ * re-arms them itself, so a student who does not open Semora for a month keeps
+ * being reminded before class. Task reminders cannot work that way — deadlines
+ * move and get completed — but a timetable is a standing fact, and a student
+ * who turned these on was promised something they can stop thinking about.
+ *
+ * Each trigger holds one pending slot forever rather than one per week, which
+ * is what makes a whole timetable affordable inside the same ceiling the
+ * deadlines live in.
+ *
+ * Runs whenever the app opens, which is also when a finished term, an edited
+ * meeting or a deleted course is noticed.
+ */
+export async function rescheduleClassReminders(userId: string): Promise<number> {
+  if (Platform.OS === 'web' || !userId) return 0;
+  const gen = rescheduleGeneration;
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status !== 'granted') return 0;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('class_reminder_minutes')
+      .eq('id', userId)
+      .maybeSingle();
+    const leadMinutes = (profile as any)?.class_reminder_minutes;
+
+    // Off, or the column does not exist yet on this database. Clear whatever is
+    // pending either way, so turning the feature off actually stops it.
+    if (leadMinutes === null || leadMinutes === undefined) {
+      return await cancelAllClassRemindersOnce();
+    }
+
+    // The active semester and its end date. A repeating trigger has no end of
+    // its own, so this is the only thing that stops a finished class being
+    // announced every week — which is why enabling the feature asks for the
+    // date when the semester does not have one.
+    const { data: semester } = await supabase
+      .from('semesters')
+      .select('id, end_date')
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!semester || !semesterStillRunning((semester as any).end_date, new Date())) {
+      // Term over, or never dated. Either way there is nothing safe to schedule.
+      return await cancelAllClassRemindersOnce();
+    }
+
+    const { data: meetings } = await supabase
+      .from('course_meetings')
+      .select('id, course_id, days_of_week, start_time, location, kind, courses!inner(name, semester_id)')
+      .eq('user_id', userId)
+      .eq('courses.semester_id', (semester as any).id);
+
+    const rows: ClassMeetingRow[] = ((meetings as any[]) ?? []).map((m) => ({
+      id: m.id,
+      courseId: m.course_id,
+      courseName: (Array.isArray(m.courses) ? m.courses[0]?.name : m.courses?.name) || 'Class',
+      daysOfWeek: m.days_of_week,
+      startTime: m.start_time,
+      location: m.location,
+      kind: m.kind,
+    }));
+
+    const plan = buildClassPlan(rows, leadMinutes);
+
+    await ensureAndroidChannels();
+    await cancelAllClassRemindersOnce();
+    if (rescheduleGeneration !== gen) return 0;
+
+    const locale = getAppLocale();
+    let scheduled = 0;
+    for (const trigger of plan.triggers) {
+      if (rescheduleGeneration !== gen) return scheduled;
+      try {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: `🎓 ${trigger.courseName}`,
+            body: classReminderBody(trigger.leadMinutes, trigger.location, locale),
+            data: {
+              [CLASS_REMINDER_KEY]: trigger.meetingId,
+              courseId: trigger.courseId,
+              leadMinutes: trigger.leadMinutes,
+              userId,
+            },
+            sound: true,
+          },
+          trigger: {
+            // CALENDAR with repeats, not DATE. This is what iOS re-arms
+            // indefinitely, and the reason the feature survives a month of the
+            // app never being opened.
+            type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+            repeats: true,
+            weekday: trigger.weekday,
+            hour: trigger.hour,
+            minute: trigger.minute,
+            channelId: TASK_REMINDER_CHANNEL,
+          } as any,
+        });
+        scheduled += 1;
+      } catch {
+        // A single bad trigger must not cost the rest of the timetable.
+      }
+    }
+
+    track('class_reminders_scheduled', {
+      screen: 'notifications',
+      lead_minutes: leadMinutes,
+      meetings: rows.length,
+      triggers: scheduled,
+      skipped_no_time: plan.skippedNoTime,
+      skipped_no_days: plan.skippedNoDays,
+      overflow: plan.overflow,
+    });
+    return scheduled;
+  } catch {
+    // Best-effort, exactly like the task path: a timetable that fails to
+    // schedule must never break an app open.
+    return 0;
   }
 }
 

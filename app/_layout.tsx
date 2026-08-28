@@ -52,7 +52,7 @@ import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateAfterP
 import {
   COMPLETE_TASK_ACTION, SNOOZE_TASK_ACTION, cancelAllRemindersOnSignOut,
   cancelTaskReminders, ensureAndroidChannels, registerTaskNotificationActions, rescheduleAllTaskReminders,
-  hasTimezoneChanged,
+  hasTimezoneChanged, rescheduleClassReminders,
   snoozeNotification, startWebDueSoonReminders,
 } from '@/lib/notifications';
 import { registerForPushNotificationsAsync } from '@/lib/push';
@@ -209,6 +209,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         .then(({ data: { session } }) => {
           if (!session) return;
           rescheduleAllTaskReminders(session.user.id, timezoneMoved ? 'timezone_change' : 'app_open');
+          // Rebuilt on the same beat as the deadlines. A repeating trigger runs
+          // on its own, so this is not what keeps class reminders alive — it is
+          // when an edited meeting, a deleted course or a finished term is
+          // noticed, and the only thing that stops a class that has ended.
+          rescheduleClassReminders(session.user.id).catch(() => {});
           // Re-check the account still exists, on the same foreground pass.
           //
           // The launch check only covers a cold start, and an app can sit in
