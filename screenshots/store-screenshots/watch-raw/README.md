@@ -1,7 +1,7 @@
 # Apple Watch App Store screenshots — source trail
 
-Every image in `watch/` is a byte-for-byte render of the Semora Watch app itself.
-Nothing here was drawn, recreated, retouched, or composited.
+The Watch UI in every shipped screenshot is the Semora Watch app itself. Nothing
+inside the device was drawn, recreated, retouched, or restyled.
 
 ## Where the pixels come from
 
@@ -12,10 +12,25 @@ Nothing here was drawn, recreated, retouched, or composited.
 | Capture | `xcrun simctl io <udid> screenshot` — the simulator's own framebuffer |
 | Size | 410 × 502, the native Ultra 2 panel and App Store Connect's `APP_WATCH_ULTRA` size |
 
-`watch-raw/` holds the untouched captures. `watch/` holds what was submitted.
-The only difference between a raw file and its final counterpart is that the
-final one carries no alpha channel, which App Store Connect requires; the RGB
-pixel data is identical, and `scripts/build-watch-screenshots.py --check` asserts that.
+`watch-raw/` holds the untouched captures. `watch/` holds what was submitted:
+the same capture, scaled once and placed inside the listing's v2 marketing
+composition — cream-to-lavender gradient, white eyebrow pill with a
+letterspaced violet label, Fraunces headline whose second line turns violet,
+device bleeding off the bottom edge. Every one of those elements lives outside
+the screen rectangle. The colours are sampled from screenshots currently live on
+the store, not guessed, so the Watch set reads as part of the same listing as
+the iPhone and iPad sets.
+
+`scripts/build-watch-screenshots.py` composes them, and `--check` re-renders
+from `watch-raw/` and demands a byte-for-byte match with what is committed. That
+is the guarantee worth having: the shipped image is a pure function of an
+untouched capture, so a retouched screen could not survive the check.
+
+Two things the composition deliberately does not do. It does not draw over the
+screen — no callouts, no fake notifications, no substituted text. And it does not
+clip it: the display's corner radius is rounder on the case than on the screen,
+because matching the two ate the first letter of the caught-up copy, and a frame
+may not crop the product it is framing.
 
 ## Where the data comes from
 
@@ -24,10 +39,10 @@ No real student's data was used, and no account was signed in.
 The Watch app's entire state is one WatchConnectivity application context sent
 by the phone. For these captures that context was sent by a small test sender
 carrying **synthetic** coursework — the same course names the existing iPhone
-screenshots use (Biology 101, Calc II, History 210, Chem 105). The sender is
-only the transport: it emits the exact wire format
-`modules/semora-watch-bridge` emits, and the real, unmodified Watch binary
-decodes it and draws every pixel with its own SwiftUI.
+screenshots use (Biology 101, Calc II, History 210). The sender is only the
+transport: it emits the exact wire format `modules/semora-watch-bridge` emits,
+and the real, unmodified Watch binary decodes it and draws every pixel with its
+own SwiftUI.
 
 `03-completed.png` is a genuine round trip, not a posed state: the row was
 tapped in the simulator, the Watch sent a real completion request, the sender
@@ -41,13 +56,3 @@ and declares `.accessoryRectangular`, `.accessoryCircular` and
 open, so it could not be genuinely captured — see `complication-attempt/`, which
 records how far the flow got. Drawing a mock-up of it would have been the one
 thing these screenshots must never be.
-
-## Why there is no marketing frame
-
-The iPhone and iPad screenshots put the device inside a headline-and-gradient
-composition. That treatment cannot carry over: App Store Connect accepts Apple
-Watch screenshots only at the exact panel size, so a headline could only be
-bought by shrinking the product UI into a letterbox — smaller and less legible
-than what a student actually sees. The brand still reads, because it is in the
-app: the violet wordmark, the violet and red count tiles, the per-course colour
-bars.
