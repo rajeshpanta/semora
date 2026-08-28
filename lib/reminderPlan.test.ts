@@ -249,7 +249,7 @@ Deno.test('offsetsForTask returns just that task', () => {
 Deno.test('the single-task ladder matches the planner for the same type', () => {
   for (const type of ['exam', 'project', 'assignment', 'quiz', 'reading', 'other']) {
     const fromPlan = plan([at(20, type)]).reminders.map((r) => r.offsetMinutes).sort((x, y) => x - y);
-    const single = offsetsForSingleTask(type, ALL_ON).sort((x, y) => x - y);
+    const single = offsetsForSingleTask(type, ALL_ON, null, '23:59:00').sort((x, y) => x - y);
     assertEquals(single, fromPlan, `${type} disagrees between the two paths`);
   }
 });
@@ -396,4 +396,61 @@ Deno.test('accounting survives pruning', () => {
   const p = plan(Array.from({ length: 60 }, () => at(15, 'reading')), ALL_ON, 10);
   assertEquals(Object.values(p.slotsByType).reduce((a, b) => a + b, 0), p.scheduled);
   assertEquals(p.highPriorityTasks, 0);
+});
+
+// ── the free tier keeps two same-day reminders ─────────────────────────────
+
+import { EVENING_LAST_CALL, TWO_HOURS_BEFORE } from './reminderPlan';
+
+const timed = (days: number, type: string): PlanTask => ({ ...at(days, type), dueTime: '14:00:00' });
+const untimed = (days: number, type: string): PlanTask => ({ ...at(days, type), dueTime: null });
+
+Deno.test('a free account still gets two same-day reminders per task', () => {
+  // The behaviour before the redesign, and the thing type-awareness quietly
+  // reduced to one. Every type, timed and untimed.
+  for (const type of ['exam', 'project', 'assignment', 'quiz', 'reading', 'other']) {
+    assertEquals(plan([timed(10, type)], FREE).reminders.length, 2, `${type} timed`);
+    assertEquals(plan([untimed(10, type)], FREE).reminders.length, 2, `${type} untimed`);
+  }
+});
+
+Deno.test('the free pair is a heads-up and a last call, not two of the same', () => {
+  const t = plan([timed(10, 'assignment')], FREE).reminders.map((r) => r.offsetMinutes).sort((a, b) => a - b);
+  assertEquals(t, [AT_DUE_TIME, TWO_HOURS_BEFORE]);
+
+  // An all-day task's last call is the evening, exactly as it was before —
+  // 9:00 AM plus 600 minutes is 7:00 PM. A flat two-hours-before would have put
+  // both reminders in the same morning.
+  const u = plan([untimed(10, 'assignment')], FREE).reminders.map((r) => r.offsetMinutes).sort((a, b) => a - b);
+  assertEquals(u, [EVENING_LAST_CALL, AT_DUE_TIME]);
+});
+
+Deno.test('the pair does not leak into accounts that have advance warning', () => {
+  // Standard and Intensive already give two or more moments, so the ladder is
+  // left exactly as the type defines it — this is what keeps the budget intact.
+  const STANDARD = { reminder_same_day: true, reminder_1day: true, reminder_3day: false };
+  assertEquals(plan([timed(10, 'reading')], STANDARD).reminders.length, 1);
+  assertEquals(plan([timed(10, 'assignment')], STANDARD).reminders.length, 2);
+  assertEquals(plan([timed(10, 'reading')], ALL_ON).reminders.length, 1);
+  assertEquals(plan([timed(10, 'exam')], ALL_ON).reminders.length, 4);
+});
+
+Deno.test('everything off still means no reminders', () => {
+  const OFF = { reminder_same_day: false, reminder_1day: false, reminder_3day: false };
+  assertEquals(plan([timed(10, 'exam')], OFF).reminders.length, 0);
+});
+
+Deno.test('an untimed exam gets an evening last call, not a 7am one', () => {
+  const p = plan([untimed(10, 'exam')], ALL_ON);
+  assert(p.reminders.some((r) => r.offsetMinutes === EVENING_LAST_CALL));
+  assert(!p.reminders.some((r) => r.offsetMinutes === TWO_HOURS_BEFORE));
+});
+
+Deno.test('the description matches the free pair', () => {
+  // Chronological: the two-hour warning comes before the deadline itself.
+  assertEquals(describeLadder('assignment', FREE, null, '14:00:00'),
+    "Reminds you 2 hours before, and when it's due");
+  // All-day work is the other way round — 9:00 AM, then the evening.
+  assertEquals(describeLadder('assignment', FREE, null, null),
+    "Reminds you when it's due and that evening");
 });

@@ -224,7 +224,7 @@ export function TaskPlanningFields(props: Props) {
         <View style={[styles.defaultNote, { backgroundColor: colors.brand50 }]}>
           <FontAwesome name="bell-o" size={11} color={colors.brand} />
           <Text style={[styles.defaultNoteText, { color: colors.brand }]}>
-            {describeLadder(props.taskType, ladderPrefs, props.priority)}
+            {describeLadder(props.taskType, ladderPrefs, props.priority, props.dueTime ? '1' : null)}
             {props.priority === 'high' ? ' — marked important' : ''}
             {/*
               An untimed task has no deadline moment, so the scheduler treats

@@ -601,7 +601,7 @@ export async function scheduleTaskReminders(
               reminder_1day: proForReminders ? base.reminder_1day : false,
               reminder_3day: proForReminders ? base.reminder_3day : false,
             };
-          })(), taskPriority);
+          })(), taskPriority, dueTime);
 
   // The actual moment the work is due: the stated time, or end of day when the
   // task has no time. Quiet hours can defer a reminder PAST this — a 10pm

@@ -55,6 +55,19 @@ export const THREE_DAYS_BEFORE = 4320;
 export const ONE_DAY_BEFORE = 1440;
 export const TWO_HOURS_BEFORE = 120;
 export const AT_DUE_TIME = 0;
+/**
+ * The last call on a task with no due time.
+ *
+ * Negative because the anchor for an untimed task is an arbitrary 9:00 AM while
+ * the real deadline is the end of the day, so the evening nudge lands AFTER the
+ * anchor: 9:00 plus 600 minutes is 7:00 PM. The scheduler's post-deadline guard
+ * still applies, and 7pm is comfortably inside a 23:59 deadline.
+ *
+ * This reproduces what the app did before the redesign. Phase 1 collapsed it to
+ * a flat two-hours-before, which for an untimed task meant 7:00 AM — two
+ * reminders in the same morning instead of a heads-up and an evening nudge.
+ */
+export const EVENING_LAST_CALL = -600;
 
 /**
  * A rung of the ladder, most distant first. The order is also the shedding
@@ -62,13 +75,19 @@ export const AT_DUE_TIME = 0;
  */
 export type ReminderRung = 'week' | 'threeDay' | 'oneDay' | 'lastCall' | 'dueTime';
 
-const RUNG_OFFSET: Record<ReminderRung, number> = {
-  week: WEEK_BEFORE,
-  threeDay: THREE_DAYS_BEFORE,
-  oneDay: ONE_DAY_BEFORE,
-  lastCall: TWO_HOURS_BEFORE,
-  dueTime: AT_DUE_TIME,
-};
+/**
+ * A rung's offset. Only the last call depends on the task: two hours before a
+ * stated deadline, or the evening of an all-day one.
+ */
+function offsetForRung(rung: ReminderRung, dueTime?: string | null): number {
+  switch (rung) {
+    case 'week': return WEEK_BEFORE;
+    case 'threeDay': return THREE_DAYS_BEFORE;
+    case 'oneDay': return ONE_DAY_BEFORE;
+    case 'lastCall': return dueTime ? TWO_HOURS_BEFORE : EVENING_LAST_CALL;
+    case 'dueTime': return AT_DUE_TIME;
+  }
+}
 
 /**
  * What each kind of work is worth, in slots.
@@ -145,6 +164,37 @@ export interface ReminderPreferences {
   reminder_same_day: boolean;
   reminder_1day: boolean;
   reminder_3day: boolean;
+}
+
+/**
+ * When a student has no advance warning at all, one reminder is not enough.
+ *
+ * Free accounts — and anyone on Light — only ever see same-day rungs. Before the
+ * redesign every task gave them two: a heads-up and a last call. Type-awareness
+ * quietly reduced that to one, because most ladders carry only a single same-day
+ * rung. That was a real downgrade to the free tier hidden inside a change that
+ * was supposed to be about budgeting, so the pair is restored whenever the
+ * same-day rungs are all a student has.
+ *
+ * It costs nothing above that: an account with the day-before rung available
+ * already has two moments, and its ladder is left exactly as the type defines.
+ */
+function withSameDayPair(
+  rungs: ReminderRung[],
+  prefs: ReminderPreferences,
+  dueTime?: string | null,
+): ReminderRung[] {
+  const hasAdvance = prefs.reminder_1day || prefs.reminder_3day;
+  if (hasAdvance || !prefs.reminder_same_day) return rungs;
+  const out = [...rungs];
+  if (!out.includes('dueTime')) out.push('dueTime');
+  if (!out.includes('lastCall')) out.push('lastCall');
+  // Chronological, earliest first — which is not the same as ladder order once
+  // both same-day rungs are present. For a timed task the last call is two
+  // hours BEFORE the deadline; for an all-day one it is the evening, which
+  // falls AFTER the 9:00 AM anchor. Sorting by offset gets both right, and it
+  // is what makes the sentence describing them read in the order they arrive.
+  return out.sort((a, b) => offsetForRung(b, dueTime) - offsetForRung(a, dueTime));
 }
 
 function rungAllowed(rung: ReminderRung, prefs: ReminderPreferences): boolean {
@@ -360,11 +410,11 @@ export function buildReminderPlan({
       continue;
     }
 
-    for (const rung of ladderFor(type, task.priority)) {
+    for (const rung of withSameDayPair(ladderFor(type, task.priority), prefs, task.dueTime)) {
       if (!rungAllowed(rung, prefs)) continue;
       candidates.push({
         taskId: task.id,
-        offsetMinutes: RUNG_OFFSET[rung],
+        offsetMinutes: offsetForRung(rung, task.dueTime),
         rung,
         // High priority ranks as an exam when the budget has to choose, not
         // only when the ladder is built — otherwise the extra rungs it just
@@ -448,10 +498,11 @@ export function offsetsForSingleTask(
   type: string | null | undefined,
   prefs: ReminderPreferences,
   priority?: string | null,
+  dueTime?: string | null,
 ): number[] {
-  return ladderFor(type, priority)
+  return withSameDayPair(ladderFor(type, priority), prefs, dueTime)
     .filter((rung) => rungAllowed(rung, prefs))
-    .map((rung) => RUNG_OFFSET[rung]);
+    .map((rung) => offsetForRung(rung, dueTime));
 }
 
 /**
@@ -467,23 +518,37 @@ export function describeLadder(
   type: string | null | undefined,
   prefs: ReminderPreferences,
   priority?: string | null,
+  dueTime?: string | null,
 ): string {
-  const rungs = ladderFor(type, priority).filter((rung) => rungAllowed(rung, prefs));
+  const rungs = withSameDayPair(ladderFor(type, priority), prefs, dueTime)
+    .filter((rung) => rungAllowed(rung, prefs));
   if (rungs.length === 0) return 'No reminders';
   const label: Record<ReminderRung, string> = {
     week: '1 week',
     threeDay: '3 days',
     oneDay: '1 day',
-    lastCall: '2 hours',
+    // An all-day task's last call is an evening nudge, not a two-hour warning
+    // against a deadline it does not have.
+    lastCall: dueTime ? '2 hours' : 'that evening',
     dueTime: 'when due',
   };
-  const parts = rungs.map((r) => label[r]);
-  if (parts.length === 1) {
-    return parts[0] === 'when due' ? 'Reminds you when it\'s due' : `Reminds you ${parts[0]} before`;
+  // Two kinds of thing appear here and they read differently: lead times ("1
+  // week") want a trailing "before", while moments ("when it's due", "that
+  // evening") already are one. Mixing them naively produced "2 hours and when
+  // it's due", which drops the word that makes the first half mean anything.
+  const leads: string[] = [];
+  const moments: string[] = [];
+  for (const rung of rungs) {
+    if (rung === 'dueTime') moments.push("when it's due");
+    else if (rung === 'lastCall' && !dueTime) moments.push('that evening');
+    else moments.length ? moments.push(label[rung]) : leads.push(label[rung]);
   }
-  const last = parts.pop()!;
-  const lead = parts.join(', ');
-  return last === 'when due'
-    ? `Reminds you ${lead} before, and when it's due`
-    : `Reminds you ${lead} and ${last} before`;
+
+  const join = (list: string[]) =>
+    list.length <= 1 ? list.join('') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`;
+
+  if (leads.length === 0) return `Reminds you ${join(moments)}`;
+  const leadPhrase = `${join(leads)} before`;
+  if (moments.length === 0) return `Reminds you ${leadPhrase}`;
+  return `Reminds you ${leadPhrase}, and ${join(moments)}`;
 }
