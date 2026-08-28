@@ -13,6 +13,7 @@ import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
 import { useProUpsell } from '@/components/ProUpsellHost';
 import { useAppStore } from '@/store/appStore';
+import { track } from '@/lib/analytics';
 import { describeLadder } from '@/lib/reminderPlan';
 import {
   PRIORITY_OPTIONS, RECURRENCE_OPTIONS, REMINDER_OPTIONS,
@@ -72,6 +73,18 @@ export function TaskPlanningFields(props: Props) {
     const next = current.includes(offset)
       ? current.filter((value) => value !== offset)
       : [...current, offset].sort((a, b) => a - b);
+    // What a student reaches for when the automatic ladder is not what they
+    // wanted. The aggregate "how many tasks carry an override" comes from the
+    // plan; this says WHICH lead times they choose, which is the input to ever
+    // changing a default. Offsets in minutes and the kind of work — nothing
+    // about the task itself.
+    track('reminder_override_set', {
+      screen: 'task_editor',
+      task_type: props.taskType || 'unknown',
+      priority: props.priority,
+      offsets: next.join(','),
+      count: next.length,
+    });
     props.onReminderOffsetsChange(next);
   };
 
@@ -213,7 +226,14 @@ export function TaskPlanningFields(props: Props) {
           <Text style={[styles.defaultNoteText, { color: colors.brand }]}>
             {describeLadder(props.taskType, ladderPrefs, props.priority)}
             {props.priority === 'high' ? ' — marked important' : ''}
-            {!props.dueTime ? ' · 9:00 AM when no time is set' : ''}
+            {/*
+              An untimed task has no deadline moment, so the scheduler treats
+              9:00 AM as one and counts every offset back from there. Saying
+              "· 9:00 AM when no time is set" beside "Reminds you 2 hours
+              before" read as though the reminder itself lands at 9, which for
+              an untimed exam it does not — it lands at 7.
+            */}
+            {!props.dueTime ? ' · counted from 9:00 AM' : ''}
           </Text>
         </View>
       )}

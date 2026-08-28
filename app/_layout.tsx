@@ -998,6 +998,37 @@ function NotificationActionBridge() {
       const taskId = response.notification.request.content.data?.taskId;
       if (typeof taskId !== 'string') return;
 
+      // The only real evidence that a reminder was useful.
+      //
+      // iOS never tells an app that a local notification was delivered or seen,
+      // so delivery is unprovable by construction — but a TAP is observable, and
+      // the gap between when the reminder was set to fire and when it was acted
+      // on is the closest thing to a measure of whether the lead time was right.
+      // A three-day warning acted on within minutes is doing its job; one acted
+      // on two days later is decoration.
+      //
+      // Nothing identifying travels with it: the action, the kind of work, and
+      // two durations. No title, no course, no task id.
+      {
+        const data = response.notification.request.content.data ?? {};
+        const firedAt = typeof data.fireAt === 'number' ? data.fireAt : null;
+        const offset = typeof data.offsetMinutes === 'number' ? data.offsetMinutes : null;
+        track('reminder_action_tapped', {
+          screen: 'notification',
+          action:
+            action === COMPLETE_TASK_ACTION ? 'complete'
+            : action === SNOOZE_TASK_ACTION ? 'snooze'
+            : action === Notifications.DEFAULT_ACTION_IDENTIFIER ? 'opened'
+            : 'review',
+          task_type: typeof data.taskType === 'string' ? data.taskType : 'unknown',
+          // How far ahead of the deadline this reminder was meant to land.
+          lead_minutes: offset,
+          // How long the student took to act once it fired. Negative would mean
+          // a clock change; clamped so the metric stays interpretable.
+          reaction_minutes: firedAt ? Math.max(0, Math.round((Date.now() - firedAt) / 60_000)) : null,
+        });
+      }
+
       if (action === SNOOZE_TASK_ACTION) {
         await snoozeNotification(response).catch(() => {});
         return;

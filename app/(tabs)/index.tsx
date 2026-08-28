@@ -303,6 +303,20 @@ export default function TodayScreen() {
         setNotifPermUndetermined(status === 'undetermined');
         const prev = prevNotifStatus.current;
         prevNotifStatus.current = status;
+        // Every observed transition, in both directions.
+        //
+        // Permission being REVOKED is the failure this catches: reminders stop
+        // arriving, nothing in the app changes, and the student concludes
+        // Semora forgot rather than that iOS switched it off. Only transitions
+        // are recorded — a cold launch that was already granted (prev === null)
+        // says nothing new and would drown the signal.
+        if (prev !== null && prev !== status) {
+          track('notification_permission_changed', {
+            screen: 'today',
+            previous: prev,
+            status,
+          });
+        }
         // Reschedule only on an OBSERVED transition into granted — not on a
         // cold launch that's already granted (prev === null), so we don't
         // reschedule on every app open. Idempotent + guarded internally.

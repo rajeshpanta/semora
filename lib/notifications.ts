@@ -986,6 +986,18 @@ export async function rescheduleAllTaskReminders(
       scheduled: plan.scheduled,
       pruned: plan.projected - plan.scheduled,
       is_pro: prefetched.isPro,
+      // Which intensity the student is actually on, derived rather than stored
+      // — the three columns remain the source of truth.
+      intensity: prefetched.reminder_3day ? 'intensive' : prefetched.reminder_1day ? 'standard' : 'light',
+      // Which kind of work is eating the budget. This is what decides whether a
+      // ladder is too generous, and it was pure guesswork before.
+      slots_by_type: Object.entries(plan.slotsByType)
+        .sort((a, b) => b[1] - a[1]).map(([t, n]) => `${t}:${n}`).join(','),
+      // Whether the importance escape hatch is being used, and what it costs.
+      high_priority_tasks: plan.highPriorityTasks,
+      high_priority_slots: plan.highPrioritySlots,
+      // Whether the automatic defaults are good enough to leave alone.
+      tasks_with_override: plan.tasksWithOverride,
       ms: Date.now() - startedAt,
     });
     if (plan.pruned.length > 0) {

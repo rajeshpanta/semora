@@ -359,3 +359,41 @@ Deno.test('the description says so when everything is switched off', () => {
     'No reminders',
   );
 });
+
+// ── accounting for observability ───────────────────────────────────────────
+
+Deno.test('the plan reports where the budget actually went', () => {
+  const p = plan([
+    at(10, 'exam'), at(10, 'exam'),
+    at(10, 'assignment'),
+    at(10, 'reading'), at(10, 'reading'), at(10, 'reading'),
+  ]);
+  assertEquals(p.slotsByType.exam, 8);
+  assertEquals(p.slotsByType.assignment, 2);
+  assertEquals(p.slotsByType.reading, 3);
+  assertEquals(Object.values(p.slotsByType).reduce((a, b) => a + b, 0), p.scheduled);
+});
+
+Deno.test('high-priority load is counted separately from its type', () => {
+  const p = plan([hi(10, 'assignment'), hi(10, 'reading'), at(10, 'assignment')]);
+  assertEquals(p.highPriorityTasks, 2);
+  // Two important tasks on an exam ladder is eight slots.
+  assertEquals(p.highPrioritySlots, 8);
+  // They are reported under 'exam' because that is how the budget ranks them.
+  assertEquals(p.slotsByType.exam, 8);
+});
+
+Deno.test('overrides are counted, including the silencing one', () => {
+  const p = plan([
+    at(10, 'assignment', [ONE_DAY_BEFORE]),
+    at(10, 'assignment', []),
+    at(10, 'assignment'),
+  ]);
+  assertEquals(p.tasksWithOverride, 2, 'an empty override is still a choice');
+});
+
+Deno.test('accounting survives pruning', () => {
+  const p = plan(Array.from({ length: 60 }, () => at(15, 'reading')), ALL_ON, 10);
+  assertEquals(Object.values(p.slotsByType).reduce((a, b) => a + b, 0), p.scheduled);
+  assertEquals(p.highPriorityTasks, 0);
+});

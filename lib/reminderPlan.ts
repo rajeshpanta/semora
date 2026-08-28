@@ -205,6 +205,17 @@ export interface ReminderPlan {
   scheduled: number;
   /** What was given up, aggregated. Never contains titles or course names. */
   pruned: PrunedSummary[];
+  /**
+   * Slots claimed per task type. Answers which kind of work is actually eating
+   * the budget, which is the question that decides whether a ladder is too
+   * generous — and the one the earlier design could only guess at.
+   */
+  slotsByType: Record<string, number>;
+  /** Tasks the student marked important, and what that cost. */
+  highPriorityTasks: number;
+  highPrioritySlots: number;
+  /** Tasks carrying an explicit per-task choice, i.e. defaults overridden. */
+  tasksWithOverride: number;
 }
 
 /**
@@ -313,6 +324,8 @@ export function buildReminderPlan({
   const candidates: PlannedReminder[] = [];
   let tasksInHorizon = 0;
   let tasksBeyondHorizon = 0;
+  const highPriorityIds = new Set<string>();
+  let tasksWithOverride = 0;
 
   for (const task of tasks) {
     const daysUntilDue = task.dueDate ? daysBetween(today, task.dueDate) : null;
@@ -332,6 +345,9 @@ export function buildReminderPlan({
 
     // An explicit empty array is a decision, not an absence: this student has
     // said they do not want reminders for this task.
+    if (task.priority === 'high') highPriorityIds.add(task.id);
+
+    if (task.overrideOffsets) tasksWithOverride += 1;
     if (task.overrideOffsets && task.overrideOffsets.length === 0) continue;
 
     if (task.overrideOffsets && task.overrideOffsets.length > 0) {
@@ -361,10 +377,24 @@ export function buildReminderPlan({
   }
 
   const projected = candidates.length;
+
+  const summarise = (kept: PlannedReminder[]) => {
+    const slotsByType: Record<string, number> = {};
+    let highPrioritySlots = 0;
+    for (const reminder of kept) {
+      slotsByType[reminder.type] = (slotsByType[reminder.type] ?? 0) + 1;
+      if (highPriorityIds.has(reminder.taskId)) highPrioritySlots += 1;
+    }
+    return { slotsByType, highPrioritySlots };
+  };
+
   if (projected <= budget) {
     return {
       reminders: candidates, tasksInHorizon, tasksBeyondHorizon,
       projected, scheduled: projected, pruned: [],
+      highPriorityTasks: highPriorityIds.size,
+      tasksWithOverride,
+      ...summarise(candidates),
     };
   }
 
@@ -396,6 +426,9 @@ export function buildReminderPlan({
     projected,
     scheduled: kept.length,
     pruned: [...byBucket.values()].sort((a, b) => b.count - a.count),
+    highPriorityTasks: highPriorityIds.size,
+    tasksWithOverride,
+    ...summarise(kept),
   };
 }
 
