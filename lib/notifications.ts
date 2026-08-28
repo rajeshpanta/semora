@@ -11,6 +11,15 @@ import {
   planReminderReconciliation,
   type ScheduledLike,
 } from '@/lib/reminderReconcile';
+import {
+  buildReminderPlan,
+  offsetsForSingleTask,
+  REMINDER_HORIZON_DAYS,
+  ONE_DAY_BEFORE,
+  TWO_HOURS_BEFORE,
+  type PlanTask,
+} from '@/lib/reminderPlan';
+import { track } from '@/lib/analytics';
 // Call-time only, on both sides: offlineSync imports rescheduleAllTaskReminders
 // from here and calls it inside functions, and this module only ever reads the
 // snapshot inside reconcileTaskReminders. Neither touches the other during
@@ -256,13 +265,48 @@ function getTriggerTime(notif: Notifications.NotificationRequest): number {
  * Same-day reminders matter most; 3-day-ahead reminders for tasks weeks
  * out are the cheapest to lose.
  */
+/**
+ * How much a pending reminder is worth keeping.
+ *
+ * Higher survives. This is the backstop, not the main mechanism — the batch
+ * planner in lib/reminderPlan.ts decides the real allocation and rarely leaves
+ * anything for this to do. It exists for the gap between full plans, when a
+ * task created or edited on its own adds rungs without a view of the budget.
+ *
+ * It used to rank by date alone and cancel the furthest out, which sounds
+ * reasonable and is not: distance is a poor proxy for value. A week's warning
+ * before a final is the most useful notification the app can send and was the
+ * first thing dropped.
+ */
+function reminderValue(notif: { content?: { data?: any } }): number {
+  const data = notif?.content?.data ?? {};
+  const type: string = typeof data.taskType === 'string' ? data.taskType : 'assignment';
+  const offset: number = Number.isFinite(data.offsetMinutes) ? data.offsetMinutes : ONE_DAY_BEFORE;
+  const fireAt: number = Number.isFinite(data.fireAt) ? data.fireAt : Number.MAX_SAFE_INTEGER;
+
+  const typeWeight =
+    type === 'exam' ? 5 : type === 'project' ? 4
+    : type === 'reading' || type === 'other' ? 1 : 3;
+  // Nearer the deadline is worth more: the last reminder before something is
+  // due is the one that still changes the outcome.
+  const rungWeight = offset <= TWO_HOURS_BEFORE ? 40 : offset <= ONE_DAY_BEFORE ? 20 : 5;
+  // Soonest-firing breaks ties, so an imminent reminder outlives a distant one
+  // of the same kind.
+  const soonness = Math.max(0, 90 - Math.floor((fireAt - Date.now()) / 86_400_000));
+
+  return rungWeight * 1000 + typeWeight * 100 + soonness;
+}
+
 async function pruneToCapIfNeeded() {
   if (Platform.OS === 'web') return;
   try {
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
     if (scheduled.length <= MAX_SCHEDULED_NOTIFICATIONS) return;
 
-    const sorted = [...scheduled].sort((a, b) => getTriggerTime(b) - getTriggerTime(a));
+    // Least valuable first, and cancel from that end.
+    const sorted = [...scheduled].sort(
+      (a, b) => reminderValue(a as any) - reminderValue(b as any),
+    );
     const overflow = scheduled.length - MAX_SCHEDULED_NOTIFICATIONS;
     for (let i = 0; i < overflow; i++) {
       await Notifications.cancelScheduledNotificationAsync(sorted[i].identifier);
@@ -369,6 +413,16 @@ export async function requestNotificationPermission(): Promise<boolean> {
   if (existing === 'granted') return true;
   const { status } = await Notifications.requestPermissionsAsync();
   const granted = status === 'granted';
+  // Only the transition is recorded, not the steady state — this returns early
+  // when permission is already granted, so it fires once per decision rather
+  // than on every schedule. Without it there is no way to tell a student who
+  // never sees reminders because they declined from one whose reminders are
+  // failing for some other reason.
+  track('notification_permission_result', {
+    screen: 'notifications',
+    previous: existing,
+    status,
+  });
   if (granted) {
     // Permission JUST transitioned to granted (e.g. the priming prompt on the
     // review screen after the first import). Enroll this device for server
@@ -422,6 +476,15 @@ export async function scheduleTaskReminders(
   },
   // null/undefined follows profile defaults; [] explicitly disables reminders.
   customOffsetsMinutes?: number[] | null,
+  // What kind of work this is. Drives how many reminders it is worth — an exam
+  // and a chapter of reading are not the same event. Absent means "treat it
+  // like an assignment", which is the commonest case.
+  taskType?: string | null,
+  // Offsets already decided by the batch planner, which alone can see the whole
+  // notification budget. NOT gated on Pro: the planner has already applied the
+  // student's preferences, and re-gating here would discard its work. The
+  // student's own per-task choice above stays gated exactly as before.
+  plannedOffsets?: number[] | null,
 ) {
   if (Platform.OS === 'web') return;
   // Before the first scheduleNotificationAsync below, always. Android 8+ drops
@@ -436,17 +499,38 @@ export async function scheduleTaskReminders(
   // quietly rather than throw out of the toggle-complete flow.
   if (!dueDate) return;
 
+  // Nothing beyond the horizon earns a slot. A reminder for work due in three
+  // months helps nobody today and costs exactly what tomorrow's deadline costs;
+  // 68% of upcoming tasks in production were beyond this line. The next full
+  // plan — app open, sync, resume — picks it up once it is close enough to
+  // matter.
+  {
+    const [hy, hm, hd] = dueDate.split('-').map(Number);
+    if (Number.isFinite(hy) && Number.isFinite(hm) && Number.isFinite(hd)) {
+      const start = new Date();
+      const days = Math.round(
+        (new Date(hy, hm - 1, hd).getTime()
+          - new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime())
+        / 86_400_000,
+      );
+      if (days > REMINDER_HORIZON_DAYS) return;
+    }
+  }
+
   // Custom reminders (None / presets / exact times) are a Pro feature. For free
   // users, ignore any task-level custom selection and fall back to the default
   // reminder scheme below — mirroring the UI gate in TaskPlanningFields, so a
   // patched client that saved custom offsets still gets only defaults. isPro
   // comes from prefetched (batch reschedule) or the store (single task).
   const proForReminders = prefetched ? prefetched.isPro : useAppStore.getState().isPro;
-  const effectiveOffsets = proForReminders ? customOffsetsMinutes : null;
+  const explicitOffsets = proForReminders ? customOffsetsMinutes : null;
 
   // An explicit empty task-level selection means "never notify" and should
   // not trigger the OS permission prompt just because the task was saved.
-  if (effectiveOffsets?.length === 0) return;
+  if (explicitOffsets?.length === 0) return;
+  // Likewise a planner that decided this task gets nothing — it has already
+  // weighed the whole budget and this one lost.
+  if (plannedOffsets?.length === 0) return;
 
   const hasPermission = await requestNotificationPermission();
   if (!hasPermission) return;
@@ -459,18 +543,29 @@ export async function scheduleTaskReminders(
     minute = m;
   }
   const now = new Date();
+  let fetchedPrefs: { reminder_same_day: boolean; reminder_1day: boolean; reminder_3day: boolean } | null = null;
   let quiet: QuietHoursPreferences = {
     quiet_hours_enabled: prefetched?.quiet_hours_enabled ?? false,
     quiet_hours_start: prefetched?.quiet_hours_start ?? '22:00:00',
     quiet_hours_end: prefetched?.quiet_hours_end ?? '08:00:00',
   };
   if (!prefetched && userId) {
+    // One read for both: the ladder needs the three reminder switches and the
+    // trigger needs the quiet-hours window, and asking twice for the same row
+    // is the kind of thing that becomes a per-task round trip in a bulk import.
     const { data: quietProfile } = await supabase
       .from('profiles')
-      .select('quiet_hours_enabled, quiet_hours_start, quiet_hours_end')
+      .select('reminder_same_day, reminder_1day, reminder_3day, quiet_hours_enabled, quiet_hours_start, quiet_hours_end')
       .eq('id', userId)
       .maybeSingle();
-    if (quietProfile) quiet = quietProfile as QuietHoursPreferences;
+    if (quietProfile) {
+      quiet = quietProfile as QuietHoursPreferences;
+      fetchedPrefs = {
+        reminder_same_day: (quietProfile as any).reminder_same_day ?? true,
+        reminder_1day: (quietProfile as any).reminder_1day ?? true,
+        reminder_3day: (quietProfile as any).reminder_3day ?? true,
+      };
+    }
   }
   // Quiet hours is a Pro feature (same as the 1-/3-day advance reminders
   // forced off below). Force it off for free users even if a stale profile
@@ -479,73 +574,31 @@ export async function scheduleTaskReminders(
   // proForReminders was resolved from prefetched.isPro / the store above.
   if (!proForReminders) quiet.quiet_hours_enabled = false;
 
-  // A task-level selection replaces the profile defaults. This includes an
-  // empty array, which deliberately means "do not remind me for this task."
-  if (effectiveOffsets != null) {
-    for (const offsetMinutes of [...new Set(effectiveOffsets)]) {
-      const triggerDate = moveOutsideQuietHours(
-        new Date(year, month - 1, day, hour, minute - offsetMinutes, 0),
-        quiet,
-      );
-      if (triggerDate <= now) continue;
-      const body = locale === 'es'
-        ? offsetMinutes === 0
-          ? `${taskTitle} vence ahora`
-          : `${taskTitle} vence en ${formatLeadTime(offsetMinutes, locale)}`
-        : offsetMinutes === 0
-          ? `${taskTitle} is due now`
-          : `${taskTitle} is due in ${formatLeadTime(offsetMinutes, locale)}`;
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: `📚 ${courseName}`,
-          body,
-          data: { taskId, taskTitle, courseName, dueDate, dueTime, userId, fireAt: triggerDate.getTime() },
-          sound: true,
-          categoryIdentifier: TASK_NOTIFICATION_CATEGORY,
-        },
-        trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: triggerDate,
-        channelId: TASK_REMINDER_CHANNEL,
-      },
-      });
-    }
-    await pruneToCapIfNeeded();
-    writeHealthState({ lastScheduledAt: new Date().toISOString(), lastError: null });
-    return;
-  }
-
-  // Get user preferences and pro status. Use maybeSingle so a brand-new
-  // OAuth user whose profile row hasn't propagated yet falls cleanly to
-  // defaults rather than throwing.
-  let preferences = { reminder_same_day: true, reminder_1day: true, reminder_3day: true };
-  let isPro: boolean;
-  if (prefetched) {
-    preferences = {
-      reminder_same_day: prefetched.reminder_same_day,
-      reminder_1day: prefetched.reminder_1day,
-      reminder_3day: prefetched.reminder_3day,
-    };
-    isPro = prefetched.isPro;
-  } else {
-    if (userId) {
-      const { data } = await supabase
-        .from('profiles')
-        .select('reminder_same_day, reminder_1day, reminder_3day, quiet_hours_enabled, quiet_hours_start, quiet_hours_end')
-        .eq('id', userId)
-        .maybeSingle();
-      if (data) preferences = data;
-    }
-    isPro = useAppStore.getState().isPro;
-  }
-
-  // Free users only get same-day reminders
-  if (!isPro) {
-    preferences.reminder_1day = false;
-    preferences.reminder_3day = false;
-  }
-
-  const dueDateObj = new Date(year, month - 1, day);
+  // Which set of offsets wins, in order of authority:
+  //
+  //   the student's own choice   they said something; nothing here overrules it
+  //   the batch planner          the only caller that can see the whole budget
+  //   the type ladder            what this kind of work is worth on its own
+  //
+  // All three replace the profile's three-switch scheme below, which now only
+  // runs if every one of them came back empty.
+  const resolvedOffsets: number[] | null =
+    explicitOffsets != null
+      ? explicitOffsets
+      : plannedOffsets != null
+        ? plannedOffsets
+        : offsetsForSingleTask(taskType, (() => {
+            const base = prefetched ?? fetchedPrefs ?? {
+              reminder_same_day: true, reminder_1day: true, reminder_3day: true,
+            };
+            return {
+              reminder_same_day: base.reminder_same_day,
+              // The advance rungs remain Pro-only, exactly as before this
+              // change. Phase 1 does not move that boundary.
+              reminder_1day: proForReminders ? base.reminder_1day : false,
+              reminder_3day: proForReminders ? base.reminder_3day : false,
+            };
+          })());
 
   // The actual moment the work is due: the stated time, or end of day when the
   // task has no time. Quiet hours can defer a reminder PAST this — a 10pm
@@ -561,94 +614,88 @@ export async function scheduleTaskReminders(
     return new Date(year, month - 1, day, 23, 59, 59);
   })();
 
-  const offsets = [
-    { days: 0, enabled: preferences.reminder_same_day },
-    { days: 1, enabled: preferences.reminder_1day },
-    { days: 3, enabled: preferences.reminder_3day },
-  ];
-
-  for (const offset of offsets) {
-    if (!offset.enabled) continue;
-
+  for (const offsetMinutes of [...new Set(resolvedOffsets)]) {
     const triggerDate = moveOutsideQuietHours(
-      new Date(year, month - 1, day - offset.days, hour, minute, 0),
+      new Date(year, month - 1, day, hour, minute - offsetMinutes, 0),
       quiet,
     );
-
-    // Don't schedule if in the past
     if (triggerDate <= now) continue;
-
-    // A reminder that lands AFTER the deadline is not a reminder — quiet hours
-    // can defer a 10pm "due today" nudge to 8am the next morning. Drop those.
-    //
-    // Strictly after, not at: for a task WITH a due time the same-day trigger is
-    // built from that very time (hour/minute above), so it equals dueMoment
-    // exactly. A >= comparison silently cancelled the same-day reminder for
-    // every timed task in the app — the common case — while leaving untimed
-    // ones (which default to 09:00 against a 23:59 dueMoment) working, so it
-    // looked fine in casual testing.
+    // A reminder that lands AFTER the deadline is not a reminder. This guard
+    // existed only on the profile-default path before; routing every source
+    // of offsets through one loop is what makes it apply to all of them,
+    // including the student's own custom times, which never had it.
     if (triggerDate > dueMoment) continue;
-
-    // Derive the label from when the notification will ACTUALLY fire, not from
-    // the unshifted date: quiet hours can move a trigger across midnight, and
-    // the label was still describing the original day.
-    const daysUntilDue = differenceInDays(
-      dueDateObj,
-      new Date(triggerDate.getFullYear(), triggerDate.getMonth(), triggerDate.getDate()),
-    );
-    const label = getDueLabel(daysUntilDue, locale);
-
+    const body = locale === 'es'
+      ? offsetMinutes === 0
+        ? `${taskTitle} vence ahora`
+        : `${taskTitle} vence en ${formatLeadTime(offsetMinutes, locale)}`
+      : offsetMinutes === 0
+        ? `${taskTitle} is due now`
+        : `${taskTitle} is due in ${formatLeadTime(offsetMinutes, locale)}`;
     await Notifications.scheduleNotificationAsync({
       content: {
         title: `📚 ${courseName}`,
-        body: locale === 'es' ? `${taskTitle} ${label}` : `${taskTitle} is ${label}`,
-        data: { taskId, taskTitle, courseName, dueDate, dueTime, userId, fireAt: triggerDate.getTime() },
+        body,
+        // taskType and offsetMinutes are here for pruneToCapIfNeeded: without
+        // them it can only rank by date, which is how a final exam three weeks
+        // out lost its week's warning while forty readings due tomorrow each
+        // kept two slots.
+        data: {
+          taskId, taskTitle, courseName, dueDate, dueTime, userId,
+          fireAt: triggerDate.getTime(),
+          taskType: taskType || 'assignment',
+          offsetMinutes,
+        },
         sound: true,
         categoryIdentifier: TASK_NOTIFICATION_CATEGORY,
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.DATE,
-        date: triggerDate,
-        channelId: TASK_REMINDER_CHANNEL,
-      },
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: triggerDate,
+      channelId: TASK_REMINDER_CHANNEL,
+    },
     });
   }
 
-  // "Last call" — a second same-day nudge so a single alert isn't the only
-  // line of defense (the most-requested reminder feature in this category:
-  // "keep nudging me until it's done"). Free tier: it's same-day-scoped,
-  // matching the free promise. cancelTaskReminders matches on data.taskId,
-  // so these are cleaned up with the rest.
-  //   - timed tasks:    2 hours before the deadline ("due in 2 hours")
-  //   - end-of-day:     7 PM ("due tonight"), complementing the 9 AM one
-  if (preferences.reminder_same_day) {
-    const rawLastCall = dueTime
-      ? new Date(year, month - 1, day, hour, minute - 120, 0)
-      : new Date(year, month - 1, day, 19, 0, 0);
-    const lastCall = moveOutsideQuietHours(rawLastCall, quiet);
-    const lastCallBody = locale === 'es'
-      ? dueTime ? `${taskTitle} vence en 2 horas` : `${taskTitle} vence esta noche`
-      : dueTime ? `${taskTitle} is due in 2 hours` : `${taskTitle} is due tonight`;
-    if (lastCall > now) {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: `⏰ ${courseName}`,
-          body: lastCallBody,
-          data: { taskId, taskTitle, courseName, dueDate, dueTime, userId, fireAt: lastCall.getTime() },
-          sound: true,
-          categoryIdentifier: TASK_NOTIFICATION_CATEGORY,
-        },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: lastCall,
-          channelId: TASK_REMINDER_CHANNEL,
-        },
-      });
-    }
-  }
-
-  await pruneToCapIfNeeded();
+  // The batch planner has already fit the whole set inside the budget, so the
+  // backstop has nothing to do — and running it here would re-read every
+  // pending notification once per task, which is the quadratic cost this change
+  // exists to remove. Single-task callers, which have no budget view, still
+  // need it.
+  if (plannedOffsets == null) await pruneToCapIfNeeded();
   writeHealthState({ lastScheduledAt: new Date().toISOString(), lastError: null });
+}
+
+/**
+ * Cancel every task reminder on the device in ONE pass.
+ *
+ * cancelTaskReminders reads the full pending list to find one task's
+ * notifications, which is right for a single task and quadratic for a backlog:
+ * the batch reschedule was issuing one OS read per task, hundreds of them for a
+ * heavy student, on the JS thread. Reading once and cancelling everything
+ * task-shaped costs the same as cancelling one.
+ *
+ * Deliberately narrow: only notifications carrying a taskId are touched, so
+ * anything else the app may schedule is left alone.
+ */
+async function cancelAllTaskRemindersOnce(): Promise<number> {
+  if (Platform.OS === 'web') return 0;
+  try {
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    let cancelled = 0;
+    for (const notif of scheduled) {
+      if (typeof notif.content.data?.taskId !== 'string') continue;
+      try {
+        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
+        cancelled += 1;
+      } catch {
+        // One bad identifier must not abandon the rest.
+      }
+    }
+    return cancelled;
+  } catch {
+    return 0;
+  }
 }
 
 export async function cancelTaskReminders(taskId: string) {
@@ -786,7 +833,45 @@ export async function cancelAllRemindersOnSignOut(): Promise<void> {
   }
 }
 
-export async function rescheduleAllTaskReminders(userId: string): Promise<void> {
+/**
+ * Why a full reschedule ran. Recorded so production can answer "what is driving
+ * this" without guessing — the answer decides whether the cost is worth it.
+ */
+export type RescheduleTrigger =
+  | 'app_open' | 'sign_in' | 'pro_activated' | 'settings_changed'
+  | 'language_changed' | 'lms_sync' | 'offline_drain' | 'permission_granted'
+  | 'timezone_change' | 'notification_action' | 'unknown';
+
+const TIMEZONE_KEY = 'semora.notification-timezone.v1';
+
+/**
+ * Has the device moved to a different timezone since reminders were last laid
+ * down?
+ *
+ * Triggers are absolute instants computed from local wall time, so a phone that
+ * crosses a timezone keeps firing yesterday's reminders at yesterday's local
+ * hour — a 9am nudge arriving at 3am, silently, until something reschedules.
+ * Comparing the stored offset is enough: it changes for a timezone move and, at
+ * a daylight-saving boundary, in a way that also wants a reschedule.
+ */
+export function hasTimezoneChanged(): boolean {
+  try {
+    const stored = SecureStore.getItem(TIMEZONE_KEY);
+    if (!stored) return false;
+    return Number(stored) !== new Date().getTimezoneOffset();
+  } catch {
+    return false;
+  }
+}
+
+function rememberTimezone() {
+  try { SecureStore.setItem(TIMEZONE_KEY, String(new Date().getTimezoneOffset())); } catch {}
+}
+
+export async function rescheduleAllTaskReminders(
+  userId: string,
+  trigger: RescheduleTrigger = 'unknown',
+): Promise<void> {
   // Guard against the dual purchase listeners (paywall + _layout) both firing
   // a full reschedule concurrently, which would double-schedule every task.
   if (Platform.OS === 'web' || !userId || rescheduleInFlight) return;
@@ -794,6 +879,7 @@ export async function rescheduleAllTaskReminders(userId: string): Promise<void> 
   // purchase listeners fire together) sees it — the event loop can't
   // interleave before the first await.
   rescheduleInFlight = true;
+  const startedAt = Date.now();
   // Snapshot the generation. If a sign-out lands mid-loop it bumps this, and
   // we abort instead of re-creating the signed-out user's reminders.
   const gen = rescheduleGeneration;
@@ -820,26 +906,97 @@ export async function rescheduleAllTaskReminders(userId: string): Promise<void> 
     };
     const { data } = await supabase
       .from('tasks')
-      .select('id, title, due_date, due_time, reminder_offsets_minutes, courses(name)')
+      .select('id, title, type, due_date, due_time, reminder_offsets_minutes, courses(name)')
       .eq('user_id', userId)
       .eq('is_completed', false);
     if (!data) return;
+
+    // Decide the whole allocation once, before touching the OS.
+    //
+    // This is the only caller that can see every pending task, so it is the
+    // only one that can spend a fixed 60-slot budget sensibly. Doing it here
+    // also removes the previous shape's cost: the per-task pruner re-read every
+    // pending notification inside each task's scheduling, which is quadratic in
+    // the number of tasks and ran on the JS thread for students with hundreds.
+    const plan = buildReminderPlan({
+      tasks: (data as any[]).map((t): PlanTask => ({
+        id: t.id,
+        type: t.type,
+        dueDate: t.due_date,
+        dueTime: t.due_time,
+        // A student's own choice is still Pro-only, exactly as before. Handing
+        // the planner an override a free account cannot use would let it
+        // allocate slots to something the scheduler then ignores.
+        overrideOffsets: prefetched.isPro ? t.reminder_offsets_minutes : null,
+      })),
+      today: new Date(),
+      prefs: {
+        reminder_same_day: prefetched.reminder_same_day,
+        reminder_1day: prefetched.isPro ? prefetched.reminder_1day : false,
+        reminder_3day: prefetched.isPro ? prefetched.reminder_3day : false,
+      },
+    });
+
+    // One lookup table instead of a scan of the plan per task.
+    const offsetsByTask = new Map<string, number[]>();
+    for (const reminder of plan.reminders) {
+      const list = offsetsByTask.get(reminder.taskId);
+      if (list) list.push(reminder.offsetMinutes);
+      else offsetsByTask.set(reminder.taskId, [reminder.offsetMinutes]);
+    }
+
+    // Clear the slate in a single pass before rebuilding it.
+    await cancelAllTaskRemindersOnce();
+    if (rescheduleGeneration !== gen) return;
+
     for (const t of data as any[]) {
       // A sign-out fired cancelAllRemindersOnSignOut() during the loop — stop
       // now, or the remaining iterations would re-create this user's reminders
       // for whoever signs in next on this device.
       if (rescheduleGeneration !== gen) return;
+      // Nothing planned for this task — beyond the horizon, shed, or explicitly
+      // silenced. Skipping here avoids an await per task for the 68% of work
+      // that is too far out to matter.
+      const planned = offsetsByTask.get(t.id) ?? [];
+      if (planned.length === 0) continue;
       const courseName =
         (Array.isArray(t.courses) ? t.courses[0]?.name : t.courses?.name) || 'Course';
-      await cancelTaskReminders(t.id);
-      // Re-check after the await — the sign-out could have landed in between.
-      if (rescheduleGeneration !== gen) return;
       await scheduleTaskReminders(
         t.id, t.title, courseName, t.due_date, t.due_time, userId,
-        prefetched, t.reminder_offsets_minutes,
+        // The planner has already applied preferences, the Pro gate and the
+        // budget, so its decision is passed as plannedOffsets rather than as a
+        // custom selection — which would be re-gated and partly discarded.
+        prefetched, null, t.type, planned,
       );
     }
+    rememberTimezone();
     writeHealthState({ lastScheduledAt: new Date().toISOString(), lastError: null });
+
+    track('reminder_plan_built', {
+      screen: 'notifications',
+      trigger,
+      tasks_total: (data as any[]).length,
+      tasks_in_horizon: plan.tasksInHorizon,
+      tasks_beyond_horizon: plan.tasksBeyondHorizon,
+      projected: plan.projected,
+      scheduled: plan.scheduled,
+      pruned: plan.projected - plan.scheduled,
+      is_pro: prefetched.isPro,
+      ms: Date.now() - startedAt,
+    });
+    if (plan.pruned.length > 0) {
+      // Only when it actually happened. If this event is rare in production the
+      // budget is working; if it is common the ladder is too generous, and the
+      // buckets say which rung to trim. Counts and categories only — no titles,
+      // no course names.
+      track('reminder_budget_pruned', {
+        screen: 'notifications',
+        trigger,
+        projected: plan.projected,
+        scheduled: plan.scheduled,
+        buckets: plan.pruned.map((b) => `${b.rung}:${b.type}:${b.count}`).join(','),
+      });
+    }
   } catch (error: any) {
     writeHealthState({
       lastScheduledAt: readHealthState().lastScheduledAt,

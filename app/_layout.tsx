@@ -52,6 +52,7 @@ import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateAfterP
 import {
   COMPLETE_TASK_ACTION, SNOOZE_TASK_ACTION, cancelAllRemindersOnSignOut,
   cancelTaskReminders, ensureAndroidChannels, registerTaskNotificationActions, rescheduleAllTaskReminders,
+  hasTimezoneChanged,
   snoozeNotification, startWebDueSoonReminders,
 } from '@/lib/notifications';
 import { registerForPushNotificationsAsync } from '@/lib/push';
@@ -195,13 +196,19 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       // was away, which the 2-minute sync throttle knows nothing about.
       noteAppForegrounded();
       const now = Date.now();
-      if (now - lastSyncAt < THROTTLE_MS) return;
+      // A timezone change skips the throttle. Reminder triggers are absolute
+      // instants computed from local wall time, so a phone that has crossed a
+      // zone is now firing every one of them at the wrong local hour — a 9am
+      // nudge at 3am — and waiting two minutes to notice is two minutes of
+      // wrong. It is also rare enough to cost nothing.
+      const timezoneMoved = hasTimezoneChanged();
+      if (!timezoneMoved && now - lastSyncAt < THROTTLE_MS) return;
       lastSyncAt = now;
       supabase.auth
         .getSession()
         .then(({ data: { session } }) => {
           if (!session) return;
-          rescheduleAllTaskReminders(session.user.id);
+          rescheduleAllTaskReminders(session.user.id, timezoneMoved ? 'timezone_change' : 'app_open');
           // Re-check the account still exists, on the same foreground pass.
           //
           // The launch check only covers a cold start, and an app can sit in
@@ -335,7 +342,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       // concurrency-guarded internally; isPro is already written above, so the
       // reschedule reads the new status.
       if (wasPro !== isPro) {
-        rescheduleAllTaskReminders(expectedUserId);
+        rescheduleAllTaskReminders(expectedUserId, 'pro_activated');
       }
     };
 
@@ -352,7 +359,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         // them HERE — after the entitlement is written — so a Pro user gets
         // their 1-/3-day advance reminders, not just same-day. (The reschedule
         // is guarded against concurrent runs and won't prompt for permission.)
-        .then(() => { if (rescheduleAfter) rescheduleAllTaskReminders(expectedUserId); })
+        .then(() => { if (rescheduleAfter) rescheduleAllTaskReminders(expectedUserId, 'pro_activated'); })
         .catch(() => {});
     };
 
@@ -395,7 +402,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         await writeEntitlementIfStillCurrent(expectedUserId, entitlement);
         // Newly Pro via a background-delivered purchase (Ask to Buy, redelivery):
         // reschedule so existing tasks get the 1-/3-day advance reminders.
-        if (entitlement.is_pro) rescheduleAllTaskReminders(expectedUserId);
+        if (entitlement.is_pro) rescheduleAllTaskReminders(expectedUserId, 'pro_activated');
         // Ack the StoreKit transaction once it has reached a terminal
         // state: either Pro is granted, or the receipt is bound to a
         // different Semora account (no retry on this device will help).
@@ -1027,7 +1034,7 @@ function NotificationActionBridge() {
         queryClient.invalidateQueries({ queryKey: ['studyBlocks'] });
         // Also picks up the next occurrence if completing this task caused the
         // recurring-task trigger to create one.
-        rescheduleAllTaskReminders(session.user.id);
+        rescheduleAllTaskReminders(session.user.id, 'notification_action');
         return;
       }
       globalRouter.push(`/task/${taskId}` as any);

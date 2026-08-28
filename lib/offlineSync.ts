@@ -506,7 +506,7 @@ export function flushOfflineQueue(
     if (syncedTaskChanges > 0) {
       // Rebuild local delivery state after queued edits. This also discovers
       // the next occurrence created by the recurring-task database trigger.
-      rescheduleAllTaskReminders(userId).catch(() => {});
+      rescheduleAllTaskReminders(userId, 'offline_drain').catch(() => {});
     }
   })()
     .finally(() => {
@@ -546,7 +546,7 @@ export async function resolveSyncConflict(
   queryClient.invalidateQueries({ queryKey: ['semesters'] });
   queryClient.invalidateQueries({ queryKey: ['gradeCategories'] });
   if (conflict.entity === 'tasks') {
-    rescheduleAllTaskReminders(conflict.userId).catch(() => {});
+    rescheduleAllTaskReminders(conflict.userId, 'offline_drain').catch(() => {});
   }
 }
 

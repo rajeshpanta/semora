@@ -411,7 +411,7 @@ export async function syncLmsConnection(
       ...(credential?.accessToken ? { access_token: credential.accessToken } : {}),
       trigger,
     });
-    rescheduleAllTaskReminders(connection.user_id).catch(() => {});
+    rescheduleAllTaskReminders(connection.user_id, 'lms_sync').catch(() => {});
     // A sync can mark assignments submitted (the apply RPC ORs is_completed in
     // from Canvas's submission state), and rescheduleAllTaskReminders above
     // cannot clear those: it iterates INCOMPLETE tasks, so an assignment that

@@ -335,7 +335,7 @@ export default function PaywallScreen() {
           purchaseFailures.current = 0;
           // Newly Pro: existing tasks only have same-day reminders (scheduled
           // while free). Reschedule so the 1-/3-day advance reminders appear.
-          if (expectedUserId) rescheduleAllTaskReminders(expectedUserId);
+          if (expectedUserId) rescheduleAllTaskReminders(expectedUserId, 'pro_activated');
           if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           handleClose();
           // Only ack the StoreKit transaction once the server entitlement
@@ -559,7 +559,7 @@ export default function PaywallScreen() {
       setIsPro(entitlement.is_pro);
       setSubscriptionPlan(entitlement.plan);
       if (entitlement.is_pro) {
-        if (expectedUserId) rescheduleAllTaskReminders(expectedUserId);
+        if (expectedUserId) rescheduleAllTaskReminders(expectedUserId, 'pro_activated');
         if (Platform.OS !== 'web') Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         Alert.alert('Restored', 'Your Pro subscription has been restored.', [
           { text: 'OK', onPress: handleClose },

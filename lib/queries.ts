@@ -1011,6 +1011,7 @@ export function useCreateTask() {
         result.user_id,
         undefined,
         result.reminder_offsets_minutes,
+        result.type,
       ).catch(() => {}); // Non-critical
 
       // Sync to calendar if enabled
@@ -1134,6 +1135,7 @@ export function useUpdateTask() {
             updatedTask.user_id,
             undefined,
             updatedTask.reminder_offsets_minutes,
+            updatedTask.type,
           ).catch(() => {});
         }
       }
@@ -1248,7 +1250,7 @@ export function useToggleTaskComplete() {
       } else {
         scheduleTaskReminders(
           id, data.title, courseName, data.due_date, data.due_time, data.user_id,
-          undefined, data.reminder_offsets_minutes,
+          undefined, data.reminder_offsets_minutes, data.type,
         ).catch(() => {});
         if (isSyncEnabled()) {
           syncTaskToCalendar(data as Task, courseName).catch(() => {});
@@ -1276,7 +1278,7 @@ export function useToggleTaskComplete() {
           const nextCourseName = (next as any).courses?.name || courseName;
           scheduleTaskReminders(
             next.id, next.title, nextCourseName, next.due_date, next.due_time, next.user_id,
-            undefined, next.reminder_offsets_minutes,
+            undefined, next.reminder_offsets_minutes, next.type,
           ).catch(() => {});
           if (isSyncEnabled()) syncTaskToCalendar(next as Task, nextCourseName).catch(() => {});
         }

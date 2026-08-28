@@ -126,7 +126,7 @@ export default function NotificationSettings() {
       refreshOsPermission();
       // Reminders couldn't be delivered while permission was off, so existing
       // tasks were never scheduled — schedule them now that it's granted.
-      if (granted && userId) rescheduleAllTaskReminders(userId);
+      if (granted && userId) rescheduleAllTaskReminders(userId, 'permission_granted');
     } else {
       // Denied — only iOS Settings can flip it now.
       Linking.openSettings().catch(() => {});
@@ -158,14 +158,14 @@ export default function NotificationSettings() {
       Alert.alert('Couldn’t save', 'Quiet hours were not updated.');
       return;
     }
-    await rescheduleAllTaskReminders(userId);
+    await rescheduleAllTaskReminders(userId, 'settings_changed');
     setHealth(await getNotificationDeliveryHealth());
   };
 
   const runDeliveryCheck = async () => {
     setCheckingHealth(true);
     try {
-      if (userId) await rescheduleAllTaskReminders(userId);
+      if (userId) await rescheduleAllTaskReminders(userId, 'settings_changed');
       setHealth(await getNotificationDeliveryHealth());
     } finally {
       setCheckingHealth(false);
@@ -196,7 +196,7 @@ export default function NotificationSettings() {
         // scheduleTaskReminders reads these prefs fresh, so a full reschedule
         // adds/removes the toggled reminder across the user's current backlog.
         // No-op if notifications aren't granted (permission-checked internally).
-        rescheduleAllTaskReminders(userId);
+        rescheduleAllTaskReminders(userId, 'settings_changed');
       }
     }
   };

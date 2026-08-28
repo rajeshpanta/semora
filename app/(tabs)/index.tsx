@@ -308,7 +308,7 @@ export default function TodayScreen() {
         // reschedule on every app open. Idempotent + guarded internally.
         if (status === 'granted' && (prev === 'denied' || prev === 'undetermined')) {
           const uid = session?.user?.id;
-          if (uid) rescheduleAllTaskReminders(uid);
+          if (uid) rescheduleAllTaskReminders(uid, 'permission_granted');
         }
       })
       .catch(() => {});
@@ -325,7 +325,7 @@ export default function TodayScreen() {
         // reinstall user's cloud-synced tasks always get reminders here.
         if (granted) {
           const uid = session?.user?.id;
-          if (uid) rescheduleAllTaskReminders(uid);
+          if (uid) rescheduleAllTaskReminders(uid, 'app_open');
         }
       })
       .catch(() => {})

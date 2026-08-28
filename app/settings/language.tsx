@@ -47,7 +47,7 @@ export default function LanguageSettings() {
         if (authResult.error) throw authResult.error;
         await registerForPushNotificationsAsync();
         await registerTaskNotificationActions(useAppStore.getState().isPro);
-        await rescheduleAllTaskReminders(session.user.id);
+        await rescheduleAllTaskReminders(session.user.id, 'language_changed');
       }
     } catch {
       // Keep the local choice so the interface never snaps back while offline.
