@@ -14,7 +14,7 @@
  */
 
 /** Bumped only alongside the Watch-side decoder in targets/watch/index.swift. */
-export const WATCH_SCHEMA_VERSION = 2;
+export const WATCH_SCHEMA_VERSION = 3;
 
 /**
  * Total rows the Watch renders. A watch face is a glance, not a backlog: past
@@ -36,8 +36,33 @@ export const WATCH_MAX_OVERDUE_ITEMS = 3;
 
 export type WatchBucket = 'overdue' | 'today' | 'upcoming';
 
-/** The minimum a row needs to render. No ids, no user, no course id. */
+/**
+ * The minimum a row needs to render — and, since Phase 4, to be completed.
+ *
+ * `id` is the task's own database uuid, and it is the only identifier here.
+ * Three alternatives were considered and are worse:
+ *
+ *   an index into the snapshot   breaks the moment the list changes, which is
+ *                                exactly when a stale watch would use it.
+ *   title + due date             makes identity fuzzy. Two "Read chapter 4"
+ *                                rows due the same day are ordinary, and
+ *                                guessing between them is how the wrong task
+ *                                gets ticked off.
+ *   an opaque per-snapshot token requires the phone to persist a token→task
+ *                                map that survives relaunch and expiry — more
+ *                                state, more failure modes, and no less to
+ *                                lose if the watch is stolen.
+ *
+ * A task uuid is not account data: it names a row, not a person, and it is
+ * useless without an authenticated session because RLS scopes every read and
+ * write to the owner. The phone additionally re-reads the task filtered by the
+ * signed-in user before acting on it, so an id left over from a previous
+ * account is rejected rather than acted on. Set against the task TITLES and
+ * course names this payload already carries, a uuid adds no meaningful
+ * exposure — and it is what makes a completion request unambiguous.
+ */
 export interface WatchTaskItem {
+  id: string;
   title: string;
   course: string;
   colorHex: string;
@@ -61,6 +86,7 @@ export interface WatchSnapshot {
 /** The shape this module needs from a task row. A structural subset of
  *  TaskWithCourse so lib/queries.ts stays the owner of the real type. */
 export interface WatchSourceTask {
+  id: string;
   title: string;
   due_date: string;
   due_time?: string | null;
@@ -73,6 +99,7 @@ const FALLBACK_COURSE = 'Course';
 
 function toItem(task: WatchSourceTask, bucket: WatchBucket): WatchTaskItem {
   return {
+    id: task.id,
     // A row with no title would render as a blank line the student cannot
     // interpret; name it rather than showing nothing.
     title: task.title?.trim() ? task.title : 'Untitled task',

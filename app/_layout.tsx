@@ -30,6 +30,17 @@ import { ActivityIndicator,
 import 'react-native-reanimated';
 
 import { supabase } from '@/lib/supabase';
+import { useToggleTaskComplete } from '@/lib/queries';
+import {
+  parseWatchCompletionRequest,
+  handleWatchCompletionRequest,
+  deriveSubmittedLate,
+  WatchRequestLedger,
+} from '@/lib/watchCompletion';
+import {
+  addWatchCompletionRequestListener,
+  sendWatchCompletionAck,
+} from '@/modules/semora-watch-bridge';
 import type { Session } from '@supabase/supabase-js';
 import * as Localization from 'expo-localization';
 import { hasPendingCheckout, resolvePendingCheckout } from '@/lib/webCheckoutReturn';
@@ -992,10 +1003,10 @@ function NotificationActionBridge() {
           .eq('user_id', session.user.id)
           .maybeSingle();
         if (!task || task.is_completed) return;
-        const due = task.due_time
-          ? new Date(`${task.due_date}T${task.due_time}`)
-          : new Date(`${task.due_date}T23:59:59`);
-        const submittedLate = Number.isFinite(due.getTime()) && new Date() > due;
+        // Same helper the Watch uses. The rule is unchanged — extracted so the
+        // two headless completion surfaces cannot drift into disagreeing about
+        // whether the same task was handed in late.
+        const submittedLate = deriveSubmittedLate(task.due_date, task.due_time, new Date());
         const { error } = await supabase
           .from('tasks')
           .update({
@@ -1042,6 +1053,84 @@ function NotificationActionBridge() {
 // the first render is exactly the one worth catching, and a useEffect would be
 // too late for it.
 installErrorTracking();
+
+/**
+ * Completes tasks that were ticked off on the Apple Watch.
+ *
+ * The Watch cannot write to Supabase and holds no session — it sends a request
+ * and waits. This is where that request becomes a completion, and it does so
+ * through `useToggleTaskComplete`, the same mutation the Today tab, task
+ * detail, the course screen and search all use. That is deliberate and it is
+ * the point of the whole design: completing from a wrist has to cancel the
+ * reminders, drop the calendar event, schedule the next occurrence of a
+ * recurring task, count toward the review milestone, fire the celebration, and
+ * queue offline exactly as completing from the phone does. None of that is
+ * re-implemented here, so none of it can be forgotten here.
+ *
+ * Mounted beside NotificationActionBridge because it has the same shape: a
+ * headless surface completing a task with nobody looking at the phone.
+ */
+function WatchCompletionBridge() {
+  const { session } = useSession();
+  const toggleComplete = useToggleTaskComplete();
+  // The mutation object is recreated each render; the listener is not. A ref
+  // keeps the handler pointing at the current one without resubscribing.
+  const toggleRef = useRef(toggleComplete);
+  toggleRef.current = toggleComplete;
+  const ledgerRef = useRef(new WatchRequestLedger());
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios' || !session) return;
+    const userId = session.user.id;
+    let active = true;
+
+    const unsubscribe = addWatchCompletionRequestListener((raw) => {
+      void (async () => {
+        const request = parseWatchCompletionRequest(raw);
+        if (!request || !active) return;
+
+        // Every decision below lives in lib/watchCompletion.ts and is unit
+        // tested there: replay suppression, the ownership-scoped lookup, the
+        // refusal to complete something already complete, and the lateness
+        // rule. This component only supplies the two capabilities it has —
+        // reading as the signed-in user, and the canonical mutation.
+        const outcome = await handleWatchCompletionRequest(request, {
+          ledger: ledgerRef.current,
+          loadTask: async (taskId) => {
+            // Scoped to the signed-in user, exactly as the notification action
+            // is. RLS would refuse a foreign row anyway, but a watch can hold a
+            // snapshot from a previous account until something replaces it,
+            // and that request should be refused rather than attempted.
+            const { data, error } = await supabase
+              .from('tasks')
+              .select('id, title, due_date, due_time, is_completed')
+              .eq('id', taskId)
+              .eq('user_id', userId)
+              .maybeSingle();
+            if (error) throw error;
+            return data ?? null;
+          },
+          complete: (input) => toggleRef.current.mutateAsync(input),
+        });
+
+        if (!active) return;
+        await sendWatchCompletionAck({
+          requestId: request.requestId,
+          taskId: request.taskId,
+          ok: outcome.ok,
+          reason: outcome.reason,
+        }).catch(() => {});
+      })();
+    });
+
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [session]);
+
+  return null;
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -1122,6 +1211,7 @@ function RootLayoutNav() {
           <TaskCompletionFlowProvider>
           <ProUpsellHost>
             <NotificationActionBridge />
+            <WatchCompletionBridge />
             <OfflineSyncRuntime />
             <RealtimeSyncRuntime />
             <LmsSyncRuntime />

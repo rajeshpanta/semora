@@ -26,7 +26,10 @@ enum WatchBucket: String {
 }
 
 struct WatchTask: Identifiable, Equatable {
-  let id = UUID()
+  /// The task's own database uuid, sent by the phone. Also what a completion
+  /// request names — see the note on WatchTaskItem in lib/watchSnapshot.ts for
+  /// why this and not an index or a title.
+  var id: String
   var title: String
   var course: String
   var color: Color
@@ -50,7 +53,7 @@ struct WatchSnapshot: Equatable {
   var updatedAtRaw: String
 
   /// Must match WATCH_SCHEMA_VERSION in lib/watchSnapshot.ts.
-  static let supportedSchemaVersion = 2
+  static let supportedSchemaVersion = 3
   var isFutureSchema: Bool { schemaVersion > Self.supportedSchemaVersion }
 }
 
@@ -88,7 +91,11 @@ func decodeWatchSnapshot(from context: [String: Any]) -> WatchSnapshot? {
   let rawItems = context["items"] as? [[String: Any]] ?? []
   let tasks: [WatchTask] = rawItems.compactMap { raw in
     guard let title = raw["title"] as? String, !title.isEmpty else { return nil }
+    // A row with no id cannot be completed, and a row that cannot be acted on
+    // is worse than absent — it looks tappable and does nothing.
+    guard let id = raw["id"] as? String, !id.isEmpty else { return nil }
     return WatchTask(
+      id: id,
       title: title,
       course: raw["course"] as? String ?? "Course",
       color: watchColor(fromHex: raw["colorHex"] as? String ?? ""),
@@ -201,3 +208,155 @@ func watchDueLabel(dueDate: String, dueTime: String?, now: Date, calendar: Calen
     return "\(dayLabel) \(dueTime.prefix(5))"
 }
 
+
+// ── Completion ───────────────────────────────────────────────────────────────
+
+/// What a row looks like while a completion is in flight.
+enum WatchRowState: Equatable {
+  /// Tappable.
+  case idle
+  /// Sent; the phone has not answered yet.
+  case pending
+  /// The phone confirmed. Shown as done until a fresh snapshot drops the row.
+  case done
+  /// The phone refused or could not do it. Tappable again.
+  case failed
+}
+
+/// Tracks completions the watch has asked for but the phone has not yet
+/// reflected in a snapshot.
+///
+/// This exists because the two directions are asynchronous and independent. A
+/// tap goes out as a queued transfer that may sit for minutes if the phone is
+/// away; the snapshot that would prove it worked only arrives when the phone
+/// next syncs. Without something in between, a student taps a row and watches
+/// nothing happen — so they tap again, which is exactly the input the whole
+/// replay-guard chain exists to survive.
+struct WatchCompletionTracker: Equatable {
+  private struct Entry: Equatable {
+    var state: WatchRowState
+    var requestId: String
+    var at: Date
+  }
+
+  private var entries: [String: Entry] = [:]
+
+  /// How long a request may stay unanswered before the row becomes tappable
+  /// again. Generous on purpose: a queued transfer to a phone that is off or
+  /// out of range is normal, and reverting early would tell the student their
+  /// tap was lost while it was still on its way.
+  static let pendingExpiry: TimeInterval = 10 * 60
+
+  func state(for taskId: String) -> WatchRowState {
+    entries[taskId]?.state ?? .idle
+  }
+
+  /// Record that a request has gone out. Returns false if one is already in
+  /// flight for this task — the first guard against a double tap, before the
+  /// phone's ledger and the database check ever see it.
+  mutating func begin(taskId: String, requestId: String, now: Date) -> Bool {
+    if let existing = entries[taskId], existing.state == .pending || existing.state == .done {
+      return false
+    }
+    entries[taskId] = Entry(state: .pending, requestId: requestId, at: now)
+    return true
+  }
+
+  /// Apply the phone's answer. Ignores acks for requests we did not send, and
+  /// stale acks for a task that has since been asked about again.
+  mutating func resolve(requestId: String, ok: Bool, now: Date) {
+    guard let taskId = entries.first(where: { $0.value.requestId == requestId })?.key else { return }
+    entries[taskId] = Entry(state: ok ? .done : .failed, requestId: requestId, at: now)
+  }
+
+  /// Drop anything the snapshot has moved past.
+  ///
+  /// A task absent from a fresh snapshot is finished as far as the phone is
+  /// concerned, whatever this watch believed. A task still present after a
+  /// confirmed completion means the snapshot predates it — keep the local
+  /// state until a newer one says otherwise.
+  mutating func reconcile(with visibleTaskIds: Set<String>, now: Date) {
+    for (taskId, entry) in entries {
+      if !visibleTaskIds.contains(taskId) {
+        entries.removeValue(forKey: taskId)
+      } else if entry.state == .pending, now.timeIntervalSince(entry.at) >= Self.pendingExpiry {
+        // Never answered. Let the student try again rather than leaving a row
+        // that looks permanently stuck.
+        entries[taskId] = Entry(state: .failed, requestId: entry.requestId, at: now)
+      }
+    }
+  }
+
+  /// For persistence across launches: a queued transfer outlives the app.
+  var storable: [String: [String: Any]] {
+    entries.reduce(into: [:]) { out, pair in
+      out[pair.key] = [
+        "state": String(describing: pair.value.state),
+        "requestId": pair.value.requestId,
+        "at": pair.value.at.timeIntervalSince1970,
+      ]
+    }
+  }
+
+  static func restore(from raw: [String: Any]) -> WatchCompletionTracker {
+    var tracker = WatchCompletionTracker()
+    for (taskId, value) in raw {
+      guard
+        let fields = value as? [String: Any],
+        let stateName = fields["state"] as? String,
+        let requestId = fields["requestId"] as? String,
+        let at = fields["at"] as? Double
+      else { continue }
+      let state: WatchRowState
+      switch stateName {
+      case "pending": state = .pending
+      case "done": state = .done
+      case "failed": state = .failed
+      default: continue
+      }
+      tracker.entries[taskId] = Entry(
+        state: state,
+        requestId: requestId,
+        at: Date(timeIntervalSince1970: at)
+      )
+    }
+    return tracker
+  }
+}
+
+/// The phone's answer to one completion request.
+struct WatchCompletionAck: Equatable {
+  var requestId: String
+  var taskId: String
+  var ok: Bool
+  var reason: String?
+}
+
+/// Decode an ack. Returns nil for anything that is not one.
+func decodeWatchAck(from userInfo: [String: Any]) -> WatchCompletionAck? {
+  guard
+    userInfo["type"] as? String == "semora_watch_complete_ack",
+    let requestId = userInfo["requestId"] as? String, !requestId.isEmpty,
+    let taskId = userInfo["taskId"] as? String, !taskId.isEmpty
+  else { return nil }
+  // A missing `ok` is treated as failure: the safe reading of a malformed
+  // answer is that the work did not happen, because that leaves the row
+  // tappable instead of falsely struck through.
+  let ok = (userInfo["ok"] as? NSNumber)?.boolValue ?? false
+  return WatchCompletionAck(
+    requestId: requestId,
+    taskId: taskId,
+    ok: ok,
+    reason: userInfo["reason"] as? String
+  )
+}
+
+/// Build the payload the watch sends when a row is tapped.
+func watchCompletionRequest(taskId: String, requestId: String, now: Date) -> [String: Any] {
+  [
+    "type": "semora_watch_complete",
+    "requestId": requestId,
+    "taskId": taskId,
+    "requestedAt": ISO8601DateFormatter().string(from: now),
+  ]
+}

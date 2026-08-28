@@ -60,6 +60,7 @@ export interface NativeWatchSnapshot {
   dueTodayCount: number;
   overdueCount: number;
   items: Array<{
+    id: string;
     title: string;
     course: string;
     colorHex: string;
@@ -69,10 +70,28 @@ export interface NativeWatchSnapshot {
   }>;
 }
 
+/** What the Watch asks for. Re-validated in lib/watchCompletion.ts. */
+export interface WatchCompletionRequestEvent {
+  type: string;
+  requestId: string;
+  taskId: string;
+  requestedAt?: string;
+}
+
+/** What the phone answers. */
+export interface WatchCompletionAck {
+  requestId: string;
+  taskId: string;
+  ok: boolean;
+  reason?: string | null;
+}
+
 interface NativeBridge {
   getStatus(): WatchStatus;
   sendTestSnapshot(dueTodayCount: number, overdueCount: number): Promise<WatchSendResult>;
   sendSnapshot(snapshot: NativeWatchSnapshot): Promise<WatchSendResult>;
+  sendCompletionAck(ack: WatchCompletionAck): Promise<WatchSendResult>;
+  addListener(event: string, listener: (payload: any) => void): { remove(): void };
 }
 
 // `requireOptionalNativeModule` returns null instead of throwing when the
@@ -135,6 +154,51 @@ export async function sendWatchSnapshot(
 
   try {
     return await native.sendSnapshot(snapshot);
+  } catch (error) {
+    return {
+      ok: false,
+      reason: 'update_failed',
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+/**
+ * Subscribe to completion requests coming from the Watch.
+ *
+ * Returns an unsubscribe function that is safe to call even when no native
+ * module exists, so the caller needs no platform branch of its own.
+ *
+ * Subscribing matters for more than delivery: the native side buffers requests
+ * that arrive before anyone is listening — which is the normal case when iOS
+ * wakes the app in the background to hand one over — and flushes them the
+ * moment the first listener attaches.
+ */
+export function addWatchCompletionRequestListener(
+  handler: (request: WatchCompletionRequestEvent) => void,
+): () => void {
+  if (!native) return () => {};
+  try {
+    const subscription = native.addListener('onWatchCompletionRequest', handler);
+    return () => {
+      try {
+        subscription.remove();
+      } catch {
+        // Already torn down.
+      }
+    };
+  } catch {
+    return () => {};
+  }
+}
+
+/** Tell the Watch what happened to one request. */
+export async function sendWatchCompletionAck(
+  ack: WatchCompletionAck,
+): Promise<WatchSendResult> {
+  if (!native) return { ok: false, reason: 'unsupported' };
+  try {
+    return await native.sendCompletionAck(ack);
   } catch (error) {
     return {
       ok: false,

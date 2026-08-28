@@ -19,7 +19,10 @@ import {
 
 const TODAY = '2026-08-28';
 
+let seq = 0;
+const uuid = () => `00000000-0000-4000-8000-${String(++seq).padStart(12, '0')}`;
 const task = (over: Partial<WatchSourceTask> & { title: string; due_date: string }): WatchSourceTask => ({
+  id: uuid(),
   courses: { name: 'Biology 101', color: '#22AA55' },
   ...over,
 });
@@ -124,10 +127,16 @@ Deno.test('course name and colour carry through', () => {
   assertEquals(snap.items[0].dueDate, TODAY);
 });
 
+Deno.test('the task id is carried through so a row can be completed', () => {
+  const t = task({ title: 'Essay', due_date: TODAY });
+  const snap = buildWatchSnapshot({ overdue: [], upcoming: [t], todayKey: TODAY });
+  assertEquals(snap.items[0].id, t.id);
+});
+
 Deno.test('a task with no course still renders', () => {
   const snap = buildWatchSnapshot({
     overdue: [],
-    upcoming: [{ title: 'Orphan', due_date: TODAY, courses: null }],
+    upcoming: [{ id: uuid(), title: 'Orphan', due_date: TODAY, courses: null }],
     todayKey: TODAY,
   });
   assertEquals(snap.items[0].course, 'Course');
@@ -137,7 +146,7 @@ Deno.test('a task with no course still renders', () => {
 Deno.test('blank course fields fall back rather than rendering empty', () => {
   const snap = buildWatchSnapshot({
     overdue: [],
-    upcoming: [{ title: 'Thing', due_date: TODAY, courses: { name: '   ', color: '' } }],
+    upcoming: [{ id: uuid(), title: 'Thing', due_date: TODAY, courses: { name: '   ', color: '' } }],
     todayKey: TODAY,
   });
   assertEquals(snap.items[0].course, 'Course');
@@ -147,7 +156,7 @@ Deno.test('blank course fields fall back rather than rendering empty', () => {
 Deno.test('an untitled task is named, not blank', () => {
   const snap = buildWatchSnapshot({
     overdue: [],
-    upcoming: [{ title: '  ', due_date: TODAY }],
+    upcoming: [{ id: uuid(), title: '  ', due_date: TODAY }],
     todayKey: TODAY,
   });
   assertEquals(snap.items[0].title, 'Untitled task');
@@ -168,24 +177,26 @@ Deno.test('due time is preserved, including its absence', () => {
 
 // ── Privacy surface ────────────────────────────────────────────────────────
 
-Deno.test('no identifier ever reaches the payload', () => {
+Deno.test('only the task id crosses; nothing that identifies the account', () => {
   // The Watch has no account of its own and never will in this design. If a
   // future edit widens the row shape, this fails before it ships.
   const snap = buildWatchSnapshot({
     overdue: [],
     upcoming: [{
+      id: 'aaaaaaaa-0000-4000-8000-000000000001',
       title: 'Essay', due_date: TODAY, courses: { name: 'Eng', color: '#111111' },
       // Extra fields a real TaskWithCourse carries — must not be copied through.
-      ...(({ id: 'task-uuid', user_id: 'user-uuid', course_id: 'course-uuid' }) as any),
+      ...(({ user_id: 'user-uuid', course_id: 'course-uuid' }) as any),
     }],
     todayKey: TODAY,
   });
   const keys = Object.keys(snap.items[0]).sort();
-  assertEquals(keys, ['bucket', 'colorHex', 'course', 'dueDate', 'dueTime', 'title']);
+  // The task's own id is present BECAUSE completion needs it (see the comment
+  // on WatchTaskItem). Nothing that identifies the account or the course is.
+  assertEquals(keys, ['bucket', 'colorHex', 'course', 'dueDate', 'dueTime', 'id', 'title']);
   const blob = JSON.stringify(snap);
-  assert(!blob.includes('task-uuid'));
-  assert(!blob.includes('user-uuid'));
-  assert(!blob.includes('course-uuid'));
+  assert(!blob.includes('user-uuid'), 'no user id');
+  assert(!blob.includes('course-uuid'), 'no course id');
 });
 
 // ── Sign-out ───────────────────────────────────────────────────────────────

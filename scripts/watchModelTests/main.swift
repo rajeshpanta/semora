@@ -61,15 +61,17 @@ expect(decodeWatchSnapshot(from: ["type": "something_else"]) == nil, true, "reje
 
 let full = decodeWatchSnapshot(from: [
   "type": "semora_watch_snapshot",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "state": "ready",
   "dueTodayCount": 2,
   "overdueCount": 5,
   "updatedAt": "2026-08-28T08:55:00Z",
   "items": [
-    ["title": "Lab report", "course": "Chem 210", "colorHex": "#FF8800",
+    ["id": "aaaa1111-0000-4000-8000-000000000001", "title": "Lab report",
+     "course": "Chem 210", "colorHex": "#FF8800",
      "dueDate": "2026-08-26", "bucket": "overdue"],
-    ["title": "Essay", "course": "Eng 101", "colorHex": "#112233",
+    ["id": "aaaa1111-0000-4000-8000-000000000002", "title": "Essay",
+     "course": "Eng 101", "colorHex": "#112233",
      "dueDate": "2026-08-28", "dueTime": "23:59:00", "bucket": "today"],
   ],
 ])!
@@ -77,10 +79,11 @@ expect(full.dueTodayCount, 2, "dueTodayCount")
 expect(full.overdueCount, 5, "overdueCount")
 expect(full.tasks.count, 2, "item count")
 expect(full.tasks[0].title, "Lab report", "first title")
+expect(full.tasks[0].id, "aaaa1111-0000-4000-8000-000000000001", "task id carried")
 expect(full.tasks[0].bucket == .overdue, true, "first bucket")
 expect(full.tasks[1].dueTime ?? "-", "23:59:00", "due time preserved")
 expect(full.state == .ready, true, "ready state")
-expect(full.isFutureSchema, false, "schema 2 is current")
+expect(full.isFutureSchema, false, "schema 3 is current")
 
 // Counts arriving as Double — what a JS number can become on the wire.
 let asDouble = decodeWatchSnapshot(from: [
@@ -97,15 +100,17 @@ expect(partial.state == .ready, true, "missing state defaults to ready")
 // A row with no title is unreadable; drop the row, keep the payload.
 let badRow = decodeWatchSnapshot(from: [
   "type": "semora_watch_snapshot",
-  "items": [["title": "", "dueDate": "2026-08-28"], ["title": "Good", "dueDate": "2026-08-28"]],
+  "items": [["id": "x1", "title": "", "dueDate": "2026-08-28"],
+            ["title": "No id", "dueDate": "2026-08-28"],
+            ["id": "x2", "title": "Good", "dueDate": "2026-08-28"]],
 ])!
-expect(badRow.tasks.count, 1, "untitled row dropped")
+expect(badRow.tasks.count, 1, "untitled row and id-less row both dropped")
 expect(badRow.tasks[0].title, "Good", "surviving row")
 
 // Unknown bucket from a newer phone renders rather than disappearing.
 let unknownBucket = decodeWatchSnapshot(from: [
   "type": "semora_watch_snapshot",
-  "items": [["title": "X", "dueDate": "2026-08-28", "bucket": "someday"]],
+  "items": [["id": "x3", "title": "X", "dueDate": "2026-08-28", "bucket": "someday"]],
 ])!
 expect(unknownBucket.tasks[0].bucket == .upcoming, true, "unknown bucket degrades to upcoming")
 
@@ -176,6 +181,135 @@ expect(watchDueLabel(dueDate: "2026-08-24", dueTime: "09:30", now: now, calendar
 // A malformed date must render something rather than crash.
 expect(watchDueLabel(dueDate: "not-a-date", dueTime: nil, now: now, calendar: cal),
        "not-a-date", "malformed date passes through")
+
+
+// ── completion tracking ─────────────────────────────────────────────────────
+
+print("WatchCompletionTracker")
+
+let T1 = "task-1", T2 = "task-2"
+let R1 = "req-1", R2 = "req-2"
+
+do {
+  var tracker = WatchCompletionTracker()
+  expect(tracker.state(for: T1) == .idle, true, "unknown task is idle")
+
+  expect(tracker.begin(taskId: T1, requestId: R1, now: now), true, "first tap sends")
+  expect(tracker.state(for: T1) == .pending, true, "row goes pending")
+
+  // The first of three guards against double completion. The other two are the
+  // phone's request ledger and the database's is_completed check.
+  expect(tracker.begin(taskId: T1, requestId: R2, now: now), false, "second tap is refused")
+
+  tracker.resolve(requestId: R1, ok: true, now: now)
+  expect(tracker.state(for: T1) == .done, true, "ack marks done")
+
+  // Still refused after success — the work is finished.
+  expect(tracker.begin(taskId: T1, requestId: "req-3", now: now), false, "done row is not tappable")
+}
+
+do {
+  var tracker = WatchCompletionTracker()
+  _ = tracker.begin(taskId: T1, requestId: R1, now: now)
+  tracker.resolve(requestId: R1, ok: false, now: now)
+  expect(tracker.state(for: T1) == .failed, true, "refusal marks failed")
+  // A failure MUST be retryable, or a student whose phone was briefly away is
+  // stuck with a row they can never complete from the wrist.
+  expect(tracker.begin(taskId: T1, requestId: R2, now: now), true, "failed row can be retried")
+}
+
+do {
+  var tracker = WatchCompletionTracker()
+  _ = tracker.begin(taskId: T1, requestId: R1, now: now)
+  // An ack for something this watch never sent must not disturb anything.
+  tracker.resolve(requestId: "unknown-request", ok: true, now: now)
+  expect(tracker.state(for: T1) == .pending, true, "foreign ack ignored")
+}
+
+do {
+  var tracker = WatchCompletionTracker()
+  _ = tracker.begin(taskId: T1, requestId: R1, now: now)
+  _ = tracker.begin(taskId: T2, requestId: R2, now: now)
+  tracker.resolve(requestId: R1, ok: true, now: now)
+
+  // A snapshot that no longer lists T1 is the phone confirming it is finished.
+  tracker.reconcile(with: Set([T2]), now: now)
+  expect(tracker.state(for: T1) == .idle, true, "completed task drops out on reconcile")
+  expect(tracker.state(for: T2) == .pending, true, "still-listed task keeps its state")
+}
+
+do {
+  var tracker = WatchCompletionTracker()
+  _ = tracker.begin(taskId: T1, requestId: R1, now: now)
+  // Never answered. The row must become tappable again rather than looking
+  // permanently stuck.
+  let later = now.addingTimeInterval(WatchCompletionTracker.pendingExpiry + 1)
+  tracker.reconcile(with: Set([T1]), now: later)
+  expect(tracker.state(for: T1) == .failed, true, "an unanswered request expires to failed")
+
+  var fresh = WatchCompletionTracker()
+  _ = fresh.begin(taskId: T1, requestId: R1, now: now)
+  fresh.reconcile(with: Set([T1]), now: now.addingTimeInterval(60))
+  expect(fresh.state(for: T1) == .pending, true, "a recent request is left alone")
+}
+
+do {
+  // Survives the app being closed while a transfer is still queued.
+  var tracker = WatchCompletionTracker()
+  _ = tracker.begin(taskId: T1, requestId: R1, now: now)
+  tracker.resolve(requestId: R1, ok: true, now: now)
+  _ = tracker.begin(taskId: T2, requestId: R2, now: now)
+
+  let restored = WatchCompletionTracker.restore(from: tracker.storable)
+  expect(restored.state(for: T1) == .done, true, "done survives a relaunch")
+  expect(restored.state(for: T2) == .pending, true, "pending survives a relaunch")
+  expect(restored == tracker, true, "round-trip is lossless")
+
+  expect(WatchCompletionTracker.restore(from: [:]) == WatchCompletionTracker(), true, "empty restore is empty")
+  let junk: [String: Any] = ["a": "not a dict", "b": ["state": "nonsense", "requestId": "r", "at": 1.0]]
+  expect(WatchCompletionTracker.restore(from: junk) == WatchCompletionTracker(), true, "junk restores to empty")
+}
+
+// ── ack decoding ────────────────────────────────────────────────────────────
+
+print("decodeWatchAck")
+
+expect(decodeWatchAck(from: ["type": "semora_watch_snapshot"]) == nil, true, "snapshot is not an ack")
+expect(decodeWatchAck(from: [:]) == nil, true, "empty is not an ack")
+expect(decodeWatchAck(from: ["type": "semora_watch_complete_ack", "taskId": T1]) == nil, true, "ack needs a requestId")
+expect(decodeWatchAck(from: ["type": "semora_watch_complete_ack", "requestId": R1]) == nil, true, "ack needs a taskId")
+
+let okAck = decodeWatchAck(from: [
+  "type": "semora_watch_complete_ack", "requestId": R1, "taskId": T1, "ok": true,
+])!
+expect(okAck.ok, true, "ok decodes")
+expect(okAck.requestId, R1, "requestId decodes")
+
+let failAck = decodeWatchAck(from: [
+  "type": "semora_watch_complete_ack", "requestId": R1, "taskId": T1, "ok": false, "reason": "not_found",
+])!
+expect(failAck.ok, false, "failure decodes")
+expect(failAck.reason ?? "-", "not_found", "reason decodes")
+
+// A malformed answer is read as failure, which leaves the row tappable rather
+// than falsely struck through.
+let missingOk = decodeWatchAck(from: [
+  "type": "semora_watch_complete_ack", "requestId": R1, "taskId": T1,
+])!
+expect(missingOk.ok, false, "a missing ok is treated as failure")
+
+// ── request payload ─────────────────────────────────────────────────────────
+
+print("watchCompletionRequest")
+
+let request = watchCompletionRequest(taskId: T1, requestId: R1, now: now)
+expect(request["type"] as? String ?? "-", "semora_watch_complete", "request type")
+expect(request["taskId"] as? String ?? "-", T1, "request carries the task id")
+expect(request["requestId"] as? String ?? "-", R1, "request carries the request id")
+// Nothing else may ride along: the watch has no session and no account data to
+// send, and this is where an accidental addition would show up.
+expect(Set(request.keys) == Set(["type", "requestId", "taskId", "requestedAt"]), true,
+       "request carries nothing beyond the two ids and a timestamp")
 
 // ── result ──────────────────────────────────────────────────────────────────
 
