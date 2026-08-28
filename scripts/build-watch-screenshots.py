@@ -53,9 +53,13 @@ BODY_TOP, BODY_W, BEZEL = 140, 312, 9
 
 # (source, eyebrow, glyph, headline 1, headline 2, bottom gradient tint)
 #
-# Two locales because the listing has two. The Spanish headlines follow the
-# voice of the Spanish iPhone and iPad sets — "Adelántate a tu día.", "Conoce tu
-# nota." — rather than being translated word for word from the English.
+# en-US only, deliberately. The listing is also localised into es-ES, but the
+# Watch app is not localised at all — every string in targets/watch/ is a
+# hardcoded English literal — so a Spanish screenshot could only ever be a
+# Spanish headline over English chrome. App Store Connect falls back to the
+# primary locale, which shows Spanish shoppers these same screenshots: English,
+# and accurate about what their watch will actually say. Add an es-ES entry here
+# once the Watch itself speaks Spanish, not before.
 LOCALES = {
     "en-US": ("watch-raw", "watch", [
         ("01-today", "ON YOUR WRIST", "sun",
@@ -66,16 +70,6 @@ LOCALES = {
          "Tick it off", "from your wrist", (206, 192, 241)),
         ("04-caught-up", "ALL CLEAR", "star",
          "Nothing due.", "Go enjoy it.", (222, 208, 240)),
-    ]),
-    "es-ES": ("watch-es-raw", "watch-es", [
-        ("01-today", "EN TU MUÑECA", "sun",
-         "Tu día,", "de un vistazo", (214, 202, 240)),
-        ("02-overdue", "NADA SE ESCAPA", "dot",
-         "Mira lo que", "va con retraso", (243, 219, 214)),
-        ("03-completed", "UN TOQUE", "check",
-         "Márcalo hecho", "desde la muñeca", (206, 192, 241)),
-        ("04-caught-up", "TODO AL DÍA", "star",
-         "Nada pendiente.", "Disfrútalo.", (222, 208, 240)),
     ]),
 }
 

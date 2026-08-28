@@ -48,6 +48,27 @@ own SwiftUI.
 tapped in the simulator, the Watch sent a real completion request, the sender
 answered with a real ack, and the row reached `.done` the only way it can.
 
+## The Watch does not speak Spanish
+
+Worth knowing before anyone adds a locale here. The listing is localised into
+es-ES, but the Watch app is not localised at all: no `.lproj`, no
+`String(localized:)`, and no `.strings` in the shipped `SemoraWatch.app`. Every
+user-facing string in `targets/watch/` is a hardcoded English literal — `Today`,
+`Overdue`, `Updated just now`, `Completed`, `2d late`. The phone app is fully
+translated in `locales/es.json`; the Watch companion never was.
+
+`watchDueLabel` is the one exception, and not a happy one: it formats weekday
+and month names through a `DateFormatter` with no locale pinned, so those follow
+the system language while everything around them does not. A Spanish watch shows
+`lun · Biología 101` under a header reading `Overdue`.
+
+A Spanish set was built and then dropped for 1.11, because it could only have
+been a Spanish headline over English chrome. App Store Connect falls back to the
+primary locale, so Spanish shoppers see the English screenshots above — which is
+an accurate preview of the watch they will actually get. Localising the Watch is
+roughly twenty strings and needs its own build; do that first, then add the
+locale back to `scripts/build-watch-screenshots.py`.
+
 ## What is deliberately absent
 
 There is no complication or Smart Stack screenshot. The widget is in the build
