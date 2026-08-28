@@ -360,3 +360,22 @@ func watchCompletionRequest(taskId: String, requestId: String, now: Date) -> [St
     "requestedAt": ISO8601DateFormatter().string(from: now),
   ]
 }
+
+// ── Shared container ─────────────────────────────────────────────────────────
+
+/// Where this app leaves the snapshot for the complication to find.
+///
+/// A WidgetKit extension runs in its own process and cannot hold a WCSession,
+/// so a shared group container is the only route between them. The payload
+/// written there is the application context exactly as the iPhone sent it —
+/// not a reshaped copy — so the complication decodes the same schema v3 this
+/// app does, and there is one format on the wire and on disk rather than two.
+///
+/// These must match ComplicationStore in
+/// targets/watch-widget/ComplicationModel.swift. The two live in different
+/// targets and cannot import each other, so scripts/watchModelTests compiles
+/// both and asserts they are equal.
+enum WatchSharedStore {
+  static let appGroup = "group.com.rajeshpanta.syllabussnap"
+  static let snapshotKey = "semora.watch.snapshot.v1"
+}

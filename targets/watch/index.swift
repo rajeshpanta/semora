@@ -1,5 +1,6 @@
 import SwiftUI
 import WatchConnectivity
+import WidgetKit
 
 // ── Semora Watch companion ───────────────────────────────────────────────────
 //
@@ -46,6 +47,22 @@ final class WatchConnectivityStore: NSObject, ObservableObject, WCSessionDelegat
     // WatchConnectivity keeps only the most recent one. Adopting it at launch
     // is what makes a cold start show real work instead of an empty screen.
     adopt(session.receivedApplicationContext)
+  }
+
+  /// Hand the raw context to the complication and ask it to redraw.
+  ///
+  /// Raw rather than reshaped: the complication reads the same schema the phone
+  /// sends, so there is one payload format rather than a watch-internal second
+  /// one that could drift from it. Best-effort throughout — a face that fails
+  /// to update is a worse watch app, not a broken one, and must never take the
+  /// app down with it.
+  private func publishToComplication(_ context: [String: Any]) {
+    guard let defaults = UserDefaults(suiteName: WatchSharedStore.appGroup) else { return }
+    defaults.set(context, forKey: WatchSharedStore.snapshotKey)
+    // The complication's own timeline only wakes hourly, which is the right
+    // cadence for a label crossing midnight but far too slow for "I just
+    // completed something". This is what makes the face agree with the app.
+    WidgetCenter.shared.reloadAllTimelines()
   }
 
   private func persistTracker() {
@@ -107,6 +124,7 @@ final class WatchConnectivityStore: NSObject, ObservableObject, WCSessionDelegat
   private func adopt(_ context: [String: Any]) {
     guard !context.isEmpty, let decoded = decodeWatchSnapshot(from: context) else { return }
     snapshot = decoded
+    publishToComplication(context)
     // A fresh snapshot is the phone's own account of what is outstanding, so
     // it supersedes anything this watch believed about work in flight.
     tracker.reconcile(with: Set(decoded.tasks.map(\.id)), now: Date())

@@ -26,12 +26,21 @@ module.exports = {
   // needs an API newer than watchOS 10.
   deploymentTarget: '10.0',
 
-  // Deliberately NO entitlements in this phase.
+  // The App Group the complication reads.
   //
-  // An App Group would have to be enabled on a brand-new App ID before this
-  // could sign, and it would buy nothing yet: App Groups are shared between an
-  // app and its extensions ON ONE DEVICE, so the group the iPhone widget uses
-  // cannot carry data to a separate Watch. The Watch gets its data over
-  // WatchConnectivity in a later phase; if the complication later needs to
-  // share with the Watch app, the group added then is a watch-side one.
+  // Phase 1 deliberately shipped this target with no entitlements, on the
+  // reasoning that a group buys nothing until something else on the watch needs
+  // to read what this app knows. targets/watch-widget is that something: a
+  // WidgetKit extension runs in its own process and cannot hold a WCSession, so
+  // the only way it sees a snapshot is through a shared container.
+  //
+  // Reusing the identifier the iPhone app and its widget already use, rather
+  // than minting a watch-specific one, because a group identifier is just a
+  // name — the CONTAINER it resolves to is per-device. Nothing the phone writes
+  // is visible here and nothing written here reaches the phone; the snapshot
+  // still arrives only over WatchConnectivity. Reusing the name means no new
+  // group has to be registered, only the capability added to two App IDs.
+  entitlements: {
+    'com.apple.security.application-groups': ['group.com.rajeshpanta.syllabussnap'],
+  },
 };

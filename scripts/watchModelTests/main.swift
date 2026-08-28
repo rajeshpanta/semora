@@ -311,6 +311,98 @@ expect(request["requestId"] as? String ?? "-", R1, "request carries the request 
 expect(Set(request.keys) == Set(["type", "requestId", "taskId", "requestedAt"]), true,
        "request carries nothing beyond the two ids and a timestamp")
 
+
+// ── complication ────────────────────────────────────────────────────────────
+
+print("ComplicationModel")
+
+// The two targets cannot import each other, so these constants are written
+// twice. If they ever disagree the complication silently reads an empty
+// container forever and shows "open Semora on iPhone" to a student whose data
+// is fine — a failure with no error anywhere. Hence this check.
+expect(ComplicationStore.appGroup, WatchSharedStore.appGroup, "app group agrees across targets")
+expect(ComplicationStore.snapshotKey, WatchSharedStore.snapshotKey, "snapshot key agrees across targets")
+expect(String(ComplicationSnapshot.staleAfter), String(WatchFreshness.staleAfter), "staleness threshold agrees")
+expect(ComplicationSnapshot.empty.hasWork, false, "the empty snapshot has no work")
+
+// Both decoders must read the SAME payload the same way. One fixture, two
+// readers — this is what stops the face and the app disagreeing.
+let shared: [String: Any] = [
+  "type": "semora_watch_snapshot",
+  "schemaVersion": 3,
+  "state": "ready",
+  "dueTodayCount": 2,
+  "overdueCount": 3,
+  "updatedAt": "2026-08-28T08:55:00Z",
+  "items": [
+    ["id": "t1", "title": "Problem Set 4", "course": "Calc", "colorHex": "#E5484D",
+     "dueDate": "2026-08-24", "bucket": "overdue"],
+    ["id": "t2", "title": "Essay draft", "course": "Eng", "colorHex": "#3E63DD",
+     "dueDate": "2026-08-28", "bucket": "today"],
+  ],
+]
+let appView = decodeWatchSnapshot(from: shared)!
+let faceView = decodeComplicationSnapshot(from: shared)!
+expect(faceView.dueTodayCount, appView.dueTodayCount, "both decoders agree on due today")
+expect(faceView.overdueCount, appView.overdueCount, "both decoders agree on overdue")
+expect(faceView.nextTitle ?? "-", appView.tasks[0].title, "the face leads with the app's first row")
+expect(faceView.nextBucket ?? "-", "overdue", "and keeps its bucket")
+
+expect(decodeComplicationSnapshot(from: ["type": "semora_watch_test"]) == nil, true, "diagnostic rejected")
+expect(decodeComplicationSnapshot(from: [:]) == nil, true, "empty rejected")
+
+// A payload whose rows are all unusable must not present a blank title.
+let titleless = decodeComplicationSnapshot(from: [
+  "type": "semora_watch_snapshot",
+  "items": [["id": "x", "title": "", "dueDate": "2026-08-28"]],
+])!
+expect(titleless.nextTitle == nil, true, "an empty title is not offered as next")
+
+// ── complication states ─────────────────────────────────────────────────────
+
+print("complication states")
+
+func snap(today: Int = 0, overdue: Int = 0, title: String? = nil, due: String? = nil,
+          state: ComplicationState = .ready, updated: Date? = nil) -> ComplicationSnapshot {
+  ComplicationSnapshot(state: state, dueTodayCount: today, overdueCount: overdue,
+                       nextTitle: title, nextDueDate: due, nextBucket: nil, updatedAt: updated)
+}
+
+expect(complicationHeadline(snap(overdue: 1)), "1 task overdue", "single overdue")
+expect(complicationHeadline(snap(overdue: 4)), "4 tasks overdue", "plural overdue")
+// Overdue leads, but today is not hidden behind it.
+expect(complicationHeadline(snap(today: 2, overdue: 3)), "3 overdue · 2 today", "both")
+expect(complicationHeadline(snap(today: 1)), "1 task due today", "single today")
+expect(complicationHeadline(snap(today: 5)), "5 tasks due today", "plural today")
+expect(complicationHeadline(snap(title: "Essay")), "Nothing due today", "work ahead but none today")
+expect(complicationHeadline(snap()), "All caught up", "all caught up")
+expect(complicationHeadline(snap(today: 3, state: .signedOut)), "Sign in on iPhone",
+       "signed out never shows counts")
+
+expect(complicationCompactLabel(snap(today: 4)), "4", "compact today")
+expect(complicationCompactLabel(snap(today: 4, overdue: 2)), "2!", "compact prefers overdue")
+expect(complicationCompactLabel(snap(state: .signedOut)), "—", "compact signed out")
+
+expect(complicationDetail(snap(title: "Essay", due: "2026-08-28"), now: now, calendar: cal) ?? "-",
+       "Today · Essay", "detail names what is next")
+expect(complicationDetail(snap(title: "Essay", due: "2026-08-24"), now: now, calendar: cal) ?? "-",
+       "Late · Essay", "an overdue next is called late")
+expect(complicationDetail(snap(), now: now, calendar: cal) == nil, true, "no next, no detail")
+expect(complicationDetail(snap(title: "Essay", state: .signedOut), now: now, calendar: cal) == nil, true,
+       "signed out leaks no titles")
+
+expect(complicationDueLabel(dueDate: "2026-08-28", now: now, calendar: cal), "Today", "label today")
+expect(complicationDueLabel(dueDate: "2026-08-29", now: now, calendar: cal), "Tomorrow", "label tomorrow")
+expect(complicationDueLabel(dueDate: "2026-08-31", now: now, calendar: cal), "Mon", "label weekday")
+expect(complicationDueLabel(dueDate: "2026-09-15", now: now, calendar: cal), "Sep 15", "label far out")
+expect(complicationDueLabel(dueDate: "bad", now: now, calendar: cal), "bad", "malformed passes through")
+
+// Staleness is part of the reading, not metadata: a face is glanced at and
+// believed, and "0 due today" from this morning can cost a deadline.
+expect(snap(updated: now.addingTimeInterval(-60)).isStale(now: now), false, "fresh")
+expect(snap(updated: now.addingTimeInterval(-(6 * 3600))).isStale(now: now), true, "6h is stale")
+expect(snap(updated: nil).isStale(now: now), true, "never synced counts as stale")
+
 // ── result ──────────────────────────────────────────────────────────────────
 
 print("")

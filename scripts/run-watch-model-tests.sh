@@ -6,6 +6,7 @@ cd "$(dirname "$0")/.."
 OUT="$(mktemp -d)/watchmodeltests"
 xcrun swiftc -O \
   targets/watch/WatchModel.swift \
+  targets/watch-widget/ComplicationModel.swift \
   scripts/watchModelTests/main.swift \
   -o "$OUT"
 "$OUT"
