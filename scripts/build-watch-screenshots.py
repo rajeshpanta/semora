@@ -22,8 +22,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-RAW = Path("screenshots/store-screenshots/watch-raw")
-OUT = Path("screenshots/store-screenshots/watch")
+STORE = Path("screenshots/store-screenshots")
 
 FRAUNCES = Path("node_modules/@expo-google-fonts/fraunces")
 SF = "/System/Library/Fonts/SFNS.ttf"
@@ -53,16 +52,32 @@ H1_Y, H2_Y = 48, 84
 BODY_TOP, BODY_W, BEZEL = 140, 312, 9
 
 # (source, eyebrow, glyph, headline 1, headline 2, bottom gradient tint)
-SHOTS = [
-    ("01-today", "ON YOUR WRIST", "sun",
-     "Your day,", "at a glance", (214, 202, 240)),
-    ("02-overdue", "NOTHING SLIPS", "dot",
-     "See what's", "running late", (243, 219, 214)),
-    ("03-completed", "ONE TAP", "check",
-     "Tick it off", "from your wrist", (206, 192, 241)),
-    ("04-caught-up", "ALL CLEAR", "star",
-     "Nothing due.", "Go enjoy it.", (222, 208, 240)),
-]
+#
+# Two locales because the listing has two. The Spanish headlines follow the
+# voice of the Spanish iPhone and iPad sets — "Adelántate a tu día.", "Conoce tu
+# nota." — rather than being translated word for word from the English.
+LOCALES = {
+    "en-US": ("watch-raw", "watch", [
+        ("01-today", "ON YOUR WRIST", "sun",
+         "Your day,", "at a glance", (214, 202, 240)),
+        ("02-overdue", "NOTHING SLIPS", "dot",
+         "See what's", "running late", (243, 219, 214)),
+        ("03-completed", "ONE TAP", "check",
+         "Tick it off", "from your wrist", (206, 192, 241)),
+        ("04-caught-up", "ALL CLEAR", "star",
+         "Nothing due.", "Go enjoy it.", (222, 208, 240)),
+    ]),
+    "es-ES": ("watch-es-raw", "watch-es", [
+        ("01-today", "EN TU MUÑECA", "sun",
+         "Tu día,", "de un vistazo", (214, 202, 240)),
+        ("02-overdue", "NADA SE ESCAPA", "dot",
+         "Mira lo que", "va con retraso", (243, 219, 214)),
+        ("03-completed", "UN TOQUE", "check",
+         "Márcalo hecho", "desde la muñeca", (206, 192, 241)),
+        ("04-caught-up", "TODO AL DÍA", "star",
+         "Nada pendiente.", "Disfrútalo.", (222, 208, 240)),
+    ]),
+}
 
 
 def fraunces(size):
@@ -180,9 +195,9 @@ def watch_body(screen):
     return out
 
 
-def render(slug, eyebrow, mark, l1, l2, tint):
+def render(raw_dir, slug, eyebrow, mark, l1, l2, tint):
     canvas = gradient(tint).convert("RGBA")
-    device = watch_body(Image.open(RAW / f"{slug}.png"))
+    device = watch_body(Image.open(raw_dir / f"{slug}.png"))
 
     # Shadow first, so the device sits on the gradient rather than floating.
     shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -223,39 +238,47 @@ def render(slug, eyebrow, mark, l1, l2, tint):
 
 def main():
     check = "--check" in sys.argv
-    if not RAW.exists():
-        print(f"no captures in {RAW}", file=sys.stderr)
-        return 1
-    OUT.mkdir(parents=True, exist_ok=True)
+    wanted = [a.split("=", 1)[1] for a in sys.argv if a.startswith("--locale=")]
 
     failed = False
-    for slug, eyebrow, mark, l1, l2, tint in SHOTS:
-        src = RAW / f"{slug}.png"
-        if Image.open(src).size != (W, H):
-            print(f"FAIL {src.name}: capture is not {W}x{H}")
+    for locale, (raw_name, out_name, shots) in LOCALES.items():
+        if wanted and locale not in wanted:
+            continue
+        raw_dir, out_dir = STORE / raw_name, STORE / out_name
+        if not raw_dir.exists():
+            print(f"FAIL {locale}: no captures in {raw_dir}")
             failed = True
             continue
+        out_dir.mkdir(parents=True, exist_ok=True)
+        print(f"{locale}:")
 
-        image = render(slug, eyebrow, mark, l1, l2, tint)
-        dest = OUT / f"{slug}.png"
-        if check:
-            if not dest.exists():
-                print(f"FAIL {dest.name}: missing")
+        for slug, eyebrow, mark, l1, l2, tint in shots:
+            src = raw_dir / f"{slug}.png"
+            if Image.open(src).size != (W, H):
+                print(f"  FAIL {src.name}: capture is not {W}x{H}")
                 failed = True
                 continue
-            shipped = Image.open(dest)
-            if shipped.mode != "RGB" or shipped.size != (W, H):
-                print(f"FAIL {dest.name}: {shipped.mode} {shipped.size}, expected RGB {(W, H)}")
-                failed = True
-                continue
-            if list(shipped.getdata()) != list(image.getdata()):
-                print(f"FAIL {dest.name}: does not match a fresh render of the raw capture")
-                failed = True
-                continue
-            print(f"ok   {dest.name}: matches a fresh render  — “{l1} {l2}”")
-        else:
-            image.save(dest)
-            print(f"wrote {dest}  {W}x{H}  “{l1} {l2}”")
+
+            image = render(raw_dir, slug, eyebrow, mark, l1, l2, tint)
+            dest = out_dir / f"{slug}.png"
+            if check:
+                if not dest.exists():
+                    print(f"  FAIL {dest.name}: missing")
+                    failed = True
+                    continue
+                shipped = Image.open(dest)
+                if shipped.mode != "RGB" or shipped.size != (W, H):
+                    print(f"  FAIL {dest.name}: {shipped.mode} {shipped.size}")
+                    failed = True
+                    continue
+                if list(shipped.getdata()) != list(image.getdata()):
+                    print(f"  FAIL {dest.name}: does not match a fresh render")
+                    failed = True
+                    continue
+                print(f"  ok   {dest.name}: matches a fresh render — \u201c{l1} {l2}\u201d")
+            else:
+                image.save(dest)
+                print(f"  wrote {dest}  {W}x{H}  \u201c{l1} {l2}\u201d")
 
     return 1 if failed else 0
 
