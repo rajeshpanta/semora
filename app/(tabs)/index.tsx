@@ -36,6 +36,7 @@ import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { formatTimeOfDay, classTimeStatus } from '@/lib/schedule';
 import { updateTodayWidget, type DueThisWeekItem } from '@/lib/widgetBridge';
+import { updateWatchSnapshot } from '@/lib/watchBridge';
 import { getNotificationPermissionStatus, rescheduleAllTaskReminders, requestNotificationPermission } from '@/lib/notifications';
 import { track } from '@/lib/analytics';
 import { computeStreak } from '@/lib/streaks';
@@ -130,7 +131,7 @@ export default function TodayScreen() {
 
   // Overdue: past due, not completed
   const yesterdayStr = format(addDays(today, -1), 'yyyy-MM-dd');
-  const { data: overdueTasks = [] } = useTasks(
+  const { data: overdueTasks = [], isSuccess: overdueLoaded } = useTasks(
     selectedSemesterId
       ? { semesterId: selectedSemesterId, dueDateTo: yesterdayStr, isCompleted: false }
       : { semesterId: null }
@@ -150,7 +151,7 @@ export default function TodayScreen() {
   // the rest of this week's roadmap. useTasks sorts by due_date then due_time,
   // so upcomingTasks[0] is the soonest and overdueTasks[0] is the most overdue.
   const todayKey = format(today, 'yyyy-MM-dd');
-  const { data: upcomingTasks = [] } = useTasks(
+  const { data: upcomingTasks = [], isSuccess: upcomingLoaded } = useTasks(
     selectedSemesterId
       ? { semesterId: selectedSemesterId, dueDateFrom: todayKey, isCompleted: false }
       : { semesterId: null }
@@ -416,6 +417,20 @@ export default function TodayScreen() {
     // the arrays are re-derived each render but only change on data change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dueSoonTasks, dueSoonLoaded, allTasksLoaded, isPro, streak.current, JSON.stringify(dueThisWeekWidgetItems)]);
+
+  // Keep the Apple Watch companion in sync from the same place, and from the
+  // same queries, that already feed the home-screen widget. The Watch is a
+  // second VIEW of the Today tab, not a second source of truth: overdueTasks
+  // and upcomingTasks are exactly the arrays rendered below, so the wrist and
+  // the phone cannot disagree about what is late or what is next.
+  //
+  // Gated on both queries having SUCCEEDED for the same reason the widget is:
+  // the [] default during loading, or on an offline launch, must not overwrite
+  // a good snapshot on the watch with an empty day.
+  useEffect(() => {
+    if (!overdueLoaded || !upcomingLoaded) return;
+    updateWatchSnapshot({ overdue: overdueTasks, upcoming: upcomingTasks, todayKey });
+  }, [overdueTasks, upcomingTasks, overdueLoaded, upcomingLoaded, todayKey]);
 
   // Ask for an App Store rating at a genuine happy moment — shared by two
   // triggers ('aha' below, 'task_milestone' further down) that both honor

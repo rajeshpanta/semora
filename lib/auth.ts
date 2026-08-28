@@ -9,6 +9,7 @@ import { endIAP } from '@/lib/purchases';
 import { clearLocalSyncState } from '@/lib/calendarSync';
 import { cancelAllRemindersOnSignOut } from '@/lib/notifications';
 import { clearTodayWidget } from '@/lib/widgetBridge';
+import { clearWatchSnapshot } from '@/lib/watchBridge';
 import { unregisterPushToken } from '@/lib/push';
 import { clearPersistedQueryCache } from '@/lib/queryPersistence';
 import { clearOfflineUserState } from '@/lib/offlineSync';
@@ -403,6 +404,11 @@ export async function signOut(options?: { landing?: 'auth' | 'marketing' }) {
     // visible without unlocking the phone: the widget reads the shared App
     // Group container, which survives sign-out.
     clearTodayWidget();
+
+    // Same exposure, one surface further out: the Apple Watch keeps the last
+    // application context across launches and shows it on the wrist without the
+    // phone being unlocked.
+    clearWatchSnapshot();
 
     // Drop calendar-sync references — without this, B's app would
     // push events into A's "Semora" calendar.

@@ -1,0 +1,8 @@
+{
+  "name": "semora-watch-bridge",
+  "version": "1.0.0",
+  "description": "iPhone-side WatchConnectivity bridge for the Semora Watch companion.",
+  "main": "index.ts",
+  "private": true,
+  "platforms": ["ios"]
+}
