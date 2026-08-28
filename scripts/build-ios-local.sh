@@ -49,8 +49,26 @@ mkdir -p "$OUT"
 cd "$ROOT"
 
 if [[ "${1:-}" != "--no-prebuild" ]]; then
-  echo "==> prebuild (syncs ios/ with app.json)"
-  npx expo prebuild -p ios
+  # --clean, not an incremental prebuild.
+  #
+  # An incremental run over an ios/ that already contains the Watch targets
+  # crashes inside @bacons/apple-targets:
+  #
+  #   Target "SemoraWatch" already exists, updating instead of creating a new one
+  #   TypeError: Cannot read properties of undefined (reading 'getDefaultConfiguration')
+  #
+  # createWatchAppConfigurationList looks up the main app target while the
+  # project is mid-rewrite and finds a target with no configuration list yet.
+  # Regenerating from scratch never reaches that path, which is why every clean
+  # prebuild in verification passed while this script failed on its first run
+  # after the Watch work landed.
+  #
+  # Safe because ios/ is a derived artifact: it is gitignored, contains no
+  # hand-edits, and every target — app, widget, watch app, complication — comes
+  # from app.json plus targets/*/expo-target.config.js. The cost is a full pod
+  # install per release build.
+  echo "==> prebuild --clean (regenerates ios/ from app.json)"
+  npx expo prebuild --clean -p ios
 fi
 
 VERSION=$(plutil -extract CFBundleShortVersionString raw ios/Semora/Info.plist)
