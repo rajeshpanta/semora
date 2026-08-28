@@ -78,6 +78,21 @@ cat > "$OUT/ExportOptions.plist" <<PLIST
   <key>signingStyle</key><string>automatic</string>
   <key>uploadSymbols</key><true/>
   <key>destination</key><string>export</string>
+  <!--
+    Without this, Xcode renumbers the build during export.
+
+    For method "app-store-connect" the key defaults to TRUE, which lets Xcode
+    pick the next build number free in App Store Connect and stamp it into the
+    .ipa. It stayed invisible through 1.10 only because build 53 had not been
+    uploaded yet when its own export ran; a verification export of that same
+    archive afterwards came out as 54, while the archive and app.json both still
+    said 53. Nothing warns about it.
+
+    app.json is the single source of the version and build number — ios/ is a
+    derived artifact regenerated from it — so having the export quietly disagree
+    means the number reviewed is not the number shipped.
+  -->
+  <key>manageAppVersionAndBuildNumber</key><false/>
 </dict>
 </plist>
 PLIST
@@ -92,6 +107,27 @@ xcodebuild -exportArchive \
 IPA=$(find "$OUT/export" -name '*.ipa' | head -1)
 [[ -n "$IPA" ]] || { echo "export failed — see $OUT/export.log" >&2; exit 1; }
 cp -f "$IPA" "$OUT/Semora.ipa"
+
+# Prove the number that went in is the number that came out.
+#
+# The manageAppVersionAndBuildNumber=false above is the fix; this is the alarm.
+# A silent renumber is invisible in every log, so the only way to know it has
+# come back — a new Xcode, a changed default, someone editing the plist — is to
+# open the artifact and look.
+VERIFY_DIR=$(mktemp -d)
+unzip -q "$OUT/Semora.ipa" -d "$VERIFY_DIR"
+VERIFY_APP=$(find "$VERIFY_DIR/Payload" -maxdepth 1 -name '*.app' | head -1)
+IPA_VERSION=$(plutil -extract CFBundleShortVersionString raw "$VERIFY_APP/Info.plist")
+IPA_BUILD=$(plutil -extract CFBundleVersion raw "$VERIFY_APP/Info.plist")
+rm -rf "$VERIFY_DIR"
+
+if [[ "$IPA_VERSION" != "$VERSION" || "$IPA_BUILD" != "$BUILD" ]]; then
+  echo >&2
+  echo "BUILD NUMBER DRIFT: archived $VERSION ($BUILD) but the .ipa says $IPA_VERSION ($IPA_BUILD)." >&2
+  echo "The export renumbered the build. Check manageAppVersionAndBuildNumber in ExportOptions." >&2
+  exit 1
+fi
+echo "==> verified .ipa is $IPA_VERSION ($IPA_BUILD), matching app.json"
 
 echo
 echo "Semora $VERSION ($BUILD) -> $OUT/Semora.ipa"
