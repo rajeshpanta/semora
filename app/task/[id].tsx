@@ -399,6 +399,7 @@ export default function TaskDetailScreen() {
                 </>
               )}
               <TaskPlanningFields
+            taskType={task?.type}
                 priority={editPriority}
                 onPriorityChange={setEditPriority}
                 estimatedMinutes={editEstimatedMinutes}

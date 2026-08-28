@@ -321,6 +321,7 @@ export default function NewTaskScreen() {
           </TouchableOpacity>
 
           <TaskPlanningFields
+            taskType={type}
             priority={priority}
             onPriorityChange={setPriority}
             estimatedMinutes={estimatedMinutes}

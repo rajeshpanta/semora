@@ -480,6 +480,9 @@ export async function scheduleTaskReminders(
   // and a chapter of reading are not the same event. Absent means "treat it
   // like an assignment", which is the commonest case.
   taskType?: string | null,
+  // 'high' asks for an exam's ladder whatever the type says. The escape hatch
+  // for an import that guessed wrong.
+  taskPriority?: string | null,
   // Offsets already decided by the batch planner, which alone can see the whole
   // notification budget. NOT gated on Pro: the planner has already applied the
   // student's preferences, and re-gating here would discard its work. The
@@ -598,7 +601,7 @@ export async function scheduleTaskReminders(
               reminder_1day: proForReminders ? base.reminder_1day : false,
               reminder_3day: proForReminders ? base.reminder_3day : false,
             };
-          })());
+          })(), taskPriority);
 
   // The actual moment the work is due: the stated time, or end of day when the
   // task has no time. Quiet hours can defer a reminder PAST this — a 10pm
@@ -643,7 +646,7 @@ export async function scheduleTaskReminders(
         data: {
           taskId, taskTitle, courseName, dueDate, dueTime, userId,
           fireAt: triggerDate.getTime(),
-          taskType: taskType || 'assignment',
+          taskType: taskPriority === 'high' ? 'exam' : (taskType || 'assignment'),
           offsetMinutes,
         },
         sound: true,
@@ -906,7 +909,7 @@ export async function rescheduleAllTaskReminders(
     };
     const { data } = await supabase
       .from('tasks')
-      .select('id, title, type, due_date, due_time, reminder_offsets_minutes, courses(name)')
+      .select('id, title, type, priority, due_date, due_time, reminder_offsets_minutes, courses(name)')
       .eq('user_id', userId)
       .eq('is_completed', false);
     if (!data) return;
@@ -922,6 +925,7 @@ export async function rescheduleAllTaskReminders(
       tasks: (data as any[]).map((t): PlanTask => ({
         id: t.id,
         type: t.type,
+        priority: t.priority,
         dueDate: t.due_date,
         dueTime: t.due_time,
         // A student's own choice is still Pro-only, exactly as before. Handing
@@ -966,7 +970,7 @@ export async function rescheduleAllTaskReminders(
         // The planner has already applied preferences, the Pro gate and the
         // budget, so its decision is passed as plannedOffsets rather than as a
         // custom selection — which would be re-gated and partly discarded.
-        prefetched, null, t.type, planned,
+        prefetched, null, t.type, t.priority, planned,
       );
     }
     rememberTimezone();

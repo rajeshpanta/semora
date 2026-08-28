@@ -258,3 +258,104 @@ Deno.test('the single-task ladder honours preferences', () => {
   assert(offsetsForSingleTask('exam', FREE).every((o) => o <= 120));
   assertEquals(offsetsForSingleTask('exam', { reminder_same_day: false, reminder_1day: false, reminder_3day: false }), []);
 });
+
+// ── priority as the importance override ────────────────────────────────────
+
+import { describeLadder } from './reminderPlan';
+
+const hi = (days: number, type: string): PlanTask => ({ ...at(days, type), priority: 'high' });
+
+Deno.test('marking a task high priority gives it an exam ladder', () => {
+  // The escape hatch for a wrong imported type: Canvas calls the capstone and
+  // a weekly problem set the same thing.
+  const normal = plan([at(20, 'assignment')]);
+  const important = plan([hi(20, 'assignment')]);
+  assertEquals(normal.reminders.length, 2);
+  assertEquals(important.reminders.length, 4);
+  assertEquals(
+    important.reminders.map((r) => r.offsetMinutes).sort((a, b) => a - b),
+    plan([at(20, 'exam')]).reminders.map((r) => r.offsetMinutes).sort((a, b) => a - b),
+  );
+});
+
+Deno.test('a high-priority reading is treated as important, not as a reading', () => {
+  assertEquals(plan([hi(20, 'reading')]).reminders.length, 4);
+});
+
+Deno.test('normal and low priority change nothing', () => {
+  const base = plan([at(20, 'assignment')]).reminders.length;
+  assertEquals(plan([{ ...at(20, 'assignment'), priority: 'normal' }]).reminders.length, base);
+  assertEquals(plan([{ ...at(20, 'assignment'), priority: 'low' }]).reminders.length, base);
+  assertEquals(plan([{ ...at(20, 'assignment'), priority: null }]).reminders.length, base);
+});
+
+Deno.test('a high-priority task is protected like an exam', () => {
+  const important = hi(EXAM_PROTECTION_DAYS, 'assignment');
+  const filler = Array.from({ length: 100 }, () => at(20, 'assignment'));
+  const p = plan([important, ...filler], ALL_ON, 5);
+  assertEquals(p.reminders.filter((r) => r.taskId === important.id).length, 4,
+    'the student said this matters; the budget may not overrule them');
+});
+
+Deno.test('high priority outranks a plain assignment when the budget bites', () => {
+  // Outside the protection window, so value ordering alone decides. Both sets
+  // are the same distance away; the only difference is that the student said
+  // one set matters.
+  const important = Array.from({ length: 10 }, () => hi(15, 'assignment'));
+  const ordinary = Array.from({ length: 40 }, () => at(15, 'assignment'));
+  const p = plan([...important, ...ordinary], ALL_ON, 30);
+  const keptImportant = p.reminders.filter((r) => important.some((t) => t.id === r.taskId)).length;
+  const keptOrdinary = p.reminders.filter((r) => ordinary.some((t) => t.id === r.taskId)).length;
+  assert(keptImportant > 0, 'an important task must not be shed to zero');
+  // Every important task keeps its final warning before any ordinary task's is
+  // considered — this is the ranking bug that ate exams' two-hour reminders.
+  const importantFinal = p.reminders.filter(
+    (r) => important.some((t) => t.id === r.taskId) && r.rung === 'lastCall',
+  ).length;
+  assertEquals(importantFinal, 10, 'every important task keeps its last warning');
+  assert(keptImportant + keptOrdinary === p.scheduled);
+});
+
+Deno.test('an exam never loses its last warning to an ordinary due-time nudge', () => {
+  // The regression this ordering exists to prevent: lastCall IS an exam's
+  // deadline reminder, so it must rank with dueTime rather than below it.
+  const exams = Array.from({ length: 5 }, () => at(20, 'exam'));
+  const readings = Array.from({ length: 60 }, () => at(20, 'reading'));
+  const p = plan([...exams, ...readings], ALL_ON, 20);
+  const examFinal = p.reminders.filter((r) => r.type === 'exam' && r.rung === 'lastCall').length;
+  assertEquals(examFinal, 5);
+});
+
+Deno.test('an explicit per-task choice still beats priority', () => {
+  const p = plan([{ ...hi(20, 'assignment'), overrideOffsets: [AT_DUE_TIME] }]);
+  assertEquals(p.reminders.length, 1);
+  assertEquals(p.reminders[0].rung, 'override');
+});
+
+// ── the description shown in the task editor ───────────────────────────────
+
+Deno.test('the description matches what will actually be scheduled', () => {
+  for (const type of ['exam', 'project', 'assignment', 'quiz', 'reading', 'other']) {
+    const count = plan([at(20, type)]).reminders.length;
+    const text = describeLadder(type, ALL_ON);
+    assert(text.length > 0);
+    // A single-rung type must not claim more than one moment.
+    if (count === 1) assert(!text.includes(' and '), `${type}: "${text}" oversells one reminder`);
+  }
+});
+
+Deno.test('the description tracks preferences and priority', () => {
+  assertEquals(describeLadder('reading', ALL_ON), "Reminds you when it's due");
+  assert(describeLadder('exam', ALL_ON).includes('1 week'));
+  // A free account sees the truth about what it gets, not the Pro ladder.
+  assert(!describeLadder('exam', FREE).includes('1 week'));
+  // Priority is reflected, so the editor explains why the answer changed.
+  assertEquals(describeLadder('assignment', ALL_ON, 'high'), describeLadder('exam', ALL_ON));
+});
+
+Deno.test('the description says so when everything is switched off', () => {
+  assertEquals(
+    describeLadder('exam', { reminder_same_day: false, reminder_1day: false, reminder_3day: false }),
+    'No reminders',
+  );
+});

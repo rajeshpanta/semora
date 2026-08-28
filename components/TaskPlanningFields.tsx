@@ -13,6 +13,7 @@ import { DatePicker } from '@/components/DatePicker';
 import { useColors } from '@/lib/theme';
 import { useProUpsell } from '@/components/ProUpsellHost';
 import { useAppStore } from '@/store/appStore';
+import { describeLadder } from '@/lib/reminderPlan';
 import {
   PRIORITY_OPTIONS, RECURRENCE_OPTIONS, REMINDER_OPTIONS,
   customReminderLabel, effectiveDueDate, reminderOptionLabel,
@@ -34,6 +35,8 @@ type Props = {
   dueTime: Date | null;
   reminderOffsets: number[] | null;
   onReminderOffsetsChange: (value: number[] | null) => void;
+  /** What kind of work this is. Decides the default ladder shown below. */
+  taskType?: string | null;
 };
 
 export function TaskPlanningFields(props: Props) {
@@ -41,6 +44,13 @@ export function TaskPlanningFields(props: Props) {
   const showProUpsell = useProUpsell();
   const router = useRouter();
   const isPro = useAppStore((s) => s.isPro);
+  // The advance rungs are Pro, so a free account must be shown what it will
+  // actually get rather than what the ladder would give a subscriber.
+  const ladderPrefs = {
+    reminder_same_day: true,
+    reminder_1day: isPro,
+    reminder_3day: isPro,
+  };
   const [showCustomReminder, setShowCustomReminder] = useState(false);
   const [customDate, setCustomDate] = useState<Date | null>(null);
   const [customTime, setCustomTime] = useState<Date | null>(null);
@@ -189,12 +199,30 @@ export function TaskPlanningFields(props: Props) {
           </View>
         )}
       </View>
+      {/*
+        What this task will actually do, before the student changes anything.
+        The audit found reminder behaviour was completely invisible — 322
+        students, zero preference changes, the notification screen opened twice
+        in a month. Nobody was ignoring the controls; there was nothing to react
+        to. Saying it here, at the moment the task is being written, is what
+        makes the defaults discoverable without adding another setting.
+      */}
+      {props.reminderOffsets === null && (
+        <View style={[styles.defaultNote, { backgroundColor: colors.brand50 }]}>
+          <FontAwesome name="bell-o" size={11} color={colors.brand} />
+          <Text style={[styles.defaultNoteText, { color: colors.brand }]}>
+            {describeLadder(props.taskType, ladderPrefs, props.priority)}
+            {props.priority === 'high' ? ' — marked important' : ''}
+            {!props.dueTime ? ' · 9:00 AM when no time is set' : ''}
+          </Text>
+        </View>
+      )}
       <Text style={[styles.help, { color: colors.ink3 }]}>
         {isPro
           ? (props.dueTime
-              ? 'Choose presets or add an exact reminder date and time.'
-              : 'No due time set — due-date reminders use 9:00 AM.')
-          : 'Free tasks use the default reminder. Upgrade to Pro to turn reminders off or set your own custom times.'}
+              ? 'Exams and projects already get more warning than readings. Set your own times here to override that for this task.'
+              : 'Exams and projects already get more warning than readings. No due time set, so due-date reminders use 9:00 AM.')
+          : 'Exams and projects already get more warning than readings. Set High priority above to give this task an exam\'s reminders. Pro adds earlier reminders and your own custom times.'}
       </Text>
       <View style={styles.wrap}>
         <TouchableOpacity
@@ -289,6 +317,16 @@ const styles = StyleSheet.create({
     minHeight: 38, paddingHorizontal: 12, borderRadius: 10, borderWidth: 1,
     flexDirection: 'row', alignItems: 'center', gap: 6, justifyContent: 'center',
   },
+  defaultNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  defaultNoteText: { fontSize: 12, fontWeight: '600', flex: 1 },
   chipText: { fontSize: 12, fontWeight: '600' },
   customList: { gap: 7, marginTop: 10 },
   customChip: {

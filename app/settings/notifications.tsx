@@ -22,6 +22,7 @@ import {
 } from '@/lib/notifications';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { describeLadder } from '@/lib/reminderPlan';
 import { useSession } from '@/app/_layout';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
@@ -172,12 +173,54 @@ export default function NotificationSettings() {
     }
   };
 
-  const toggle = async (key: keyof ReminderPrefs) => {
-    // 1-day and 3-day reminders are Pro only
-    if (!isPro && (key === 'reminder_1day' || key === 'reminder_3day')) {
+  /**
+   * How much warning, as one choice instead of three switches.
+   *
+   * Stored in the same three columns, so nothing migrates and every other
+   * surface — the settings index row, the scheduler, an older client — keeps
+   * reading what it always read. The switches were not confusing because there
+   * were three of them; they were confusing because "Same day" and "1 day
+   * before" describe mechanics rather than an outcome, and production showed
+   * 322 students and not one change to any of them.
+   */
+  const INTENSITY = {
+    light: { reminder_same_day: true, reminder_1day: false, reminder_3day: false },
+    standard: { reminder_same_day: true, reminder_1day: true, reminder_3day: false },
+    intensive: { reminder_same_day: true, reminder_1day: true, reminder_3day: true },
+  } as const;
+  type Intensity = keyof typeof INTENSITY;
+
+  const currentIntensity: Intensity =
+    prefs.reminder_3day && prefs.reminder_1day ? 'intensive'
+    : prefs.reminder_1day ? 'standard'
+    : 'light';
+
+  const setIntensity = async (level: Intensity) => {
+    // Anything beyond a same-day nudge is still Pro, exactly as before.
+    if (!isPro && level !== 'light') {
       showProUpsell('reminders');
       return;
     }
+    const previous = { ...prefs };
+    const updated = { ...prefs, ...INTENSITY[level] };
+    setPrefs(updated);
+    if (!userId) return;
+    const { error } = await supabase
+      .from('profiles')
+      .update(INTENSITY[level])
+      .eq('id', userId);
+    if (error) {
+      setPrefs(previous);
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ['reminderPrefs', userId] });
+    // Apply to the existing backlog, not just future tasks.
+    rescheduleAllTaskReminders(userId, 'settings_changed');
+  };
+
+  // Now only the flashcards switch. The reminder columns are written by
+  // setIntensity above, which carries the Pro gate for the advance rungs.
+  const toggle = async (key: keyof ReminderPrefs) => {
 
     const previous = { ...prefs };
     const updated = { ...prefs, [key]: !prefs[key] };
@@ -262,33 +305,70 @@ export default function NotificationSettings() {
           </TouchableOpacity>
         )}
 
-        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>Remind me before due date</Text>
+        <Text style={[styles.sectionTitle, { color: colors.ink2 }]}>How much warning</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <ToggleRow
-            label="Same day"
-            subtitle="Morning of, plus a last call before the deadline"
-            value={prefs.reminder_same_day}
-            onToggle={() => toggle('reminder_same_day')}
-          />
-          <ToggleRow
-            label="1 day before"
-            subtitle={isPro ? 'The day before it\'s due' : 'Pro feature'}
-            value={isPro ? prefs.reminder_1day : false}
-            onToggle={() => toggle('reminder_1day')}
-            pro={!isPro}
-          />
-          <ToggleRow
-            label="3 days before"
-            subtitle={isPro ? 'Early heads-up' : 'Pro feature'}
-            value={isPro ? prefs.reminder_3day : false}
-            onToggle={() => toggle('reminder_3day')}
-            last
-            pro={!isPro}
-          />
+          {([
+            { key: 'light' as const, label: 'Light', sub: 'A nudge when work is due' },
+            { key: 'standard' as const, label: 'Standard', sub: 'Adds the day before' },
+            { key: 'intensive' as const, label: 'Intensive', sub: 'Adds an early heads-up' },
+          ]).map((option, i, all) => {
+            const selected = currentIntensity === option.key;
+            const locked = !isPro && option.key !== 'light';
+            return (
+              <TouchableOpacity
+                key={option.key}
+                style={[styles.row, i < all.length - 1 && styles.rowBorder, i < all.length - 1 && { borderBottomColor: colors.line }]}
+                onPress={() => setIntensity(option.key)}
+              >
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={[styles.rowLabel, { color: colors.ink }]}>{option.label}</Text>
+                    {locked && (
+                      <View style={[styles.proBadge, { backgroundColor: colors.brand }]}>
+                        <Text style={styles.proBadgeText}>PRO</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={[styles.rowSub, { color: colors.ink3 }]}>{option.sub}</Text>
+                </View>
+                {selected && <FontAwesome name="check" size={15} color={colors.brand} />}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/*
+          What each kind of work actually gets.
+          The audit found the notification screen opened twice in thirty days and
+          not one preference ever changed — the behaviour was invisible, so there
+          was nothing to react to. Saying it plainly is worth more than another
+          control.
+        */}
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line, marginTop: 12 }]}>
+          {([
+            { label: 'Exams', type: 'exam' },
+            { label: 'Projects', type: 'project' },
+            { label: 'Assignments & quizzes', type: 'assignment' },
+            { label: 'Readings', type: 'reading' },
+          ]).map((row, i, all) => (
+            <View key={row.type} style={[styles.row, i < all.length - 1 && styles.rowBorder, i < all.length - 1 && { borderBottomColor: colors.line }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.rowLabel, { color: colors.ink }]}>{row.label}</Text>
+                <Text style={[styles.rowSub, { color: colors.ink3 }]}>
+                  {describeLadder(row.type, {
+                    reminder_same_day: prefs.reminder_same_day,
+                    reminder_1day: isPro && prefs.reminder_1day,
+                    reminder_3day: isPro && prefs.reminder_3day,
+                  })}
+                </Text>
+              </View>
+            </View>
+          ))}
         </View>
 
         <Text style={[styles.hint, { color: colors.ink3 }]}>
-          Reminders are scheduled when tasks are created or updated. Changes here apply to all your tasks.
+          Semora gives more warning to work that matters more. Mark any task High
+          priority to give it an exam's reminders, or set your own times on a task.
         </Text>
 
         {/* Sent from the server (supabase/cron/flashcards_due_push.sql), not

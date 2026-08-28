@@ -112,7 +112,19 @@ const LADDER: Record<TaskType, ReminderRung[]> = {
 /** Unknown or missing type behaves like an assignment — the commonest case. */
 const FALLBACK_TYPE: TaskType = 'assignment';
 
-function ladderForType(type: string | null | undefined): ReminderRung[] {
+/**
+ * Marking a task high priority gives it an exam's ladder.
+ *
+ * This is the escape hatch for a type that is wrong or too blunt. Canvas calls
+ * a lot of things "assignment", and a syllabus parser cannot tell a weekly
+ * problem set from the capstone that decides the grade — but the student can,
+ * and the task editor has had a Priority control the whole time that did
+ * nothing for reminders. Sixteen tasks in production use it. Wiring it here
+ * makes an existing, visible, already-understood control mean something, which
+ * is a better answer than a new switch nobody would find.
+ */
+function ladderFor(type: string | null | undefined, priority?: string | null): ReminderRung[] {
+  if (priority === 'high') return LADDER.exam;
   return LADDER[(type as TaskType)] ?? LADDER[FALLBACK_TYPE];
 }
 
@@ -151,6 +163,8 @@ function rungAllowed(rung: ReminderRung, prefs: ReminderPreferences): boolean {
 export interface PlanTask {
   id: string;
   type: string | null | undefined;
+  /** 'high' | 'normal' | 'low'. High is treated as an exam. */
+  priority?: string | null;
   /** yyyy-MM-dd */
   dueDate: string;
   /** HH:mm[:ss] or null */
@@ -212,7 +226,11 @@ export const IMMINENT_PROTECTION_DAYS = 2;
 function isProtected(task: PlanTask, daysUntilDue: number, isOverride: boolean): boolean {
   if (isOverride) return true;
   if (daysUntilDue <= IMMINENT_PROTECTION_DAYS) return true;
-  if (task.type === 'exam' && daysUntilDue <= EXAM_PROTECTION_DAYS) return true;
+  // A student who marked something high priority has told us it matters as much
+  // as an exam. Protecting it on their word is the point of the control.
+  if ((task.type === 'exam' || task.priority === 'high') && daysUntilDue <= EXAM_PROTECTION_DAYS) {
+    return true;
+  }
   return false;
 }
 
@@ -228,8 +246,15 @@ function isProtected(task: PlanTask, daysUntilDue: number, isOverride: boolean):
  */
 const RUNG_VALUE: Record<ReminderRung | 'override', number> = {
   override: 100,
+  // dueTime and lastCall are deliberately equal: both are a task's FINAL
+  // warning, and which one a task gets depends only on its type. An exam has no
+  // due-time rung — an alert at 14:00 for an exam at 14:00 is useless — so its
+  // two-hour warning is its deadline reminder. Ranking lastCall lower meant
+  // every ordinary assignment's due-time nudge outranked an exam's last
+  // warning, and under pressure exams lost the rung that mattered most while
+  // readings kept theirs. The type weight below is what separates them.
   dueTime: 40,
-  lastCall: 30,
+  lastCall: 40,
   oneDay: 20,
   threeDay: 10,
   week: 5,
@@ -319,13 +344,16 @@ export function buildReminderPlan({
       continue;
     }
 
-    for (const rung of ladderForType(type)) {
+    for (const rung of ladderFor(type, task.priority)) {
       if (!rungAllowed(rung, prefs)) continue;
       candidates.push({
         taskId: task.id,
         offsetMinutes: RUNG_OFFSET[rung],
         rung,
-        type,
+        // High priority ranks as an exam when the budget has to choose, not
+        // only when the ladder is built — otherwise the extra rungs it just
+        // earned would be the first ones taken away again.
+        type: task.priority === 'high' ? 'exam' : type,
         daysUntilDue,
         isProtected: isProtected(task, daysUntilDue, false),
       });
@@ -386,8 +414,43 @@ export function offsetsForTask(plan: ReminderPlan, taskId: string): number[] {
 export function offsetsForSingleTask(
   type: string | null | undefined,
   prefs: ReminderPreferences,
+  priority?: string | null,
 ): number[] {
-  return ladderForType(type)
+  return ladderFor(type, priority)
     .filter((rung) => rungAllowed(rung, prefs))
     .map((rung) => RUNG_OFFSET[rung]);
+}
+
+/**
+ * Plain English for what a task will actually do, for the task editor.
+ *
+ * The reason this exists at all: production showed 322 students and not one
+ * change to a reminder setting, with the notification screen opened twice in
+ * thirty days. The problem was never a shortage of controls — it was that the
+ * behaviour was invisible, so there was nothing to react to. Saying it where
+ * the student already is beats another screen they will not visit.
+ */
+export function describeLadder(
+  type: string | null | undefined,
+  prefs: ReminderPreferences,
+  priority?: string | null,
+): string {
+  const rungs = ladderFor(type, priority).filter((rung) => rungAllowed(rung, prefs));
+  if (rungs.length === 0) return 'No reminders';
+  const label: Record<ReminderRung, string> = {
+    week: '1 week',
+    threeDay: '3 days',
+    oneDay: '1 day',
+    lastCall: '2 hours',
+    dueTime: 'when due',
+  };
+  const parts = rungs.map((r) => label[r]);
+  if (parts.length === 1) {
+    return parts[0] === 'when due' ? 'Reminds you when it\'s due' : `Reminds you ${parts[0]} before`;
+  }
+  const last = parts.pop()!;
+  const lead = parts.join(', ');
+  return last === 'when due'
+    ? `Reminds you ${lead} before, and when it's due`
+    : `Reminds you ${lead} and ${last} before`;
 }
