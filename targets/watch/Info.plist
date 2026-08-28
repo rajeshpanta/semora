@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-  <dict/>
+  <dict>
+    <!--
+      Everything else in this target's Info.plist is supplied by build settings
+      the plugin writes (INFOPLIST_KEY_*), which is why this file is otherwise
+      empty. CFBundleIconName has no INFOPLIST_KEY_ equivalent, and setting
+      ASSETCATALOG_COMPILER_APPICON_NAME alone did not put it here: the archive
+      and export both succeed without it and only Apple's delivery service
+      objects, with
+
+        90713  A value for the Info.plist key 'CFBundleIconName' is missing in
+               the bundle com.rajeshpanta.syllabussnap.watchkitapp
+        90391  No icons found for watch application
+               Semora.app/Watch/SemoraWatch.app
+
+      so it has to be stated literally. "AppIcon" names the set in
+      targets/watch/Assets.xcassets, which expo-target.config.js generates from
+      the phone app's icon.
+    -->
+    <key>CFBundleIconName</key>
+    <string>AppIcon</string>
+  </dict>
 </plist>

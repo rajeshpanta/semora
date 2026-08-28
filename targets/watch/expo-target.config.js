@@ -26,6 +26,25 @@ module.exports = {
   // needs an API newer than watchOS 10.
   deploymentTarget: '10.0',
 
+  // The Watch app's own icon.
+  //
+  // Not optional the way the widget's is: Apple's delivery service refuses the
+  // whole package without it —
+  //
+  //   90713  A value for the Info.plist key 'CFBundleIconName' is missing in
+  //          the bundle com.rajeshpanta.syllabussnap.watchkitapp
+  //   90391  No icons found for watch application Semora.app/Watch/SemoraWatch.app
+  //
+  // — and neither error surfaces during archive or export, only on upload. A
+  // WidgetKit extension has no icon because it never appears on a Home Screen;
+  // a WatchKit app does, so it needs one.
+  //
+  // Reusing the phone app's 1024px icon rather than drawing a watch-specific
+  // one: watchOS masks it to a circle, the artwork is already centred, and one
+  // source means the two can never drift. The path is resolved relative to this
+  // file (see props.icon handling in @bacons/apple-targets/build/with-widget.js).
+  icon: '../../assets/images/icon.png',
+
   // The App Group the complication reads.
   //
   // Phase 1 deliberately shipped this target with no entitlements, on the
