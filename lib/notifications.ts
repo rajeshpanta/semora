@@ -7,6 +7,11 @@ import { registerForPushNotificationsAsync } from '@/lib/push';
 import * as SecureStore from 'expo-secure-store';
 import { getAppLocale, translate, type AppLocale } from '@/lib/i18n';
 import {
+  buildClassCopy,
+  buildReminderCopy,
+  buildSnoozedCopy,
+} from '@/lib/notificationCopy';
+import {
   groupRemindersByTask,
   planReminderReconciliation,
   type ScheduledLike,
@@ -245,10 +250,45 @@ export async function snoozeNotification(response: Notifications.NotificationRes
     quiet = profile as QuietHoursPreferences | null;
   }
   const triggerDate = moveOutsideQuietHours(new Date(Date.now() + minutes * 60_000), quiet);
+  // Recomposed against the NEW fire time rather than replayed.
+  //
+  // Every field this needs was already being stamped into data at schedule
+  // time for the pruner's benefit, so nothing extra is stored. Replaying the
+  // original strings was harmless while every body read "due in 2 hours"; it
+  // stops being harmless once titles carry tone, because an hour's snooze taken
+  // at the deadline would resurface "Tomorrow's mission" after the work was
+  // due. When the deadline is unknown we keep the previous behaviour exactly.
+  const snoozed = (() => {
+    const taskId = typeof data.taskId === 'string' ? data.taskId : null;
+    const taskTitle = typeof data.taskTitle === 'string' ? data.taskTitle : null;
+    const courseName = typeof data.courseName === 'string' ? data.courseName : null;
+    const dueDate = typeof data.dueDate === 'string' ? data.dueDate : null;
+    if (!taskId || !taskTitle || !courseName || !dueDate) return null;
+    const dueTime = typeof data.dueTime === 'string' ? data.dueTime : null;
+    const [y, mo, d] = dueDate.split('-').map(Number);
+    if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return null;
+    let dueMoment = new Date(y, mo - 1, d, 23, 59, 59);
+    if (dueTime) {
+      const [dh, dm] = dueTime.split(':').map(Number);
+      if (Number.isFinite(dh) && Number.isFinite(dm)) dueMoment = new Date(y, mo - 1, d, dh, dm, 0);
+    }
+    return buildSnoozedCopy({
+      taskId, taskTitle, courseName,
+      leadMinutes: Math.round((dueMoment.getTime() - triggerDate.getTime()) / 60_000),
+      daysUntilDue: Math.round(
+        (new Date(y, mo - 1, d).getTime() -
+          new Date(triggerDate.getFullYear(), triggerDate.getMonth(), triggerDate.getDate()).getTime()) /
+          86_400_000,
+      ),
+      dueTime,
+      taskType: typeof data.taskType === 'string' ? data.taskType : null,
+      locale: getAppLocale(),
+    });
+  })();
   await Notifications.scheduleNotificationAsync({
     content: {
-      title: content.title || translate('Task reminder'),
-      body: content.body || translate('This task still needs your attention.'),
+      title: snoozed?.title || content.title || translate('Task reminder'),
+      body: snoozed?.body || content.body || translate('This task still needs your attention.'),
       data: { ...data, fireAt: triggerDate.getTime(), snoozed: true },
       sound: true,
       categoryIdentifier: TASK_NOTIFICATION_CATEGORY,
@@ -485,17 +525,6 @@ function getDueLabel(daysUntilDue: number, locale: AppLocale): string {
   return `overdue by ${Math.abs(daysUntilDue)} days`;
 }
 
-function formatLeadTime(totalMinutes: number, locale: AppLocale): string {
-  const days = Math.floor(totalMinutes / 1440);
-  const hours = Math.floor((totalMinutes % 1440) / 60);
-  const minutes = totalMinutes % 60;
-  const parts: string[] = [];
-  if (days) parts.push(`${days} ${locale === 'es' ? (days === 1 ? 'día' : 'días') : (days === 1 ? 'day' : 'days')}`);
-  if (hours) parts.push(`${hours} ${locale === 'es' ? (hours === 1 ? 'hora' : 'horas') : (hours === 1 ? 'hour' : 'hours')}`);
-  if (minutes) parts.push(`${minutes} ${locale === 'es' ? (minutes === 1 ? 'minuto' : 'minutos') : (minutes === 1 ? 'minute' : 'minutes')}`);
-  return parts.join(' ');
-}
-
 export async function scheduleTaskReminders(
   taskId: string,
   taskTitle: string,
@@ -523,6 +552,12 @@ export async function scheduleTaskReminders(
   // student's preferences, and re-gating here would discard its work. The
   // student's own per-task choice above stays gated exactly as before.
   plannedOffsets?: number[] | null,
+  // How many open tasks share this due date. Copy-only: it lets a reminder on
+  // a crowded day acknowledge the crowd and point at one thing, instead of
+  // being the fourth identical nudge that morning. Only the batch reschedule
+  // can see the whole set, so every other caller leaves this undefined and
+  // gets the ordinary wording.
+  dayLoad?: number,
 ) {
   if (Platform.OS === 'web') return;
   // Before the first scheduleNotificationAsync below, always. Android 8+ drops
@@ -663,17 +698,24 @@ export async function scheduleTaskReminders(
     // of offsets through one loop is what makes it apply to all of them,
     // including the student's own custom times, which never had it.
     if (triggerDate > dueMoment) continue;
-    const body = locale === 'es'
-      ? offsetMinutes === 0
-        ? `${taskTitle} vence ahora`
-        : `${taskTitle} vence en ${formatLeadTime(offsetMinutes, locale)}`
-      : offsetMinutes === 0
-        ? `${taskTitle} is due now`
-        : `${taskTitle} is due in ${formatLeadTime(offsetMinutes, locale)}`;
+    // Measured from the trigger that survived quiet hours, not from the offset
+    // the ladder asked for. moveOutsideQuietHours can push a reminder hours
+    // later than its rung intended, and copy derived from the rung would then
+    // describe a deadline that is no longer that far away.
+    const leadMinutes = Math.round((dueMoment.getTime() - triggerDate.getTime()) / 60_000);
+    const daysUntilDue = Math.round(
+      (new Date(year, month - 1, day).getTime() -
+        new Date(triggerDate.getFullYear(), triggerDate.getMonth(), triggerDate.getDate()).getTime()) /
+        86_400_000,
+    );
+    const copy = buildReminderCopy({
+      taskId, taskTitle, courseName, leadMinutes, daysUntilDue,
+      dueTime, taskType, taskPriority, dayLoad, locale,
+    });
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: `📚 ${courseName}`,
-        body,
+        title: copy.title,
+        body: copy.body,
         // taskType and offsetMinutes are here for pruneToCapIfNeeded: without
         // them it can only rank by date, which is how a final exam three weeks
         // out lost its week's warning while forty readings due tomorrow each
@@ -989,6 +1031,15 @@ export async function rescheduleAllTaskReminders(
       },
     });
 
+    // How crowded each due date is. Copy-only, and computed from the same rows
+    // the planner already read, so it costs one pass over a list already in
+    // memory rather than anything the OS or the network has to answer.
+    const loadByDueDate = new Map<string, number>();
+    for (const t of data as any[]) {
+      if (!t.due_date) continue;
+      loadByDueDate.set(t.due_date, (loadByDueDate.get(t.due_date) ?? 0) + 1);
+    }
+
     // One lookup table instead of a scan of the plan per task.
     const offsetsByTask = new Map<string, number[]>();
     for (const reminder of plan.reminders) {
@@ -1019,6 +1070,7 @@ export async function rescheduleAllTaskReminders(
         // budget, so its decision is passed as plannedOffsets rather than as a
         // custom selection — which would be re-gated and partly discarded.
         prefetched, null, t.type, t.priority, planned,
+        loadByDueDate.get(t.due_date) ?? 1,
       );
     }
     rememberTimezone();
@@ -1204,8 +1256,13 @@ export async function rescheduleClassReminders(userId: string): Promise<number> 
       try {
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: `🎓 ${trigger.courseName}`,
-            body: classReminderBody(trigger.leadMinutes, trigger.location, locale),
+            ...buildClassCopy({
+              meetingId: trigger.meetingId,
+              courseName: trigger.courseName,
+              factualBody: classReminderBody(trigger.leadMinutes, trigger.location, locale),
+              leadMinutes: trigger.leadMinutes,
+              locale,
+            }),
             data: {
               [CLASS_REMINDER_KEY]: trigger.meetingId,
               courseId: trigger.courseId,
