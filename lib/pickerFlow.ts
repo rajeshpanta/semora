@@ -75,18 +75,54 @@ export async function runPick(deps: PickFlowDeps): Promise<any> {
   const startedAt = now();
   let timer: ReturnType<typeof setTimeout> | undefined;
 
+  // The native call, held separately from the race below.
+  //
+  // Promise.race does not cancel the loser. When the timeout wins, THIS is
+  // still pending and expo-document-picker's native `pickingContext` is still
+  // set — it is cleared only from the picker's own delegate callbacks. So this
+  // promise, not the race, is the only thing that knows whether the native
+  // module is free.
+  // Whether the native module was actually reached. Nothing before this point
+  // can strand anything, so the guard has nothing to protect until it flips.
+  let nativeStarted = false;
+
+  const pickPromise = (async () => {
+    await waitForTransitions();
+    nativeStarted = true;
+    return work();
+  })();
+
+  // Release the guard when the NATIVE call settles, not when the race does.
+  //
+  // Clearing it in a `finally` around the race was the defect: on a timeout it
+  // announced the picker was free while native still held the lock, so the very
+  // next tap sailed past this guard, reached the module, and threw
+  // PickingInProgressException instantly — the permanent strand, with
+  // elapsed_ms of 1. Two paying subscribers hit exactly that, minutes after
+  // subscribing. Registered before Promise.race so that on the ordinary paths
+  // the guard is already down by the time runPick returns.
+  //
+  // Attaching a rejection handler here also keeps a late failure from surfacing
+  // as an unhandled rejection once the race has already settled on the timeout.
+  const release = () => { inFlight.current = false; };
+  pickPromise.then(release, release);
+
   try {
     const result = await Promise.race([
-      (async () => {
-        await waitForTransitions();
-        return work();
-      })(),
+      pickPromise,
       new Promise<'__timeout__'>((resolve) => {
         timer = setTimeout(() => resolve('__timeout__'), timeoutMs);
       }),
     ]);
 
     if (result === '__timeout__') {
+      // A timeout BEFORE the native call was even reached — a transition that
+      // never finished, typically a leaked InteractionManager handle. No
+      // picker was presented, so there is no native context to protect, and
+      // holding the guard here would disable the button for the rest of the
+      // process: the same dead end this whole change exists to remove, reached
+      // from the other side. Release it and let the student try again.
+      if (!nativeStarted) inFlight.current = false;
       onFailure(null, 'timeout', now() - startedAt);
       return FAILED;
     }
@@ -96,7 +132,8 @@ export async function runPick(deps: PickFlowDeps): Promise<any> {
     return FAILED;
   } finally {
     if (timer !== undefined) clearTimeout(timer);
-    inFlight.current = false;
+    // `inFlight` is deliberately NOT cleared here. See `release` above: only
+    // the native call settling proves the module is usable again.
   }
 }
 

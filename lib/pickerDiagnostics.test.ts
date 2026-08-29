@@ -11,7 +11,10 @@ import {
   describePickerFailure,
   pickerErrorCode,
   redactPickerMessage,
+  isPickerStrandedError,
   PICKER_MESSAGE_MAX,
+  PICKER_HOST_BUSY_CODE,
+  PICKING_IN_PROGRESS_CODE,
 } from './pickerDiagnostics';
 
 const ctx = {
@@ -163,4 +166,27 @@ Deno.test('no payload key can carry a path, a filename or an address', () => {
   for (const leak of ['Anna', 'Essay', '.pdf', 'anna@icloud.com', '/var/mobile', 'file://']) {
     assert(!serialized.includes(leak), `leaked ${leak} in ${serialized}`);
   }
+});
+
+// ── the patched module's recoverable refusal ────────────────────────────────
+
+Deno.test('a busy host is NOT a strand — it clears itself and must stay retryable', () => {
+  const busy = { code: PICKER_HOST_BUSY_CODE, name: 'Error',
+    message: 'The screen is already presenting something, so the document picker cannot open yet' };
+  assertEquals(isPickerStrandedError(busy), false);
+  assertEquals(describePickerFailure(busy, {
+    method: 'document', reason: 'threw', elapsedMs: 2, platform: 'ios',
+  }).stranded, false);
+  assertEquals(describePickerFailure(busy, {
+    method: 'document', reason: 'threw', elapsedMs: 2, platform: 'ios',
+  }).error_code, PICKER_HOST_BUSY_CODE);
+});
+
+Deno.test('the real strand is still reported as a strand', () => {
+  const stranded = { code: PICKING_IN_PROGRESS_CODE, name: 'Error',
+    message: 'Different document picking in progress. Await other document picking first' };
+  assertEquals(isPickerStrandedError(stranded), true);
+  assertEquals(describePickerFailure(stranded, {
+    method: 'document', reason: 'threw', elapsedMs: 1, platform: 'ios',
+  }).stranded, true);
 });

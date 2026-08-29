@@ -105,6 +105,15 @@ const STRANDED_PICKER_MESSAGE =
   'Semora needs a restart before it can open your files again. Close the app '
   + 'completely (swipe it away from the app switcher) and reopen it.';
 
+// Said on the SECOND and later taps, once the Files route is known to be dead.
+// The restart is still the only thing that revives it, but a student standing
+// in front of a syllabus wants a way through now — and Photos and the camera
+// are a different native module that the strand never touched.
+const STRANDED_PICKER_MESSAGE_WITH_ALTERNATIVES =
+  STRANDED_PICKER_MESSAGE
+  + '\n\nYou do not have to wait: "Take a photo" and "Choose from Photos" '
+  + 'still work, and read a syllabus just as well.';
+
 // Said when the picker itself refused to open. Names the surface that failed
 // rather than the file, because at this point no file has been chosen — the
 // old copy ("try a different one — PDF works best") sent students hunting for
@@ -274,6 +283,13 @@ export default function ScanScreen() {
     // Camera capture finished with at least one page kept. The multi-page
     // count is the interesting part: it says whether students photograph one
     // page and stop, or work through a whole syllabus.
+
+    // Did the student find a way through after Files died on them? This is the
+    // only measure of whether naming the alternatives actually rescues the
+    // session, rather than just softening the dead end.
+    if (documentPickerStranded) {
+      track('scan_picker_recovered', { screen: 'scan', method: 'camera' });
+    }
     track('scan_source_selected', {
       screen: 'scan', method: 'camera', pages: pages.length, mime: pages[0]?.mimeType ?? null,
     });
@@ -296,6 +312,17 @@ export default function ScanScreen() {
   // A ref, not state: this must be readable and writable synchronously inside
   // safePick, before React could ever re-render.
   const pickerInFlight = useRef(false);
+
+  // Set once expo-document-picker's native context has been stranded.
+  //
+  // Only the Files picker is affected: the strand lives in
+  // expo-document-picker's module-level `pickingContext`, which JS cannot
+  // reach or reset. Photos and the camera go through expo-image-picker — a
+  // different module, still perfectly usable. Keeping the dead Files button
+  // live is what turned one failure into 44 retries for a subscriber who had
+  // paid three minutes earlier, so once this is true the button stops
+  // pretending and the working routes are named instead.
+  const [documentPickerStranded, setDocumentPickerStranded] = useState(false);
 
   // expo-image-picker's WEB build resolves its promise from inside a `change`
   // listener that has no reject path: if the picked file has no MIME mapping
@@ -340,6 +367,13 @@ export default function ScanScreen() {
         interfaceIdiom: (Platform.constants as any)?.interfaceIdiom ?? null,
         appState: AppState.currentState ?? null,
       }));
+      // Remember the strand so the Files card can stop offering a route that
+      // cannot work. Only 'document' matters: the stranded context belongs to
+      // expo-document-picker, and Photos and the camera are a different module.
+      if (isPickerStrandedError(err) && method === 'document') {
+        setDocumentPickerStranded(true);
+      }
+
       // A stranded native context cannot be cleared from JS at all — only a
       // fresh app process clears it. Saying "try again" to someone in that
       // state is advice that cannot work, so the one instruction that does
@@ -479,6 +513,18 @@ export default function ScanScreen() {
     // and is turned away still counts as having tried to scan. Firing it
     // after the gate would make the paywall look like disinterest.
     track('scan_started', { screen: 'scan', method: 'document' });
+
+    // Do not call into a module we already know is stranded. Every such call
+    // throws PickingInProgressException synchronously — the 1ms "failures" in
+    // the telemetry — so the only thing another attempt can produce is another
+    // identical error. Say the one thing that works and point at the routes
+    // that still do.
+    if (documentPickerStranded) {
+      track('scan_picker_blocked', { screen: 'scan', method: 'document', reason: 'stranded' });
+      Alert.alert("Files can't open right now", STRANDED_PICKER_MESSAGE_WITH_ALTERNATIVES);
+      return;
+    }
+
     if (!(await checkScanLimit())) return;
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
@@ -609,6 +655,12 @@ export default function ScanScreen() {
         if (fitted.length > 0 && totalBytes + size > MAX_SCAN_RAW_BYTES) break;
         totalBytes += size;
         fitted.push({ uri: a.uri, mimeType: assetMimeType(a) });
+      }
+      // Did the student find a way through after Files died on them? This is the
+      // only measure of whether naming the alternatives actually rescues the
+      // session, rather than just softening the dead end.
+      if (documentPickerStranded) {
+        track('scan_picker_recovered', { screen: 'scan', method: 'photos' });
       }
       track('scan_source_selected', {
         screen: 'scan', method: 'photos',
@@ -931,10 +983,12 @@ export default function ScanScreen() {
             </View>
             <View style={styles.actionContent}>
               <Text style={[styles.actionTitle, { color: colors.ink }]}>Upload a document</Text>
-              <Text style={[styles.actionSub, { color: colors.ink3 }]}>
-                {Platform.OS === 'android'
-                  ? 'PDF or Word — Drive, Downloads, Files'
-                  : 'PDF or Word — Files, iCloud, Drive'}
+              <Text style={[styles.actionSub, { color: documentPickerStranded ? colors.coral : colors.ink3 }]}>
+                {documentPickerStranded
+                  ? 'Unavailable until you restart Semora — try Photos below'
+                  : Platform.OS === 'android'
+                    ? 'PDF or Word — Drive, Downloads, Files'
+                    : 'PDF or Word — Files, iCloud, Drive'}
               </Text>
             </View>
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />

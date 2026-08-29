@@ -190,3 +190,159 @@ Deno.test('a missing result is a failure, not a silent success', () => {
 Deno.test('a real selection is selected', () => {
   assert(classifyPick(selected) === 'selected');
 });
+
+// ── the timeout path: the strand these tests did not previously cover ───────
+//
+// A timeout does not cancel the native call, and expo-document-picker clears
+// its `pickingContext` only from the picker's own delegate callbacks. So while
+// the picker is still outstanding the module is still busy, and the guard has
+// to say so. Releasing it on the timeout was what let the next tap reach the
+// module and strand it permanently.
+
+Deno.test('a timeout does NOT release the guard while the picker is still outstanding', async () => {
+  const inFlight = cell();
+  let settle: (v: unknown) => void = () => {};
+  const work = () => new Promise((resolve) => { settle = resolve; });
+
+  const result = await runPick({
+    inFlight,
+    waitForTransitions: () => Promise.resolve(),
+    work,
+    onFailure: noop,
+    timeoutMs: 1,
+  });
+
+  assertEquals(classifyPick(result as any), 'failed');
+  assertEquals(inFlight.current, true, 'native is still holding the picker');
+
+  settle({ canceled: true, assets: [] });
+});
+
+Deno.test('the guard is released once the abandoned picker finally settles', async () => {
+  const inFlight = cell();
+  let settle: (v: unknown) => void = () => {};
+  const work = () => new Promise((resolve) => { settle = resolve; });
+
+  await runPick({
+    inFlight,
+    waitForTransitions: () => Promise.resolve(),
+    work,
+    onFailure: noop,
+    timeoutMs: 1,
+  });
+  assertEquals(inFlight.current, true);
+
+  settle({ canceled: true, assets: [] });
+  await new Promise((r) => setTimeout(r, 0));
+
+  assertEquals(inFlight.current, false, 'the picker settled, so the module is free again');
+});
+
+Deno.test('the guard is released when the abandoned picker settles by THROWING', async () => {
+  const inFlight = cell();
+  let fail: (e: unknown) => void = () => {};
+  const work = () => new Promise((_resolve, reject) => { fail = reject; });
+
+  await runPick({
+    inFlight,
+    waitForTransitions: () => Promise.resolve(),
+    work,
+    onFailure: noop,
+    timeoutMs: 1,
+  });
+  assertEquals(inFlight.current, true);
+
+  fail(new Error('late native failure'));
+  await new Promise((r) => setTimeout(r, 0));
+
+  assertEquals(inFlight.current, false);
+});
+
+Deno.test('a tap after a timeout never reaches the native module', async () => {
+  const inFlight = cell();
+  let settle: (v: unknown) => void = () => {};
+  let nativeCalls = 0;
+  const work = () => {
+    nativeCalls += 1;
+    return new Promise((resolve) => { settle = resolve; });
+  };
+
+  await runPick({
+    inFlight, waitForTransitions: () => Promise.resolve(), work, onFailure: noop, timeoutMs: 1,
+  });
+  assertEquals(nativeCalls, 1);
+
+  // This is the tap that used to strand the picker forever.
+  const second = await runPick({
+    inFlight, waitForTransitions: () => Promise.resolve(), work, onFailure: noop, timeoutMs: 1,
+  });
+
+  assertEquals(classifyPick(second as any), 'duplicate');
+  assertEquals(nativeCalls, 1, 'the native module was never called a second time');
+  assertEquals(shouldTrackCancelled(second as any), false);
+
+  settle({ canceled: true, assets: [] });
+});
+
+Deno.test('a timeout is reported as a failure exactly once, never as a cancel', async () => {
+  const inFlight = cell();
+  let settle: (v: unknown) => void = () => {};
+  const reasons: string[] = [];
+
+  const result = await runPick({
+    inFlight,
+    waitForTransitions: () => Promise.resolve(),
+    work: () => new Promise((resolve) => { settle = resolve; }),
+    onFailure: (_err, reason) => { reasons.push(reason); },
+    timeoutMs: 1,
+  });
+
+  assertEquals(reasons, ['timeout']);
+  assertEquals(shouldTrackCancelled(result as any), false);
+
+  // The late settle must not produce a second report.
+  settle({ canceled: true, assets: [] });
+  await new Promise((r) => setTimeout(r, 0));
+  assertEquals(reasons, ['timeout']);
+});
+
+Deno.test('a stalled waitForTransitions times out without stranding the module', async () => {
+  const inFlight = cell();
+  let nativeCalls = 0;
+
+  const result = await runPick({
+    inFlight,
+    waitForTransitions: () => new Promise<void>(() => {}), // never resolves
+    work: () => { nativeCalls += 1; return Promise.resolve(selected); },
+    onFailure: noop,
+    timeoutMs: 1,
+  });
+
+  assertEquals(classifyPick(result as any), 'failed');
+  assertEquals(nativeCalls, 0, 'the picker was never presented, so nothing to strand');
+  // And the guard must NOT be held. A stalled InteractionManager would
+  // otherwise disable the button for the life of the process — the same dead
+  // end as the native strand, reached from the JS side.
+  assertEquals(inFlight.current, false, 'nothing native was reached, so nothing to guard');
+});
+
+Deno.test('a button stalled by transitions still works on the next tap', async () => {
+  const inFlight = cell();
+  let stall = true;
+  let nativeCalls = 0;
+  const deps = () => ({
+    inFlight,
+    waitForTransitions: () => (stall ? new Promise<void>(() => {}) : Promise.resolve()),
+    work: () => { nativeCalls += 1; return Promise.resolve(selected); },
+    onFailure: noop,
+    timeoutMs: 1,
+  });
+
+  await runPick(deps());          // stalls, times out
+  assertEquals(nativeCalls, 0);
+
+  stall = false;
+  const second = await runPick(deps());
+  assertEquals(classifyPick(second as any), 'selected', 'the button recovered');
+  assertEquals(nativeCalls, 1);
+});

@@ -1,0 +1,85 @@
+diff --git a/node_modules/expo-document-picker/ios/DocumentPickerModule.swift b/node_modules/expo-document-picker/ios/DocumentPickerModule.swift
+index 8b093cd..62b187b 100644
+--- a/node_modules/expo-document-picker/ios/DocumentPickerModule.swift
++++ b/node_modules/expo-document-picker/ios/DocumentPickerModule.swift
+@@ -23,6 +23,23 @@ public class DocumentPickerModule: Module, PickingResultHandler {
+         throw MissingViewControllerException()
+       }
+ 
++      // Semora patch 1/2 — never present onto a busy host.
++      //
++      // UIKit refuses to present onto a view controller that is already
++      // presenting, or one that is mid-dismissal, and it refuses SILENTLY: no
++      // throw, no completion, no delegate callback. `pickingContext` is
++      // assigned below BEFORE the presentation is attempted, so a silent
++      // refusal leaves it set for the life of the process and every later call
++      // throws PickingInProgressException instantly. JS cannot clear it; only a
++      // fresh process can. Two paying subscribers hit exactly that, minutes
++      // after subscribing.
++      //
++      // Failing here is recoverable instead: nothing has been assigned yet, and
++      // the caller gets a distinct code it can retry once the transition ends.
++      if currentVc.presentedViewController != nil || currentVc.isBeingDismissed {
++        throw PickerHostBusyException()
++      }
++
+       let documentPickerVC = createDocumentPicker(with: options)
+       let pickerDelegate = DocumentPickingDelegate(resultHandler: self)
+ 
+@@ -44,6 +61,28 @@ public class DocumentPickerModule: Module, PickingResultHandler {
+         documentPickerVC.modalPresentationStyle = .pageSheet
+       }
+       currentVc.present(documentPickerVC, animated: true)
++
++      // Semora patch 2/2 — a watchdog, because a refusal is silent.
++      //
++      // This deliberately does NOT use present's completion handler: that block
++      // runs only after a presentation actually finishes, so in the one case it
++      // would need to catch — UIKit declining to present at all — it never runs.
++      // A scheduled check runs either way.
++      //
++      // Every early return below is a case where nothing is wrong: the picker
++      // reached the screen, a delegate callback already settled the promise, or
++      // a newer pick owns the context now. What remains is a context held for a
++      // picker that never appeared, which is the strand. Release it, so the
++      // module is usable on the next tap instead of for the rest of the process.
++      let thisDelegate = pickerDelegate
++      DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self, weak documentPickerVC] in
++        guard let self = self else { return }
++        if documentPickerVC?.presentingViewController != nil { return }
++        guard let context = self.pickingContext else { return }
++        guard context.delegate === thisDelegate else { return }
++        self.pickingContext = nil
++        context.promise.reject(PickerPresentationFailedException())
++      }
+     }.runOnQueue(.main)
+   }
+ 
+diff --git a/node_modules/expo-document-picker/ios/Exceptions.swift b/node_modules/expo-document-picker/ios/Exceptions.swift
+index 3544f43..5bac0bd 100644
+--- a/node_modules/expo-document-picker/ios/Exceptions.swift
++++ b/node_modules/expo-document-picker/ios/Exceptions.swift
+@@ -17,3 +17,23 @@ internal final class MissingViewControllerException: Exception {
+     "Could not find the current ViewController"
+   }
+ }
++
++// Semora patch. Distinct from PickingInProgressException on purpose: that one
++// means the module is already stranded and only a new process can clear it,
++// while this one means the screen is momentarily busy and the caller may try
++// again once the transition finishes. Collapsing the two would tell a student
++// to restart the app for a condition that resolves itself in a frame.
++internal final class PickerHostBusyException: Exception {
++  override var reason: String {
++    "The screen is already presenting something, so the document picker cannot open yet"
++  }
++}
++
++// Semora patch. The presentation was attempted but the picker never reached
++// the screen. Raised only after releasing pickingContext, so the module stays
++// usable instead of refusing every later call.
++internal final class PickerPresentationFailedException: Exception {
++  override var reason: String {
++    "The document picker was asked to open but never appeared"
++  }
++}

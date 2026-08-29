@@ -115,6 +115,19 @@ export function pickerErrorCode(err: any): string {
 export const PICKING_IN_PROGRESS_CODE = 'ERR_PICKING_IN_PROGRESS';
 
 /**
+ * The code from the patched module's PickerHostBusyException
+ * (patches/expo-document-picker+14.0.8.patch).
+ *
+ * This is the failure that USED to become a strand. The patched module now
+ * refuses before assigning `pickingContext`, so the module stays usable and the
+ * next tap — once the transition has finished — works. It must never be
+ * classified as stranded: telling someone to restart the app for a condition
+ * that clears itself in a frame is the wrong instruction, and it would also
+ * make `stranded` useless as the measure of whether the patch worked.
+ */
+export const PICKER_HOST_BUSY_CODE = 'ERR_PICKER_HOST_BUSY';
+
+/**
  * True when the failure is the native picker refusing because it still thinks
  * a previous pick is running.
  *
