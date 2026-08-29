@@ -56,6 +56,7 @@ interface Phrase {
 export type ReminderStage =
   | 'dueNow'
   | 'finalStretch'
+  | 'lastCall'
   | 'today'
   | 'tomorrow'
   | 'thisWeek'
@@ -132,10 +133,19 @@ export function reminderTiming(
  * technically tomorrow — while 'today', 'tomorrow' and 'thisWeek' can only be
  * chosen when the calendar agrees with them.
  */
-export function classifyStage(leadMinutes: number, daysUntilDue: number): ReminderStage {
+export function classifyStage(
+  leadMinutes: number,
+  daysUntilDue: number,
+  isEveningLastCall = false,
+): ReminderStage {
   if (leadMinutes <= DUE_NOW_MINUTES) return 'dueNow';
   if (leadMinutes <= FINAL_STRETCH_MINUTES) return 'finalStretch';
-  if (daysUntilDue <= 0) return 'today';
+  // A task with no due time gets two same-day nudges — 09:00 and 19:00 — and
+  // both used to be 'today' with an identical body. Fifteen hours of runway
+  // became five and the notification said the same thing, which is the opposite
+  // of the escalation a last call is for. The evening rung is its own stage so
+  // it can sound, and read, like the last window of the day.
+  if (daysUntilDue <= 0) return isEveningLastCall ? 'lastCall' : 'today';
   if (daysUntilDue === 1) return 'tomorrow';
   if (daysUntilDue <= THIS_WEEK_DAYS) return 'thisWeek';
   return 'earlyHeadsUp';
@@ -154,6 +164,7 @@ export function classifyStage(leadMinutes: number, daysUntilDue: number): Remind
  */
 const STAGE_ORDINAL: Record<ReminderStage, number> = {
   dueNow: 0, finalStretch: 1, today: 2, tomorrow: 3, thisWeek: 4, earlyHeadsUp: 5,
+  lastCall: 6,
 };
 
 /**
@@ -253,7 +264,7 @@ const TODAY: readonly Phrase[] = [
   { en: 'Today’s list 📋', es: 'La lista de hoy 📋' },
   { en: 'Due today — plenty doable', es: 'Vence hoy y da tiempo' },
   { en: 'Today’s the day', es: 'Hoy es el día' },
-  { en: 'Before the day’s out', es: 'Antes de que acabe el día' },
+  { en: 'Slot this into today', es: 'Encájalo en el día de hoy' },
   { en: 'Sometime today ⏳', es: 'En algún momento de hoy ⏳' },
   { en: 'Today’s one thing', es: 'La tarea de hoy' },
 ];
@@ -281,12 +292,33 @@ const DUE_NOW: readonly Phrase[] = [
 // Exam and quiz flavours for the calmer stages. Close in, exams use the same
 // plain titles as everything else — a student walking into an exam does not
 // need Semora to be charming.
-const EXAM_EARLY: readonly Phrase[] = [
+/**
+ * Five or more days out. One pool per stage, deliberately.
+ *
+ * These used to be a single EXAM_EARLY serving both the horizon and the
+ * this-week rung, and because the choice is a hash there was nothing stopping
+ * "nice and early" from landing on the nearer one: 41% of exams had a three-day
+ * reminder that sounded further away than their seven-day reminder, which is
+ * backwards from the escalation the ladder exists to create. Splitting the pool
+ * makes the gradient a property of the structure rather than of luck — and it
+ * makes the cross-stage collision guarantee trivial, since separate pools
+ * cannot collide at all.
+ */
+const EXAM_HORIZON: readonly Phrase[] = [
   { en: 'Exam on the horizon 📖', es: 'Examen en el horizonte 📖' },
-  { en: 'Worth starting to review', es: 'Buen momento para empezar a repasar' },
-  { en: 'A good time to start reviewing 📚', es: 'Buen momento para empezar a repasar 📚' },
   { en: 'Exam ahead — nice and early', es: 'Examen a la vista, con tiempo' },
+  { en: 'Worth putting on the calendar 🗓️', es: 'Vale la pena apuntarlo 🗓️' },
+  { en: 'Plenty of time to prepare', es: 'Tiempo de sobra para prepararte' },
+  { en: 'Early notice for this one', es: 'Aviso anticipado para este' },
+];
+
+/** Two to four days out: the week the studying actually has to happen. */
+const EXAM_REVIEW: readonly Phrase[] = [
+  { en: 'Worth starting to review', es: 'Buen momento para empezar a repasar' },
+  { en: 'Review time is now 📚', es: 'Hora de ponerse a repasar 📚' },
   { en: 'Future-you would start now 🙌', es: 'Tu yo del futuro empezaría ya 🙌' },
+  { en: 'A few days to prepare', es: 'Unos días para prepararte' },
+  { en: 'The study window is open 📚', es: 'Se abre la ventana de estudio 📚' },
 ];
 
 const EXAM_SOON: readonly Phrase[] = [
@@ -296,11 +328,37 @@ const EXAM_SOON: readonly Phrase[] = [
   { en: 'Last good study window', es: 'Última buena ventana para estudiar' },
 ];
 
-const PROJECT_EARLY: readonly Phrase[] = [
+/** Five or more days out. Same split, same reason. */
+const PROJECT_HORIZON: readonly Phrase[] = [
   { en: 'Project on the horizon 🛠️', es: 'Proyecto en el horizonte 🛠️' },
   { en: 'Big one — worth a head start', es: 'Uno grande: mejor empezar pronto' },
-  { en: 'Chip away at this one 🧩', es: 'Ve avanzando poco a poco 🧩' },
   { en: 'Projects like an early start', es: 'Los proyectos agradecen empezar pronto' },
+  { en: 'Plenty of runway on this one ✈️', es: 'Tiempo de sobra para este ✈️' },
+];
+
+/** Two to four days out. */
+const PROJECT_START: readonly Phrase[] = [
+  { en: 'Chip away at this one 🧩', es: 'Ve avanzando poco a poco 🧩' },
+  { en: 'Good week to make progress', es: 'Buena semana para avanzar' },
+  { en: 'A few days to build this out 🛠️', es: 'Unos días para sacarlo adelante 🛠️' },
+  { en: 'Time to get moving on this', es: 'Hora de ponerse con esto' },
+];
+
+/**
+ * The last window of the day, for a task with no due time.
+ *
+ * Its own pool because the 09:00 nudge and the 19:00 one used to be
+ * indistinguishable, and the whole point of a last call is that it is later.
+ * Focused rather than alarmed — the deadline here is midnight, not a
+ * consequence, and a student reading this still has an evening.
+ */
+const LAST_CALL: readonly Phrase[] = [
+  { en: 'Last call for today', es: 'Última llamada de hoy' },
+  { en: 'Still time tonight', es: 'Aún hay tiempo esta noche' },
+  { en: 'Tonight’s the window', es: 'Esta noche es el momento' },
+  { en: 'One more push today 💪', es: 'Un último empujón hoy 💪' },
+  { en: 'Evening check-in', es: 'Repaso de la tarde' },
+  { en: 'Before the day’s out', es: 'Antes de que termine el día' },
 ];
 
 /**
@@ -411,6 +469,9 @@ export function describeWhen(
 
   if (daysUntilDue <= 0) {
     if (dueTime) return es ? `vence hoy a las ${formatClock(dueTime, 'es')}` : `due today at ${formatClock(dueTime, 'en')}`;
+    // Only ever reached with no due time and the day still running, so this is
+    // a narrowing of "end of day" rather than a different claim about it.
+    if (stage === 'lastCall') return es ? 'vence esta noche' : 'due tonight';
     return es ? 'vence hoy' : 'due by end of day';
   }
   if (daysUntilDue === 1) {
@@ -484,22 +545,22 @@ function titlePool(
   // A heavy day outranks the flavour of any single task on it: what the student
   // needs first is permission to do one thing, not encouragement about this
   // particular essay. Never applied to dueNow, where nothing outranks clarity.
-  if (busy && stage === 'today') return BUSY_DAY;
+  if (busy && (stage === 'today' || stage === 'finalStretch' || stage === 'lastCall')) return BUSY_DAY;
   if (busy && stage === 'tomorrow') return BUSY_TOMORROW;
-  if (busy && stage === 'finalStretch') return BUSY_DAY;
 
   switch (stage) {
     case 'dueNow': return DUE_NOW;
     case 'finalStretch': return kind === 'exam' || kind === 'quiz' ? EXAM_SOON : FINAL_STRETCH;
+    case 'lastCall': return LAST_CALL;
     case 'today': return TODAY;
     case 'tomorrow': return kind === 'exam' || kind === 'quiz' ? EXAM_SOON : TOMORROW;
     case 'thisWeek':
-      if (kind === 'exam') return EXAM_EARLY;
-      if (kind === 'project') return PROJECT_EARLY;
+      if (kind === 'exam') return EXAM_REVIEW;
+      if (kind === 'project') return PROJECT_START;
       return THIS_WEEK;
     case 'earlyHeadsUp':
-      if (kind === 'exam') return EXAM_EARLY;
-      if (kind === 'project') return PROJECT_EARLY;
+      if (kind === 'exam') return EXAM_HORIZON;
+      if (kind === 'project') return PROJECT_HORIZON;
       return EARLY_HEADS_UP;
   }
 }
@@ -512,7 +573,12 @@ function titlePool(
  * cannot act on. Only the title varies.
  */
 export function buildReminderCopy(input: ReminderCopyInput): NotificationCopy {
-  const stage = classifyStage(input.leadMinutes, input.daysUntilDue);
+  // Negative offsets are Semora's evening last call, and only reachable for a
+  // task with no due time — a timed task's rungs are all counted backwards from
+  // the clock. Both conditions are required so a stray custom offset cannot
+  // relabel a timed deadline as tonight's.
+  const eveningLastCall = (input.rungOffsetMinutes ?? 0) < 0 && !input.dueTime;
+  const stage = classifyStage(input.leadMinutes, input.daysUntilDue, eveningLastCall);
   const kind = classifyKind(input.taskType, input.taskPriority);
   const busy = (input.dayLoad ?? 0) >= BUSY_DAY_THRESHOLD;
 
@@ -527,15 +593,10 @@ export function buildReminderCopy(input: ReminderCopyInput): NotificationCopy {
   // anything would silently rewrite its neighbours. Occasional repetition
   // between two different tasks is the cheaper fault: their bodies still name
   // different work, which is what the student is actually reading for.
-  // A negative offset is Semora's evening last call, which is always the later
-  // of the two same-day rungs. Bumping only that one keeps the cross-stage
-  // guarantee intact: no stage sharing a pool with 'today' ends up a whole pool
-  // width away from it.
-  const lateSameDay = (input.rungOffsetMinutes ?? 0) < 0 ? 1 : 0;
   const phrase = pickPhrase(
     pool,
     `${input.taskId}|${busy ? 'busy' : 'solo'}`,
-    STAGE_ORDINAL[stage] + lateSameDay,
+    STAGE_ORDINAL[stage],
   );
 
   const when = describeWhen(stage, input.daysUntilDue, input.dueTime, input.locale);
@@ -630,7 +691,7 @@ export function buildClassCopy(input: ClassCopyInput): NotificationCopy {
  * adding a phrase cannot quietly opt out of the check.
  */
 export const ALL_PHRASE_POOLS: Readonly<Record<string, readonly Phrase[]>> = {
-  EARLY_HEADS_UP, THIS_WEEK, TOMORROW, TODAY, FINAL_STRETCH, DUE_NOW,
-  EXAM_EARLY, EXAM_SOON, PROJECT_EARLY, BUSY_DAY, BUSY_TOMORROW,
-  PAST_DEADLINE, PAST_DEADLINE_BODY, CLASS_LEAD_IN,
+  EARLY_HEADS_UP, THIS_WEEK, TOMORROW, TODAY, FINAL_STRETCH, DUE_NOW, LAST_CALL,
+  EXAM_HORIZON, EXAM_REVIEW, EXAM_SOON, PROJECT_HORIZON, PROJECT_START,
+  BUSY_DAY, BUSY_TOMORROW, PAST_DEADLINE, PAST_DEADLINE_BODY, CLASS_LEAD_IN,
 };

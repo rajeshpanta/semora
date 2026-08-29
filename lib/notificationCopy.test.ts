@@ -195,6 +195,10 @@ Deno.test('urgency outranks the calendar; the calendar decides the rest', () => 
   assertEquals(classifyStage(180, 1), 'finalStretch'); // tomorrow by date, 3h by clock
   assertEquals(classifyStage(181, 0), 'today');
   assertEquals(classifyStage(900, 0), 'today');        // the untimed case that used to break
+  assertEquals(classifyStage(300, 0, true), 'lastCall');   // the evening rung
+  assertEquals(classifyStage(300, 0, false), 'today');     // the morning one
+  assertEquals(classifyStage(10, 0, true), 'dueNow');      // urgency still outranks it
+  assertEquals(classifyStage(120, 0, true), 'finalStretch');
   assertEquals(classifyStage(181, 1), 'tomorrow');
   assertEquals(classifyStage(2340, 1), 'tomorrow');    // the other untimed case
   assertEquals(classifyStage(3000, 2), 'thisWeek');
@@ -217,6 +221,23 @@ Deno.test('every pool offers a genuine choice', () => {
     assert(pool.length >= 3, `${name} has only ${pool.length} phrases`);
     assertEquals(new Set(pool.map((p) => p.en)).size, pool.length, `${name} repeats English`);
     assertEquals(new Set(pool.map((p) => p.es)).size, pool.length, `${name} repeats Spanish`);
+  }
+});
+
+Deno.test('no phrase appears in two pools', () => {
+  // Different pools can still hand one task the same sentence at two stages,
+  // which is how "Before the day's out" reached both the morning nudge and the
+  // evening last call. Uniqueness across the whole registry closes that.
+  const seen = new Map<string, string>();
+  for (const [name, pool] of Object.entries(ALL_PHRASE_POOLS)) {
+    for (const phrase of pool) {
+      for (const locale of ['en', 'es'] as const) {
+        const key = `${locale}:${phrase[locale]}`;
+        const previous = seen.get(key);
+        assert(!previous, `"${phrase[locale]}" is in both ${previous} and ${name}`);
+        seen.set(key, name);
+      }
+    }
   }
 });
 
@@ -253,10 +274,11 @@ Deno.test('SHARED POOLS: two stages drawing the same pool can never collide', ()
     ['exam soon', ['tomorrow', 'finalStretch'], { taskType: 'exam' }],
     ['quiz soon', ['tomorrow', 'finalStretch'], { taskType: 'quiz' }],
     ['project early', ['thisWeek', 'earlyHeadsUp'], { taskType: 'project' }],
-    ['busy', ['today', 'finalStretch'], { dayLoad: 5 }],
+    // BUSY_DAY is the one pool now serving three stages.
+    ['busy', ['today', 'finalStretch', 'lastCall'], { dayLoad: 5 }],
   ];
   const leadFor: Record<ReminderStage, [number, number]> = {
-    dueNow: [0, 0], finalStretch: [120, 0], today: [400, 0],
+    dueNow: [0, 0], finalStretch: [120, 0], today: [400, 0], lastCall: [300, 0],
     tomorrow: [1000, 1], thisWeek: [3000, 3], earlyHeadsUp: [9000, 6],
   };
   for (const [label, stages, over] of cases) {
@@ -264,7 +286,10 @@ Deno.test('SHARED POOLS: two stages drawing the same pool can never collide', ()
       const taskId = `task-${i}-${label}`;
       const titles = stages.map((st) => {
         const [leadMinutes, daysUntilDue] = leadFor[st];
-        return buildReminderCopy(base({ taskId, leadMinutes, daysUntilDue, ...over })).title;
+        return buildReminderCopy(base({
+          taskId, leadMinutes, daysUntilDue, ...over,
+          ...(st === 'lastCall' ? { dueTime: null, rungOffsetMinutes: -600 } : {}),
+        })).title;
       });
       assertEquals(new Set(titles).size, titles.length, `${label} repeated for ${taskId}: ${titles.join(' | ')}`);
     }
@@ -488,6 +513,47 @@ Deno.test('a snooze landing before the deadline is an ordinary reminder', () => 
 Deno.test('a snooze landing exactly on the deadline is due, not late', () => {
   const copy = buildSnoozedCopy(base({ leadMinutes: 0, daysUntilDue: 0 }));
   assert(/due now/i.test(copy.title), copy.title);
+});
+
+Deno.test('the evening last call escalates instead of repeating the morning', () => {
+  // Fifteen hours of runway became five and the notification used to say the
+  // same thing twice. Title AND body must now both move.
+  for (const locale of ['en', 'es'] as CopyLocale[]) {
+    const shared = { taskId: 'r1', taskTitle: 'Chapter 5', courseName: 'History 210', dueTime: null, locale };
+    const morning = buildReminderCopy(base({ ...shared, leadMinutes: 900, daysUntilDue: 0, rungOffsetMinutes: 0 }));
+    const evening = buildReminderCopy(base({ ...shared, leadMinutes: 300, daysUntilDue: 0, rungOffsetMinutes: -600 }));
+    assert(morning.title !== evening.title, `${locale}: same title twice`);
+    assert(morning.body !== evening.body, `${locale}: same body twice — ${morning.body}`);
+    assert(/tonight|esta noche/i.test(evening.body), `${locale}: evening body did not narrow — ${evening.body}`);
+    assert(!/tonight|esta noche/i.test(morning.body), `${locale}: morning claimed tonight — ${morning.body}`);
+    assert(ALL_PHRASE_POOLS.LAST_CALL.some((p) => p[locale] === evening.title), evening.title);
+  }
+});
+
+Deno.test('only an untimed evening rung becomes a last call', () => {
+  // A timed deadline must never be relabelled as "tonight" by a stray offset.
+  const timed = buildReminderCopy(base({ leadMinutes: 300, daysUntilDue: 0, dueTime: '17:00', rungOffsetMinutes: -600 }));
+  assert(!/tonight/i.test(timed.body), timed.body);
+  assert(/due today at 5:00 PM/.test(timed.body), timed.body);
+});
+
+Deno.test('LADDER GRADIENT: a nearer exam reminder never sounds further away', () => {
+  // EXAM_EARLY once served both the horizon and the this-week rung, so a
+  // "nice and early" phrase could land on the three-day reminder: 41% of exams
+  // read backwards. Separate pools make that structurally impossible.
+  for (let i = 0; i < 3000; i++) {
+    for (const [type, horizon, near] of [
+      ['exam', ALL_PHRASE_POOLS.EXAM_HORIZON, ALL_PHRASE_POOLS.EXAM_REVIEW],
+      ['project', ALL_PHRASE_POOLS.PROJECT_HORIZON, ALL_PHRASE_POOLS.PROJECT_START],
+    ] as const) {
+      const id = `grad-${type}-${i}`;
+      const far = buildReminderCopy(base({ taskId: id, taskType: type, leadMinutes: 10080, daysUntilDue: 7, dueTime: '09:00' })).title;
+      const soon = buildReminderCopy(base({ taskId: id, taskType: type, leadMinutes: 4320, daysUntilDue: 3, dueTime: '09:00' })).title;
+      assert(horizon.some((p) => p.en === far), `${type} 7-day drew the wrong pool: ${far}`);
+      assert(near.some((p) => p.en === soon), `${type} 3-day drew the wrong pool: ${soon}`);
+      assert(far !== soon);
+    }
+  }
 });
 
 Deno.test('two same-day rungs of one task do not read identically', () => {
