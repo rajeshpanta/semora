@@ -74,21 +74,87 @@ export type ReminderKind = 'exam' | 'quiz' | 'project' | 'reading' | 'assignment
  */
 const DUE_NOW_MINUTES = 15;
 const FINAL_STRETCH_MINUTES = 3 * 60;
-const TODAY_MINUTES = 12 * 60;
-const TOMORROW_MINUTES = 30 * 60;
-const THIS_WEEK_MINUTES = 4 * 24 * 60;
+const THIS_WEEK_DAYS = 4;
 
 /** A day with at least this many open tasks is treated as a heavy one. */
 export const BUSY_DAY_THRESHOLD = 3;
 
-export function classifyStage(leadMinutes: number): ReminderStage {
+/**
+ * The two numbers every piece of copy is derived from, computed in ONE place.
+ *
+ * This used to be inlined at each call site in lib/notifications.ts, and the
+ * duplication is what let a bug hide: the tests hand-supplied their own
+ * mutually-consistent pair, so no test could ever reproduce what production
+ * actually computed. Exporting it means the suite exercises the real path.
+ *
+ * `daysUntilDue` is counted between calendar days rather than divided out of
+ * the lead, because 30 hours can be either tomorrow or the day after depending
+ * on the hour, and because a day is 23 or 25 hours twice a year.
+ */
+export function reminderTiming(
+  dueDate: string,
+  dueTime: string | null | undefined,
+  triggerDate: Date,
+): { leadMinutes: number; daysUntilDue: number; dueMoment: Date } {
+  const [year, month, day] = dueDate.split('-').map(Number);
+  let dueMoment = new Date(year, month - 1, day, 23, 59, 59);
+  if (dueTime) {
+    const [h, m] = dueTime.split(':').map(Number);
+    if (Number.isFinite(h) && Number.isFinite(m)) {
+      dueMoment = new Date(year, month - 1, day, h, m, 0);
+    }
+  }
+  const dueDay = new Date(year, month - 1, day).getTime();
+  const triggerDay = new Date(
+    triggerDate.getFullYear(), triggerDate.getMonth(), triggerDate.getDate(),
+  ).getTime();
+  return {
+    leadMinutes: Math.round((dueMoment.getTime() - triggerDate.getTime()) / 60_000),
+    daysUntilDue: Math.round((dueDay - triggerDay) / 86_400_000),
+    dueMoment,
+  };
+}
+
+/**
+ * Urgency first, then the calendar.
+ *
+ * The previous version read the lead time alone, which broke on tasks with no
+ * due time: their deadline is end-of-day but their reminder anchor is 09:00, so
+ * a nudge on the morning something was due carried ~15 hours of lead and was
+ * classified 'tomorrow' — under a body that correctly said "due by end of day".
+ * Every phrase in that pool asserts tomorrow, so every affected student was told
+ * they had an extra day.
+ *
+ * The fix is to let `daysUntilDue` decide any stage whose wording names a
+ * calendar day, and to let the lead decide only the two stages that never name
+ * one. 'dueNow' and 'finalStretch' can therefore still outrank the calendar —
+ * something due at 00:30 really is a couple of hours away even though it is
+ * technically tomorrow — while 'today', 'tomorrow' and 'thisWeek' can only be
+ * chosen when the calendar agrees with them.
+ */
+export function classifyStage(leadMinutes: number, daysUntilDue: number): ReminderStage {
   if (leadMinutes <= DUE_NOW_MINUTES) return 'dueNow';
   if (leadMinutes <= FINAL_STRETCH_MINUTES) return 'finalStretch';
-  if (leadMinutes <= TODAY_MINUTES) return 'today';
-  if (leadMinutes <= TOMORROW_MINUTES) return 'tomorrow';
-  if (leadMinutes <= THIS_WEEK_MINUTES) return 'thisWeek';
+  if (daysUntilDue <= 0) return 'today';
+  if (daysUntilDue === 1) return 'tomorrow';
+  if (daysUntilDue <= THIS_WEEK_DAYS) return 'thisWeek';
   return 'earlyHeadsUp';
 }
+
+/**
+ * Fixed position per stage, used to step the phrase choice.
+ *
+ * Two stages that share a pool would otherwise collide on roughly 1-in-pool-size
+ * of tasks — measured at 20% for exams, whose default ladder draws EXAM_EARLY at
+ * both 'thisWeek' and 'earlyHeadsUp'. Adding the ordinal before the modulo makes
+ * two distinct stages land on distinct entries whenever their ordinals differ by
+ * less than the pool size, which for every pool actually shared here means
+ * never colliding at all. Adding a constant is a bijection modulo n, so the
+ * spread across tasks is unchanged.
+ */
+const STAGE_ORDINAL: Record<ReminderStage, number> = {
+  dueNow: 0, finalStretch: 1, today: 2, tomorrow: 3, thisWeek: 4, earlyHeadsUp: 5,
+};
 
 /**
  * A high-priority task is treated as an exam for tone as well as for slots.
@@ -127,9 +193,16 @@ export function stableHash(input: string): number {
   return hash >>> 0;
 }
 
-/** Pick one entry, always the same one for the same seed. */
-export function pickPhrase<T>(pool: readonly T[], seed: string): T {
-  return pool[stableHash(seed) % pool.length];
+/**
+ * Pick one entry, always the same one for the same seed.
+ *
+ * `step` shifts the choice by a fixed amount so that two stages sharing a pool
+ * cannot land on the same entry. It is added before the modulo, which keeps the
+ * mapping a bijection and so leaves the spread across tasks untouched.
+ */
+export function pickPhrase<T>(pool: readonly T[], seed: string, step = 0): T {
+  const n = pool.length;
+  return pool[(((stableHash(seed) + step) % n) + n) % n];
 }
 
 // ── Titles ───────────────────────────────────────────────────────────────────
@@ -144,7 +217,7 @@ const EARLY_HEADS_UP: readonly Phrase[] = [
   { en: 'A little heads-up', es: 'Un aviso con tiempo' },
   { en: 'Future-you will appreciate this 🙌', es: 'Tu yo del futuro te lo agradecerá 🙌' },
   { en: 'Plenty of runway ✈️', es: 'Tiempo de sobra ✈️' },
-  { en: 'Worth a look this week', es: 'Vale la pena mirarlo esta semana' },
+  { en: 'Worth a look soon', es: 'Vale la pena mirarlo pronto' },
   { en: 'Filed under: not yet urgent', es: 'Archivado en: aún sin prisa' },
   { en: 'Early warning system 📡', es: 'Sistema de aviso anticipado 📡' },
   { en: 'One for the calendar 🗓️', es: 'Uno para el calendario 🗓️' },
@@ -154,23 +227,23 @@ const EARLY_HEADS_UP: readonly Phrase[] = [
 
 const THIS_WEEK: readonly Phrase[] = [
   { en: 'Coming up this week', es: 'Llega esta semana' },
-  { en: 'A few days out 🗓️', es: 'A unos días vista 🗓️' },
+  { en: 'A few days out 🗓️', es: 'En unos días 🗓️' },
   { en: 'Still time to plan this one', es: 'Aún hay tiempo de planearlo' },
-  { en: 'Getting closer 👣', es: 'Cada vez más cerca 👣' },
+  { en: 'Getting closer', es: 'Cada vez más cerca' },
   { en: 'This week’s lineup', es: 'En la lista de esta semana' },
   { en: 'Worth starting soon', es: 'Buen momento para empezar' },
-  { en: 'On deck 🎯', es: 'En la recta 🎯' },
+  { en: 'Next up 🎯', es: 'Lo que sigue 🎯' },
   { en: 'Pencil this in ✏️', es: 'Apúntalo ✏️' },
 ];
 
 const TOMORROW: readonly Phrase[] = [
   { en: 'Tomorrow’s mission 🎯', es: 'La misión de mañana 🎯' },
   { en: 'Heads-up for tomorrow 👋', es: 'Aviso para mañana 👋' },
-  { en: 'On deck for tomorrow', es: 'Para mañana' },
+  { en: 'Up next tomorrow', es: 'Lo siguiente es mañana' },
   { en: 'Due tomorrow — you’ve got time 💪', es: 'Vence mañana: tienes tiempo 💪' },
-  { en: 'Tomorrow, not today 🙂', es: 'Mañana, no hoy 🙂' },
+  { en: 'Tomorrow’s on the list', es: 'Mañana está en la lista' },
   { en: 'Set up for tomorrow', es: 'Prepárate para mañana' },
-  { en: 'One sleep to go 😴', es: 'Falta una noche 😴' },
+  { en: 'A night to prepare 😴', es: 'Una noche para prepararte 😴' },
   { en: 'Tomorrow’s the day', es: 'Mañana es el día' },
 ];
 
@@ -178,11 +251,11 @@ const TODAY: readonly Phrase[] = [
   { en: 'On today’s plate', es: 'En la lista de hoy' },
   { en: 'Still on for today', es: 'Sigue en pie para hoy' },
   { en: 'Today’s list 📋', es: 'La lista de hoy 📋' },
-  { en: 'Due today — plenty doable', es: 'Vence hoy, se puede' },
+  { en: 'Due today — plenty doable', es: 'Vence hoy y da tiempo' },
   { en: 'Today’s the day', es: 'Hoy es el día' },
   { en: 'Before the day’s out', es: 'Antes de que acabe el día' },
   { en: 'Sometime today ⏳', es: 'En algún momento de hoy ⏳' },
-  { en: 'Today’s one thing', es: 'Lo de hoy' },
+  { en: 'Today’s one thing', es: 'La tarea de hoy' },
 ];
 
 const FINAL_STRETCH: readonly Phrase[] = [
@@ -211,9 +284,9 @@ const DUE_NOW: readonly Phrase[] = [
 const EXAM_EARLY: readonly Phrase[] = [
   { en: 'Exam on the horizon 📖', es: 'Examen en el horizonte 📖' },
   { en: 'Worth starting to review', es: 'Buen momento para empezar a repasar' },
-  { en: 'Study time starts now-ish 📚', es: 'La hora de estudiar empieza más o menos ya 📚' },
+  { en: 'A good time to start reviewing 📚', es: 'Buen momento para empezar a repasar 📚' },
   { en: 'Exam ahead — nice and early', es: 'Examen a la vista, con tiempo' },
-  { en: 'Future-you would start today 🙌', es: 'Tu yo del futuro empezaría hoy 🙌' },
+  { en: 'Future-you would start now 🙌', es: 'Tu yo del futuro empezaría ya 🙌' },
 ];
 
 const EXAM_SOON: readonly Phrase[] = [
@@ -238,11 +311,11 @@ const PROJECT_EARLY: readonly Phrase[] = [
  */
 const BUSY_DAY: readonly Phrase[] = [
   { en: 'Busy day — one thing at a time', es: 'Día cargado: una cosa a la vez' },
-  { en: 'Full day ahead. Start here 👇', es: 'Día completo. Empieza por aquí 👇' },
+  { en: 'Full day ahead. Start here', es: 'Día completo. Empieza por aquí' },
   { en: 'A lot on today — this one first', es: 'Hoy hay mucho: empieza por esto' },
   { en: 'Stacked day. One at a time 💪', es: 'Día apretado. Uno a uno 💪' },
   { en: 'Plenty on. Here’s the next one', es: 'Hay bastante. Aquí va el siguiente' },
-  { en: 'The professors coordinated again 😅 One at a time', es: 'Los profes se pusieron de acuerdo otra vez 😅 Uno a uno' },
+  { en: 'All at once, naturally 😅 One at a time', es: 'Todo a la vez, cómo no 😅 Uno a uno' },
   { en: 'Lots today. Just this one for now', es: 'Hoy hay mucho. Por ahora solo esto' },
   { en: 'Big day. Take it in order 📋', es: 'Día grande. Ve por orden 📋' },
   { en: 'Several things today — here’s one', es: 'Hoy hay varias cosas: aquí va una' },
@@ -297,7 +370,7 @@ const PAST_DEADLINE_BODY: readonly Phrase[] = [
 // not in the way; inside half an hour the body stands alone.
 
 const CLASS_LEAD_IN: readonly Phrase[] = [
-  { en: 'Grab your notes', es: 'Coge tus apuntes' },
+  { en: 'Grab your notes', es: 'Trae tus apuntes' },
   { en: 'Heads-up', es: 'Aviso' },
   { en: 'Coming up', es: 'Ya viene' },
   { en: 'Time to head over', es: 'Hora de ir saliendo' },
@@ -319,31 +392,6 @@ export function formatClock(dueTime: string, locale: CopyLocale): string {
 }
 
 /**
- * A rounded, readable distance.
- *
- * Deliberately coarser than lib/notifications.ts's formatLeadTime, which
- * renders "2 days 3 hours 15 minutes". That precision is right for a settings
- * screen and wrong on a lock screen, where the student is reading one line at a
- * glance and the difference between three and four days is what they need.
- */
-export function humanLead(minutes: number, locale: CopyLocale): string {
-  const es = locale === 'es';
-  if (minutes < 60) {
-    const m = Math.max(1, Math.round(minutes));
-    return es ? `${m} min` : `${m} min`;
-  }
-  const hours = minutes / 60;
-  if (hours < 24) {
-    const h = Math.round(hours);
-    if (h <= 1) return es ? '1 hora' : '1 hour';
-    return es ? `${h} horas` : `${h} hours`;
-  }
-  const days = Math.round(hours / 24);
-  if (days <= 1) return es ? '1 día' : '1 day';
-  return es ? `${days} días` : `${days} days`;
-}
-
-/**
  * The "when" clause. Calendar-relative wherever a student would say it that
  * way, and a plain distance otherwise.
  *
@@ -354,7 +402,6 @@ export function humanLead(minutes: number, locale: CopyLocale): string {
  */
 export function describeWhen(
   stage: ReminderStage,
-  leadMinutes: number,
   daysUntilDue: number,
   dueTime: string | null | undefined,
   locale: CopyLocale,
@@ -370,7 +417,31 @@ export function describeWhen(
     if (dueTime) return es ? `vence mañana a las ${formatClock(dueTime, 'es')}` : `due tomorrow at ${formatClock(dueTime, 'en')}`;
     return es ? 'vence mañana' : 'due tomorrow';
   }
-  return es ? `vence en ${humanLead(leadMinutes, 'es')}` : `due in ${humanLead(leadMinutes, 'en')}`;
+  // Counted, not divided. Rounding the lead said "due in 4 days" for something
+  // three calendar days away whenever the task had no due time, because the
+  // lead carried the extra hours out to end-of-day.
+  return es ? `vence en ${daysUntilDue} días` : `due in ${daysUntilDue} days`;
+}
+
+/**
+ * Room for each part of the body, so the deadline is never what gets cut.
+ *
+ * iOS shows roughly two lines of body on the lock screen. The deadline used to
+ * sit last, behind both names, and a real Canvas title plus a real course name
+ * pushed it past character 110 of 117 — exactly where it disappears. The order
+ * is now what the student needs first, and both names are bounded so the middle
+ * segment always lands early enough to survive.
+ */
+const TASK_TITLE_MAX = 60;
+const COURSE_NAME_MAX = 30;
+
+/** Trim on a word boundary when there is one nearby, so it reads as a name. */
+export function clamp(text: string, max: number): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= max) return trimmed;
+  const cut = trimmed.slice(0, max - 1);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > max * 0.6 ? cut.slice(0, space) : cut).trimEnd()}…`;
 }
 
 // ── Assembly ─────────────────────────────────────────────────────────────────
@@ -389,6 +460,14 @@ export interface ReminderCopyInput {
   taskPriority?: string | null;
   /** Open tasks sharing this due date, when the caller can see the whole set. */
   dayLoad?: number;
+  /**
+   * The ladder offset this reminder came from. Used ONLY to tell two rungs of
+   * one task apart when both land in the same stage — an untimed task on the
+   * free tier fires at 09:00 and again at 19:00, and both are 'today', so
+   * without this the student reads the identical sentence twice in a day.
+   * It never influences tone; that still comes from the real distance.
+   */
+  rungOffsetMinutes?: number;
   locale: CopyLocale;
 }
 
@@ -433,7 +512,7 @@ function titlePool(
  * cannot act on. Only the title varies.
  */
 export function buildReminderCopy(input: ReminderCopyInput): NotificationCopy {
-  const stage = classifyStage(input.leadMinutes);
+  const stage = classifyStage(input.leadMinutes, input.daysUntilDue);
   const kind = classifyKind(input.taskType, input.taskPriority);
   const busy = (input.dayLoad ?? 0) >= BUSY_DAY_THRESHOLD;
 
@@ -448,14 +527,40 @@ export function buildReminderCopy(input: ReminderCopyInput): NotificationCopy {
   // anything would silently rewrite its neighbours. Occasional repetition
   // between two different tasks is the cheaper fault: their bodies still name
   // different work, which is what the student is actually reading for.
-  const phrase = pickPhrase(pool, `${input.taskId}|${stage}|${busy ? 'busy' : 'solo'}`);
+  // A negative offset is Semora's evening last call, which is always the later
+  // of the two same-day rungs. Bumping only that one keeps the cross-stage
+  // guarantee intact: no stage sharing a pool with 'today' ends up a whole pool
+  // width away from it.
+  const lateSameDay = (input.rungOffsetMinutes ?? 0) < 0 ? 1 : 0;
+  const phrase = pickPhrase(
+    pool,
+    `${input.taskId}|${busy ? 'busy' : 'solo'}`,
+    STAGE_ORDINAL[stage] + lateSameDay,
+  );
 
-  const when = describeWhen(stage, input.leadMinutes, input.daysUntilDue, input.dueTime, input.locale);
-  const title = input.locale === 'es' ? phrase.es : phrase.en;
+  const when = describeWhen(stage, input.daysUntilDue, input.dueTime, input.locale);
   return {
-    title,
-    body: `${input.taskTitle} · ${input.courseName} · ${when}`,
+    title: input.locale === 'es' ? phrase.es : phrase.en,
+    body: composeBody(input.taskTitle, input.courseName, when),
   };
+}
+
+/**
+ * task · when · course.
+ *
+ * The order is the priority order: what to do, by when, then which class it
+ * belongs to. Course goes last because it is the most expendable — a student
+ * reading "Problem Set 7 · due today at 5:00 PM" already knows enough to act,
+ * and a truncated course name costs them nothing.
+ *
+ * An absent course is dropped rather than rendered, which is what stopped
+ * "Task ·  · due today" from reaching a lock screen.
+ */
+export function composeBody(taskTitle: string, courseName: string, when: string): string {
+  const parts = [clamp(taskTitle ?? '', TASK_TITLE_MAX) || 'Task', when];
+  const course = clamp(courseName ?? '', COURSE_NAME_MAX);
+  if (course) parts.push(course);
+  return parts.join(' · ');
 }
 
 /**
@@ -468,14 +573,22 @@ export function buildReminderCopy(input: ReminderCopyInput): NotificationCopy {
  * work was due.
  */
 export function buildSnoozedCopy(input: ReminderCopyInput): NotificationCopy {
-  if (input.leadMinutes > 0) return buildReminderCopy(input);
+  // >= 0, not > 0: at exactly the due minute the deadline has arrived, it has
+  // not passed, and "the deadline has gone by" would be the wrong thing to say.
+  if (input.leadMinutes >= 0) return buildReminderCopy(input);
 
   const seed = `${input.taskId}|snoozed`;
   const phrase = pickPhrase(PAST_DEADLINE, seed);
   const line = pickPhrase(PAST_DEADLINE_BODY, seed);
+  // Composed differently from a live reminder on purpose. There is no deadline
+  // clause left to protect, and the supportive line is a whole sentence rather
+  // than a phrase — putting a course name after it read as a dangling fragment.
+  const named = [clamp(input.taskTitle ?? '', TASK_TITLE_MAX) || 'Task'];
+  const course = clamp(input.courseName ?? '', COURSE_NAME_MAX);
+  if (course) named.push(course);
   return {
     title: input.locale === 'es' ? phrase.es : phrase.en,
-    body: `${input.taskTitle} · ${input.courseName} — ${input.locale === 'es' ? line.es : line.en}`,
+    body: `${named.join(' · ')} — ${input.locale === 'es' ? line.es : line.en}`,
   };
 }
 

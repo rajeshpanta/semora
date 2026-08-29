@@ -10,6 +10,7 @@ import {
   buildClassCopy,
   buildReminderCopy,
   buildSnoozedCopy,
+  reminderTiming,
 } from '@/lib/notificationCopy';
 import {
   groupRemindersByTask,
@@ -265,22 +266,11 @@ export async function snoozeNotification(response: Notifications.NotificationRes
     const dueDate = typeof data.dueDate === 'string' ? data.dueDate : null;
     if (!taskId || !taskTitle || !courseName || !dueDate) return null;
     const dueTime = typeof data.dueTime === 'string' ? data.dueTime : null;
-    const [y, mo, d] = dueDate.split('-').map(Number);
-    if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return null;
-    let dueMoment = new Date(y, mo - 1, d, 23, 59, 59);
-    if (dueTime) {
-      const [dh, dm] = dueTime.split(':').map(Number);
-      if (Number.isFinite(dh) && Number.isFinite(dm)) dueMoment = new Date(y, mo - 1, d, dh, dm, 0);
-    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return null;
+    const { leadMinutes, daysUntilDue } = reminderTiming(dueDate, dueTime, triggerDate);
+    if (!Number.isFinite(leadMinutes) || !Number.isFinite(daysUntilDue)) return null;
     return buildSnoozedCopy({
-      taskId, taskTitle, courseName,
-      leadMinutes: Math.round((dueMoment.getTime() - triggerDate.getTime()) / 60_000),
-      daysUntilDue: Math.round(
-        (new Date(y, mo - 1, d).getTime() -
-          new Date(triggerDate.getFullYear(), triggerDate.getMonth(), triggerDate.getDate()).getTime()) /
-          86_400_000,
-      ),
-      dueTime,
+      taskId, taskTitle, courseName, leadMinutes, daysUntilDue, dueTime,
       taskType: typeof data.taskType === 'string' ? data.taskType : null,
       locale: getAppLocale(),
     });
@@ -701,16 +691,13 @@ export async function scheduleTaskReminders(
     // Measured from the trigger that survived quiet hours, not from the offset
     // the ladder asked for. moveOutsideQuietHours can push a reminder hours
     // later than its rung intended, and copy derived from the rung would then
-    // describe a deadline that is no longer that far away.
-    const leadMinutes = Math.round((dueMoment.getTime() - triggerDate.getTime()) / 60_000);
-    const daysUntilDue = Math.round(
-      (new Date(year, month - 1, day).getTime() -
-        new Date(triggerDate.getFullYear(), triggerDate.getMonth(), triggerDate.getDate()).getTime()) /
-        86_400_000,
-    );
+    // describe a deadline that is no longer that far away. Computed by the copy
+    // module rather than here so the tests exercise this exact arithmetic.
+    const { leadMinutes, daysUntilDue } = reminderTiming(dueDate, dueTime, triggerDate);
     const copy = buildReminderCopy({
       taskId, taskTitle, courseName, leadMinutes, daysUntilDue,
       dueTime, taskType, taskPriority, dayLoad, locale,
+      rungOffsetMinutes: offsetMinutes,
     });
     await Notifications.scheduleNotificationAsync({
       content: {
