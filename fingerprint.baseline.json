@@ -1,0 +1,7 @@
+{
+  "//": "The native runtime fingerprint this project expects. Updated deliberately, by scripts/check-native-fingerprint.sh --update, whenever a native change is intended. If this file and the generated fingerprint disagree, something changed the native surface without anyone deciding to.",
+  "platform": "ios",
+  "fingerprint": "454b8924f25b756617791a52f262af0b923baa37",
+  "recordedForVersion": "1.11",
+  "recordedForBuild": "55"
+}

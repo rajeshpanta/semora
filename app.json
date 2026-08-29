@@ -4,7 +4,7 @@
     "slug": "semora",
     "version": "1.11",
     "runtimeVersion": {
-      "policy": "appVersion"
+      "policy": "fingerprint"
     },
     "updates": {
       "url": "https://u.expo.dev/063fbdf9-33e3-49b4-8b0b-ba9d6f18490b",
@@ -12,6 +12,11 @@
       "checkAutomatically": "ON_LOAD",
       "requestHeaders": {
         "expo-channel-name": "production"
+      },
+      "codeSigningCertificate": "./certs/certificate.pem",
+      "codeSigningMetadata": {
+        "keyid": "main",
+        "alg": "rsa-v1_5-sha256"
       }
     },
     "icon": "./assets/images/icon.png",
@@ -145,7 +150,9 @@
         "android.permission.USE_BIOMETRIC",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MICROPHONE",
-        "com.android.vending.BILLING"
+        "com.android.vending.BILLING",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     "web": {
@@ -231,7 +238,42 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "063fbdf9-33e3-49b4-8b0b-ba9d6f18490b"
+        "projectId": "063fbdf9-33e3-49b4-8b0b-ba9d6f18490b",
+        "build": {
+          "experimental": {
+            "ios": {
+              "appExtensions": [
+                {
+                  "bundleIdentifier": "com.rajeshpanta.syllabussnap.widget",
+                  "targetName": "SemoraToday",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.rajeshpanta.syllabussnap"
+                    ]
+                  }
+                },
+                {
+                  "bundleIdentifier": "com.rajeshpanta.syllabussnap.watchkitapp.widget",
+                  "targetName": "SemoraWatchComplication",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.rajeshpanta.syllabussnap"
+                    ]
+                  }
+                },
+                {
+                  "bundleIdentifier": "com.rajeshpanta.syllabussnap.watchkitapp",
+                  "targetName": "SemoraWatch",
+                  "entitlements": {
+                    "com.apple.security.application-groups": [
+                      "group.com.rajeshpanta.syllabussnap"
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        }
       }
     },
     "owner": "smallpantas-organization",

@@ -98,7 +98,7 @@ struct SemoraComplicationView: View {
         .foregroundStyle(brand)
 
       if !entry.hasData {
-        Text("Open Semora on iPhone")
+        Text(entry.snapshot.strings("complication.openPhone", "Open Semora on iPhone"))
           .font(.caption2)
           .foregroundStyle(.secondary)
       } else {
@@ -114,7 +114,7 @@ struct SemoraComplicationView: View {
             .foregroundStyle(.secondary)
             .lineLimit(1)
         } else if entry.snapshot.state == .ready, !entry.snapshot.hasWork {
-          Text("Nothing due or overdue")
+          Text(entry.snapshot.strings("complication.empty", "Nothing due or overdue"))
             .font(.caption2)
             .foregroundStyle(.secondary)
             .lineLimit(1)
@@ -123,7 +123,7 @@ struct SemoraComplicationView: View {
         // Only said when it matters. A freshness line on every glance is noise;
         // on a stale one it is the most important thing on the face.
         if entry.snapshot.isStale(now: entry.date), entry.snapshot.state == .ready {
-          Text("Not synced recently")
+          Text(entry.snapshot.strings("complication.stale", "Not synced recently"))
             .font(.system(size: 9))
             .foregroundStyle(.orange)
             .lineLimit(1)
@@ -139,7 +139,9 @@ struct SemoraComplicationView: View {
         .font(.title3)
         .fontWeight(.semibold)
         .foregroundStyle(tint)
-      Text(entry.snapshot.overdueCount > 0 ? "late" : "today")
+      Text(entry.snapshot.overdueCount > 0
+        ? entry.snapshot.strings("complication.lateLower", "late")
+        : entry.snapshot.strings("complication.todayLower", "today"))
         .font(.system(size: 9))
         .foregroundStyle(.secondary)
     }
@@ -149,7 +151,7 @@ struct SemoraComplicationView: View {
     // One line, no styling to speak of — the face owns the typography here.
     Text(entry.hasData
          ? (complicationDetail(entry.snapshot, now: entry.date) ?? complicationHeadline(entry.snapshot))
-         : "Semora · open on iPhone")
+         : entry.snapshot.strings("complication.inlineSignedOut", "Semora · open on iPhone"))
   }
 }
 

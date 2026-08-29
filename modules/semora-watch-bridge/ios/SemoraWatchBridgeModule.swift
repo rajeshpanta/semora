@@ -81,6 +81,15 @@ struct WatchSnapshotRecord: Record {
   @Field var dueTodayCount: Int = 0
   @Field var overdueCount: Int = 0
   @Field var items: [WatchTaskRecord] = []
+  /// The Watch's own vocabulary, localised by the phone.
+  ///
+  /// The Watch and its complication ship no localisation of their own, and a
+  /// .lproj in each would have left every future wording change needing an App
+  /// Store build. Sending the words alongside the data localises both surfaces
+  /// AND makes their copy changeable over the air. Empty is valid: a payload
+  /// from an older JS bundle carries none, and the Watch falls back to the
+  /// English it was compiled with.
+  @Field var strings: [String: String] = [:]
 }
 
 /// The phone's answer to one completion request.
@@ -267,6 +276,7 @@ final class SemoraWatchSessionCoordinator: NSObject, WCSessionDelegate {
       PayloadKey.dueTodayCount: snapshot.dueTodayCount,
       PayloadKey.overdueCount: snapshot.overdueCount,
       "items": snapshot.items.map { $0.asDictionary() },
+      "strings": snapshot.strings,
     ]
     return deliver(context)
   }

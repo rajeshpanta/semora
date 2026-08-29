@@ -68,6 +68,12 @@ export interface NativeWatchSnapshot {
     dueTime?: string | null;
     bucket: string;
   }>;
+  /**
+   * Localised chrome for the Watch and its complication, keyed by
+   * lib/surfaceStrings.ts. Optional so an older native build ignores it, and a
+   * Watch that receives none falls back to the English it shipped with.
+   */
+  strings?: Record<string, string>;
 }
 
 /** What the Watch asks for. Re-validated in lib/watchCompletion.ts. */

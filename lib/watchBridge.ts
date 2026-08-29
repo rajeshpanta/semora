@@ -4,6 +4,8 @@ import {
   signedOutWatchSnapshot,
   type BuildWatchSnapshotInput,
 } from '@/lib/watchSnapshot';
+import { getAppLocale } from '@/lib/i18n';
+import { buildSurfaceStrings } from '@/lib/surfaceStrings';
 
 /**
  * Pushes the Watch payload out of the app, alongside the home-screen widget.
@@ -39,7 +41,14 @@ export function updateWatchSnapshot(input: BuildWatchSnapshotInput): void {
     // tests, an older binary) never touch it at import time.
     const { sendWatchSnapshot } = require('@/modules/semora-watch-bridge');
     // Fire and forget: the Today screen must not await a Bluetooth accessory.
-    sendWatchSnapshot(buildWatchSnapshot(input))?.catch?.(() => {});
+      // The Watch ships no localisation of its own, so the phone — which holds
+      // both the locale and the dictionary — sends its vocabulary alongside its
+      // data. Resolved here rather than inside buildWatchSnapshot so that module
+      // stays a pure shaper with no locale dependency and no new import.
+      sendWatchSnapshot({
+        ...buildWatchSnapshot(input),
+        strings: buildSurfaceStrings(getAppLocale() === 'es' ? 'es' : 'en'),
+      })?.catch?.(() => {});
   } catch {
     // Watch data is a nice-to-have; never let it surface as an app error.
   }

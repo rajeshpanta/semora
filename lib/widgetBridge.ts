@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 import type { TaskWithCourse } from '@/lib/queries';
+import { getAppLocale } from '@/lib/i18n';
+import { buildSurfaceStrings } from '@/lib/surfaceStrings';
 
 /**
  * Pushes the "Up Next" payload into the App Group so the home-screen
@@ -21,12 +23,16 @@ const WIDGET_KIND = 'SemoraTodayWidget';
 const DUE_THIS_WEEK_KIND = 'SemoraDueThisWeekWidget';
 
 function dueLabelFor(dueDate: string, todayStr: string, tomorrowStr: string): string {
-  if (dueDate <= todayStr) return 'Today';
-  if (dueDate === tomorrowStr) return 'Tomorrow';
+  // This already ran in JS; it was simply never localised. The widget still
+  // recomputes its own label from the raw date at render time — this is what it
+  // shows until the next redraw.
+  const t = buildSurfaceStrings(getAppLocale() === 'es' ? 'es' : 'en');
+  if (dueDate <= todayStr) return t['due.today'];
+  if (dueDate === tomorrowStr) return t['due.tomorrow'];
   const due = new Date(dueDate + 'T00:00:00');
   const today = new Date(todayStr + 'T00:00:00');
   const days = Math.round((due.getTime() - today.getTime()) / 86_400_000);
-  return `In ${days} days`;
+  return t['due.inDays'].replace('{n}', String(days));
 }
 
 /** A single "due this week" row for the second widget. Deliberately the
@@ -94,6 +100,11 @@ export function updateTodayWidget(
         items,
         streak,
         dueThisWeek,
+        // The widget extension has no localisation of its own either, so its
+        // vocabulary travels with its data. Additive like everything above: an
+        // older widget binary ignores the key, and a newer one falls back to
+        // English when an older JS bundle omits it.
+        strings: buildSurfaceStrings(getAppLocale() === 'es' ? 'es' : 'en'),
       }),
     );
     ExtensionStorage.reloadWidget(WIDGET_KIND);

@@ -182,6 +182,18 @@ struct CompanionView: View {
 
   private let brand = Color(red: 0.42, green: 0.27, blue: 0.76)
 
+  /// Look a label up in whatever the phone last sent, falling back to the
+  /// English compiled into this build. Reads the live snapshot each time rather
+  /// than caching, so a language change on the phone reaches the wrist on the
+  /// next context without the view needing to know it happened.
+  private func t(_ key: String, _ fallback: String) -> String {
+    (store.snapshot?.strings ?? SurfaceStrings(nil))(key, fallback)
+  }
+
+  private func t(_ key: String, _ fallback: String, n: Int) -> String {
+    (store.snapshot?.strings ?? SurfaceStrings(nil))(key, fallback, n: n)
+  }
+
   var body: some View {
     ScrollView {
       VStack(alignment: .leading, spacing: 10) {
@@ -204,8 +216,8 @@ struct CompanionView: View {
       case .signedOut:
         // Never a blank "all clear" — that would read as good news.
         MessageBlock(
-          title: "Signed out",
-          detail: "Sign in on your iPhone to see your work here."
+          title: t("watch.signedOut.title", "Signed out"),
+          detail: t("watch.signedOut.body", "Sign in on your iPhone to see your work here.")
         )
       case .ready:
         readyContent(snapshot)
@@ -214,10 +226,10 @@ struct CompanionView: View {
       // A settled state, not a loading one. There is nothing to wait for: if
       // the phone had sent something, it would already be here.
       MessageBlock(
-        title: "No data yet",
+        title: t("watch.noData.title", "No data yet"),
         detail: store.sessionState == "activated"
-          ? "Open Semora on your iPhone to sync."
-          : "Connecting to your iPhone…"
+          ? t("watch.noData.sync", "Open Semora on your iPhone to sync.")
+          : t("watch.noData.connecting", "Connecting to your iPhone…")
       )
     }
   }
@@ -227,20 +239,24 @@ struct CompanionView: View {
     CountsRow(
       dueToday: snapshot.dueTodayCount,
       overdue: snapshot.overdueCount,
-      brand: brand
+      brand: brand,
+      todayLabel: t("watch.today", "Today"),
+      overdueLabel: t("watch.overdue", "Overdue")
     )
 
-    let freshness = WatchFreshness.describe(updatedAt: snapshot.updatedAt, now: now)
+    let freshness = WatchFreshness.describe(updatedAt: snapshot.updatedAt, now: now, strings: snapshot.strings)
     Text(freshness.label)
       .font(.caption2)
       .foregroundStyle(freshness.isStale ? .orange : .secondary)
 
     if snapshot.tasks.isEmpty {
       MessageBlock(
-        title: snapshot.overdueCount > 0 ? "Nothing due today" : "You're all caught up",
+        title: snapshot.overdueCount > 0
+          ? t("watch.nothingToday.title", "Nothing due today")
+          : t("watch.allClear.title", "You're all caught up"),
         detail: snapshot.overdueCount > 0
-          ? "Still \(snapshot.overdueCount) overdue on your iPhone."
-          : "Nothing due today or coming up."
+          ? t("watch.nothingToday.body", "Still {n} overdue on your iPhone.", n: snapshot.overdueCount)
+          : t("watch.allClear.body", "Nothing due today or coming up.")
       )
     } else {
       ForEach(snapshot.tasks) { task in
@@ -248,13 +264,14 @@ struct CompanionView: View {
           task: task,
           now: now,
           state: store.state(for: task.id),
+          strings: snapshot.strings,
           onComplete: { store.requestCompletion(for: task) }
         )
       }
     }
 
     if snapshot.isFutureSchema {
-      Text("Update Semora on your Watch to see everything your iPhone is sending.")
+      Text(t("watch.futureSchema", "Update Semora on your Watch to see everything your iPhone is sending."))
         .font(.caption2)
         .foregroundStyle(.orange)
     }
@@ -265,14 +282,16 @@ private struct CountsRow: View {
   let dueToday: Int
   let overdue: Int
   let brand: Color
+  let todayLabel: String
+  let overdueLabel: String
 
   var body: some View {
     HStack(spacing: 8) {
-      CountTile(value: dueToday, label: "Today", tint: brand)
+      CountTile(value: dueToday, label: todayLabel, tint: brand)
       // Overdue only earns a tile when there is something overdue — a
       // permanent "0 overdue" is noise on a screen this size.
       if overdue > 0 {
-        CountTile(value: overdue, label: "Overdue", tint: .red)
+        CountTile(value: overdue, label: overdueLabel, tint: .red)
       }
     }
   }
@@ -304,6 +323,7 @@ private struct TaskRow: View {
   let task: WatchTask
   let now: Date
   let state: WatchRowState
+  let strings: SurfaceStrings
   let onComplete: () -> Void
 
   var body: some View {
@@ -334,13 +354,13 @@ private struct TaskRow: View {
           case .pending:
             // Not a spinner: this can legitimately take minutes if the phone
             // is away, and a spinner would read as "about to finish".
-            Text("Sending…").foregroundStyle(.secondary)
+            Text(strings("watch.row.sending", "Sending…")).foregroundStyle(.secondary)
           case .done:
-            Text("Completed").foregroundStyle(.green)
+            Text(strings("watch.row.completed", "Completed")).foregroundStyle(.green)
           case .failed:
-            Text("Didn't send · tap to retry").foregroundStyle(.orange)
+            Text(strings("watch.row.failed", "Didn't send · tap to retry")).foregroundStyle(.orange)
           case .idle:
-            Text(watchDueLabel(dueDate: task.dueDate, dueTime: task.dueTime, now: now))
+            Text(watchDueLabel(dueDate: task.dueDate, dueTime: task.dueTime, now: now, strings: strings))
               .foregroundStyle(task.bucket == .overdue ? .red : .secondary)
             Text("·").foregroundStyle(.secondary)
             Text(task.course)

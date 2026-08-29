@@ -32,6 +32,30 @@ enum ComplicationState: String {
 }
 
 /// Everything a face can show, and nothing more.
+/// The phone's vocabulary for this build's UI.
+///
+/// Deliberately a copy of the Watch app's SurfaceStrings, under its own name.
+///
+/// @bacons/apple-targets gives each target its own synchronized root group, so
+/// there is no file both targets can compile — and scripts/run-watch-model-tests.sh
+/// compiles both models into ONE module, where two types of the same name would
+/// collide. Twenty duplicated lines cost less than a build-system change, and
+/// the English fallbacks make each copy independently correct.
+struct ComplicationStrings: Equatable {
+  private let map: [String: String]
+
+  init(_ map: [String: String]?) { self.map = map ?? [:] }
+
+  func callAsFunction(_ key: String, _ fallback: String) -> String {
+    let value = map[key]
+    return (value?.isEmpty == false) ? value! : fallback
+  }
+
+  func callAsFunction(_ key: String, _ fallback: String, n: Int) -> String {
+    callAsFunction(key, fallback).replacingOccurrences(of: "{n}", with: String(n))
+  }
+}
+
 struct ComplicationSnapshot: Equatable {
   var state: ComplicationState
   var dueTodayCount: Int
@@ -42,6 +66,8 @@ struct ComplicationSnapshot: Equatable {
   var nextDueDate: String?
   var nextBucket: String?
   var updatedAt: Date?
+  /// Localised chrome from the phone; empty means "use the compiled English".
+  var strings: ComplicationStrings = ComplicationStrings(nil)
 
   /// Must match WatchFreshness.staleAfter in the Watch app.
   static let staleAfter: TimeInterval = 6 * 60 * 60
@@ -98,22 +124,25 @@ func decodeComplicationSnapshot(from context: [String: Any]) -> ComplicationSnap
 /// late, then something due today, then the next thing coming, then the fact
 /// that there is nothing.
 func complicationHeadline(_ snapshot: ComplicationSnapshot) -> String {
+  let t = snapshot.strings
   switch snapshot.state {
-  case .signedOut: return "Sign in on iPhone"
+  case .signedOut: return t("complication.signIn", "Sign in on iPhone")
   case .ready:
     if snapshot.overdueCount > 0 {
-      let plural = snapshot.overdueCount == 1 ? "" : "s"
       if snapshot.dueTodayCount > 0 {
-        return "\(snapshot.overdueCount) overdue · \(snapshot.dueTodayCount) today"
+        return "\(snapshot.overdueCount) \(t("complication.overdueLower", "overdue")) · \(snapshot.dueTodayCount) \(t("complication.todayLower", "today"))"
       }
-      return "\(snapshot.overdueCount) task\(plural) overdue"
+      return snapshot.overdueCount == 1
+        ? t("count.overdue.one", "{n} task overdue", n: snapshot.overdueCount)
+        : t("count.overdue.many", "{n} tasks overdue", n: snapshot.overdueCount)
     }
     if snapshot.dueTodayCount > 0 {
-      let plural = snapshot.dueTodayCount == 1 ? "" : "s"
-      return "\(snapshot.dueTodayCount) task\(plural) due today"
+      return snapshot.dueTodayCount == 1
+        ? t("count.dueToday.one", "{n} task due today", n: snapshot.dueTodayCount)
+        : t("count.dueToday.many", "{n} tasks due today", n: snapshot.dueTodayCount)
     }
-    if snapshot.nextTitle != nil { return "Nothing due today" }
-    return "All caught up"
+    if snapshot.nextTitle != nil { return t("complication.nothingToday", "Nothing due today") }
+    return t("complication.allCaught", "All caught up")
   }
 }
 
@@ -133,7 +162,7 @@ func complicationDetail(_ snapshot: ComplicationSnapshot, now: Date, calendar: C
   guard snapshot.state == .ready else { return nil }
   guard let title = snapshot.nextTitle else { return nil }
   guard let dueDate = snapshot.nextDueDate else { return title }
-  return "\(complicationDueLabel(dueDate: dueDate, now: now, calendar: calendar)) · \(title)"
+  return "\(complicationDueLabel(dueDate: dueDate, now: now, calendar: calendar, strings: snapshot.strings)) · \(title)"
 }
 
 /// Day label, recomputed on the watch so a face that said "Tomorrow" last night
@@ -142,7 +171,7 @@ func complicationDetail(_ snapshot: ComplicationSnapshot, now: Date, calendar: C
 /// Deliberately terser than the Watch app's watchDueLabel — a complication has
 /// no room for a time, and the label is only there to say how urgent the title
 /// beside it is.
-func complicationDueLabel(dueDate: String, now: Date, calendar: Calendar = .current) -> String {
+func complicationDueLabel(dueDate: String, now: Date, calendar: Calendar = .current, strings: ComplicationStrings = ComplicationStrings(nil)) -> String {
   let parser = DateFormatter()
   parser.dateFormat = "yyyy-MM-dd"
   parser.calendar = calendar
@@ -156,9 +185,9 @@ func complicationDueLabel(dueDate: String, now: Date, calendar: Calendar = .curr
   ).day ?? 0
 
   switch days {
-  case ..<0: return "Late"
-  case 0: return "Today"
-  case 1: return "Tomorrow"
+  case ..<0: return strings("complication.late", "Late")
+  case 0: return strings("due.today", "Today")
+  case 1: return strings("due.tomorrow", "Tomorrow")
   case 2...6:
     let weekday = DateFormatter()
     weekday.dateFormat = "EEE"

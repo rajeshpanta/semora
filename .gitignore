@@ -75,3 +75,17 @@ client_secret*.json
 
 # Search Console OAuth refresh token (scripts/gsc.mjs). Public repo — never commit.
 scripts/.gsc-token.json
+
+# ── Expo OTA code signing ───────────────────────────────────────
+# The PRIVATE key signs every future update. It must never be committed: this
+# repo is public, and anyone holding it could publish JavaScript that every
+# installed copy of Semora would accept as genuine. Back it up beside the Apple
+# .p8 keys in ~/Semora-Recovery — losing it means every already-installed
+# binary can no longer be updated over the air, only replaced through the App
+# Store.
+keys/
+
+# The CERTIFICATE is the public half and MUST be committed. It is compiled into
+# the binary, so a checkout without it cannot produce a build that trusts our
+# updates. `*.pem` above would otherwise swallow it.
+!certs/certificate.pem

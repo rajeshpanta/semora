@@ -27,18 +27,36 @@ enum DueLabel {
     return f
   }()
 
-  static func compute(_ task: WidgetTask, now: Date) -> String {
+  /// How soon, independent of what it is called.
+  ///
+  /// Split out from `compute` because the two call sites styled their label by
+  /// comparing it to the literal "Today" or "Overdue". That worked only while
+  /// the widget was English-only; the moment the phone supplies the words, a
+  /// Spanish "Hoy" would silently lose its highlight. Urgency is a fact about
+  /// the date, so it is now derived from the date.
+  enum Urgency { case overdue, today, later }
+
+  static func urgency(_ task: WidgetTask, now: Date) -> Urgency {
+    guard let raw = task.dueDate, let due = formatter.date(from: raw) else { return .later }
+    let cal = Calendar.current
+    if cal.isDate(due, inSameDayAs: now) { return .today }
+    if due < cal.startOfDay(for: now) { return .overdue }
+    return .later
+  }
+
+  static func compute(_ task: WidgetTask, now: Date, strings: WidgetStrings = WidgetStrings(nil)) -> String {
     guard let raw = task.dueDate, let due = formatter.date(from: raw) else {
+      // The label the phone already rendered, which it localised on the way in.
       return task.dueLabel
     }
     let cal = Calendar.current
-    if cal.isDate(due, inSameDayAs: now) { return "Today" }
-    if due < cal.startOfDay(for: now) { return "Overdue" }
+    if cal.isDate(due, inSameDayAs: now) { return strings("due.today", "Today") }
+    if due < cal.startOfDay(for: now) { return strings("widget.overdue", "Overdue") }
     if let tomorrow = cal.date(byAdding: .day, value: 1, to: now), cal.isDate(due, inSameDayAs: tomorrow) {
-      return "Tomorrow"
+      return strings("due.tomorrow", "Tomorrow")
     }
     let days = cal.dateComponents([.day], from: cal.startOfDay(for: now), to: due).day ?? 0
-    return "In \(days) days"
+    return strings("due.inDays", "In {n} days", n: days)
   }
 }
 
@@ -57,11 +75,14 @@ struct DueThisWeekItem: Codable, Identifiable {
 
 extension DueThisWeekItem {
   // Reuse the Up Next label logic by projecting onto a WidgetTask.
-  func computedLabel(now: Date) -> String {
-    DueLabel.compute(
-      WidgetTask(id: id, title: title, course: "", colorHex: colorHex, dueLabel: dueLabel, dueDate: dueDate),
-      now: now
-    )
+  func computedLabel(now: Date, strings: WidgetStrings = WidgetStrings(nil)) -> String {
+    DueLabel.compute(projected, now: now, strings: strings)
+  }
+
+  func urgency(now: Date) -> DueLabel.Urgency { DueLabel.urgency(projected, now: now) }
+
+  private var projected: WidgetTask {
+    WidgetTask(id: id, title: title, course: "", colorHex: colorHex, dueLabel: dueLabel, dueDate: dueDate)
   }
 }
 
@@ -74,6 +95,31 @@ struct WidgetPayload: Codable {
   // dueThisWeek keys) still decodes cleanly into this newer struct.
   var streak: Int?
   var dueThisWeek: [DueThisWeekItem]?
+  /// Localised chrome, keyed by lib/surfaceStrings.ts. Optional for the same
+  /// reason as the two above: a payload written by an older app version simply
+  /// has none, and every label below falls back to the English compiled here.
+  var strings: [String: String]?
+}
+
+/// The phone's vocabulary for this build's UI.
+///
+/// The widget extension ships no localisation of its own, and a `.lproj` would
+/// have left every future wording change needing an App Store build. Looking
+/// each label up in the payload — with the compiled English as the fallback —
+/// localises it and makes its copy changeable over the air at the same time.
+struct WidgetStrings {
+  private let map: [String: String]
+
+  init(_ map: [String: String]?) { self.map = map ?? [:] }
+
+  func callAsFunction(_ key: String, _ fallback: String) -> String {
+    let value = map[key]
+    return (value?.isEmpty == false) ? value! : fallback
+  }
+
+  func callAsFunction(_ key: String, _ fallback: String, n: Int) -> String {
+    callAsFunction(key, fallback).replacingOccurrences(of: "{n}", with: String(n))
+  }
 }
 
 enum SharedData {
@@ -163,6 +209,7 @@ struct Provider: TimelineProvider {
 struct TaskRow: View {
   let task: WidgetTask
   let now: Date
+  var strings: WidgetStrings = WidgetStrings(nil)
   var body: some View {
     HStack(spacing: 7) {
       Circle()
@@ -178,23 +225,25 @@ struct TaskRow: View {
           .lineLimit(1)
       }
       Spacer(minLength: 4)
-      let label = DueLabel.compute(task, now: now)
+      let label = DueLabel.compute(task, now: now, strings: strings)
+      let urgency = DueLabel.urgency(task, now: now)
       Text(label)
         .font(.system(size: 10, weight: .bold))
-        .foregroundStyle(label == "Today" || label == "Overdue" ? Color.brand : Color.secondary)
+        .foregroundStyle(urgency == .later ? Color.secondary : Color.brand)
     }
   }
 }
 
 struct EmptyStateView: View {
+  var strings: WidgetStrings = WidgetStrings(nil)
   var body: some View {
     VStack(spacing: 4) {
       Image(systemName: "checkmark.circle.fill")
         .font(.system(size: 22))
         .foregroundStyle(Color.brand)
-      Text("All clear")
+      Text(strings("widget.allClear", "All clear"))
         .font(.system(size: 12, weight: .semibold))
-      Text("Open Semora to scan a syllabus")
+      Text(strings("widget.scanPrompt", "Open Semora to scan a syllabus"))
         .font(.system(size: 9))
         .foregroundStyle(.secondary)
         .multilineTextAlignment(.center)
@@ -205,17 +254,18 @@ struct EmptyStateView: View {
 struct SmallView: View {
   let payload: WidgetPayload?
   let now: Date
+  var strings: WidgetStrings = WidgetStrings(nil)
   var body: some View {
     if let p = payload, let first = p.items.first {
       VStack(alignment: .leading, spacing: 5) {
         HStack {
-          Text("UP NEXT")
+          Text(strings("widget.upNext", "Up Next").uppercased())
             .font(.system(size: 9, weight: .heavy))
             .foregroundStyle(Color.brand)
             .kerning(1)
           Spacer()
           if p.dueTodayCount > 0 {
-            Text("\(p.dueTodayCount) today")
+            Text("\(p.dueTodayCount) \(strings("widget.todayLower", "today"))")
               .font(.system(size: 9, weight: .bold))
               .foregroundStyle(.secondary)
           }
@@ -227,7 +277,7 @@ struct SmallView: View {
         Text(first.title)
           .font(.system(size: 14, weight: .bold, design: .serif))
           .lineLimit(2)
-        Text("\(first.course) · \(DueLabel.compute(first, now: now))")
+        Text("\(first.course) · \(DueLabel.compute(first, now: now, strings: strings))")
           .font(.system(size: 10))
           .foregroundStyle(.secondary)
           .lineLimit(1)
@@ -235,7 +285,7 @@ struct SmallView: View {
       }
       .frame(maxWidth: .infinity, alignment: .leading)
     } else {
-      EmptyStateView()
+      EmptyStateView(strings: strings)
     }
   }
 }
@@ -243,6 +293,7 @@ struct SmallView: View {
 struct MediumView: View {
   let payload: WidgetPayload?
   let now: Date
+  var strings: WidgetStrings = WidgetStrings(nil)
   var body: some View {
     if let p = payload, !p.items.isEmpty {
       VStack(alignment: .leading, spacing: 6) {
@@ -252,18 +303,22 @@ struct MediumView: View {
             .foregroundStyle(Color.brand)
             .kerning(1)
           Spacer()
-          Text(p.dueTodayCount > 0 ? "\(p.dueTodayCount) due today" : "Nothing due today")
+          Text(p.dueTodayCount > 0
+          ? (p.dueTodayCount == 1
+             ? strings("count.dueToday.one", "{n} task due today", n: p.dueTodayCount)
+             : strings("count.dueToday.many", "{n} tasks due today", n: p.dueTodayCount))
+          : strings("widget.nothingToday", "Nothing due today"))
             .font(.system(size: 9, weight: .bold))
             .foregroundStyle(.secondary)
         }
         ForEach(p.items.prefix(3)) { t in
-          TaskRow(task: t, now: now)
+          TaskRow(task: t, now: now, strings: strings)
         }
         Spacer(minLength: 0)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     } else {
-      EmptyStateView()
+      EmptyStateView(strings: strings)
     }
   }
 }
@@ -294,6 +349,7 @@ struct StreakBadge: View {
 struct DueRow: View {
   let item: DueThisWeekItem
   let now: Date
+  var strings: WidgetStrings = WidgetStrings(nil)
   var body: some View {
     HStack(spacing: 7) {
       RoundedRectangle(cornerRadius: 2)
@@ -303,10 +359,11 @@ struct DueRow: View {
         .font(.system(size: 12, weight: .semibold))
         .lineLimit(1)
       Spacer(minLength: 4)
-      let label = item.computedLabel(now: now)
+      let label = item.computedLabel(now: now, strings: strings)
+      let urgency = item.urgency(now: now)
       Text(label)
         .font(.system(size: 10, weight: .bold))
-        .foregroundStyle(label == "Today" || label == "Overdue" ? Color.coral : Color.secondary)
+        .foregroundStyle(urgency == .later ? Color.secondary : Color.coral)
     }
   }
 }
@@ -323,13 +380,14 @@ struct GroupedDueList: View {
     var order: [String] = []
     var map: [String: [DueThisWeekItem]] = [:]
     for it in items.prefix(maxRows) {
-      let label = it.computedLabel(now: now)
+      let label = it.computedLabel(now: now, strings: strings)
       if map[label] == nil { order.append(label) }
       map[label, default: []].append(it)
     }
     return order.map { ($0, map[$0] ?? []) }
   }
 
+  var strings: WidgetStrings = WidgetStrings(nil)
   var body: some View {
     VStack(alignment: .leading, spacing: 6) {
       ForEach(groups, id: \.label) { group in
@@ -338,7 +396,7 @@ struct GroupedDueList: View {
           .foregroundStyle(.secondary)
           .kerning(0.6)
         ForEach(group.rows) { row in
-          DueRow(item: row, now: now)
+          DueRow(item: row, now: now, strings: strings)
         }
       }
     }
@@ -347,17 +405,18 @@ struct GroupedDueList: View {
 
 struct DueEmptyStateView: View {
   let streak: Int
+  var strings: WidgetStrings = WidgetStrings(nil)
   var body: some View {
     VStack(spacing: 4) {
       Image(systemName: "calendar.badge.checkmark")
         .font(.system(size: 22))
         .foregroundStyle(Color.coral)
-      Text("Week's clear")
+      Text(strings("widget.weekClear", "Week's clear"))
         .font(.system(size: 12, weight: .semibold))
       if streak > 0 {
         StreakBadge(streak: streak)
       } else {
-        Text("Nothing due in the next 7 days")
+        Text(strings("widget.nothingThisWeek", "Nothing due in the next 7 days"))
           .font(.system(size: 9))
           .foregroundStyle(.secondary)
           .multilineTextAlignment(.center)
@@ -369,13 +428,14 @@ struct DueEmptyStateView: View {
 struct DueSmallView: View {
   let payload: WidgetPayload?
   let now: Date
+  var strings: WidgetStrings = WidgetStrings(nil)
   var body: some View {
     let items = payload?.dueThisWeek ?? []
     let streak = payload?.streak ?? 0
     if !items.isEmpty {
       VStack(alignment: .leading, spacing: 5) {
         HStack {
-          Text("THIS WEEK")
+          Text(strings("widget.thisWeek", "This week").uppercased())
             .font(.system(size: 9, weight: .heavy))
             .foregroundStyle(Color.coral)
             .kerning(1)
@@ -384,7 +444,7 @@ struct DueSmallView: View {
         }
         Spacer(minLength: 0)
         // Small: a compact count + the two soonest rows.
-        GroupedDueList(items: items, now: now, maxRows: 3)
+        GroupedDueList(items: items, now: now, maxRows: 3, strings: strings)
         Spacer(minLength: 0)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -397,13 +457,14 @@ struct DueSmallView: View {
 struct DueMediumView: View {
   let payload: WidgetPayload?
   let now: Date
+  var strings: WidgetStrings = WidgetStrings(nil)
   var body: some View {
     let items = payload?.dueThisWeek ?? []
     let streak = payload?.streak ?? 0
     if !items.isEmpty {
       VStack(alignment: .leading, spacing: 6) {
         HStack {
-          Text("DUE THIS WEEK")
+          Text(strings("widget.dueThisWeek", "Due This Week").uppercased())
             .font(.system(size: 9, weight: .heavy))
             .foregroundStyle(Color.coral)
             .kerning(1)
@@ -416,7 +477,7 @@ struct DueMediumView: View {
               .foregroundStyle(.secondary)
           }
         }
-        GroupedDueList(items: items, now: now, maxRows: 6)
+        GroupedDueList(items: items, now: now, maxRows: 6, strings: strings)
         Spacer(minLength: 0)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -451,9 +512,9 @@ struct SemoraWidgetEntryView: View {
   var body: some View {
     switch family {
     case .systemMedium:
-      MediumView(payload: entry.payload, now: entry.date)
+      MediumView(payload: entry.payload, now: entry.date, strings: WidgetStrings(entry.payload?.strings))
     default:
-      SmallView(payload: entry.payload, now: entry.date)
+      SmallView(payload: entry.payload, now: entry.date, strings: WidgetStrings(entry.payload?.strings))
     }
   }
 }
@@ -483,9 +544,9 @@ struct SemoraDueThisWeekEntryView: View {
   var body: some View {
     switch family {
     case .systemMedium:
-      DueMediumView(payload: entry.payload, now: entry.date)
+      DueMediumView(payload: entry.payload, now: entry.date, strings: WidgetStrings(entry.payload?.strings))
     default:
-      DueSmallView(payload: entry.payload, now: entry.date)
+      DueSmallView(payload: entry.payload, now: entry.date, strings: WidgetStrings(entry.payload?.strings))
     }
   }
 }

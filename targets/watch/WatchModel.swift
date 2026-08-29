@@ -38,6 +38,33 @@ struct WatchTask: Identifiable, Equatable {
   var bucket: WatchBucket
 }
 
+/// The phone's vocabulary for this build's UI.
+///
+/// The Watch ships no localisation of its own, so every label it draws is
+/// looked up here first and falls back to the English it was compiled with.
+/// That fallback is the whole safety story: a payload from an older JS bundle
+/// carries no strings, an unknown key returns the compiled default, and neither
+/// case can fail — the Watch simply looks the way it always did.
+struct SurfaceStrings: Equatable {
+  private let map: [String: String]
+
+  init(_ map: [String: String]?) {
+    self.map = map ?? [:]
+  }
+
+  /// The phone's word for this, or the one compiled in.
+  func callAsFunction(_ key: String, _ fallback: String) -> String {
+    let value = map[key]
+    return (value?.isEmpty == false) ? value! : fallback
+  }
+
+  /// Same, with the count filled in on THIS device. The number is deliberately
+  /// not sent: a freshness label saying "2m ago" would be wrong within a minute.
+  func callAsFunction(_ key: String, _ fallback: String, n: Int) -> String {
+    callAsFunction(key, fallback).replacingOccurrences(of: "{n}", with: String(n))
+  }
+}
+
 enum WatchPayloadState: String {
   case ready
   case signedOut = "signed_out"
@@ -51,6 +78,8 @@ struct WatchSnapshot: Equatable {
   var tasks: [WatchTask]
   var updatedAt: Date?
   var updatedAtRaw: String
+  /// Localised chrome from the phone. Empty means "use the compiled English".
+  var strings: SurfaceStrings
 
   /// Must match WATCH_SCHEMA_VERSION in lib/watchSnapshot.ts.
   static let supportedSchemaVersion = 3
@@ -113,7 +142,8 @@ func decodeWatchSnapshot(from context: [String: Any]) -> WatchSnapshot? {
     overdueCount: count("overdueCount"),
     tasks: tasks,
     updatedAt: ISO8601DateFormatter().date(from: raw),
-    updatedAtRaw: raw
+    updatedAtRaw: raw,
+    strings: SurfaceStrings(context["strings"] as? [String: String])
   )
 }
 
@@ -136,28 +166,36 @@ struct WatchFreshness {
   /// day — long enough for the numbers to be wrong.
   static let staleAfter: TimeInterval = 6 * 60 * 60
 
-  static func describe(updatedAt: Date?, now: Date) -> WatchFreshness {
+  /// `strings` defaults to empty so every existing caller and test keeps
+  /// working and simply gets the compiled English.
+  static func describe(
+    updatedAt: Date?,
+    now: Date,
+    strings: SurfaceStrings = SurfaceStrings(nil)
+  ) -> WatchFreshness {
     guard let updatedAt else {
-      return WatchFreshness(label: "Not synced yet", isStale: true)
+      return WatchFreshness(label: strings("watch.updated.never", "Not synced yet"), isStale: true)
     }
 
     let age = now.timeIntervalSince(updatedAt)
 
     // A small negative age is ordinary clock skew between two devices, not a
     // future timestamp; treat it as "just now" rather than printing nonsense.
-    if age < 60 { return WatchFreshness(label: "Updated just now", isStale: false) }
+    if age < 60 {
+      return WatchFreshness(label: strings("watch.updated.now", "Updated just now"), isStale: false)
+    }
 
     let stale = age >= staleAfter
     let minutes = Int(age / 60)
     if minutes < 60 {
-      return WatchFreshness(label: "Updated \(minutes)m ago", isStale: stale)
+      return WatchFreshness(label: strings("watch.updated.minutes", "Updated {n}m ago", n: minutes), isStale: stale)
     }
     let hours = minutes / 60
     if hours < 24 {
-      return WatchFreshness(label: "Updated \(hours)h ago", isStale: stale)
+      return WatchFreshness(label: strings("watch.updated.hours", "Updated {n}h ago", n: hours), isStale: stale)
     }
     let days = hours / 24
-    return WatchFreshness(label: "Updated \(days)d ago", isStale: stale)
+    return WatchFreshness(label: strings("watch.updated.days", "Updated {n}d ago", n: days), isStale: stale)
   }
 }
 
@@ -181,7 +219,13 @@ private func Self_label(format: String, date: Date, calendar: Calendar) -> Strin
 /// "Today", "Tomorrow", "Mon", "Sep 4" — recomputed on the watch from the raw
 /// date so a row that said "Tomorrow" last night says "Today" this morning
 /// without the phone having synced again.
-func watchDueLabel(dueDate: String, dueTime: String?, now: Date, calendar: Calendar = .current) -> String {
+func watchDueLabel(
+  dueDate: String,
+  dueTime: String?,
+  now: Date,
+  calendar: Calendar = .current,
+  strings: SurfaceStrings = SurfaceStrings(nil)
+) -> String {
     let formatter = DateFormatter()
     formatter.dateFormat = "yyyy-MM-dd"
     formatter.calendar = calendar
@@ -194,10 +238,15 @@ func watchDueLabel(dueDate: String, dueTime: String?, now: Date, calendar: Calen
 
     let dayLabel: String
     switch days {
-    case ..<0: dayLabel = days == -1 ? "Yesterday" : "\(-days)d late"
-    case 0: dayLabel = "Today"
-    case 1: dayLabel = "Tomorrow"
+    case ..<0:
+      dayLabel = days == -1
+        ? strings("due.yesterday", "Yesterday")
+        : strings("due.daysLate", "{n}d late", n: -days)
+    case 0: dayLabel = strings("due.today", "Today")
+    case 1: dayLabel = strings("due.tomorrow", "Tomorrow")
     case 2...6:
+      // Weekday and month names come from the formatter, which already follows
+      // the device locale — the words that had to travel are the relative ones.
       dayLabel = Self_label(format: "EEE", date: due, calendar: calendar)
     default:
       dayLabel = Self_label(format: "MMM d", date: due, calendar: calendar)

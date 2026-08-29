@@ -48,6 +48,32 @@ AUTH=(-allowProvisioningUpdates)
 mkdir -p "$OUT"
 cd "$ROOT"
 
+# ── Guard 1: the picker patch has to be ON DISK before pods are installed ────
+#
+# expo-document-picker is a development pod — Podfile.lock points at
+# ../node_modules/expo-document-picker/ios and Xcode compiles those files in
+# place. So the patch reaches the binary if, and only if, patch-package has
+# already run. It normally has, via postinstall. But nothing in this script
+# installs anything, so a build on a tree where npm ci was interrupted, or
+# where node_modules was restored from a cache taken before the patch landed,
+# would produce a binary that silently lacks the one fix it was cut for.
+PATCHED_SWIFT="node_modules/expo-document-picker/ios/DocumentPickerModule.swift"
+if ! grep -q "PickerHostBusyException" "$PATCHED_SWIFT" 2>/dev/null; then
+  echo >&2
+  echo "PICKER PATCH NOT APPLIED." >&2
+  echo "  $PATCHED_SWIFT does not contain the Semora patch." >&2
+  echo "  Run: npx patch-package    (or npm ci, which runs it via postinstall)" >&2
+  exit 1
+fi
+echo "==> picker patch present in node_modules"
+
+# ── Guard 2: is the native runtime the one we think it is? ──────────────────
+#
+# Informational here rather than fatal: cutting a build is exactly when the
+# fingerprint is allowed to move. It is printed so the person releasing sees it
+# and remembers to re-record the baseline afterwards.
+scripts/check-native-fingerprint.sh || echo "==> (expected for a native release — re-record with --update once this build is cut)"
+
 if [[ "${1:-}" != "--no-prebuild" ]]; then
   # --clean, not an incremental prebuild.
   #
@@ -146,6 +172,35 @@ if [[ "$IPA_VERSION" != "$VERSION" || "$IPA_BUILD" != "$BUILD" ]]; then
   exit 1
 fi
 echo "==> verified .ipa is $IPA_VERSION ($IPA_BUILD), matching app.json"
+
+# ── Guard 3: prove the picker patch is in the BINARY, not just on disk ──────
+#
+# Swift `reason` strings survive into the compiled binary, so the patch's own
+# words are the evidence. Guard 1 checks the source; this checks the artefact,
+# which is the only thing that actually ships.
+VERIFY2=$(mktemp -d)
+unzip -q "$OUT/Semora.ipa" -d "$VERIFY2"
+APP_BIN=$(find "$VERIFY2/Payload" -maxdepth 2 -name 'Semora' -type f | head -1)
+if ! strings -a "$APP_BIN" 2>/dev/null | grep -q "The screen is already presenting something"; then
+  echo >&2
+  echo "PICKER PATCH MISSING FROM THE BINARY." >&2
+  echo "  The patched Swift was on disk but its strings are not in the app." >&2
+  echo "  A stale Pods/ or DerivedData is the usual cause; prebuild --clean fixes it." >&2
+  rm -rf "$VERIFY2"; exit 1
+fi
+
+# ── Guard 4: OTA updates must be verifiable by the app that receives them ───
+CERT_IN_APP=$(plutil -extract EXUpdatesCodeSigningCertificate raw \
+  "$(dirname "$APP_BIN")/Expo.plist" 2>/dev/null | head -c 20)
+if [[ -z "$CERT_IN_APP" ]]; then
+  echo >&2
+  echo "OTA CODE-SIGNING CERTIFICATE NOT EMBEDDED." >&2
+  echo "  This binary would accept ANY update served on its channel." >&2
+  echo "  Check updates.codeSigningCertificate in app.json and re-run prebuild." >&2
+  rm -rf "$VERIFY2"; exit 1
+fi
+rm -rf "$VERIFY2"
+echo "==> picker patch and OTA signing certificate both verified in the .ipa"
 
 echo
 echo "Semora $VERSION ($BUILD) -> $OUT/Semora.ipa"
