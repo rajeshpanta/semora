@@ -38,6 +38,8 @@ export interface SpanishFeatureFact {
   name: string;
   shortDescription: string;
   tier: 'free' | 'pro';
+  /** Ver FeatureFact.freeNote: gratis para PROBAR, no gratis sin límite. */
+  freeNote?: string;
   description: string;
 }
 
@@ -48,6 +50,8 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     name: 'Escaneo de programas con IA',
     shortDescription: 'Convierte una foto o un PDF en fechas de entrega, horarios y criterios de evaluación organizados.',
     tier: 'free',
+    freeNote:
+      'Gratis para probar. El plan gratuito incluye una acción de IA para toda la vida de la cuenta: gástala en un escaneo. Pro no tiene límite.',
     description: 'Toma una foto, sube un PDF o pega el texto. Semora identifica tareas, exámenes, horarios y criterios de evaluación para que los revises antes de guardar.',
   },
   {
@@ -72,6 +76,8 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     name: 'Grabación de clases',
     shortDescription: 'Graba una clase y recibe la transcripción, apuntes escritos, un cuestionario de práctica y un mazo de tarjetas.',
     tier: 'free',
+    freeNote:
+      'Gratis para probar. El plan gratuito incluye una acción de IA para toda la vida de la cuenta: gástala en una clase. Pro no tiene límite.',
     description: 'Graba la clase desde el teléfono y Semora la transcribe, y a partir de esa misma transcripción escribe apuntes ordenados, un cuestionario de opción múltiple con explicaciones y un mazo de tarjetas. La captura se guarda en tramos de cinco minutos, así que un teléfono que se apaga te cuesta los últimos minutos y no la clase entera. El audio se borra en cuanto la transcripción queda guardada.',
   },
   {

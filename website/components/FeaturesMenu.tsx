@@ -28,8 +28,8 @@ export function FeaturesMenu({ locale = 'en' }: { locale?: SiteLocale }) {
   const panelId = useId();
   const features = locale === 'es' ? FEATURES_ES : FEATURES;
   const copy = locale === 'es'
-    ? { trigger: 'Funciones', free: 'Gratis', all: 'Ver todas las funciones', base: '/es/funciones' }
-    : { trigger: 'Features', free: 'Free', all: 'See all features', base: '/features' };
+    ? { trigger: 'Funciones', free: 'Gratis', freeTrial: 'Gratis para probar', all: 'Ver todas las funciones', base: '/es/funciones' }
+    : { trigger: 'Features', free: 'Free', freeTrial: 'Free to try', all: 'See all features', base: '/features' };
 
   useEffect(() => {
     if (!open) return;
@@ -123,7 +123,10 @@ export function FeaturesMenu({ locale = 'en' }: { locale?: SiteLocale }) {
                     f.tier === 'pro' ? styles.menuTierPro : styles.menuTierFree
                   }`}
                 >
-                  {f.tier === 'pro' ? 'Pro' : copy.free}
+                  {/* Three states, not two. A scan and a lecture are free ONCE —
+                      they spend the account's single lifetime AI action — so a bare
+                      "Free" promised unlimited use of something you get one of. */}
+                  {f.tier === 'pro' ? 'Pro' : f.freeNote ? copy.freeTrial : copy.free}
                 </span>
               </span>
               <span className={styles.menuItemDesc}>{f.shortDescription}</span>

@@ -113,7 +113,7 @@ function DirectoryWidget({ config }: { config: SpanishPageConfig }) {
         <div className={styles.cardGrid}>
         {FEATURES_ES.map((feature) => (
           <Link key={feature.slug} href={`/es/funciones/${feature.slug}`} className={styles.card}>
-            <span className={styles.cardMeta}>{feature.tier === 'pro' ? 'Pro' : 'Gratis'}</span>
+            <span className={styles.cardMeta}>{feature.tier === 'pro' ? 'Pro' : feature.freeNote ? 'Gratis para probar' : 'Gratis'}</span>
             <strong>{feature.name}</strong>
             <p>{feature.shortDescription}</p>
             <span className={styles.cardLink}>Conocer la función →</span>
@@ -126,7 +126,7 @@ function DirectoryWidget({ config }: { config: SpanishPageConfig }) {
   if (config.kind === 'feature') {
     return (
       <div className={styles.featureStrip}>
-        <span>{config.feature?.tier === 'pro' ? 'Incluido con Semora Pro' : 'Disponible en el plan Gratis'}</span>
+        <span>{config.feature?.tier === 'pro' ? 'Incluido con Semora Pro' : config.feature?.freeNote ?? 'Disponible en el plan Gratis'}</span>
         <Link href="/es/precios">Comparar planes →</Link>
       </div>
     );
