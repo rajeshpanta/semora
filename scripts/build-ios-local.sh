@@ -189,18 +189,30 @@ if ! strings -a "$APP_BIN" 2>/dev/null | grep -q "The screen is already presenti
   rm -rf "$VERIFY2"; exit 1
 fi
 
-# ── Guard 4: OTA updates must be verifiable by the app that receives them ───
+# ── Guard 4: this binary must actually be updatable ─────────────────────────
+#
+# Inverted from what it first looked like it should be. Embedding a code-signing
+# certificate makes the app REJECT any update without a matching signature —
+# `allowUnsignedManifests` defaults to false — and `eas update` cannot produce
+# one on this account: signing requires an EAS Enterprise plan, and without
+# `--private-key-path` the CLI refuses to publish at all. A binary shipped with
+# a certificate on this plan could therefore never receive an OTA again, by
+# either route. Verified by attempting both.
+#
+# So the certificate is the thing to fail on, not its absence. Revisit only if
+# the account moves to Enterprise.
 CERT_IN_APP=$(plutil -extract EXUpdatesCodeSigningCertificate raw \
   "$(dirname "$APP_BIN")/Expo.plist" 2>/dev/null | head -c 20)
-if [[ -z "$CERT_IN_APP" ]]; then
+if [[ -n "$CERT_IN_APP" ]]; then
   echo >&2
-  echo "OTA CODE-SIGNING CERTIFICATE NOT EMBEDDED." >&2
-  echo "  This binary would accept ANY update served on its channel." >&2
-  echo "  Check updates.codeSigningCertificate in app.json and re-run prebuild." >&2
+  echo "THIS BINARY COULD NEVER RECEIVE AN OTA UPDATE." >&2
+  echo "  A code-signing certificate is embedded, so it will reject unsigned" >&2
+  echo "  updates — and EAS cannot sign one without an Enterprise plan." >&2
+  echo "  Remove updates.codeSigningCertificate from app.json, or upgrade." >&2
   rm -rf "$VERIFY2"; exit 1
 fi
 rm -rf "$VERIFY2"
-echo "==> picker patch and OTA signing certificate both verified in the .ipa"
+echo "==> picker patch verified in the .ipa; binary can receive OTA updates"
 
 echo
 echo "Semora $VERSION ($BUILD) -> $OUT/Semora.ipa"
