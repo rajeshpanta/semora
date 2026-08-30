@@ -28,12 +28,12 @@ const FAQ = [
   {
     question: 'How do I connect Canvas to Semora?',
     answer:
-      "Canvas import is a Pro feature. The current connector uses a personal access token generated in Canvas. Some institutions disable or prohibit third-party token use, so confirm your school's policy. If it is unavailable or not permitted, scan your syllabus or paste the Canvas assignment list into Semora instead.",
+      "Canvas import is free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. If it is unavailable or not permitted, scan your syllabus or paste the Canvas assignment list into Semora instead.",
   },
   {
     question: 'Is Semora free to use alongside Canvas?',
     answer:
-      'Partly. Importing assignments from Canvas is a Pro feature, but the free tier gets you started on the syllabus side of the same job, and you can paste Canvas assignment text straight into the scanner. The free tier includes one AI action for the lifetime of the account—a syllabus scan, a lecture recording, or a document turned into notes—plus unlimited classes synced free from Canvas plus one course you add by hand within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no scan cap, plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
+      'Yes. Importing assignments from Canvas is free on every plan, and the syllabus side of the same job is free too — you can also paste Canvas assignment text straight into the scanner. The free tier includes one AI action for the lifetime of the account—a syllabus scan, a lecture recording, or a document turned into notes—plus unlimited classes synced free from Canvas plus one course you add by hand within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no scan cap, plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
   },
   {
     question: 'Does Semora work on iPhone, iPad, and web?',
@@ -166,7 +166,7 @@ export default function CanvasDeadlineTrackerPage() {
 
       <h2>How Canvas sync works</h2>
       <p>
-        Canvas import is free; Blackboard and Moodle import is part of Pro. The current connector uses a personal access token generated
+        Canvas, Blackboard and Moodle import is free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Generated
         in Canvas. Some institutions disable or prohibit third-party token use, so confirm your
         school&apos;s policy before connecting. When it is permitted, you can choose courses and bring
         their assignments into Semora. Otherwise, scan the syllabus or paste the Canvas assignment

@@ -160,7 +160,7 @@ const FAQ = [
   {
     question: '¿Necesito Canvas?',
     answer:
-      'No. Puedes usar Semora solo con el programa de tus materias. Las conexiones con Canvas, Blackboard y Moodle son funciones opcionales de Pro.',
+      'No. Puedes usar Semora solo con el programa de tus materias. Las conexiones con Canvas, Blackboard y Moodle son opcionales y gratis en todos los planes.',
   },
   {
     question: '¿La app está en español?',

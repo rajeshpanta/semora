@@ -33,7 +33,7 @@ const FAQ = [
   {
     question: 'Does Semora sync with Canvas?',
     answer:
-      "Canvas import is a Pro feature. The current connector uses a personal access token generated in Canvas. Some institutions disable or prohibit third-party token use, so confirm your school's policy. If it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list instead.",
+      "Canvas import is free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. If it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list instead.",
   },
   {
     question: 'Does scanning a syllabus also track my grades, not just deadlines?',

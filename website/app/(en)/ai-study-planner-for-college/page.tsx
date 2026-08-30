@@ -38,7 +38,7 @@ const FAQ = [
   {
     question: 'Does Semora sync with Canvas or other tools?',
     answer:
-      "Canvas, Blackboard, and Moodle import are Pro features. The current Canvas connector uses a personal access token generated in Canvas. Some institutions disable or prohibit third-party token use, so confirm your school's policy. If the connector is unavailable or not permitted, scan the syllabus or paste the assignment list instead. Semora also supports Course Spaces and syncs across iPhone, iPad, and web on one account.",
+      "Canvas, Blackboard, and Moodle import are free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. If the connector is unavailable or not permitted, scan the syllabus or paste the assignment list instead. Semora also supports Course Spaces and syncs across iPhone, iPad, and web on one account.",
   },
 ];
 
@@ -162,7 +162,7 @@ export default function AiStudyPlannerPage() {
 
       <h3>Canvas sync</h3>
       <p>
-        Canvas import is a Pro feature. The current connector uses a personal access token generated
+        Canvas import is free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Generated
         in Canvas. Some institutions disable or prohibit third-party token use, so confirm your
         school&apos;s policy. If it is unavailable or not permitted, scan the syllabus or paste the
         assignment list instead.

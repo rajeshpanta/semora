@@ -230,7 +230,7 @@ export const FEATURES: FeatureFact[] = [
     // user who installs on that promise hits a paywall at the first tap.
     tier: 'pro',
     description:
-      "Canvas sync is free right now, on every account, with no limit on how many classes come across — this is a limited-time offer, and an account that connects while it runs keeps free Canvas sync for good. It uses the private calendar feed Canvas already gives you, so there is no access token to generate and nothing for your IT department to approve. Once connected it re-checks Canvas about hourly on its own: a deadline your instructor moves is right in Semora without anyone doing anything, and an assignment they delete disappears from your list instead of nagging you. One honest limit — the calendar feed carries dates, not marks, so your grades are still yours to enter. Blackboard and Moodle import is a Pro feature, uses a personal access token, and varies by school.",
+      "Canvas sync is free right now, on every account, with no limit on how many classes come across — this is a limited-time offer, and an account that connects while it runs keeps free Canvas sync for good. It uses the private calendar feed Canvas already gives you, so there is no access token to generate and nothing for your IT department to approve. Once connected it re-checks Canvas about hourly on its own: a deadline your instructor moves is right in Semora without anyone doing anything, and an assignment they delete disappears from your list instead of nagging you. One honest limit — the calendar feed carries dates, not marks, so your grades are still yours to enter. Blackboard and Moodle import is free on every plan, uses a school-issued token, and varies by school.",
   },
   {
     slug: 'lecture-recording',

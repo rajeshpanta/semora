@@ -157,7 +157,7 @@ const HOME_FAQ = [
   {
     question: 'Do I need Canvas for this to work?',
     answer:
-      'No. Semora works from your syllabus alone. Canvas, Blackboard and Moodle connections are optional Pro features. The current Canvas connector uses a personal access token you generate in Canvas and should be used only if your school permits third-party token connections.',
+      'No. Semora works from your syllabus alone. Canvas, Blackboard and Moodle connections are optional and free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Blackboard and Moodle still use a school-issued token connections.',
   },
   {
     question: 'Does it work on iPad?',
