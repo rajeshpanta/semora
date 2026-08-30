@@ -49,6 +49,9 @@ export const LOCALE_ROUTE_PAIRS: LocaleRoutePair[] = [
   { en: '/blog/best-ai-study-apps-for-college-2026', es: '/es/blog/mejores-apps-de-estudio-con-ia-2026' },
   { en: '/blog/ai-flashcards-from-lecture-notes', es: '/es/blog/tarjetas-de-estudio-con-ia' },
   { en: '/blog/grade-needed-on-final-exam', es: '/es/blog/que-nota-necesito-en-el-examen-final' },
+  { en: '/blog/what-assignment-weights-mean', es: '/es/blog/que-significa-que-valga-20-por-ciento' },
+  { en: '/blog/first-two-weeks-of-semester', es: '/es/blog/primeras-dos-semanas-del-semestre' },
+  { en: '/blog/how-to-study-for-midterms', es: '/es/blog/como-estudiar-para-los-parciales' },
 
   { en: '/compare/dormway', es: '/es/comparar/dormway' },
   { en: '/compare/shovel', es: '/es/comparar/shovel' },

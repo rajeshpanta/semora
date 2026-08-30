@@ -1,0 +1,143 @@
+import { enAlternates } from '@/lib/hreflang';
+import { OG_DEFAULTS } from '@/lib/og';
+export const metadata = {
+  title: 'What "Worth 20% of Your Grade" Actually Means',
+  description:
+    'Assignment weights decide your course grade, not the points on the page. The arithmetic, worked through, and the four ways a gradebook percentage misleads you.',
+  alternates: enAlternates('/blog/what-assignment-weights-mean'),
+  openGraph: { url: '/blog/what-assignment-weights-mean', ...OG_DEFAULTS, type: 'article', publishedTime: '2026-08-30' },
+}
+
+import { JsonLd } from '@/components/JsonLd'
+import { articleSchema } from '@/lib/schema'
+import { BlogPostHero } from '@/components/BlogPostHero'
+import { BlogTable } from '@/components/BlogTable'
+import { RelatedPosts } from '@/components/RelatedPosts'
+import { relatedPosts } from '@/lib/blog'
+import { Faq } from '@/components/Faq'
+import { faqPageSchema } from '@/lib/schema'
+
+export const faqItems = [
+  {
+    question: 'What does it mean when an assignment is worth 20% of your grade?',
+    answer:
+      'It means that assignment controls 20 of the 100 points your final course grade is built from, no matter how many points appear on the assignment itself. A 10-point quiz in a category worth 20 percent moves your course grade exactly as much as a 200-point project in a category worth 20 percent. Points measure the work; weights measure the consequence, and only the weights come from your syllabus.',
+  },
+  {
+    question: 'How do I calculate my weighted course average?',
+    answer:
+      'Multiply each category average by its weight as a decimal, then add the results. Homework at 92 percent weighted 20 percent contributes 18.4 points; a midterm average of 81 percent weighted 30 percent contributes 24.3. Add every category and you have your course percentage. If a category has no grades in it yet, leave it out of both the total and the divisor rather than treating it as a zero — see below, because that single mistake produces most of the panic.',
+  },
+  {
+    question: 'Why is my Canvas percentage different from my real grade?',
+    answer:
+      'Because an LMS percentage is computed over graded work only, and how it treats ungraded work is a setting your instructor chose. Depending on that setting, an unsubmitted assignment may be excluded, counted as zero, or handled differently between two courses taught by two people. The number is not wrong so much as unlabeled — you cannot tell which convention produced it. Recomputing from your syllabus weights is the only way to know what you are looking at.',
+  },
+  {
+    question: 'What happens to my average if a category has not been graded yet?',
+    answer:
+      'It should be excluded from the calculation entirely, not scored as a zero. If homework and midterms are graded but the final project is not, your current standing is the weighted average of homework and midterms over their combined weight — not over 100. Dividing by the full 100 treats every ungraded point as a point you lost, which is why students routinely believe they are failing a course they are passing.',
+  },
+  {
+    question: 'Do weights ever add up to something other than 100%?',
+    answer:
+      'They should sum to 100, and when they do not it is usually extra credit or a rounding artifact in the syllabus rather than a mistake you need to correct. If your categories sum to 105 because of a 5 percent extra-credit component, treat the extra credit as genuinely extra — calculate your grade over the 100 that is required, then add what the extra credit contributes on top. If the categories sum to 97 or 103 with no explanation, ask, because the answer changes every calculation you do for the rest of the term.',
+  },
+]
+
+<JsonLd data={articleSchema({
+  path: '/blog/what-assignment-weights-mean',
+  title: 'What "Worth 20% of Your Grade" Actually Means',
+  description: 'Assignment weights decide your course grade, not the points on the page. The arithmetic, worked through, and the four ways a gradebook percentage misleads you.',
+  datePublished: '2026-08-30',
+})} />
+
+<JsonLd data={faqPageSchema(faqItems)} />
+
+<BlogPostHero
+  title={'What "Worth 20% of Your Grade" Actually Means'}
+  date="Published August 30, 2026"
+  image="/illustrations/grade-card.svg"
+  imageAlt="A friendly character beside a grade card showing category weights adding up to a course grade"
+/>
+
+**The short version:** a weight is the share of your final course grade that a category controls, and it has nothing to do with how many points the assignment is marked out of. A 10-point quiz and a 200-point paper in the same 20-percent category move your grade by exactly the same amount. To find your real course average, multiply each category's average by its weight as a decimal and add the results — and leave ungraded categories out of the sum entirely rather than scoring them as zero. The percentage your LMS shows you is computed over graded work only, using a rule your instructor chose and did not tell you about, which is why it drifts from the number that actually decides your letter.
+
+## Points measure the work. Weights measure the consequence.
+
+This is the whole idea, and almost every confusion downstream comes from collapsing the two.
+
+The **points** on an assignment describe the assignment: how much there was to do, how finely it was marked, how many questions it had. A lab report out of 60 was probably longer than a quiz out of 10.
+
+The **weight** describes how much that category decides your course grade. It lives in the syllabus, usually in a small table on page one or two, and it is the only number that matters when you are working out where you stand.
+
+Consider two assignments in the same course:
+
+- A quiz marked out of 10, in a quiz category worth 20 percent of the grade
+- A research paper marked out of 200, in a paper category worth 20 percent of the grade
+
+The paper is twenty times larger. It is not worth any more. Losing five percentage points in either category costs you exactly one point off your course grade. Students spend a great deal of anxiety on this backwards, treating the 200-point paper as twenty times more consequential because the number is bigger.
+
+The inverse is more painful. A participation grade worth 15 percent, marked out of 15 points across the whole term, is worth more than every homework assignment combined in a course where homework is 10 percent — even if you did thirty homeworks and there were only fifteen participation points to earn.
+
+## How to actually calculate it
+
+Take each category's average as a percentage, multiply by its weight as a decimal, and add.
+
+Say your syllabus reads:
+
+<BlogTable
+  columns={['Category', 'Weight', 'Your average', 'Contributes']}
+  highlightColumn={3}
+  caption="Multiply each average by its weight as a decimal. The contributions sum to your course percentage."
+  rows={[
+    ['Homework', '20%', '92%', '92 × 0.20 = 18.4'],
+    ['Quizzes', '15%', '78%', '78 × 0.15 = 11.7'],
+    ['Midterms', '30%', '81%', '81 × 0.30 = 24.3'],
+    ['Final exam', '35%', 'not taken', '—'],
+  ]}
+/>
+
+Your graded work contributes **18.4 + 11.7 + 24.3 = 54.4 points**, out of the **65 points** that have actually been decided so far.
+
+Here is where nearly everyone goes wrong. Your current standing is not 54.4 percent. It is 54.4 out of 65, which is **83.7 percent**. The final exam has not happened; its 35 points are neither earned nor lost, and dividing by 100 quietly counts every one of them against you.
+
+That gap — 54.4 versus 83.7 — is the difference between believing you are failing and knowing you have a B. It is the single most common arithmetic error students make about their own grades, and it happens most often in exactly the weeks when it does the most damage.
+
+## Why your LMS percentage disagrees
+
+Canvas, Blackboard and Moodle all show you a percentage. It is frequently not the number above, and the reason is not a bug.
+
+An LMS computes over graded work, and what counts as "graded" is configurable. Depending on what your instructor set:
+
+- **Ungraded work may be excluded**, which produces roughly the honest figure
+- **Ungraded work may be counted as zero**, which makes you look far worse than you are — especially early in the term
+- **Two courses may do different things**, because two instructors made different choices in the same system
+
+None of those is announced anywhere you will see it. The percentage arrives without a label describing which convention produced it, which makes it impossible to interpret with confidence even when it happens to be right.
+
+This is not an argument for ignoring your LMS. It is an argument for knowing your weights, so that when the two numbers disagree you can tell which one is describing reality.
+
+## Categories change the arithmetic more than people expect
+
+Two rules inside a category routinely move an average by several points, and both are stated once in the syllabus and never mentioned again.
+
+**Drop-lowest rules.** If the course drops your lowest quiz, your quiz average must be recomputed with that score removed before it goes anywhere near the weighted total. A student with quizzes of 95, 88, 91 and 40 has a 78.5 average — or an 91.3 average once the 40 is dropped. Weighted at 15 percent, that is nearly two points on the course grade, and it changes what the final needs to deliver.
+
+**Points-summed categories.** Some instructors average the percentages inside a category; others sum the points. If your homework category has a 10-point assignment you scored 5 on and a 100-point assignment you scored 95 on, averaging the percentages gives 72.5 percent. Summing the points gives 100 out of 110, or 90.9 percent. Same work, eighteen points apart, and only the syllabus says which one your course uses.
+
+## What to do with this
+
+Find the weight table in each of your syllabi and write the four or five numbers down somewhere you will see them. That is genuinely the whole task, and it takes about ten minutes per course at the start of a term.
+
+It pays for itself the first time you have to decide between two assignments due the same week, because the honest comparison is not which one is larger or which one is due sooner. It is which one moves your grade — and that is a question about weights, which you will now have in front of you.
+
+Once the weights are written down, everything else becomes arithmetic: what you currently have, what a specific target requires, and [what score you need on the final](/blog/grade-needed-on-final-exam) to land where you want.
+
+Semora does the writing-down part by reading the weights straight off the syllabus when you scan it, then keeps a running weighted average as you enter scores — including drop-lowest rules and points-versus-percentage categories, which is where hand calculation usually goes wrong. But the ten-minute manual version works too, and knowing the numbers is worth more than any tool that knows them for you.
+
+## Frequently asked questions
+
+<Faq items={faqItems} />
+
+<RelatedPosts posts={relatedPosts('what-assignment-weights-mean')} />

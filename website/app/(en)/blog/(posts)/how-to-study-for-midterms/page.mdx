@@ -1,0 +1,132 @@
+import { enAlternates } from '@/lib/hreflang';
+import { OG_DEFAULTS } from '@/lib/og';
+export const metadata = {
+  title: 'How to Study for Midterms When Three Land in One Week',
+  description:
+    'Midterms collide in a way finals do not, and the hard part is allocation rather than studying. How to decide where the hours go, with the arithmetic.',
+  alternates: enAlternates('/blog/how-to-study-for-midterms'),
+  openGraph: { url: '/blog/how-to-study-for-midterms', ...OG_DEFAULTS, type: 'article', publishedTime: '2026-08-30' },
+}
+
+import { JsonLd } from '@/components/JsonLd'
+import { articleSchema } from '@/lib/schema'
+import { BlogPostHero } from '@/components/BlogPostHero'
+import { BlogTable } from '@/components/BlogTable'
+import { RelatedPosts } from '@/components/RelatedPosts'
+import { relatedPosts } from '@/lib/blog'
+import { Faq } from '@/components/Faq'
+import { faqPageSchema } from '@/lib/schema'
+
+export const faqItems = [
+  {
+    question: 'How far in advance should I start studying for midterms?',
+    answer:
+      'Start the allocation a fortnight out and the studying about a week out, and treat those as two different tasks. The allocation — working out which exams deserve which share of your hours — takes twenty minutes and is worth far more than the extra day of revision it costs you, because the most common midterm failure is not studying too little overall but spending equal time on a 30-percent exam and a 10-percent one.',
+  },
+  {
+    question: 'How do I decide which midterm to study for first?',
+    answer:
+      'Rank by weight multiplied by how far you are from the grade you want, not by which exam comes first. An exam worth 30 percent in a course where you are sitting on a borderline B deserves more hours than one worth 10 percent in a course you have comfortably. Chronological order feels natural and is almost always the wrong allocation, because it hands the most time to whichever professor happened to schedule earliest.',
+  },
+  {
+    question: 'Why are midterms harder to manage than finals?',
+    answer:
+      'Because the rest of the course keeps running. During finals week, classes have stopped and the exams are your only obligation. Midterms arrive on top of ongoing homework, labs, readings and a job — so the available hours are far fewer than the week feels like it contains, and they are fragmented rather than continuous.',
+  },
+  {
+    question: 'Is it worth studying for a midterm I cannot get an A in?',
+    answer:
+      'Usually yes, but for a specific number rather than in general. Work out what score holds the grade you can realistically finish with, and study to that, not to an A you are not going to reach. The value of doing the arithmetic is that it converts vague dread into a concrete target — and frequently reveals that a couple of hours secures the outcome, freeing the rest for an exam where the marginal hour actually changes something.',
+  },
+]
+
+<JsonLd data={articleSchema({
+  path: '/blog/how-to-study-for-midterms',
+  title: 'How to Study for Midterms When Three Land in One Week',
+  description: 'Midterms collide in a way finals do not, and the hard part is allocation rather than studying. How to decide where the hours go, with the arithmetic.',
+  datePublished: '2026-08-30',
+})} />
+
+<JsonLd data={faqPageSchema(faqItems)} />
+
+<BlogPostHero
+  title="How to Study for Midterms When Three Land in One Week"
+  date="Published August 30, 2026"
+  image="/illustrations/book-stack.svg"
+  imageAlt="A friendly character beside a stack of books with three exam dates marked on a calendar behind"
+/>
+
+**The short version:** midterms are an allocation problem before they are a studying problem. Unlike finals, the rest of the course keeps running — homework, labs, a job — so the hours available are fewer and more fragmented than the week appears to hold. Rank each exam by its weight multiplied by how far you are from the grade you want, not by which comes first, and work out the score each one actually requires before deciding where the hours go. That arithmetic takes twenty minutes and routinely reveals that one exam needs two hours and another needs twelve.
+
+## Why midterms are harder than finals
+
+Finals week has a shape that helps you: classes have stopped, the exams are the only thing on the calendar, and the schedule is published weeks ahead.
+
+Midterms have none of that. They arrive in week six or nine, scheduled independently by professors who have no idea what else is on your plate, on top of a course load that carries on regardless. The homework still comes. The lab still meets. The shift still happens.
+
+So the practical constraint is not motivation or technique. It is that a week which appears to contain seven days of study time actually contains perhaps twelve usable hours, broken into fragments between other obligations — and those twelve hours have to cover three exams that want thirty between them.
+
+Everything below is about that gap.
+
+## Step 1: find out what each exam is worth
+
+Before any studying. This takes ten minutes and determines everything after it.
+
+For each exam, pull two numbers: its **weight** from the syllabus, and your **current standing** in that course. Multiply the weight by the distance between where you are and where you want to finish, and you have a rough ranking of where an hour buys the most.
+
+<BlogTable
+  columns={['Course', 'Midterm weight', 'Current grade', 'Target', 'Where an hour matters']}
+  highlightColumn={4}
+  caption="An illustrative allocation. The ranking rarely matches the order the exams are scheduled in."
+  rows={[
+    ['Organic Chemistry', '30%', '79% (borderline)', 'B', 'Highest — heavy and close to a boundary'],
+    ['Statistics', '25%', '94%', 'A', 'Moderate — a lot of weight, but banked'],
+    ['Art History', '10%', '88%', 'B+', 'Lowest — light, and comfortable'],
+  ]}
+/>
+
+The chemistry exam deserves most of the week even if it happens to be scheduled last, and the art history exam deserves an evening even if it is on Monday. Studying in calendar order is the default, feels responsible, and hands your scarcest resource to whichever professor booked the earliest room.
+
+## Step 2: calculate the score each exam actually needs
+
+For each course, work out the score that holds the grade you can realistically finish with. The formula is the same one that applies to finals:
+
+> Needed score = (target − current grade × (1 − exam weight)) ÷ exam weight
+
+Run it for the grade you want and the grade you can live with. The gap between those two numbers is the real information. In the chemistry example above — 79 percent going in, a 30-percent midterm, wanting to finish at 83 — the exam needs about 92. Wanting to finish at 80 needs about 82. That is a ten-point spread, and it tells you whether this is a two-evening exam or a two-week one.
+
+Doing this for all three exams produces something more useful than a study plan: it tells you which exams are already decided. An exam that needs a 45 to hold your grade does not need a week. Knowing that is what frees the hours for the one that needs a 92. [What grade do I need on my final exam](/blog/grade-needed-on-final-exam) works through the arithmetic and the four ways it goes wrong.
+
+## Step 3: schedule against real hours, not the whole week
+
+Write down what the week actually contains before allocating anything: classes, labs, work shifts, commute, sleep. Whatever remains is the budget, and it is always smaller than expected.
+
+Two things follow from working in real hours rather than days.
+
+**Spread each subject rather than blocking it.** Three two-hour sessions across three days beat one six-hour session, and the effect is large enough to matter over a week. If you have twelve hours and three exams, twelve separate hour-long sessions spread across the fortnight will outperform three four-hour blocks even though the total is identical.
+
+**Put the hard subject where you are sharp.** Not at midnight after a shift. If your only reliable clear stretch is a morning gap between two classes, that gap belongs to organic chemistry, not to the reading you could do half-asleep.
+
+If your gaps are genuinely fragmented, [the Pomodoro technique between classes](/blog/pomodoro-technique-between-classes) covers making twenty-five-minute windows productive rather than writing them off.
+
+## Step 4: leave the last day alone
+
+Do not schedule new material into the final day before an exam.
+
+The last day is for consolidation — reviewing what you already know, working practice problems, sleeping properly. New material learned in the final twenty-four hours is the least reliable thing in the exam room, and the hour spent on it costs more in sleep than it returns in recall.
+
+This is also where a mid-week reassessment belongs. By day four you will know whether the chemistry plan was optimistic. Adjusting then, deliberately, is better than discovering it the night before and reallocating in a panic.
+
+## The failure mode worth naming
+
+The most common midterm mistake is not studying too little. It is studying evenly.
+
+Equal hours across three exams feels fair and produces a worse outcome than deliberate imbalance, because the courses are not equally weighted, you are not equally far from the grade you want in each, and the marginal hour is worth wildly different amounts in each one. The student who gives twelve hours to chemistry and two to art history usually finishes the term ahead of the one who gave five, five and four — and did more total work.
+
+Deciding that consciously, in week eight, with the weights in front of you, is the whole point of the twenty minutes at the top.
+
+## Frequently asked questions
+
+<Faq items={faqItems} />
+
+<RelatedPosts posts={relatedPosts('how-to-study-for-midterms')} />

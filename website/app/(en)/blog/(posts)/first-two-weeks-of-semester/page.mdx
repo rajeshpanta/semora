@@ -1,0 +1,142 @@
+import { enAlternates } from '@/lib/hreflang';
+import { OG_DEFAULTS } from '@/lib/og';
+export const metadata = {
+  title: 'The First Two Weeks of the Semester: What to Set Up Now',
+  description:
+    'Weeks one and two are the only quiet stretch of the term. Five things worth doing while they last, including the deadline most students find out about too late.',
+  alternates: enAlternates('/blog/first-two-weeks-of-semester'),
+  openGraph: { url: '/blog/first-two-weeks-of-semester', ...OG_DEFAULTS, type: 'article', publishedTime: '2026-08-30' },
+}
+
+import { JsonLd } from '@/components/JsonLd'
+import { articleSchema } from '@/lib/schema'
+import { BlogPostHero } from '@/components/BlogPostHero'
+import { BlogTable } from '@/components/BlogTable'
+import { RelatedPosts } from '@/components/RelatedPosts'
+import { relatedPosts } from '@/lib/blog'
+import { Faq } from '@/components/Faq'
+import { faqPageSchema } from '@/lib/schema'
+
+export const faqItems = [
+  {
+    question: 'What should I do in the first week of the semester?',
+    answer:
+      'Read each syllabus once end to end, then pull three things out of it: every dated item, the grade weight table, and your recurring class and lab times. Those three cover almost everything you will need for the rest of the term, and week one is the only time you can do it without something else being due. Everything else — study systems, colour coding, elaborate planners — can wait, and most of it will not survive week six anyway.',
+  },
+  {
+    question: 'When is the add/drop deadline and why does it matter?',
+    answer:
+      'It is usually somewhere between the end of week one and the end of week three, it is set by your registrar rather than your instructor, and it is not in your syllabus. Before it passes you can usually drop a course with no transcript record and often a refund. After it, the same decision may mean a W on your transcript, no refund, or both. It is the single most consequential date of the term and the one students most often discover after it has gone.',
+  },
+  {
+    question: 'How do I know if I am taking too many classes?',
+    answer:
+      'Add up the graded items across all your syllabi and look at where they land, not how many there are. Fifteen assignments spread evenly is a manageable term; fifteen with four exams and two papers in the same fortnight is not, and the calendar shows you that in week one while you can still act on it. The signal to watch for is a week holding more than one heavily weighted item, because those are the weeks that decide your grades and the ones you cannot fix by working harder that week.',
+  },
+  {
+    question: 'Do professors actually change the dates in the syllabus?',
+    answer:
+      'Frequently, and rarely with a formal announcement. A date moves in a lecture aside, in an LMS update, or in a revised PDF that replaces the old one silently. This is the practical argument for keeping your dates somewhere you control rather than only in the original document: when something moves, you want to notice it and update one place, not rediscover the old date three weeks later and plan around it.',
+  },
+]
+
+<JsonLd data={articleSchema({
+  path: '/blog/first-two-weeks-of-semester',
+  title: 'The First Two Weeks of the Semester: What to Set Up Now',
+  description: 'Weeks one and two are the only quiet stretch of the term. Five things worth doing while they last, including the deadline most students find out about too late.',
+  datePublished: '2026-08-30',
+})} />
+
+<JsonLd data={faqPageSchema(faqItems)} />
+
+<BlogPostHero
+  title="The First Two Weeks of the Semester: What to Set Up Now"
+  date="Published August 30, 2026"
+  image="/illustrations/syllabus-calendar.svg"
+  imageAlt="A friendly character waving beside a syllabus page turning into a month grid, one date highlighted"
+/>
+
+**The short version:** weeks one and two are the only stretch of the term when nothing is due, and that makes them the only time you can look at the whole semester at once. Five things are worth doing while that lasts: read each syllabus end to end, pull every dated item into one calendar, write down the grade weights, block your recurring class times, and — the one most people miss — find your add/drop deadline, which is set by your registrar, is not in your syllabus, and is the most consequential date of the term.
+
+## Why these two weeks specifically
+
+The work in a semester is not spread evenly. Week one has no deadlines because nothing has been assigned yet. By week six you are in the middle of it, and by week nine there is a stretch where two exams and a paper land within days of each other.
+
+That shape is entirely visible in week one, because every syllabus already contains it. It is simply distributed across four or five PDFs, in prose, in four different formats.
+
+So the value of doing this early is not organisation for its own sake. It is that the crunch weeks are knowable now, while you can still do something about them — drop a course, move a shift, warn someone that you will be unavailable — and unknowable later, when the only available response is to be tired.
+
+## 1. Read each syllabus once, all the way through
+
+Before writing down a single date.
+
+Grading policies, late-work rules and exam formats are explained once, usually in the first two pages, and then referenced in passing for the rest of the document. Skipping that context makes individual dates misleading: an entry reading "project due" is sometimes only the proposal, with the real submission weeks later.
+
+That first read is also where the course's particular rules live — a dropped lowest quiz, participation tied to attendance, a fixed penalty per day late. None of those are dates, and all of them change how you should treat the dates once you have them.
+
+## 2. Get every dated item into one place
+
+One calendar, one list, one anything — as long as it is one.
+
+The specific failure this prevents is not forgetting a deadline. It is having four syllabi open and no way to see that three of them converge on the same Thursday. A deadline you can see is a deadline you can plan around; a deadline that only exists inside a PDF you last opened in August is not.
+
+Watch for the formats that hide dates:
+
+- **A dated schedule table** — the easy case, and rarely the whole story
+- **Prose in a policy paragraph** — "the research proposal is due two weeks before the final draft" is a date, expressed as arithmetic
+- **Relative dates** — "every Friday", "the week after spring break", which are dates you have to resolve yourself
+- **An appendix** — reading schedules in particular are often separated from everything else, several pages later
+
+## 3. Write down the grade weights
+
+Four or five numbers per course, from the table on page one or two.
+
+These decide what a week actually costs you. Two assignments due the same day are not equivalent if one is worth 5 percent and the other 25, and without the weights in front of you the comparison defaults to whichever feels more urgent — which is usually whichever is larger, and largeness is not the same as consequence. [What "worth 20% of your grade" actually means](/blog/what-assignment-weights-mean) covers the arithmetic in full.
+
+## 4. Block the recurring commitments
+
+Classes, labs, discussion sections, and anything outside school that repeats — a shift, a practice, a standing appointment.
+
+This is the least interesting item on the list and the one that makes the others useful. A calendar showing only deadlines tells you what is due. A calendar also showing where your time already goes tells you when you can actually do the work, which is the question you are really asking when you look at a busy week.
+
+## 5. Find your add/drop deadline
+
+This is the one to do first if you do nothing else.
+
+It is set by your registrar, not your instructor, so **it will not be in any syllabus**. It usually falls somewhere between the end of week one and the end of week three, and it varies by institution and sometimes by course type.
+
+<BlogTable
+  columns={['', 'Before the deadline', 'After the deadline']}
+  highlightColumn={1}
+  caption="Exact policies vary by institution — check your registrar's academic calendar rather than assuming. The pattern is near-universal even when the details are not."
+  rows={[
+    ['Dropping a course', 'Usually no transcript record', 'Often a W on the transcript'],
+    ['Tuition', 'Often refundable in full or part', 'Usually not refundable'],
+    ['Adding a course', 'Generally possible', 'Usually requires permission, often refused'],
+    ['Switching sections', 'Straightforward', 'Case by case'],
+  ]}
+/>
+
+The reason this matters more than it sounds: the information that tells you whether a course load is survivable — the mapped calendar from step 2 — becomes available in week one, and the deadline to act on it passes in week two or three. Those two facts are only useful together, and most students assemble the first one after the second has already expired.
+
+## What not to bother with
+
+A brief argument against doing more.
+
+Elaborate systems built in week one do not survive week six. Colour-coded tags, a study schedule planned to the hour, a note-taking method adopted from a video — these consume the quiet week and are abandoned under the first real deadline pile-up, usually with some guilt attached.
+
+The five items above survive because they are facts rather than habits. A written-down deadline stays true whether or not you are on top of things that week. That is the entire reason to prefer them.
+
+## Doing it faster
+
+The manual version of steps 1 through 4 takes about half an hour per course, and it is genuinely worth the time even done by hand.
+
+Semora exists to compress that: scanning a syllabus pulls out the dated items, the grade weights and the class meeting times in one pass, and you review the extracted list before anything is saved. [Turning a syllabus into a semester calendar](/blog/syllabus-to-semester-calendar) walks through both routes, manual and scanned.
+
+Step 5 it cannot help with. Your add/drop deadline lives on your registrar's academic calendar, and finding it is five minutes of your own time — spent in week one, not week four.
+
+## Frequently asked questions
+
+<Faq items={faqItems} />
+
+<RelatedPosts posts={relatedPosts('first-two-weeks-of-semester')} />

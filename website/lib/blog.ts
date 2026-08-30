@@ -92,6 +92,33 @@ export const BLOG_POSTS: BlogPostMeta[] = [
     image: '/illustrations/final-grade-target.svg',
     imageAlt: 'A friendly character beside a gauge filling toward the score needed on a final exam',
   },
+  {
+    slug: 'what-assignment-weights-mean',
+    title: 'What "Worth 20% of Your Grade" Actually Means',
+    description:
+      'Assignment weights decide your course grade, not the points on the page. The arithmetic, worked through, and the four ways a gradebook percentage misleads you.',
+    date: '2026-08-30',
+    image: '/illustrations/grade-card.svg',
+    imageAlt: 'A friendly character beside a grade card showing category weights adding up to a course grade',
+  },
+  {
+    slug: 'first-two-weeks-of-semester',
+    title: 'The First Two Weeks of the Semester: What to Set Up Now',
+    description:
+      'Weeks one and two are the only quiet stretch of the term. Five things worth doing while they last, including the deadline most students find out about too late.',
+    date: '2026-08-30',
+    image: '/illustrations/syllabus-calendar.svg',
+    imageAlt: 'A friendly character waving beside a syllabus page turning into a month grid, one date highlighted',
+  },
+  {
+    slug: 'how-to-study-for-midterms',
+    title: 'How to Study for Midterms When Three Land in One Week',
+    description:
+      'Midterms collide in a way finals do not, and the hard part is allocation rather than studying. How to decide where the hours go, with the arithmetic.',
+    date: '2026-08-30',
+    image: '/illustrations/book-stack.svg',
+    imageAlt: 'A friendly character beside a stack of books with three exam dates marked on a calendar behind',
+  },
 ];
 
 export function getBlogPost(slug: string): BlogPostMeta | undefined {

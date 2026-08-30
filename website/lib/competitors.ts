@@ -146,7 +146,7 @@ export const COMPETITORS: CompetitorFact[] = [
     competitorParagraph:
       'Shovel is a study-planning and scheduling app. You either upload a PDF syllabus for AI parsing, with a review/confirmation screen, or connect a school LMS (Canvas, Brightspace, Moodle, or Google Classroom) for read-only sync that auto-refreshes roughly every 24 hours. From there, Shovel builds a time-blocked study schedule across the whole semester, weighing available time against estimated time-per-task. Distinct features include "The Cushion™" predictive conflict alerts, reading-time estimators, streak-based motivation tracking, and free supplementary "how to study" courses.',
     comparisonCaption:
-      "Comparison based on verified product details checked August 9, 2026. Shovel's official Pricing and Buy pages showed conflicting prices on that date.",
+      "Comparison based on verified product details checked August 30, 2026. Shovel's official Pricing and Buy pages showed conflicting prices on that date.",
     comparisonRows: [
       {
         feature: 'Syllabus & deadline handling',
@@ -179,7 +179,7 @@ export const COMPETITORS: CompetitorFact[] = [
         semora:
           'Free tier (one AI action for the life of the account — a syllabus scan, a lecture recording, or a document turned into notes — plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total); Pro is $3.99/month or $19.99/year, bought by card on the web or in the iOS app and applied account-wide.',
         competitor:
-          "Official pages conflicted when checked August 9, 2026. The Pricing page showed a 7-day free trial followed by $9.79/month (with $19.99 also displayed) or $39/year; the navigation-linked Buy page showed $33/month paid monthly or $16/month paid annually. Confirm the checkout amount.",
+          "Official pages conflicted when checked August 30, 2026. The Pricing page showed a 7-day free trial followed by $9.79/month (with $19.99 also displayed) or $39/year; the navigation-linked Buy page showed $33/month paid monthly or $16/month paid annually. Confirm the checkout amount.",
       },
       {
         feature: 'Platforms',
@@ -240,7 +240,7 @@ export const COMPETITORS: CompetitorFact[] = [
       'Features like "The Cushion™" conflict alerts, reading-time estimators, or free supplementary study courses matter to you.',
     ],
     extraNote:
-      "Semora launched recently and does not yet have a public rating history to report — we're not going to invent one. Shovel is subscription-based, and its official Pricing and navigation-linked Buy pages showed conflicting prices when checked August 9, 2026; confirm the checkout amount before deciding.",
+      "Semora launched recently and does not yet have a public rating history to report — we're not going to invent one. Shovel is subscription-based, and its official Pricing and navigation-linked Buy pages showed conflicting prices when checked August 30, 2026; confirm the checkout amount before deciding.",
     faq: [
       {
         question: 'Does Semora sync with Canvas the same way Shovel does?',
@@ -250,7 +250,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Is Semora or Shovel free to use?',
         answer:
-          "Semora has a free tier for one semester total: one AI action for the lifetime of the account (a syllabus scan, a lecture recording, or a document turned into notes — you pick), unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within that semester, full deadline and grade tracking, and same-day reminders, with no countdown timer on the planner itself (calendar sync with .ics export is a Pro feature). Shovel's core planner is subscription-gated. Its official Pricing page advertised a 7-day free trial when checked August 9, 2026, while its navigation-linked Buy page did not mention a trial; confirm the offer at checkout.",
+          "Semora has a free tier for one semester total: one AI action for the lifetime of the account (a syllabus scan, a lecture recording, or a document turned into notes — you pick), unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within that semester, full deadline and grade tracking, and same-day reminders, with no countdown timer on the planner itself (calendar sync with .ics export is a Pro feature). Shovel's core planner is subscription-gated. Its official Pricing page advertised a 7-day free trial when checked August 30, 2026, while its navigation-linked Buy page did not mention a trial; confirm the offer at checkout.",
       },
       {
         question: 'Does Semora build a study schedule like Shovel does?',
@@ -260,7 +260,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'What does Semora cost compared to Shovel?',
         answer:
-          "Semora Pro is $3.99/month or $19.99/year, bought by card on the web or as a subscription inside the iOS app, and applied account-wide across iPhone, iPad, and browser. Shovel's official pages conflicted when checked August 9, 2026: the Pricing page showed a 7-day free trial followed by $9.79/month (with $19.99 also displayed) or $39/year, while the navigation-linked Buy page showed $33/month paid monthly or $16/month paid annually. Confirm the checkout amount.",
+          "Semora Pro is $3.99/month or $19.99/year, bought by card on the web or as a subscription inside the iOS app, and applied account-wide across iPhone, iPad, and browser. Shovel's official pages conflicted when checked August 30, 2026: the Pricing page showed a 7-day free trial followed by $9.79/month (with $19.99 also displayed) or $39/year, while the navigation-linked Buy page showed $33/month paid monthly or $16/month paid annually. Confirm the checkout amount.",
       },
     ],
   },
@@ -389,7 +389,7 @@ export const COMPETITORS: CompetitorFact[] = [
     competitorParagraph:
       'Mindgrasp takes a different starting point: you upload or link a piece of content — a PDF, DOCX, PowerPoint, MP3/MP4, YouTube video, web article, or a lecture you record live, and it generates a linked bundle of AI notes, a summary, flashcards, a quiz, and an "AI Tutor" chat for asking questions about that content. A higher Scholar/Premium tier adds an "AI math expert" for step-by-step math help, and there\'s a Chrome extension for capturing content from the browser. Mindgrasp also states compatibility with Canvas, Blackboard, and Panopto, though this appears to be for importing or processing files from those platforms rather than parsing a syllabus for deadlines. Mindgrasp\'s marketing targets a broad range of learners — high school through graduate students, self-learners, professionals, and exam-prep candidates.',
     comparisonCaption:
-      "Based on Semora's shipped features and Mindgrasp's public materials checked August 9, 2026. Mindgrasp pricing uses the official plan picker's Yearly selector.",
+      "Based on Semora's shipped features and Mindgrasp's public materials checked August 30, 2026. Mindgrasp pricing uses the official plan picker's Yearly selector.",
     comparisonRows: [
       {
         feature: 'Syllabus & deadline handling',
@@ -424,7 +424,7 @@ export const COMPETITORS: CompetitorFact[] = [
         semora:
           'Free tier available (one AI action for the life of the account — a scan, a lecture recording, or a document turned into notes — plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total). Pro is $3.99/month or $19.99/year, bought by card on the web or in the iOS app, applying account-wide across iPhone, iPad, and browser.',
         competitor:
-          "The official plan picker, with Yearly selected on August 9, 2026, showed Basic at $5.99/month billed $71.88 once per year, Scholar at $8.99/month billed $107.88 once per year, and Premium at $10.99/month billed $131.88 once per year. The official site advertises a free trial; confirm the offer and any monthly-billing prices at checkout.",
+          "The official plan picker, with Yearly selected on August 30, 2026, showed Basic at $5.99/month billed $71.88 once per year, Scholar at $8.99/month billed $107.88 once per year, and Premium at $10.99/month billed $131.88 once per year. The official site advertises a free trial; confirm the offer and any monthly-billing prices at checkout.",
       },
       {
         feature: 'Platform availability',
@@ -434,7 +434,7 @@ export const COMPETITORS: CompetitorFact[] = [
       },
     ],
     pricingWin:
-      "Semora Pro is $3.99/month or $19.99/year. Mindgrasp's official Yearly view starts at $5.99/month billed $71.88 once per year, so Semora's listed monthly and annual prices are lower; checked August 9, 2026.",
+      "Semora Pro is $3.99/month or $19.99/year. Mindgrasp's official Yearly view starts at $5.99/month billed $71.88 once per year, so Semora's listed monthly and annual prices are lower; checked August 30, 2026.",
     whereSemoraFits: [
       'Want your syllabus turned into a calendar of deadlines automatically, instead of copying dates by hand',
       'Want grades, assignments, and class schedule tracked in one place all semester',
@@ -469,7 +469,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Which is cheaper, Semora or Mindgrasp?',
         answer:
-          "Semora's pricing is confirmed directly: free, or Pro at $3.99/month or $19.99/year. Mindgrasp's official plan picker, with Yearly selected on August 9, 2026, showed Basic at $5.99/month billed $71.88 once per year, Scholar at $8.99/month billed $107.88 once per year, and Premium at $10.99/month billed $131.88 once per year. Semora's listed monthly and annual prices are lower, but confirm Mindgrasp's current offer and billing cadence at checkout.",
+          "Semora's pricing is confirmed directly: free, or Pro at $3.99/month or $19.99/year. Mindgrasp's official plan picker, with Yearly selected on August 30, 2026, showed Basic at $5.99/month billed $71.88 once per year, Scholar at $8.99/month billed $107.88 once per year, and Premium at $10.99/month billed $131.88 once per year. Semora's listed monthly and annual prices are lower, but confirm Mindgrasp's current offer and billing cadence at checkout.",
       },
     ],
   },

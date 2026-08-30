@@ -569,7 +569,7 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
         "paragraphs": [
           "This blog is written for one specific person: an undergraduate carrying four to six courses, each with its own syllabus, its own grading scheme, and its own idea of when things are due. Not a productivity hobbyist collecting systems. Someone who wants the semester to stop producing surprises — the paper assigned in week two and due in week eleven, the midterm that turns out to be worth thirty percent, the Wednesday in December with two finals on it.",
           "Every post here takes one concrete mechanic and explains it end to end, in the order you would actually do it. The methods work with a spreadsheet, a paper planner, or the calendar app already on your phone. Semora shows up at the end of each guide as the automated version of work you could do by hand, with the tier stated plainly so you know which parts cost nothing. If a guide is only useful once you subscribe, it was written wrong.",
-          "There are nine posts, published between July 20 and August 9, 2026. They fall into nine problems, described below. Each description explains the underlying problem well enough to be useful on its own, so this page is worth reading even if you never open a single post."
+          "There are nine posts, published between July 20 and August 30, 2026. They fall into nine problems, described below. Each description explains the underlying problem well enough to be useful on its own, so this page is worth reading even if you never open a single post."
         ],
         "bullets": [
           "Turning a syllabus into a semester calendar — the conversion every course demands and no course teaches",

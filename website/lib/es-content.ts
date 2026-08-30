@@ -1738,11 +1738,44 @@ export const SPANISH_BLOG_POSTS = [
     englishPath: '/blog/grade-needed-on-final-exam',
     title: '¿Qué nota necesito en el examen final?',
     description: 'La fórmula para saber qué necesitas sacar en el final, resuelta con ponderaciones reales, y los cuatro errores que dan un resultado equivocado.',
-    date: '9 de agosto de 2026',
+    date: '30 de agosto de 2026',
     isoDate: '2026-08-09',
     modifiedDate: undefined,
     image: '/illustrations/final-grade-target.svg',
     imageAlt: 'Ilustración de un medidor que se llena hasta la nota que necesitas en el examen final',
+  },
+  {
+    path: '/es/blog/que-significa-que-valga-20-por-ciento',
+    englishPath: '/blog/what-assignment-weights-mean',
+    title: 'Qué significa realmente que algo «valga el 20 % de la nota»',
+    description: 'El peso decide tu calificación final, no los puntos de la tarea. La aritmética, resuelta, y por qué el porcentaje del campus virtual te engaña.',
+    date: '30 de agosto de 2026',
+    isoDate: '2026-08-30',
+    modifiedDate: '2026-08-30',
+    image: '/illustrations/grade-card.svg',
+    imageAlt: 'Ilustración de una boleta de calificaciones con los pesos de cada categoría sumando la nota del curso',
+  },
+  {
+    path: '/es/blog/primeras-dos-semanas-del-semestre',
+    englishPath: '/blog/first-two-weeks-of-semester',
+    title: 'Las primeras dos semanas del semestre: qué dejar listo ahora',
+    description: 'Las semanas uno y dos son el único tramo tranquilo del semestre. Cinco cosas que conviene hacer mientras duran, incluida la fecha que casi nadie mira a tiempo.',
+    date: '30 de agosto de 2026',
+    isoDate: '2026-08-30',
+    modifiedDate: '2026-08-30',
+    image: '/illustrations/syllabus-calendar.svg',
+    imageAlt: 'Ilustración de la página de un programa que se convierte en un calendario con una fecha marcada',
+  },
+  {
+    path: '/es/blog/como-estudiar-para-los-parciales',
+    englishPath: '/blog/how-to-study-for-midterms',
+    title: 'Cómo estudiar para los parciales cuando caen tres en la misma semana',
+    description: 'Los parciales son un problema de reparto antes que de estudio. Cómo decidir a dónde van las horas, con los números delante.',
+    date: '30 de agosto de 2026',
+    isoDate: '2026-08-30',
+    modifiedDate: '2026-08-30',
+    image: '/illustrations/book-stack.svg',
+    imageAlt: 'Ilustración de una pila de libros con tres fechas de examen marcadas en un calendario detrás',
   },
 ] as const;
 
@@ -1760,7 +1793,7 @@ export const SPANISH_BLOG_INDEX_BODY: PageLongForm = {
       paragraphs: [
         'Este blog está escrito para una persona concreta: alguien de licenciatura con cuatro a seis materias, cada una con su propio programa, su propio esquema de calificación y su propia idea de cuándo se entregan las cosas. No para un aficionado a la productividad que colecciona sistemas, sino para quien quiere que el semestre deje de producir sorpresas: el trabajo asignado en la semana dos que se entrega en la once, el parcial que resulta valer el treinta por ciento, el miércoles de diciembre con dos exámenes finales.',
         'Cada entrada toma un mecanismo concreto y lo explica de principio a fin, en el orden en que de verdad lo harías. Los métodos funcionan con una hoja de cálculo, una agenda de papel o el calendario que ya traes en el teléfono. Semora aparece al final de cada guía como la versión automática de un trabajo que podrías hacer a mano, con el plan indicado con claridad para que sepas qué partes no cuestan nada. Si una guía solo sirve después de suscribirte, está mal escrita.',
-        'Hay nueve entradas, publicadas entre el 20 de julio y el 9 de agosto de 2026. Corresponden a nueve problemas, descritos abajo. Cada descripción explica el problema de fondo lo suficiente como para servir por sí sola, así que esta página vale la pena aunque no abras ninguna entrada.',
+        'Hay nueve entradas, publicadas entre el 20 de julio y el 30 de agosto de 2026. Corresponden a nueve problemas, descritos abajo. Cada descripción explica el problema de fondo lo suficiente como para servir por sí sola, así que esta página vale la pena aunque no abras ninguna entrada.',
       ],
       bullets: [
         'Convertir un programa de clase en un calendario del semestre: la conversión que exige toda materia y que ninguna enseña',
@@ -2917,7 +2950,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
         paragraphs: [
           'Es la categoría más concurrida y aquella donde el marketing suena más parecido. Las tres reciben contenido y devuelven material de estudio. Las diferencias están en qué aceptan, qué producen y si algo se conecta con tus cursos reales.',
           'StudyFetch está construido alrededor de Spark.E, un tutor que responde a partir de tus propios materiales en lugar de la web abierta, una distinción con consecuencias: hace que las respuestas sean rastreables hasta algo que tu profesor efectivamente asignó. Genera tarjetas, cuestionarios y simulacros de examen a partir de lo que subes, ofrece planes de estudio con repetición espaciada y da retroalimentación sobre ensayos. Sí tiene una función de programa: fotografías un programa o un calendario y Spark.E extrae los eventos a un calendario con recordatorios. Según las descripciones disponibles, funciona por cada subida y no agregando automáticamente las fechas de todos tus cursos. StudyFetch también documenta una integración LTI 1.3 con Canvas, Blackboard, Schoology, D2L Brightspace y Google Classroom con sincronización de listas, pero esa la implementa la institución, no el estudiante, así que solo está disponible si tu universidad ya la configuró. Reseñas de terceros reportan un plan gratuito (alrededor de 10 conversaciones con el tutor, un conjunto de estudio y dos subidas), un plan Base cercano a $7.99 al mes, uno Premium cercano a $11.99, un paquete semestral cercano a $49.99 y un plan anual cercano a $99.99; nada de eso está confirmado en la propia página de precios de StudyFetch, así que conviene verificarlo antes de comprar. Funciona en web, iOS y Android.',
-          'Mindgrasp tiene el rango de entrada más amplio: PDF, DOCX, PowerPoint, MP3 y MP4, videos de YouTube y artículos web. Le das cualquiera de esos y produce apuntes, resúmenes, tarjetas y cuestionarios, con un tutor con IA para preguntas de seguimiento y un plan superior que agrega un experto en matemáticas. Declara compatibilidad con Canvas, Blackboard y Panopto, lo que parece significar importar archivos de esas plataformas y no analizar programas ni fechas. No aparece ninguna función de análisis de programas ni de extracción de fechas en sus materiales públicos, ni seguimiento de calificaciones. Con la opción anual activa el 9 de agosto de 2026, su selector oficial mostraba Basic a $5.99 al mes facturados como $71.88 una vez al año, Scholar a $8.99 al mes facturados como $107.88 al año y Premium a $10.99 al mes facturados como $131.88 al año. El sitio oficial también anuncia una prueba gratuita; confirma la oferta y los precios de pago mensual al finalizar la compra. Se distribuye como app de iOS, app web y extensión de Chrome; la disponibilidad en Android no es clara.',
+          'Mindgrasp tiene el rango de entrada más amplio: PDF, DOCX, PowerPoint, MP3 y MP4, videos de YouTube y artículos web. Le das cualquiera de esos y produce apuntes, resúmenes, tarjetas y cuestionarios, con un tutor con IA para preguntas de seguimiento y un plan superior que agrega un experto en matemáticas. Declara compatibilidad con Canvas, Blackboard y Panopto, lo que parece significar importar archivos de esas plataformas y no analizar programas ni fechas. No aparece ninguna función de análisis de programas ni de extracción de fechas en sus materiales públicos, ni seguimiento de calificaciones. Con la opción anual activa el 30 de agosto de 2026, su selector oficial mostraba Basic a $5.99 al mes facturados como $71.88 una vez al año, Scholar a $8.99 al mes facturados como $107.88 al año y Premium a $10.99 al mes facturados como $131.88 al año. El sitio oficial también anuncia una prueba gratuita; confirma la oferta y los precios de pago mensual al finalizar la compra. Se distribuye como app de iOS, app web y extensión de Chrome; la disponibilidad en Android no es clara.',
           'Studley AI acepta PDF, diapositivas, videos de YouTube, enlaces a artículos y fotos de apuntes escritos a mano, y los convierte en tarjetas, cuestionarios y material de estudio en audio. Una función llamada «Solve» da ayuda paso a paso con tareas a partir de una foto, y un tutor con IA responde preguntas sobre lo que subiste. Mide el dominio de ese material en cuatro niveles, de desconocido a dominado, lo cual es seguimiento de progreso, pero de tu memoria, no de tu calificación. No aparecen integraciones con LMS ni análisis de programas en sus materiales disponibles. El plan gratuito cubre un conjunto de estudio al día; el plan Unlimited está reportado por reseñas de terceros en $12.88 al mes o $97.76 al año. Funciona en iOS, Android y web.',
           'Ninguna de las tres intenta ser tu agenda, y leerlas como agendas es el error. En lo que sí son buenas es en el último tramo antes de una evaluación: ya tienes el material, tienes poco tiempo y quieres convertirlo en algo que puedas practicar activamente en vez de releer.',
         ],
@@ -2925,7 +2958,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Centradas en la agenda: Shovel y myHomework',
         paragraphs: [
-          'Shovel es la app con la postura más definida de esta lista, y la postura es buena: conocer una fecha de entrega no es lo mismo que tener tiempo para cumplirla. Procesa un PDF del programa con pantalla de revisión, o se conecta en modo lectura a Canvas, Brightspace, Moodle y Google Classroom, actualizándose aproximadamente cada 24 horas, y después hace lo que las demás no hacen: compara el tiempo que van a tomar tus tareas contra el tiempo que realmente tienes, y lo reserva en el calendario. Sus alertas «Cushion» avisan cuando te comprometiste a más de lo que cabe, y estima el tiempo de lectura a partir del número de páginas. El seguimiento de calificaciones no está confirmado como función central; sus materiales públicos hablan de planificación. Sus páginas oficiales no coincidían el 9 de agosto de 2026: la página de precios mostraba una prueba de 7 días seguida de $9.79 al mes (con $19.99 tachado) o $39 al año, mientras que la página de compra enlazada desde la navegación mostraba $33 al mes con pago mensual o $16 al mes con pago anual. Confirma el importe en la pantalla de pago. La configuración empieza en la app web, con iOS y Android nativos como acompañantes.',
+          'Shovel es la app con la postura más definida de esta lista, y la postura es buena: conocer una fecha de entrega no es lo mismo que tener tiempo para cumplirla. Procesa un PDF del programa con pantalla de revisión, o se conecta en modo lectura a Canvas, Brightspace, Moodle y Google Classroom, actualizándose aproximadamente cada 24 horas, y después hace lo que las demás no hacen: compara el tiempo que van a tomar tus tareas contra el tiempo que realmente tienes, y lo reserva en el calendario. Sus alertas «Cushion» avisan cuando te comprometiste a más de lo que cabe, y estima el tiempo de lectura a partir del número de páginas. El seguimiento de calificaciones no está confirmado como función central; sus materiales públicos hablan de planificación. Sus páginas oficiales no coincidían el 30 de agosto de 2026: la página de precios mostraba una prueba de 7 días seguida de $9.79 al mes (con $19.99 tachado) o $39 al año, mientras que la página de compra enlazada desde la navegación mostraba $33 al mes con pago mensual o $16 al mes con pago anual. Confirma el importe en la pantalla de pago. La configuración empieza en la app web, con iOS y Android nativos como acompañantes.',
           'myHomework es la opción tradicional y es honesta al respecto. Registras materias y tareas a mano, o las importas de Canvas, D2L, Google Classroom, Blackboard y Schoology; una cuenta premium actualiza la agenda automáticamente con las tareas nuevas que vayan apareciendo. No hay escaneo de programas, ni tarjetas de estudio, ni tutor, y el seguimiento de calificaciones no se describe como función central. Lo que tiene, en cambio, es alcance: iOS, Android, Mac, Windows, Chrome, Kindle Fire y web, una cobertura de plataformas mayor que cualquier otra de esta lista, además de una versión gratuita con anuncios y una versión sin anuncios reportada en unos $4.99 al año. Si ya conoces tus fechas, las quieres en todos los dispositivos que usas y no te interesan las funciones de IA, es una opción razonable y muy barata.',
         ],
       },
@@ -3242,6 +3275,203 @@ const BLOG_PAGES: SpanishPageConfig[] = [
       { question: '¿Y si mi final puede reemplazar la nota de un parcial bajo?', answer: 'Eso cambia a la vez el peso del final y tu calificación actual, así que una sola pasada por la fórmula no lo resuelve. Calcúlalo dos veces, con y sin la sustitución, y planea contra el resultado más pesimista. Revisa además si el programa exige un mínimo obligatorio en el final, algo que algunas materias piden con independencia de tu porcentaje general y que invalida por completo la aritmética.' },
     ],
   }),
+  page(SPANISH_BLOG_POSTS[9].path, SPANISH_BLOG_POSTS[9].englishPath, 'standard', {
+    metaTitle: 'Qué significa que algo valga el 20 % de la nota',
+    metaDescription: SPANISH_BLOG_POSTS[9].description,
+    h1: SPANISH_BLOG_POSTS[9].title,
+    lede: 'El peso es la parte de tu calificación final que controla una categoría, y no tiene nada que ver con sobre cuántos puntos está calificada la tarea. Una prueba sobre 10 puntos y un trabajo sobre 200, dentro de la misma categoría del 20 %, mueven tu nota exactamente igual.',
+    intro: [
+      'Para saber tu promedio real, multiplica el promedio de cada categoría por su peso en decimal y suma los resultados. Y deja fuera de esa suma las categorías que todavía no tienen ninguna nota, en lugar de contarlas como cero: ahí está el error que produce casi todo el pánico innecesario.',
+      'El porcentaje que te muestra el campus virtual se calcula solo sobre lo ya calificado, con una regla que eligió tu profesor y que no aparece por ningún lado. Por eso se separa del número que de verdad decide tu letra.',
+    ],
+    sections: [
+      {
+        heading: 'Los puntos miden el trabajo. El peso mide la consecuencia.',
+        paragraphs: [
+          'Esa es la idea completa, y casi todas las confusiones posteriores vienen de mezclar las dos cosas. Los puntos de una tarea describen la tarea: cuánto había que hacer, con cuánto detalle se corrigió, cuántas preguntas tenía. Un informe de laboratorio sobre 60 puntos seguramente era más largo que una prueba sobre 10.',
+          'El peso describe cuánto decide esa categoría tu calificación del curso. Vive en el programa, casi siempre en una tabla pequeña de la primera o segunda página, y es el único número que importa cuando quieres saber dónde estás parado.',
+          'Piensa en dos tareas del mismo curso: una prueba sobre 10 puntos dentro de una categoría que vale el 20 %, y un trabajo de investigación sobre 200 puntos dentro de otra categoría que también vale el 20 %. El trabajo es veinte veces más grande. No vale ni un punto más. Perder cinco puntos porcentuales en cualquiera de las dos te cuesta exactamente lo mismo.',
+          'Al revés duele más. Una nota de participación que vale el 15 %, calificada sobre 15 puntos en todo el semestre, pesa más que todas las tareas juntas en un curso donde las tareas valen el 10 %, aunque hayas entregado treinta tareas y solo existan quince puntos de participación.',
+        ],
+      },
+      {
+        heading: 'Cómo se calcula de verdad',
+        paragraphs: [
+          'Toma el promedio de cada categoría como porcentaje, multiplícalo por su peso en decimal y suma. Supongamos que tu programa dice: tareas 20 % (tu promedio 92 %), pruebas 15 % (78 %), parciales 30 % (81 %) y examen final 35 % (todavía sin presentar).',
+          'Lo calificado aporta 92 × 0.20 = 18.4, más 78 × 0.15 = 11.7, más 81 × 0.30 = 24.3. En total 54.4 puntos, sobre los 65 puntos que hasta ahora están decididos.',
+          'Y aquí se equivoca casi todo el mundo. Tu situación actual no es 54.4 %. Es 54.4 sobre 65, o sea 83.7 %. El examen final no ha ocurrido: sus 35 puntos no están ganados ni perdidos, y dividir entre 100 los cuenta calladamente en tu contra.',
+          'Esa diferencia —54.4 frente a 83.7— es la distancia entre creer que vas reprobando y saber que llevas un notable. Es el error aritmético más común que cometen los estudiantes con sus propias notas, y aparece justo en las semanas en las que más daño hace.',
+        ],
+      },
+      {
+        heading: 'Por qué el porcentaje del campus virtual no coincide',
+        paragraphs: [
+          'Canvas, Blackboard y Moodle te muestran un porcentaje. Muchas veces no es el número de arriba, y la razón no es un fallo del sistema.',
+          'El campus virtual calcula sobre lo calificado, y qué cuenta como «calificado» es configurable. Según lo que haya elegido tu profesor, lo no calificado puede quedar excluido —lo que da una cifra bastante honesta—, puede contarse como cero —lo que te hace ver mucho peor de lo que estás, sobre todo al principio del semestre—, o puede tratarse distinto en dos materias porque dos profesores configuraron cosas distintas en el mismo sistema.',
+          'Nada de eso se anuncia en un lugar donde vayas a verlo. El porcentaje llega sin una etiqueta que diga qué regla lo produjo, y eso lo hace imposible de interpretar con confianza incluso cuando por casualidad está bien.',
+          'No es un argumento para ignorar el campus virtual. Es un argumento para conocer tus pesos, de modo que cuando los dos números no coincidan sepas cuál describe la realidad.',
+        ],
+      },
+      {
+        heading: 'Dos reglas que cambian el cálculo más de lo que parece',
+        paragraphs: [
+          'Eliminar la nota más baja. Si el curso descarta tu peor prueba, hay que recalcular el promedio de esa categoría sin ella antes de meterla en la suma ponderada. Con pruebas de 95, 88, 91 y 40, el promedio es 78.5; sin el 40, es 91.3. Ponderado al 15 %, eso son casi dos puntos de la calificación del curso.',
+          'Sumar puntos en lugar de promediar porcentajes. Algunos profesores promedian los porcentajes dentro de una categoría; otros suman los puntos. Si en tareas tienes una de 10 puntos donde sacaste 5 y otra de 100 donde sacaste 95, promediar porcentajes da 72.5 %. Sumar puntos da 100 sobre 110, o sea 90.9 %. El mismo trabajo, dieciocho puntos de diferencia, y solo el programa dice cuál usa tu curso.',
+        ],
+      },
+      {
+        heading: 'Qué hacer con esto',
+        paragraphs: [
+          'Busca la tabla de pesos en cada uno de tus programas y anota los cuatro o cinco números en algún sitio donde los vayas a ver. Esa es toda la tarea, y son unos diez minutos por materia al empezar el semestre.',
+          'Se paga sola la primera vez que tengas que elegir entre dos entregas de la misma semana, porque la comparación honesta no es cuál es más grande ni cuál vence antes: es cuál mueve tu calificación. Y esa es una pregunta sobre pesos, que ya tendrás delante.',
+          'Semora hace la parte de anotarlos: lee los pesos directamente del programa cuando lo escaneas y mantiene el promedio ponderado al día conforme introduces notas, incluidas las reglas de eliminar la nota más baja y las categorías que suman puntos, que es donde el cálculo a mano suele fallar. Pero la versión manual de diez minutos también funciona, y conocer los números vale más que cualquier herramienta que los conozca por ti.',
+        ],
+      },
+    ],
+    faq: [
+      { question: '¿Qué significa que una tarea valga el 20 % de la nota?', answer: 'Significa que esa tarea controla 20 de los 100 puntos con los que se construye tu calificación final, sin importar cuántos puntos aparezcan en la tarea misma. Una prueba de 10 puntos dentro de una categoría del 20 % mueve tu nota exactamente igual que un proyecto de 200 puntos dentro de una categoría del 20 %. Los puntos miden el trabajo; el peso mide la consecuencia, y solo el peso viene del programa.' },
+      { question: '¿Cómo calculo mi promedio ponderado del curso?', answer: 'Multiplica el promedio de cada categoría por su peso en decimal y suma los resultados. Tareas al 92 % con peso del 20 % aportan 18.4 puntos; un promedio de parciales del 81 % con peso del 30 % aporta 24.3. Suma todas las categorías y tienes tu porcentaje del curso. Si una categoría todavía no tiene ninguna nota, déjala fuera del total y del divisor en lugar de contarla como cero.' },
+      { question: '¿Por qué mi porcentaje de Canvas es distinto de mi nota real?', answer: 'Porque el campus virtual calcula solo sobre lo calificado, y cómo trata lo no calificado es una opción que eligió tu profesor. Según esa configuración, una entrega sin calificar puede quedar excluida, contarse como cero, o tratarse distinto entre dos materias. El número no está mal: está sin etiquetar, y no puedes saber qué regla lo produjo. Recalcular desde los pesos de tu programa es la única forma de saber qué estás mirando.' },
+      { question: '¿Qué pasa con mi promedio si una categoría aún no tiene notas?', answer: 'Debe quedar completamente fuera del cálculo, no contarse como cero. Si tienes calificadas las tareas y los parciales pero no el proyecto final, tu situación actual es el promedio ponderado de tareas y parciales sobre el peso combinado de esas dos categorías, no sobre 100. Dividir entre 100 trata cada punto sin calificar como un punto perdido, y por eso hay estudiantes convencidos de que van reprobando una materia que están aprobando.' },
+      { question: '¿Los pesos pueden sumar algo distinto de 100 %?', answer: 'Deberían sumar 100, y cuando no lo hacen suele ser por puntos extra o por un redondeo del programa, no por un error que tengas que corregir. Si tus categorías suman 105 por un 5 % de crédito extra, trata ese crédito como realmente extra: calcula tu nota sobre el 100 obligatorio y súmale después lo que aporte. Si suman 97 o 103 sin explicación, pregunta, porque eso cambia todos los cálculos que hagas el resto del semestre.' },
+    ],
+  }),
+  page(SPANISH_BLOG_POSTS[10].path, SPANISH_BLOG_POSTS[10].englishPath, 'standard', {
+    metaTitle: 'Primeras dos semanas del semestre: qué dejar listo',
+    metaDescription: SPANISH_BLOG_POSTS[10].description,
+    h1: SPANISH_BLOG_POSTS[10].title,
+    lede: 'Las semanas uno y dos son el único tramo del semestre en el que no vence nada, y por eso son el único momento en el que puedes mirar el semestre entero de una sola vez.',
+    intro: [
+      'Cinco cosas vale la pena hacer mientras dure: leer cada programa de principio a fin, pasar todas las fechas a un solo calendario, anotar los pesos de la calificación, bloquear tus horarios fijos y —la que casi nadie hace— averiguar tu fecha límite de altas y bajas, que la fija la administración, no aparece en ningún programa y es la fecha más consecuente del semestre.',
+      'El trabajo de un semestre no está repartido de forma pareja. La semana uno no tiene entregas porque todavía no han asignado nada. Para la semana seis ya estás dentro, y hacia la nueve hay un tramo en el que dos exámenes y un trabajo caen con días de diferencia.',
+    ],
+    sections: [
+      {
+        heading: 'Por qué estas dos semanas en concreto',
+        paragraphs: [
+          'Esa forma del semestre ya es visible en la semana uno, porque cada programa la contiene entera. Lo que pasa es que está repartida en cuatro o cinco PDF, en prosa y en cuatro formatos distintos.',
+          'Así que el valor de hacer esto pronto no es el orden por el orden. Es que las semanas duras se pueden conocer ahora, cuando todavía puedes hacer algo —dar de baja una materia, cambiar un turno, avisar a alguien de que no vas a estar disponible— y no se pueden conocer después, cuando la única respuesta posible es aguantar cansado.',
+        ],
+      },
+      {
+        heading: '1. Lee cada programa una vez, entero',
+        paragraphs: [
+          'Antes de anotar una sola fecha. Las políticas de calificación, las reglas de entrega tardía y el formato de los exámenes se explican una vez, casi siempre en las dos primeras páginas, y después el documento solo los menciona de pasada. Saltarte ese contexto hace que las fechas sueltas engañen: lo que aparece como «entrega del proyecto» a veces es solo la propuesta, y el trabajo real se entrega semanas después.',
+          'Esa primera lectura también es donde viven las reglas particulares del curso: que se elimine la peor prueba, que la participación dependa de la asistencia, que haya una penalización fija por cada día de retraso. Ninguna de esas cosas es una fecha, y todas cambian cómo deberías tratar las fechas una vez que las tengas.',
+        ],
+      },
+      {
+        heading: '2. Pasa todas las fechas a un solo sitio',
+        paragraphs: [
+          'Un calendario, una lista, lo que sea, siempre que sea uno solo. El fallo que esto evita no es olvidarse de una entrega: es tener cuatro programas abiertos y ninguna forma de ver que tres coinciden el mismo jueves.',
+          'Vigila los formatos que esconden fechas. Una tabla con el calendario del curso es el caso fácil y rara vez es todo. La prosa dentro de una política —«la propuesta se entrega dos semanas antes del borrador final»— es una fecha expresada como una resta. Las fechas relativas —«cada viernes», «la semana después del receso»— son fechas que tienes que resolver tú. Y los anexos: los calendarios de lectura suelen ir separados de todo lo demás, varias páginas más adelante.',
+        ],
+      },
+      {
+        heading: '3. Anota los pesos de la calificación',
+        paragraphs: [
+          'Cuatro o cinco números por materia, de la tabla de la primera o segunda página. Son los que deciden cuánto te cuesta de verdad una semana.',
+          'Dos entregas el mismo día no son equivalentes si una vale el 5 % y la otra el 25 %, y sin los pesos delante la comparación se decide por lo que parece más urgente, que suele ser lo más grande. Y grande no es lo mismo que importante.',
+        ],
+      },
+      {
+        heading: '4. Bloquea lo que se repite',
+        paragraphs: [
+          'Clases, laboratorios, seminarios, y también lo que no es de la universidad y se repite: un turno, un entrenamiento, una cita fija.',
+          'Es el punto menos interesante de la lista y el que hace útiles a los demás. Un calendario que solo muestra entregas te dice qué vence. Un calendario que además muestra dónde ya se va tu tiempo te dice cuándo puedes hacer el trabajo, que es la pregunta real cuando miras una semana cargada.',
+        ],
+      },
+      {
+        heading: '5. Busca tu fecha límite de altas y bajas',
+        paragraphs: [
+          'Si solo vas a hacer una cosa, que sea esta. La fija la administración de tu universidad, no tu profesor, así que no va a estar en ningún programa. Suele caer entre el final de la semana uno y el final de la semana tres, y cambia según la institución.',
+          'Antes de esa fecha, dar de baja una materia normalmente no deja rastro en el expediente y a menudo hay devolución del importe. Después, la misma decisión puede significar una anotación en el expediente, ningún reembolso, o las dos cosas. Añadir una materia pasa de ser sencillo a necesitar permiso, que muchas veces se deniega.',
+          'Y aquí está el motivo por el que importa más de lo que parece: la información que te dice si una carga de materias es viable —el calendario del paso 2— aparece en la semana uno, y el plazo para actuar sobre ella vence en la dos o la tres. Las dos cosas solo sirven juntas, y la mayoría de la gente reúne la primera cuando la segunda ya venció.',
+        ],
+      },
+      {
+        heading: 'Qué no vale la pena hacer',
+        paragraphs: [
+          'Los sistemas elaborados montados en la semana uno no sobreviven a la semana seis. Etiquetas de colores, un plan de estudio hora por hora, un método de apuntes copiado de un vídeo: se comen la semana tranquila y se abandonan en la primera acumulación de entregas, normalmente con algo de culpa encima.',
+          'Los cinco puntos de arriba sobreviven porque son hechos, no hábitos. Una fecha anotada sigue siendo cierta tengas o no la semana bajo control. Esa es toda la razón para preferirlos.',
+          'La versión manual de los pasos 1 a 4 son unos treinta minutos por materia, y vale la pena incluso hecha a mano. Semora existe para comprimir eso: escanear un programa saca las fechas, los pesos y los horarios de clase en una sola pasada, y tú revisas la lista antes de que se guarde nada. El paso 5 no lo puede hacer por ti: tu fecha de altas y bajas está en el calendario académico de tu universidad, y encontrarla son cinco minutos tuyos, gastados en la semana uno y no en la cuatro.',
+        ],
+      },
+    ],
+    faq: [
+      { question: '¿Qué debería hacer la primera semana del semestre?', answer: 'Lee cada programa una vez de principio a fin y saca de él tres cosas: todas las fechas, la tabla de pesos de la calificación y tus horarios fijos de clase y laboratorio. Con eso cubres casi todo lo que vas a necesitar el resto del semestre, y la semana uno es el único momento en el que puedes hacerlo sin tener algo venciendo. Lo demás puede esperar, y la mayoría no sobrevive a la semana seis de todos modos.' },
+      { question: '¿Cuándo es la fecha límite de altas y bajas y por qué importa?', answer: 'Suele caer entre el final de la semana uno y el final de la semana tres, la fija la administración de tu universidad y no aparece en tu programa. Antes de esa fecha puedes dar de baja una materia normalmente sin que quede constancia en el expediente y muchas veces con devolución. Después, la misma decisión puede dejar una anotación, no devolver nada, o ambas. Es la fecha más consecuente del semestre y la que más gente descubre cuando ya pasó.' },
+      { question: '¿Cómo sé si me he matriculado de demasiadas materias?', answer: 'Suma los elementos calificables de todos tus programas y fíjate en dónde caen, no en cuántos son. Quince entregas repartidas de forma pareja es un semestre llevadero; quince con cuatro exámenes y dos trabajos en la misma quincena no lo es, y el calendario te lo enseña en la semana uno, cuando todavía puedes actuar. La señal que buscas es una semana con más de un elemento de peso alto, porque esas son las semanas que deciden tus notas y las que no se arreglan trabajando más esa misma semana.' },
+      { question: '¿Los profesores cambian de verdad las fechas del programa?', answer: 'Con frecuencia, y pocas veces con un aviso formal. Una fecha se mueve en un comentario en clase, en una actualización del campus virtual o en un PDF revisado que sustituye al anterior sin decir nada. Ese es el argumento práctico para tener tus fechas en un sitio que controlas tú: cuando algo se mueve, quieres enterarte y actualizar un solo lugar, no redescubrir la fecha vieja tres semanas después.' },
+    ],
+  }),
+
+  page(SPANISH_BLOG_POSTS[11].path, SPANISH_BLOG_POSTS[11].englishPath, 'standard', {
+    metaTitle: 'Cómo estudiar para los parciales cuando caen tres juntos',
+    metaDescription: SPANISH_BLOG_POSTS[11].description,
+    h1: SPANISH_BLOG_POSTS[11].title,
+    lede: 'Los parciales son un problema de reparto antes que un problema de estudio. A diferencia de los finales, el resto del curso sigue funcionando: tareas, laboratorios, un trabajo. Así que las horas disponibles son menos y están más partidas de lo que parece.',
+    intro: [
+      'Ordena cada examen por su peso multiplicado por lo lejos que estás de la nota que quieres, no por cuál cae primero. Y calcula qué puntuación necesita cada uno antes de decidir a dónde van las horas.',
+      'Esa aritmética son veinte minutos y suele revelar que un examen necesita dos horas y otro necesita doce.',
+    ],
+    sections: [
+      {
+        heading: 'Por qué los parciales son más difíciles que los finales',
+        paragraphs: [
+          'La semana de finales tiene una forma que te ayuda: las clases pararon, los exámenes son lo único en el calendario y el horario se publica con semanas de antelación.',
+          'Los parciales no tienen nada de eso. Llegan en la semana seis o la nueve, programados por separado por profesores que no saben qué más tienes encima, sobre una carga de trabajo que sigue igual. Las tareas siguen llegando. El laboratorio sigue reuniéndose. El turno sigue ahí.',
+          'Así que la restricción real no es la motivación ni la técnica. Es que una semana que parece contener siete días de estudio contiene en realidad unas doce horas aprovechables, partidas en trozos entre otras obligaciones, y esas doce horas tienen que cubrir tres exámenes que entre todos piden treinta.',
+        ],
+      },
+      {
+        heading: 'Paso 1: averigua cuánto vale cada examen',
+        paragraphs: [
+          'Antes de estudiar nada. Son diez minutos y deciden todo lo que viene después.',
+          'De cada examen saca dos números: su peso, del programa, y tu situación actual en esa materia. Multiplica el peso por la distancia entre donde estás y donde quieres terminar, y ya tienes un orden aproximado de dónde rinde más una hora.',
+          'Un parcial que vale el 30 % en una materia donde estás justo en el límite de una nota merece más horas que uno que vale el 10 % en una materia que llevas holgada, aunque el primero esté programado el último. Estudiar en orden cronológico es lo natural, parece responsable, y le entrega tu recurso más escaso al profesor que reservó el aula más temprano.',
+        ],
+      },
+      {
+        heading: 'Paso 2: calcula qué puntuación necesita cada examen',
+        paragraphs: [
+          'Para cada materia, calcula la puntuación que sostiene la nota con la que puedes terminar de forma realista. La fórmula es la misma que para un final: puntuación necesaria = (objetivo − nota actual × (1 − peso del examen)) ÷ peso del examen.',
+          'Hazlo dos veces: para la nota que quieres y para la nota con la que puedes vivir. La distancia entre esos dos números es la información de verdad. Con un 79 % de entrada y un parcial que vale el 30 %, terminar en 83 pide alrededor de un 92 en el examen; terminar en 80 pide alrededor de un 82. Diez puntos de diferencia, y eso te dice si es un examen de dos tardes o de dos semanas.',
+          'Hacerlo con los tres exámenes produce algo más útil que un plan de estudio: te dice cuáles ya están decididos. Un examen que necesita un 45 para sostener tu nota no necesita una semana. Saber eso es lo que libera las horas para el que necesita un 92.',
+        ],
+      },
+      {
+        heading: 'Paso 3: reparte sobre horas reales, no sobre la semana entera',
+        paragraphs: [
+          'Anota lo que la semana contiene de verdad antes de repartir nada: clases, laboratorios, turnos, desplazamientos, dormir. Lo que quede es el presupuesto, y siempre es menor de lo esperado.',
+          'Reparte cada materia en lugar de bloquearla. Tres sesiones de dos horas en tres días distintos rinden más que una sesión de seis, y la diferencia es lo bastante grande como para notarse en una semana. Con doce horas y tres exámenes, doce sesiones de una hora repartidas en la quincena rinden más que tres bloques de cuatro horas aunque el total sea idéntico.',
+          'Y pon la materia difícil donde estés despejado, no a medianoche después de un turno. Si tu único hueco fiable es la mañana entre dos clases, ese hueco es para la materia dura, no para la lectura que podrías hacer medio dormido.',
+        ],
+      },
+      {
+        heading: 'Paso 4: deja libre el último día',
+        paragraphs: [
+          'No metas materia nueva el día antes de un examen. El último día es para consolidar: repasar lo que ya sabes, hacer ejercicios, dormir bien. La materia aprendida en las últimas veinticuatro horas es lo menos fiable dentro del aula, y la hora que le dedicas cuesta más en sueño de lo que devuelve en memoria.',
+          'Ahí también es donde toca revisar el plan. Para el cuarto día ya sabrás si la previsión era optimista. Ajustar entonces, a propósito, es mejor que descubrirlo la noche anterior y reorganizarlo todo con prisa.',
+        ],
+      },
+      {
+        heading: 'El error que conviene nombrar',
+        paragraphs: [
+          'El fallo más común en los parciales no es estudiar poco. Es estudiar por igual.',
+          'Repartir las horas a partes iguales entre tres exámenes parece justo y da un resultado peor que un desequilibrio deliberado, porque las materias no pesan lo mismo, no estás igual de lejos de la nota que quieres en cada una, y la hora marginal vale cantidades muy distintas en cada caso. Quien dedica doce horas a la materia dura y dos a la fácil suele terminar por delante de quien dedicó cinco, cinco y cuatro, y trabajó más horas en total.',
+          'Decidir eso conscientemente, en la semana ocho, con los pesos delante, es para lo que sirven los veinte minutos del principio.',
+        ],
+      },
+    ],
+    faq: [
+      { question: '¿Con cuánta antelación debería empezar a estudiar para los parciales?', answer: 'Empieza el reparto unas dos semanas antes y el estudio alrededor de una semana antes, y trátalos como dos tareas distintas. El reparto —decidir qué examen merece qué parte de tus horas— son veinte minutos y valen mucho más que el día extra de repaso que cuestan, porque el fallo más común no es estudiar poco en total, sino dedicar el mismo tiempo a un examen del 30 % y a uno del 10 %.' },
+      { question: '¿Cómo decido para qué parcial estudiar primero?', answer: 'Ordena por peso multiplicado por lo lejos que estás de la nota que quieres, no por cuál cae antes. Un examen del 30 % en una materia donde estás en el límite merece más horas que uno del 10 % en una que llevas holgada. El orden cronológico es lo natural y casi siempre es el reparto equivocado, porque le entrega el tiempo a quien programó primero.' },
+      { question: '¿Por qué los parciales cuestan más de gestionar que los finales?', answer: 'Porque el resto del curso sigue funcionando. En la semana de finales las clases pararon y los exámenes son tu única obligación. Los parciales llegan encima de las tareas, los laboratorios, las lecturas y un trabajo, así que las horas disponibles son muchas menos de las que la semana aparenta contener, y están partidas en lugar de seguidas.' },
+      { question: '¿Vale la pena estudiar para un parcial en el que ya no puedo sacar la nota más alta?', answer: 'Normalmente sí, pero para un número concreto y no en general. Calcula qué puntuación sostiene la nota con la que puedes terminar de forma realista y estudia para eso, no para una nota que no vas a alcanzar. El valor de hacer la cuenta es que convierte una angustia difusa en un objetivo concreto, y muchas veces revela que un par de horas aseguran el resultado y liberan el resto para un examen donde la hora extra sí cambia algo.' },
+    ],
+  }),
+
 ];
 
 export const SPANISH_COMPARISONS = [
