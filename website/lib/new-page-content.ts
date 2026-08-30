@@ -1644,12 +1644,12 @@ export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
     ]
   },
   download: {
-    metaTitle: 'Download Semora — iPhone, iPad, and web',
+    metaTitle: 'Download Semora — iPhone, iPad, Apple Watch, and web',
     metaDescription:
-      'Get Semora on iPhone and iPad, or open it in any browser. One account keeps every deadline, grade and course in sync across all of them. Android, Apple Watch, Wear OS and Mac are in development.',
+      'Get Semora on iPhone, iPad and Apple Watch, or open it in any browser. One account keeps every deadline, grade and course in sync across all of them. Android, Wear OS and Mac are in development.',
     h1: 'One account. Every device you study on.',
     lede:
-      'Semora runs on iPhone, iPad and the web today, and everything you add on one shows up on the others. Scan a syllabus on your phone between classes, and the whole semester is already there when you open your laptop.',
+      'Semora runs on iPhone, iPad, Apple Watch and the web today, and everything you add on one shows up on the others. Scan a syllabus on your phone between classes, and the whole semester is already there when you open your laptop.',
     intro: [
       'The reason this matters is not convenience. A deadline you cannot see is a deadline you miss, and students do not sit still — the syllabus arrives as a PDF on a laptop, the reminder has to reach a phone, and the check-in before class happens on whatever is in your hand.',
       'So the account is the product, not the app. You sign in once, and every surface below reads the same semester.',
@@ -1667,8 +1667,8 @@ export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
             ['iPad', 'Available', 'The same universal download, laid out for the larger screen'],
             ['Web', 'Available', 'Any browser, including on Android and Mac. Drag a PDF straight onto the page'],
             ['Home Screen widget', 'Available', "Today's deadlines on the iPhone and iPad Home Screen"],
+            ['Apple Watch', 'Available', "Today's and overdue counts on your wrist and watch face; complete a task from the Watch"],
             ['Android', 'In development', 'The same account and semester, no release date announced'],
-            ['Apple Watch', 'In development', 'Your next deadline at a glance'],
             ['Wear OS', 'In development', 'The same glance on an Android watch'],
             ['Mac', 'In development', 'A desktop window; the web app covers this today'],
           ],

@@ -9,11 +9,13 @@ import { APP_STORE_URL, APP_SIGNUP_URL } from './semora-facts';
  * work that is well underway — a download page is the last place a promise
  * should outrun the build.
  *
- * Verified against the app repo on 2026-08-22:
+ * Verified against the app repo on 2026-08-29:
  *  - iPhone/iPad: one universal build (`expo.ios.supportsTablet: true`)
  *  - Widget: targets/widget, WidgetKit, .systemSmall + .systemMedium
  *  - Web: the Expo web export at app.semoraai.com
- *  - Watch: NO watchOS target and no .accessory* families exist
+ *  - Watch: SHIPPED in 1.11 (targets/watch + targets/watch-widget), live on the
+ *    App Store since 2026-08-28. It is a companion inside the same universal
+ *    listing, not a separate purchase or a separate download.
  *  - Android: the target builds and runs, nothing is published
  *  - Wear OS / Mac: not started
  */
@@ -55,8 +57,14 @@ export const DEVICES: DeviceCard[] = [
   // instead. A card that is the only one with an empty space where its
   // neighbours have a code reads as unfinished.
   { id: 'widget', status: 'available', preview: 'widget' },
+  // Shipped with 1.11. Carries the same App Store link as iPhone and iPad
+  // because it is the same universal listing — there is no separate watchOS
+  // download, and the Watch app installs from the Watch app on the paired
+  // phone once Semora is on it. It gets a code like its neighbours rather
+  // than an empty panel, for the reason given on the iPad card above.
+  { id: 'watch', status: 'available', href: APP_STORE_URL, qr: APP_STORE_URL },
+
   { id: 'android', status: 'soon' },
-  { id: 'watch', status: 'soon' },
   { id: 'wearos', status: 'soon' },
   { id: 'mac', status: 'soon' },
 ];
@@ -90,7 +98,11 @@ export const DEVICE_COPY_EN: Record<string, DeviceCopy> = {
     action: 'Included with the iPhone and iPad app',
   },
   android: { name: 'Android', body: 'In development. Same account, same semester, same deadlines.' },
-  watch: { name: 'Apple Watch', body: 'Your next deadline on your wrist.' },
+  watch: {
+    name: 'Apple Watch',
+    body: "What's due today and what's overdue, on your wrist. Complications put the count on your watch face; tick a task off without reaching for your phone.",
+    action: 'Download on the App Store',
+  },
   wearos: { name: 'Wear OS', body: 'The same glance, for an Android watch.' },
   mac: { name: 'Mac', body: 'A desktop window for the work you do sitting down.' },
 };
@@ -117,7 +129,11 @@ export const DEVICE_COPY_ES: Record<string, DeviceCopy> = {
     action: 'Incluido con la app de iPhone y iPad',
   },
   android: { name: 'Android', body: 'En desarrollo. La misma cuenta, el mismo semestre, las mismas entregas.' },
-  watch: { name: 'Apple Watch', body: 'Tu próxima entrega en la muñeca.' },
+  watch: {
+    name: 'Apple Watch',
+    body: 'Lo que vence hoy y lo que llevas atrasado, en la muñeca. Las complicaciones muestran el número en la esfera y puedes marcar una tarea sin sacar el teléfono.',
+    action: 'Descargar en la App Store',
+  },
   wearos: { name: 'Wear OS', body: 'Lo mismo, de un vistazo, en un reloj Android.' },
   mac: { name: 'Mac', body: 'Una ventana de escritorio para cuando trabajas desde la computadora.' },
 };

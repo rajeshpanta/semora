@@ -35,12 +35,12 @@ const page = (
 
 const CORE_PAGES: SpanishPageConfig[] = [
   page('/es/descargar', '/download', 'download', {
-    metaTitle: 'Descargar Semora — iPhone, iPad y web',
+    metaTitle: 'Descargar Semora — iPhone, iPad, Apple Watch y web',
     metaDescription:
-      'Instala Semora en iPhone y iPad, o ábrela en cualquier navegador. Una sola cuenta mantiene sincronizadas tus entregas, calificaciones y materias. Android, Apple Watch, Wear OS y Mac están en desarrollo.',
+      'Instala Semora en iPhone, iPad y Apple Watch, o ábrela en cualquier navegador. Una sola cuenta mantiene sincronizadas tus entregas, calificaciones y materias. Android, Wear OS y Mac están en desarrollo.',
     h1: 'Una cuenta. Todos los dispositivos donde estudias.',
     lede:
-      'Semora funciona hoy en iPhone, iPad y la web, y todo lo que agregas en uno aparece en los demás. Escanea un programa con el teléfono entre clases y el semestre completo ya está ahí cuando abres la computadora.',
+      'Semora funciona hoy en iPhone, iPad, Apple Watch y la web, y todo lo que agregas en uno aparece en los demás. Escanea un programa con el teléfono entre clases y el semestre completo ya está ahí cuando abres la computadora.',
     intro: [
       'No se trata de comodidad. Una entrega que no ves es una entrega que se te pasa, y los estudiantes no se quedan quietos: el programa llega como PDF a una laptop, el aviso tiene que sonar en un teléfono, y la revisión antes de clase pasa en lo que tengas en la mano.',
       'Por eso el producto es la cuenta, no la app. Inicias sesión una vez y cada superficie de abajo lee el mismo semestre.',
@@ -58,8 +58,8 @@ const CORE_PAGES: SpanishPageConfig[] = [
             ['iPad', 'Disponible', 'La misma descarga universal, adaptada a la pantalla grande'],
             ['Web', 'Disponible', 'Cualquier navegador, también en Android y Mac. Arrastra un PDF a la página'],
             ['Widget de pantalla de inicio', 'Disponible', 'Lo que vence hoy, en la pantalla de inicio del iPhone y del iPad'],
+            ['Apple Watch', 'Disponible', 'Lo que vence hoy y lo atrasado, en la muñeca y en la esfera; marca una tarea desde el reloj'],
             ['Android', 'En desarrollo', 'La misma cuenta y el mismo semestre, sin fecha anunciada'],
-            ['Apple Watch', 'En desarrollo', 'Tu próxima entrega de un vistazo'],
             ['Wear OS', 'En desarrollo', 'La misma mirada rápida en un reloj Android'],
             ['Mac', 'En desarrollo', 'Una ventana de escritorio; hoy lo cubre la app web'],
           ],
