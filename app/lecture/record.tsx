@@ -181,6 +181,50 @@ export default function RecordLectureScreen() {
       );
       return;
     }
+    // Service-side refusals get their own branches, and the reason is not
+    // cosmetic. "Couldn't start recording" reads as the student's device or
+    // their attempt having failed. That is true for MIC_DENIED and NO_SPACE
+    // above and false for every code below: our transcription budget being
+    // spent, our provider being unconfigured, and a recording of theirs still
+    // processing are three different situations, only one of which they can do
+    // anything about. The generic title stays where it belongs — on failures we
+    // genuinely cannot name.
+    if (result.code === 'AT_CAPACITY') {
+      // Offers the upload path rather than only a date. Notes built from a file
+      // go through lecture-study-kit, which never touches the daily audio
+      // ledger, so it still works while transcription is full — a real
+      // alternative, not a consolation prize.
+      Alert.alert(
+        'Transcription is full for today',
+        "Semora can only transcribe so much audio a day, and today's is spent. This is our limit, not anything you did, and it resets tomorrow.\n\nYou can still make notes from slides, a chapter, or a photo of the board — that does not use the transcription budget.",
+        [
+          { text: 'Not now', style: 'cancel' },
+          {
+            text: 'Make notes instead',
+            onPress: () => router.replace({
+              pathname: '/lecture/new',
+              params: courseId ? { courseId } : undefined,
+            } as any),
+          },
+        ],
+      );
+      return;
+    }
+    if (result.code === 'TOO_MANY_IN_FLIGHT') {
+      // The one refusal here a student can clear themselves, so it says how.
+      Alert.alert(
+        'A lecture is still processing',
+        'Let the one already running finish before starting another. It will appear in Notes when it is done.',
+      );
+      return;
+    }
+    if (result.code === 'NOT_CONFIGURED') {
+      Alert.alert(
+        'Recording is unavailable right now',
+        'Lecture transcription is temporarily unavailable. Nothing is wrong with your device — please try again later.',
+      );
+      return;
+    }
     Alert.alert(
       "Couldn't start recording",
       result.message || 'Something went wrong starting the recording. Please try again.',

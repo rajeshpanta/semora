@@ -2385,4 +2385,24 @@ export const ES: Record<string, string> = {
   'A quick rating helps other students find it.': 'Una calificación rápida ayuda a que otros estudiantes la encuentren.',
   'Dismiss': 'Descartar',
   'Rate Semora on the App Store': 'Calificar Semora en el App Store',
+
+  // ── Lecture recording: why a start was refused (1.12) ───────────────────
+  // Three service-side refusals that used to share the generic "Couldn't start
+  // recording" title. Neutral Spanish throughout — "grabar" and "apuntes"
+  // rather than any regional alternative.
+  'Transcription is full for today': 'La transcripción llegó a su límite de hoy',
+  "Semora can only transcribe so much audio a day, and today's is spent. This is our limit, not anything you did, and it resets tomorrow.\n\nYou can still make notes from slides, a chapter, or a photo of the board — that does not use the transcription budget.":
+    'Semora solo puede transcribir cierta cantidad de audio al día, y la de hoy ya se usó. Es un límite nuestro, no algo que hayas hecho, y se reinicia mañana.\n\nTodavía puedes crear apuntes a partir de diapositivas, un capítulo o una foto del pizarrón: eso no consume el presupuesto de transcripción.',
+  'Make notes instead': 'Crear apuntes',
+  'A lecture is still processing': 'Todavía se está procesando una clase',
+  'Let the one already running finish before starting another. It will appear in Notes when it is done.':
+    'Espera a que termine la que ya está en curso antes de empezar otra. Aparecerá en Apuntes cuando esté lista.',
+  'Recording is unavailable right now': 'La grabación no está disponible ahora',
+  'Lecture transcription is temporarily unavailable. Nothing is wrong with your device — please try again later.':
+    'La transcripción de clases no está disponible temporalmente. No es un problema de tu dispositivo; inténtalo más tarde.',
+  // Pre-existing gap: the generic fallback body had no Spanish at all, so any
+  // start failure without a server message showed English inside a translated
+  // dialog.
+  'Something went wrong starting the recording. Please try again.':
+    'Algo salió mal al iniciar la grabación. Inténtalo de nuevo.',
 };
