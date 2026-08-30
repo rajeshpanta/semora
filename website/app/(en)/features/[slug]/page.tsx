@@ -87,6 +87,7 @@ export default async function FeaturePage({
         heading={long?.h1 ?? feature.name}
         lede={long?.lede ?? feature.shortDescription}
         tier={feature.tier === 'pro' ? 'pro' : 'free'}
+        freeNote={feature.freeNote}
       />
     <ArticleShell
       ctaHeading="Try it on your own syllabus"

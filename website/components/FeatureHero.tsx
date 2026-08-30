@@ -22,12 +22,14 @@ export function FeatureHero({
   heading,
   lede,
   tier,
+  freeNote,
 }: {
   slug: string;
   name: string;
   heading: string;
   lede: string;
   tier: 'free' | 'pro';
+  freeNote?: string;
 }) {
   return (
     <section className={styles.hero}>
@@ -40,6 +42,15 @@ export function FeatureHero({
           </nav>
 
           <h1 className={styles.h1}>{heading}</h1>
+
+          {/* Above the buttons, not below them. "Is this free?" is the first
+              question a reader has and it was being answered last. */}
+          <p className={styles.note}>
+            {tier === 'pro'
+              ? 'Part of Semora Pro. Create a free account first — scanning, courses and grades are free to use.'
+              : freeNote ?? 'Free to use. No credit card.'}
+          </p>
+
           <p className={styles.lede}>{lede}</p>
 
           <div className={styles.actions}>
@@ -48,12 +59,6 @@ export function FeatureHero({
               Get the app
             </Link>
           </div>
-
-          <p className={styles.note}>
-            {tier === 'pro'
-              ? 'Part of Semora Pro. Create a free account first — scanning, courses and grades are free to use.'
-              : 'Free to use. No credit card.'}
-          </p>
         </div>
 
         <div className={styles.visual}>
