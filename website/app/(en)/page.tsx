@@ -32,16 +32,30 @@ const HERO_CHIPS = [
   'Synced across iPhone, iPad and web',
 ];
 
+// Two doors into step 03, not one.
+//
+// Scanning was presented as the only way in, which is wrong for the majority of
+// students whose school runs Canvas: connecting it is one pasted link and it
+// carries every class at once. Naming Canvas specifically rather than "your
+// LMS" is deliberate — a Canvas student can do this tonight on their own, while
+// Blackboard and Moodle need a token their IT department issues.
+//
+// The free claim on step 02 is the load-bearing one and every part of it is
+// enforced server-side: LMS-sourced courses skip the four-course cap entirely
+// (090), there is no task limit, and connecting is free for all three providers
+// because lms_access_allowed() takes no provider argument. The one free-tier
+// boundary that does exist is one semester, which is why this does not claim
+// otherwise.
 const STEPS = [
   {
     n: '01',
-    title: 'Scan it',
-    body: 'Take a photo, upload a PDF, drag it onto the web, or paste the text.',
+    title: 'Scan a syllabus',
+    body: 'Take a photo, upload a PDF, drag it onto the web, or paste the text. One scan reads a whole term.',
   },
   {
     n: '02',
-    title: 'Review it',
-    body: 'Review and correct every extracted deadline before adding it to your calendar.',
+    title: 'Or connect Canvas',
+    body: 'Paste one calendar link and every class comes across — free, and synced classes never count toward the free course limit.',
   },
   {
     n: '03',
@@ -215,10 +229,11 @@ export default function Home() {
       <section className={styles.inner}>
         <Reveal>
           <div className={styles.sectionHead}>
-            <span className={styles.label}>From PDF to plan</span>
+            <span className={styles.label}>Two ways in</span>
             <h2>How it works</h2>
             <p>
-              From a syllabus to a clear, connected semester in three simple steps.
+              Start from a syllabus or from Canvas. Either way you land on the same
+              connected semester.
             </p>
           </div>
         </Reveal>

@@ -37,16 +37,22 @@ const CHIPS = [
   'Tus datos al día en iPhone, iPad y la web',
 ];
 
+// Dos puertas hacia el paso 03, no una. Ver el comentario equivalente en
+// app/(en)/page.tsx: la afirmación de gratuidad del paso 02 se cumple en el
+// servidor (los cursos que llegan de un LMS no cuentan para el tope de cuatro,
+// no hay límite de tareas, y conectar es gratis en los tres proveedores). El
+// único límite real del plan gratuito es un semestre, y por eso aquí no se
+// afirma lo contrario.
 const STEPS = [
   {
     n: '01',
-    title: 'Añádelo',
-    body: 'Toma una foto, sube un PDF, arrastra el archivo en la web o pega el texto.',
+    title: 'Escanea el programa',
+    body: 'Toma una foto, sube un PDF, arrastra el archivo en la web o pega el texto. Un escaneo lee un semestre entero.',
   },
   {
     n: '02',
-    title: 'Revísalo',
-    body: 'Revisa y corrige cada entrega antes de añadirla al calendario.',
+    title: 'O conecta Canvas',
+    body: 'Pega un enlace de calendario y llegan todas tus clases: gratis, y las clases sincronizadas nunca cuentan para el tope de cursos del plan gratuito.',
   },
   {
     n: '03',
@@ -60,7 +66,7 @@ const CAPABILITIES = [
     n: '01',
     eyebrow: 'Materias al día',
     title: 'Tus cursos cambian. Semora se actualiza contigo.',
-    body: 'Importa el programa o conecta Canvas, Blackboard o Moodle con Pro. El conector actual de Canvas usa un token personal y algunas instituciones desactivan o prohíben su uso con servicios externos. Confirma la política de tu universidad; si no está permitido, escanea el programa o pega la lista de tareas.',
+    body: 'Importa el programa o conecta Canvas, Blackboard o Moodle, gratis. El historial de sincronización y la última actualización dejan cada cambio a la vista.',
     href: '/es/funciones/sincronizacion-canvas',
     linkLabel: 'Conocer la sincronización LMS',
   },
@@ -213,9 +219,9 @@ export default function SpanishHome() {
       <section className={styles.inner}>
         <Reveal>
           <div className={styles.sectionHead}>
-            <span className={styles.label}>Del PDF al plan</span>
+            <span className={styles.label}>Dos formas de empezar</span>
             <h2>Cómo funciona</h2>
-            <p>Del programa de una materia a un semestre organizado en tres pasos.</p>
+            <p>Empieza por el programa o por Canvas. En los dos casos llegas al mismo semestre organizado.</p>
           </div>
         </Reveal>
         <ol className={styles.steps}>
