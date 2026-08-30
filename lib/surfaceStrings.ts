@@ -40,7 +40,7 @@ export type SurfaceLocale = 'en' | 'es';
 const STRINGS: Record<string, { en: string; es: string }> = {
   // ── Watch: counts ─────────────────────────────────────────────────────────
   'watch.today': { en: 'Today', es: 'Hoy' },
-  'watch.overdue': { en: 'Overdue', es: 'Atrasado' },
+  'watch.overdue': { en: 'Overdue', es: 'Atrasadas' },
 
   // ── Watch: states ─────────────────────────────────────────────────────────
   'watch.signedOut.title': { en: 'Signed out', es: 'Sesión cerrada' },
@@ -90,15 +90,15 @@ const STRINGS: Record<string, { en: string; es: string }> = {
   'due.today': { en: 'Today', es: 'Hoy' },
   'due.tomorrow': { en: 'Tomorrow', es: 'Mañana' },
   'due.yesterday': { en: 'Yesterday', es: 'Ayer' },
-  'due.daysLate': { en: '{n}d late', es: '{n} d tarde' },
+  'due.daysLate': { en: '{n}d late', es: '{n} d de retraso' },
   'due.inDays': { en: 'In {n} days', es: 'En {n} días' },
 
   // ── Complication ──────────────────────────────────────────────────────────
   'complication.allCaught': { en: 'All caught up', es: 'Todo al día' },
   'complication.nothingToday': { en: 'Nothing due today', es: 'Hoy no vence nada' },
   'complication.signIn': { en: 'Sign in on iPhone', es: 'Inicia sesión en el iPhone' },
-  'complication.late': { en: 'Late', es: 'Tarde' },
-  'complication.lateLower': { en: 'late', es: 'tarde' },
+  'complication.late': { en: 'Late', es: 'Atrasada' },
+  'complication.lateLower': { en: 'late', es: 'atrasadas' },
   // Singular and plural kept as whole sentences rather than assembled from
   // parts. Spanish agrees the noun AND the adjective, so "{n} tarea atrasada"
   // and "{n} tareas atrasadas" differ in two places — a shared stem plus an "s"
@@ -111,13 +111,13 @@ const STRINGS: Record<string, { en: string; es: string }> = {
   'count.dueToday.many': { en: '{n} tasks due today', es: '{n} tareas vencen hoy' },
   'complication.overdueLower': { en: 'overdue', es: 'atrasadas' },
   'complication.todayLower': { en: 'today', es: 'hoy' },
-  'complication.stale': { en: 'Not synced recently', es: 'Sin sincronizar hace rato' },
+  'complication.stale': { en: 'Not synced recently', es: 'Sin sincronizar recientemente' },
   'complication.empty': { en: 'Nothing due or overdue', es: 'Nada pendiente ni atrasado' },
   'complication.openPhone': { en: 'Open Semora on iPhone', es: 'Abre Semora en el iPhone' },
   'complication.inlineSignedOut': { en: 'Semora · open on iPhone', es: 'Semora · ábrelo en el iPhone' },
 
   // ── Home-screen widget ────────────────────────────────────────────────────
-  'widget.overdue': { en: 'Overdue', es: 'Atrasado' },
+  'widget.overdue': { en: 'Overdue', es: 'Atrasadas' },
   // The small widget prints just a number and this word beneath it.
   'widget.todayLower': { en: 'today', es: 'hoy' },
   'widget.upNext': { en: 'Up Next', es: 'Lo siguiente' },
