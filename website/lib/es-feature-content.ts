@@ -81,6 +81,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         paragraphs: [
           'Un Apple Watch Series 4 o posterior, con watchOS 10 o más reciente. Ese piso se eligió a propósito: lo habitual en este tipo de destino es watchOS 11, que exige un Series 6, y nada de lo que hace la app necesita una API tan nueva. Un acompañante cuyo único trabajo es el vistazo rápido no debería dejar fuera un reloj que funciona, sin motivo.',
           'Se instala junto con la app de iPhone desde la misma ficha de la App Store: no hay descarga aparte para watchOS ni una segunda compra. Si tienes Semora Pro, es un permiso de la cuenta, así que ya está activo aquí.',
+          'Y está en español. Desde la versión 1.12 el reloj y sus complicaciones hablan tu idioma: las palabras viajan desde el teléfono con cada sincronización, así que el reloj sigue el idioma que ya elegiste ahí, sin ajustes aparte.',
         ],
       },
     ],
@@ -104,6 +105,10 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         question: '¿La app del reloj está incluida en el plan gratuito?',
         answer: 'Sí. La app del reloj lee las entregas que ya llevas registradas, y el seguimiento de entregas, las calificaciones y los avisos del mismo día están en el plan gratuito. Nada del reloj está detrás de Pro.',
+      },
+      {
+        question: '¿El Apple Watch está en español?',
+        answer: 'Sí, desde la versión 1.12. El reloj y sus complicaciones muestran todo en español, y no hay nada que configurar: el idioma viaja desde el teléfono con cada sincronización, así que el reloj sigue el que ya elegiste en la app. Antes de 1.12 el reloj estaba solo en inglés aunque el teléfono estuviera en español.',
       },
     ],
   },
