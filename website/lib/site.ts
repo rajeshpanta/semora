@@ -21,4 +21,4 @@ export const SITE_URL =
  * sweeps, not page by page. Bump this when you materially change page copy —
  * not for a styling or layout change, which is not what lastmod means.
  */
-export const CONTENT_LAST_REVIEWED = '2026-08-12';
+export const CONTENT_LAST_REVIEWED = '2026-08-29';
