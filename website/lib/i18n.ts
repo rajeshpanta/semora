@@ -40,6 +40,8 @@ export const LOCALE_ROUTE_PAIRS: LocaleRoutePair[] = [
   { en: '/features/ai-tutor', es: '/es/funciones/tutor-con-ia' },
   { en: '/features/collaboration', es: '/es/funciones/espacios-de-curso' },
   { en: '/features/canvas-sync', es: '/es/funciones/sincronizacion-canvas' },
+  { en: '/features/lecture-recording', es: '/es/funciones/grabacion-de-clases' },
+  { en: '/features/apple-watch', es: '/es/funciones/apple-watch' },
 
   { en: '/blog/syllabus-to-semester-calendar', es: '/es/blog/convertir-programa-en-calendario' },
   { en: '/blog/best-college-deadline-tracking-apps-2026', es: '/es/blog/mejores-apps-fechas-universidad-2026' },
