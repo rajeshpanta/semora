@@ -46,12 +46,12 @@ const STEPS = [
   {
     n: '01',
     title: 'Empieza por el programa',
-    body: 'Foto, PDF o pega el texto. Un escaneo lee un semestre entero.',
+    body: 'Foto, PDF o pega el texto. Cada fecha de entrega, y cuánto vale cada una en tu calificación.',
   },
   {
     n: '02',
     title: 'Empieza por Canvas',
-    body: 'Pega un enlace de calendario. Cada materia, tarea, prueba y examen: gratis.',
+    body: 'Pega un enlace de calendario. Cada tarea, prueba y examen, sincronizado con Canvas automáticamente.',
   },
 ];
 
@@ -215,7 +215,7 @@ export default function SpanishHome() {
           <div className={styles.sectionHead}>
             <span className={styles.label}>Dos formas de empezar</span>
             <h2>Cómo funciona</h2>
-            <p>Elige el que te dé menos trabajo. Los dos terminan igual, en todos los dispositivos donde estudias.</p>
+            <p>En cualquier caso tu semestre entero queda en un solo lugar, en todos los dispositivos donde estudias.</p>
           </div>
         </Reveal>
         <ol className={styles.steps}>

@@ -51,12 +51,12 @@ const STEPS = [
   {
     n: '01',
     title: 'Start from a syllabus',
-    body: 'Photo, PDF, or paste the text. One scan reads a whole term.',
+    body: 'Photo, PDF, or paste the text. Every deadline, plus what each is worth toward your grade.',
   },
   {
     n: '02',
     title: 'Start from Canvas',
-    body: 'Paste one calendar link. Every class, assignment, quiz and exam — free.',
+    body: 'Paste one calendar link. Every assignment, quiz and exam, kept in sync with Canvas automatically.',
   },
 ];
 
@@ -227,7 +227,7 @@ export default function Home() {
           <div className={styles.sectionHead}>
             <span className={styles.label}>Two ways in</span>
             <h2>How it works</h2>
-            <p>Pick whichever is less work. Both end in the same place, on every device you study on.</p>
+            <p>Either way your whole semester lands in one place, on every device you study on.</p>
           </div>
         </Reveal>
         <ol className={styles.steps}>
