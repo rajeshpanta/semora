@@ -181,7 +181,14 @@ echo "==> verified .ipa is $IPA_VERSION ($IPA_BUILD), matching app.json"
 VERIFY2=$(mktemp -d)
 unzip -q "$OUT/Semora.ipa" -d "$VERIFY2"
 APP_BIN=$(find "$VERIFY2/Payload" -maxdepth 2 -name 'Semora' -type f | head -1)
-if ! strings -a "$APP_BIN" 2>/dev/null | grep -q "The screen is already presenting something"; then
+# `strings ... | grep -q` looks obvious and is wrong here. grep -q exits at the
+# first match, which closes the pipe under strings; strings dies of SIGPIPE and
+# returns 141, and `set -o pipefail` makes that the status of the whole
+# pipeline. `!` then inverts a SUCCESSFUL search into a failure, so the guard
+# fired loudest exactly when the patch WAS present. Counting instead reads the
+# stream to the end, so nothing is killed mid-write.
+PATCH_HITS=$(strings -a "$APP_BIN" 2>/dev/null | grep -c "The screen is already presenting something" || true)
+if [[ "${PATCH_HITS:-0}" -eq 0 ]]; then
   echo >&2
   echo "PICKER PATCH MISSING FROM THE BINARY." >&2
   echo "  The patched Swift was on disk but its strings are not in the app." >&2
@@ -201,8 +208,14 @@ fi
 #
 # So the certificate is the thing to fail on, not its absence. Revisit only if
 # the account moves to Enterprise.
-CERT_IN_APP=$(plutil -extract EXUpdatesCodeSigningCertificate raw \
-  "$(dirname "$APP_BIN")/Expo.plist" 2>/dev/null | head -c 20)
+# plutil exits 1 when the key is absent — which is the outcome this guard wants.
+# Without `|| true` that non-zero propagates out of the command substitution and
+# `set -e` kills the script before the check below ever runs, failing every
+# correctly-configured build. The `head -c 20` that used to be here was also a
+# SIGPIPE source, and truncating the value bought nothing: only emptiness is
+# being tested.
+CERT_IN_APP="$(plutil -extract EXUpdatesCodeSigningCertificate raw \
+  "$(dirname "$APP_BIN")/Expo.plist" 2>/dev/null || true)"
 if [[ -n "$CERT_IN_APP" ]]; then
   echo >&2
   echo "THIS BINARY COULD NEVER RECEIVE AN OTA UPDATE." >&2
