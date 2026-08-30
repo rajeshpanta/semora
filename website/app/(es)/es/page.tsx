@@ -37,27 +37,21 @@ const CHIPS = [
   'Tus datos al día en iPhone, iPad y la web',
 ];
 
-// Dos puertas hacia el paso 03, no una. Ver el comentario equivalente en
-// app/(en)/page.tsx: la afirmación de gratuidad del paso 02 se cumple en el
-// servidor (los cursos que llegan de un LMS no cuentan para el tope de cuatro,
-// no hay límite de tareas, y conectar es gratis en los tres proveedores). El
-// único límite real del plan gratuito es un semestre, y por eso aquí no se
-// afirma lo contrario.
+// Dos caminos, no tres pasos. Ver el comentario equivalente en
+// app/(en)/page.tsx: numerar las dos vías de entrada junto al resultado se leía
+// como una secuencia, y son alternativas. La afirmación de gratuidad se cumple
+// en el servidor y no llega a decir «semestres ilimitados», porque
+// enforce_free_semester_limit solo exime a is_pro.
 const STEPS = [
   {
     n: '01',
-    title: 'Escanea el programa',
-    body: 'Toma una foto, sube un PDF, arrastra el archivo en la web o pega el texto. Un escaneo lee un semestre entero.',
+    title: 'Empieza por el programa',
+    body: 'Foto, PDF o pega el texto. Un escaneo lee un semestre entero.',
   },
   {
     n: '02',
-    title: 'O conecta Canvas',
-    body: 'Pega un enlace de calendario y llegan todas tus clases: gratis, y las clases sincronizadas nunca cuentan para el tope de cursos del plan gratuito.',
-  },
-  {
-    n: '03',
-    title: 'Organízate',
-    body: 'Controla fechas, calificaciones y tiempo de estudio desde una sola vista.',
+    title: 'Empieza por Canvas',
+    body: 'Pega un enlace de calendario. Llegan todas tus clases, gratis.',
   },
 ];
 
@@ -221,7 +215,7 @@ export default function SpanishHome() {
           <div className={styles.sectionHead}>
             <span className={styles.label}>Dos formas de empezar</span>
             <h2>Cómo funciona</h2>
-            <p>Empieza por el programa o por Canvas. En los dos casos llegas al mismo semestre organizado.</p>
+            <p>Elige el que te dé menos trabajo. Los dos terminan igual.</p>
           </div>
         </Reveal>
         <ol className={styles.steps}>

@@ -32,35 +32,31 @@ const HERO_CHIPS = [
   'Synced across iPhone, iPad and web',
 ];
 
-// Two doors into step 03, not one.
+// Two paths, not three steps.
 //
-// Scanning was presented as the only way in, which is wrong for the majority of
-// students whose school runs Canvas: connecting it is one pasted link and it
-// carries every class at once. Naming Canvas specifically rather than "your
-// LMS" is deliberate — a Canvas student can do this tonight on their own, while
-// Blackboard and Moodle need a token their IT department issues.
+// This block used to number the two entry routes 01 and 02 alongside the payoff
+// at 03, which reads as a sequence: scan a syllabus, THEN connect Canvas, THEN
+// plan. They are alternatives, so a new reader was being told to do both.
 //
-// The free claim on step 02 is the load-bearing one and every part of it is
-// enforced server-side: LMS-sourced courses skip the four-course cap entirely
-// (090), there is no task limit, and connecting is free for all three providers
-// because lms_access_allowed() takes no provider argument. The one free-tier
-// boundary that does exist is one semester, which is why this does not claim
-// otherwise.
+// It is two cards now, each a complete route, with the shared outcome moved up
+// into the section intro. The grid is auto-fit, so two cells lay out without
+// touching the CSS.
+//
+// Naming Canvas rather than "your LMS" is deliberate: a Canvas student can do
+// this tonight alone, while Blackboard and Moodle need a token their IT
+// department issues. The free claim is enforced server-side — LMS-sourced
+// courses skip the four-course cap (090) — and it stops short of claiming
+// unlimited semesters, because enforce_free_semester_limit exempts only is_pro.
 const STEPS = [
   {
     n: '01',
-    title: 'Scan a syllabus',
-    body: 'Take a photo, upload a PDF, drag it onto the web, or paste the text. One scan reads a whole term.',
+    title: 'Start from a syllabus',
+    body: 'Photo, PDF, or paste the text. One scan reads a whole term.',
   },
   {
     n: '02',
-    title: 'Or connect Canvas',
-    body: 'Paste one calendar link and every class comes across — free, and synced classes never count toward the free course limit.',
-  },
-  {
-    n: '03',
-    title: 'Plan around it',
-    body: 'Track deadlines, grades and study time from one calm, connected view.',
+    title: 'Start from Canvas',
+    body: 'Paste one calendar link. Every class comes across, free.',
   },
 ];
 
@@ -231,10 +227,7 @@ export default function Home() {
           <div className={styles.sectionHead}>
             <span className={styles.label}>Two ways in</span>
             <h2>How it works</h2>
-            <p>
-              Start from a syllabus or from Canvas. Either way you land on the same
-              connected semester.
-            </p>
+            <p>Pick whichever is less work. Both end in the same place.</p>
           </div>
         </Reveal>
         <ol className={styles.steps}>
