@@ -78,8 +78,8 @@ const CAPABILITIES = [
   {
     n: '04',
     eyebrow: 'One account, everywhere',
-    title: 'Keep going on iPhone, iPad or the web.',
-    body: 'Offline changes wait safely and sync when you reconnect. The complete app is available in both English and Spanish.',
+    title: 'Keep going on iPhone, iPad, Apple Watch or the web.',
+    body: 'Offline changes wait safely and sync when you reconnect. The phone, tablet and web app are all in English and Spanish.',
     href: '/features',
     linkLabel: 'See every feature',
   },

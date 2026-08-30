@@ -83,8 +83,8 @@ const CAPABILITIES = [
   {
     n: '04',
     eyebrow: 'Una cuenta, en todas partes',
-    title: 'Continúa en iPhone, iPad o la web.',
-    body: 'Los cambios sin conexión quedan guardados y se sincronizan al volver. Toda la app está disponible en español y en inglés.',
+    title: 'Continúa en iPhone, iPad, Apple Watch o la web.',
+    body: 'Los cambios sin conexión quedan guardados y se sincronizan al volver. La app de teléfono, tableta y web está en español y en inglés.',
     href: '/es/funciones',
     linkLabel: 'Ver todas las funciones',
   },
