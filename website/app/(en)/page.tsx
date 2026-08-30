@@ -227,7 +227,7 @@ export default function Home() {
           <div className={styles.sectionHead}>
             <span className={styles.label}>Two ways in</span>
             <h2>How it works</h2>
-            <p>Pick whichever is less work. Both end in the same place.</p>
+            <p>Pick whichever is less work. Both end in the same place, on every device you study on.</p>
           </div>
         </Reveal>
         <ol className={styles.steps}>

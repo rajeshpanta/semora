@@ -215,7 +215,7 @@ export default function SpanishHome() {
           <div className={styles.sectionHead}>
             <span className={styles.label}>Dos formas de empezar</span>
             <h2>Cómo funciona</h2>
-            <p>Elige el que te dé menos trabajo. Los dos terminan igual.</p>
+            <p>Elige el que te dé menos trabajo. Los dos terminan igual, en todos los dispositivos donde estudias.</p>
           </div>
         </Reveal>
         <ol className={styles.steps}>
