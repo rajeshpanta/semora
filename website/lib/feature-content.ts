@@ -27,6 +27,83 @@ export interface FeatureLongForm {
 
 export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
 {
+  "apple-watch": {
+    "metaTitle": "Apple Watch \u2014 Deadlines on Your Wrist",
+    "metaDescription":
+      "Semora on Apple Watch shows what is due today and what is overdue, puts the counts on your watch face, and lets you tick a task off from your wrist.",
+    "h1": "The two numbers that matter, without taking your phone out.",
+    "lede":
+      "Between classes you do not want an app. You want to know whether anything is due today and whether anything is already late. Semora on Apple Watch answers both from your wrist, and lets you tick something off while you are there.",
+    "intro": [
+      "A wrist is a terrible place to read a syllabus and an excellent place to answer one question. So the Watch app does not try to be the phone app made small \u2014 it holds the answer a glance can actually carry.",
+      "It ships inside the iPhone app on the same purchase, so there is nothing separate to buy and nothing separate to find in a store."
+    ],
+    "sections": [
+      {
+        "heading": "What is actually on the watch",
+        "paragraphs": [
+          "Two counts at the top \u2014 due today, and overdue \u2014 with the list underneath in due order. Each row carries its own label, so you can tell a thing due this afternoon from a thing due Friday without doing arithmetic on a small screen.",
+          "Underneath that, honestly, is how fresh the data is. \"Updated 4m ago\" or \"Not synced yet\" is on the screen, because a glanceable surface that quietly shows you yesterday's list is worse than one that admits it is behind."
+        ],
+        "bullets": [
+          "Due today and overdue, as counts you read rather than lists you scan",
+          "The tasks themselves, in due order, each with its own date label",
+          "How recently the phone synced, stated rather than assumed",
+          "Distinct screens for signed out, nothing synced yet, and genuinely all caught up \u2014 three states that look identical if you only handle \"empty\""
+        ]
+      },
+      {
+        "heading": "Complications: the answer without opening anything",
+        "paragraphs": [
+          "The counts also run as watch-face complications in three families \u2014 circular, inline and rectangular \u2014 so they sit on the face you already look at forty times a day. That is the version of this feature that costs a student nothing at all: no tap, no launch, no decision to check.",
+          "The complication runs in its own process and cannot talk to the phone directly, so it reads the last snapshot from a shared container the Watch app writes. That is the mechanism behind it staying correct when the app is not open."
+        ]
+      },
+      {
+        "heading": "Ticking something off from your wrist",
+        "paragraphs": [
+          "Tapping a row completes it, and the row tells you where it got to: sending, completed, or \"Didn't send \u00b7 tap to retry\" if the phone was not reachable. No silent failures dressed up as success.",
+          "What matters is what happens underneath. A Watch completion is not a separate implementation \u2014 it asks the phone to run the same mutation the Today tab, the task screen, the course screen and search all run. So finishing something from your wrist cancels its reminders, removes its calendar event, schedules the next recurrence if it repeats, and queues offline exactly the way it would have if you had done it on the phone. The Watch does not get its own half-version of that; it gets a way to ask for it."
+        ]
+      },
+      {
+        "heading": "It stays right when the phone is not around",
+        "paragraphs": [
+          "Due labels are recomputed on the watch from the raw dates rather than sent as finished text. A row that read \"Tomorrow\" last night reads \"Today\" this morning, with your phone in another room and no sync in between.",
+          "This sounds like a detail and is the difference between a companion you trust and one you check twice. A wrist surface showing a stale word is worse than showing nothing, because you act on it."
+        ]
+      },
+      {
+        "heading": "What it needs",
+        "paragraphs": [
+          "Apple Watch Series 4 or later, on watchOS 10 or newer. That floor was chosen deliberately: the default for this kind of target is watchOS 11, which requires a Series 6, and nothing the app does needs an API that new. A companion whose entire job is glanceability should not exclude a working watch for no reason.",
+          "It installs alongside the iPhone app from the same App Store listing \u2014 there is no separate watchOS download and no second purchase. Semora Pro, if you have it, is an account entitlement, so it is already in effect here."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "question": "Do I have to buy the Watch app separately?",
+        "answer": "No. It is part of the same universal listing as the iPhone and iPad app, and it installs from the Watch app on your paired phone once Semora is on it. There is no separate watchOS download, no second purchase, and Pro \u2014 which is an account entitlement rather than a per-device licence \u2014 already applies."
+      },
+      {
+        "question": "Which Apple Watch models work?",
+        "answer": "Series 4 and later, running watchOS 10 or newer. The usual default for a companion target like this is watchOS 11, which needs a Series 6 or later; Semora targets 10 on purpose, because reading two numbers off a watch face does not require a recent API and there is no reason to lock out a watch that works."
+      },
+      {
+        "question": "Can I complete a task from the Watch?",
+        "answer": "Yes, by tapping the row. The Watch asks your phone to run the same completion the phone's own screens run, so reminders are cancelled, any calendar event is removed, and the next occurrence of a repeating task is scheduled \u2014 all identical to completing it on the phone. If the phone is not reachable the row says so and offers a retry rather than pretending it worked."
+      },
+      {
+        "question": "Does it work if my phone is in another room?",
+        "answer": "It shows the last snapshot it received, and it tells you how old that is rather than hiding it. Due labels are recalculated on the watch itself from the underlying dates, so they stay correct across midnight without a fresh sync. What it cannot do without the phone is complete a task, since that has to become a real database write \u2014 the row will say it did not send and let you retry."
+      },
+      {
+        "question": "Is the Watch app included on the free tier?",
+        "answer": "Yes. The Watch app reads the deadlines you already track, and deadline tracking, grades and same-day reminders are all on the free tier. Nothing about the Watch is behind Pro."
+      }
+    ]
+  },
   "lecture-recording": {
     "metaTitle": "Lecture Recording \u2014 Notes, Quiz and Flashcards",
     "metaDescription":

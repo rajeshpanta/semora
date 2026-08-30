@@ -141,7 +141,8 @@ export type FeatureSlug =
   | 'ai-tutor'
   | 'collaboration'
   | 'canvas-sync'
-  | 'lecture-recording';
+  | 'lecture-recording'
+  | 'apple-watch';
 
 export interface FeatureFact {
   slug: FeatureSlug;
@@ -239,6 +240,15 @@ export const FEATURES: FeatureFact[] = [
     tier: 'free',
     description:
       "Record a lecture from your phone and Semora transcribes it, then writes structured notes, a multiple-choice practice quiz with explanations, and a flashcard deck from the same transcript. Capture is chunked into five-minute segments, so a phone that dies or an app the system kills costs you the last few minutes rather than the whole class. The audio itself is deleted as soon as the transcript is written. Free accounts get one AI action for the lifetime of the account and a lecture is one way to spend it; Pro is where you record more than one.",
+  },
+  {
+    slug: 'apple-watch',
+    name: 'Apple Watch',
+    shortDescription:
+      "What's due today and what's overdue, on your wrist and on your watch face \u2014 and you can tick a task off from there.",
+    tier: 'free',
+    description:
+      "The Watch app shows the two numbers that matter between classes: what is due today and what is already overdue, with the list underneath. Complications put the same counts on your watch face, so the answer arrives without opening anything. Completing a task from the wrist runs the same code path as completing it on the phone, so reminders are cancelled and calendar events cleaned up exactly as they would be. It installs with the iPhone app, on the same purchase.",
   },
 ];
 

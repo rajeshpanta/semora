@@ -35,6 +35,78 @@ export interface EsFeatureLongForm {
 }
 
 export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
+  'apple-watch': {
+    lede: 'Entre clases no quieres una app: quieres saber si algo vence hoy y si algo ya está atrasado. Semora en el Apple Watch responde las dos cosas desde la muñeca, y te deja marcar algo como hecho sin sacar el teléfono.',
+    intro: [
+      'La muñeca es un pésimo lugar para leer un programa y un lugar excelente para responder una sola pregunta. Por eso la app del reloj no intenta ser la app del teléfono en pequeño: sostiene la respuesta que de verdad cabe en un vistazo.',
+      'Viene dentro de la app de iPhone con la misma compra, así que no hay nada aparte que comprar ni nada aparte que buscar en la tienda.',
+    ],
+    sections: [
+      {
+        heading: 'Qué hay realmente en el reloj',
+        paragraphs: [
+          'Dos cifras arriba —lo que vence hoy y lo atrasado— con la lista debajo, ordenada por fecha. Cada fila lleva su propia etiqueta, así que distingues lo que vence esta tarde de lo que vence el viernes sin hacer cuentas en una pantalla diminuta.',
+          'Y debajo, con honestidad, qué tan reciente es la información. «Actualizado hace 4 min» o «Sin sincronizar aún» aparece en pantalla, porque una superficie de vistazo rápido que te muestra en silencio la lista de ayer es peor que una que admite ir con retraso.',
+        ],
+        bullets: [
+          'Lo que vence hoy y lo atrasado, como cifras que lees y no listas que recorres',
+          'Las tareas en sí, por orden de vencimiento y cada una con su etiqueta de fecha',
+          'Hace cuánto sincronizó el teléfono, dicho y no supuesto',
+          'Pantallas distintas para sesión cerrada, sin sincronizar todavía y realmente al día: tres estados que se ven idénticos si solo contemplas «vacío»',
+        ],
+      },
+      {
+        heading: 'Complicaciones: la respuesta sin abrir nada',
+        paragraphs: [
+          'Las cifras también funcionan como complicaciones en tres formatos —circular, en línea y rectangular—, así que viven en la esfera que ya miras cuarenta veces al día. Esa es la versión de esta función que no le cuesta nada al estudiante: sin toque, sin abrir la app, sin decidir revisar.',
+          'La complicación corre en su propio proceso y no puede hablar con el teléfono directamente, así que lee la última instantánea desde un contenedor compartido que escribe la app del reloj. Ese es el mecanismo que la mantiene correcta cuando la app no está abierta.',
+        ],
+      },
+      {
+        heading: 'Marcar algo como hecho desde la muñeca',
+        paragraphs: [
+          'Al tocar una fila se marca como completada, y la fila te dice en qué punto va: enviando, completada, o «No se envió · toca para reintentar» si el teléfono no estaba al alcance. Nada de fallos silenciosos disfrazados de éxito.',
+          'Lo importante es lo que ocurre por debajo. Completar desde el reloj no es una implementación aparte: le pide al teléfono que ejecute la misma operación que ejecutan la pestaña de Hoy, la pantalla de la tarea, la del curso y la búsqueda. Así que terminar algo desde la muñeca cancela sus avisos, elimina su evento de calendario, programa la siguiente repetición si la tarea se repite, y se encola sin conexión igual que si lo hubieras hecho en el teléfono. El reloj no recibe su propia media versión de eso: recibe una forma de pedirlo.',
+        ],
+      },
+      {
+        heading: 'Sigue siendo correcto aunque el teléfono no esté cerca',
+        paragraphs: [
+          'Las etiquetas de fecha se recalculan en el reloj a partir de las fechas originales, no se envían ya escritas. Una fila que anoche decía «Mañana» hoy dice «Hoy», con el teléfono en otra habitación y sin ninguna sincronización de por medio.',
+          'Suena a detalle y es la diferencia entre un acompañante en el que confías y uno que revisas dos veces. Una superficie de muñeca que muestra una palabra desactualizada es peor que una que no muestra nada, porque actúas sobre ella.',
+        ],
+      },
+      {
+        heading: 'Qué necesitas',
+        paragraphs: [
+          'Un Apple Watch Series 4 o posterior, con watchOS 10 o más reciente. Ese piso se eligió a propósito: lo habitual en este tipo de destino es watchOS 11, que exige un Series 6, y nada de lo que hace la app necesita una API tan nueva. Un acompañante cuyo único trabajo es el vistazo rápido no debería dejar fuera un reloj que funciona, sin motivo.',
+          'Se instala junto con la app de iPhone desde la misma ficha de la App Store: no hay descarga aparte para watchOS ni una segunda compra. Si tienes Semora Pro, es un permiso de la cuenta, así que ya está activo aquí.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        question: '¿Tengo que comprar la app del reloj por separado?',
+        answer: 'No. Forma parte de la misma ficha universal que la app de iPhone y iPad, y se instala desde la app Watch de tu teléfono una vez que Semora está ahí. No hay descarga aparte para watchOS, no hay una segunda compra, y Pro —que es un permiso de la cuenta y no una licencia por dispositivo— ya aplica.',
+      },
+      {
+        question: '¿Qué modelos de Apple Watch funcionan?',
+        answer: 'Series 4 en adelante, con watchOS 10 o más reciente. Lo habitual en un destino acompañante como este es watchOS 11, que necesita un Series 6 o posterior; Semora apunta a 10 a propósito, porque leer dos cifras en una esfera no requiere una API reciente y no hay razón para dejar fuera un reloj que funciona.',
+      },
+      {
+        question: '¿Puedo completar una tarea desde el reloj?',
+        answer: 'Sí, tocando la fila. El reloj le pide a tu teléfono que ejecute la misma operación que ejecutan sus propias pantallas, así que se cancelan los avisos, se elimina el evento de calendario y se programa la siguiente repetición de una tarea recurrente, idéntico a completarla en el teléfono. Si el teléfono no está al alcance, la fila lo dice y ofrece reintentar en lugar de fingir que funcionó.',
+      },
+      {
+        question: '¿Funciona si mi teléfono está en otra habitación?',
+        answer: 'Muestra la última instantánea que recibió, y te dice qué tan antigua es en lugar de ocultarlo. Las etiquetas de fecha se recalculan en el propio reloj a partir de las fechas de fondo, así que siguen siendo correctas al pasar la medianoche sin una sincronización nueva. Lo que no puede hacer sin el teléfono es completar una tarea, porque eso tiene que convertirse en una escritura real en la base de datos: la fila dirá que no se envió y podrás reintentar.',
+      },
+      {
+        question: '¿La app del reloj está incluida en el plan gratuito?',
+        answer: 'Sí. La app del reloj lee las entregas que ya llevas registradas, y el seguimiento de entregas, las calificaciones y los avisos del mismo día están en el plan gratuito. Nada del reloj está detrás de Pro.',
+      },
+    ],
+  },
   'lecture-recording': {
     lede: 'Semora graba la clase desde tu teléfono, la transcribe y convierte esa transcripción en apuntes escritos, un cuestionario de opción múltiple con explicaciones y un mazo de tarjetas. Todo de una sola grabación, sin que vuelvas a teclear nada.',
     intro: [

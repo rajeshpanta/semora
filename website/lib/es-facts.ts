@@ -114,6 +114,14 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     tier: 'free',
     description: 'Graba la clase desde el teléfono y Semora la transcribe, y a partir de esa misma transcripción escribe apuntes ordenados, un cuestionario de opción múltiple con explicaciones y un mazo de tarjetas. La captura se guarda en tramos de cinco minutos, así que un teléfono que se apaga te cuesta los últimos minutos y no la clase entera. El audio se borra en cuanto la transcripción queda guardada.',
   },
+  {
+    slug: 'apple-watch',
+    englishSlug: 'apple-watch',
+    name: 'Apple Watch',
+    shortDescription: 'Lo que vence hoy y lo que llevas atrasado, en la muñeca y en la esfera del reloj, y puedes marcar una tarea desde ahí.',
+    tier: 'free',
+    description: 'La app del reloj muestra los dos números que importan entre clase y clase: lo que vence hoy y lo que ya está atrasado, con la lista debajo. Las complicaciones ponen esas mismas cifras en la esfera, así que la respuesta llega sin abrir nada. Marcar una tarea desde la muñeca ejecuta el mismo código que marcarla en el teléfono, así que los avisos se cancelan y los eventos del calendario se limpian igual. Se instala junto con la app de iPhone, con la misma compra.',
+  },
 ];
 
 export function getSpanishFeature(slug: string): SpanishFeatureFact | undefined {
