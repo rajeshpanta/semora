@@ -56,7 +56,7 @@ const STEPS = [
   {
     n: '02',
     title: 'Start from Canvas',
-    body: 'Paste one calendar link. Every class comes across, free.',
+    body: 'Paste one calendar link. Every class, assignment, quiz and exam — free.',
   },
 ];
 

@@ -51,7 +51,7 @@ const STEPS = [
   {
     n: '02',
     title: 'Empieza por Canvas',
-    body: 'Pega un enlace de calendario. Llegan todas tus clases, gratis.',
+    body: 'Pega un enlace de calendario. Cada materia, tarea, prueba y examen: gratis.',
   },
 ];
 
