@@ -106,6 +106,14 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     tier: 'pro',
     description: 'Conecta Canvas gratis y todas tus clases se importan solas y se mantienen al día, sin token ni permiso de informática.',
   },
+  {
+    slug: 'grabacion-de-clases',
+    englishSlug: 'lecture-recording',
+    name: 'Grabación de clases',
+    shortDescription: 'Graba una clase y recibe la transcripción, apuntes escritos, un cuestionario de práctica y un mazo de tarjetas.',
+    tier: 'free',
+    description: 'Graba la clase desde el teléfono y Semora la transcribe, y a partir de esa misma transcripción escribe apuntes ordenados, un cuestionario de opción múltiple con explicaciones y un mazo de tarjetas. La captura se guarda en tramos de cinco minutos, así que un teléfono que se apaga te cuesta los últimos minutos y no la clase entera. El audio se borra en cuanto la transcripción queda guardada.',
+  },
 ];
 
 export function getSpanishFeature(slug: string): SpanishFeatureFact | undefined {

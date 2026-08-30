@@ -35,6 +35,79 @@ export interface EsFeatureLongForm {
 }
 
 export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
+  'lecture-recording': {
+    lede: 'Semora graba la clase desde tu teléfono, la transcribe y convierte esa transcripción en apuntes escritos, un cuestionario de opción múltiple con explicaciones y un mazo de tarjetas. Todo de una sola grabación, sin que vuelvas a teclear nada.',
+    intro: [
+      'Tomar apuntes y seguir la clase son dos tareas que compiten por la misma atención. Quien escribe más rápido suele ser quien menos entiende, y quien decide escuchar bien se queda sin nada que repasar tres semanas después.',
+      'Esto elimina ese intercambio: pulsas grabar, escuchas, y lo escrito se produce después a partir de lo que de verdad se dijo.',
+    ],
+    sections: [
+      {
+        heading: 'Qué obtienes de una sola grabación',
+        paragraphs: [
+          'Una clase terminada produce cuatro cosas en una sola pasada, y todas salen de la transcripción, no de una segunda subida ni de otra acción de IA.',
+        ],
+        bullets: [
+          'La transcripción, que puedes buscar, para encontrar los diez segundos en que tu profesor dijo qué entra en el examen',
+          'Apuntes escritos y ordenados por secciones, no un muro de texto hablado',
+          'Un cuestionario de opción múltiple, con una explicación en cada respuesta y no solo un puntaje',
+          'Un mazo de tarjetas hecho con el mismo material, que funciona igual que cualquier otro mazo de Semora',
+        ],
+      },
+      {
+        heading: 'Una grabación que sobrevive a que se apague el teléfono',
+        paragraphs: [
+          'El audio se captura en tramos de cinco minutos y no como un archivo largo, por una razón concreta: un .m4a que se corta antes de cerrarse no queda incompleto, queda ilegible. Una grabadora de archivo único que se topa con un apagado por batería en el minuto 70 no te devuelve 70 minutos: no te devuelve nada.',
+          'Con tramos, una pérdida irrecuperable se vuelve soportable: en el peor caso pierdes los últimos minutos, y todo lo anterior ya se subió. Además cada subida pesa alrededor de 1,2 MB, que es lo que hace que esto funcione con el wifi del campus y no solo con buena conexión.',
+          'La captura está ajustada para una voz en un salón grande: mono, 32 kbps, muestreo en el rango del habla. Una clase de 90 minutos ocupa unos 22 MB; esa misma clase con los ajustes que trae una grabadora por defecto ocuparía 86 MB.',
+        ],
+      },
+      {
+        heading: 'El audio se borra en cuanto existe la transcripción',
+        paragraphs: [
+          'En cuanto la transcripción queda guardada, la grabación se borra. No es un ahorro de almacenamiento ni algo configurable: reproducir el audio no es una función, a propósito.',
+          'La razón es que la grabación de una clase no son solo tus datos. Contiene la voz de tu profesor y la de todas las personas al alcance del micrófono, y ninguna eligió que una app las grabara. Conservar ese audio después de que cumplió su función solo añade un costo de almacenamiento y una obligación de borrado. La transcripción, los apuntes, el cuestionario y las tarjetas son tuyos y se quedan.',
+        ],
+      },
+      {
+        heading: 'El permiso va primero, y la app lo dice',
+        paragraphs: [
+          'Antes de tu primera grabación, Semora muestra un aviso que te pide confirmar que tienes permiso y te remite a las reglas de tu profesor y a la política de tu institución. Muchos cursos exigen permiso, algunos lo prohíben, y la ley cambia según el país y el estado.',
+          'Ese aviso existe porque una app que convierte grabar en un solo toque tiene alguna responsabilidad sobre el momento anterior a ese toque. No es asesoría legal ni sustituye preguntar: es justamente un recordatorio de que hay que preguntar.',
+        ],
+      },
+      {
+        heading: 'Los límites, sin rodeos',
+        paragraphs: [
+          'Una grabación llega hasta 90 minutos y se te avisa antes del tope en lugar de cortarte en seco. Grabar requiere la app del teléfono, iPhone o iPad, porque necesita micrófono y una sesión de audio en primer plano; la app web puede leer todo lo que produjo una grabación, pero no puede capturarla.',
+          'Semora revisa el espacio libre antes de empezar, porque un dispositivo que se llena a mitad de la clase es el único fallo sin arreglo posible: la clase no ocurre dos veces. También te avisa si la batería está baja y no estás conectado a la corriente.',
+          'En el plan gratuito, una clase gasta la única acción de IA de por vida de la cuenta, la misma que gastaría un escaneo de programa. Grabar más de una clase es parte de Pro.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        question: '¿Puedo volver a escuchar la grabación?',
+        answer: 'No, y es a propósito. El audio se borra en cuanto se guarda la transcripción, así que la reproducción no se ofrece. Lo que queda es la transcripción, los apuntes, el cuestionario y el mazo de tarjetas. Si escuchar de nuevo te importa más que todo eso, una grabadora de voz normal es la herramienta adecuada y no es una decisión difícil.',
+      },
+      {
+        question: '¿Qué pasa si se apaga mi teléfono a mitad de la clase?',
+        answer: 'Pierdes el tramo en curso, como máximo los últimos cinco minutos, y conservas todo lo anterior. El audio se escribe en piezas de cinco minutos que se suben conforme se completan, precisamente para que un apagón o un cierre del sistema no te cueste la clase entera. Una grabadora de archivo único, en esa misma situación, suele dejar un archivo que ni siquiera abre.',
+      },
+      {
+        question: '¿Necesito permiso para grabar mis clases?',
+        answer: 'Casi siempre, sí. Muchos cursos lo exigen, algunos prohíben grabar del todo, y las leyes cambian según el país y el estado. Semora muestra un aviso antes de tu primera grabación que te remite a las reglas de tu profesor y a la política de tu institución. Tómalo como un recordatorio para ir a preguntar, no como una autorización: la app no conoce la política de tu universidad y no finge conocerla.',
+      },
+      {
+        question: '¿Puedo grabar desde la app web?',
+        answer: 'No. Grabar necesita micrófono y una sesión de audio en primer plano, así que funciona solo en la app de iPhone y iPad. Todo lo que produce una grabación (transcripción, apuntes, cuestionario y tarjetas) son datos de la cuenta, así que se leen sin problema desde el navegador con la misma sesión.',
+      },
+      {
+        question: '¿La grabación de clases es gratis?',
+        answer: 'Una cuenta gratuita tiene una acción de IA para toda la vida de la cuenta, y una clase es una forma de gastarla; escanear un programa o convertir un documento en apuntes son las otras, y tú eliges. Grabar más de una clase forma parte de Pro, por $3.99 al mes o $19.99 al año, que además incluye escaneos y materias sin límite.',
+      },
+    ],
+  },
   'syllabus-scanner': {
     lede: 'Fotografía, sube o pega el programa y Semora te devuelve el curso, el horario de clases, la escala de calificación y todas las fechas que encuentre. Tú revisas la lista antes de que se guarde un solo elemento.',
     intro: [

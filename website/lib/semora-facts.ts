@@ -140,7 +140,8 @@ export type FeatureSlug =
   | 'focus-timer'
   | 'ai-tutor'
   | 'collaboration'
-  | 'canvas-sync';
+  | 'canvas-sync'
+  | 'lecture-recording';
 
 export interface FeatureFact {
   slug: FeatureSlug;
@@ -229,6 +230,15 @@ export const FEATURES: FeatureFact[] = [
     tier: 'pro',
     description:
       "Canvas sync is free right now, on every account, with no limit on how many classes come across — this is a limited-time offer, and an account that connects while it runs keeps free Canvas sync for good. It uses the private calendar feed Canvas already gives you, so there is no access token to generate and nothing for your IT department to approve. Once connected it re-checks Canvas about hourly on its own: a deadline your instructor moves is right in Semora without anyone doing anything, and an assignment they delete disappears from your list instead of nagging you. One honest limit — the calendar feed carries dates, not marks, so your grades are still yours to enter. Blackboard and Moodle import is a Pro feature, uses a personal access token, and varies by school.",
+  },
+  {
+    slug: 'lecture-recording',
+    name: 'Lecture Recording',
+    shortDescription:
+      'Record a class and get a transcript, written notes, a practice quiz and a flashcard deck from it.',
+    tier: 'free',
+    description:
+      "Record a lecture from your phone and Semora transcribes it, then writes structured notes, a multiple-choice practice quiz with explanations, and a flashcard deck from the same transcript. Capture is chunked into five-minute segments, so a phone that dies or an app the system kills costs you the last few minutes rather than the whole class. The audio itself is deleted as soon as the transcript is written. Free accounts get one AI action for the lifetime of the account and a lecture is one way to spend it; Pro is where you record more than one.",
   },
 ];
 

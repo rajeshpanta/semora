@@ -27,6 +27,91 @@ export interface FeatureLongForm {
 
 export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
 {
+  "lecture-recording": {
+    "metaTitle": "Lecture Recording \u2014 Notes, Quiz and Flashcards",
+    "metaDescription":
+      "Record a lecture on your phone. Semora transcribes it and writes structured notes, a practice quiz and a flashcard deck from the same transcript.",
+    "h1": "Record the lecture. Get the notes, the quiz and the cards.",
+    "lede":
+      "Semora records a class from your phone, transcribes it, and turns that transcript into written notes, a multiple-choice practice quiz with explanations, and a flashcard deck \u2014 all from one recording, without you retyping anything.",
+    "intro": [
+      "Taking notes and following a lecture are two different jobs competing for the same attention. The student writing the fastest is usually the one understanding the least, and the one who chose to listen properly has nothing to revise from three weeks later.",
+      "This removes the trade. You press record, you listen, and the writing happens afterwards from what was actually said."
+    ],
+    "sections": [
+      {
+        "heading": "What you get from one recording",
+        "paragraphs": [
+          "A finished lecture produces four things from a single pass, and each of them is derived from the transcript rather than from a separate upload or a second AI action."
+        ],
+        "bullets": [
+          "The transcript itself, searchable, so you can find the ten seconds where the professor said what the exam covers",
+          "Structured written notes, organised into headings rather than a wall of speech",
+          "A multiple-choice practice quiz, with an explanation attached to every answer rather than just a score",
+          "A flashcard deck, generated from the same material, that behaves like every other deck in Semora"
+        ]
+      },
+      {
+        "heading": "Recording that survives your phone dying",
+        "paragraphs": [
+          "Audio is captured in five-minute segments rather than as one long file, and the reason is specific. An .m4a killed before its writer finalises has no moov atom \u2014 the file is not shortened, it is unplayable. A single-file recorder that meets a low-battery shutdown or an aggressive iOS memory reclaim at minute 70 does not hand back 70 minutes. It hands back nothing.",
+          "Segmenting turns an unrecoverable loss into a survivable one: the worst case is the last few minutes, and every earlier segment has already uploaded. It also keeps each upload around 1.2 MB, which is what makes this work on campus wifi rather than only on a good connection.",
+          "The capture settings are tuned for one voice in a large room \u2014 mono, 32 kbps, speech-range sampling. A 90-minute lecture is roughly 22 MB. The same lecture at the audio presets a recorder ships with by default would be 86 MB."
+        ]
+      },
+      {
+        "heading": "The audio is deleted once the transcript exists",
+        "paragraphs": [
+          "As soon as the transcript is durably written, the recording is deleted. This is not a storage-saving measure and it is not configurable \u2014 playback is deliberately not a feature.",
+          "The reasoning is that a lecture recording is not only your data. It contains your instructor's voice and everyone within microphone range of your phone, none of whom chose to be recorded by an app. Keeping that audio after it has served its purpose buys a hosting bill and an erasure obligation and nothing else. The transcript, the notes, the quiz and the cards are yours and they stay."
+        ]
+      },
+      {
+        "heading": "Permission comes first, and the app says so",
+        "paragraphs": [
+          "Before your first recording Semora shows a sheet asking you to confirm you have permission, and pointing you at your instructor's rules and your school's policy. Many courses require permission before you record, some prohibit it, and the law varies by state and country.",
+          "That screen exists because an app that makes recording a one-tap action has some responsibility for the moment before the tap. It is not legal advice and it is not a substitute for asking \u2014 it is a prompt to ask."
+        ]
+      },
+      {
+        "heading": "Where it sits in the rest of Semora",
+        "paragraphs": [
+          "Recording lives under Notes in the app, alongside uploads: slides, a chapter, or a photo of the board all go to the same place and produce the same set of outputs. A lecture is one input, not a separate product.",
+          "The cards generated from a lecture are ordinary Semora flashcards, so they open in the same reviewer as a deck built from a syllabus. The notes are attached to the course you recorded for, which means the AI tutor can answer from them the same way it answers from a scanned syllabus."
+        ]
+      },
+      {
+        "heading": "The limits, plainly",
+        "paragraphs": [
+          "One recording runs up to 90 minutes, and you are warned before the cap rather than cut off at it. Recording requires the phone app \u2014 iPhone or iPad \u2014 because it needs a microphone and a foreground audio session; the web app can read everything a recording produced, but it cannot capture one.",
+          "Semora checks for free space before it starts, because a device that fills up mid-lecture is the one failure with no recovery: the class does not happen twice. It also warns you if the battery is low and you are not plugged in.",
+          "On the free tier a lecture spends the account's single lifetime AI action, the same one a syllabus scan would spend. Recording more than one class is a Pro feature."
+        ]
+      }
+    ],
+    "faq": [
+      {
+        "question": "Can I listen back to the recording?",
+        "answer": "No, and that is deliberate. The audio is deleted as soon as the transcript is written, so playback is not offered at all. What survives is the transcript, the notes, the quiz and the flashcard deck. If listening back matters more to you than any of those, a plain voice recorder is the better tool and this is not a close call."
+      },
+      {
+        "question": "What happens if my phone dies halfway through the lecture?",
+        "answer": "You lose the segment that was in progress, at most the last five minutes, and keep everything before it. Audio is written in five-minute pieces and uploaded as they complete, precisely so that a shutdown, a crash, or iOS reclaiming memory does not cost you the whole class. A single-file recorder in the same situation typically produces a file that will not open at all."
+      },
+      {
+        "question": "Do I need permission to record my lectures?",
+        "answer": "Usually, yes. Many courses require it, some prohibit recording entirely, and recording laws differ by state and country. Semora shows a confirmation sheet before your first recording that points you at your instructor's rules and your school's policy. Treat that as a prompt to go and ask, not as clearance \u2014 the app cannot know your institution's policy and does not pretend to."
+      },
+      {
+        "question": "Can I record on the web app?",
+        "answer": "No. Recording needs a microphone and a foreground audio session, so it runs in the iPhone and iPad app only. Everything a recording produces \u2014 the transcript, notes, quiz and cards \u2014 is account data, so it is all readable in the browser afterwards on the same account."
+      },
+      {
+        "question": "Is lecture recording free?",
+        "answer": "A free account gets one AI action for the lifetime of the account, and a lecture is one way to spend it \u2014 a syllabus scan or a document turned into notes are the others, and you pick. Recording more than one class is part of Pro, at $3.99/month or $19.99/year, which also covers unlimited syllabus scans and courses."
+      }
+    ]
+  },
   "syllabus-scanner": {
     "metaTitle": "AI Syllabus Scanner for College Students",
     "metaDescription": "Turn a syllabus photo, PDF, or pasted text into every deadline, class time, and grade cutoff. Review each item before it saves. Free tier: one AI action per account.",
