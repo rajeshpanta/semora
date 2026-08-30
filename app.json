@@ -2,7 +2,7 @@
   "expo": {
     "name": "Semora",
     "slug": "semora",
-    "version": "1.11",
+    "version": "1.12",
     "runtimeVersion": {
       "policy": "fingerprint"
     },
@@ -26,7 +26,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rajeshpanta.syllabussnap",
-      "buildNumber": "55",
+      "buildNumber": "56",
       "appleTeamId": "7T9897GFKH",
       "usesAppleSignIn": true,
       "entitlements": {
