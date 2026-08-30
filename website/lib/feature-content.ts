@@ -341,7 +341,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
           "Percentages are stored to two decimal places; the original points are kept and displayed alongside",
           "Points earned above points possible is blocked unless the task is marked extra credit",
           "Assignments with no weight get a visible warning rather than silently skewing your average",
-          "Canvas-synced assignments arrive with their score already filled in, computed the same way"
+          "Canvas-synced assignments arrive with their dates, and you enter the score yourself"
         ]
       },
       {
@@ -411,7 +411,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "How it connects to everything else in Semora",
         "paragraphs": [
           "Grades are not a standalone screen. The scores you enter feed the rest of the app.",
-          "Your Courses tab shows each course's letter and percentage under its name, next to what is due next. When the current Pro Canvas token connector is permitted by your institution, assignment scores can arrive with points earned and points possible, get converted to percentages with the same arithmetic, and land in the same running average. Canvas can also carry the late flag, and Semora tracks late submissions separately: you can record an expected penalty and the task screen will show the estimated maximum you can still earn until the real grade is posted, without ever docking a posted score twice.",
+          "Your Courses tab shows each course's letter and percentage under its name, next to what is due next. Canvas import brings dates rather than scores, so the running average is built from marks you enter yourself, with the same arithmetic as average. Canvas can also carry the late flag, and Semora tracks late submissions separately: you can record an expected penalty and the task screen will show the estimated maximum you can still earn until the real grade is posted, without ever docking a posted score twice.",
           "On the Pro side, Academic Risk alerts read your grade history directly. A course needs at least two graded items; Semora then compares the average of your three most recent grades against the three before them, ordered by when the work was due rather than when you happened to enter it, and raises a falling-grade alert when the drop is seven points or more, or when the course estimate sits below 70. Below 65 it escalates to high severity. Progress Insights needs four graded items before it will draw a trend, and exports a semester CSV with columns for current grade, letter, completion percentage, on-time percentage, missing work, and graded count, plus a print view you can bring to an advising appointment. The Workload dashboard shows how much of each course's grade is still in play.",
           "All of it is one account across iPhone, iPad, and web, syncing in near real time, so a score you enter walking out of a lecture hall is on your laptop when you open it."
         ]
@@ -1215,7 +1215,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
           "The title, and the description as plain readable text.",
           "The due date and time, converted to your device's local clock from the absolute timestamp Canvas returns, so an 11:59 p.m. deadline stays 11:59 p.m. instead of drifting by your UTC offset.",
           "Points possible, your points earned, and a percentage score computed from the two when both exist.",
-          "Submission status: whether Canvas shows the work as submitted, graded, or pending review, when it was submitted, and whether Canvas flagged it late.",
+          "Not submission status. The Calendar Feed carries no record of what you have handed in, so completion in Semora is yours to set.",
           "A link back to the assignment's own Canvas page, opened straight from the task in Semora."
         ]
       },
@@ -1246,7 +1246,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
           "Fields Canvas owns get refreshed on every pass — title, description, type, due date, due time, and which course it belongs to. Fields you own are protected, and the rules are specific rather than vague:"
         ],
         "bullets": [
-          "Grades merge instead of replacing. If Canvas returns nothing for a score, Semora keeps the number you typed in rather than blanking it.",
+          "Grades are never touched by a sync. The Calendar Feed carries no scores, so the number you typed in cannot be overwritten by an import.",
           "Completion is a logical OR. If you have checked a task off in Semora, no sync will un-check it, even if Canvas has not registered the submission yet.",
           "The same applies to the late flag: once something is marked late, a later sync will not quietly clear it.",
           "If Canvas cannot supply a trustworthy submission timestamp, Semora leaves the completion time unknown rather than stamping the sync time, because using sync time could make on-time work look late."

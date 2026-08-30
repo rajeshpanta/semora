@@ -1130,11 +1130,8 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
           "Title and description — the Canvas description is stripped of HTML, script and style blocks are dropped, entities are decoded, and the text is capped at 10,000 characters.",
           "Type — quiz when Canvas's submission types say so, otherwise inferred from the name: midterm, final, exam, or test becomes an exam; quiz becomes a quiz; project becomes a project; read, reading, or chapter becomes a reading; everything else is an assignment.",
           "Due date and due time — Canvas returns one absolute timestamp, and Semora carries it through as an absolute value and converts it on your device. An 11:59 p.m. deadline does not slide a day because a server and your timezone disagree.",
-          "Points possible, points earned, and a percentage score computed as earned divided by possible, which then feeds your weighted average.",
-          "Completion — marked done when your Canvas submission state is submitted, graded, or pending review.",
-          "Submitted late — Canvas's own late flag, carried straight across.",
-          "Submission time — taken from Canvas's submitted_at when Canvas supplies one, and left blank rather than invented when it does not.",
-          "A deep link back to the assignment's Canvas page, plus Canvas's own updated_at so Semora knows how fresh each row is."
+          "A deep link back to the assignment's Canvas page, plus Canvas's own updated_at so Semora knows how fresh each row is.",
+          "Not scores, and not whether you have handed something in. The Calendar Feed is the same link you would paste into Google Calendar, so it carries what a calendar carries. Grades and completion stay yours to record in Semora."
         ]
       },
       {
@@ -1154,10 +1151,9 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
           "Here is what a sync will not touch:"
         ],
         "bullets": [
-          "Completion is a logical OR. If you checked something off in Semora, no sync un-checks it, regardless of what Canvas reports. If Canvas says submitted and Semora did not know, it becomes complete.",
-          "Completion timestamps are sticky. Once an item is complete, the original timestamp stands and later syncs leave it alone. When Canvas knows work is done but not when, the timestamp stays empty instead of being backfilled with the sync time — filling it in would falsely make on-time work look late.",
-          "The late flag is also an OR, so it cannot be silently cleared by a later response.",
-          "Grades merge rather than replace. Points possible, points earned, and score each take the Canvas value only when Canvas has one. A null from Canvas leaves whatever is already there, so a score you entered by hand survives a sync that returns nothing for it.",
+          "Completion is a logical OR. If you checked something off in Semora, no sync un-checks it, regardless of what Canvas reports. A sync can add work, refresh a title and move a date; it cannot decide you have finished something.",
+          "Completion timestamps are sticky. Once you mark an item complete, the original timestamp stands and later syncs leave it alone.",
+          "Grades are never touched by a sync. The Calendar Feed carries no scores, so a mark you entered by hand cannot be overwritten or blanked by an import.",
           "Nothing is deleted. The sync response is explicitly flagged as unsafe for removal inference, so the deletion pass never runs at all. Even when it could run, it only stamps a removed-at timestamp on the row — a tombstone, never a delete."
         ]
       },

@@ -332,7 +332,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Los porcentajes se guardan con dos decimales; los puntos originales se conservan y se muestran al lado.',
           'Puntos obtenidos por encima de los posibles se bloquean salvo que la tarea esté marcada como crédito extra.',
           'Las entregas sin ponderación muestran un aviso visible en lugar de desviar tu promedio en silencio.',
-          'Cuando tu institución permite el conector actual de Canvas con token personal, las tareas importadas pueden llegar con su nota ya rellenada, calculada de la misma forma.',
+          'Las tareas que llegan de Canvas traen sus fechas, no sus notas: la calificación la introduces tú, con el mismo cálculo.',
         ],
       },
       {
@@ -402,7 +402,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'Cómo se conecta con el resto de Semora',
         paragraphs: [
           'Las calificaciones no son una pantalla aislada. Las notas que introduces alimentan el resto de la app.',
-          'Tu pestaña de Cursos muestra la letra y el porcentaje de cada asignatura bajo su nombre, junto a lo siguiente que vence. Cuando tu institución permite el conector actual de Canvas con token personal, las notas de las tareas pueden llegar con sus puntos obtenidos y posibles y se convierten igual.',
+          'Tu pestaña de Cursos muestra la letra y el porcentaje de cada asignatura bajo su nombre, junto a lo siguiente que vence. Lo que llega de Canvas son las fechas, no las notas: los puntos los introduces tú y se convierten igual.',
           'Del lado de Pro, la revisión académica lee tu historial de notas directamente. Una asignatura necesita al menos dos elementos corregidos; Semora compara entonces el promedio de tus tres notas más recientes con el de las tres anteriores, ordenadas por cuándo se calificaron.',
           'Todo eso es una sola cuenta en iPhone, iPad y la web, sincronizada casi en tiempo real, así que una nota que introduces saliendo de clase ya está en tu portátil cuando lo abres.',
         ],
