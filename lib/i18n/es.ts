@@ -2377,4 +2377,12 @@ export const ES: Record<string, string> = {
   'Could not start a semester': 'No se pudo crear el semestre',
   'Current Password': 'Contraseña actual',
   'Semester Name *': 'Nombre del semestre *',
+
+  // ── Rating card (1.12): the quieter, unmetered second ask ───────────────
+  // "Calificar" rather than "valorar", matching the existing 'Rate Semora'
+  // row in the Me tab — one verb for one action across the whole app.
+  'Enjoying Semora?': '¿Te está gustando Semora?',
+  'A quick rating helps other students find it.': 'Una calificación rápida ayuda a que otros estudiantes la encuentren.',
+  'Dismiss': 'Descartar',
+  'Rate Semora on the App Store': 'Calificar Semora en el App Store',
 };

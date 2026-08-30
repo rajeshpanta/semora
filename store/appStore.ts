@@ -32,6 +32,20 @@ const REVIEW_REQUESTED_KEY = 'semora_review_requested';
 // good rating. Separating the two means the paywall flag goes on describing
 // the paywall and this one describes the import.
 const IMPORTED_SYLLABUS_KEY = 'semora_imported_syllabus';
+// The device-local calendar day of that import, yyyy-MM-dd.
+//
+// The flag above says an import happened; this says when, and the review gate
+// needs the difference. Measured, 39% of rating prompts fired within ten
+// minutes of first launch and 76% within the hour, because the Today tab only
+// mounts AFTER onboarding and the first scan — so a mount-time check found the
+// flag already true and asked immediately. A day is the smallest unit that
+// distinguishes "watched a syllabus import" from "planned a week of work".
+const IMPORTED_SYLLABUS_DAY_KEY = 'semora_imported_syllabus_day';
+// The day the native SKStoreReviewController prompt was spent. The card ask
+// waits for a later one so the two never land in the same sitting.
+const REVIEW_PROMPTED_DAY_KEY = 'semora_review_prompted_day';
+// The student dismissed the rating card. Once ever — this is not a nag.
+const RATING_CARD_DISMISSED_KEY = 'semora_rating_card_dismissed';
 const WIDGET_TIP_KEY = 'semora_widget_tip_seen';
 const COURSES_VIEW_KEY = 'semora_courses_view';
 const TOOLS_OPEN_KEY = 'semora_sidebar_tools_open';
@@ -62,6 +76,15 @@ function getItem(key: string): string | null {
     try { return typeof window !== 'undefined' ? window.localStorage.getItem(key) : null; } catch { return null; }
   }
   try { return SecureStore.getItem(key); } catch { return null; }
+}
+
+/** Device-local yyyy-MM-dd. Deliberately local rather than UTC: "did the
+ *  student come back the next day" is a question about their calendar, and a
+ *  UTC day boundary would answer it wrongly for most of the Americas every
+ *  evening. Hand-formatted so this file stays free of a date library. */
+export function localDayKey(d: Date = new Date()): string {
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
 function setItem(key: string, value: string) {
@@ -143,6 +166,35 @@ const initialReviewRequested = getItem(REVIEW_REQUESTED_KEY) === 'true';
 // already been through it.
 const initialImportedSyllabus =
   getItem(IMPORTED_SYLLABUS_KEY) === 'true' || initialAhaPaywallShown;
+// Devices that imported before IMPORTED_SYLLABUS_DAY_KEY existed have no day
+// recorded. Backfilling to TODAY rather than to a past date is the
+// conservative choice: it costs a long-standing user at most one more day
+// before they are asked, where the alternative risks asking someone who
+// imported twenty minutes ago on the very launch this code first runs.
+const initialImportedSyllabusDay = (() => {
+  const stored = getItem(IMPORTED_SYLLABUS_DAY_KEY);
+  if (stored) return stored;
+  if (!initialImportedSyllabus) return null;
+  const today = localDayKey();
+  setItem(IMPORTED_SYLLABUS_DAY_KEY, today);
+  return today;
+})();
+// Same backfill reasoning as the import day, aimed at a specific population:
+// the 82 devices that already spent their native prompt under the old build
+// have `reviewRequested` set and no day recorded. Those are precisely the
+// users the card exists for — their one shot was fired, and iOS may well have
+// swallowed it without showing anything. Left null they could never be offered
+// the card at all, which would exclude the best audience for it. Stamped today
+// so the card becomes available tomorrow, never in this session.
+const initialReviewPromptedDay = (() => {
+  const stored = getItem(REVIEW_PROMPTED_DAY_KEY);
+  if (stored) return stored;
+  if (!initialReviewRequested) return null;
+  const today = localDayKey();
+  setItem(REVIEW_PROMPTED_DAY_KEY, today);
+  return today;
+})();
+const initialRatingCardDismissed = getItem(RATING_CARD_DISMISSED_KEY) === 'true';
 const initialTasksCompleted = (() => {
   const n = parseInt(getItem(TASKS_COMPLETED_KEY) ?? '', 10);
   // Corrupt/missing value degrades to 0 — worst case the milestone prompt
@@ -177,8 +229,17 @@ interface AppState {
   /** Set on the first fully successful syllabus import, Pro or free. */
   hasImportedSyllabus: boolean;
   setHasImportedSyllabus: (v: boolean) => void;
+  /** Device-local yyyy-MM-dd of that import; null if it never happened.
+   *  Read by lib/reviewGate to keep the rating ask off the import day. */
+  importedSyllabusDay: string | null;
   reviewRequested: boolean;
   setReviewRequested: (v: boolean) => void;
+  /** Device-local yyyy-MM-dd the native rating prompt was spent. */
+  reviewPromptedDay: string | null;
+  setReviewPromptedDay: (v: string) => void;
+  /** The rating card was dismissed. Once ever. */
+  ratingCardDismissed: boolean;
+  setRatingCardDismissed: () => void;
   /**
    * The home-screen widget tip has been shown once. The app ships a widget
    * (targets/widget) that nothing in the UI has ever mentioned, so nobody
@@ -289,14 +350,39 @@ export const useAppStore = create<AppState>((set) => ({
     if (v) { setItem(AHA_PAYWALL_KEY, 'true'); } else { deleteItem(AHA_PAYWALL_KEY); }
   },
   hasImportedSyllabus: initialImportedSyllabus,
+  importedSyllabusDay: initialImportedSyllabusDay,
   setHasImportedSyllabus: (v) => {
-    set({ hasImportedSyllabus: v });
-    if (v) { setItem(IMPORTED_SYLLABUS_KEY, 'true'); } else { deleteItem(IMPORTED_SYLLABUS_KEY); }
+    if (!v) {
+      deleteItem(IMPORTED_SYLLABUS_KEY);
+      set({ hasImportedSyllabus: false });
+      return;
+    }
+    setItem(IMPORTED_SYLLABUS_KEY, 'true');
+    set((s) => {
+      // Stamped only on the FIRST import. A student importing a second
+      // syllabus in week six has not reset their relationship with the app,
+      // and re-stamping would push the rating ask a day further out every
+      // time they added a course.
+      if (s.importedSyllabusDay) return { hasImportedSyllabus: true };
+      const day = localDayKey();
+      setItem(IMPORTED_SYLLABUS_DAY_KEY, day);
+      return { hasImportedSyllabus: true, importedSyllabusDay: day };
+    });
   },
   reviewRequested: initialReviewRequested,
   setReviewRequested: (v) => {
     set({ reviewRequested: v });
     if (v) { setItem(REVIEW_REQUESTED_KEY, 'true'); } else { deleteItem(REVIEW_REQUESTED_KEY); }
+  },
+  reviewPromptedDay: initialReviewPromptedDay,
+  setReviewPromptedDay: (v) => {
+    set({ reviewPromptedDay: v });
+    setItem(REVIEW_PROMPTED_DAY_KEY, v);
+  },
+  ratingCardDismissed: initialRatingCardDismissed,
+  setRatingCardDismissed: () => {
+    set({ ratingCardDismissed: true });
+    setItem(RATING_CARD_DISMISSED_KEY, 'true');
   },
   widgetTipSeen: initialWidgetTipSeen,
   setWidgetTipSeen: (v) => {

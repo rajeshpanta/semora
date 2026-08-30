@@ -39,6 +39,9 @@ import { updateTodayWidget, type DueThisWeekItem } from '@/lib/widgetBridge';
 import { updateWatchSnapshot } from '@/lib/watchBridge';
 import { getNotificationPermissionStatus, rescheduleAllTaskReminders, requestNotificationPermission } from '@/lib/notifications';
 import { track } from '@/lib/analytics';
+import { decideReviewAsk } from '@/lib/reviewGate';
+import { localDayKey } from '@/store/appStore';
+import RatingNudgeCard from '@/components/RatingNudgeCard';
 import { computeStreak } from '@/lib/streaks';
 import StudySuggestionsCard from '@/components/StudySuggestionsCard';
 import DecisionStrip from '@/components/DecisionStrip';
@@ -60,12 +63,6 @@ import { SyncStatusPill } from '@/components/OfflineSyncBridge';
 // 5 covers the typical case (0–3) without truncating; only kicks in when
 // the user has accumulated a backlog.
 const VISIBLE_OVERDUE = 5;
-
-// Review-prompt fallback threshold: the aha-flag path (below) only fires
-// for users who scanned a syllabus AND relaunched later — rare enough that
-// ratings stayed at zero. 10 lifetime completions is a strong "this app is
-// working for me" signal that doesn't depend on the scan flow at all.
-const REVIEW_TASK_MILESTONE = 10;
 
 // Display labels for course_meetings.kind. Lecture is the default and
 // rendered without a prefix; the others get "Lab · 2:00 PM" style.
@@ -106,9 +103,9 @@ export default function TodayScreen() {
   // free users see a locked teaser routing to /paywall.
   const isPro = useAppStore((s) => s.isPro);
   const ahaPaywallShown = useAppStore((s) => s.ahaPaywallShown);
-  const hasImportedSyllabus = useAppStore((s) => s.hasImportedSyllabus);
-  const reviewRequested = useAppStore((s) => s.reviewRequested);
   const setReviewRequested = useAppStore((s) => s.setReviewRequested);
+  const setReviewPromptedDay = useAppStore((s) => s.setReviewPromptedDay);
+  const setRatingCardDismissed = useAppStore((s) => s.setRatingCardDismissed);
   const { data: semesters = [], isLoading: semestersLoading } = useSemesters();
   const { data: courses = [] } = useCourses(selectedSemesterId);
   const { data: gradeCategories = [] } = useSemesterGradeCategories(selectedSemesterId);
@@ -446,13 +443,20 @@ export default function TodayScreen() {
     updateWatchSnapshot({ overdue: overdueTasks, upcoming: upcomingTasks, todayKey });
   }, [overdueTasks, upcomingTasks, overdueLoaded, upcomingLoaded, todayKey]);
 
-  // Ask for an App Store rating at a genuine happy moment — shared by two
-  // triggers ('aha' below, 'task_milestone' further down) that both honor
-  // the same once-ever `reviewRequested` flag. The in-flight ref plus a
-  // getState() re-read of the flag stop the triggers double-prompting when
-  // both qualify in the same session (each trigger fires on its own timer).
+  // Asking for a rating — see lib/reviewGate for the rule and why it changed.
+  //
+  // Everything about WHEN lives in that module so it can be tested; this is
+  // only the wiring. The decision is re-read on every focus rather than once
+  // on mount, because the gate is now a calendar day: a student who does not
+  // qualify tonight qualifies tomorrow morning without relaunching.
   const reviewPromptInFlight = useRef(false);
-  const maybeRequestReview = useCallback(async (trigger: 'aha' | 'task_milestone') => {
+  const [showRatingCard, setShowRatingCard] = useState(false);
+
+  // Snapshot at mount: if the paywall flag is false now, any later flip
+  // happened in THIS session, and a rating ask must not follow money.
+  const ahaPaywallShownAtMount = useRef(ahaPaywallShown);
+
+  const requestNativeReview = useCallback(async (trigger: 'aha' | 'task_milestone') => {
     if (reviewPromptInFlight.current || useAppStore.getState().reviewRequested) return;
     reviewPromptInFlight.current = true;
     try {
@@ -460,52 +464,48 @@ export default function TodayScreen() {
       if (await StoreReview.isAvailableAsync()) {
         track('review_prompt_shown', { screen: 'today', trigger });
         await StoreReview.requestReview();
+        // Recorded even though iOS reports nothing about whether it displayed
+        // the sheet. The shot is spent either way, and the card ask keys off
+        // this day to stay out of the same sitting.
         setReviewRequested(true);
+        setReviewPromptedDay(localDayKey());
       }
     } catch {
-      // Non-critical — try again next launch/visit.
+      // Non-critical — the gate will offer it again on a later focus.
     } finally {
       reviewPromptInFlight.current = false;
     }
-  }, [setReviewRequested]);
+  }, [setReviewRequested, setReviewPromptedDay]);
 
-  // Trigger 1 ('aha'): `hasImportedSyllabus` is set on any fully successful
-  // import, so reaching here means the user has already felt the value.
-  // Running on mount (not focus) defers the prompt to a *later* app launch —
-  // never in the same session as the post-scan paywall, so the two never
-  // stack. Fires once, ever.
-  //
-  // This deliberately does NOT read `ahaPaywallShown`: that flag is set only
-  // in the free-tier branch of the review screen, so gating on it meant a user
-  // who was already Pro at their first import could never reach this trigger.
-  useEffect(() => {
-    if (!hasImportedSyllabus || reviewRequested || Platform.OS === 'web') return;
-    const t = setTimeout(() => { maybeRequestReview('aha'); }, 1800);
-    return () => clearTimeout(t);
-  }, []);
-
-  // Trigger 2 ('task_milestone'): fallback for users the aha path misses.
-  // After the 10th lifetime completion, ask on the NEXT Today-tab visit —
-  // the focus effect reads fresh store state each focus, so the visit
-  // during which the 10th completion happened never prompts mid-scroll
-  // (its focus callback already ran with the pre-milestone count).
-  //
-  // Same never-stack-with-the-paywall rule as the aha path: if the flag was
-  // false at mount, the post-scan paywall can only have appeared THIS
-  // session — snapshot it so the milestone prompt waits for a later one.
-  const ahaPaywallShownAtMount = useRef(ahaPaywallShown);
   useFocusEffect(
     useCallback(() => {
-      if (Platform.OS === 'web') return;
       const s = useAppStore.getState();
-      if (s.reviewRequested || s.tasksCompletedCount < REVIEW_TASK_MILESTONE) return;
-      if (s.ahaPaywallShown && !ahaPaywallShownAtMount.current) return;
-      // Small delay so the tab settles before iOS's sheet slides up —
-      // cleared on blur so navigating away cancels the pending prompt.
-      const t = setTimeout(() => { maybeRequestReview('task_milestone'); }, 1200);
+      const decision = decideReviewAsk({
+        platformIsWeb: Platform.OS === 'web',
+        hasImportedSyllabus: s.hasImportedSyllabus,
+        importedSyllabusDay: s.importedSyllabusDay,
+        reviewRequested: s.reviewRequested,
+        reviewPromptedDay: s.reviewPromptedDay,
+        ratingCardDismissed: s.ratingCardDismissed,
+        tasksCompletedCount: s.tasksCompletedCount,
+        today: localDayKey(),
+        paywallShownThisSession: s.ahaPaywallShown && !ahaPaywallShownAtMount.current,
+      });
+
+      if (decision.ask === 'card') { setShowRatingCard(true); return; }
+      if (decision.ask !== 'native') return;
+
+      // Small delay so the tab settles before iOS's sheet slides up — cleared
+      // on blur so navigating away cancels a prompt that never made sense.
+      const t = setTimeout(() => { requestNativeReview(decision.trigger!); }, 1200);
       return () => clearTimeout(t);
-    }, [maybeRequestReview]),
+    }, [requestNativeReview]),
   );
+
+  const dismissRatingCard = useCallback(() => {
+    setShowRatingCard(false);
+    setRatingCardDismissed();
+  }, [setRatingCardDismissed]);
 
   // Today's classes — flatMap over course_meetings so a course with a
   // lecture *and* a lab meeting today shows up as two rows (one per
@@ -1335,6 +1335,13 @@ export default function TodayScreen() {
             the fuller week roadmap. Renders nothing when it has nothing to
             suggest. */}
         <StudySuggestionsCard limit={3} />
+
+        {/* Asking for a rating goes BELOW the day's actual work, for the same
+            reason the suggestions card does: a student who opened Semora to
+            find out what is due today should not have to scroll past a favour
+            we are asking of them to see it. Gated in lib/reviewGate; mobile
+            only, because neither ask has a web path. */}
+        {showRatingCard && <RatingNudgeCard onDismiss={dismissRatingCard} />}
 
         {/* Phones keep it inline — there is no rail there to move it to. On
             desktop it lives in the right column beside Courses, where the rest
