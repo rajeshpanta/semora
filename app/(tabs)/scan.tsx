@@ -165,6 +165,9 @@ export default function ScanScreen() {
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
   const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
   const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
+  // Same rule the paywall's promotional card uses: only while the offer is
+  // genuinely live, and never to someone whose Canvas is already healthy.
+  const canvasEscape = canvasFree && canvasOffer !== 'healthy';
   const [upsellVisible, setUpsellVisible] = useState(false);
   // Which wall was hit. The scan limit and the Canvas Pro gate are different
   // reasons and must not borrow each other's words.
@@ -239,11 +242,28 @@ export default function ScanScreen() {
         'Use Your Free Scan?',
         atCourseLimit
           ? `Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it — and a free semester already holds ${FREE_COURSE_PHRASE} you added yourself, so this scan can only update a class you already have, not add a new one. Canvas imports every class for free and does not touch this action.`
-          : 'Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it. Pro includes unlimited scans and lectures.',
+          // The moment a student hesitates over spending their one lifetime AI
+          // action is the moment the free alternative is worth the most — and
+          // until now this variant named only the paid one. Someone who was not
+          // ready to buy had nothing to say yes to and simply left.
+          //
+          // Gated on canvasEscape, not shown unconditionally: the sentence
+          // claims Canvas is free right now, which is only true while
+          // app_promos.canvas_free is live, and it would be nonsense to offer it
+          // to a student whose Canvas is already syncing.
+          : canvasEscape
+            ? 'Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it. Canvas sync is free right now and does not use it. Pro includes unlimited scans and lectures.'
+            : 'Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it. Pro includes unlimited scans and lectures.',
         [
           { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-          ...(atCourseLimit
-            ? [{ text: 'Connect Canvas', onPress: () => { resolve(false); router.push('/settings/lms' as any); } }]
+          ...(atCourseLimit || canvasEscape
+            ? [{ text: 'Connect Canvas', onPress: () => {
+                track('canvas_offer_tapped', {
+                  screen: 'scan_free_action', offer: canvasOffer, free: canvasFree, source: 'scan_free_action',
+                });
+                resolve(false);
+                router.push({ pathname: '/settings/lms', params: { source: 'scan_free_action' } } as any);
+              } }]
             : []),
           { text: 'See Pro', onPress: () => { setUpsellReason('scan'); setUpsellVisible(true); resolve(false); } },
           { text: 'Use Free Scan', onPress: () => resolve(true) },
