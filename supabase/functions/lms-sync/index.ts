@@ -665,6 +665,90 @@ function errorCode(error: unknown): 'credentials_required' | 'provider_error' {
     : 'provider_error';
 }
 
+/**
+ * How long a healthy connection waits before its next background sync.
+ *
+ * Calendar feeds were on ONE hour. That was set when there were three
+ * connections and nothing downstream of it; at scale it is the single number
+ * that decides whether the worker keeps up. The arithmetic, from production:
+ * a fixed-rate cron of 96 runs/day serving N connections can only hold an
+ * interval of N x (24 / (96 x batch)) hours, so the hourly promise saturated
+ * at ~80 connections and then silently degraded for everyone.
+ *
+ * Three hours is not a compromise on usefulness. What this sync actually
+ * catches is an instructor moving a due date, which happens on the scale of
+ * days — a student is not refreshed into a different decision by learning it
+ * 55 minutes sooner. It is a 3x capacity increase for no behaviour a student
+ * could notice.
+ *
+ * DORMANT is the other half. A connection whose student has not opened Semora
+ * in weeks was consuming exactly the same hourly slot as one being used every
+ * day, forever, because nothing in the worker had ever asked whether anyone was
+ * still there. Dormant connections drop to once a day — reduced, never stopped,
+ * so their data stays close enough that a return is not a rebuild — and
+ * lms_wake_returning_connections() (106) pulls them straight back the moment
+ * the student reopens the app.
+ */
+const SYNC_HOURS = {
+  calendarFeed: 3,
+  token: 4,
+  /** Any connection whose student has been away longer than DORMANT_AFTER_DAYS. */
+  dormant: 24,
+} as const;
+
+/**
+ * How long a student must be away before their connection is treated as
+ * dormant. Deliberately generous: the cost of being wrong in one direction is
+ * a connection syncing 8x more often than it needs to, and in the other it is a
+ * real student's deadlines going a day stale. Three weeks is far outside any
+ * normal gap in term-time use, including a reading week.
+ */
+const DORMANT_AFTER_DAYS = 21;
+
+function nextSyncHours(connection: SyncConnection, active: boolean) {
+  if (!active) return SYNC_HOURS.dormant;
+  return connection.connection_method === 'calendar_feed'
+    ? SYNC_HOURS.calendarFeed
+    : SYNC_HOURS.token;
+}
+
+/**
+ * Which of these users have opened Semora recently enough to count as active.
+ *
+ * ONE query for the whole batch rather than one per connection — this runs
+ * inside the worker's hot path, and a per-connection lookup would add a round
+ * trip to every sync to answer a question that changes daily.
+ *
+ * Fails OPEN. If this read errors the whole batch is treated as active, which
+ * costs a little capacity and costs no student anything. Failing closed would
+ * silently park every connection on the 24-hour cadence the first time
+ * analytics had a bad minute.
+ */
+async function activeUserIds(
+  log: EdgeLogger,
+  admin: AdminClient,
+  userIds: string[],
+): Promise<Set<string> | null> {
+  if (!userIds.length) return new Set();
+  try {
+    // Through the RPC, not a table select: DISTINCT happens in Postgres, so
+    // this returns at most one row per user instead of one row per event.
+    const { data, error } = await admin.rpc('lms_active_user_ids', {
+      p_user_ids: userIds,
+      p_days: DORMANT_AFTER_DAYS,
+    });
+    if (error) throw error;
+    return new Set(
+      (Array.isArray(data) ? data : [])
+        .map((row: any) => (typeof row === 'string' ? row : row?.lms_active_user_ids ?? row?.user_id))
+        .filter(Boolean),
+    );
+  } catch (error) {
+    log.error('active_user_lookup_failed', errorFields(error));
+    return null; // null = "unknown", and unknown means active.
+  }
+}
+
 function nextBackgroundAttempt(failures: number) {
   // 4h after a healthy sync. Failures back off 1h → 2h → 4h → 8h → 24h,
   // keeping Semora considerate of institution API rate limits.
@@ -850,6 +934,11 @@ async function performConnectionSync(
   connection: SyncConnection,
   token: string,
   trigger: SyncTrigger,
+  // Only the background worker knows (or cares) whether the student is still
+  // around. Every interactive caller — initial, manual, foreground_auto —
+  // defaults to active, so a sync a student asked for is never scheduled as if
+  // they were gone.
+  active = true,
 ) {
   const runId = await createRun(admin, connection, trigger);
   await admin.from('lms_connections').update({
@@ -952,7 +1041,7 @@ async function performConnectionSync(
         last_successful_sync_at: finishedAt,
         consecutive_sync_failures: 0,
         next_background_sync_at: connection.background_sync_enabled
-          ? new Date(Date.now() + (connection.connection_method === 'calendar_feed' ? 1 : 4) * 60 * 60 * 1000).toISOString()
+          ? new Date(Date.now() + nextSyncHours(connection, active) * 60 * 60 * 1000).toISOString()
           : null,
         background_sync_paused_at: null,
       }).eq('id', connection.id),
@@ -1035,23 +1124,46 @@ serve(withRequestLogging('lms-sync', async (req, log) => {
 
     if (action === 'background') {
       await verifyCron(req, admin);
-      const limit = Math.min(Math.max(Number(body?.limit) || 20, 1), 30);
+      // Ceiling raised from 30 to 120 because the loop below is no longer
+      // sequential. It stayed a clamp rather than becoming unbounded: `limit`
+      // arrives in a request body, and a batch big enough to exceed the cron's
+      // 120s http_post timeout would leave every connection in it stuck on
+      // 'syncing' until the next run.
+      const limit = Math.min(Math.max(Number(body?.limit) || 20, 1), 120);
       const { data: rows, error } = await admin
         .from('lms_connections')
         .select('*, links:lms_course_links(*)')
         .eq('sync_enabled', true)
         .eq('background_sync_enabled', true)
         .lte('next_background_sync_at', new Date().toISOString())
+        // Oldest due first. Under saturation this is what stops a backlog from
+        // starving anyone: the connection that has waited longest goes first,
+        // rather than the queue being re-served in id order every run.
         .order('next_background_sync_at', { ascending: true })
         .limit(limit);
       if (error) throw error;
+
+      const due = (rows ?? []).map((row) => (
+        { ...row, links: (row as any).links ?? [] } as SyncConnection
+      ));
+
+      // One activity lookup for the whole batch — see activeUserIds. `null`
+      // means the lookup failed, and unknown is treated as active.
+      const activeIds = await activeUserIds(log, admin, [...new Set(due.map((c) => c.user_id))]);
+      const isActive = (userId: string) => activeIds === null || activeIds.has(userId);
+
       let succeeded = 0;
       let failed = 0;
-      for (const row of rows ?? []) {
-        const connection = { ...row, links: (row as any).links ?? [] } as SyncConnection;
+      let dormant = 0;
+
+      const syncOne = async (connection: SyncConnection) => {
+        const active = isActive(connection.user_id);
+        if (!active) dormant += 1;
         try {
           await requireLmsAccess(log, admin, connection.user_id);
-          await performConnectionSync(log, admin, connection, await backgroundCredential(admin, connection.id), 'background');
+          await performConnectionSync(
+            log, admin, connection, await backgroundCredential(admin, connection.id), 'background', active,
+          );
           succeeded += 1;
         } catch (error) {
           failed += 1;
@@ -1086,8 +1198,34 @@ serve(withRequestLogging('lms-sync', async (req, log) => {
           }
           log.error('background_connection_failed', { connection_id: connection.id, message: (error as Error)?.message ?? null });
         }
-      }
-      return json({ processed_connections: (rows ?? []).length, succeeded, failed });
+      };
+
+      // BOUNDED CONCURRENCY, and the reason the batch limit could be raised.
+      //
+      // The loop used to be sequential. Measured over a week of production, a
+      // sync takes p50 1.9s / p95 5.3s, so a batch of 20 already ran ~106s
+      // against the cron's 120s timeout — the limit was pinned not by database
+      // load but by wall-clock, and raising it would have bought timeouts
+      // rather than throughput. Each sync is one HTTPS fetch of a feed plus a
+      // handful of round trips, so it is almost entirely waiting.
+      //
+      // Six at a time, not more: every worker shares one Postgres connection
+      // pool and the institution feeds deserve to not be hit in a burst. Six
+      // takes a p95 batch of 60 from ~318s to ~53s, comfortably inside the
+      // timeout with room for the 20s outliers that do occur.
+      const CONCURRENCY = 6;
+      const queue = [...due];
+      await Promise.all(
+        Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
+          for (let next = queue.shift(); next; next = queue.shift()) {
+            // Never rejects — syncOne owns its own try/catch, so one bad
+            // connection cannot cancel the rest of the batch.
+            await syncOne(next);
+          }
+        }),
+      );
+
+      return json({ processed_connections: due.length, succeeded, failed, dormant });
     }
 
     const user = await requireUser(req);

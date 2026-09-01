@@ -1,0 +1,81 @@
+{
+  "//": "SEMORA PHASE 0 — frozen pre-promotion baseline. The control for the LMS activation experiment. Reproduce with: supabase db query --linked --file scripts/phase0-baseline.sql. Account-level unless noted. Do not edit by hand; re-run the script and paste.",
+  "captured_at": "2026-08-31T23:47:34Z",
+  "captured_before": "Phase 1 (syllabus-scan Canvas promotion) — unshipped at capture time",
+
+  "population": {
+    "accounts": 378,
+    "signups_30d": 359,
+    "ever_pro": 61,
+    "free_without_lms": 306,
+    "free_with_lms": 11,
+    "lms_accounts": 29
+  },
+  "per_100_signups": {
+    "lms_connections": 7.67,
+    "pro": 16.14
+  },
+  "lms_first_to_pro": {
+    "connected_lms_while_free": 16,
+    "later_became_pro": 5,
+    "rate_pct": 31.3,
+    "//": "vs 16.14 site-wide — the counter-evidence to Canvas cannibalisation"
+  },
+  "retention": {
+    "d1_eligible": 352, "d1_return_pct": 28.4,
+    "d7_eligible": 214, "d7_return_pct": 16.4,
+    "//": "censoring-aware: only accounts that have HAD the chance are counted"
+  },
+  "activation": { "pct_completed_a_task": 13.5 },
+
+  "purchase_attribution": {
+    "//": "device/account distinct on client purchase_success events",
+    "upsell_scan": 13,
+    "postScan": 14
+  },
+
+  "syllabus_hard_wall": {
+    "//": "from the Phase-0 audit; free AI action already spent at first pro_upsell_shown(reason=scan), not already Pro. Device=account 1:1.",
+    "cohort": 34,
+    "converted_immediately": 6,
+    "converted_later": 0,
+    "immediate_conversion_pct": 17.6,
+    "never_pro": 28,
+    "activation_strict_pct": 17.9,
+    "abandoned_no_meaningful_use_pct": 75.0,
+    "canvas_attempted": 8,
+    "canvas_connected": 2
+  },
+
+  "lms_sync_capacity_at_capture": {
+    "connections": 29,
+    "connections_syncing": 29,
+    "cron_cadence": "every 15 min (96 runs/day)",
+    "batch_limit": 20,
+    "loop": "sequential",
+    "calendar_feed_interval_hours": 1,
+    "capacity_syncs_per_day": 1920,
+    "demand_per_connection_per_day": 24,
+    "saturation_connections": 80,
+    "sync_avg_ms": 2417,
+    "sync_p50_ms": 1912,
+    "sync_p95_ms": 5325,
+    "sync_max_ms": 20071,
+    "lms_sync_run_rows": 2616,
+    "retention": "none"
+  },
+
+  "engagement_by_cohort": {
+    "//": "account-level; B and C are small and young — directional only",
+    "free_no_lms":  { "n": 303, "courses": 0.7, "tasks": 7.7,  "pct_completed_task": 6,  "pct_active_3d": 17 },
+    "free_with_lms":{ "n": 11,  "courses": 3.5, "tasks": 85.8, "pct_completed_task": 45, "pct_active_3d": 64 },
+    "pro_no_lms":   { "n": 43,  "courses": 3.4, "tasks": 49.0, "pct_completed_task": 42, "pct_active_3d": 56 },
+    "pro_with_lms": { "n": 18,  "courses": 4.8, "tasks": 85.6, "pct_completed_task": 56, "pct_active_3d": 78 }
+  },
+
+  "caveats": [
+    "95% of accounts signed up in August 2026 — this is an acquisition snapshot, not a lifecycle one.",
+    "No account has yet reached a second semester, so the strongest structural upgrade trigger is unmeasured.",
+    "free_with_lms (n=11) averages ~6 days of observation. Compare only with like-aged cohorts."
+  ]
+}
