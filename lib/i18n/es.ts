@@ -2352,6 +2352,22 @@ export const ES: Record<string, string> = {
   'Use Free Scan': 'Usar escaneo gratis',
   'INCLUDED WITH PRO': 'INCLUIDO CON PRO',
 
+  // ── The "how would you like to add your course?" sheet ─────────────────
+  // Copy from components/FreeScanConfirmSheet.tsx, which replaced the Alert
+  // that used to describe the free tier before it asked anything. The button
+  // labels ('Connect Canvas (Free)', 'Use Free Scan', 'Become Pro', 'Cancel')
+  // are already covered above and are reused verbatim.
+  'How would you like to add your course?': '¿Cómo quieres agregar tu materia?',
+  'Your free semester is already full, so a scan can update a class you have but not add a new one.':
+    'Tu semestre gratuito ya está lleno, así que un escaneo puede actualizar una materia que ya tienes, pero no agregar una nueva.',
+  'Every class imports itself, with no scan needed.':
+    'Todas tus materias se importan solas, sin escanear nada.',
+  'Reads this syllabus now, and uses your one free AI action.':
+    'Lee este temario ahora y usa tu única acción de IA gratuita.',
+  'Unlimited scans and lectures, all semester.':
+    'Escaneos y clases grabadas sin límite, todo el semestre.',
+  'Connect Canvas, free': 'Conectar Canvas, gratis',
+
   // ── Canvas course-link choice (duplicate prevention at import) ─────────
   // Copy from components/CourseLinkChoiceSheet.tsx. The two headlines and the
   // CTA live in JSX ternaries, which scripts/audit-i18n.mjs cannot extract —

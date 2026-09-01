@@ -32,6 +32,7 @@ import { useColors } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import { track } from '@/lib/analytics';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
+import { FreeScanConfirmSheet, type FreeScanChoice } from '@/components/FreeScanConfirmSheet';
 import { HEIC_HELP, isHeic, transcodeHeicToJpeg } from '@/lib/heic';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
@@ -177,6 +178,38 @@ export default function ScanScreen() {
   // different words, and only the scan wall can be reached both ways.
   const [upsellActionSpent, setUpsellActionSpent] = useState(true);
 
+  // The "how would you like to add this?" question, which used to be an
+  // Alert. The resolver lives in a ref because checkScanLimit's contract is a
+  // Promise<boolean> that every caller awaits before opening a picker, and the
+  // answer now arrives from a render rather than from inside the call.
+  const [freeScanPromptVisible, setFreeScanPromptVisible] = useState(false);
+  const freeScanResolver = useRef<((allowed: boolean) => void) | null>(null);
+
+  const handleFreeScanChoice = (choice: FreeScanChoice) => {
+    setFreeScanPromptVisible(false);
+    const resolve = freeScanResolver.current;
+    // Cleared before anything else can throw: a resolver left behind would
+    // strand the next scan attempt on a promise nobody settles.
+    freeScanResolver.current = null;
+    if (choice === 'scan') { resolve?.(true); return; }
+    if (choice === 'canvas') {
+      track('canvas_offer_tapped', {
+        screen: 'scan_free_action', offer: canvasOffer, free: canvasFree, source: 'scan_free_action',
+      });
+      resolve?.(false);
+      router.push({ pathname: '/settings/lms', params: { source: 'scan_free_action' } } as any);
+      return;
+    }
+    if (choice === 'pro') {
+      // Reached voluntarily, with the free action still unspent — so the
+      // paywall must sell Pro rather than announce a limit they have not hit.
+      setUpsellReason('scan');
+      setUpsellActionSpent(false);
+      setUpsellVisible(true);
+    }
+    resolve?.(false);
+  };
+
   // The free tier has TWO separate caps — scans AND courses-per-semester — and
   // a scan that extracts a NEW course trips the course cap even with scans
   // left. Surfacing the course usage here stops that from reading as a
@@ -230,59 +263,15 @@ export default function ScanScreen() {
       return false;
     }
 
-    // Heads-up before the student spends the only free action they get, since
-    // there is no monthly reset to fall back on. Lecture recording draws from
-    // the same one, so it is named here — finding that out afterwards, having
-    // meant to save it for a lecture, is the version of this that feels like a
-    // trick rather than a limit.
-    //
-    // The at-the-cap wording is not a nicety. The free action is charged when
-    // the syllabus is PARSED, and the course is created after — so a student
-    // already holding their one manual course can spend the only action their
-    // account will ever get on a scan whose course is then refused. At a limit
-    // of four that was a corner; at one it is anybody with a class already in.
-    // Saying so before the tap is the difference between a limit and a loss.
+    // Ask before the student spends the only free action they get, since there
+    // is no monthly reset to fall back on. FreeScanConfirmSheet carries the two
+    // facts that have to be known BEFORE the tap rather than after it: that
+    // scanning is what spends the action, and — at the course cap — that the
+    // action is charged when the syllabus is parsed while the new course is
+    // refused afterwards, so the scan can cost everything and add nothing.
     return new Promise((resolve) => {
-      Alert.alert(
-        'Use Your Free Scan?',
-        atCourseLimit
-          ? `Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it — and a free semester already holds ${FREE_COURSE_PHRASE} you added yourself, so this scan can only update a class you already have, not add a new one. Canvas imports every class for free and does not touch this action.`
-          // The moment a student hesitates over spending their one lifetime AI
-          // action is the moment the free alternative is worth the most — and
-          // until now this variant named only the paid one. Someone who was not
-          // ready to buy had nothing to say yes to and simply left.
-          //
-          // Gated on canvasEscape, not shown unconditionally: the sentence
-          // claims Canvas is free right now, which is only true while
-          // app_promos.canvas_free is live, and it would be nonsense to offer it
-          // to a student whose Canvas is already syncing.
-          : canvasEscape
-            ? 'Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it. Canvas sync is free right now and does not use it. Pro includes unlimited scans and lectures.'
-            : 'Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it. Pro includes unlimited scans and lectures.',
-        // Order is the message: the free way in, then the thing they came to do,
-        // then the paid upgrade. iOS always sinks the `cancel` button to the
-        // bottom regardless of position, so the array order here is what the
-        // student actually reads.
-        [
-          ...(atCourseLimit || canvasEscape
-            // "(Free)" only when it is true. The button also appears at the
-            // course cap, where the promo may be off and Canvas is not free for
-            // this account — labelling that "(Free)" would be the one kind of
-            // wrong a price claim cannot be.
-            ? [{ text: canvasEscape ? 'Connect Canvas (Free)' : 'Connect Canvas', onPress: () => {
-                track('canvas_offer_tapped', {
-                  screen: 'scan_free_action', offer: canvasOffer, free: canvasFree, source: 'scan_free_action',
-                });
-                resolve(false);
-                router.push({ pathname: '/settings/lms', params: { source: 'scan_free_action' } } as any);
-              } }]
-            : []),
-          { text: 'Use Free Scan', onPress: () => resolve(true) },
-          { text: 'Become Pro', onPress: () => { setUpsellReason('scan'); setUpsellActionSpent(false); setUpsellVisible(true); resolve(false); } },
-          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-        ],
-        { cancelable: true, onDismiss: () => resolve(false) },
-      );
+      freeScanResolver.current = resolve;
+      setFreeScanPromptVisible(true);
     });
   };
 
@@ -819,6 +808,17 @@ export default function ScanScreen() {
         freeActionSpent={upsellActionSpent}
         reason={upsellReason}
         onClose={() => setUpsellVisible(false)}
+      />
+      <FreeScanConfirmSheet
+        visible={freeScanPromptVisible}
+        // Same rule the promotional card uses: only while the offer is genuinely
+        // live, and never to someone whose Canvas is already healthy. At the
+        // course cap the row still appears, because Canvas classes are uncapped
+        // and it is the only route that still adds the class.
+        canvasAvailable={canvasEscape || atCourseLimit}
+        canvasIsFree={canvasEscape}
+        atCourseLimit={atCourseLimit}
+        onChoose={handleFreeScanChoice}
       />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         {/* Desktop web only. The sidebar there calls this "Import syllabus"
