@@ -2343,6 +2343,8 @@ export const ES: Record<string, string> = {
   // now because it is only shown while app_promos.canvas_free is live.
   'Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it. Canvas sync is free right now and does not use it. Pro includes unlimited scans and lectures.':
     'Las cuentas gratuitas incluyen una acción de IA: escanear un programa o grabar una clase. Esto la usa. Sincronizar Canvas es gratis ahora mismo y no la usa. Pro incluye escaneos y grabaciones ilimitados.',
+  'Become Pro': 'Hazte Pro',
+  'Use Free Scan': 'Usar escaneo gratis',
   'INCLUDED WITH PRO': 'INCLUIDO CON PRO',
 
   // ── Canvas course-link choice (duplicate prevention at import) ─────────

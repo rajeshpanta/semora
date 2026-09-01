@@ -254,10 +254,17 @@ export default function ScanScreen() {
           : canvasEscape
             ? 'Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it. Canvas sync is free right now and does not use it. Pro includes unlimited scans and lectures.'
             : 'Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it. Pro includes unlimited scans and lectures.',
+        // Order is the message: the free way in, then the thing they came to do,
+        // then the paid upgrade. iOS always sinks the `cancel` button to the
+        // bottom regardless of position, so the array order here is what the
+        // student actually reads.
         [
-          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
           ...(atCourseLimit || canvasEscape
-            ? [{ text: 'Connect Canvas', onPress: () => {
+            // "(Free)" only when it is true. The button also appears at the
+            // course cap, where the promo may be off and Canvas is not free for
+            // this account — labelling that "(Free)" would be the one kind of
+            // wrong a price claim cannot be.
+            ? [{ text: canvasEscape ? 'Connect Canvas (Free)' : 'Connect Canvas', onPress: () => {
                 track('canvas_offer_tapped', {
                   screen: 'scan_free_action', offer: canvasOffer, free: canvasFree, source: 'scan_free_action',
                 });
@@ -265,8 +272,9 @@ export default function ScanScreen() {
                 router.push({ pathname: '/settings/lms', params: { source: 'scan_free_action' } } as any);
               } }]
             : []),
-          { text: 'See Pro', onPress: () => { setUpsellReason('scan'); setUpsellVisible(true); resolve(false); } },
           { text: 'Use Free Scan', onPress: () => resolve(true) },
+          { text: 'Become Pro', onPress: () => { setUpsellReason('scan'); setUpsellVisible(true); resolve(false); } },
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
         ],
         { cancelable: true, onDismiss: () => resolve(false) },
       );
