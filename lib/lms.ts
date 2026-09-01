@@ -252,6 +252,17 @@ export async function connectLms(input: {
    * a notification thirty seconds later.
    */
   declined?: DiscoveredLmsCourse[];
+  /**
+   * external_course_id -> an EXISTING local course to attach it to.
+   *
+   * Present only for selections the student explicitly chose to link (see
+   * components/CourseLinkChoiceSheet). Anything absent behaves exactly as
+   * before: a new course is created. Linking writes nothing to the existing
+   * course — not its name, colour, source, semester or settings — it only adds
+   * the lms_course_links row that makes the next sync deliver Canvas items
+   * into it.
+   */
+  linkTo?: Record<string, string>;
 }): Promise<{ connectionId: string; processed: number; skipped: number }> {
   if (!input.courses.length) throw new Error('Select at least one course to import.');
 
@@ -292,6 +303,27 @@ export async function connectLms(input: {
     }
     for (let index = 0; index < input.courses.length; index++) {
       const external = input.courses[index];
+
+      // The student said this Canvas course is a class Semora already has.
+      //
+      // Link only. No insert, and deliberately no update either: their course
+      // keeps its own name, colour, instructor, semester and grade setup, and
+      // every task already in it is untouched. All that changes is where the
+      // next sync puts Canvas's items. Not pushed onto createdCourseIds, so the
+      // rollback below can never delete a course the student already had.
+      const existingCourseId = input.linkTo?.[external.id];
+      if (existingCourseId) {
+        const { error: linkExistingError } = await supabase.from('lms_course_links').insert({
+          user_id: input.userId,
+          connection_id: connection.id,
+          external_course_id: external.id,
+          external_name: external.name,
+          local_course_id: existingCourseId,
+        });
+        if (linkExistingError) throw linkExistingError;
+        continue;
+      }
+
       const { data: course, error: courseError } = await supabase
         .from('courses')
         .insert({
@@ -598,7 +630,7 @@ export async function canvasFreePromoActive(): Promise<boolean> {
  * Is the Pro Canvas education modal switched on?
  *
  * The same promo_active() mechanism as the free Canvas offer, on a DIFFERENT
- * key (pro_canvas_education), so the two switches are genuinely independent:
+ * key (pro_canvas_education_v2), so the two switches are genuinely independent:
  * turning this one off cannot disturb the free-tier promotion or its
  * grandfathering, and vice versa.
  *
@@ -617,7 +649,9 @@ export async function proCanvasEducationActive(): Promise<boolean> {
 }
 
 export const proCanvasEducationQuery = {
-  queryKey: ['proCanvasEducationFlag'] as const,
+  // Keyed to the flag version so a bundle can never serve a cached answer
+  // that was fetched for the retired key.
+  queryKey: ['proCanvasEducationFlagV2'] as const,
   queryFn: proCanvasEducationActive,
   // Matches the free promo's window: a switch does not flip mid-session, and
   // this sits on the Today tab's render path.

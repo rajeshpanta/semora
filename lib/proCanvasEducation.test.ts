@@ -14,6 +14,7 @@ import {
   INITIAL_STATE,
   MAX_SHOWS,
   PRO_CANVAS_EDU_FLAG_KEY,
+  PRO_CANVAS_EDU_FLAG_KEY_RETIRED,
   PRO_CANVAS_EDU_SOURCE,
   parseProCanvasEduState,
   proCanvasEduStorageKey,
@@ -60,10 +61,33 @@ Deno.test('the flag outranks every other condition', () => {
 });
 
 Deno.test('the flag key is its own row, never canvas_free', () => {
-  assertEquals(PRO_CANVAS_EDU_FLAG_KEY, 'pro_canvas_education');
+  assertEquals(PRO_CANVAS_EDU_FLAG_KEY, 'pro_canvas_education_v2');
   const key: string = PRO_CANVAS_EDU_FLAG_KEY;
   assert(key !== 'canvas_free',
     'sharing a row with the free promotion would make one switch move the other');
+});
+
+Deno.test('the retired v1 key is NOT what this build listens for', () => {
+  // An earlier OTA shipped listening for the bare key while the Canvas connect
+  // flow could still create a duplicate course. Expo updates are silent and
+  // two-launch, so activating v1 would have reached bundles without the fix.
+  // Leaving v1 uncreated is what keeps that bundle silent forever.
+  const current: string = PRO_CANVAS_EDU_FLAG_KEY;
+  const retired: string = PRO_CANVAS_EDU_FLAG_KEY_RETIRED;
+  assertEquals(retired, 'pro_canvas_education');
+  assert(current !== retired,
+    'the safe build must not qualify on the same row as the pre-fix build');
+});
+
+Deno.test('the bundle queries ONLY canvas_free and the v2 key', () => {
+  // Reads the real source rather than a constant, because the risk is a
+  // forgotten literal in a promo_active() call, not a mislabelled export.
+  const source = Deno.readTextFileSync(new URL('./lms.ts', import.meta.url));
+  const keys = [...source.matchAll(/p_key:\s*(?:'([^']+)'|([A-Z_]+))/g)]
+    .map((m) => m[1] ?? m[2]);
+  assertEquals(keys.sort(), ['PRO_CANVAS_EDU_FLAG_KEY', 'canvas_free']);
+  assert(!keys.includes('pro_canvas_education'),
+    'no promo_active() call may name the retired key');
 });
 
 // ── Eligibility ─────────────────────────────────────────────────────────────

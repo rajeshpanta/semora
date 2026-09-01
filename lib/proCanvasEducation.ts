@@ -36,8 +36,31 @@ export const PRO_CANVAS_EDU_SOURCE = 'pro_canvas_education';
  * promotion and the grandfathering that goes with it; entangling a paying
  * subscriber's education modal with it would mean one switch could not be
  * thrown without moving the other.
+ *
+ * ─── Why _v2, and why the v1 key must stay dead ───────────────────────────
+ * An earlier OTA shipped this modal listening for the bare key
+ * `pro_canvas_education`, before the Canvas connect flow could detect that a
+ * class was already in Semora. Expo updates are silent and take effect on the
+ * SECOND launch, so at any moment after a publish some devices are still
+ * running the previous bundle.
+ *
+ * Activating the v1 row would therefore have invited subscribers on the older
+ * bundle to connect Canvas through the flow that creates a duplicate course —
+ * which is the exact problem this release exists to prevent, aimed at the exact
+ * people it would hurt most: 36 of the 37 eligible accounts already have
+ * courses, and 25 have grade categories set up.
+ *
+ * Moving the key is the whole fix. A row nobody creates is a switch nobody can
+ * throw, so the old bundle stays silent for the rest of its life with no
+ * further action. `pro_canvas_education` must never be created.
  */
-export const PRO_CANVAS_EDU_FLAG_KEY = 'pro_canvas_education';
+export const PRO_CANVAS_EDU_FLAG_KEY = 'pro_canvas_education_v2';
+
+/**
+ * The retired key. Exported ONLY so tests can assert it is never read again —
+ * nothing in the app should reference it for any other purpose.
+ */
+export const PRO_CANVAS_EDU_FLAG_KEY_RETIRED = 'pro_canvas_education';
 
 /** At most two appearances, ever. See the module note. */
 export const MAX_SHOWS = 2;
@@ -91,7 +114,7 @@ export function serializeProCanvasEduState(state: ProCanvasEduState): string {
 
 export interface ProCanvasEduInput {
   /**
-   * The remote kill switch — app_promos.pro_canvas_education, read through the
+   * The remote kill switch — app_promos.pro_canvas_education_v2, read through the
    * same promo_active() RPC that already gates the free Canvas offer.
    *
    * `undefined` means the read has not landed (or failed). Treated exactly like

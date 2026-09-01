@@ -2340,6 +2340,21 @@ export const ES: Record<string, string> = {
   // Same "entregas" discipline as the rest of the Canvas copy: a calendar feed
   // carries dated work, not classes.
   'INCLUDED WITH PRO': 'INCLUIDO CON PRO',
+
+  // ── Canvas course-link choice (duplicate prevention at import) ─────────
+  // Copy from components/CourseLinkChoiceSheet.tsx. The two headlines and the
+  // CTA live in JSX ternaries, which scripts/audit-i18n.mjs cannot extract —
+  // added by hand for the same reason as the connect-screen buttons.
+  'We found a course that may already be in Semora':
+    'Encontramos un curso que quizá ya está en Semora',
+  'Some of these may already be in Semora': 'Puede que algunos ya estén en Semora',
+  'Linking keeps everything you already added — your tasks, what you have completed, and your grades all stay exactly as they are. Canvas deadlines simply arrive in the same course instead of a second one.':
+    'Al vincularlos se conserva todo lo que ya añadiste: tus tareas, lo que has completado y tus notas quedan igual. Las entregas de Canvas simplemente llegan al mismo curso en vez de a uno nuevo.',
+  'FROM CANVAS': 'DESDE CANVAS',
+  'Connect Canvas to this course': 'Conectar Canvas a este curso',
+  'Keep as a separate course': 'Mantener como curso aparte',
+  'Semora adds it as a new course.': 'Semora lo añade como un curso nuevo.',
+  'Continue — keep all separate': 'Continuar: mantener todos aparte',
   'Let Semora keep Canvas updated for you': 'Deja que Semora mantenga Canvas al día por ti',
   'Connect Canvas once and Semora imports the deadlines already on your Canvas calendar, then keeps them updated when an instructor moves a date.':
     'Conecta Canvas una vez y Semora importa las entregas que ya están en tu calendario de Canvas, y las mantiene al día cuando un profesor cambia una fecha.',
