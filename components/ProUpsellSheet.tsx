@@ -145,18 +145,23 @@ const COPY: Record<ProUpsellReason, { title: string; subtitle: string }> = {
 };
 
 /**
- * The scan wall's subtitle when the free action is still UNSPENT.
+ * The scan wall when the free action is still UNSPENT.
  *
- * COPY.scan is written for the hard wall — the student who ran out — and says
- * so. But the same sheet also opens from the "Become Pro" button on the
- * confirmation that asks whether to spend the action in the first place, and
- * that student has spent nothing. Telling them otherwise is the mistake this
- * file already names for the course wall: "telling them they have used
- * something they have not is the kind of wrong that makes a paywall feel like
- * a trick."
+ * COPY.scan is written for the hard wall — the student who ran out — and both
+ * its lines are shaped by that: a title about scanning, and a subtitle that
+ * opens by naming what they have used up. Neither fits the student who arrives
+ * from "Become Pro" on the confirmation, because they have not run out of
+ * anything and did not come here blocked.
+ *
+ * So this variant sells rather than explains. It names no free-tier limit at
+ * all — a paywall reached voluntarily has no reason to describe the tier the
+ * reader is already living in — and the headline is about the outcome they
+ * want rather than the feature that happened to be under their thumb.
  */
-const SCAN_UNSPENT_SUBTITLE =
-  'Free accounts include one AI action — a scan or a lecture. Pro reads every syllabus you have, all term.';
+const SCAN_UNSPENT = {
+  title: 'Stay on top of your semester by becoming Pro',
+  subtitle: 'Everything Semora can do, for every class you have this term.',
+};
 
 const BENEFITS = [
   'Unlimited scans, lectures and file uploads',
@@ -201,8 +206,10 @@ export function ProUpsellSheet({
   }, [visible, reason]);
 
   const copy = COPY[reason];
-  // Only the scan wall has two truths to tell; every other reason is unchanged.
-  const subtitle = reason === 'scan' && !freeActionSpent ? SCAN_UNSPENT_SUBTITLE : copy.subtitle;
+  // Only the scan wall is reachable both ways; every other reason is unchanged.
+  const unspentScan = reason === 'scan' && !freeActionSpent;
+  const title = unspentScan ? SCAN_UNSPENT.title : copy.title;
+  const subtitle = unspentScan ? SCAN_UNSPENT.subtitle : copy.subtitle;
   // Canvas is the free answer to "I cannot get my classes in", so it is offered
   // on exactly those two walls and nowhere else — putting it on the flashcards
   // or calendar sheet would be noise in a place that has to stay a clear yes/no.
@@ -282,7 +289,7 @@ export function ProUpsellSheet({
             {/* Horizontal padding keeps a long title clear of the absolutely
                 positioned close button. "Turn every file into notes" ran
                 under the x on a 393pt phone without it. */}
-            <Text style={[styles.title, { color: colors.ink }]}>{copy.title}</Text>
+            <Text style={[styles.title, { color: colors.ink }]}>{title}</Text>
             <Text style={[styles.subtitle, { color: colors.ink2 }]}>{subtitle}</Text>
 
             {/* The free way out, above the prices.

@@ -2344,10 +2344,11 @@ export const ES: Record<string, string> = {
   'Free accounts include one AI action: a syllabus scan or a lecture recording. This uses it. Canvas sync is free right now and does not use it. Pro includes unlimited scans and lectures.':
     'Las cuentas gratuitas incluyen una acción de IA: escanear un programa o grabar una clase. Esto la usa. Sincronizar Canvas es gratis ahora mismo y no la usa. Pro incluye escaneos y grabaciones ilimitados.',
   'Become Pro': 'Hazte Pro',
-  // Shown instead of COPY.scan's subtitle when the student still HAS their
-  // free action — reached via Become Pro on the confirmation, not by running out.
-  'Free accounts include one AI action — a scan or a lecture. Pro reads every syllabus you have, all term.':
-    'Las cuentas gratuitas incluyen una acción de IA: un escaneo o una grabación. Pro lee todos tus programas, durante todo el semestre.',
+  // The scan wall reached voluntarily (Become Pro on the confirmation) rather
+  // than by running out. Sells Pro; names no free-tier limit.
+  'Stay on top of your semester by becoming Pro': 'Ve un paso por delante todo el semestre con Pro',
+  'Everything Semora can do, for every class you have this term.':
+    'Todo lo que Semora puede hacer, para todas tus materias de este semestre.',
   'Use Free Scan': 'Usar escaneo gratis',
   'INCLUDED WITH PRO': 'INCLUIDO CON PRO',
 
