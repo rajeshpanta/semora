@@ -295,6 +295,20 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
       <View style={styles.host}>
         <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close menu" />
         <Animated.View
+          // box-none, because this wrapper is MOSTLY padding: 14pt down each
+          // side and over 100pt below the card, which is the whole tab-bar
+          // strip. As a plain View it was hit-tested like any other, and a tap
+          // there found no responder — the backdrop is its SIBLING, not an
+          // ancestor, so the touch died in the padding and the menu stayed
+          // open. Tapping the dimmed area only worked above the card, where
+          // the backdrop is genuinely the topmost view.
+          //
+          // box-none makes the wrapper itself invisible to hit-testing while
+          // its children stay tappable, so padding taps fall through to the
+          // backdrop and the rows are untouched. The card keeps the default
+          // auto, so tapping the sheet's own background still does nothing —
+          // dismissing on that would fire every time a thumb missed a row.
+          pointerEvents="box-none"
           style={[
             styles.sheetWrap,
             { paddingBottom: insets.bottom + 84 },
