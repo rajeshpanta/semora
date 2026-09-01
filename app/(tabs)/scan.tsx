@@ -184,13 +184,31 @@ export default function ScanScreen() {
   // answer now arrives from a render rather than from inside the call.
   const [freeScanPromptVisible, setFreeScanPromptVisible] = useState(false);
   const freeScanResolver = useRef<((allowed: boolean) => void) | null>(null);
+  // The choice is REMEMBERED rather than acted on, and flushed only once the
+  // sheet's view controller is genuinely gone. See waitForTransitions above:
+  // presenting onto a controller that is still `isBeingDismissed` is what
+  // strands expo-document-picker's native context until the app is restarted,
+  // and every branch here presents something — a picker, the Pro sheet, or a
+  // route. Alert.alert never needed this because UIKit fires an alert's handler
+  // after its own dismissal completes; a React Native <Modal> does not.
+  const pendingFreeScanChoice = useRef<FreeScanChoice | null>(null);
+  const freeScanFlushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleFreeScanChoice = (choice: FreeScanChoice) => {
-    setFreeScanPromptVisible(false);
+  const flushFreeScanChoice = useCallback(() => {
+    const choice = pendingFreeScanChoice.current;
+    // Idempotent: onDismiss and the backstop timer both call this, and whichever
+    // arrives second must do nothing.
+    if (!choice) return;
+    pendingFreeScanChoice.current = null;
+    if (freeScanFlushTimer.current) {
+      clearTimeout(freeScanFlushTimer.current);
+      freeScanFlushTimer.current = null;
+    }
     const resolve = freeScanResolver.current;
-    // Cleared before anything else can throw: a resolver left behind would
-    // strand the next scan attempt on a promise nobody settles.
+    // Cleared before dispatch: a resolver left behind would strand the next
+    // scan attempt on a promise nobody settles.
     freeScanResolver.current = null;
+
     if (choice === 'scan') { resolve?.(true); return; }
     if (choice === 'canvas') {
       track('canvas_offer_tapped', {
@@ -208,7 +226,24 @@ export default function ScanScreen() {
       setUpsellVisible(true);
     }
     resolve?.(false);
+  }, [canvasOffer, canvasFree, router]);
+
+  const handleFreeScanChoice = (choice: FreeScanChoice) => {
+    pendingFreeScanChoice.current = choice;
+    setFreeScanPromptVisible(false);
+    // Backstop. onDismiss is iOS-only, so on Android and web nothing else would
+    // ever flush this — and even on iOS a callback that never arrives would
+    // leave the picker unopenable for the rest of the session, which is worse
+    // than the race it guards. Whichever fires first wins; the other no-ops.
+    if (freeScanFlushTimer.current) clearTimeout(freeScanFlushTimer.current);
+    freeScanFlushTimer.current = setTimeout(flushFreeScanChoice, Platform.OS === 'ios' ? 700 : 250);
   };
+
+  // Nothing may outlive the screen: a timer firing into an unmounted component
+  // would push a route from a screen that is no longer there.
+  useEffect(() => () => {
+    if (freeScanFlushTimer.current) clearTimeout(freeScanFlushTimer.current);
+  }, []);
 
   // The free tier has TWO separate caps — scans AND courses-per-semester — and
   // a scan that extracts a NEW course trips the course cap even with scans
@@ -819,6 +854,7 @@ export default function ScanScreen() {
         canvasIsFree={canvasEscape}
         atCourseLimit={atCourseLimit}
         onChoose={handleFreeScanChoice}
+        onDismissed={flushFreeScanChoice}
       />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         {/* Desktop web only. The sidebar there calls this "Import syllabus"

@@ -32,6 +32,7 @@ export function FreeScanConfirmSheet({
   canvasIsFree,
   atCourseLimit,
   onChoose,
+  onDismissed,
 }: {
   visible: boolean;
   /** Show the Canvas row at all. */
@@ -41,11 +42,29 @@ export function FreeScanConfirmSheet({
   /** The free semester already holds its one self-added course. */
   atCourseLimit: boolean;
   onChoose: (choice: FreeScanChoice) => void;
+  /**
+   * Fired once UIKit has ACTUALLY finished dismissing this modal — it comes
+   * from the completion block of dismissViewControllerAnimated:, so it is a
+   * real lifecycle signal rather than a guess at an animation duration.
+   *
+   * It exists because acting on the choice too early is the bug this whole
+   * screen has a 40-line comment about: presenting a picker onto a controller
+   * that is still `isBeingDismissed` makes UIKit refuse SILENTLY and strands
+   * expo-document-picker's native pickingContext until the app is restarted.
+   * iOS only; see the caller for the cross-platform backstop.
+   */
+  onDismissed?: () => void;
 }) {
   const colors = useColors();
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={() => onChoose('cancel')}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onDismiss={onDismissed}
+      onRequestClose={() => onChoose('cancel')}
+    >
       <View style={styles.host}>
         <Pressable style={styles.backdrop} onPress={() => onChoose('cancel')} accessible={false} />
         <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.line }]}>
