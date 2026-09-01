@@ -434,7 +434,13 @@ export default function LmsConnectScreen() {
                 {provider === 'google_classroom'
                   ? 'Sign in to Google Classroom'
                   : isCanvasCalendar
-                    ? 'Connect Canvas to Semora'
+                    // The heading carries the price, because the banner below
+                    // is the kind of thing a student scrolls past. Someone who
+                    // arrived from a card promising a limited-time free offer
+                    // should not then read three screens of instructions whose
+                    // every action word is silent about it — that gap is what
+                    // makes a promo feel like it had a catch.
+                    ? (lmsFree ? 'Connect Canvas — free' : 'Connect Canvas to Semora')
                     : `Connect your ${LMS_PROVIDER_LABELS[provider]} account`}
               </Text>
               <Text style={[styles.subtitle, { color: colors.ink3 }]}>
@@ -514,6 +520,19 @@ export default function LmsConnectScreen() {
                     </View>
                   </View>
 
+                  {/* Said BEFORE the step, not after it. Tapping a webcal://
+                      link makes iOS ask to open it in Calendar — a real system
+                      prompt Semora neither triggers nor may suppress. A student
+                      who meets it unprepared reads it as Semora doing something
+                      suspicious; a student who was told to expect it just
+                      declines and carries on. */}
+                  <View style={styles.copyTip}>
+                    <FontAwesome name="hand-pointer-o" size={12} color={colors.ink3} />
+                    <Text style={[styles.copyTipText, { color: colors.ink3 }]}>
+                      Copy your Canvas Calendar Feed link and paste it here. If iOS offers to open it
+                      in Calendar, choose Cancel and return to Semora.
+                    </Text>
+                  </View>
                   <Text style={[styles.label, { color: colors.ink2 }]}>Paste your private Calendar Feed link</Text>
                   <View style={styles.secretField}>
                     <TextInput
@@ -523,6 +542,20 @@ export default function LmsConnectScreen() {
                       autoCorrect={false}
                       keyboardType="url"
                       secureTextEntry={!showPrivateUrl}
+                      // secureTextEntry alone tells iOS "this is a password",
+                      // and with no content-type hint iOS then applies its own
+                      // credential heuristics to the focused field — Passwords
+                      // sheet, QuickType credential bar, sometimes a Face ID
+                      // prompt. In a step whose entire instruction is "paste a
+                      // calendar link", unexplained Apple chrome reads as a
+                      // warning that something is wrong.
+                      //
+                      // These three say what the field actually is. The masking
+                      // is kept exactly as it was: this changes what iOS OFFERS,
+                      // never whether the link is hidden.
+                      textContentType="URL"
+                      autoComplete="off"
+                      importantForAutofill="no"
                       placeholder="webcal://…/feeds/calendars/user_….ics"
                       placeholderTextColor={colors.ink3}
                       style={[styles.input, styles.secretInput, { color: colors.ink, backgroundColor: colors.card, borderColor: colors.line }]}
@@ -597,7 +630,7 @@ export default function LmsConnectScreen() {
                 {working ? <ActivityIndicator color="#fff" /> : (
                   <>
                     <FontAwesome name={provider === 'google_classroom' ? 'google' : isCanvasCalendar ? 'calendar' : 'search'} size={14} color="#fff" />
-                    <Text style={styles.primaryText}>{reconnecting ? 'Reconnect and sync' : provider === 'google_classroom' ? 'Continue with Google' : isCanvasCalendar ? 'Check link and choose courses' : 'Find my courses'}</Text>
+                    <Text style={styles.primaryText}>{reconnecting ? 'Reconnect and sync' : provider === 'google_classroom' ? 'Continue with Google' : isCanvasCalendar ? (lmsFree ? 'Check link — free' : 'Check link and choose courses') : 'Find my courses'}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -641,7 +674,7 @@ export default function LmsConnectScreen() {
               />
 
               <TouchableOpacity onPress={save} disabled={working} style={[styles.primary, { backgroundColor: colors.brand }]}>
-                {working ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{isCanvasCalendar ? 'Connect Canvas and start syncing' : 'Import and sync'}</Text>}
+                {working ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{isCanvasCalendar ? (lmsFree ? 'Connect Canvas free and start syncing' : 'Connect Canvas and start syncing') : 'Import and sync'}</Text>}
               </TouchableOpacity>
             </>
           )}
@@ -684,6 +717,8 @@ const styles = StyleSheet.create({
   syncExplainer: { borderRadius: 15, padding: 13, flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 5 },
   syncTitle: { fontSize: 13, fontWeight: '800' },
   syncText: { fontSize: 12, lineHeight: 18, marginTop: 3 },
+  copyTip: { flexDirection: 'row', alignItems: 'flex-start', gap: 7, marginBottom: 8 },
+  copyTipText: { flex: 1, fontSize: 11.5, lineHeight: 16 },
   privateNote: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 8, paddingHorizontal: 2 },
   privateNoteText: { flex: 1, fontSize: 11, lineHeight: 16 },
   limitNote: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 14, paddingTop: 12 },

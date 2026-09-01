@@ -2333,6 +2333,18 @@ export const ES: Record<string, string> = {
   'Limited-time offer: try Canvas Sync free':
     'Oferta por tiempo limitado: prueba la sincronización con Canvas gratis',
 
+  // ── Canvas connect screen: the free offer stated in the ACTIONS ────────
+  // Copy from app/settings/lms-connect.tsx. These live inside JSX ternaries,
+  // which scripts/audit-i18n.mjs cannot statically extract — it reported only
+  // the plain-text line below as uncovered. Added by hand for that reason: an
+  // untranslated BUTTON is the most visible way for a Spanish account to be
+  // shown an English app, and the audit would never have flagged it.
+  'Connect Canvas — free': 'Conecta Canvas: gratis',
+  'Check link — free': 'Revisar enlace: gratis',
+  'Connect Canvas free and start syncing': 'Conecta Canvas gratis y empieza a sincronizar',
+  'Copy your Canvas Calendar Feed link and paste it here. If iOS offers to open it in Calendar, choose Cancel and return to Semora.':
+    'Copia el enlace del feed de calendario de Canvas y pégalo aquí. Si iOS te ofrece abrirlo en Calendario, elige Cancelar y vuelve a Semora.',
+
   // ── Sign-in / sign-up hero (the first screen anyone sees) ──────────────
   // These two are the signed-out headline and subhead. They were the only
   // strings on that screen missing from the catalogue, so a Spanish account
