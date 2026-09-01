@@ -57,6 +57,8 @@ import {
 } from '@/lib/notifications';
 import { registerForPushNotificationsAsync } from '@/lib/push';
 import { track, installErrorTracking, noteAppForegrounded } from '@/lib/analytics';
+import Constants from 'expo-constants';
+import { recordAuthEvent, recordPhase, setAuthTelemetrySink } from '@/lib/authTelemetry';
 import { clearLocalSyncState } from '@/lib/calendarSync';
 import { applyPendingReferral, hasActivePromoGrant } from '@/lib/referral';
 import { readPendingShareToken } from '@/lib/shareCourse';
@@ -121,6 +123,21 @@ const queryClient = new QueryClient({
   },
 });
 setQueryClient(queryClient);
+
+// Auth diagnostics reach analytics through this one injected call rather than
+// an import: lib/analytics imports lib/supabase, and lib/supabase imports
+// lib/authTelemetry, so importing analytics back from there would close the
+// cycle. Same shape as setQueryClient above.
+//
+// Emits nothing on a healthy launch — see lib/authTelemetry.ts for what counts
+// as abnormal and how often it is allowed to say so.
+setAuthTelemetrySink((event, props) => {
+  let build: string | null = null;
+  try {
+    build = Constants.platform?.ios?.buildNumber ?? null;
+  } catch {}
+  track(event, { ...props, native_build: build });
+});
 
 // --- Auth context ---
 const AuthContext = createContext<{
@@ -195,6 +212,9 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       // Before the throttle below: a session boundary is about how long the app
       // was away, which the 2-minute sync throttle knows nothing about.
       noteAppForegrounded();
+      // Which side of a foreground boundary an anonymous request landed on is
+      // the difference between a resume race and a session that is simply gone.
+      recordPhase('resume');
       const now = Date.now();
       // A timezone change skips the throttle. Reminder triggers are absolute
       // instants computed from local wall time, so a phone that has crossed a
@@ -470,6 +490,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+
+      // Mirrors into the diagnostics what this listener already tells the UI:
+      // whether a session exists, and when it is due to expire. `expires_at` is
+      // an integer Supabase hands us, so nothing here reads or decodes a token.
+      recordAuthEvent(_event, Boolean(session), session?.expires_at ?? null);
 
       // Supabase fires PASSWORD_RECOVERY when a recovery code has just
       // been exchanged for a session. Setting the flag here means it

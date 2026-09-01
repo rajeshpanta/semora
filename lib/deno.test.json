@@ -3,6 +3,8 @@
   "imports": {
     "@/lib/": "./",
     "@/types/": "../types/",
-    "react-native": "./__testing__/react-native.stub.ts"
+    "react-native": "./__testing__/react-native.stub.ts",
+    "expo-secure-store": "./__testing__/expo-secure-store.stub.ts",
+    "@supabase/supabase-js": "./__testing__/supabase-js.stub.ts"
   }
 }
