@@ -1218,9 +1218,9 @@ export default function TodayScreen() {
                   <TouchableOpacity
                     style={[styles.emptyCanvas, { borderColor: colors.teal, backgroundColor: colors.teal50 }]}
                     onPress={() => {
-                      track('canvas_offer_tapped', { screen: 'today_empty', offer: canvasOffer, free: canvasFree });
+                      track('canvas_offer_tapped', { screen: 'today_empty', offer: canvasOffer, free: canvasFree, source: 'today_empty' });
                       if (canvasOffer === 'locked') { showProUpsell('canvas'); return; }
-                      router.push('/settings/lms' as any);
+                      router.push({ pathname: '/settings/lms', params: { source: 'today_empty' } } as any);
                     }}
                     activeOpacity={0.85}
                     accessibilityRole="button"

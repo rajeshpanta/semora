@@ -127,7 +127,7 @@ export default function CoursesScreen() {
               : canvasFree ? 'Connect Canvas (Free)'
               : 'Connect Canvas',
             onPress: () => {
-              track('canvas_offer_tapped', { screen: 'courses', offer: canvasOffer, free: canvasFree });
+              track('canvas_offer_tapped', { screen: 'courses', offer: canvasOffer, free: canvasFree, source: 'courses' });
               // Free account: the upgrade sheet, right here. Sending someone
               // to another screen to find out something costs money turns one
               // tap into a journey.
@@ -135,7 +135,7 @@ export default function CoursesScreen() {
                 setCanvasUpsell(true);
                 return;
               }
-              handleNav(canvasOffer === 'new_courses' ? '/settings/lms/new-courses' : '/settings/lms');
+              handleNav(canvasOffer === 'new_courses' ? '/settings/lms/new-courses' : '/settings/lms?source=courses');
             },
           }];
     Alert.alert(

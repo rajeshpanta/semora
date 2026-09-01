@@ -8,7 +8,8 @@ import {
   useQuery,
   useQueryClient } from '@tanstack/react-query';
 import { Stack,
-  router } from 'expo-router';
+  router,
+  useLocalSearchParams } from 'expo-router';
 import {
   RefreshControl,
   ScrollView,
@@ -19,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   canvasFreeFor,
   canvasFreePromoQuery,
+  canvasSourceOf,
   disconnectLms,
   disableLmsBackgroundSync,
   enableLmsBackgroundSync,
@@ -60,6 +62,11 @@ const OTHER_PROVIDERS: Array<{ id: LmsProvider; icon: string; detail: string }> 
 export default function LmsSettingsScreen() {
   const colors = useColors();
   const showProUpsell = useProUpsell();
+  // Which CTA sent them here. This screen is a waypoint, not a destination, for
+  // anyone arriving from the syllabus paywall — so the only job here is to hand
+  // the label on to the connect screen, where the funnel events are fired.
+  // Defaults to 'settings' for the person who simply opened Settings.
+  const source = canvasSourceOf(useLocalSearchParams<{ source?: string }>().source);
   const { contentMaxWidth } = useResponsive();
   const isPro = useAppStore((s) => s.isPro);
   const queryClient = useQueryClient();
@@ -215,7 +222,7 @@ export default function LmsSettingsScreen() {
           {!canvasFeedConnection && (
             <TouchableOpacity
               onPress={() => (lmsAllowed
-                ? router.push({ pathname: '/settings/lms-connect', params: { provider: 'canvas' } } as any)
+                ? router.push({ pathname: '/settings/lms-connect', params: { provider: 'canvas', source } } as any)
                 : openPaywall())}
               style={[styles.canvasButton, { backgroundColor: colors.brand }]}
             >
@@ -369,7 +376,7 @@ export default function LmsSettingsScreen() {
             // locked teaser → paywall instead of opening the connect flow.
             // While the offer is live nobody is locked out — see lmsAllowed.
             onPress={() => (lmsAllowed
-              ? router.push({ pathname: '/settings/lms-connect', params: { provider: provider.id } } as any)
+              ? router.push({ pathname: '/settings/lms-connect', params: { provider: provider.id, source } } as any)
               : openPaywall())}
             style={[styles.providerRow, { backgroundColor: colors.card, borderColor: colors.line }]}
           >

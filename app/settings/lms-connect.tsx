@@ -25,6 +25,7 @@ import { useQuery } from '@tanstack/react-query';
 import {
   canvasCalendarOrigin,
   canvasFreeFor,
+  canvasSourceOf,
   canvasFreePromoQuery,
   connectLms,
   discoverLmsCourses,
@@ -33,6 +34,7 @@ import {
   normalizeCanvasCalendarFeedUrl,
   reconnectLmsConnection,
   lmsConnectionsQuery,
+  lmsFailureCode,
   requestGoogleClassroomCredential,
   syncLmsConnection,
   type LmsCredential,
@@ -74,7 +76,13 @@ export default function LmsConnectScreen() {
     provider?: string;
     connectionId?: string;
     baseUrl?: string;
+    source?: string;
   }>();
+  // Which CTA started this attempt — 'scan_upsell' from the syllabus paywall's
+  // limited-time Canvas card, 'settings' for anyone who came here themselves.
+  // Stamped on every funnel event below so the experiment reads as one journey
+  // rather than as two unrelated piles of Canvas events.
+  const source = canvasSourceOf(params.source);
   const provider = (Object.keys(LMS_PROVIDER_LABELS).includes(params.provider ?? '')
     ? params.provider
     : 'canvas') as LmsProvider;
@@ -157,6 +165,34 @@ export default function LmsConnectScreen() {
     return baseUrl.trim().replace(/\/+$/, '');
   }, [baseUrl, isCanvasCalendar, token]);
   const connectionMethod = isCanvasCalendar ? 'calendar_feed' as const : 'legacy_token' as const;
+
+  // ── The Canvas connect funnel starts here ────────────────────────────────
+  //
+  // Everything before this point was already measurable: the CTA fires
+  // canvas_offer_tapped, and a finished connection leaves a row in
+  // lms_connections. Between those two the flow was dark, which is why "59
+  // devices tapped, 29 users connected" could be counted but not explained.
+  //
+  // Four events close that gap, and no more than four: reaching this screen,
+  // whether the feed could be read, what was chosen, and whether it landed.
+  // Everything downstream — courses imported, deadlines imported, whether the
+  // account came back, whether it later bought Pro — is already answerable by
+  // joining lms_connections / lms_course_links / tasks / entitlements on
+  // user_id, so re-recording it here would be a second copy of the truth that
+  // can disagree with the first.
+  //
+  // Empty deps on purpose: one event per arrival, not one per keystroke.
+  useEffect(() => {
+    track('lms_connect_opened', {
+      screen: 'lms_connect',
+      provider,
+      method: connectionMethod,
+      source,
+      reconnecting,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const manualCredential = (): LmsCredential => ({
     accessToken: isCanvasCalendar ? normalizeCanvasCalendarFeedUrl(token) : token.trim(),
   });
@@ -207,6 +243,18 @@ export default function LmsConnectScreen() {
         baseUrl: normalizedBase || null,
         credential: nextCredential,
       });
+      // The feed was reachable and readable. `courses` is the number offered,
+      // which is what separates "Canvas said no" from "Canvas said nothing" —
+      // a feed that opens and returns zero dated courses is a real and
+      // different outcome, and the one the alert below explains.
+      track('lms_discover_succeeded', {
+        screen: 'lms_connect',
+        provider,
+        method: connectionMethod,
+        source,
+        reconnecting,
+        courses: found.length,
+      });
       if (reconnecting) {
         await reconnectLmsConnection(
           params.connectionId!,
@@ -232,6 +280,20 @@ export default function LmsConnectScreen() {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'The learning platform could not be connected.';
+      // CLASSIFIED, never echoed. A connect error can quote the pasted string,
+      // and that string is the student's private Canvas feed URL — a bearer
+      // credential. Sending it to analytics would put a live secret in a table
+      // several people can read. A bounded code answers the only question the
+      // experiment asks ("where does this flow lose people") and carries
+      // nothing that could authenticate as anyone.
+      track('lms_discover_failed', {
+        screen: 'lms_connect',
+        provider,
+        method: connectionMethod,
+        source,
+        reconnecting,
+        reason: lmsFailureCode(message),
+      });
       // Pro lapsed mid-session (or a patched client hit the server gate): the
       // lms-sync function replies with the PRO_REQUIRED copy. Route to the
       // paywall instead of showing it as a raw connect error. invokeLms surfaces
@@ -270,6 +332,18 @@ export default function LmsConnectScreen() {
 
   const commit = async (chosen: DiscoveredLmsCourse[]) => {
     if (!credential || !session) return;
+    // What they actually chose, against what they were offered. The gap between
+    // the two is the answer to "did the review step help or get in the way" —
+    // everyone importing everything and everyone importing one class are very
+    // different products, and the counts alone tell them apart.
+    track('lms_courses_selected', {
+      screen: 'lms_connect',
+      provider,
+      method: connectionMethod,
+      source,
+      selected: chosen.length,
+      offered: courses.length,
+    });
     setWorking(true);
     try {
       const result = await connectLms({
@@ -285,12 +359,36 @@ export default function LmsConnectScreen() {
         // first sync does not offer them straight back.
         declined: courses.filter((course) => !selected.has(course.id)),
       });
+      // The end of the funnel. `deadlines` is the number that makes activation
+      // measurable on its own — a connection that imports three courses and one
+      // deadline is not the same success as one that imports 74, and the
+      // difference decides whether this experiment actually helped anybody.
+      track('lms_connect_completed', {
+        screen: 'lms_connect',
+        provider,
+        method: connectionMethod,
+        source,
+        courses: chosen.length,
+        deadlines: result.processed,
+      });
       Alert.alert(
         isCanvasCalendar ? 'Canvas connected' : 'Connected',
         `${chosen.length} ${chosen.length === 1 ? 'course' : 'courses'} and ${result.processed} deadlines imported.${isCanvasCalendar ? ' Semora will keep checking Canvas about hourly.' : ''}`,
+        // Deliberately NOT a paywall. This is the moment the promotion promised
+        // something and delivered it; charging straight into an upsell here is
+        // how a kept promise starts to feel like a setup. Pro is offered again
+        // by the walls that were already there.
         [{ text: 'Done', onPress: () => router.replace('/settings/lms' as any) }],
       );
     } catch (error) {
+      track('lms_connect_failed', {
+        screen: 'lms_connect',
+        provider,
+        method: connectionMethod,
+        source,
+        courses: chosen.length,
+        reason: lmsFailureCode(error instanceof Error ? error.message : ''),
+      });
       Alert.alert('Import failed', error instanceof Error ? error.message : 'Nothing was saved. Please try again.');
     } finally {
       setWorking(false);

@@ -2318,6 +2318,21 @@ export const ES: Record<string, string> = {
     'Gratis por tiempo limitado · cada clase se importa sola y se mantiene al día',
   'Or connect Canvas — free': 'O conecta Canvas: gratis',
 
+  // ── Syllabus paywall: the limited-time Canvas card (scan wall only) ────
+  // Copy from components/ProUpsellSheet.tsx. Deliberately says "entregas"
+  // (deadlines), never "materias" (classes): the connection is a calendar
+  // feed, so a class with no dated work never appears, and the Spanish must
+  // not promise what the English was careful not to.
+  'LIMITED-TIME OFFER': 'OFERTA POR TIEMPO LIMITADO',
+  'School uses Canvas? Try Canvas Sync free':
+    '¿Tu institución usa Canvas? Prueba la sincronización con Canvas gratis',
+  'Import the deadlines already on your Canvas calendar, and Semora keeps them updated when your instructor moves them.':
+    'Importa las entregas que ya están en tu calendario de Canvas, y Semora las mantiene al día cuando tu profesor cambia una fecha.',
+  'Takes a minute: you’ll copy your Canvas calendar link.':
+    'Toma un minuto: copiarás el enlace de tu calendario de Canvas.',
+  'Limited-time offer: try Canvas Sync free':
+    'Oferta por tiempo limitado: prueba la sincronización con Canvas gratis',
+
   // ── Sign-in / sign-up hero (the first screen anyone sees) ──────────────
   // These two are the signed-out headline and subhead. They were the only
   // strings on that screen missing from the catalogue, so a Spanish account

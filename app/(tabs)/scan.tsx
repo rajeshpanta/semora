@@ -827,7 +827,7 @@ export default function ScanScreen() {
               : 'Connect Canvas'
             }
             onPress={() => {
-              track('canvas_offer_tapped', { screen: 'scan', offer: canvasOffer, free: canvasFree });
+              track('canvas_offer_tapped', { screen: 'scan', offer: canvasOffer, free: canvasFree, source: 'scan_screen' });
               // A free account gets the upgrade SHEET here, not a trip to
               // another screen. The offer and the answer belong in the same
               // place — sending someone to Settings or a full paywall screen
@@ -837,7 +837,7 @@ export default function ScanScreen() {
                 setUpsellVisible(true);
                 return;
               }
-              router.push('/settings/lms' as any);
+              router.push({ pathname: '/settings/lms', params: { source: 'scan_screen' } } as any);
             }}
           >
             <View style={[styles.canvasIcon, { backgroundColor: colors.teal + '22' }]}>

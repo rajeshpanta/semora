@@ -11,7 +11,13 @@ import { getProducts, purchaseProduct, PRODUCT_IDS } from '@/lib/purchases';
 import { track } from '@/lib/analytics';
 import { FREE_COURSE_PHRASE, FREE_SEMESTER_LIMIT } from '@/lib/syllabus';
 import { useQuery } from '@tanstack/react-query';
-import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import {
+  CANVAS_PROMO_SOURCE,
+  canvasFreePromoQuery,
+  canvasOfferFor,
+  canvasPromoPlacementFor,
+  lmsConnectionsQuery,
+} from '@/lib/lms';
 import { useAppStore } from '@/store/appStore';
 
 // The upgrade moment, as a sheet rather than a screen.
@@ -179,7 +185,13 @@ export function ProUpsellSheet({
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
   const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
   const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
-  const canvasEscape = canvasFree && canvasOffer !== 'healthy' && (reason === 'course' || reason === 'scan');
+  // One rule, in one testable place — see canvasPromoPlacementFor. The syllabus
+  // wall gets the limited-time promotional card BELOW the Pro offer; the course
+  // wall keeps the plain escape it has shipped with since 2026-08-21, same
+  // words and same position; every other wall gets nothing.
+  const placement = canvasPromoPlacementFor(reason, canvasOffer, canvasFree);
+  const canvasScanPromo = placement === 'scan_promo';
+  const canvasEscape = placement === 'course_escape';
 
   const choose = async () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -263,9 +275,9 @@ export function ProUpsellSheet({
                 accessibilityRole="button"
                 accessibilityLabel="Connect Canvas free, limited time offer"
                 onPress={() => {
-                  track('canvas_offer_tapped', { screen: 'upsell_sheet', offer: canvasOffer, free: true, reason });
+                  track('canvas_offer_tapped', { screen: 'upsell_sheet', offer: canvasOffer, free: true, reason, source: 'course_upsell' });
                   onClose();
-                  router.push('/settings/lms' as any);
+                  router.push({ pathname: '/settings/lms', params: { source: 'course_upsell' } } as any);
                 }}
               >
                 <FontAwesome name="university" size={15} color={colors.teal} />
@@ -338,6 +350,84 @@ export function ProUpsellSheet({
                 </Text>
               )}
             </TouchableOpacity>
+
+            {/* The limited-time Canvas offer — syllabus wall only, BELOW the
+                Pro offer.
+
+                Position is the whole argument. The course wall's version sits
+                above the prices because there the free route is simply the
+                better answer: Canvas classes do not count against the course
+                cap, so charging someone to walk around a wall they can walk
+                around for nothing would be the dishonest option. Syllabus is
+                not that. AI scanning is a Pro capability and Canvas is not a
+                substitute for it — a calendar feed carries dates, never the
+                grading weights, policies and rubric a syllabus scan reads out
+                of the document. Putting this above the prices would advertise
+                a swap that is not on offer.
+
+                So it reads as what it is: the alternative for someone who is
+                not buying today, placed after they have seen and declined the
+                thing being sold, and before "Not now" — which is the outcome
+                it exists to convert. */}
+            {canvasScanPromo && (
+              <TouchableOpacity
+                style={[styles.canvasPromo, { borderColor: colors.teal, backgroundColor: colors.teal50 }]}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Limited-time offer: try Canvas Sync free"
+                onPress={() => {
+                  // SAME event name and same existing fields, so every query
+                  // written against canvas_offer_tapped keeps working across
+                  // the change. `promo` and `source` are additive, and `source`
+                  // is what survives into the connect flow — see the params
+                  // below and lms-connect's funnel events.
+                  track('canvas_offer_tapped', {
+                    screen: 'upsell_sheet',
+                    offer: canvasOffer,
+                    free: true,
+                    reason,
+                    promo: true,
+                    source: CANVAS_PROMO_SOURCE,
+                  });
+                  onClose();
+                  router.push({
+                    pathname: '/settings/lms',
+                    params: { source: CANVAS_PROMO_SOURCE },
+                  } as any);
+                }}
+              >
+                <View style={[styles.canvasPromoPill, { backgroundColor: colors.teal }]}>
+                  <Text style={[styles.canvasPromoPillText, { color: colors.card }]}>LIMITED-TIME OFFER</Text>
+                </View>
+                <View style={styles.canvasPromoRow}>
+                  <FontAwesome name="university" size={15} color={colors.teal} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.canvasPromoTitle, { color: colors.ink }]}>
+                      School uses Canvas? Try Canvas Sync free
+                    </Text>
+                    {/* Deliberately "the deadlines already on your Canvas
+                        calendar" and not "your classes". Every connection in
+                        production is a calendar feed, which carries dated work
+                        and nothing else — a class with no dated items in the
+                        feed cannot appear, and grades, submissions,
+                        announcements and course materials never sync at all.
+                        Promising the class and delivering its deadlines is the
+                        version of this that generates refunds. */}
+                    <Text style={[styles.canvasPromoText, { color: colors.ink2 }]}>
+                      Import the deadlines already on your Canvas calendar, and Semora keeps them
+                      updated when your instructor moves them.
+                    </Text>
+                    {/* Said BEFORE the tap, not discovered after it. Connecting
+                        means fetching a link out of Canvas in a browser, which
+                        is a real errand to hand someone on a phone. */}
+                    <Text style={[styles.canvasPromoNote, { color: colors.ink3 }]}>
+                      Takes a minute: you’ll copy your Canvas calendar link.
+                    </Text>
+                  </View>
+                  <FontAwesome name="chevron-right" size={12} color={colors.teal} />
+                </View>
+              </TouchableOpacity>
+            )}
 
             <TouchableOpacity style={styles.notNow} onPress={dismiss} accessibilityRole="button">
               <Text style={[styles.notNowText, { color: colors.ink3 }]}>Not now</Text>
@@ -422,6 +512,33 @@ const styles = StyleSheet.create({
   },
   canvasEscapeTitle: { fontSize: 13.5, fontWeight: '800' },
   canvasEscapeText: { fontSize: 12, lineHeight: 17, marginTop: 2 },
+
+  // Secondary by construction, not by hoping. The Pro CTA above is a filled
+  // brand-coloured button; this is an outlined card in the accent colour, one
+  // step down in weight at every level — border not fill, 13.5pt title against
+  // the CTA's centred bold label. Same visual family as canvasEscape so the two
+  // Canvas offers read as one feature, deliberately not as two experiments.
+  canvasPromo: {
+    borderWidth: 1, borderRadius: 13,
+    paddingHorizontal: 13, paddingVertical: 12, marginTop: 14,
+  },
+  canvasPromoRow: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  // alignSelf keeps the pill to its own content width; a full-bleed bar would
+  // out-weigh the Pro badge on the annual plan card.
+  canvasPromoPill: {
+    alignSelf: 'flex-start', borderRadius: 5,
+    paddingHorizontal: 7, paddingVertical: 3, marginBottom: 9,
+  },
+  // NO hardcoded colour here. `colors.teal` is a dark green in light mode and a
+  // bright mint (#34D399) in dark, so white would be crisp in one theme and
+  // barely legible in the other — the same trap that made an earlier promo
+  // card's text invisible. `colors.card` is the palette's own opposite of an
+  // accent fill and stays high-contrast in both directions; it is applied
+  // inline because a StyleSheet cannot read the active palette.
+  canvasPromoPillText: { fontSize: 9.5, fontWeight: '900', letterSpacing: 0.6 },
+  canvasPromoTitle: { fontSize: 13.5, fontWeight: '800' },
+  canvasPromoText: { fontSize: 12, lineHeight: 17, marginTop: 3 },
+  canvasPromoNote: { fontSize: 11, lineHeight: 15, marginTop: 5 },
   benefits: { marginTop: 20, gap: 11 },
   benefitRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   check: { marginTop: 2.5 },

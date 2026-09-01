@@ -20,6 +20,22 @@ import type {
   LmsProvider,
 } from '@/types/database';
 
+// The promotion's decision logic lives in lib/canvasPromo.ts, which imports
+// nothing — this module reaches supabase and the notification scheduler at
+// import time, so nothing defined here can be unit-tested. Re-exported rather
+// than re-implemented: every existing call site keeps importing these from
+// '@/lib/lms', and there is still exactly one definition of each.
+export {
+  CANVAS_PROMO_SOURCE,
+  CANVAS_SOURCE_DEFAULT,
+  canvasSourceOf,
+  lmsFailureCode,
+  canvasFreeFor,
+  canvasOfferFor,
+  canvasPromoPlacementFor,
+} from '@/lib/canvasPromo';
+export type { CanvasOffer, CanvasConnectionFacts } from '@/lib/canvasPromo';
+
 export interface DiscoveredLmsCourse {
   id: string;
   name: string;
@@ -556,7 +572,6 @@ export async function disconnectLms(connectionId: string): Promise<void> {
 //                     a prompt to do it again — that is how a useful feature
 //                     turns into nagging.
 
-export type CanvasOffer = 'none' | 'needs_attention' | 'new_courses' | 'healthy' | 'locked';
 
 /**
  * Is Canvas sync free for everyone right now?
@@ -585,84 +600,6 @@ export const canvasFreePromoQuery = {
   // it alone — this sits on the render path of six screens.
   staleTime: 10 * 60_000,
 };
-
-/**
- * Is Canvas free for THIS account right now?
- *
- * Two ways to qualify, and the second is the one that makes "limited time"
- * honest: the offer is live, or this account already connected while it was.
- * A claim is stamped by the database on the connection row (090), so ending
- * the offer never reaches backwards and switches off somebody who took it.
- *
- * Separate from canvasOfferFor because the settings screens need this answer
- * before the connection list has loaded — canvasOfferFor deliberately reports
- * 'healthy' while loading so no prompt flashes, and a screen that gated on
- * that would show a paywall for a beat to a student who does not owe anything.
- */
-export function canvasFreeFor(
-  connections: (LmsConnection & { links: LmsCourseLink[] })[] | undefined,
-  isPro?: boolean,
-  freePromoActive?: boolean,
-): boolean {
-  if (isPro !== false) return false;
-  if (freePromoActive === true) return true;
-  return (connections ?? []).some((c) => c.free_promo_claimed_at != null);
-}
-
-export function canvasOfferFor(
-  connections: (LmsConnection & { links: LmsCourseLink[] })[] | undefined,
-  isPro?: boolean,
-  freePromoActive?: boolean,
-): { offer: CanvasOffer; connection: LmsConnection | null; free: boolean } {
-  // While the query is loading, offer nothing. Flashing "Connect Canvas" at a
-  // student who connected it last term, then swapping it out a beat later, is
-  // worse than showing it a moment late.
-  if (!connections) return { offer: 'healthy', connection: null, free: false };
-
-  const canvas = connections.find((c) => c.provider === 'canvas') ?? null;
-
-  // Pro, the offer is live, or this account claimed it while it was. See
-  // canvasFreeFor — lms_access_allowed answers the same question server-side.
-  const free = canvasFreeFor(connections, isPro, freePromoActive);
-
-  // Not Pro, and the offer is not open to them.
-  //
-  // lms-sync refuses this caller server-side, so a free student who taps
-  // "Connect Canvas" reaches Settings, then the paywall — a dead end dressed
-  // as a feature, and the second-worst way to learn something costs money. The
-  // worst is finding out after connecting.
-  //
-  // 'locked' still SHOWS the offer, deliberately: hiding it from exactly the
-  // people who have not upgraded would be the wrong lesson from "do not
-  // dead-end them". It carries a PRO badge and goes straight to the paywall.
-  //
-  // Checked before the healthy case on purpose. When Pro lapses the server
-  // disables background sync and deletes the credential, so a lapsed
-  // subscriber's connection is not healthy no matter what the row says — and
-  // reconnecting is what they will have to do.
-  if (isPro === false && !free) return { offer: 'locked', connection: canvas, free: false };
-
-  if (!canvas) return { offer: 'none', connection: null, free };
-
-  const stalled =
-    !canvas.background_sync_enabled ||
-    ['error', 'credentials_required'].includes(canvas.last_sync_status ?? '');
-  if (stalled) return { offer: 'needs_attention', connection: canvas, free };
-
-  // Syncing perfectly AND holding courses back is not healthy.
-  //
-  // This is the state a connection lands in when the term turns over: the feed
-  // fills with next semester's classes, none of them are linked, and every
-  // deadline in them is discarded. The sync reports success the whole time,
-  // because nothing it was asked to do failed. Ranked below needs_attention —
-  // a broken connection is the bigger problem — but above healthy, because a
-  // connection quietly ignoring a semester of work must never render as fine.
-  if ((canvas.pending_courses_count ?? 0) > 0) {
-    return { offer: 'new_courses', connection: canvas, free };
-  }
-
-  return { offer: 'healthy', connection: canvas, free };
-}
 
 /**
  * Shared query. One key, so connecting Canvas on one screen updates the offer
