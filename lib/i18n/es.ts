@@ -2333,6 +2333,20 @@ export const ES: Record<string, string> = {
   'Limited-time offer: try Canvas Sync free':
     'Oferta por tiempo limitado: prueba la sincronización con Canvas gratis',
 
+  // ── Pro Canvas education sheet (subscribers only, never a paywall) ─────
+  // Copy from components/ProCanvasEducationSheet.tsx. Says "incluido", never
+  // "gratis" — these people already pay, and calling a feature they bought
+  // "free" is the fastest way to make a subscription feel like an advert.
+  // Same "entregas" discipline as the rest of the Canvas copy: a calendar feed
+  // carries dated work, not classes.
+  'INCLUDED WITH PRO': 'INCLUIDO CON PRO',
+  'Let Semora keep Canvas updated for you': 'Deja que Semora mantenga Canvas al día por ti',
+  'Connect Canvas once and Semora imports the deadlines already on your Canvas calendar, then keeps them updated when an instructor moves a date.':
+    'Conecta Canvas una vez y Semora importa las entregas que ya están en tu calendario de Canvas, y las mantiene al día cuando un profesor cambia una fecha.',
+  'Less checking Canvas. More knowing what is next.': 'Menos revisar Canvas. Más saber qué viene.',
+  'Semora only reads your Canvas calendar feed. It never posts, changes or removes anything in Canvas.':
+    'Semora solo lee el feed de calendario de Canvas. Nunca publica, cambia ni elimina nada en Canvas.',
+
   // ── Canvas connect screen: the free offer stated in the ACTIONS ────────
   // Copy from app/settings/lms-connect.tsx. These live inside JSX ternaries,
   // which scripts/audit-i18n.mjs cannot statically extract — it reported only

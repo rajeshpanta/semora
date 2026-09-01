@@ -35,6 +35,7 @@ export {
   canvasPromoPlacementFor,
 } from '@/lib/canvasPromo';
 export type { CanvasOffer, CanvasConnectionFacts } from '@/lib/canvasPromo';
+import { PRO_CANVAS_EDU_FLAG_KEY } from '@/lib/proCanvasEducation';
 
 export interface DiscoveredLmsCourse {
   id: string;
@@ -592,6 +593,36 @@ export async function canvasFreePromoActive(): Promise<boolean> {
   if (error) return false;
   return data === true;
 }
+
+/**
+ * Is the Pro Canvas education modal switched on?
+ *
+ * The same promo_active() mechanism as the free Canvas offer, on a DIFFERENT
+ * key (pro_canvas_education), so the two switches are genuinely independent:
+ * turning this one off cannot disturb the free-tier promotion or its
+ * grandfathering, and vice versa.
+ *
+ * Lives beside canvasFreePromoQuery because it is the same one-row read against
+ * the same RPC — a second mechanism for a second boolean would be architecture
+ * for its own sake. See lib/proCanvasEducation.ts for what it gates.
+ *
+ * Fails CLOSED. A failed read returns false, which silences the modal — the
+ * correct direction for a kill switch, and the opposite of the free promo's
+ * concern (there, failing closed only withholds an advertisement).
+ */
+export async function proCanvasEducationActive(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('promo_active', { p_key: PRO_CANVAS_EDU_FLAG_KEY });
+  if (error) return false;
+  return data === true;
+}
+
+export const proCanvasEducationQuery = {
+  queryKey: ['proCanvasEducationFlag'] as const,
+  queryFn: proCanvasEducationActive,
+  // Matches the free promo's window: a switch does not flip mid-session, and
+  // this sits on the Today tab's render path.
+  staleTime: 10 * 60_000,
+};
 
 export const canvasFreePromoQuery = {
   queryKey: ['canvasFreePromo'] as const,

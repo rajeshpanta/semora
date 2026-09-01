@@ -47,7 +47,18 @@ import StudySuggestionsCard from '@/components/StudySuggestionsCard';
 import DecisionStrip from '@/components/DecisionStrip';
 import CoursesGlance from '@/components/CoursesGlance';
 import GradesWaitingCard from '@/components/GradesWaitingCard';
-import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, proCanvasEducationQuery } from '@/lib/lms';
+import { ProCanvasEducationSheet } from '@/components/ProCanvasEducationSheet';
+import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
+import {
+  parseProCanvasEduState,
+  proCanvasEduStorageKey,
+  recordConnected,
+  recordDismissed,
+  recordShown,
+  serializeProCanvasEduState,
+  shouldShowProCanvasEducation,
+} from '@/lib/proCanvasEducation';
 import { calculateCourseGrade } from '@/lib/grades';
 import { stillNeedsAttention } from '@/lib/taskStatus';
 import { DEFAULT_GRADE_SCALE } from '@/lib/constants';
@@ -118,6 +129,72 @@ export default function TodayScreen() {
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
   const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
   const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
+
+  // ── "Canvas Sync is already yours" — Pro subscribers only ────────────────
+  //
+  // Mounted HERE rather than beside ProUpsellHost above the router, on purpose.
+  // A host at the root can fire before the app has finished becoming itself —
+  // over the splash, mid-restore, on the auth screen — and the one thing this
+  // must never do is greet a paying customer before their own data has loaded.
+  // Living on Today means it cannot appear until the main screen is genuinely
+  // on screen, and it cannot follow the student into the connect flow or a
+  // paywall, because those are different routes and this component is not on
+  // them.
+  const [proCanvasEdu, setProCanvasEdu] = useState<{ visible: boolean; occurrence: number }>(
+    { visible: false, occurrence: 0 },
+  );
+  const proCanvasEduKey = session?.user?.id ? proCanvasEduStorageKey(session.user.id) : null;
+  // The remote kill switch. Its own app_promos row, independent of canvas_free.
+  const { data: proCanvasEduFlag } = useQuery(proCanvasEducationQuery);
+
+  useEffect(() => {
+    if (!proCanvasEduKey) return;
+    // Gates the WHOLE effect, not just the presentation. Switching the flag off
+    // must leave every student's dismissal state exactly as it was, so that
+    // turning it back on resumes rather than restarts — which means the off
+    // state cannot be allowed to write anything either, including the
+    // connection-observed suppression below.
+    if (proCanvasEduFlag !== true) return;
+    // `undefined` means the connection list has not come back yet. Passing that
+    // through as connectionsLoaded:false is what stops the sheet telling a
+    // student with working Canvas to go and connect Canvas.
+    const connectionsLoaded = lmsConnections !== undefined;
+    const hasAnyConnection = (lmsConnections ?? []).length > 0;
+    const state = parseProCanvasEduState(getDeviceItem(proCanvasEduKey));
+
+    // Observing a connection ends this flow permanently — including for anyone
+    // who later disconnects. See recordConnected.
+    if (connectionsLoaded && hasAnyConnection) {
+      const closed = recordConnected(state);
+      if (closed !== state) setDeviceItem(proCanvasEduKey, serializeProCanvasEduState(closed));
+      return;
+    }
+
+    if (!shouldShowProCanvasEducation({
+      flagActive: proCanvasEduFlag, isPro, connectionsLoaded, hasAnyConnection, state, now: Date.now(),
+    })) return;
+
+    // A beat after the screen settles. Not a nicety: mounting a modal in the
+    // same frame as the first render of Today makes it race the list animating
+    // in, and the student sees the sheet before they see their own day — which
+    // is exactly the "it opened on top of the splash" feeling this avoids.
+    const timer = setTimeout(() => {
+      const next = recordShown(state, new Date().toISOString());
+      setDeviceItem(proCanvasEduKey, serializeProCanvasEduState(next));
+      setProCanvasEdu({ visible: true, occurrence: next.shows });
+    }, 1200);
+    return () => clearTimeout(timer);
+    // Deliberately keyed only on identity and the two facts that gate it. Adding
+    // the state object would re-run this on every write it makes.
+  }, [proCanvasEduKey, proCanvasEduFlag, isPro, lmsConnections]);
+
+  const closeProCanvasEdu = (connected: boolean) => {
+    setProCanvasEdu((current) => ({ ...current, visible: false }));
+    if (!proCanvasEduKey) return;
+    const state = parseProCanvasEduState(getDeviceItem(proCanvasEduKey));
+    const next = connected ? recordConnected(state) : recordDismissed(state);
+    if (next !== state) setDeviceItem(proCanvasEduKey, serializeProCanvasEduState(next));
+  };
   const { data: todayTasks = [] } = useTodayTasks(selectedSemesterId);
   const { data: dueSoonTasks = [], isSuccess: dueSoonLoaded } = useDueSoonTasks(selectedSemesterId);
   const { data: stats } = useTaskStats(selectedSemesterId);
@@ -1656,6 +1733,15 @@ export default function TodayScreen() {
           coin toss rather than a choice. "New task" now lives in that menu
           (components/PlusMenu.tsx) so the action survives at the same one tap
           from anywhere in the app, not just from Today. */}
+
+      <ProCanvasEducationSheet
+        visible={proCanvasEdu.visible}
+        occurrence={proCanvasEdu.occurrence}
+        onDismiss={() => closeProCanvasEdu(false)}
+        // Tapping Connect closes it for good: they have been told, and the
+        // connect screen is now the thing carrying the message.
+        onConnect={() => closeProCanvasEdu(true)}
+      />
     </SafeAreaView>
   );
 }
