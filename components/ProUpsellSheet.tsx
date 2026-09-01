@@ -144,6 +144,20 @@ const COPY: Record<ProUpsellReason, { title: string; subtitle: string }> = {
   },
 };
 
+/**
+ * The scan wall's subtitle when the free action is still UNSPENT.
+ *
+ * COPY.scan is written for the hard wall — the student who ran out — and says
+ * so. But the same sheet also opens from the "Become Pro" button on the
+ * confirmation that asks whether to spend the action in the first place, and
+ * that student has spent nothing. Telling them otherwise is the mistake this
+ * file already names for the course wall: "telling them they have used
+ * something they have not is the kind of wrong that makes a paywall feel like
+ * a trick."
+ */
+const SCAN_UNSPENT_SUBTITLE =
+  'Free accounts include one AI action — a scan or a lecture. Pro reads every syllabus you have, all term.';
+
 const BENEFITS = [
   'Unlimited scans, lectures and file uploads',
   'Notes, flashcards and practice quizzes',
@@ -154,10 +168,19 @@ export function ProUpsellSheet({
   visible,
   reason,
   onClose,
+  freeActionSpent = true,
 }: {
   visible: boolean;
   reason: ProUpsellReason;
   onClose: () => void;
+  /**
+   * Has the student actually used their one free AI action?
+   *
+   * Defaults to true so every existing caller — including ProUpsellHost, which
+   * serves roughly fifty walls — keeps the copy it has today. Only the scan
+   * screen passes false, and only from the path where the action is unspent.
+   */
+  freeActionSpent?: boolean;
 }) {
   const colors = useColors();
   const router = useRouter();
@@ -178,6 +201,8 @@ export function ProUpsellSheet({
   }, [visible, reason]);
 
   const copy = COPY[reason];
+  // Only the scan wall has two truths to tell; every other reason is unchanged.
+  const subtitle = reason === 'scan' && !freeActionSpent ? SCAN_UNSPENT_SUBTITLE : copy.subtitle;
   // Canvas is the free answer to "I cannot get my classes in", so it is offered
   // on exactly those two walls and nowhere else — putting it on the flashcards
   // or calendar sheet would be noise in a place that has to stay a clear yes/no.
@@ -258,7 +283,7 @@ export function ProUpsellSheet({
                 positioned close button. "Turn every file into notes" ran
                 under the x on a 393pt phone without it. */}
             <Text style={[styles.title, { color: colors.ink }]}>{copy.title}</Text>
-            <Text style={[styles.subtitle, { color: colors.ink2 }]}>{copy.subtitle}</Text>
+            <Text style={[styles.subtitle, { color: colors.ink2 }]}>{subtitle}</Text>
 
             {/* The free way out, above the prices.
                 Only on the two walls Canvas actually answers: out of courses,

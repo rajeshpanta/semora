@@ -172,6 +172,10 @@ export default function ScanScreen() {
   // Which wall was hit. The scan limit and the Canvas Pro gate are different
   // reasons and must not borrow each other's words.
   const [upsellReason, setUpsellReason] = useState<'scan' | 'canvas'>('scan');
+  // Whether the sheet is being opened by someone who has RUN OUT, or by someone
+  // browsing Pro from the confirmation before they spend anything. The two need
+  // different words, and only the scan wall can be reached both ways.
+  const [upsellActionSpent, setUpsellActionSpent] = useState(true);
 
   // The free tier has TWO separate caps — scans AND courses-per-semester — and
   // a scan that extracts a NEW course trips the course cap even with scans
@@ -221,6 +225,7 @@ export default function ScanScreen() {
       // say what Pro actually costs or includes, so the decision was being
       // asked for on no information, two taps from the thing they wanted.
       setUpsellReason('scan');
+      setUpsellActionSpent(true);
       setUpsellVisible(true);
       return false;
     }
@@ -273,7 +278,7 @@ export default function ScanScreen() {
               } }]
             : []),
           { text: 'Use Free Scan', onPress: () => resolve(true) },
-          { text: 'Become Pro', onPress: () => { setUpsellReason('scan'); setUpsellVisible(true); resolve(false); } },
+          { text: 'Become Pro', onPress: () => { setUpsellReason('scan'); setUpsellActionSpent(false); setUpsellVisible(true); resolve(false); } },
           { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
         ],
         { cancelable: true, onDismiss: () => resolve(false) },
@@ -811,6 +816,7 @@ export default function ScanScreen() {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['top']}>
       <ProUpsellSheet
         visible={upsellVisible}
+        freeActionSpent={upsellActionSpent}
         reason={upsellReason}
         onClose={() => setUpsellVisible(false)}
       />
