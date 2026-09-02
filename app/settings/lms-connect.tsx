@@ -447,7 +447,7 @@ export default function LmsConnectScreen() {
       });
       Alert.alert(
         isCanvasCalendar ? 'Canvas connected' : 'Connected',
-        `${chosen.length} ${chosen.length === 1 ? 'course' : 'courses'} and ${result.processed} deadlines imported.${isCanvasCalendar ? ' Semora will keep checking Canvas about hourly.' : ''}`,
+        `${chosen.length} ${chosen.length === 1 ? 'course' : 'courses'} and ${result.processed} deadlines imported.${isCanvasCalendar ? ' Semora will keep checking Canvas every few hours.' : ''}`,
         // Deliberately NOT a paywall. This is the moment the promotion promised
         // something and delivered it; charging straight into an upsell here is
         // how a kept promise starts to feel like a setup. Pro is offered again
@@ -590,7 +590,7 @@ export default function LmsConnectScreen() {
                     <FontAwesome name="refresh" size={15} color={colors.brand} />
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.syncTitle, { color: colors.ink }]}>How automatic sync works</Text>
-                      <Text style={[styles.syncText, { color: colors.ink2 }]}>Semora securely checks your private Canvas link about hourly—even when the app is closed. If a dated assignment or event changes, Semora updates the same task instead of creating a duplicate. Semora never changes anything in Canvas.</Text>
+                      <Text style={[styles.syncText, { color: colors.ink2 }]}>Semora securely checks your private Canvas link every few hours—even when the app is closed. If a dated assignment or event changes, Semora updates the same task instead of creating a duplicate. Semora never changes anything in Canvas.</Text>
                     </View>
                   </View>
 

@@ -199,7 +199,7 @@ export default function LmsConnectionDetailScreen() {
             <Text style={[styles.heroText, { color: colors.ink2 }]}>
               {connection.background_sync_enabled
                 ? connection.connection_method === 'calendar_feed'
-                  ? 'Automatic Canvas Calendar Feed sync is on. Semora checks for dated assignment and event changes about hourly.'
+                  ? 'Automatic Canvas Calendar Feed sync is on. Semora checks for dated assignment and event changes every few hours.'
                   : 'Automatic background sync is on. Semora checks this connection every few hours.'
                 : needsReconnect
                   ? 'Your school needs you to reconnect before Semora can continue syncing.'

@@ -740,7 +740,7 @@ function Toolkit({ colors, isWide, isLandscape }: { colors: C; isWide: boolean; 
  *   · "read-only link"     — Canvas's private calendar feed (an .ics URL), so
  *                            Semora genuinely cannot write anything back.
  *   · "dated"              — the feed lists dated assignments and events only.
- *   · "about every hour"   — the wording the connect screen already uses.
+ *   · "every few hours"   — the wording the connect screen already uses.
  *   · "encrypted"          — the credential lives in Supabase Vault and is
  *                            never returned to the client (lib/lms.ts).
  *   · "keeps itself right" — background sync is ON from the moment you
@@ -760,7 +760,7 @@ const CANVAS_POINTS: {
   {
     icon: 'refresh',
     label: 'It stays right on its own',
-    note: 'Semora re-checks Canvas about every hour. When an instructor moves a due date, yours moves with it.',
+    note: 'Semora re-checks Canvas every few hours. When an instructor moves a due date, yours moves with it.',
   },
   {
     icon: 'lock',

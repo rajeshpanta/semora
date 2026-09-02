@@ -375,7 +375,7 @@ export const ES: Record<string, string> = {
   'Could not dismiss': 'No se pudo descartar',
   'New Canvas courses': 'Nuevas materias de Canvas',
   'Nothing new right now': 'Nada nuevo por ahora',
-  'Semora checks Canvas about hourly. When next semester’s courses appear, they will show up here.': 'Semora revisa Canvas cada hora aproximadamente. Cuando aparezcan las materias del próximo semestre, saldrán aquí.',
+  'Semora checks Canvas every few hours. When next semester’s courses appear, they will show up here.': 'Semora revisa Canvas cada pocas horas. Cuando aparezcan las materias del próximo semestre, saldrán aquí.',
   'new Canvas course': 'materia nueva de Canvas',
   'new Canvas courses': 'materias nuevas de Canvas',
   'for': 'para',
@@ -1302,7 +1302,7 @@ export const ES: Record<string, string> = {
   'Automatic deadline sync': 'Sincronización automática de entregas',
   'Canvas deadline sync': 'Sincronización de entregas de Canvas',
   'Connect Canvas once. Semora keeps dated assignments and events updated automatically when an instructor changes a deadline.': 'Conecta Canvas una sola vez. Semora mantiene actualizadas automáticamente las tareas y los eventos con fecha cuando un profesor cambia una entrega.',
-  'Checks about hourly': 'Se revisa aproximadamente cada hora',
+  'Checks every few hours': 'Se revisa cada pocas horas',
   'Private and read-only': 'Privado y de solo lectura',
   'No school approval needed': 'No requiere aprobación de la institución',
   'What you’ll do': 'Lo que harás',
@@ -1327,7 +1327,7 @@ export const ES: Record<string, string> = {
   'Copy the URL Canvas displays. It usually starts with webcal:// and contains /feeds/calendars/user_.': 'Copia la URL que muestra Canvas. Normalmente comienza con webcal:// y contiene /feeds/calendars/user_.',
   'See Canvas’s illustrated instructions': 'Ver las instrucciones ilustradas de Canvas',
   'How automatic sync works': 'Cómo funciona la sincronización automática',
-  'Semora securely checks your private Canvas link about hourly—even when the app is closed. If a dated assignment or event changes, Semora updates the same task instead of creating a duplicate. Semora never changes anything in Canvas.': 'Semora revisa de forma segura tu enlace privado de Canvas aproximadamente cada hora, incluso cuando la app está cerrada. Si cambia una tarea o un evento con fecha, Semora actualiza la misma tarea en vez de crear un duplicado. Semora nunca modifica nada en Canvas.',
+  'Semora securely checks your private Canvas link every few hours—even when the app is closed. If a dated assignment or event changes, Semora updates the same task instead of creating a duplicate. Semora never changes anything in Canvas.': 'Semora revisa de forma segura tu enlace privado de Canvas cada pocas horas, incluso cuando la app está cerrada. Si cambia una tarea o un evento con fecha, Semora actualiza la misma tarea en vez de crear un duplicado. Semora nunca modifica nada en Canvas.',
   'Paste your private Calendar Feed link': 'Pega tu enlace privado del feed de calendario',
   'Treat this link like a password. Semora encrypts it and never displays it after setup.': 'Trata este enlace como una contraseña. Semora lo cifra y nunca vuelve a mostrarlo después de configurarlo.',
   'What Canvas includes': 'Lo que incluye Canvas',
@@ -1363,8 +1363,8 @@ export const ES: Record<string, string> = {
   'This Canvas Calendar Feed is no longer available. Copy a fresh Calendar Feed URL from Canvas and reconnect.': 'Este feed de calendario de Canvas ya no está disponible. Copia una URL nueva desde Canvas y vuelve a conectarlo.',
   'Canvas returned an invalid calendar feed.': 'Canvas devolvió un feed de calendario no válido.',
   'In Canvas on the web:\n1. Open Calendar.\n2. Select Calendar Feed in the sidebar.\n3. Copy the full URL and paste it above.\n\nThe URL is private, like a password. Semora encrypts it for automatic syncing. Canvas feeds do not include grades, submission status, or undated To-Do items. When you add a new Canvas course, reconnect once so it can be selected.': 'En Canvas desde la web:\n1. Abre Calendario.\n2. Selecciona Feed de calendario en la barra lateral.\n3. Copia la URL completa y pégala arriba.\n\nLa URL es privada, como una contraseña. Semora la cifra para sincronizar automáticamente. Los feeds de Canvas no incluyen calificaciones, estado de entrega ni tareas pendientes sin fecha. Cuando agregues un curso nuevo en Canvas, vuelve a conectar una vez para poder seleccionarlo.',
-  'Automatic Canvas Calendar Feed sync is on. Semora checks for dated assignment and event changes about hourly.': 'La sincronización automática del feed de Canvas está activada. Semora busca cambios en tareas y eventos con fecha aproximadamente cada hora.',
-  ' · Canvas checks about hourly': ' · Canvas se revisa aproximadamente cada hora',
+  'Automatic Canvas Calendar Feed sync is on. Semora checks for dated assignment and event changes every few hours.': 'La sincronización automática del feed de Canvas está activada. Semora busca cambios en tareas y eventos con fecha cada pocas horas.',
+  ' · Canvas checks every few hours': ' · Canvas se revisa cada pocas horas',
   ' · Reconnect required': ' · Debes volver a conectar',
   'Recent attempts make it clear what changed and what needs attention.': 'Los intentos recientes muestran qué cambió y qué requiere atención.',
   'Reconnected': 'Conexión restablecida',
@@ -1799,7 +1799,7 @@ export const ES: Record<string, string> = {
 
   // ── Onboarding step 5: Canvas ──────────────────────────────────────────
   // The claims are load-bearing, so the Spanish has to carry the same limits
-  // the English does: read-only, private, about hourly, free.
+  // the English does: read-only, private, every few hours, free.
   'IF YOUR SCHOOL USES CANVAS': 'SI TU UNIVERSIDAD USA CANVAS',
   // Phone variant uses the hard line breaks; the tablet/landscape headline
   // wraps on its own, exactly as the toolkit headline above does.
@@ -1811,7 +1811,7 @@ export const ES: Record<string, string> = {
   'Your classes and every dated assignment arrive together — no typing, no importing them one at a time.':
     'Tus clases y todas las tareas con fecha llegan juntas: sin escribir nada y sin importarlas una por una.',
   'It stays right on its own': 'Se mantiene correcto solo',
-  'Semora re-checks Canvas about every hour. When an instructor moves a due date, yours moves with it.':
+  'Semora re-checks Canvas every few hours. When an instructor moves a due date, yours moves with it.':
     'Semora vuelve a consultar Canvas más o menos cada hora. Si un profesor cambia una fecha de entrega, la tuya cambia con ella.',
   'Read-only, and private': 'Solo lectura, y privado',
   'Your private Canvas calendar link, encrypted on our side. Semora can read your deadlines — never post, submit or change anything.':

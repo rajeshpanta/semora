@@ -34,3 +34,14 @@ Deno.test('a count with more than one digit still matches', () => {
   const es = translate('12 new Canvas courses found — their deadlines are not in Semora yet', 'es');
   assert(es.includes('12 cursos nuevos'), es);
 });
+
+Deno.test('the post-import confirmation no longer promises hourly', () => {
+  // Interpolated, so it lives in the regex chain rather than the catalogue —
+  // the half of i18n that fails silently. SYNC_HOURS is 3h for calendar feeds
+  // and 4h for token; "hourly" stopped being true when that changed.
+  const en = '3 courses and 42 deadlines imported. Semora will keep checking Canvas every few hours.';
+  const es = translate(en, 'es');
+  assert(es !== en, 'fell through untranslated');
+  assert(es.includes('cada pocas horas'), es);
+  assert(!/cada hora/.test(es), `still promises hourly: ${es}`);
+});

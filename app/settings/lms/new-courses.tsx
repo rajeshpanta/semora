@@ -163,7 +163,7 @@ export default function NewCanvasCourses() {
           <FontAwesome name="check-circle" size={26} color={colors.brand} />
           <Text style={[styles.emptyTitle, { color: colors.ink }]}>{t('Nothing new right now')}</Text>
           <Text style={[styles.emptyBody, { color: colors.ink3 }]}>
-            {t('Semora checks Canvas about hourly. When next semester’s courses appear, they will show up here.')}
+            {t('Semora checks Canvas every few hours. When next semester’s courses appear, they will show up here.')}
           </Text>
         </View>
       </SafeAreaView>

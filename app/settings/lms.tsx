@@ -202,7 +202,7 @@ export default function LmsSettingsScreen() {
           <View style={styles.benefits}>
             <View style={styles.benefit}>
               <FontAwesome name="clock-o" size={13} color={colors.brand} />
-              <Text style={[styles.benefitText, { color: colors.ink2 }]}>Checks about hourly</Text>
+              <Text style={[styles.benefitText, { color: colors.ink2 }]}>Checks every few hours</Text>
             </View>
             <View style={styles.benefit}>
               <FontAwesome name="shield" size={13} color={colors.brand} />
@@ -268,7 +268,7 @@ export default function LmsSettingsScreen() {
                       <Text style={[styles.syncMeta, { color: colors.ink3 }]}>
                         {syncTimeLabel(connection.last_successful_sync_at ?? connection.last_synced_at)}
                         {connection.connection_method === 'calendar_feed'
-                          ? connection.background_sync_enabled ? ' · Canvas checks about hourly' : ' · Reconnect required'
+                          ? connection.background_sync_enabled ? ' · Canvas checks every few hours' : ' · Reconnect required'
                           : connection.background_sync_enabled ? ' · Automatic sync on' : ' · Device sync only'}
                       </Text>
                     </View>
