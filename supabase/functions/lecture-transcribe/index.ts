@@ -619,6 +619,42 @@ async function handleSegment(
     .eq('id', lectureId)
     .in('status', ['recording', 'uploading']);
 
+  // ── Keep the row's clock honest while audio is still arriving ────────────
+  // The update above is guarded, correctly: it must never drag a lecture that
+  // has moved on back to 'transcribing'. But the guard means it matches ZERO
+  // rows from the second segment onward, and a matched-nothing update fires no
+  // trigger — so `updated_at` froze at the first segment and stayed there for
+  // the rest of the recording, however long it ran.
+  //
+  // Everything that asks "is this lecture still alive?" reads that column, and
+  // all of them were being lied to:
+  //
+  //   - sweep_stalled_lectures (082) finalises 'transcribing' rows untouched
+  //     for 15 minutes. Every recording longer than that was being finalised
+  //     MID-RECORDING, on a partial transcript.
+  //   - isLectureStalled (lib/lectures.ts:106) marks the same rows stalled, and
+  //     the detail screen stops polling when it does — so the student's own
+  //     screen gave up on a lecture that was still running.
+  //   - request_pending_lecture_notes (109) treats a quiet row as settled, and
+  //     wrote notes from that partial transcript. On 2026-09-02 lecture
+  //     a4a6aff3 got notes covering roughly a third of a 37,323-character
+  //     class, and nothing regenerates them once notes_md is set.
+  //
+  // The premature finalise was survivable on its own: finishLecture writes the
+  // final state with no status guard, so a student who presses stop undoes it
+  // and the full transcript is rebuilt. That is why this went unnoticed for so
+  // long. It stopped being survivable the moment something else started acting
+  // on 'transcribed'.
+  //
+  // A separate statement rather than folding it into the update above, because
+  // the two have genuinely different guards: the status may only move forward
+  // from 'recording'/'uploading', while the clock must keep ticking through
+  // 'transcribing' as well. Cheap — one row, once per five-minute segment.
+  await admin.from('lecture_recordings')
+    .update({ updated_at: new Date().toISOString() })
+    .eq('id', lectureId)
+    .in('status', ['recording', 'uploading', 'transcribing']);
+
   // Previous segment's tail keeps terminology stable across the boundary.
   let promptHint = typeof lecture.title === 'string' ? lecture.title.slice(0, 120) : '';
   if (claimed.seq > 0) {
