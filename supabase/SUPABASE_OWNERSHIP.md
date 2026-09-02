@@ -119,6 +119,17 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
 - `syllabi` (private) — **SEMORA only**, per-user RLS policies. Citizen has no bucket.
 - `course-notes` (private, 025) — **SEMORA only**, per-user RLS. AI-tutor uploaded notes.
 
+## Held migrations — `supabase/migrations-held/`
+
+A migration that is written and reviewed but deliberately **not** applied lives
+in `supabase/migrations-held/`, where `supabase db push` cannot see it. It goes
+out only when someone moves it back, never as a side effect of pushing
+something else.
+
+Currently held: **108** — the "Canvas has classes waiting" push. The Today
+banner half already shipped; this half targets students who have drifted away
+and is parked until on or after 2026-09-09. See that folder's README.
+
 ## Rules to avoid cross-app accidents
 1. Only `DROP`/`ALTER`/`TRUNCATE` a table whose comment names **your** app (or that's listed above under your app).
 2. For shared `analytics_events`: always scope by `app_name`; never bulk-delete unscoped.

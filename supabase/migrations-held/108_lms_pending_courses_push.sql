@@ -3,6 +3,17 @@
 -- ============================================================
 -- STATUS: NOT YET APPLIED to usglgeosqhtxbyxsugre.
 --
+-- It lives in supabase/migrations-held/ rather than supabase/migrations/ so
+-- that `supabase db push` cannot see it. Between 09-01 and 09-02, eight
+-- migrations were pushed to production and every one of them would have taken
+-- this along — db push applies everything pending, and this was the only thing
+-- pending. It survived because someone remembered to lift it out first, eight
+-- times. Moving it here replaces that memory with a fact about the filesystem.
+--
+-- To apply: git mv it into supabase/migrations/, confirm with
+-- `supabase migration list --linked` that it is the ONLY thing pending, then
+-- push. See supabase/migrations-held/README.md.
+--
 -- THE STATE THIS EXISTS FOR. A connection can be syncing perfectly and still be
 -- withholding a semester. When the term turns over, the feed fills with classes
 -- that are not linked to anything, and every dated item inside them is
