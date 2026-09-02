@@ -815,8 +815,34 @@ async function deleteLectureAudio(
       log.warn('audio_delete_failed', errorFields(error));
       return;
     }
-    await admin.from('lecture_segments').update({ storage_path: null }).eq('lecture_id', lectureId);
+    // Scoped to the paths actually removed, NOT to the whole lecture. The
+    // unscoped `.eq('lecture_id', ...)` cleared storage_path on segments whose
+    // objects were never in `paths` — anything that arrived after this
+    // snapshot was taken. Those objects then had nothing pointing at them and
+    // a row claiming the audio was gone, which is how one file ended up in the
+    // bucket with no segment referencing it at all.
+    await admin.from('lecture_segments')
+      .update({ storage_path: null })
+      .eq('lecture_id', lectureId)
+      .in('storage_path', paths);
   }
+
+  // Only once nothing is left. Stamping unconditionally is what let a lecture
+  // report its audio deleted while later segments sat in the bucket: on
+  // 2026-08-31 lecture 17433304 recorded this at 09:30:13 and then uploaded
+  // seven more segments between 09:34 and 10:06, none of which any cleanup
+  // could see afterwards because the row already said it was done.
+  const { count: remaining } = await admin
+    .from('lecture_segments')
+    .select('id', { count: 'exact', head: true })
+    .eq('lecture_id', lectureId)
+    .not('storage_path', 'is', null);
+
+  if ((remaining ?? 0) > 0) {
+    log.info('audio_partially_deleted', { lecture_id: lectureId, remaining });
+    return;
+  }
+
   await admin.from('lecture_recordings')
     .update({ audio_deleted_at: new Date().toISOString() })
     .eq('id', lectureId);

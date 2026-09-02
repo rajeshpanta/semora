@@ -55,6 +55,7 @@ supabase functions deploy lms-sync --no-verify-jwt       # MUST use the flag —
 supabase functions deploy google-cal-sync                # only needed when you enable Google Cal (see §5)
 supabase functions deploy lecture-transcribe             # 065 — lecture recording pipeline
 supabase functions deploy lecture-study-kit --no-verify-jwt  # MUST use the flag — see the note below
+supabase functions deploy lecture-retention --no-verify-jwt   # 117 — MUST use the flag (shared-secret auth, not JWT)
 supabase functions deploy generate-flashcards            # 065 — per-note context cap fix
 # 065-067 migrations MUST be applied before deploying lecture-transcribe:
 # it calls reserve_lecture_for_recording / release_lecture_reservation.
