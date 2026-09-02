@@ -128,7 +128,15 @@ export default function TodayScreen() {
   // `free` comes back true instead, and the same prompt becomes the giveaway.
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
   const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
-  const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
+  const { offer: canvasOffer, free: canvasFree, connection: canvasConnection } =
+    canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
+  // Courses Canvas has found and is holding back. The sync reports success the
+  // whole time it does this — nothing it was asked to do failed — so this count
+  // is the only place the loss is visible. See canvasOfferFor, which already
+  // ranks 'new_courses' above 'healthy' for exactly this reason.
+  const pendingCanvasCourses = canvasOffer === 'new_courses'
+    ? (canvasConnection?.pending_courses_count ?? 0)
+    : 0;
 
   // ── "Canvas Sync is already yours" — Pro subscribers only ────────────────
   //
@@ -924,6 +932,43 @@ export default function TodayScreen() {
           </TouchableOpacity>
         )}
 
+        {/* Canvas found classes and is holding them back.
+
+            This state had no rendering path on the screen the affected student
+            actually opens. The Canvas card on Today lives in the EMPTY-state
+            branch, and a student with courses held back is by definition not
+            empty — they imported earlier and have been using the app since. So
+            canvasOfferFor computed 'new_courses' on every Today render and the
+            answer was thrown away, while the sync reported perfect health every
+            three hours and discarded every deadline in those courses.
+
+            Above AcademicRiskCard on purpose: that card reasons about the work
+            it can see, and this banner says the work it can see is incomplete.
+
+            No dismiss control, and none needed — importing or ignoring the
+            courses clears pending_courses_count, so the banner is answered
+            rather than hidden. */}
+        {pendingCanvasCourses > 0 && (
+          <TouchableOpacity
+            style={[styles.notifBanner, { backgroundColor: colors.teal50, borderColor: colors.teal }]}
+            onPress={() => {
+              track('canvas_offer_tapped', {
+                screen: 'today', offer: canvasOffer, free: canvasFree, source: 'today_pending',
+              });
+              router.push('/settings/lms/new-courses' as any);
+            }}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${pendingCanvasCourses} new Canvas courses found, deadlines not imported yet`}
+          >
+            <FontAwesome name="university" size={14} color={colors.teal} />
+            <Text style={[styles.notifBannerText, { color: colors.ink }]}>
+              {`${pendingCanvasCourses} new Canvas ${pendingCanvasCourses === 1 ? 'course' : 'courses'} found — ${pendingCanvasCourses === 1 ? 'its' : 'their'} deadlines are not in Semora yet`}
+            </Text>
+            <FontAwesome name="chevron-right" size={11} color={colors.teal} />
+          </TouchableOpacity>
+        )}
+
         {!isDesktop && (
         <AcademicRiskCard
           report={academicRisk}
@@ -1291,7 +1336,12 @@ export default function TodayScreen() {
                     bringing them when an instructor moves a date. A student
                     looking at an empty semester is exactly who should hear
                     that. Hidden once Canvas is healthy — see canvasOfferFor. */}
-                {canvasOffer !== 'healthy' && (
+                {/* 'new_courses' is deliberately excluded now: the banner at the
+                    top of this screen already says it, with the count and the
+                    right destination. Left in, this slot would invite a student
+                    whose Canvas is connected and syncing to "Sync Canvas" —
+                    contradicting the banner directly above it. */}
+                {canvasOffer !== 'healthy' && canvasOffer !== 'new_courses' && (
                   <TouchableOpacity
                     style={[styles.emptyCanvas, { borderColor: colors.teal, backgroundColor: colors.teal50 }]}
                     onPress={() => {

@@ -467,6 +467,12 @@ function spanishPattern(input: string): string | null {
     if (match) return `Se importaron ${match[1]} ${match[1] === '1' ? 'curso' : 'cursos'} y ${match[3]} ${match[3] === '1' ? 'tarea' : 'tareas'}.`;
   match = input.match(/^(\d+) (course|courses) and (\d+) deadlines imported\. Semora will keep checking Canvas about hourly\.$/i);
     if (match) return `Se importaron ${match[1]} ${match[1] === '1' ? 'curso' : 'cursos'} y ${match[3]} ${match[3] === '1' ? 'entrega' : 'entregas'}. Semora seguirá revisando Canvas aproximadamente cada hora.`;
+  // Today's held-back-courses banner. Interpolated, so it can never match a
+  // catalogue key — the count and both agreements are resolved here instead.
+  match = input.match(/^(\d+) new Canvas (?:course|courses) found — (?:its|their) deadlines are not in Semora yet$/i);
+    if (match) return `Se ${match[1] === '1' ? 'encontró' : 'encontraron'} ${match[1]} ${match[1] === '1' ? 'curso nuevo' : 'cursos nuevos'} de Canvas — sus entregas aún no están en Semora`;
+  match = input.match(/^(\d+) new Canvas courses found, deadlines not imported yet$/i);
+    if (match) return `${match[1]} cursos nuevos de Canvas encontrados, sus entregas aún no se importan`;
   match = input.match(/^Connect your (.+?) account$/i);
     if (match) return `Conecta tu cuenta de ${match[1]}`;
   match = input.match(/^Updated (\d+)m ago$/i);
