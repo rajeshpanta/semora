@@ -54,11 +54,39 @@ supabase functions deploy send-push --no-verify-jwt      # MUST use the flag (sh
 supabase functions deploy lms-sync --no-verify-jwt       # MUST use the flag — see the note below
 supabase functions deploy google-cal-sync                # only needed when you enable Google Cal (see §5)
 supabase functions deploy lecture-transcribe             # 065 — lecture recording pipeline
-supabase functions deploy lecture-study-kit              # 065 — lecture notes + quiz
+supabase functions deploy lecture-study-kit --no-verify-jwt  # MUST use the flag — see the note below
 supabase functions deploy generate-flashcards            # 065 — per-note context cap fix
 # 065-067 migrations MUST be applied before deploying lecture-transcribe:
 # it calls reserve_lecture_for_recording / release_lecture_reservation.
 ```
+
+### lecture-study-kit and `--no-verify-jwt`: same trap, second door
+
+Since 109 the ten-minute `semora-finish-lecture-notes` job posts to this
+function to write notes for lectures the app abandoned. Like the Canvas job, it
+sends only its own header — `x-semora-lecture-cron-secret` — and no
+`Authorization`, so **deploying without the flag makes the gateway reject every
+unattended notes request** and students silently stop getting notes for any
+lecture they did not sit and watch.
+
+The flag is safe for the same reason it is safe on lms-sync: the function
+authenticates itself on both paths. A scheduler request is checked against the
+vault secret via `read_lecture_cron_secret()`, and every student request still
+goes through `auth.getUser()` with a real Bearer token. The scheduler path can
+only ever ask for `mode: 'notes'` on a lecture that is already `transcribed`,
+and it never gets to say whose lecture it is — the owner is read off the row.
+
+**Unlike lms-sync, this one reports itself.** `notes_auto_attempts` is stamped
+on the lecture before each request is sent, so a rejected hop still counts. Two
+or more lectures stuck at three attempts in a day raises a `lecture_notes_stuck`
+row in `ops_alerts` (109). To check by hand:
+
+```sql
+select count(*) from public.lecture_recordings
+where status = 'transcribed' and notes_md is null and notes_auto_attempts >= 3;
+```
+
+Zero is healthy. Anything above one, check `net._http_response` for a 401.
 
 ### lms-sync and `--no-verify-jwt`: how the cron died silently for 9 days
 

@@ -173,19 +173,39 @@ serve(withRequestLogging('lecture-study-kit', async (req, log) => {
     }
     if (contentLength > MAX_BODY_BYTES) return jsonResponse({ error: 'Request too large' }, 413);
 
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return jsonResponse({ error: 'Authentication required' }, 401);
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // Two ways in, and they are not equal. A student presents a JWT and may ask
+    // for anything they own. The scheduler (109) presents a shared secret, may
+    // only ever ask for 'notes', and does not get to say WHOSE lecture it is —
+    // the owner is read off the row further down. That asymmetry is the whole
+    // security model here: the secret authorises "finish this lecture's notes",
+    // never "act as this user".
+    const cronSecret = req.headers.get('x-semora-lecture-cron-secret') ?? '';
+    const isCron = cronSecret.length > 0;
+    let userId = '';
+
+    if (isCron) {
+      const { data: expected, error: secretErr } = await adminClient.rpc('read_lecture_cron_secret');
+      if (secretErr || typeof expected !== 'string' || cronSecret !== expected) {
+        log.warn('cron_secret_rejected');
+        return jsonResponse({ error: 'Unauthorized scheduler' }, 401);
+      }
+    } else {
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return jsonResponse({ error: 'Authentication required' }, 401);
+      }
+      const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: userData, error: userError } = await userClient.auth.getUser();
+      if (userError || !userData.user) {
+        return jsonResponse({ error: 'Invalid or expired session' }, 401);
+      }
+      userId = userData.user.id;
+      log.setUser(userId);
     }
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData, error: userError } = await userClient.auth.getUser();
-    if (userError || !userData.user) {
-      return jsonResponse({ error: 'Invalid or expired session' }, 401);
-    }
-    const userId = userData.user.id;
-    log.setUser(userId);
 
     let body: Record<string, unknown>;
     try {
@@ -195,7 +215,10 @@ serve(withRequestLogging('lecture-study-kit', async (req, log) => {
     }
     const locale: Locale = body.locale === 'es' ? 'es' : 'en';
     const lectureId = typeof body.lectureId === 'string' ? body.lectureId : null;
-    const mode = body.mode === 'quiz' ? 'quiz' : 'notes';
+    // The scheduler is pinned to 'notes' regardless of what it sent. Quiz is
+    // Pro-gated and on-demand; nothing unattended should ever be able to reach
+    // a gated, billable path on a student's behalf.
+    const mode = isCron ? 'notes' : (body.mode === 'quiz' ? 'quiz' : 'notes');
     if (!lectureId) return jsonResponse({ error: 'lectureId is required' }, 400);
 
     if (!isProviderConfigured(providerFor(AiTask.contentGeneration))) {
@@ -203,20 +226,34 @@ serve(withRequestLogging('lecture-study-kit', async (req, log) => {
       return jsonResponse({ error: t('transient', locale) }, 503);
     }
 
-    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
     // service_role bypasses RLS, so ownership is re-checked explicitly here.
-    const { data: lecture, error: lectureErr } = await adminClient
+    // For a student that means "this row must be yours". For the scheduler
+    // there is no claimed identity to check against, so the row itself is the
+    // authority and its owner is adopted below.
+    let lectureQuery = adminClient
       .from('lecture_recordings')
       .select('id, user_id, course_id, title, status, transcript, notes_md, duration_seconds, source')
-      .eq('id', lectureId)
-      .eq('user_id', userId)
-      .maybeSingle();
+      .eq('id', lectureId);
+    if (!isCron) lectureQuery = lectureQuery.eq('user_id', userId);
+
+    const { data: lecture, error: lectureErr } = await lectureQuery.maybeSingle();
     if (lectureErr) {
       log.error('lecture_lookup_failed', errorFields(lectureErr));
       return jsonResponse({ error: t('transient', locale) }, 503);
     }
     if (!lecture) return jsonResponse({ error: 'Lecture not found' }, 404);
+
+    if (isCron) {
+      userId = lecture.user_id;
+      log.setUser(userId);
+      // A student who opened the lecture in the meantime is already generating.
+      // Re-entering here would stamp a second claim over theirs and race the
+      // write. 'transcribed' is the only state this worker has any business in.
+      if (lecture.status !== 'transcribed' || lecture.notes_md) {
+        log.info('cron_notes_skipped', { lecture_id: lecture.id, status: lecture.status });
+        return jsonResponse({ ok: true, skipped: true }, 200);
+      }
+    }
 
     if (mode === 'quiz') {
       // Pro gate, fail-closed-as-transient on an RPC blip so a paying user is
@@ -346,7 +383,8 @@ async function handleNotes(
     safety_identifier: await makeSafetyIdentifier(userId),
   }, 'lecture-notes');
 
-  await logAiCall(admin, userId, {
+  // Deliberately NOT logged yet. See the write below.
+  const logThisCall = () => logAiCall(admin, userId, {
     task: AiTask.contentGeneration,
     provider: providerFor(AiTask.contentGeneration),
     model: modelFor(AiTask.contentGeneration),
@@ -360,6 +398,8 @@ async function handleNotes(
 
   const notes = result.ok ? openAIText(result.data) : null;
   if (!notes) {
+    // Nothing to protect on this path, so the log goes first as it always did.
+    await logThisCall();
     // Back to 'transcribed', not 'failed': the transcript is intact and
     // valuable on its own, and the client can offer a retry.
     await admin.from('lecture_recordings')
@@ -375,14 +415,35 @@ async function handleNotes(
 
   const notesMd = notes.replace(/```(?:markdown)?\n?/g, '').trim().slice(0, MAX_NOTES_CHARS);
 
+  // THE STUDENT'S NOTES GO FIRST. Nothing else touches the database until this
+  // has landed.
+  //
+  // This ordering is not stylistic. On 2026-08-31 lecture 96575255 asked for
+  // notes on a 16,027-character PDF. The model answered — successfully, 3,815
+  // tokens, after 148.5 seconds — and the isolate was killed in the gap between
+  // writing the ai_call_log row and writing the notes. The log row survived.
+  // The notes did not. The student got NOTES_FAILED for work that had already
+  // been done and paid for.
+  //
+  // 148,552 ms is the slowest call in the entire ai_call_log, and nothing in it
+  // has ever crossed 150,000 ms — the shape of a hard platform ceiling, not of
+  // a model that occasionally runs long. Anything running that close to the
+  // wall will be cut off again, so the fix is not to hope for a faster model:
+  // it is to make sure that when the axe falls, the thing already saved is the
+  // thing the student came for. Bookkeeping is replaceable. Their notes are not.
   const { error: writeErr } = await admin
     .from('lecture_recordings')
     .update({ notes_md: notesMd, status: 'ready', error_code: null, notes_started_at: null })
     .eq('id', lecture.id);
   if (writeErr) {
+    await logThisCall();
     log.error('notes_write_failed', errorFields(writeErr));
     return jsonResponse({ error: t('transient', locale) }, 503);
   }
+
+  // Safe now — the notes are durable, so everything from here is bookkeeping
+  // and may be lost to a timeout without costing the student anything.
+  await logThisCall();
 
   await mirrorToCourseNotes(admin, userId, lecture, notesMd, log);
 

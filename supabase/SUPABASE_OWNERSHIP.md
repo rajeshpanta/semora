@@ -53,14 +53,17 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
   `lecture_recordings_assert_parent_owner`, `lecture_segments_assert_parent_owner`,
   `lecture_recordings_set_updated_at` (065),
   `reserve_lecture_for_recording`, `release_lecture_reservation`, `settle_lecture_reservation`,
-  `reclaim_stale_lecture_reservations` (066–067)
+  `reclaim_stale_lecture_reservations` (066–067),
+  `read_lecture_cron_secret`, `request_pending_lecture_notes`, `alert_lecture_notes_stuck` (109),
+  `release_finished_lecture_reservations` (111), `notify_lecture_notes_ready` (112)
 - **Citizen:** `whisper_rate_limit_ok` ← DO NOT modify from Semora
 
 ## Edge functions
 - **Semora:** `parse-syllabus`, `validate-receipt`, `send-push` (deploy `--no-verify-jwt`),
   `tutor-chat`, `share-course`, `google-cal-sync`, `redeem-referral`, `lms-sync`,
   `submit-support` (deploy `--no-verify-jwt`),
-  `lecture-transcribe`, `lecture-study-kit` (065)
+  `lecture-transcribe`, `lecture-study-kit` (065; deploy `--no-verify-jwt` since 109 —
+  the unattended notes job posts to it with a shared secret and no Authorization header)
 
 ## Lecture recording (migration 065) — **SEMORA only**
 - `lecture_recordings` / `lecture_segments` — owner-only RLS, realtime enabled.
