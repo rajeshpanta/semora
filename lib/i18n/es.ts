@@ -1008,6 +1008,13 @@ export const ES: Record<string, string> = {
   'Task unavailable': 'Tarea no disponible',
   'Tasks (': 'Tareas (',
   'The syllabus file is missing from storage.': 'El archivo del programa no está disponible.',
+  // Settings → Notifications, Canvas section (migration 108).
+  // 'Canvas' and 'New Canvas courses' are already in this catalogue (637, 376).
+  'When Canvas finds classes you have not added yet': 'Cuando Canvas encuentra materias que aún no has agregado',
+  // The push itself (sent from migration 108; these mirror its translations
+  // block so the copy can be read in one place with the rest of the app).
+  'Canvas has classes waiting': 'Canvas tiene materias esperando',
+  'New courses were found in your Canvas. Their deadlines are not in Semora until you add them.': 'Se encontraron cursos nuevos en tu Canvas. Sus entregas no estarán en Semora hasta que los agregues.',
   'No connection. Reconnect to open your syllabus.': 'Sin conexión. Vuelve a conectarte para abrir tu programa.',
   // Live feedback under the Canvas Calendar Feed field (lib/canvasFeedUrl.ts).
   'Looks right': 'Se ve bien',

@@ -1021,6 +1021,10 @@ function NotificationActionBridge() {
       const pushType = response.notification.request.content.data?.type;
       if (typeof pushType === 'string') {
         if (pushType === 'flashcards_due') globalRouter.push('/flashcards' as any);
+        // Sent by migration 108 to students who have drifted away while Canvas
+        // holds courses back. Land them on the screen that resolves it, not in
+        // Settings to go looking for it.
+        if (pushType === 'lms_new_courses') globalRouter.push('/settings/lms/new-courses' as any);
         else globalRouter.replace('/(tabs)' as any);
         return;
       }

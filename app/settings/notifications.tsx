@@ -43,6 +43,7 @@ interface ReminderPrefs {
   quiet_hours_start: string;
   quiet_hours_end: string;
   flashcards_due_push_enabled: boolean;
+  lms_pending_push_enabled: boolean;
 }
 
 const DEFAULT_PREFS: ReminderPrefs = {
@@ -54,6 +55,7 @@ const DEFAULT_PREFS: ReminderPrefs = {
   quiet_hours_start: '22:00:00',
   quiet_hours_end: '08:00:00',
   flashcards_due_push_enabled: true,
+  lms_pending_push_enabled: true,
 };
 
 function timeToDate(value: string) {
@@ -78,6 +80,8 @@ export default function NotificationSettings() {
   const qc = useQueryClient();
   const [prefs, setPrefs] = useState<ReminderPrefs>(DEFAULT_PREFS);
   const [loading, setLoading] = useState(true);
+  // null while unknown; false when migration 108 has not been applied yet.
+  const [canvasPushAvailable, setCanvasPushAvailable] = useState<boolean | null>(null);
   // OS-level permission. Without this check the toggles look functional
   // while every reminder is silently dead (scheduling no-ops when the
   // user denied or never granted notifications).
@@ -114,7 +118,29 @@ export default function NotificationSettings() {
           .select('reminder_same_day, reminder_1day, reminder_3day, quiet_hours_enabled, quiet_hours_start, quiet_hours_end, flashcards_due_push_enabled, class_reminder_minutes')
           .eq('id', userId)
           .maybeSingle();
-        if (data) setPrefs(data);
+        // Merged, not replaced: this select no longer names every field in
+        // ReminderPrefs, so the ones it omits keep their defaults.
+        if (data) setPrefs((current) => ({ ...current, ...data }));
+        // Read SEPARATELY, and never in the query above.
+        //
+        // Migration 108 has not been applied, and PostgREST answers a select
+        // naming an unknown column with 42703 — which would take the whole
+        // preferences read down with it. That failure is silent here (only
+        // `data` is destructured), so every user would open this screen to
+        // DEFAULT_PREFS: quiet hours reading off, reminders reading on, none
+        // of it theirs. Isolated, a missing column costs one toggle that does
+        // not render yet instead of everyone's settings appearing wrong.
+        const { data: canvasPref, error: canvasPrefError } = await supabase
+          .from('profiles')
+          .select('lms_pending_push_enabled')
+          .eq('id', userId)
+          .maybeSingle();
+        if (canvasPrefError) {
+          setCanvasPushAvailable(false);
+        } else {
+          setCanvasPushAvailable(true);
+          if (canvasPref) setPrefs((current) => ({ ...current, ...canvasPref }));
+        }
       } catch {
         // Network or DB error — show defaults, don't hang
       } finally {
@@ -317,7 +343,7 @@ export default function NotificationSettings() {
         qc.invalidateQueries({ queryKey: ['reminderPrefs', userId] });
         // Server-side push preference — it changes nothing about the on-device
         // task reminders, so skip the (expensive) full reschedule below.
-        if (key === 'flashcards_due_push_enabled') return;
+        if (key === 'flashcards_due_push_enabled' || key === 'lms_pending_push_enabled') return;
         // Apply the new preference to EXISTING tasks, not just future ones —
         // scheduleTaskReminders reads these prefs fresh, so a full reschedule
         // adds/removes the toggled reminder across the user's current backlog.
@@ -507,6 +533,24 @@ export default function NotificationSettings() {
             last
           />
         </View>
+
+        {/* Also server-sent (migration 108). Separate from Flashcards because it
+            is not a study nudge — it reports coursework Canvas has found and is
+            holding back, which the student is currently losing. Only reaches
+            someone who has been away for days; anyone opening the app sees the
+            Today banner instead. */}
+        {canvasPushAvailable === true && (<>
+        <Text style={[styles.sectionTitle, { color: colors.ink2, marginTop: 24 }]}>Canvas</Text>
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <ToggleRow
+            label="New Canvas courses"
+            subtitle="When Canvas finds classes you have not added yet"
+            value={prefs.lms_pending_push_enabled}
+            onToggle={() => toggle('lms_pending_push_enabled')}
+            last
+          />
+        </View>
+        </>)}
 
         <Text style={[styles.sectionTitle, { color: colors.ink2, marginTop: 24 }]}>Quiet hours</Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
