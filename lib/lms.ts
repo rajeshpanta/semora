@@ -126,33 +126,17 @@ export const LMS_PROVIDER_LABELS: Record<LmsProvider, string> = {
 
 /** Canvas exposes webcal://, while Edge fetch supports HTTPS. Keep the feed
  * secret out of logs and reject anything except Canvas's user feed path. */
-export function normalizeCanvasCalendarFeedUrl(raw: string): string {
-  let candidate = raw.trim();
-  if (!candidate) throw new Error('Paste your Canvas Calendar Feed URL.');
-  if (candidate.length > 4096) throw new Error('The Canvas Calendar Feed URL is too long.');
-  if (/^webcal:\/\//i.test(candidate)) candidate = `https://${candidate.slice(candidate.indexOf('//') + 2)}`;
-  let url: URL;
-  try {
-    url = new URL(candidate);
-  } catch {
-    throw new Error('Paste the complete Calendar Feed URL copied from Canvas.');
-  }
-  if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) {
-    throw new Error('Canvas Calendar Feed URLs must use secure HTTPS.');
-  }
-  if (/^\d{1,3}(?:\.\d{1,3}){3}$/.test(url.hostname) || url.hostname.includes(':')) {
-    throw new Error('Canvas Calendar Feed URLs must use your school’s Canvas hostname.');
-  }
-  if (!/\/feeds\/calendars\/user_[^/]+\.ics$/i.test(url.pathname)) {
-    throw new Error('This is not a Canvas user Calendar Feed URL. In Canvas, open Calendar → Calendar Feed and copy the URL shown there.');
-  }
-  url.hash = '';
-  return url.toString();
-}
-
-export function canvasCalendarOrigin(raw: string): string {
-  return new URL(normalizeCanvasCalendarFeedUrl(raw)).origin;
-}
+// Moved to lib/canvasFeedUrl.ts, which is import-free and therefore testable
+// under Deno. Re-exported here so every existing caller keeps working.
+export {
+  normalizeCanvasCalendarFeedUrl,
+  canvasCalendarOrigin,
+  describeCanvasFeedInput,
+  extractCanvasFeedCandidate,
+  CANVAS_FEED_HINTS,
+  type CanvasFeedVerdict,
+  type CanvasFeedProblem,
+} from '@/lib/canvasFeedUrl';
 
 export async function getLmsCredential(connectionId: string): Promise<LmsCredential | null> {
   return readLmsCredential(connectionId);

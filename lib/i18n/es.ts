@@ -1009,6 +1009,13 @@ export const ES: Record<string, string> = {
   'Tasks (': 'Tareas (',
   'The syllabus file is missing from storage.': 'El archivo del programa no está disponible.',
   'No connection. Reconnect to open your syllabus.': 'Sin conexión. Vuelve a conectarte para abrir tu programa.',
+  // Live feedback under the Canvas Calendar Feed field (lib/canvasFeedUrl.ts).
+  'Looks right': 'Se ve bien',
+  'That is not a link yet. Copy the whole Calendar Feed URL from Canvas.': 'Todavía no es un enlace. Copia la URL completa del Calendar Feed desde Canvas.',
+  'That is a Canvas page, not the feed. In Canvas open Calendar, then Calendar Feed.': 'Esa es una página de Canvas, no el feed. En Canvas abre Calendario y luego Calendar Feed.',
+  'Copy the Calendar Feed URL exactly as Canvas shows it.': 'Copia la URL del Calendar Feed tal como la muestra Canvas.',
+  'Use your school Canvas web address.': 'Usa la dirección web de Canvas de tu institución.',
+  'That is too long to be a Calendar Feed URL.': 'Es demasiado larga para ser una URL del Calendar Feed.',
   'This assignment is worth': 'Esta tarea vale',
   'This course couldn\'t be loaded. It may have been deleted.': 'No se pudo cargar este curso. Es posible que se haya eliminado.',
   'This semester no longer exists.': 'Este semestre ya no existe.',

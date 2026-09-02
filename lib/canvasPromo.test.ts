@@ -163,7 +163,8 @@ Deno.test('connect failures are classified, and the pasted URL never survives', 
   // server outcomes the connect screen already branches on.
   assertEquals(lmsFailureCode('Paste your Canvas Calendar Feed URL.'), 'feed_url_empty');
   assertEquals(lmsFailureCode('The Canvas Calendar Feed URL is too long.'), 'feed_url_too_long');
-  assertEquals(lmsFailureCode('Paste the complete Calendar Feed URL copied from Canvas.'), 'feed_url_wrong_page');
+  // Split: nothing-that-is-a-link vs a real Canvas URL from the wrong page.
+  assertEquals(lmsFailureCode('Paste the complete Calendar Feed URL copied from Canvas.'), 'feed_url_unparseable');
   assertEquals(
     lmsFailureCode('This is not a Canvas user Calendar Feed URL. In Canvas, open Calendar → Calendar Feed and copy the URL shown there.'),
     'feed_url_wrong_page',
@@ -186,7 +187,7 @@ Deno.test('a message quoting a live feed URL cannot leak through the code', () =
   ];
   const allowed = new Set([
     'pro_required', 'cancelled', 'feed_url_empty', 'feed_url_too_long',
-    'feed_url_wrong_page', 'feed_url_bad_host', 'network', 'other',
+    'feed_url_wrong_page', 'feed_url_unparseable', 'feed_url_bad_host', 'network', 'other',
   ]);
   for (const code of codes) {
     assert(allowed.has(code), `unexpected code: ${code}`);

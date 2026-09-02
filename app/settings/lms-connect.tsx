@@ -32,6 +32,8 @@ import {
   DiscoveredLmsCourse,
   LMS_PROVIDER_LABELS,
   normalizeCanvasCalendarFeedUrl,
+  describeCanvasFeedInput,
+  CANVAS_FEED_HINTS,
   reconnectLmsConnection,
   lmsConnectionsQuery,
   lmsFailureCode,
@@ -179,6 +181,17 @@ export default function LmsConnectScreen() {
     return baseUrl.trim().replace(/\/+$/, '');
   }, [baseUrl, isCanvasCalendar, token]);
   const connectionMethod = isCanvasCalendar ? 'calendar_feed' as const : 'legacy_token' as const;
+
+  // Say what is wrong WHILE they are looking at the field, not after Connect.
+  // The box is a masked credential field, so a student rejected on submit is
+  // sent back to text they cannot read; four of seven who reached this step on
+  // 2026-09-01 never got past it. When the paste is right this shows the
+  // hostname — the school's Canvas address is not the secret, the user_ token
+  // is, and seeing "canvas.school.edu" is how a masked field confirms itself.
+  const feedVerdict = useMemo(
+    () => (isCanvasCalendar ? describeCanvasFeedInput(token) : null),
+    [isCanvasCalendar, token],
+  );
 
   // ── The Canvas connect funnel starts here ────────────────────────────────
   //
@@ -629,6 +642,32 @@ export default function LmsConnectScreen() {
                       <FontAwesome name={showPrivateUrl ? 'eye-slash' : 'eye'} size={15} color={colors.ink3} />
                     </TouchableOpacity>
                   </View>
+                  {/* Silent until they have typed something: an error sitting
+                      under an empty box reads as a failure they already made. */}
+                  {feedVerdict && feedVerdict.state !== 'empty' && (
+                    <View style={styles.privateNote}>
+                      <FontAwesome
+                        name={feedVerdict.state === 'ok' ? 'check-circle' : 'exclamation-circle'}
+                        size={12}
+                        color={feedVerdict.state === 'ok' ? colors.teal : colors.ink2}
+                      />
+                      <Text
+                        style={[
+                          styles.privateNoteText,
+                          { color: feedVerdict.state === 'ok' ? colors.teal : colors.ink2 },
+                        ]}
+                      >
+                        {/* t() explicitly: a string built by interpolation can
+                            never match a catalogue key, so the translatable
+                            half is resolved before the hostname is appended.
+                            The hints below are plain values and <Text> localizes
+                            those on their own. */}
+                        {feedVerdict.state === 'ok'
+                          ? `${t('Looks right')} — ${feedVerdict.host}`
+                          : CANVAS_FEED_HINTS[feedVerdict.code]}
+                      </Text>
+                    </View>
+                  )}
                   <View style={styles.privateNote}>
                     <FontAwesome name="lock" size={12} color={colors.ink3} />
                     <Text style={[styles.privateNoteText, { color: colors.ink3 }]}>Treat this link like a password. Semora encrypts it and never displays it after setup.</Text>

@@ -72,7 +72,13 @@ export function lmsFailureCode(message: string): string {
   // copied out of the wrong Canvas page.
   if (/paste your canvas calendar feed url/.test(text)) return 'feed_url_empty';
   if (/too long/.test(text)) return 'feed_url_too_long';
-  if (/complete calendar feed url|not a canvas user calendar feed/.test(text)) return 'feed_url_wrong_page';
+  // Split, because these two called for opposite help and were being counted
+  // as one thing. `feed_url_unparseable` is "there is no link in what you
+  // pasted"; `feed_url_wrong_page` is "that is a real Canvas URL, from the
+  // wrong page". Merged, they said only "the paste was bad" — which is the
+  // question, not the answer.
+  if (/complete calendar feed url/.test(text)) return 'feed_url_unparseable';
+  if (/not a canvas user calendar feed/.test(text)) return 'feed_url_wrong_page';
   if (/secure https|canvas hostname/.test(text)) return 'feed_url_bad_host';
   if (/network|fetch|timed? ?out|connection/.test(text)) return 'network';
   return 'other';
