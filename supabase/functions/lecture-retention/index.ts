@@ -91,10 +91,12 @@ serve(withRequestLogging('lecture-retention', async (req, log) => {
     return jsonResponse({ error: 'query failed' }, 503);
   }
 
+  // Deliberately NO early return on an empty candidate list. The orphan sweep
+  // below is a SEPARATE question — audio with no row at all — and the steady
+  // state of a healthy system is exactly "nothing to transcribe-collect, but
+  // maybe an orphan". An early return here meant the orphan pass only ever ran
+  // on ticks that already had other work, which is to say almost never.
   const candidates = (rows ?? []) as { lecture_id: string; paths: string[] }[];
-  if (candidates.length === 0) {
-    return jsonResponse({ ok: true, lectures: 0, objects: 0 }, 200);
-  }
 
   let objectsDeleted = 0;
   let lecturesCleared = 0;
@@ -153,9 +155,43 @@ serve(withRequestLogging('lecture-retention', async (req, log) => {
     }
   }
 
+  // ── Audio nothing points at (118) ────────────────────────────────────────
+  // Everything above is found THROUGH a segment row, so the one class it
+  // cannot reach is audio whose row is gone — which is also the class that
+  // lasts longest, because nothing else can reach it either. Deleting a
+  // lecture cascades its segments away, taking the only pointer with them, and
+  // purgeLectureAudio swallows a failed storage delete before that happens.
+  //
+  // Safe because uploadSegment writes the row BEFORE the object, so "no row"
+  // can only mean the row was deleted, never that an upload is in flight.
+  let orphansDeleted = 0;
+  const { data: orphanRows, error: orphanErr } = await admin.rpc('lecture_orphaned_audio', {
+    p_limit: MAX_PATHS_PER_CALL * 2,
+  });
+  if (orphanErr) {
+    log.error('orphan_query_failed', errorFields(orphanErr));
+    failures += 1;
+  } else {
+    const orphanPaths = ((orphanRows ?? []) as { path: string }[])
+      .map((r) => r.path)
+      .filter((p) => typeof p === 'string' && p.length > 0);
+
+    for (let i = 0; i < orphanPaths.length; i += MAX_PATHS_PER_CALL) {
+      const batch = orphanPaths.slice(i, i + MAX_PATHS_PER_CALL);
+      const { error } = await admin.storage.from('lectures').remove(batch);
+      if (error) {
+        log.warn('orphan_delete_failed', errorFields(error));
+        failures += 1;
+        break;
+      }
+      orphansDeleted += batch.length;
+    }
+  }
+
   log.info('retention_swept', {
     lectures: candidates.length,
     objects_deleted: objectsDeleted,
+    orphans_deleted: orphansDeleted,
     lectures_cleared: lecturesCleared,
     failures,
   });
@@ -164,6 +200,7 @@ serve(withRequestLogging('lecture-retention', async (req, log) => {
     ok: true,
     lectures: candidates.length,
     objects: objectsDeleted,
+    orphans: orphansDeleted,
     cleared: lecturesCleared,
     failures,
   }, 200);

@@ -57,7 +57,8 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
   `read_lecture_cron_secret`, `request_pending_lecture_notes`, `alert_lecture_notes_stuck` (109),
   `release_finished_lecture_reservations` (111), `notify_lecture_notes_ready` (112),
   `resync_lecture_transcripts` (115-116),
-  `lecture_audio_awaiting_deletion`, `alert_lecture_audio_retained` (117)
+  `lecture_audio_awaiting_deletion`, `alert_lecture_audio_retained` (117),
+  `lecture_orphaned_audio` (118)
 - **Citizen:** `whisper_rate_limit_ok` ← DO NOT modify from Semora
 
 ## Edge functions
@@ -66,8 +67,8 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
   `submit-support` (deploy `--no-verify-jwt`),
   `lecture-transcribe`, `lecture-study-kit` (065; deploy `--no-verify-jwt` since 109 —
   the unattended notes job posts to it with a shared secret and no Authorization header),
-  `lecture-retention` (117, deploy `--no-verify-jwt` — deletes lecture audio whose
-  transcript is already written, on a 20-minute schedule)
+  `lecture-retention` (117-118, deploy `--no-verify-jwt` — deletes lecture audio whose
+  transcript is already written, plus objects no segment row points at, every 20 minutes)
 
 ## Lecture recording (migration 065) — **SEMORA only**
 - `lecture_recordings` / `lecture_segments` — owner-only RLS, realtime enabled.
