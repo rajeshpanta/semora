@@ -86,6 +86,8 @@ type StorageRead = {
   at: number;
   expected: number | null;
   found: number | null;
+  /** Sanitised description of a throw; null for every non-throwing outcome. */
+  code: string | null;
 };
 
 type UnauthWindow = {
@@ -200,15 +202,77 @@ export function isDegradedRead(outcome: StorageReadOutcome): boolean {
   return outcome === 'partial' || outcome === 'bad_manifest' || outcome === 'error';
 }
 
+/** Longest description ever emitted. Codes are short; anything longer is noise. */
+const MAX_ERROR_CODE_CHARS = 48;
+
+/**
+ * A safe, comparable description of WHY a keychain read threw.
+ *
+ * `outcome: 'error'` says the read failed and stops there, which is one
+ * question short of actionable. On 2026-09-02 a device spent 5m40s
+ * unauthenticated with a session that was intact the whole time — it read back
+ * `hit_chunked` 2/2 the moment it recovered — and made ZERO refresh attempts,
+ * so the failure was unambiguously the store rather than the network or an
+ * expiry. What it could not say is why the store refused, and that single
+ * unknown is the difference between a one-line fix and a guess.
+ *
+ * The suspicion is the keychain accessibility class. Session items are written
+ * with expo-secure-store's default, `kSecAttrAccessibleWhenUnlocked`, and
+ * Semora is the rare app that deliberately runs while the screen is off —
+ * background audio keeps a lecture recording. iOS answers a read of a
+ * WHEN_UNLOCKED item on a locked device with errSecInteractionNotAllowed,
+ * OSStatus **-25308**, which is exactly the shape observed: sustained for
+ * minutes, then resolving cleanly on its own.
+ *
+ * If -25308 is what comes back, the fix is one option on the write and the
+ * evidence is closed. If it is something else, a store build would have been
+ * spent on the wrong theory. Hence measuring first.
+ *
+ * ─── WHAT IS DELIBERATELY NOT KEPT ───
+ * Never the message. A keychain error can name the key it was reading, and
+ * these keys are named after the Supabase project and the auth token. So this
+ * takes only a declared `code`, plus any negative integer in the message —
+ * which is what an OSStatus looks like and cannot be anything else — and
+ * discards the rest. The result is filtered to a conservative character set so
+ * no stray text can ride along even if a future runtime changes shape.
+ */
+export function describeStorageError(err: unknown): string | null {
+  if (err === null || err === undefined) return null;
+
+  const parts: string[] = [];
+
+  const code = (err as { code?: unknown }).code;
+  if (typeof code === 'string' && code.length > 0) parts.push(code);
+  else if (typeof code === 'number' && Number.isFinite(code)) parts.push(String(code));
+
+  // OSStatus, and only OSStatus: a negative integer standing on its own. The
+  // message itself never travels.
+  const message = (err as { message?: unknown }).message;
+  if (typeof message === 'string') {
+    const status = message.match(/-\d{3,6}\b/);
+    if (status && !parts.includes(status[0])) parts.push(status[0]);
+  }
+
+  if (parts.length === 0) {
+    const name = (err as { name?: unknown }).name;
+    if (typeof name === 'string' && name.length > 0) parts.push(name);
+  }
+  if (parts.length === 0) return null;
+
+  const joined = parts.join('/').replace(/[^A-Za-z0-9_.:/-]/g, '');
+  return joined.length === 0 ? null : joined.slice(0, MAX_ERROR_CODE_CHARS);
+}
+
 // ─── Recorders (memory only, safe on the per-request path) ──────────────────
 
 export function recordStorageRead(
   outcome: StorageReadOutcome,
   expected: number | null = null,
   found: number | null = null,
+  code: string | null = null,
 ): void {
   const at = clock();
-  state.lastStorageRead = { outcome, at, expected, found };
+  state.lastStorageRead = { outcome, at, expected, found, code };
   if (!isDegradedRead(outcome)) return;
 
   // A degraded read is worth saying out loud even when the app has already
@@ -225,6 +289,8 @@ export function recordStorageRead(
     outcome,
     chunks_expected: expected,
     chunks_found: found,
+    // The field this event existed without: WHY the store refused.
+    error_code: code,
     phase: state.phase,
     ms_since_phase: at - state.phaseAt,
     believes_signed_in: state.believesSignedIn,
@@ -300,6 +366,7 @@ function windowProps(now: number): DiagnosticProps {
     storage_outcome: read?.outcome ?? null,
     storage_chunks_expected: read?.expected ?? null,
     storage_chunks_found: read?.found ?? null,
+    storage_error_code: read?.code ?? null,
     ms_since_storage_read: read ? now - read.at : null,
     storage_write_failures: state.storageWriteFailures,
     refresh_attempts: w?.refreshAttempts ?? 0,

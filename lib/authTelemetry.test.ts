@@ -10,6 +10,7 @@
 import { assertEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
   classifyRequest,
+  describeStorageError,
   isAnonAuthorization,
   isDegradedRead,
   noteProtectedRequest,
@@ -372,4 +373,54 @@ Deno.test('a sink that throws cannot break the path it reports on', () => {
   noteProtectedRequest(true); // must not throw
   noteProtectedRequest(false);
   recordStorageRead('partial', 3, 1);
+});
+
+
+// ─── describeStorageError: the field that turns inference into measurement ───
+
+Deno.test('the iOS locked-keychain status survives intact', () => {
+  // errSecInteractionNotAllowed. This exact value is what decides whether the
+  // keychain accessibility class is the cause, so it must arrive unmangled.
+  const err = Object.assign(new Error('The user name or passphrase you entered is not correct. (-25308)'), {
+    code: 'ERR_SECURE_STORE_READ',
+  });
+  const out = describeStorageError(err);
+  assert(out !== null);
+  assert(out!.includes('-25308'), `expected the OSStatus, got ${out}`);
+  assert(out!.includes('ERR_SECURE_STORE_READ'));
+});
+
+Deno.test('the message itself NEVER travels', () => {
+  // A keychain error can name the key it was reading, and these keys are named
+  // after the Supabase project and the auth token. Only a code and an OSStatus
+  // may leave this function.
+  const err = Object.assign(
+    new Error('failed reading sb-usglgeosqhtxbyxsugre-auth-token.chunk.1 for user hunter@example.edu (-25308)'),
+    { code: 'ERR_X' },
+  );
+  const out = describeStorageError(err) ?? '';
+  assert(!out.includes('sb-'), out);
+  assert(!out.includes('auth-token'), out);
+  assert(!out.includes('@'), out);
+  assert(!out.includes('hunter'), out);
+  assertEquals(out, 'ERR_X/-25308');
+});
+
+Deno.test('a bare throw still yields something comparable', () => {
+  assertEquals(describeStorageError(new Error('boom')), 'Error');
+  assertEquals(describeStorageError({ code: 'ERR_ONLY' }), 'ERR_ONLY');
+  assertEquals(describeStorageError({ code: -25308 }), '-25308');
+});
+
+Deno.test('nothing to say returns null rather than a placeholder', () => {
+  for (const junk of [null, undefined, {}, 'a string', 42]) {
+    assertEquals(describeStorageError(junk), null);
+  }
+});
+
+Deno.test('the description is bounded and character-filtered', () => {
+  const err = Object.assign(new Error('x'), { code: 'A'.repeat(200) + ' <script> ;drop' });
+  const out = describeStorageError(err) ?? '';
+  assert(out.length <= 48, `length ${out.length}`);
+  assert(!/[<>; ]/.test(out), out);
 });

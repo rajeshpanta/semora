@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import {
   classifyRequest,
+  describeStorageError,
   isAnonAuthorization,
   noteProtectedRequest,
   recordRefreshAttempt,
@@ -78,8 +79,16 @@ const secureStorage = {
       }
       recordStorageRead('hit_chunked', count, count);
       return out;
-    } catch {
-      recordStorageRead('error');
+    } catch (err) {
+      // The throw itself was the one thing this path never kept. `outcome:
+      // 'error'` proved the store refused and could not say why, which on
+      // 2026-09-02 left a 5m40s unauthenticated window — session intact, token
+      // unexpired, zero refresh attempts — diagnosed only by inference.
+      //
+      // describeStorageError keeps a code and any OSStatus and nothing else;
+      // the message never travels, because a keychain error can name the key it
+      // was reading and these keys are named after the auth token.
+      recordStorageRead('error', null, null, describeStorageError(err));
       return null;
     }
   },
