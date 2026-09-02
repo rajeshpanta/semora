@@ -7,6 +7,7 @@ import {
   type SyllabusPage,
 } from '@/lib/ai-extraction';
 import { getFileSize, readFileAsBase64 } from '@/lib/readFileBase64';
+import { userScopedStorageKey } from '@/lib/storageKey';
 import { isMeetingSyncEnabled, syncMeetingToCalendar } from '@/lib/calendarSync';
 import type { CourseMeeting } from '@/types/database';
 import { COURSE_COLORS, COURSE_ICONS, DEFAULT_GRADE_SCALE } from '@/lib/constants';
@@ -302,9 +303,17 @@ export async function processSyllabus(
   // 4. Create upload record. A pasted-text scan has no real file — its
   // "file" is the pasted text itself, stored as a .txt blob below, so every
   // syllabus_uploads row still points at something real.
+  //
+  // The key is sanitised; `file_name` below keeps what the student actually
+  // chose, which is what the course screen shows them. Storage rejects keys
+  // containing `> | [ ]` or non-ASCII marks, and the upload at step 5 is
+  // deliberately non-critical — so an unsanitised key never failed the scan,
+  // it just left this row pointing at a file that was never written. Concourse
+  // exports every syllabus as `Course > Syllabus | Concourse.pdf`, so that was
+  // not a rare shape. See lib/storageKey.ts.
   const storagePath = pastedText != null
     ? `${userId}/${Date.now()}_pasted-syllabus.txt`
-    : `${userId}/${Date.now()}_${fileName}`;
+    : userScopedStorageKey(userId, fileName, Date.now());
   const { data: upload, error: uploadError } = await supabase
     .from('syllabus_uploads')
     .insert({

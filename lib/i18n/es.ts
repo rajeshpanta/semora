@@ -1008,6 +1008,7 @@ export const ES: Record<string, string> = {
   'Task unavailable': 'Tarea no disponible',
   'Tasks (': 'Tareas (',
   'The syllabus file is missing from storage.': 'El archivo del programa no está disponible.',
+  'No connection. Reconnect to open your syllabus.': 'Sin conexión. Vuelve a conectarte para abrir tu programa.',
   'This assignment is worth': 'Esta tarea vale',
   'This course couldn\'t be loaded. It may have been deleted.': 'No se pudo cargar este curso. Es posible que se haya eliminado.',
   'This semester no longer exists.': 'Este semestre ya no existe.',

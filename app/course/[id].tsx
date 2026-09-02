@@ -23,6 +23,7 @@ import {
   useCreateCourseOfficeHours, useUpdateCourseOfficeHours, useDeleteCourseOfficeHours,
   useLatestSyllabus, useGradeCategories,
 } from '@/lib/queries';
+import { isNetworkFailure } from '@/lib/offlineSync';
 import { TaskItem } from '@/components/TaskItem';
 import { FinalExamWhatIfCard, GradeCard, WhatIfCard } from '@/components/GradeCard';
 import { ScheduleEditor, type ScheduleBlock, isNewBlock } from '@/components/ScheduleEditor';
@@ -458,9 +459,23 @@ export default function CourseDetailScreen() {
       const { data, error } = await supabase.storage
         .from('syllabi')
         .createSignedUrl(syllabus.storage_path, 60);
-      if (error) throw error;
-      if (!data?.signedUrl) {
-        Alert.alert('Cannot open', 'The syllabus file is missing from storage.');
+      // Rows written before the storage key was sanitised point at objects
+      // that were never created, and signing one of those keys fails with a
+      // raw "Invalid key" — which reached the student as an error dialog full
+      // of our vocabulary rather than an explanation.
+      //
+      // But a signing error is NOT proof the file is gone. Offline, the same
+      // call fails with "Network request failed", and answering that with "the
+      // file is missing from storage" would invent a data-loss story about a
+      // syllabus that is sitting safely in the bucket. Only a non-network
+      // failure is evidence about the file.
+      if (error || !data?.signedUrl) {
+        Alert.alert(
+          'Cannot open',
+          isNetworkFailure(error)
+            ? 'No connection. Reconnect to open your syllabus.'
+            : 'The syllabus file is missing from storage.',
+        );
         return;
       }
       await Linking.openURL(data.signedUrl);
