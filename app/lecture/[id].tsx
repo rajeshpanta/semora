@@ -129,8 +129,35 @@ function NotesBody({
  * Both notes and quiz generation are synchronous edge invocations; if the
  * isolate is killed mid-flight the row keeps its "in progress" marker forever.
  * Without an expiry the screen spins and the retry button never renders.
+ *
+ * ─── WHY 170 SECONDS AND NOT THE 4 MINUTES THIS USED TO BE ───
+ * 4 minutes was a guess made before anyone knew how long an invocation can
+ * actually live. It can live 150 seconds. Across all 315 model calls ever
+ * logged, the slowest is 148,552 ms and NOT ONE has crossed 150,000 — the
+ * shape of a hard platform ceiling rather than a model that occasionally runs
+ * long. The 148.5s one is the call that died: it finished, and the isolate was
+ * killed before it could save.
+ *
+ * So past ~150 seconds from the claim there is nothing alive on the other end,
+ * and every second the old threshold kept spinning after that was a second the
+ * student waited for a result that could no longer arrive — 90 of them.
+ *
+ * 170 leaves ~20 seconds of margin over the ceiling, for the second or two
+ * between the request starting and notes_started_at being stamped, for the
+ * 4-second poll granularity, and for ordinary clock skew between a phone and
+ * the server. Tighter than that and a device running fast could offer "Try
+ * again" while the server is still working, which costs a duplicate model call.
+ *
+ * ─── STILL SAFELY AHEAD OF THE SERVER ───
+ * sweep_stalled_lectures resets an abandoned claim at 4 minutes (migration
+ * 107). 082's rule is that the server must never act before the client has
+ * given up, and 107 satisfied it by matching this constant exactly. Lowering
+ * this to 170s keeps the rule — the sweep now trails the client by 70 seconds
+ * instead of arriving at the same moment. 107's comment naming this constant
+ * as "4 minutes" is stale as of this change; the ORDER is what mattered, and
+ * the order is unchanged.
  */
-const STALE_GENERATION_MS = 4 * 60 * 1000;
+const STALE_GENERATION_MS = 170 * 1000;
 // Longer than STALE_GENERATION_MS because transcription is genuinely slower
 // and arrives in pieces: updated_at moves as each segment lands, so this only
 // elapses when nothing at all has progressed. Long enough that a slow upload
