@@ -48,6 +48,7 @@ import { useAppStore } from '@/store/appStore';
 import { ThemeColorsProvider, useResolvedScheme, useColors } from '@/lib/theme';
 import { claimAuthCode, setQueryClient, signOut } from '@/lib/auth';
 import { loadLastServerRead, trackServerReads } from '@/lib/dataFreshness';
+import { isServerPush, resolvePushRoute } from '@/lib/pushRouting';
 import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateAfterPurchase, setupPurchaseListeners } from '@/lib/purchases';
 import {
   COMPLETE_TASK_ACTION, SNOOZE_TASK_ACTION, cancelAllRemindersOnSignOut,
@@ -1018,14 +1019,37 @@ function NotificationActionBridge() {
       // they have to be routed BEFORE the taskId guard below — which would
       // otherwise drop them silently, as it has been doing for the weekly
       // digest since that job shipped.
-      const pushType = response.notification.request.content.data?.type;
-      if (typeof pushType === 'string') {
-        if (pushType === 'flashcards_due') globalRouter.push('/flashcards' as any);
-        // Sent by migration 108 to students who have drifted away while Canvas
-        // holds courses back. Land them on the screen that resolves it, not in
-        // Settings to go looking for it.
-        if (pushType === 'lms_new_courses') globalRouter.push('/settings/lms/new-courses' as any);
-        else globalRouter.replace('/(tabs)' as any);
+      //
+      // The destinations themselves live in lib/pushRouting, not here. They
+      // used to be a chain of ifs in this spot, and adding one in the middle
+      // detached the fallback from flashcards_due and sent every tap on it
+      // home — live, over the air, for 13 hours. A table cannot break that way
+      // and, out there, it has tests.
+      const pushData = response.notification.request.content.data ?? {};
+      if (isServerPush(pushData)) {
+        const route = resolvePushRoute(pushData);
+
+        // Server pushes have never been measured. This branch returns before
+        // the reminder tracking further down, so from the day the first cron
+        // push shipped there has been no way to answer "does anyone tap these,
+        // and do they land where we promised" — which is exactly why the
+        // flashcards deep link could break and stay broken.
+        //
+        // `routed: false` on a type that has a destination is the signal that
+        // matters: it means a build is receiving a push it does not understand,
+        // which is what a missing table row and a server running ahead of the
+        // app both look like from here.
+        //
+        // The type and whether it routed, and nothing else. No lecture id, no
+        // task, no title — the same rule the reminder event below follows.
+        track('push_notification_tapped', {
+          screen: 'notification',
+          push_type: route.type,
+          routed: route.known,
+        });
+
+        if (route.mode === 'push') globalRouter.push(route.path as any);
+        else globalRouter.replace(route.path as any);
         return;
       }
 
