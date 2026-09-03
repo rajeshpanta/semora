@@ -234,12 +234,12 @@ export default function LmsConnectScreen() {
       lane: reconnecting ? 'repair' : 'connect',
     };
     if (lmsAllowed) {
-      track('lms_connect_opened', { ...facts, step: 'opened' });
+      track('lms_connect_opened', { ...facts, funnel_step: 'opened' });
     } else {
       // The arrival still happened and is still worth counting — it is just
       // not the same thing. Kept as a separate name so no existing query
       // silently changes meaning.
-      track('lms_connect_blocked', { ...facts, step: 'opened', blocked: 'not_entitled' });
+      track('lms_connect_blocked', { ...facts, funnel_step: 'opened', blocked: 'not_entitled' });
     }
   }, [gateResolved, lmsAllowed, provider, connectionMethod, source, reconnecting]);
 
@@ -299,7 +299,7 @@ export default function LmsConnectScreen() {
       // different outcome, and the one the alert below explains.
       track('lms_discover_succeeded', {
         lane: reconnecting ? 'repair' : 'connect',
-        step: 'discovered',
+        funnel_step: 'discovered',
         screen: 'lms_connect',
         provider,
         method: connectionMethod,
@@ -340,7 +340,7 @@ export default function LmsConnectScreen() {
       // nothing that could authenticate as anyone.
       track('lms_discover_failed', {
         lane: reconnecting ? 'repair' : 'connect',
-        step: 'discovered',
+        funnel_step: 'discovered',
         screen: 'lms_connect',
         provider,
         method: connectionMethod,
@@ -436,7 +436,7 @@ export default function LmsConnectScreen() {
     // different products, and the counts alone tell them apart.
     track('lms_courses_selected', {
       lane: reconnecting ? 'repair' : 'connect',
-      step: 'chosen',
+      funnel_step: 'chosen',
       screen: 'lms_connect',
       provider,
       method: connectionMethod,
@@ -468,7 +468,7 @@ export default function LmsConnectScreen() {
       // difference decides whether this experiment actually helped anybody.
       track('lms_connect_completed', {
         lane: reconnecting ? 'repair' : 'connect',
-        step: 'connected',
+        funnel_step: 'connected',
         screen: 'lms_connect',
         provider,
         method: connectionMethod,
@@ -488,7 +488,7 @@ export default function LmsConnectScreen() {
     } catch (error) {
       track('lms_connect_failed', {
         lane: reconnecting ? 'repair' : 'connect',
-        step: 'connected',
+        funnel_step: 'connected',
         screen: 'lms_connect',
         provider,
         method: connectionMethod,

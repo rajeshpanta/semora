@@ -93,7 +93,7 @@ export default function NewCanvasCourses() {
     if (viewFired.current || !rows.length) return;
     viewFired.current = true;
     track('lms_new_courses_viewed', {
-      screen: 'lms_new_courses', count: rows.length, source, lane: 'expand', step: 'opened',
+      screen: 'lms_new_courses', count: rows.length, source, lane: 'expand', funnel_step: 'opened',
     });
   }, [rows.length, source]);
 
@@ -123,7 +123,7 @@ export default function NewCanvasCourses() {
       // hour for the deadlines to appear would read as a failure.
       const result = await syncLmsConnection(connectionId, 'manual');
       track('lms_new_courses_imported', {
-        screen: 'lms_new_courses', count: created, source, lane: 'expand', step: 'connected',
+        screen: 'lms_new_courses', count: created, source, lane: 'expand', funnel_step: 'connected',
       });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: pendingLmsCoursesQuery.queryKey }),

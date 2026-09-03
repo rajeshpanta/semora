@@ -58,6 +58,49 @@ export function canvasLaneFor(offer: CanvasOffer): CanvasLane {
   return 'connect';
 }
 
+export interface CanvasOfferFacts {
+  /** Where it is rendered. Matches the existing canvas_offer_tapped values. */
+  screen: string;
+  offer: CanvasOffer;
+  free: boolean;
+  /** Attribution for everything downstream. Always pass it. */
+  source: string;
+}
+
+/**
+ * The exact shape every Canvas funnel event goes out with.
+ *
+ * ─── WHY THE KEY IS `funnel_step` AND NOT `step` ────────────
+ * `step` was already taken. onboarding_step has carried a `step` property on
+ * 3,416 events since long before this existed, with the values 0-5 and
+ * 'complete'. Two different funnels answering to one property name is the kind
+ * of thing that is harmless right up until someone writes
+ * `group by properties->>'step'` and gets a chart blending onboarding progress
+ * with Canvas conversion — a result that looks plausible and is nonsense.
+ *
+ * It was caught before a single event had been emitted, so nothing had to be
+ * migrated. `lane` is left alone: it is unique, and it is what scopes a query
+ * to this funnel.
+ *
+ * Lives here, in the pure half, so the wire contract is covered by a test
+ * rather than by whoever remembers. That is the whole lesson of the collision.
+ */
+export function canvasFunnelPayload(
+  facts: CanvasOfferFacts,
+  step: CanvasStep,
+  extra?: Record<string, any>,
+) {
+  return {
+    screen: facts.screen,
+    offer: facts.offer,
+    free: facts.free,
+    source: facts.source,
+    lane: canvasLaneFor(facts.offer),
+    funnel_step: step,
+    ...extra,
+  };
+}
+
 // ── Where a tap actually goes ───────────────────────────────
 //
 // THE ROUTING LOSS. Every Canvas CTA sent the student to /settings/lms — the

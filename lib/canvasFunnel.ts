@@ -1,7 +1,7 @@
 import { track, peekSessionId } from '@/lib/analytics';
-import { canvasLaneFor } from '@/lib/canvasLanes';
-import type { CanvasOffer } from '@/lib/canvasPromo';
-import type { CanvasStep } from '@/lib/canvasLanes';
+import type { CanvasOfferFacts } from '@/lib/canvasLanes';
+import { canvasFunnelPayload } from '@/lib/canvasLanes';
+
 
 /**
  * Emission for the Canvas funnel. The decisions it reports — which lane an
@@ -11,30 +11,9 @@ import type { CanvasStep } from '@/lib/canvasLanes';
  * Re-exported below so a surface imports one module, not two.
  */
 export {
-  CANVAS_LANES, CANVAS_STEPS, canvasLaneFor, canvasOfferDestination,
+  CANVAS_LANES, CANVAS_STEPS, canvasLaneFor, canvasOfferDestination, canvasFunnelPayload,
 } from '@/lib/canvasLanes';
-export type { CanvasLane, CanvasStep, CanvasDestination } from '@/lib/canvasLanes';
-
-export interface CanvasOfferFacts {
-  /** Where it is rendered. Matches the existing canvas_offer_tapped values. */
-  screen: string;
-  offer: CanvasOffer;
-  free: boolean;
-  /** Attribution for everything downstream. Always pass it. */
-  source: string;
-}
-
-function payload(facts: CanvasOfferFacts, step: CanvasStep, extra?: Record<string, any>) {
-  return {
-    screen: facts.screen,
-    offer: facts.offer,
-    free: facts.free,
-    source: facts.source,
-    lane: canvasLaneFor(facts.offer),
-    step,
-    ...extra,
-  };
-}
+export type { CanvasLane, CanvasStep, CanvasDestination, CanvasOfferFacts } from '@/lib/canvasLanes';
 
 // ── Impression de-duplication ───────────────────────────────
 //
@@ -67,7 +46,7 @@ export function trackCanvasOfferShown(facts: CanvasOfferFacts): void {
   const key = `${facts.screen}:${facts.offer}`;
   if (seenThisSession.has(key)) return;
   seenThisSession.add(key);
-  track('canvas_offer_shown', payload(facts, 'shown'));
+  track('canvas_offer_shown', canvasFunnelPayload(facts, 'shown'));
 }
 
 /** Test seam. Never call this from app code. */
@@ -77,6 +56,6 @@ export function resetCanvasImpressionsForTest(): void {
 }
 
 export function trackCanvasOfferTapped(facts: CanvasOfferFacts, extra?: Record<string, any>): void {
-  track('canvas_offer_tapped', payload(facts, 'tapped', extra));
+  track('canvas_offer_tapped', canvasFunnelPayload(facts, 'tapped', extra));
 }
 
