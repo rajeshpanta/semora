@@ -93,8 +93,8 @@ export default function CanvasDeadlineTrackerPage() {
 
       <h1>A Canvas Deadline Tracker App That Adds Grades, Reminders, and an Actual Study Plan</h1>
       <p className={styles.lede}>
-        Semora is a Canvas deadline tracker app with a token-based Canvas connector on Pro. Some
-        institutions disable or prohibit third-party token use, so confirm your school&apos;s policy.
+        Semora is a Canvas deadline tracker app. Canvas import is free on every plan and connects with
+        the private Calendar Feed link Canvas already gives you — no access token, no school approval.
         Semora layers grade tracking, same-day reminders, and an AI-generated study schedule on top
         of your assignments across iPhone, iPad, and web.
       </p>
@@ -166,11 +166,12 @@ export default function CanvasDeadlineTrackerPage() {
 
       <h2>How Canvas sync works</h2>
       <p>
-        Canvas, Blackboard and Moodle import is free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Generated
-        in Canvas. Some institutions disable or prohibit third-party token use, so confirm your
-        school&apos;s policy before connecting. When it is permitted, you can choose courses and bring
-        their assignments into Semora. Otherwise, scan the syllabus or paste the Canvas assignment
-        list into the scanner.
+        Canvas, Blackboard and Moodle import is free on every plan. Connecting Canvas takes one
+        step: copy the private Calendar Feed link Canvas already gives you, under Calendar then
+        Calendar Feed, and paste it in. There is no access token to generate and nothing for your
+        school to approve. You then choose which courses to bring into Semora. If you would rather
+        not connect Canvas at all, scan the syllabus or paste the Canvas assignment list into the
+        scanner instead.
       </p>
       <p>
         Canvas sync covers your assignments. Semora adds a syllabus-derived view alongside it,
@@ -208,7 +209,7 @@ export default function CanvasDeadlineTrackerPage() {
       <p>
         Semora is built specifically around a syllabus and a Canvas course, not a generic task list:
         it imports the whole structure at once (course, instructor, meeting times, grading scale,
-        and every deadline) from either a syllabus or the token-based Canvas connector when permitted,
+        and every deadline) from either a syllabus or the Canvas Calendar Feed link,
         then tracks grades and workload against that structure automatically.
       </p>
 

@@ -97,7 +97,7 @@ export const COMPETITORS: CompetitorFact[] = [
       'You want Progress Insights (trend charts and CSV export) layered on top of your grade tracking.',
       'You want an AI-generated study schedule (Smart Plan) or a workload dashboard that flags crunch weeks and exam-heavy stretches.',
       "You'd use flashcards, a Pomodoro-style focus timer, or an AI tutor chat that already knows your syllabus.",
-      'You want Pro Canvas import through the current token connector, your institution permits it, and syllabus scanning or pasted assignment text as the fallback.',
+      'You want free Canvas import from the private Calendar Feed link Canvas already gives you, with syllabus scanning or pasted assignment text as the fallback.',
       'You want to share a course with classmates (Course Spaces) with deadlines and group assignments syncing in real time.',
     ],
     whereCompetitorFits: [
@@ -231,7 +231,7 @@ export const COMPETITORS: CompetitorFact[] = [
       'You want a genuinely free planner for one semester (unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand, unlimited tasks and deadlines, and grade tracking that never expires, plus one AI action to try the syllabus scanning) rather than a subscription-gated planner.',
       'You want grade tracking as a first-class feature, not a scheduling tool with no gradebook.',
       'You want to share a course with classmates via Course Spaces, with deadlines and group assignments syncing in real time.',
-      'You want Pro Canvas import through the current token connector, your institution permits it, and syllabus scanning or pasted assignment text as the fallback.',
+      'You want free Canvas import from the private Calendar Feed link Canvas already gives you, with syllabus scanning or pasted assignment text as the fallback.',
     ],
     whereCompetitorFits: [
       'You want time-blocked scheduling — weighing available time against estimated time-per-task — as the core product, not an add-on.',
@@ -438,7 +438,7 @@ export const COMPETITORS: CompetitorFact[] = [
     whereSemoraFits: [
       'Want your syllabus turned into a calendar of deadlines automatically, instead of copying dates by hand',
       'Want grades, assignments, and class schedule tracked in one place all semester',
-      'Want Pro Canvas import through the current token connector, your institution permits it, and syllabus scanning or pasted assignment text as the fallback',
+      'Want free Canvas import from the private Calendar Feed link Canvas already gives you, with syllabus scanning or pasted assignment text as the fallback',
       'Want an AI-generated study schedule that adapts as deadlines change',
       'Want to share a course and its deadlines with classmates',
     ],
@@ -536,7 +536,7 @@ export const COMPETITORS: CompetitorFact[] = [
       "Semora Pro is $3.99/month or $19.99/year. Taskade's own pricing page lists Pro at $10/month billed annually (about $120/year), though Taskade is priced and built for teams, not individual students, so the two aren't a direct apples-to-apples comparison.",
     whereSemoraFits: [
       'You want deadlines and grades populated automatically from a syllabus photo or PDF instead of typing them in by hand.',
-      'You want Pro Canvas import through the current token connector, your institution permits it, and syllabus scanning or pasted assignment text as the fallback.',
+      'You want free Canvas import from the private Calendar Feed link Canvas already gives you, with syllabus scanning or pasted assignment text as the fallback.',
       'You want study tools built specifically around your own material — flashcards from your syllabus, a Pomodoro timer, an AI tutor that already knows your assignments, and alerts when a grade slips or a week is overloaded.',
       'You want to split a course with classmates — Course Spaces lets you share a course via an invite link with deadlines and group assignments syncing in real time.',
       'You move between an iPhone, an iPad, and a browser and want one account that stays in sync in near real time.',
@@ -631,7 +631,7 @@ export const COMPETITORS: CompetitorFact[] = [
     whereSemoraFits: [
       'Want your syllabus turned into a calendar of deadlines automatically, instead of typing them in by hand',
       'Want grades, assignments, and class schedule tracked in one place all semester, included free',
-      'Want Pro Canvas import through the current token connector, your institution permits it, and syllabus scanning or pasted assignment text as the fallback',
+      'Want free Canvas import from the private Calendar Feed link Canvas already gives you, with syllabus scanning or pasted assignment text as the fallback',
       'Want an AI-generated study schedule that adapts as deadlines change',
     ],
     whereCompetitorFits: [
@@ -725,7 +725,7 @@ export const COMPETITORS: CompetitorFact[] = [
     whereSemoraFits: [
       'Want deadlines and grades extracted automatically from a syllabus instead of typing every assignment in by hand',
       'Want grade tracking with a weighted average included free',
-      'Want Pro Canvas import through the current token connector, your institution permits it, and syllabus scanning or pasted assignment text as the fallback',
+      'Want free Canvas import from the private Calendar Feed link Canvas already gives you, with syllabus scanning or pasted assignment text as the fallback',
       'Want study tools — Smart Plan, Flashcards, a Focus timer, an AI tutor — built around your own courses',
     ],
     whereCompetitorFits: [

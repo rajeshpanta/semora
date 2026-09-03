@@ -64,13 +64,13 @@ const SHOWCASE: ShowcaseItem[] = [
   {
     image: '/screenshots/canvas-sync.png',
     alt: 'Semora Canvas sync settings screen showing connected courses and auto-sync status',
-    tier: 'pro',
+    tier: 'free',
     title: 'Import coursework from Canvas',
-    body: "Canvas import is free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Generated in Canvas, and some institutions disable or prohibit third-party token use. Confirm your school's policy before connecting. When permitted, assignments and grades import automatically, and reminders reschedule themselves when a deadline moves.",
+    body: "Canvas import is free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you, under Calendar then Calendar Feed, and paste it in. There is no access token to generate and nothing for your school to approve. Dated assignments then import on their own and stay right when an instructor moves a deadline, with reminders rescheduling themselves. The calendar feed carries dates rather than marks, so your grades stay yours to enter.",
     bullets: [
-      'Personal-access-token connector on Pro',
-      'Assignments and grades import automatically',
-      'Syllabus scan or pasted assignment list when token use is unavailable or not permitted',
+      'Connects with the private Calendar Feed link Canvas already gives you',
+      'Dated assignments import automatically and stay up to date',
+      'Syllabus scan or pasted assignment list if you would rather not connect Canvas',
     ],
     href: '/features/canvas-sync',
   },

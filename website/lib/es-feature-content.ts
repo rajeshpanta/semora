@@ -1191,7 +1191,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'El conector actual de Canvas y sus límites',
         paragraphs: [
           'Conectar Canvas es un solo paso: copia el enlace privado del calendario que Canvas ya te da y pégalo. No hay ningún token que generar ni nada que tu universidad tenga que aprobar. Semora todavía no ofrece un inicio de sesión OAuth propio ni una integración gestionada por la institución.',
-          'Los administradores pueden desactivar la creación de tokens y una universidad puede prohibir que se introduzcan credenciales académicas en un servicio externo. Canvas documenta OAuth como la vía aprobada para aplicaciones de varios usuarios. No uses el conector si tu institución no lo permite.',
+          'El enlace del calendario ya te lo da Canvas: no se crea ninguna credencial nueva, no se introduce tu contraseña en ningún sitio y no hace falta que tu universidad apruebe nada. Trátalo como una contraseña, porque quien lo tenga puede leer tus fechas de entrega.',
           'Si el conector no está disponible o permitido, todavía puedes escanear el programa o copiar la lista de tareas de Canvas y pegarla en el escáner de la web. Ambos caminos incluyen una revisión antes de añadir las fechas.',
         ],
       },
@@ -1200,12 +1200,12 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         paragraphs: [
           'Conectar Canvas es gratis para todo el mundo. Abre la pantalla de conexiones, elige Canvas y pega el enlace privado de tu calendario: no hace falta ningún token ni permiso de tu universidad. Blackboard y Moodle también son gratis, aunque sí usan un token que emite tu universidad.',
           'Puede que te pida la dirección de Canvas de tu universidad, que suele ser una URL específica de la institución. Semora exige una dirección HTTPS válida y avisa antes de intentar una conexión con una dirección incorrecta.',
-          'Cuando se acepte el token, elige las asignaturas activas y el semestre de Semora donde deben entrar. Si el uso del token no está disponible o permitido, usa el escáner del programa o pega la lista de tareas.',
+          'Cuando se acepte el enlace, elige las asignaturas y el semestre de Semora donde deben entrar. Si prefieres no conectar Canvas, usa el escáner del programa o pega la lista de tareas.',
         ],
         bullets: [
           'Abre las conexiones de plataformas académicas en Semora y elige Canvas.',
           'Introduce la dirección HTTPS de Canvas de tu universidad si se solicita.',
-          'Introduce un token de Canvas solo si tu institución permite usarlo con servicios externos.',
+          'Pega el enlace privado del calendario de Canvas. Sin token de acceso y sin que tu universidad tenga que aprobar nada.',
           'Elige las asignaturas activas y el semestre que quieres importar.',
           'Si no hay conexión directa, escanea el programa o pega la lista de tareas.',
         ],
@@ -1237,11 +1237,11 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Cómo funciona la actualización después de la primera importación',
         paragraphs: [
-          'Las actualizaciones usan el mismo token personal que la importación inicial de Canvas. Semora muestra el estado actual para que sepas si el contenido importado está al día o necesita atención.',
-          'Cuando el token es válido y el dispositivo tiene acceso a internet, Semora puede actualizar las tareas durante el uso normal de la app. Si algo falla, registra el estado en lugar de presentar la importación como actual.',
+          'Las actualizaciones usan el mismo enlace del calendario que la importación inicial de Canvas. Semora muestra el estado actual para que sepas si el contenido importado está al día o necesita atención.',
+          'Mientras el enlace funcione y el dispositivo tenga acceso a internet, Semora puede actualizar las tareas durante el uso normal de la app. Si algo falla, registra el estado en lugar de presentar la importación como actual.',
           'También puedes forzarla. Cada conexión en Ajustes tiene un botón de «Sincronizar ahora», y te informa exactamente de lo que pasó: cuántas tareas se actualizaron y cuántas se saltaron.',
           'Después de cada sincronización correcta, Semora reprograma los recordatorios de tus tareas. Esa es la parte que hace útil una fecha movida: cuando un profesor pasa un trabajo del martes al viernes, tus avisos se mueven con él.',
-          'Si el token caduca o se revoca, Semora marca la conexión como pendiente. Vuelve a conectar solo si tu institución permite usar tokens personales con servicios externos; de lo contrario, usa un programa escaneado o una lista de tareas pegada.',
+          'El enlace del calendario no caduca. Si lo restableces en Canvas, Semora marca la conexión como pendiente y la acción de volver a conectar acepta el enlace nuevo sin tocar lo que ya se importó.',
         ],
       },
       {
@@ -1258,13 +1258,15 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         paragraphs: [
           'Cada tarea sincronizada se empareja por una clave compuesta: la conexión, la asignatura de Canvas y el identificador de la tarea en Canvas. Ejecutar una sincronización dos veces no crea duplicados.',
           'Tampoco se borra nada. Si una tarea desaparece de Canvas, Semora conserva la tarea junto con tu estado de completado y cualquier nota asociada.',
-          'Los campos que son de Canvas se refrescan en cada pasada: título, descripción, tipo, fecha, hora y a qué asignatura pertenece. Los campos que son tuyos están protegidos, y las reglas son concretas.',
+          'Canvas refresca los campos que no has tocado: título, descripción, tipo, fecha, hora y a qué asignatura pertenece. En cuanto editas uno tú, pasa a ser tuyo y las sincronizaciones dejan de sobrescribirlo. Las reglas son concretas.',
         ],
         bullets: [
-          'Las notas se combinan en lugar de sustituirse. Si Canvas no devuelve puntuación, Semora conserva el número que escribiste tú.',
-          'El completado es una O lógica. Si marcaste una tarea como hecha en Semora, ninguna sincronización la desmarca.',
+          'Un campo que editas pasa a ser tuyo. Si cambias el nombre de una tarea o mueves su fecha, las sincronizaciones posteriores respetan tu versión.',
+          'Una excepción deliberada: si Canvas adelanta una fecha de entrega respecto a la tuya, gana la fecha más temprana, porque protegerte de una fecha que se adelantó no sería protegerte. Semora te avisa del desacuerdo.',
+          'Las notas nunca las toca una sincronización. El calendario de Canvas no trae puntuaciones, así que el número que escribiste tú no se puede sobrescribir.',
+          'El completado es solo tuyo. El calendario de Canvas no dice si has entregado algo, así que eso se lo cuentas tú a Semora, y ninguna sincronización lo desmarca.',
           'Lo mismo vale para la marca de entrega tardía: una vez marcada, una sincronización posterior no la borra en silencio.',
-          'Si Canvas no puede dar una marca de tiempo de entrega fiable, Semora deja la hora de completado como desconocida en lugar de inventarla.',
+          'El calendario de Canvas no trae la hora de entrega, así que Semora deja la hora de completado como desconocida en lugar de inventarla.',
         ],
       },
       {
@@ -1273,7 +1275,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Semora lista Canvas, Blackboard y Moodle. Conectar Canvas es un solo paso: copia el enlace privado del calendario que Canvas ya te da y pégalo. No hay ningún token que generar ni nada que tu universidad tenga que aprobar. Blackboard y Moodle sí siguen usando un token que emite tu universidad, así que su configuración depende de cada centro.',
           'Cuando Blackboard está disponible, Semora puede leer la lista de asignaturas y columnas del boletín para obtener títulos, fechas y puntos. Según la configuración de la universidad, los detalles de notas o entregas pueden ser más limitados que en Canvas.',
           'Cuando Moodle está disponible, Semora puede leer asignaturas matriculadas y actividades de tareas. Los cuestionarios configurados como actividades aparte pueden quedar fuera, y las escalas no numéricas se ignoran en lugar de tratarlas como puntos negativos.',
-          'Para Canvas, la pantalla de conexión usa un token personal. Si tu institución desactiva o prohíbe ese uso, escanea el programa o pega una lista de tareas.',
+          'Para Canvas, la pantalla de conexión pide el enlace privado del calendario que Canvas ya te da: sin token y sin que tu universidad apruebe nada. Si prefieres no conectarlo, escanea el programa o pega una lista de tareas.',
         ],
       },
       {
@@ -1289,7 +1291,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Semora no trae los nombres de los profesores de la lista de asignaturas de Canvas, así que llegan sin ese dato.',
           'Una sincronización cubre hasta 50 asignaturas de una vez, y la paginación de las tareas de cada una se detiene en un límite.',
           'No hay un interruptor por asignatura después de importar. Para cambiar cuáles se sincronizan, desconecta y vuelve a conectar.',
-          'Si el token de Canvas caduca o se revoca, la conexión muestra «se requieren credenciales». Vuelve a conectar solo si tu institución permite usar tokens personales con servicios externos.',
+          'El enlace del calendario de Canvas no caduca. Si lo restableces en Canvas, la conexión muestra «se requieren credenciales» y la acción de volver a conectar acepta el enlace nuevo.',
         ],
       },
     ],
@@ -1305,7 +1307,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Conectar Canvas es un solo paso: copia el enlace privado del calendario que Canvas ya te da y pégalo. No hay ningún token que generar ni nada que tu universidad tenga que aprobar. No hace falta confirmar ninguna política de tu centro y conéctate solo si está permitido.',
       },
       {
-        question: '¿Y si mi universidad no permite el acceso por token?',
+        question: '¿Y si prefiero no conectar Canvas?',
         answer:
           'Escanea el programa, o pega la lista de tareas de Canvas directamente en el escáner. Ambas vías funcionan en el plan Gratis, y si tu profesor lo deja todo en el programa en lugar de publicarlo en Canvas, escanear es de todos modos el mejor camino.',
       },

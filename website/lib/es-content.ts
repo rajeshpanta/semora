@@ -126,7 +126,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
         paragraphs: [
           'Es la decisión de diseño más importante del producto, y merece explicarse.',
           'Una conexión con el campus virtual refleja lo que el profesor publica dentro de la plataforma. El programa, en cambio, es donde suelen vivir las ponderaciones de la nota, las fechas de examen, el calendario de lecturas, las horas de atención y la escala de calificación. Buena parte de eso nunca llega a convertirse en una entrada de la plataforma.',
-          'Hay además una razón práctica: no todo el mundo puede conectar su plataforma. Algunas instituciones desactivan la creación de tokens de acceso y otras prohíben su uso por terceros. Un producto que dependiera de esa conexión dejaría fuera a una parte de sus usuarios sin alternativa.',
+          'Hay además una razón práctica: no todo el mundo usa una plataforma compatible, y algunos profesores publican las fechas solo en el programa. Un producto que dependiera de esa conexión dejaría fuera a una parte de sus usuarios sin alternativa.',
           'Por eso la importación desde Canvas, Blackboard y Moodle es gratis en todos los planes, y no es la puerta de entrada. La vía gratuita —escanear el programa o pegar el texto— funciona para cualquiera.',
         ],
       },
@@ -340,7 +340,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
         paragraphs: [
           'Si un programa se extrajo mal, lo más útil es decir qué materia, qué esperabas y qué salió. Los formatos de programa varían enormemente entre profesores y ese detalle concreto es lo que permite corregir el caso.',
           'Si un escaneo falla o se queda a medias, comprueba que el documento sea legible: una foto torcida, oscura o desenfocada es la causa más frecuente. Para un programa largo, subir el PDF da mejor resultado que fotografiarlo, porque el PDF se lee completo y sin tope de páginas. En la web, pegar el texto es la vía más precisa de todas.',
-          'Si la conexión con Canvas deja de funcionar, lo normal es que el token haya caducado o se haya revocado: la conexión aparecerá marcada como que necesita atención. Vuelve a conectarla solo si tu institución permite el uso de tokens por terceros; si no, escanea el programa o pega la lista de tareas.',
+          'Si la conexión con Canvas deja de funcionar, lo normal es que hayas restablecido el enlace del calendario en Canvas: la conexión aparecerá marcada como que necesita atención y la acción de volver a conectar acepta el enlace nuevo sin tocar lo que ya se importó.',
           'Para borrar la cuenta, la ruta está dentro de la app en la pestaña de perfil, al final. Elimina la cuenta y los datos asociados de forma permanente.',
         ],
       },
@@ -542,7 +542,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
           '«Me han caído dos exámenes la misma semana y no lo vi venir» — carga académica. Pro.',
           '«No sé en qué punto voy» — calificaciones y nota media del semestre (gratis), y después los pronósticos (Pro).',
           '«Pierdo los primeros veinte minutos de cada sesión» — tarjetas centradas en un examen concreto y temporizador de enfoque. Pro.',
-          '«Mis entregas ya están en Canvas» — pega el texto de la tarea en el escáner desde la web (gratis), o conecta la plataforma con un token que generas tú (también gratis).',
+          '«Mis entregas ya están en Canvas» — conecta Canvas pegando el enlace privado del calendario que ya te da (gratis en todos los planes), o pega el texto de la tarea en el escáner desde la web (también gratis).',
           '«Ya se me ha ido de las manos» — revisión académica: nombra la nota que baja, el trabajo que falta o la semana sobrecargada y te da un orden para recuperar. Pro.',
         ],
       },
@@ -1511,7 +1511,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
         paragraphs: [
           'Esta es la parte que decide si puedes confiarle un semestre a una importación automática, así que está diseñada de forma conservadora.',
           'Una resincronización actualiza el título y las fechas de una tarea, pero nunca toca tu estado de completado. Lo que marcaste como hecho sigue marcado. Las notas que introdujiste siguen ahí. Las subtareas que añadiste no se borran.',
-          'Hay un detalle que merece mención porque es fácil hacerlo mal: si Canvas no puede aportar una marca de tiempo de entrega fiable, Semora deja la hora de completado como desconocida en lugar de estampar la hora de sincronización. Usar la hora de sincronización haría que un trabajo entregado a tiempo pareciera tardío, y esa clase de error es peor que no tener el dato.',
+          'Hay un detalle que merece mención porque es fácil hacerlo mal: el calendario de Canvas no trae la hora de entrega, así que Semora deja la hora de completado como desconocida en lugar de estampar la hora de sincronización. Usar la hora de sincronización haría que un trabajo entregado a tiempo pareciera tardío, y esa clase de error es peor que no tener el dato.',
           'Puedes forzar una sincronización cuando quieras: cada conexión tiene un botón que informa exactamente de qué pasó, cuántas tareas se actualizaron y cuántas se omitieron por no tener una fecha utilizable.',
         ],
       },

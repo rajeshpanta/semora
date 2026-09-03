@@ -146,8 +146,8 @@ export default function AiSyllabusScannerPage() {
       <h2>Beyond the Scan: Canvas Sync and Shared Courses</h2>
       <h3>Canvas LMS Sync</h3>
       <p>
-        Canvas import is available on Pro through the current personal-access-token connector. Some
-        institutions disable or prohibit third-party token use, so confirm your school&apos;s policy.
+        Canvas import is free on every plan. You paste the private Calendar Feed link Canvas already
+        gives you — there is no access token to generate and nothing for your school to approve.
         If it is unavailable or not permitted, scan the syllabus or paste the Canvas assignment list
         into the scanner instead.
       </p>

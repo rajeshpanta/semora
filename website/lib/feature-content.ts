@@ -281,14 +281,14 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "paragraphs": [
           "The scan is the front door, not a standalone tool. Everything it produces is ordinary Semora data from the moment you save it, which is why the scanner is free: it is what makes the rest of the app worth opening.",
           "Deadlines become tasks on your Today tab \u2014 sorted into overdue, due today, and this week \u2014 with same-day reminders on the free tier. Weights become the input to grade tracking, so a weighted average appears as soon as you start entering scores - and because the scanner pulled the grading scale off the syllabus, that percentage maps to the letter your professor actually uses rather than a generic 90/80/70. Meeting blocks become your class schedule. The stored syllabus file stays one tap away on the course screen. All of it syncs across iPhone, iPad, and the web app on one account.",
-          "On the Pro side, the same extraction feeds Smart Plan's study schedule and the Workload dashboard's crunch-week view, both of which are only as good as the deadlines they have. The AI Tutor answers from the syllabus you scanned and the deadlines it produced. Flashcards can be generated from a scanned syllabus, or scoped to one specific exam pulled from your tracked deadlines. Canvas, Blackboard and Moodle import is free on every plan, and the other two do not use a Canvas token \u2014 Blackboard connects with a school-issued OAuth access token your administrator approves, and Moodle with a web-service token your administrator issues. Some institutions disable or prohibit third-party token use, so confirm your school's policy. If the connector is unavailable or not permitted, paste the Canvas assignment list into the web scanner."
+          "On the Pro side, the same extraction feeds Smart Plan's study schedule and the Workload dashboard's crunch-week view, both of which are only as good as the deadlines they have. The AI Tutor answers from the syllabus you scanned and the deadlines it produced. Flashcards can be generated from a scanned syllabus, or scoped to one specific exam pulled from your tracked deadlines. Canvas, Blackboard and Moodle import is free on every plan, and the other two do not use a Canvas token \u2014 Blackboard connects with a school-issued OAuth access token your administrator approves, and Moodle with a web-service token your administrator issues. Blackboard and Moodle still need that administrator step; Canvas does not. If a connector is unavailable to you, or you would rather not use one, it is not a consolation prize to paste instead. If the connector is unavailable or not permitted, paste the Canvas assignment list into the web scanner."
         ]
       },
       {
         "heading": "Who this is genuinely for, and when to use something else",
         "paragraphs": [
           "This is built for a student holding a syllabus that contains a schedule - a table of weeks and dates, an exam list, a grading breakdown. If your professor writes a real syllabus, this turns thirty minutes of typing into about thirty seconds of reviewing, and the multi-page photo path means you do not need a scanner or a desk to do it.",
-          "It is a weaker fit in a few honest cases. If your syllabus contains no dates because everything lives in the LMS, use the current Canvas token connector only if your institution permits it; otherwise, paste the Canvas assignment list into the web scanner. Scan the syllabus separately for the grading scale and class times. If the document is a photo of a whiteboard or handwriting at an angle in bad light, expect low-confidence flags and plan on editing in the review screen. If you have more than five pages of photos, use a PDF. And if you want to re-import an updated syllabus and merge only the changed deadlines into an existing course, that is not what this does - it will offer you a duplicate course instead, and the honest workaround is to edit the handful of tasks that moved.",
+          "It is a weaker fit in a few honest cases. If your syllabus contains no dates because everything lives in the LMS, connect Canvas with its Calendar Feed link, or paste the Canvas assignment list into the web scanner. Scan the syllabus separately for the grading scale and class times. If the document is a photo of a whiteboard or handwriting at an angle in bad light, expect low-confidence flags and plan on editing in the review screen. If you have more than five pages of photos, use a PDF. And if you want to re-import an updated syllabus and merge only the changed deadlines into an existing course, that is not what this does - it will offer you a duplicate course instead, and the honest workaround is to edit the handful of tasks that moved.",
           "One more thing worth setting expectations on: the scan is counted when the extraction succeeds, not when you save. If the results come back and you close the app without saving anything, the work was still done and delivered, and it counted. Review first, then decide - the review screen is where the value is anyway."
         ]
       }
@@ -1184,13 +1184,13 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "Checking availability and importing courses",
         "paragraphs": [
           "Learning-platform import is free on every plan. Start from Semora's connection screen and choose Canvas; there is no institutional permission to confirm.",
-          "The current screen asks for your school's Canvas address, often a school-specific instructure.com URL, and the access token generated in Canvas. Semora requires a valid HTTPS address and reports an invalid address before attempting the connection.",
-          "After the token is accepted, choose the active courses you want to import and the Semora semester where they belong. If token use is unavailable or not permitted, use the syllabus scanner or paste the assignment list instead."
+          "The screen asks for one thing: the private Calendar Feed link Canvas already gives you, under Calendar then Calendar Feed. Your school's Canvas address comes from that link, so there is nothing else to type. Semora checks the link is a real Canvas feed over HTTPS and says what is wrong before attempting the connection.",
+          "Once the link is accepted, choose the courses you want to import and the Semora semester where they belong. If you would rather not connect Canvas at all, use the syllabus scanner or paste the assignment list instead."
         ],
         "bullets": [
           "Open learning-platform connections in Semora and choose Canvas.",
           "Enter your school's HTTPS Canvas address if prompted.",
-          "Enter a Canvas access token only if your institution permits third-party token use.",
+          "Paste the private Calendar Feed link from Canvas. No access token, and nothing for your school to approve.",
           "Choose the active courses and semester you want to import.",
           "If no direct connection is available, scan the syllabus or paste the assignment list."
         ]
@@ -1223,16 +1223,16 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "How refreshing works after the first import",
         "paragraphs": [
           "Refreshes use the same Calendar Feed link as the initial Canvas import. Semora shows the current connection state so you can tell whether imported coursework is up to date or needs attention.",
-          "When the token is valid and your device is online, Semora can refresh coursework during normal app use. If a refresh fails, the connection records a status instead of silently presenting the import as current.",
+          "While the feed link works and your device is online, Semora can refresh coursework during normal app use. If a refresh fails, the connection records a status instead of silently presenting the import as current.",
           "You can also force one. Every connection in Settings has a “Sync now” button, and it reports back exactly what happened: how many assignments were updated, and how many were skipped for not having a usable due date. Each connection carries a plain-language health state you can read at a glance — never, syncing, success, partial, error, or credentials required.",
           "After each successful sync, Semora reschedules the reminders on your tasks. That is the part that makes a moved deadline actually useful: when a professor pushes a paper from Tuesday to Friday, the notification moves with it instead of firing on the old date.",
-          "If the token expires or is revoked, Semora marks the connection as needing attention. Reconnect only if your institution permits third-party token use, or use a syllabus scan or pasted assignment list instead."
+          "A Calendar Feed link does not expire. If you reset it in Canvas, Semora marks the connection as needing attention and a Reconnect action accepts the new link in place."
         ]
       },
       {
         "heading": "What Semora can do with a Canvas connection",
         "paragraphs": [
-          "Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Confirm that your institution permits third-party token use before connecting.",
+          "Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve.",
           "Semora uses the connection to list courses and read assignments and gradebook data. It does not submit coursework, post, edit, or delete anything in Canvas.",
           "There are guardrails on any school address you enter. The URL must be HTTPS; localhost, .local hostnames, and private network ranges are refused, while redirects are limited to the same origin.",
           "Disconnecting removes the connection from Semora. Coursework already imported into your planner, including your completion history and grades, remains available unless you delete it separately."
@@ -1243,13 +1243,15 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "paragraphs": [
           "Every synced assignment is matched on a composite key: the connection, the Canvas course, and the Canvas assignment ID. Running a sync twice does not create duplicates, and the same import repeated ten times produces the same result as running it once.",
           "Nothing gets deleted, either. If an assignment disappears from Canvas, Semora keeps the task along with your completion state and any grade attached to it. The sync function explicitly declines to authorize removals, on the reasoning that bounded pagination or a visibility rule on the school's side could make a perfectly valid assignment look like it vanished. Even where a removal is authorized, the database marks the task rather than deleting it, and the task screen labels it as no longer listed in the LMS but kept in Semora.",
-          "Fields Canvas owns get refreshed on every pass — title, description, type, due date, due time, and which course it belongs to. Fields you own are protected, and the rules are specific rather than vague:"
+          "Canvas refreshes the fields you have not touched — title, description, type, due date, due time, and which course an item belongs to. The moment you edit one of those yourself it becomes yours, and syncs stop overwriting it. The rules are specific rather than vague:"
         ],
         "bullets": [
+          "A field you edit is yours from then on. Rename an assignment or move its date and later syncs leave your version alone.",
+          "One deliberate exception: if Canvas moves a deadline EARLIER than the date you set, the earlier date wins, because being protected from a deadline that moved up is not protection. Semora flags the disagreement so you can see what changed.",
           "Grades are never touched by a sync. The Calendar Feed carries no scores, so the number you typed in cannot be overwritten by an import.",
-          "Completion is a logical OR. If you have checked a task off in Semora, no sync will un-check it, even if Canvas has not registered the submission yet.",
+          "Completion is yours alone. The Calendar Feed carries no submission state, so whether you have handed something in is something only you tell Semora — and no sync un-checks it.",
           "The same applies to the late flag: once something is marked late, a later sync will not quietly clear it.",
-          "If Canvas cannot supply a trustworthy submission timestamp, Semora leaves the completion time unknown rather than stamping the sync time, because using sync time could make on-time work look late."
+          "Because the feed carries no submission time, Semora leaves the completion time unknown rather than stamping the sync time, which could make on-time work look late."
         ]
       },
       {
@@ -1274,7 +1276,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
           "Semora does not pull instructor names from the Canvas course list, so imported courses arrive with the instructor field blank. You can fill it in yourself.",
           "A sync covers up to 50 courses at a time, and pagination through each course's assignments stops at a bounded number of pages — generous for a normal course load, but not unlimited.",
           "There is no per-course on/off switch after import. To change which courses sync, disconnect and reconnect with a different selection.",
-          "If the Canvas token expires or is revoked, the connection shows “credentials required” and offers a Reconnect action. Reconnect only if your institution permits third-party token use."
+          "A Calendar Feed link does not expire. If you reset it in Canvas, the connection shows “credentials required” and offers a Reconnect action that takes the new link."
         ]
       }
     ],
@@ -1288,7 +1290,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "answer": "Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve."
       },
       {
-        "question": "What if my school does not allow token access?",
+        "question": "What if I would rather not connect Canvas at all?",
         "answer": "Scan the syllabus, or paste the Canvas assignment list straight into the scanner. Both routes run through the scanner, so on a free account either one spends your single lifetime AI action, and if your professor keeps everything in the syllabus rather than posting to Canvas, scanning is the better path anyway."
       },
       {
@@ -1297,7 +1299,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       },
       {
         "question": "Will a sync overwrite work I have already done?",
-        "answer": "No. A re-sync refreshes titles and dates but leaves your own state alone. If Canvas cannot supply a trustworthy submission timestamp, Semora leaves the completion time unknown rather than stamping the sync time, because using sync time could make on-time work look late."
+        "answer": "No. A re-sync refreshes titles and dates but leaves your own state alone. The feed carries no submission time, so Semora leaves the completion time unknown rather than stamping the sync time, because using sync time could make on-time work look late."
       },
       {
         "question": "Does it work with Blackboard and Moodle?",

@@ -162,10 +162,10 @@ export default function AiStudyPlannerPage() {
 
       <h3>Canvas sync</h3>
       <p>
-        Canvas import is free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Generated
-        in Canvas. Some institutions disable or prohibit third-party token use, so confirm your
-        school&apos;s policy. If it is unavailable or not permitted, scan the syllabus or paste the
-        assignment list instead.
+        Canvas import is free on every plan. Connecting Canvas takes one step: copy the private
+        Calendar Feed link Canvas already gives you, under Calendar then Calendar Feed, and paste
+        it in. There is no access token to generate and nothing for your school to approve. If you
+        would rather not connect Canvas, scan the syllabus or paste the assignment list instead.
       </p>
 
       <h3>Course Spaces (collaboration)</h3>

@@ -188,10 +188,10 @@ export const SHOWCASE_ES = [
     alt: 'Pantalla de plataformas educativas de Semora con los cursos conectados y el estado de sincronización',
     tier: 'pro' as const,
     title: 'Importa tareas desde Canvas',
-    body: 'La sincronización con Canvas es gratis ahora mismo, en todas las cuentas y sin límite de clases: es una oferta por tiempo limitado, y quien lo conecte mientras dure la conserva gratis para siempre. Usa el calendario privado que Canvas ya te da, así que no hay ningún token que generar ni nada que aprobar en informática. Una vez conectado se revisa solo cada hora: si tu profesor mueve una fecha, en Semora aparece cambiada sin que nadie haga nada, y si borra una tarea, esta desaparece de tu lista en vez de seguir dándote la lata. Un límite honesto: el calendario trae fechas, no notas, así que las calificaciones las sigues poniendo tú. La importación de Blackboard y Moodle también es gratis, usa un token que emite tu universidad y depende de cada centro.',
+    body: 'La sincronización con Canvas es gratis ahora mismo, en todas las cuentas y sin límite de clases: es una oferta por tiempo limitado, y quien lo conecte mientras dure la conserva gratis para siempre. Usa el calendario privado que Canvas ya te da, así que no hay ningún token que generar ni nada que aprobar en informática. Una vez conectado se revisa solo cada pocas horas —cada hora si estás en mitad del semestre y usando la app—: si tu profesor mueve una fecha, en Semora aparece cambiada sin que nadie haga nada, y si borra una tarea, esta desaparece de tu lista en vez de seguir dándote la lata. Un límite honesto: el calendario trae fechas, no notas, así que las calificaciones las sigues poniendo tú. La importación de Blackboard y Moodle también es gratis, usa un token que emite tu universidad y depende de cada centro.',
     bullets: [
-      'Uso sujeto a la política de tokens de tu institución',
-      'Tareas y calificaciones se importan solas',
+      'Sin token de acceso y sin permiso de tu universidad',
+      'Las tareas con fecha se importan solas y se mantienen al día',
       'Si no está disponible, escanea el programa o pega la lista de tareas',
     ],
     href: '/es/funciones/sincronizacion-canvas',

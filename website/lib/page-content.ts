@@ -227,7 +227,7 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
           "\"Two exams landed in the same week and I never saw it coming\" — Workload dashboard. Pro.",
           "\"I do not know where I stand\" — Grade tracking and semester GPA (free), then Forecasting (Pro).",
           "\"I waste the first twenty minutes of every session\" — Flashcards scoped to one exam, plus the focus timer. Pro.",
-          "\"My deadlines already live in Canvas\" — paste the assignment text into the scanner on the web app (your free AI action), or use the current token-based Canvas import only where your institution permits it (Pro).",
+          "\"My deadlines already live in Canvas\" — connect Canvas by pasting the private Calendar Feed link it already gives you, which is free on every plan, or paste the assignment text into the scanner on the web app (your free AI action).",
           "\"It is already on fire\" — Academic Risk, which names the failing grade, the missing work or the overloaded week and gives you a recovery order. Pro."
         ]
       },
@@ -1096,33 +1096,33 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
         ]
       },
       {
-        "heading": "Generating the token: the exact steps",
+        "heading": "Copying the Calendar Feed link: the exact steps",
         "paragraphs": [
-          "Do this in a browser, not the Canvas mobile app. The mobile app does not expose the token screen. You will also need your school's Canvas web address, usually yourschool.instructure.com, entered as a full HTTPS URL.",
+          "Do this in a browser, not the Canvas mobile app. The mobile app does not expose the Calendar Feed link. Everything Semora needs is in that one URL, including your school's Canvas address, so there is nothing else to type.",
           "Semora rejects plain HTTP outright, and it refuses private-network addresses (localhost, 127.x, 10.x, 192.168.x, 172.16 through 172.31, and 169.254.x) so a mistyped or hostile URL cannot point the sync server at something it should not reach. Redirects are followed at most three times, and only when they stay on the same host you entered.",
-          "Leave the expiry blank so you are not redoing this in week nine. If a token does expire, or you revoke it, the connection flips to \"credentials required\" in Settings with a Reconnect action that accepts a fresh token and re-syncs in place. Your imported courses and assignments are not disturbed while that happens.",
+          "Treat that link like a password: anyone holding it can read your deadlines. There is nothing to expire, so a connection made in week one is still syncing in week nine. If you ever reset the link in Canvas, the connection flips to \"credentials required\" in Settings with a Reconnect action that accepts the new link and re-syncs in place. Your imported courses and assignments are not disturbed while that happens.",
           "The whole sequence, start to finish:"
         ],
         "bullets": [
           "Sign in to Canvas on the web.",
-          "Open Account, then Settings.",
-          "Under \"Approved Integrations,\" choose \"+ New Access Token.\"",
-          "Name it Semora, leave the expiry blank, then Generate Token.",
-          "Copy the token and paste it into Semora, along with your school's Canvas web address."
+          "Open Calendar from the main navigation.",
+          "In the calendar sidebar, choose \"Calendar Feed.\"",
+          "Copy the link Canvas shows you — it is private to your account.",
+          "Paste that link into Semora. Nothing else is needed."
         ]
       },
       {
         "heading": "Choosing which courses actually import",
         "paragraphs": [
-          "Once the token is accepted, Semora asks Canvas for your active enrollments and shows you the list before writing a single row. Each course appears with its name and its Canvas course code, all pre-selected, with a Clear control if you would rather take two out of six. Nothing exists in Semora yet at this point — this screen is a preview, not a commitment.",
+          "Once the link is accepted, Semora reads your Canvas calendar and shows you the courses it found dated work for before writing a single row. Each course appears with its name and its Canvas course code, all pre-selected, with a Clear control if you would rather take two out of six. Nothing exists in Semora yet at this point — this screen is a preview, not a commitment.",
           "On the same screen you name the connection and choose the semester the courses belong to. \"Import and sync\" then creates one Semora course per selection, each with its own color, links it to the Canvas course id, and runs the first assignment pull. You get a count back: how many courses and how many assignments landed.",
-          "The bounds are worth knowing. Up to 50 courses sync per connection, Canvas is paged at 100 results per request for up to 12 pages per endpoint, and a single sync returns at most 5,000 assignments. A course you leave unselected at import is never touched at all. After import, the unit you control is the connection: Settings, Learning Platforms gives each connection exactly two actions, \"Sync now\" and \"Disconnect,\" and disconnecting stops automatic updates without removing anything already in Semora. There is no per-course sync toggle in the interface today, so if you drop a class mid-term, delete that course in Semora directly, which also removes its tasks, or disconnect and re-import with a narrower selection."
+          "The bounds are worth knowing. A single sync reads at most 1,000 dated items from the feed, and the feed itself only carries what Canvas publishes to your calendar. A course you leave unselected at import is never touched at all. After import, the unit you control is the connection: Settings, Learning Platforms gives each connection exactly two actions, \"Sync now\" and \"Disconnect,\" and disconnecting stops automatic updates without removing anything already in Semora. There is no per-course sync toggle in the interface today, so if you drop a class mid-term, delete that course in Semora directly, which also removes its tasks, or disconnect and re-import with a narrower selection."
         ]
       },
       {
         "heading": "What comes across for each assignment",
         "paragraphs": [
-          "Canvas assignments are pulled ordered by due date with your own submission attached, so a single request carries both the assignment and where you stand on it.",
+          "Each item arrives with its title, its due date, a link back to Canvas, and the assignment description when Canvas includes one. Whether you have submitted is not in the calendar feed, so Semora never claims to know.",
           "Assignments with no due date are counted and skipped, not given a fabricated one. Semora needs a real date to place an item on a calendar and schedule a reminder. The sync result says so plainly — \"N assignments updated, M skipped without usable due dates\", and the connection is marked \"partial\" instead of \"success\" so that number does not quietly vanish.",
           "Field by field, here is what lands on each item:"
         ],
@@ -1146,8 +1146,8 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
         "heading": "What a sync will never overwrite",
         "paragraphs": [
           "The merge is written so a refresh can add and correct, but not erase. These rules are enforced in the database rather than in the app, so they hold no matter which device triggered the sync.",
-          "What does get refreshed from Canvas each time is the set of fields Canvas is genuinely authoritative for: title, description, type, due date and time, which course the item belongs to, the deep link, and Canvas's updated_at. Everything about whether you did the thing, when, and what you scored stays yours.",
-          "Disconnecting is equally non-destructive. The confirmation says it in as many words: automatic updates will stop, and imported courses, assignments, completion, and grades stay in Semora. What gets removed is the connection record and the stored token.",
+          "What gets refreshed each time is the set of fields you have not touched: title, description, type, due date and time, which course the item belongs to, and the link back to Canvas. Edit any of those yourself and it becomes yours — later syncs leave your version alone. The one exception is a deadline Canvas moves EARLIER than yours, which wins so you cannot be protected into missing it, and is flagged when it happens. Everything about whether you did the thing, when, and what you scored stays yours.",
+          "Disconnecting is equally non-destructive. The confirmation says it in as many words: automatic updates will stop, and imported courses, assignments and anything you recorded yourself stay in Semora. What gets removed is the connection record and the stored Calendar Feed link.",
           "Here is what a sync will not touch:"
         ],
         "bullets": [
@@ -1170,11 +1170,11 @@ export const PAGE_CONTENT: Partial<Record<PageKey, PageLongForm>> =
     "faq": [
       {
         "question": "Does connecting Canvas change anything inside Canvas?",
-        "answer": "No. Every Canvas call Semora makes is a read. It lists your active courses and pulls assignments with your submission attached. Nothing is created, edited, submitted, or deleted on the Canvas side, and you still submit your work in Canvas as usual. The sync function also cannot reach a private-network address or follow a redirect off your school's host, both are blocked outright."
+        "answer": "No. Semora only reads your Canvas calendar feed. It cannot write to Canvas at all — nothing is created, edited, submitted or deleted there, and you still submit your work in Canvas as usual. The sync function also cannot reach a private-network address or follow a redirect off your school's host, both are blocked outright."
       },
       {
-        "question": "Where is my Canvas token stored, and how do I revoke it?",
-        "answer": "On your device: the iOS Keychain through SecureStore on iPhone and iPad, browser storage on web. Semora's server keeps only connection metadata — provider, your school's Canvas URL, which courses are linked, and sync health. To revoke, delete the token in Canvas under Account, Settings, Approved Integrations, or disconnect inside Semora, which removes the stored credential. Either action stops the sync immediately."
+        "question": "Where is my Canvas Calendar Feed link stored, and how do I revoke it?",
+        "answer": "Encrypted on Semora's server so the scheduled sync can run while your phone is closed, and never shown again after setup. The server otherwise keeps only connection metadata — provider, your school's Canvas host, which courses are linked, and sync health. To revoke, reset the Calendar Feed link in Canvas under Calendar, Calendar Feed, or disconnect inside Semora, which deletes the stored link. Either action stops the sync."
       },
       {
         "question": "If I check an assignment off in Semora, will a sync un-check it?",
@@ -1271,7 +1271,7 @@ const CANVAS_TRACKER_SUMMARY: PageLongForm = {
     {
       heading: 'Connection availability depends on your institution',
       paragraphs: [
-        'Canvas import is free on every plan. The shipping connector uses the private Calendar Feed link Canvas already gives every student, so no token and no institutional approval are involved. Canvas documents OAuth as the approved route for multi-user applications, and some institutions disable or prohibit third-party token use. Confirm your school’s policy before connecting.',
+        'Canvas import is free on every plan. The shipping connector uses the private Calendar Feed link Canvas already gives every student, so no token and no institutional approval are involved. Canvas publishes that feed to every student by design, so there is no policy to check and nothing to request.',
         'If direct connection is unavailable, the reliable fallback is the syllabus scanner. On the web, you can also copy the text of a Canvas assignment list and paste it into the scanner. That is a snapshot rather than a live sync, so re-check Canvas after an instructor changes a date. Canvas remains the source of truth for submissions and official course updates.',
       ],
     },
