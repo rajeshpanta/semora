@@ -52,7 +52,7 @@ import {
   isPickerStrandedError,
   type PickerMethod,
 } from '@/lib/pickerDiagnostics';
-import { runPick, shouldTrackCancelled } from '@/lib/pickerFlow';
+import { classifyPick, runPick, shouldTrackCancelled } from '@/lib/pickerFlow';
 
 /**
  * Wait until every running transition has finished before presenting a picker.
@@ -381,6 +381,43 @@ export default function ScanScreen() {
   // pretending and the working routes are named instead.
   const [documentPickerStranded, setDocumentPickerStranded] = useState(false);
 
+  // ── A tap that was swallowed, acknowledged ────────────────────────────────
+  // runPick returns DUPLICATE when a pick is already in flight. That is
+  // correct and must stay: releasing the guard early is what strands the
+  // native module, and two tests pin it. But DUPLICATE calls no onFailure and
+  // is not a cancellation, so every caller then returned SILENTLY — the button
+  // did nothing, said nothing, and logged nothing.
+  //
+  // Students read that as a dead button and tap again. Measured over 9 days:
+  // 23 repeat taps landed 2-15s apart (not double-taps, which were 3), one
+  // student tapped eight times across three different methods, and only 2 of
+  // 27 left any diagnostic behind.
+  //
+  // This adds acknowledgement ONLY. The guard, its release timing, the native
+  // watchdog, classifyPick and the failure alert are all untouched — a
+  // duplicate is still not a failure and still not a cancellation.
+  const [pickerBusyMethod, setPickerBusyMethod] = useState<PickerMethod | null>(null);
+  const pickerBusyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (pickerBusyTimer.current) clearTimeout(pickerBusyTimer.current);
+  }, []);
+
+  const notePickerBusy = (method: PickerMethod) => {
+    // The measurement this path never had. Deliberately its own event rather
+    // than scan_picker_failed: nothing failed, and folding it into the failure
+    // metric would corrupt the number that proved the strand.
+    track('scan_picker_busy', { screen: 'scan', method });
+    if (Platform.OS !== 'web') {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
+    }
+    setPickerBusyMethod(method);
+    if (pickerBusyTimer.current) clearTimeout(pickerBusyTimer.current);
+    // Long enough to read, short enough that it never outlives the picker it
+    // describes: on 1.12 the native watchdog resolves a stuck presentation in
+    // ~3s, after which the real failure alert takes over.
+    pickerBusyTimer.current = setTimeout(() => setPickerBusyMethod(null), 2600);
+  };
+
   // expo-image-picker's WEB build resolves its promise from inside a `change`
   // listener that has no reject path: if the picked file has no MIME mapping
   // (or the user defeats the accept filter with "All Files"), it throws in
@@ -491,6 +528,13 @@ export default function ScanScreen() {
       // top of the failure alert, and stop looping — retrying a camera that
       // just refused would only produce the same alert again.
       if (result.failed || result.duplicate) {
+        // A failure has already alerted from safePick's onFailure. A duplicate
+        // has not — nothing reports it, by design — so it is the one that
+        // needs acknowledging here, and only when there is no capture flow
+        // still on screen to speak for itself.
+        if (result.duplicate && !result.failed && pages.length === 0) {
+          notePickerBusy('camera');
+        }
         if (pages.length === 0) return;
         break;
       }
@@ -602,6 +646,10 @@ export default function ScanScreen() {
       track('scan_cancelled', { screen: 'scan', method: 'document' });
       return;
     }
+    if (classifyPick(result) === 'duplicate') {
+      notePickerBusy('document');
+      return;
+    }
     if (!result.assets?.[0]) return;
     {
       const asset = result.assets[0];
@@ -683,6 +731,10 @@ export default function ScanScreen() {
     // must not also be counted as the student changing their mind.
     if (shouldTrackCancelled(result)) {
       track('scan_cancelled', { screen: 'scan', method: 'photos' });
+      return;
+    }
+    if (classifyPick(result) === 'duplicate') {
+      notePickerBusy('photos');
       return;
     }
     if (!result.assets || result.assets.length === 0) return;
@@ -1035,7 +1087,9 @@ export default function ScanScreen() {
             </View>
             <View style={styles.actionContent}>
               <Text style={[styles.actionTitle, { color: colors.ink }]}>Take a photo</Text>
-              <Text style={[styles.actionSub, { color: colors.ink3 }]}>Printed handout or whiteboard</Text>
+              <Text style={[styles.actionSub, { color: pickerBusyMethod === 'camera' ? colors.brand : colors.ink3 }]}>
+                {pickerBusyMethod === 'camera' ? 'Still opening the camera — one moment' : 'Printed handout or whiteboard'}
+              </Text>
             </View>
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>
@@ -1053,12 +1107,18 @@ export default function ScanScreen() {
             </View>
             <View style={styles.actionContent}>
               <Text style={[styles.actionTitle, { color: colors.ink }]}>Upload a document</Text>
-              <Text style={[styles.actionSub, { color: documentPickerStranded ? colors.coral : colors.ink3 }]}>
+              <Text style={[styles.actionSub, {
+                color: documentPickerStranded ? colors.coral
+                  : pickerBusyMethod === 'document' ? colors.brand
+                  : colors.ink3,
+              }]}>
                 {documentPickerStranded
                   ? 'Unavailable until you restart Semora — try Photos below'
-                  : Platform.OS === 'android'
-                    ? 'PDF or Word — Drive, Downloads, Files'
-                    : 'PDF or Word — Files, iCloud, Drive'}
+                  : pickerBusyMethod === 'document'
+                    ? 'Still opening Files — one moment'
+                    : Platform.OS === 'android'
+                      ? 'PDF or Word — Drive, Downloads, Files'
+                      : 'PDF or Word — Files, iCloud, Drive'}
               </Text>
             </View>
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
@@ -1076,7 +1136,9 @@ export default function ScanScreen() {
             </View>
             <View style={styles.actionContent}>
               <Text style={[styles.actionTitle, { color: colors.ink }]}>Choose from Photos</Text>
-              <Text style={[styles.actionSub, { color: colors.ink3 }]}>Select from your photo library</Text>
+              <Text style={[styles.actionSub, { color: pickerBusyMethod === 'photos' ? colors.brand : colors.ink3 }]}>
+                {pickerBusyMethod === 'photos' ? 'Still opening Photos — one moment' : 'Select from your photo library'}
+              </Text>
             </View>
             <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
           </TouchableOpacity>
