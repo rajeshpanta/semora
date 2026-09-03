@@ -6,8 +6,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { CanvasCourseReview, confirmSemesterConflict } from '@/components/CanvasCourseReview';
+import { CanvasFeedLimits } from '@/components/CanvasFeedLimits';
+import {
+  CourseLinkChoiceSheet,
+  pendingCourseChoices,
+  type CourseLinkDecision,
+  type PendingCourseChoice,
+} from '@/components/CourseLinkChoiceSheet';
 import {
   courseFactsOf,
+  countImportedDeadlines,
   linkPendingCourses,
   lmsConnectionsQuery,
   pendingAsDiscovered,
@@ -17,7 +25,7 @@ import {
 } from '@/lib/lms';
 import { formatSpan, matchSemester, spanOf, suggestNewSemester } from '@/lib/termMatch';
 import { canvasSourceOf } from '@/lib/canvasPromo';
-import { useSemesters } from '@/lib/queries';
+import { useCourses, useSemesters } from '@/lib/queries';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useResponsive } from '@/lib/responsive';
 import { useColors } from '@/lib/theme';
@@ -106,18 +114,61 @@ export default function NewCanvasCourses() {
     if (match.confidence === 'strong' && match.semesterId) setSemesterId(match.semesterId);
   }, [facts, semesters, semesterId, courses.length]);
 
+  // The courses they already have in the term being imported into — the
+  // candidates a Canvas course might be a duplicate OF.
+  const { data: semesterCourses = [] } = useCourses(semesterId || null);
+  const [linkChoices, setLinkChoices] = useState<PendingCourseChoice[]>([]);
+
   const chosenCourses = courses.filter((course) => selected.has(course.id));
   const target = semesters.find((semester) => semester.id === semesterId) ?? null;
   const range = formatSpan(spanOf(facts), locale === 'es' ? 'es' : 'en');
 
-  const commit = async () => {
+  /**
+   * The same question the first connection asks, finally asked here too.
+   *
+   * A term change is exactly when a duplicate is most likely: the student has
+   * been using Semora all summer and has courses of their own, and Canvas is
+   * now offering the same classes under its own names. Offering the link is
+   * the difference between keeping their notes and grades on that course and
+   * starting a second copy of it beside the first.
+   */
+  const beginImport = () => {
+    const candidates = (semesterCourses ?? []).map((course: any) => ({
+      id: course.id as string,
+      name: String(course.name ?? ''),
+    }));
+    const choices = pendingCourseChoices(
+      chosenCourses.map((course) => ({ id: course.id, name: course.name })),
+      candidates,
+    );
+    if (!choices.length) { void commit(); return; }
+    setLinkChoices(choices);
+  };
+
+  const resolveLinkChoices = (decisions: CourseLinkDecision[]) => {
+    setLinkChoices([]);
+    const linkTo: Record<string, string> = {};
+    for (const decision of decisions) {
+      if (decision.linkToCourseId) linkTo[decision.externalId] = decision.linkToCourseId;
+    }
+    track('lms_course_link_decided', {
+      screen: 'lms_new_courses', source, lane: 'expand',
+      offered: decisions.length,
+      linked: Object.keys(linkTo).length,
+    });
+    void commit(linkTo);
+  };
+
+  const commit = async (linkTo?: Record<string, string>) => {
     if (!connectionId || !semesterId || working) return;
     setWorking(true);
     try {
+      const externalIds = chosenCourses.map((course) => course.id);
       const created = await linkPendingCourses({
         connectionId,
         semesterId,
-        externalCourseIds: chosenCourses.map((course) => course.id),
+        externalCourseIds: externalIds,
+        linkTo,
       });
       // Import their work immediately. Confirming and then waiting up to an
       // hour for the deadlines to appear would read as a failure.
@@ -131,9 +182,34 @@ export default function NewCanvasCourses() {
         queryClient.invalidateQueries({ queryKey: ['courses'] }),
         queryClient.invalidateQueries({ queryKey: ['tasks'] }),
       ]);
+      // ── The count has to be about THIS import ──────────────
+      // `result.processed` is every item in the whole connection's feed. A
+      // student adding one class was told "1 course and 287 deadlines added",
+      // where 287 was their entire Canvas history. Counted from the courses
+      // this import actually touched instead; if that lookup fails the sync
+      // still succeeded, so it degrades to naming the courses only rather than
+      // to a wrong number.
+      let deadlines: number | null = null;
+      try {
+        deadlines = (await countImportedDeadlines({ connectionId, externalCourseIds: externalIds })).deadlines;
+      } catch {
+        deadlines = null;
+      }
+      // Assembled from separators rather than translated connectives. Gluing
+      // t('and') and t('added to') into a sentence looks like translation and
+      // is not: word order differs between languages, so the Spanish would
+      // come out as English grammar wearing Spanish words. Each fragment here
+      // stands alone and the punctuation does the joining.
+      const linkedCount = Math.max(0, externalIds.length - created);
+      const parts: string[] = [];
+      if (created > 0) parts.push(`${created} ${created === 1 ? t('course') : t('courses')}`);
+      if (linkedCount > 0) parts.push(`${linkedCount} ${t('linked to a class you already had')}`);
+      if (deadlines !== null) {
+        parts.push(`${deadlines} ${deadlines === 1 ? t('deadline') : t('deadlines')}`);
+      }
       Alert.alert(
         t('Imported'),
-        `${created} ${created === 1 ? t('course') : t('courses')} and ${result.processed} ${t('deadlines')} added to ${target?.name ?? t('your semester')}.`,
+        `${parts.join(' · ')}\n${target?.name ?? t('your semester')}`,
         [{ text: t('Done'), onPress: () => router.back() }],
       );
     } catch (error) {
@@ -253,8 +329,8 @@ export default function NewCanvasCourses() {
                     Alert.alert(t('Select courses'), t('Choose at least one course to import.'));
                     return;
                   }
-                  if (!confirmSemesterConflict(chosenCourses, target, range, () => { void commit(); })) return;
-                  void commit();
+                  if (!confirmSemesterConflict(chosenCourses, target, range, () => { beginImport(); })) return;
+                  beginImport();
                 }}
                 disabled={working}
                 style={[styles.primary, { backgroundColor: colors.brand }]}
@@ -274,11 +350,23 @@ export default function NewCanvasCourses() {
         />
       </ScrollView>
       </KeyboardAvoidingView>
+      {/* The same limits the connect screen states. A student importing a
+          second term is making the same decision again and deserves the same
+          facts — stated in one component so the two cannot drift apart. */}
+      <View style={styles.limitsWrap}><CanvasFeedLimits compact /></View>
+
+      <CourseLinkChoiceSheet
+        visible={linkChoices.length > 0}
+        choices={linkChoices}
+        onCancel={() => setLinkChoices([])}
+        onConfirm={(decisions) => resolveLinkChoices(decisions)}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  limitsWrap: { paddingHorizontal: 16, paddingBottom: 16, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   screen: { flex: 1 },
   content: { padding: 18, paddingBottom: 60, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
   title: { fontSize: 22, fontWeight: '800', marginBottom: 6 },

@@ -205,6 +205,52 @@ function contextFromUrl(raw: string): { courseId: string; url: string } | null {
 }
 
 /** Parse only the bounded Canvas fields Semora needs from an RFC 5545 feed. */
+const DESCRIPTION_LIMIT = 10_000;
+
+/**
+ * Canvas assignment text, cut where a reader would not notice.
+ *
+ * `.slice(0, 10_000)` stopped mid-word. Three tasks in production sit at
+ * exactly 10,000 characters, which means three students have an assignment
+ * brief that ends in the middle of a sentence with nothing to say it was cut —
+ * and the most common thing at the end of a long Canvas description is the
+ * submission instructions.
+ *
+ * So the cut moves back to the last paragraph or sentence break in the final
+ * stretch, and says what happened. The task already carries `lms_url`, which
+ * is the whole point of the note: there IS somewhere to read the rest.
+ *
+ * The limit itself is unchanged. It is not the problem — 10,000 characters is
+ * a generous brief, and raising it would mean carrying course-pack-sized text
+ * into every sync payload for the handful of assignments that hit it.
+ */
+function truncateDescription(raw: string): string | null {
+  const text = raw.trim();
+  if (!text) return null;
+  if (text.length <= DESCRIPTION_LIMIT) return text;
+
+  const head = text.slice(0, DESCRIPTION_LIMIT);
+  // Look for a clean break in the last 20% only. Further back than that and
+  // the "truncation" would be throwing away text the reader could have had.
+  const floor = Math.floor(DESCRIPTION_LIMIT * 0.8);
+
+  // Each candidate carries how much of itself to KEEP. A sentence break keeps
+  // its full stop — cutting at the index alone ends the text on "assignment"
+  // where the author wrote "assignment.", which is a smaller version of the
+  // same mid-word problem this function exists to fix.
+  const candidates: { at: number; keep: number }[] = [
+    { at: head.lastIndexOf('\n\n'), keep: 0 },
+    { at: head.lastIndexOf('. '), keep: 1 },
+    { at: head.lastIndexOf('\n'), keep: 0 },
+  ];
+  const best = candidates
+    .filter((candidate) => candidate.at > floor)
+    .sort((a, b) => b.at - a.at)[0];
+
+  const cut = best ? head.slice(0, best.at + best.keep) : head;
+  return `${cut.trimEnd()}\n\n[Shortened — open in Canvas for the full description.]`;
+}
+
 export function parseCanvasCalendarFeed(ics: string): ParsedCanvasCalendar {
   if (typeof ics !== 'string' || !/BEGIN:VCALENDAR/i.test(ics) || !/END:VCALENDAR/i.test(ics)) {
     throw new Error('Canvas returned an invalid calendar feed.');
@@ -275,7 +321,7 @@ export function parseCanvasCalendarFeed(ics: string): ParsedCanvasCalendar {
       external_id: uid,
       external_course_id: context.courseId,
       title,
-      description: decodeIcsText(first(properties, 'DESCRIPTION')?.value ?? '').slice(0, 10_000) || null,
+      description: truncateDescription(decodeIcsText(first(properties, 'DESCRIPTION')?.value ?? '')),
       type: classify(title, uid),
       ...due,
       external_updated_at: updated,

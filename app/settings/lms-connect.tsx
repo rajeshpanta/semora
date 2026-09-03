@@ -41,6 +41,7 @@ import {
 } from '@/lib/lms';
 import { track } from '@/lib/analytics';
 import { CanvasGuidedPaste } from '@/components/CanvasGuidedPaste';
+import { CanvasFeedLimits } from '@/components/CanvasFeedLimits';
 import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
 import {
   canvasSetupStorageKey,
@@ -706,10 +707,7 @@ export default function LmsConnectScreen() {
                     <FontAwesome name="lock" size={12} color={colors.ink3} />
                     <Text style={[styles.privateNoteText, { color: colors.ink3 }]}>Treat this link like a password. Semora encrypts it and never displays it after setup.</Text>
                   </View>
-                  <View style={[styles.limitNote, { borderColor: colors.line }]}>
-                    <Text style={[styles.limitTitle, { color: colors.ink2 }]}>What Canvas includes</Text>
-                    <Text style={[styles.limitText, { color: colors.ink3 }]}>Dated assignments and calendar events. It does not import grades, whether work was submitted, or To-Do items without dates.</Text>
-                  </View>
+                  <CanvasFeedLimits />
                 </>
               )}
 

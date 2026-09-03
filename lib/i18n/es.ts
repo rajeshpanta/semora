@@ -2321,6 +2321,7 @@ export const ES: Record<string, string> = {
   // '(Pro)' was not, so a Spanish student saw one of them in English —
   // precisely the pair where a difference in wording reads as a difference in
   // the offer.
+  'linked to a class you already had': 'vinculada a una clase que ya tenías',
   'Connect Canvas (Pro)': 'Conectar Canvas (Pro)',
   'Pro · every class imports itself and stays up to date':
     'Pro · cada clase se importa sola y se mantiene al día',

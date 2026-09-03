@@ -841,14 +841,58 @@ export async function linkPendingCourses(input: {
   connectionId: string;
   semesterId: string;
   externalCourseIds: string[];
+  /**
+   * external course id -> a course the student already has (124/125).
+   *
+   * The first-connection flow has always asked "is this the same course you
+   * already have?" before creating anything. The new-term flow could not:
+   * link_lms_pending_courses took a list of ids and inserted a course for each,
+   * so a student who made Organic Chemistry by hand in August and imported it
+   * from Canvas in September got two of them.
+   */
+  linkTo?: Record<string, string>;
 }): Promise<number> {
   const { data, error } = await supabase.rpc('link_lms_pending_courses', {
     p_connection_id: input.connectionId,
     p_semester_id: input.semesterId,
     p_external_course_ids: input.externalCourseIds,
+    p_link_to: input.linkTo ?? {},
   });
   if (error) throw error;
   return Number(data ?? 0);
+}
+
+/**
+ * How much of this import is actually the student's new work.
+ *
+ * The import screens used to report `result.processed` from the sync — which is
+ * every item in the WHOLE connection's feed, not the courses just added. A
+ * student importing one class was told "1 course and 287 deadlines added",
+ * where 287 was their entire Canvas history and roughly 20 were new. The number
+ * was large, confident and wrong in the flattering direction.
+ *
+ * Counted from the tasks that belong to the courses this import touched.
+ */
+export async function countImportedDeadlines(input: {
+  connectionId: string;
+  externalCourseIds: string[];
+}): Promise<{ deadlines: number; courseIds: string[] }> {
+  if (!input.externalCourseIds.length) return { deadlines: 0, courseIds: [] };
+  const { data: links, error: linkError } = await supabase
+    .from('lms_course_links')
+    .select('local_course_id, external_course_id')
+    .eq('connection_id', input.connectionId)
+    .in('external_course_id', input.externalCourseIds);
+  if (linkError) throw linkError;
+  const courseIds = [...new Set((links ?? []).map((row: any) => row.local_course_id).filter(Boolean))];
+  if (!courseIds.length) return { deadlines: 0, courseIds: [] };
+  const { count, error: countError } = await supabase
+    .from('tasks')
+    .select('id', { count: 'exact', head: true })
+    .in('course_id', courseIds)
+    .not('lms_external_id', 'is', null);
+  if (countError) throw countError;
+  return { deadlines: count ?? 0, courseIds };
 }
 
 /**

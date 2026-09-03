@@ -750,6 +750,22 @@ function errorCode(error: unknown): 'credentials_required' | 'provider_error' {
  * the student reopens the app.
  */
 const SYNC_HOURS = {
+  /**
+   * A student using Semora right now, inside a term that is running (126).
+   *
+   * Three hours was set when capacity was the binding constraint. It is not
+   * currently: the worker's ceiling is 96 runs/day x 60 per run = 5,760
+   * connection-syncs, and production made 284 in the last 24 hours — 4.9%. The
+   * people that cadence costs are exactly the ones in the middle of a semester
+   * with the app open, for whom a moved deadline is worth knowing in an hour.
+   *
+   * Both halves of the test are required (see lms_fresh_sync_user_ids): active
+   * without a live term does not need it, a live term without activity is
+   * nobody waiting. At most 16 of 37 connections qualify today, which takes
+   * utilisation to roughly 9% — the headroom that justified three hours is
+   * still there if adoption grows.
+   */
+  fresh: 1,
   calendarFeed: 3,
   token: 4,
   /** Any connection whose student has been away longer than DORMANT_AFTER_DAYS. */
@@ -765,8 +781,12 @@ const SYNC_HOURS = {
  */
 const DORMANT_AFTER_DAYS = 21;
 
-function nextSyncHours(connection: SyncConnection, active: boolean) {
+function nextSyncHours(connection: SyncConnection, active: boolean, fresh = false) {
+  // Dormancy wins over freshness: `fresh` is a subset of `active`, so the two
+  // cannot disagree, but ordering it this way means a future change to either
+  // test can never accidentally give a dormant connection the fast cadence.
   if (!active) return SYNC_HOURS.dormant;
+  if (fresh && connection.connection_method === 'calendar_feed') return SYNC_HOURS.fresh;
   return connection.connection_method === 'calendar_feed'
     ? SYNC_HOURS.calendarFeed
     : SYNC_HOURS.token;
@@ -806,6 +826,38 @@ async function activeUserIds(
   } catch (error) {
     log.error('active_user_lookup_failed', errorFields(error));
     return null; // null = "unknown", and unknown means active.
+  }
+}
+
+/**
+ * Which of these users are mid-term AND using the app — the faster cadence.
+ *
+ * One RPC for the whole batch, exactly like activeUserIds. A failure here
+ * returns an empty set rather than null: unknown means the ORDINARY cadence,
+ * not the fast one. Freshness is an optimisation, and an optimisation that
+ * fails open would quietly triple the worker's load the first time this query
+ * had a bad day.
+ */
+async function freshUserIds(
+  log: EdgeLogger,
+  admin: AdminClient,
+  userIds: string[],
+): Promise<Set<string>> {
+  if (!userIds.length) return new Set();
+  try {
+    const { data, error } = await admin.rpc('lms_fresh_sync_user_ids', {
+      p_user_ids: userIds,
+      p_hours: 24,
+    });
+    if (error) throw error;
+    return new Set(
+      (Array.isArray(data) ? data : [])
+        .map((row: any) => (typeof row === 'string' ? row : row?.lms_fresh_sync_user_ids ?? row?.user_id))
+        .filter(Boolean),
+    );
+  } catch (error) {
+    log.warn('fresh_user_lookup_failed', errorFields(error));
+    return new Set();
   }
 }
 
@@ -999,6 +1051,11 @@ async function performConnectionSync(
   // defaults to active, so a sync a student asked for is never scheduled as if
   // they were gone.
   active = true,
+  // Mid-term AND recently active (126). Defaults FALSE for interactive callers:
+  // a student who just tapped "sync now" has told us nothing about whether
+  // their term is running, and guessing yes would hand the fast cadence to
+  // everyone who ever pressed a button.
+  fresh = false,
 ) {
   const runId = await createRun(admin, connection, trigger);
   await admin.from('lms_connections').update({
@@ -1101,7 +1158,7 @@ async function performConnectionSync(
         last_successful_sync_at: finishedAt,
         consecutive_sync_failures: 0,
         next_background_sync_at: connection.background_sync_enabled
-          ? new Date(Date.now() + nextSyncHours(connection, active) * 60 * 60 * 1000).toISOString()
+          ? new Date(Date.now() + nextSyncHours(connection, active, fresh) * 60 * 60 * 1000).toISOString()
           : null,
         background_sync_paused_at: null,
       }).eq('id', connection.id),
@@ -1209,20 +1266,26 @@ serve(withRequestLogging('lms-sync', async (req, log) => {
 
       // One activity lookup for the whole batch — see activeUserIds. `null`
       // means the lookup failed, and unknown is treated as active.
-      const activeIds = await activeUserIds(log, admin, [...new Set(due.map((c) => c.user_id))]);
+      const batchUsers = [...new Set(due.map((c) => c.user_id))];
+      const activeIds = await activeUserIds(log, admin, batchUsers);
       const isActive = (userId: string) => activeIds === null || activeIds.has(userId);
+      // Second batch lookup, same shape: who is mid-term and using the app.
+      const freshIds = await freshUserIds(log, admin, batchUsers);
 
       let succeeded = 0;
       let failed = 0;
       let dormant = 0;
+      let fresh = 0;
 
       const syncOne = async (connection: SyncConnection) => {
         const active = isActive(connection.user_id);
+        const isFresh = active && freshIds.has(connection.user_id);
         if (!active) dormant += 1;
+        if (isFresh) fresh += 1;
         try {
           await requireLmsAccess(log, admin, connection.user_id);
           await performConnectionSync(
-            log, admin, connection, await backgroundCredential(admin, connection.id), 'background', active,
+            log, admin, connection, await backgroundCredential(admin, connection.id), 'background', active, isFresh,
           );
           succeeded += 1;
         } catch (error) {
@@ -1285,7 +1348,7 @@ serve(withRequestLogging('lms-sync', async (req, log) => {
         }),
       );
 
-      return json({ processed_connections: due.length, succeeded, failed, dormant });
+      return json({ processed_connections: due.length, succeeded, failed, dormant, fresh });
     }
 
     const user = await requireUser(req);
