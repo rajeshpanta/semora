@@ -55,8 +55,6 @@ import {
  * short as possible and never leave them at a dead end.
  */
 
-const AUTO_PASTE_HINT_MS = 900;
-
 function useClipboardFeed() {
   /**
    * react-native still ships Clipboard in core at 0.81 (deprecated, warns on
@@ -109,6 +107,8 @@ export function CanvasGuidedPaste({
   const [manualHost, setManualHost] = useState('');
   const [showPrivateUrl, setShowPrivateUrl] = useState(false);
   const [clipboardMiss, setClipboardMiss] = useState(false);
+  /** Set when the student comes back from Canvas, so the paste can be offered. */
+  const [justReturned, setJustReturned] = useState(false);
 
   const lane = progress.setupLane;
   const host = progress.host;
@@ -159,12 +159,18 @@ export function CanvasGuidedPaste({
     onProgressChange({ ...progress, host: resolved, schoolName: resolved });
   };
 
-  /** Read the clipboard and fill the field if it holds a Canvas feed link. */
+  /**
+   * Read the clipboard and fill the field if it holds a Canvas feed link.
+   *
+   * Only ever called from a tap. iOS will show its paste permission alert here,
+   * and that is correct: the student asked for this a moment ago.
+   */
   const absorbClipboard = useCallback(async () => {
     const clip = await readClipboard();
     if (clip && /\/feeds\/calendars\//i.test(clip)) {
       track('canvas_setup_autofilled', { screen: 'lms_connect', source, lane: 'connect' });
       onTokenChange(clip.trim());
+      setJustReturned(false);
       return true;
     }
     setClipboardMiss(true);
@@ -172,29 +178,42 @@ export function CanvasGuidedPaste({
   }, [readClipboard, onTokenChange, source]);
 
   /**
-   * Waiting for a return that has not happened yet.
+   * ─── WHY SEMORA NO LONGER READS THE CLIPBOARD BY ITSELF ────
    *
-   * The two ways of opening a page come back at different moments, and reading
-   * the clipboard at the wrong one produces a confident "nothing there" while
-   * the student is still in Canvas:
+   * Phase 3 read it automatically the moment the student came back from
+   * Canvas, which was the whole "usually needs no paste" promise. On iOS 16 and
+   * later that is not a silent read: touching UIPasteboard's contents from code
+   * the user did not ask for raises the system's own "Allow Paste?" alert.
    *
-   *   openBrowserAsync  in-app sheet; the promise resolves WHEN IT IS DISMISSED,
-   *                     so awaiting it is exactly the right moment.
-   *   Linking.openURL   hands off to another app and resolves IMMEDIATELY, long
-   *                     before the student has copied anything.
+   * So the student returned holding their private Canvas credential and was met
+   * by an iOS permission dialog nobody had mentioned — in a flow whose entire
+   * job is to feel safe enough to paste a bearer token into. This codebase has
+   * twice decided that unexplained Apple chrome reads as a warning that
+   * something is wrong: once for the Passwords/QuickType heuristics on the
+   * field below, and once for the webcal:// prompt the copy warns about in
+   * advance. Firing a third one automatically undoes both.
    *
-   * So the fallback path arms this instead and reads when the app itself comes
-   * back to the foreground.
+   * There is no API in React Native core that checks the clipboard without
+   * reading it (expo-clipboard's hasStringAsync does, and would need a new
+   * binary — and would only avoid the prompt when there is nothing to paste,
+   * which is the case that matters least).
+   *
+   * The fix is not a native module. It is to stop taking the action nobody
+   * asked for. Coming back from Canvas now OFFERS the paste as a prominent
+   * button; iOS then asks permission as the direct result of a tap the student
+   * just made, which is exactly the interaction Apple's prompt is designed for
+   * and the only version of it that reads as normal.
    */
   const awaitingReturn = useRef(false);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
       if (state !== 'active' || !awaitingReturn.current) return;
       awaitingReturn.current = false;
-      void absorbClipboard();
+      // Offer, do not take. See the note above.
+      setJustReturned(true);
     });
     return () => sub.remove();
-  }, [absorbClipboard]);
+  }, []);
 
   /** Open the school's calendar page, then look for the link on return. */
   const openCalendar = async (targetHost: string, via: string) => {
@@ -214,9 +233,14 @@ export function CanvasGuidedPaste({
       inAppSheet = false;
       await Linking.openURL(url).catch(() => {});
     }
+    // Native only. useClipboardFeed returns null on web by design, so offering
+    // "tap and Semora fills it in" there would be a button that cannot do what
+    // it says. On the web app the student pastes into the field directly, which
+    // is what a browser makes easy anyway.
+    if (Platform.OS === 'web') return;
     if (inAppSheet) {
       // The sheet has been dismissed: we are already back.
-      setTimeout(() => { void absorbClipboard(); }, AUTO_PASTE_HINT_MS);
+      setJustReturned(true);
     } else {
       awaitingReturn.current = true;
     }
@@ -268,7 +292,8 @@ export function CanvasGuidedPaste({
             <View style={{ flex: 1 }}>
               <Text style={[s.laneTitle, { color: colors.ink }]}>Do it here on my phone</Text>
               <Text style={[s.laneText, { color: colors.ink2 }]}>
-                Semora opens your school’s Canvas calendar and fills the link in when you come back.
+                Semora opens your school’s Canvas calendar, then fills the link in with one tap when
+                you come back.
               </Text>
             </View>
           </TouchableOpacity>
@@ -458,7 +483,26 @@ export function CanvasGuidedPaste({
             </TouchableOpacity>
           </View>
 
-          {!token && (
+          {/* Back from Canvas with the link in hand. Offered as a real button
+              rather than done silently, because the read raises iOS's own paste
+              permission alert and that alert only makes sense as the answer to
+              something the student just tapped. */}
+          {justReturned && !token && Platform.OS !== 'web' && (
+            <View style={[s.rescue, { backgroundColor: colors.brand50, borderColor: colors.brand }]}>
+              <Text style={[s.rescueText, { color: colors.ink2 }]}>
+                Copied the link? Tap below and Semora fills it in. iOS may ask permission to paste —
+                that is expected, and Semora only ever reads the one link.
+              </Text>
+              <TouchableOpacity
+                onPress={() => { void absorbClipboard(); }}
+                style={[s.primary, { backgroundColor: colors.brand }]}
+              >
+                <FontAwesome name="clipboard" size={14} color="#fff" />
+                <Text style={s.primaryText}>Paste my Calendar Feed link</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {(!justReturned || Platform.OS === 'web') && !token && (
             <TouchableOpacity onPress={pasteFromClipboard} style={s.pasteRow}>
               <FontAwesome name="clipboard" size={12} color={colors.brand} />
               <Text style={[s.link, { color: colors.brand }]}>Paste from clipboard</Text>

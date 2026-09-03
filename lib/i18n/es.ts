@@ -2321,6 +2321,14 @@ export const ES: Record<string, string> = {
   // '(Pro)' was not, so a Spanish student saw one of them in English —
   // precisely the pair where a difference in wording reads as a difference in
   // the offer.
+  // The paste is offered rather than taken, so the copy has to prepare the
+  // student for iOS's own permission alert — an unexplained system dialog in a
+  // step whose whole job is to feel safe enough to paste a credential into.
+  'Copied the link? Tap below and Semora fills it in. iOS may ask permission to paste — that is expected, and Semora only ever reads the one link.':
+    '¿Ya copiaste el enlace? Toca abajo y Semora lo rellena. Puede que iOS te pida permiso para pegar: es normal, y Semora solo lee ese enlace.',
+  'Paste my Calendar Feed link': 'Pegar el enlace de mi calendario',
+  'Semora opens your school’s Canvas calendar, then fills the link in with one tap when you come back.':
+    'Semora abre el calendario de Canvas de tu universidad y luego rellena el enlace con un toque cuando vuelvas.',
   'linked to a class you already had': 'vinculada a una clase que ya tenías',
   'Connect Canvas (Pro)': 'Conectar Canvas (Pro)',
   'Pro · every class imports itself and stays up to date':
