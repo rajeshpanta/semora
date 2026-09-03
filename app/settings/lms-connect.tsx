@@ -463,7 +463,16 @@ export default function LmsConnectScreen() {
         courses: chosen.length,
         reason: lmsFailureCode(error instanceof Error ? error.message : ''),
       });
-      Alert.alert('Import failed', error instanceof Error ? error.message : 'Nothing was saved. Please try again.');
+      // "Nothing was saved" is a claim about the rollback, so only make it when
+      // the rollback confirmed it. connectLms flags a rollback that did not
+      // fully succeed; in that case the student's course list HAS changed and
+      // sending them away believing otherwise is worse than saying so.
+      Alert.alert(
+        'Import failed',
+        (error as any)?.partialImport
+          ? `${error instanceof Error ? error.message : 'The import failed.'}\n\nSome classes may have been added before it stopped — check your course list.`
+          : error instanceof Error ? error.message : 'Nothing was saved. Please try again.',
+      );
     } finally {
       setWorking(false);
     }

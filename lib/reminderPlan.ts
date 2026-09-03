@@ -448,19 +448,33 @@ export function buildReminderPlan({
     };
   }
 
-  // Shed from the bottom until it fits, never touching a protected reminder.
-  const sorted = [...candidates].sort((a, b) => value(b) - value(a));
-  const kept: PlannedReminder[] = [];
-  const shed: PlannedReminder[] = [];
-  for (const reminder of sorted) {
-    if (kept.length < budget || reminder.isProtected) kept.push(reminder);
-    else shed.push(reminder);
-  }
+  // Shed from the bottom until it fits. Protection wins the CONTEST; it no
+  // longer wins an exemption from the budget.
+  //
+  // `|| reminder.isProtected` used to let a protected reminder past the cap
+  // unconditionally, on the reasoning that a student with more than 56
+  // protected reminders has a genuinely full fortnight and should be told so.
+  // That reasoning had one thing wrong with it: iOS does not accept more than
+  // 64 pending notifications per app, and it does not report a refusal. Past
+  // the ceiling the OS silently keeps an arbitrary subset, so the exemption
+  // did not deliver the extra reminders — it decided, at random and invisibly,
+  // WHICH of the student's promised reminders would be thrown away, including
+  // the protected ones the exemption existed to guarantee.
+  //
+  // A real 189-task Canvas import projects 149 reminders here and used to keep
+  // 69. The 5 over the ceiling did not arrive; 5 unknowable others did not
+  // either. Class reminders share the same 64, so the true overflow was worse.
+  //
+  // Ranking protected first and then taking the top `budget` keeps every
+  // guarantee that can actually be honoured, and turns the rest from silent
+  // OS-level loss into a shed count the student's plan can report.
+  const sorted = [...candidates].sort((a, b) => {
+    if (a.isProtected !== b.isProtected) return a.isProtected ? -1 : 1;
+    return value(b) - value(a);
+  });
+  const kept: PlannedReminder[] = sorted.slice(0, budget);
+  const shed: PlannedReminder[] = sorted.slice(budget);
 
-  // Protection can legitimately carry the plan past the budget — a student with
-  // more than 56 protected reminders is one whose next fortnight is genuinely
-  // that full. Reporting it honestly is more useful than silently dropping
-  // something that was promised.
   const byBucket = new Map<string, PrunedSummary>();
   for (const reminder of shed) {
     const key = `${reminder.rung}:${reminder.type}`;

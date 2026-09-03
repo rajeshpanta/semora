@@ -30,6 +30,8 @@ import { useColors } from '@/lib/theme';
 import { useResponsive, gridItemBasis } from '@/lib/responsive';
 import { formatLocalDate } from '@/lib/dates';
 import { track } from '@/lib/analytics';
+import { setLmsTaskHidden } from '@/lib/lms';
+import { useQueryClient } from '@tanstack/react-query';
 import { TaskPlanningFields } from '@/components/TaskPlanningFields';
 import { recurrenceLabel, reminderSummary } from '@/lib/taskPlanning';
 import type { RecurrenceFrequency, TaskPriority } from '@/types/database';
@@ -42,6 +44,7 @@ export default function TaskDetailScreen() {
   const { data: task, isLoading, isError } = useTask(id!);
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
+  const queryClient = useQueryClient();
   const toggleComplete = useToggleTaskComplete();
   const { data: subtasks = [] } = useTaskSubtasks(id!);
   const { data: gradeCategories = [] } = useGradeCategories(task?.course_id);
@@ -292,11 +295,59 @@ export default function TaskDetailScreen() {
     }
   };
 
+  // Whether this row is a copy of something in a connected LMS. Everything
+  // below keys off it, because the honest action for a synced row is different
+  // from the honest action for one the student typed in.
+  const isLmsTask = !!task.lms_connection_id && !!task.lms_external_id;
+  const isHidden = !!task.lms_hidden_at;
+
   const handleDelete = () => {
     Alert.alert('Delete Task', 'Are you sure?', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => { try { await deleteTask.mutateAsync(task.id); router.back(); } catch (err: any) { Alert.alert('Delete Failed', err.message ?? 'Something went wrong. Please try again.'); } } },
     ]);
+  };
+
+  // HIDE, NOT DELETE — and the wording matters as much as the behaviour.
+  //
+  // Deleting a synced row made it come back on the next sync, so the button
+  // read as broken; worse, students reasonably feared it had deleted the
+  // assignment in Canvas. It cannot: Semora reads a Canvas calendar feed and
+  // has no way to write anything back. Saying so on the confirmation is the
+  // point of this dialog, not a disclaimer on it.
+  const handleHide = () => {
+    Alert.alert(
+      'Hide this assignment?',
+      'It disappears from Semora — your lists, reminders and calendar. Nothing changes in Canvas; Semora can only read from it.\n\nYou can bring it back any time from Settings › Connected classes › Hidden assignments.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Hide',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await setLmsTaskHidden(task.id, true);
+              track('lms_task_hidden', { screen: 'task_detail' });
+              await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+              router.back();
+            } catch (err: any) {
+              Alert.alert('Could not hide it', err.message ?? 'Something went wrong. Please try again.');
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const handleRestore = async () => {
+    try {
+      await setLmsTaskHidden(task.id, false);
+      track('lms_task_restored', { screen: 'task_detail' });
+      await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      await queryClient.invalidateQueries({ queryKey: ['task', task.id] });
+    } catch (err: any) {
+      Alert.alert('Could not restore it', err.message ?? 'Something went wrong. Please try again.');
+    }
   };
 
   const handleAddSubtask = async () => {
@@ -360,6 +411,22 @@ export default function TaskDetailScreen() {
         <View style={[styles.card, width < 360 && styles.cardNarrow, { backgroundColor: colors.card, borderColor: colors.line }]}>
           {editing ? (
             <>
+              {/* Two things a student cannot know without being told, and both
+                  of them used to be wrong in the direction that loses work:
+                  their edit survives the next sync now (it did not before), and
+                  nothing they type here reaches Canvas (it never could). The
+                  one exception is stated, because it is the one that can cost
+                  them a grade if it surprises them. */}
+              {isLmsTask && (
+                <View style={[styles.sourceBanner, { backgroundColor: colors.brand50, marginBottom: 10 }]}>
+                  <FontAwesome name="info-circle" size={13} color={colors.brand} />
+                  <Text style={[styles.sourceText, { color: colors.brand, flex: 1 }]}>
+                    Your changes stay in Semora and are kept when this class syncs. Canvas is not
+                    changed. If Canvas ever moves this deadline earlier, that earlier date wins so
+                    you cannot miss it — and Semora will tell you.
+                  </Text>
+                </View>
+              )}
               <TextInput style={[styles.editInput, { borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]} value={editTitle} onChangeText={setEditTitle} placeholder="Title" placeholderTextColor={colors.ink3} />
               <TextInput style={[styles.editInput, { height: 80, borderColor: colors.line, backgroundColor: colors.card, color: colors.ink }]} value={editDescription} onChangeText={setEditDescription} placeholder="Description" placeholderTextColor={colors.ink3} multiline textAlignVertical="top" />
               <Text style={[styles.editLabel, { color: colors.ink2 }]}>Type</Text>
@@ -445,6 +512,37 @@ export default function TaskDetailScreen() {
                   </Text>
                   {!!task.lms_url && <FontAwesome name="external-link" size={11} color={task.lms_removed_at ? colors.coral : colors.brand} />}
                 </TouchableOpacity>
+              )}
+
+              {/* Hidden is a state the student chose, so it says so and offers
+                  the way back in the same place rather than sending them to a
+                  settings screen to undo something they just did. */}
+              {isHidden && (
+                <View style={[styles.sourceBanner, { backgroundColor: colors.amber50 ?? colors.brand50 }]}>
+                  <FontAwesome name="eye-slash" size={13} color={colors.ink2} />
+                  <Text style={[styles.sourceText, { color: colors.ink2, flex: 1 }]}>
+                    Hidden from your lists, reminders and calendar.
+                  </Text>
+                  <TouchableOpacity onPress={handleRestore}>
+                    <Text style={[styles.sourceText, { color: colors.brand, fontWeight: '700' }]}>Restore</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Canvas changed something the student had changed themselves.
+                  Shown whichever way the conflict was resolved: when Canvas won
+                  (it only does so by moving a deadline EARLIER) this is the
+                  only warning they get, and when the student won it explains
+                  why the app disagrees with Canvas. */}
+              {!!task.lms_conflict_at && !isHidden && (
+                <View style={[styles.sourceBanner, { backgroundColor: colors.coral50 }]}>
+                  <FontAwesome name="exclamation-circle" size={13} color={colors.coral} />
+                  <Text style={[styles.sourceText, { color: colors.coral, flex: 1 }]}>
+                    {task.lms_synced_due_date && task.lms_synced_due_date !== task.due_date
+                      ? `Canvas now says this is due ${task.lms_synced_due_date}. Your own date is shown above.`
+                      : 'Canvas changed something you had edited. Your version is shown above.'}
+                  </Text>
+                </View>
               )}
               <View style={[styles.detailsGrid, isWide && styles.detailsGridWide]}>
                 <View style={[styles.detailItem, isWide && styles.detailItemWide]}>
@@ -746,9 +844,24 @@ export default function TaskDetailScreen() {
             <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.brand50 }]} onPress={startEdit}>
               <FontAwesome name="pencil" size={14} color={colors.brand} /><Text style={[styles.actionBtnText, { color: colors.brand }]}>Edit</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#fef2f2' }]} onPress={handleDelete}>
-              <FontAwesome name="trash-o" size={14} color="#ef4444" /><Text style={[styles.actionBtnText, { color: '#ef4444' }]}>Delete</Text>
-            </TouchableOpacity>
+            {isLmsTask ? (
+              // "Delete" was never true here. The row is a copy of a Canvas
+              // item; removing it made the next sync recreate it, and the word
+              // implied Semora could delete work from Canvas, which it cannot.
+              isHidden ? (
+                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.brand50 }]} onPress={handleRestore}>
+                  <FontAwesome name="eye" size={14} color={colors.brand} /><Text style={[styles.actionBtnText, { color: colors.brand }]}>Restore</Text>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#fef2f2' }]} onPress={handleHide}>
+                  <FontAwesome name="eye-slash" size={14} color="#ef4444" /><Text style={[styles.actionBtnText, { color: '#ef4444' }]}>Hide</Text>
+                </TouchableOpacity>
+              )
+            ) : (
+              <TouchableOpacity style={[styles.actionBtn, { backgroundColor: '#fef2f2' }]} onPress={handleDelete}>
+                <FontAwesome name="trash-o" size={14} color="#ef4444" /><Text style={[styles.actionBtnText, { color: '#ef4444' }]}>Delete</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>

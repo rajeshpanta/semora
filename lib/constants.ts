@@ -54,7 +54,11 @@ export const TASK_TYPE_LABELS: Record<TaskType, string> = {
   other: 'Other',
 };
 
-export const SOURCE_TYPES = ['manual', 'rule_parsed', 'gemini_parsed'] as const;
+// 'lms' was added to the database enum in migration 121. Tasks imported from a
+// connected LMS previously claimed 'manual', which was the only honest-ish
+// option the enum offered and made imported work indistinguishable from typed
+// work in every query and every funnel number.
+export const SOURCE_TYPES = ['manual', 'rule_parsed', 'gemini_parsed', 'lms'] as const;
 export type SourceType = (typeof SOURCE_TYPES)[number];
 
 export const COURSE_COLORS = [

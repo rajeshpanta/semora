@@ -358,17 +358,44 @@ export async function connectLms(input: {
     // optional extra did not take. A connection that synced once is still worth
     // keeping; canvasOfferFor() reports it as needs_attention and every entry
     // point offers to finish the job.
-    try {
-      await invokeLms({
-        action: 'enable_background',
-        connection_id: connection.id,
-        access_token: input.credential.accessToken,
-        refresh_token: input.credential.refreshToken ?? null,
-        expires_at: input.credential.expiresAt ?? null,
-      });
-    } catch {
-      // Left off deliberately: the student hears about it from the "Finish
-      // Canvas setup" prompt, not from a connection that vanished.
+    //
+    // RETRIED, AND LOUD WHEN IT STILL FAILS. This is one network round trip
+    // standing between a student and every future sync: a calendar-feed
+    // connection has no device credential, so if the Vault never receives the
+    // feed URL the background worker has nothing to sync WITH and the
+    // connection imports once and then goes quiet forever. That is the exact
+    // shape of the three-week silent failure 053 recorded.
+    //
+    // A single transient error should not cost that, so it gets a second
+    // attempt. And when both fail the reason is written to the connection
+    // instead of being discarded — `needs_attention` told the student
+    // something was wrong but nobody could see WHAT, which made it
+    // undiagnosable from the outside.
+    let backgroundEnabled = false;
+    let backgroundError = '';
+    for (let attempt = 0; attempt < 2 && !backgroundEnabled; attempt++) {
+      if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, 800));
+      try {
+        await invokeLms({
+          action: 'enable_background',
+          connection_id: connection.id,
+          access_token: input.credential.accessToken,
+          refresh_token: input.credential.refreshToken ?? null,
+          expires_at: input.credential.expiresAt ?? null,
+        });
+        backgroundEnabled = true;
+      } catch (error) {
+        backgroundError = error instanceof Error ? error.message : 'Automatic sync could not be enabled.';
+      }
+    }
+    if (!backgroundEnabled) {
+      // Still non-fatal. A connection that syncs once is worth keeping, and
+      // every entry point offers to finish the job — it just says why now.
+      await supabase
+        .from('lms_connections')
+        .update({ last_error: `Automatic sync could not be turned on: ${backgroundError}`.slice(0, 500) })
+        .eq('id', connection.id)
+        .then(() => {}, () => {});
     }
     // Before the first sync, not after: the sync is what records unlinked
     // courses, so these have to be on the ignore list by the time it runs.
@@ -384,25 +411,99 @@ export async function connectLms(input: {
         // same dismiss button is one tap away. Not worth failing a connect.
       }
     }
-    const result = await syncLmsConnection(connection.id, 'initial');
+    const result = await syncLmsConnection(
+      connection.id,
+      'initial',
+      // See the parameter's own note: never let the first sync depend on the
+      // Vault write above having landed.
+      input.credential.accessToken,
+    );
     return { connectionId: connection.id, ...result };
   } catch (error) {
-    await supabase.from('lms_connections').delete().eq('id', connection.id);
+    // The rollback is not guaranteed to work, and the screen above says
+    // "Nothing was saved" on the strength of it. That sentence is only true if
+    // both deletes below actually succeeded — they were unchecked, so a
+    // student whose rollback failed was told nothing had been added while
+    // looking at a course list that now had four new classes in it.
+    //
+    // Check them, and tell the caller which sentence is the honest one.
+    let rolledBack = true;
+    const { error: connectionDeleteError } = await supabase
+      .from('lms_connections').delete().eq('id', connection.id);
+    if (connectionDeleteError) rolledBack = false;
     if (createdCourseIds.length) {
-      await supabase
+      const { error: courseDeleteError } = await supabase
         .from('courses')
         .delete()
         .eq('user_id', input.userId)
         .in('id', createdCourseIds);
+      if (courseDeleteError) rolledBack = false;
     }
     await removeLmsCredential(connection.id);
+    if (!rolledBack && error instanceof Error) {
+      (error as any).partialImport = true;
+    }
     throw error;
   }
+}
+
+/**
+ * Hide or restore an LMS-imported task.
+ *
+ * Deliberately NOT a delete. Deleting the row worked exactly once: the next
+ * background sync read the item from the feed, found no matching task and
+ * created it again, so the assignment came back within the hour. The student
+ * was left with a delete button that visibly did nothing — and a reasonable
+ * fear that it had deleted something in Canvas, which Semora cannot do and has
+ * never done (the calendar feed is read-only).
+ *
+ * The RPC writes the task's lms_hidden_at and its lms_suppressed_items row
+ * together; either half alone reappears or vanishes wrongly. See migration 120.
+ */
+export async function setLmsTaskHidden(taskId: string, hidden: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_lms_task_hidden', {
+    p_task_id: taskId,
+    p_hidden: hidden,
+  });
+  if (error) throw error;
+}
+
+/** Everything the student has hidden, newest first, for the restore screen. */
+export async function listHiddenLmsTasks(): Promise<
+  { id: string; title: string; due_date: string; lms_hidden_at: string; courseName: string }[]
+> {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('id, title, due_date, lms_hidden_at, courses(name)')
+    .not('lms_hidden_at', 'is', null)
+    .order('lms_hidden_at', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    title: row.title,
+    due_date: row.due_date,
+    lms_hidden_at: row.lms_hidden_at,
+    courseName: (Array.isArray(row.courses) ? row.courses[0]?.name : row.courses?.name) ?? 'Class',
+  }));
 }
 
 export async function syncLmsConnection(
   connectionId: string,
   trigger: 'initial' | 'manual' | 'foreground_auto' = 'manual',
+  // The credential to sync WITH, when the caller already has it in hand.
+  //
+  // Only the connect flow passes this, and only because of an ordering trap it
+  // could not otherwise escape. A calendar-feed connection holds no device
+  // credential by design — the feed URL goes straight to the Vault and the
+  // server reads it back on every sync. So the very first sync, moments after
+  // connecting, depends on a Vault write that happened seconds earlier through
+  // a DIFFERENT edge-function call. When that write failed the first sync got
+  // a 401, the connect threw, and the catch below deleted a connection whose
+  // feed URL was perfectly good.
+  //
+  // Passing it explicitly removes the dependency entirely: the first sync uses
+  // the URL the student just gave us, whatever the Vault did.
+  explicitCredential?: string | null,
 ): Promise<{ processed: number; skipped: number }> {
   const { data: connection, error: connectionError } = await supabase
     .from('lms_connections')
@@ -438,10 +539,16 @@ export async function syncLmsConnection(
       throw new Error('Reconnect this LMS on this device to continue syncing.');
     }
 
+    // The explicit credential wins when the caller supplied one. For a
+    // calendar-feed connection it is the only credential that exists on this
+    // device; for a token connection it is the same value getLmsCredential
+    // would have returned. Either way the server prefers `access_token` over
+    // its Vault lookup, so this cannot pick up a stale token.
+    const syncToken = explicitCredential || credential?.accessToken || '';
     const data = await invokeLms<{ processed: number; skipped: number }>({
       action: 'sync',
       connection_id: connectionId,
-      ...(credential?.accessToken ? { access_token: credential.accessToken } : {}),
+      ...(syncToken ? { access_token: syncToken } : {}),
       trigger,
     });
     rescheduleAllTaskReminders(connection.user_id, 'lms_sync').catch(() => {});
@@ -457,10 +564,20 @@ export async function syncLmsConnection(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'LMS synchronization failed.';
+    // `credentials_required` is not a status, it is an instruction: it disables
+    // background sync, purges the stored feed URL and tells the student to go
+    // and fetch a new one from Canvas. Reaching it by keyword match on an error
+    // string is how a rate limit, a timeout or a five-minute Canvas outage
+    // ended up costing a student a working connection.
+    //
+    // So the test is now narrow and has an explicit escape: anything that
+    // names throttling or a transport failure is a temporary error, whatever
+    // other words it happens to contain, and the sync simply retries.
+    const transient = /rate.?limit|throttl|too many requests|timed? ?out|network|did not respond|temporarily/i.test(message);
     await supabase
       .from('lms_connections')
       .update({
-        last_sync_status: /reconnect|permission|unauthor|token/i.test(message)
+        last_sync_status: !transient && /reconnect|no longer available|unauthor|expired|revoked/i.test(message)
           ? 'credentials_required'
           : 'error',
         last_error: message.slice(0, 500),

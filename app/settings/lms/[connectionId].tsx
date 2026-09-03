@@ -288,6 +288,16 @@ export default function LmsConnectionDetailScreen() {
           </TouchableOpacity>
         )}
 
+        {/* The only route back to something the student hid. Sits with the
+            connection it belongs to rather than in a global settings list,
+            because "hidden" only means anything for synced assignments. */}
+        <TouchableOpacity
+          onPress={() => router.push('/settings/lms/hidden' as any)}
+          style={[styles.secondary, { borderColor: colors.line }]}
+        >
+          <Text style={[styles.secondaryText, { color: colors.ink2 }]}>Hidden assignments</Text>
+        </TouchableOpacity>
+
         <View style={styles.sectionHead}>
           <Text style={[styles.sectionTitle, { color: colors.ink }]}>Sync activity</Text>
           <Text style={[styles.sectionNote, { color: colors.ink3 }]}>Recent attempts make it clear what changed and what needs attention.</Text>

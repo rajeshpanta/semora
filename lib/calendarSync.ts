@@ -379,6 +379,65 @@ async function adoptMeetingEvents(events: any[]): Promise<void> {
 
 // ── Sync logic ─────────────────────────────────────────────
 
+// ── Canvas is already in their calendar (1.12) ──────────────────────────────
+//
+// A student can reach the same deadline through two doors. Semora writes an
+// event per task into its own device calendar; Canvas publishes the SAME
+// deadlines as an .ics the OS can subscribe to directly, and Canvas's own
+// onboarding tells students to do exactly that. When both are on, every Canvas
+// assignment appears twice in the calendar app, with different titles, and
+// nothing in either system knows the other exists.
+//
+// Semora cannot un-publish the Canvas subscription and should not try — the
+// student set it up and it keeps working when Semora is not installed. What it
+// can do is notice, and stop being the second copy. Its own tasks (typed in,
+// scanned from a syllabus) are unaffected; those exist nowhere else.
+//
+// Detection is deliberately narrow: a SUBSCRIBED calendar (one the OS
+// refreshes from a URL and the user cannot edit) whose name points at Canvas.
+// A writable calendar someone happens to have called "Canvas" is not a feed
+// and must not silence the export.
+let canvasSubscriptionCache: { at: number; value: boolean } | null = null;
+
+export async function hasCanvasCalendarSubscription(): Promise<boolean> {
+  if (Platform.OS === 'web') return false;
+  // Re-checked at most once a minute: syncAllTasks asks per task, and this is
+  // a native round trip over every calendar on the device.
+  if (canvasSubscriptionCache && Date.now() - canvasSubscriptionCache.at < 60_000) {
+    return canvasSubscriptionCache.value;
+  }
+  let value = false;
+  try {
+    const Calendar = await getCalendarModule();
+    if (Calendar) {
+      const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+      value = (calendars ?? []).some((c: any) => {
+        const subscribed = c?.type === 'subscribed'
+          || c?.type === (Calendar as any).CalendarType?.SUBSCRIBED
+          || c?.allowsModifications === false;
+        if (!subscribed) return false;
+        const name = `${c?.title ?? ''} ${c?.source?.name ?? ''}`;
+        return /canvas|instructure/i.test(name);
+      });
+    }
+  } catch {
+    // Unknown means "no subscription found", which keeps today's behaviour.
+    value = false;
+  }
+  canvasSubscriptionCache = { at: Date.now(), value };
+  return value;
+}
+
+/** Forget the cached answer — used when the student changes calendar settings. */
+export function forgetCanvasSubscriptionCheck(): void {
+  canvasSubscriptionCache = null;
+}
+
+/** A task that came from a connected LMS rather than from the student. */
+function isLmsTask(task: any): boolean {
+  return Boolean(task?.lms_external_id) || task?.source === 'lms';
+}
+
 export async function syncTaskToCalendar(
   task: Task,
   courseName: string,
@@ -386,6 +445,10 @@ export async function syncTaskToCalendar(
   if (Platform.OS === 'web') return;
   const Calendar = await getCalendarModule();
   if (!Calendar) return;
+
+  // Already reaching their calendar straight from Canvas — writing it again
+  // makes a duplicate, not a reminder.
+  if (isLmsTask(task) && await hasCanvasCalendarSubscription()) return;
 
   const calendarId = await getOrCreateCalendar();
   if (!calendarId) return;
@@ -485,6 +548,9 @@ export async function syncAllTasks(semesterId: string | null): Promise<number> {
     .select('*, courses!inner(name, color, semester_id)')
     .eq('courses.semester_id', semesterId)
     .eq('is_completed', false)
+    // Hidden assignments (120) never reach the device calendar. The prune loop
+    // below removes any event one already has.
+    .is('lms_hidden_at', null)
     .order('due_date');
 
   // A failed task query must not report success — the settings toggle
@@ -498,8 +564,18 @@ export async function syncAllTasks(semesterId: string | null): Promise<number> {
   // reverts.
   if (!tasks) return 0;
 
+  // Drop anything Canvas is already delivering to this calendar. Filtering
+  // HERE rather than only inside syncTaskToCalendar is what makes it retroactive:
+  // the prune loop below removes the event for every task not in this list, so
+  // duplicates written before this shipped are cleaned up on the next sync
+  // instead of lingering until the task is completed.
+  const canvasSubscribed = await hasCanvasCalendarSubscription();
+  const exportable = canvasSubscribed
+    ? (tasks as any[]).filter((t) => !isLmsTask(t))
+    : (tasks as any[]);
+
   let count = 0;
-  for (const task of tasks) {
+  for (const task of exportable) {
     const course = (task as any).courses;
     try {
       await syncTaskToCalendar(task as Task, course.name);
@@ -510,14 +586,16 @@ export async function syncAllTasks(semesterId: string | null): Promise<number> {
   // Every single event failed (permission revoked, calendar unavailable):
   // reporting success and flipping the enabled flag would show a working
   // toggle over a dead sync. Surface it instead.
-  if (tasks.length > 0 && count === 0) {
+  if (exportable.length > 0 && count === 0) {
     throw new Error('Could not add events to your calendar. Check Semora\'s calendar permission in iOS Settings and try again.');
   }
 
   // Prune events for tasks no longer in this semester's incomplete set
   // (semester switch, completed/deleted elsewhere) so the device calendar
   // mirrors the active semester instead of accumulating stale events.
-  const liveIds = new Set(tasks.map((t: any) => t.id));
+  // Built from `exportable`, not `tasks`: a Canvas task we have stopped
+  // exporting must have its old event removed, not preserved.
+  const liveIds = new Set(exportable.map((t: any) => t.id));
   for (const taskId of Object.keys(readEventMap())) {
     if (!liveIds.has(taskId)) {
       try { await removeTaskFromCalendar(taskId); } catch {}

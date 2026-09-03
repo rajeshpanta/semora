@@ -147,6 +147,15 @@ export interface Task {
   lms_url: string | null;
   lms_last_synced_at: string | null;
   lms_removed_at: string | null;
+  /** What the LMS last sent, so an edited due date is distinguishable (119). */
+  lms_synced_due_date: string | null;
+  lms_synced_due_time: string | null;
+  /** Fields the student now owns; the sync stops overwriting these (120). */
+  lms_field_overrides: Record<string, boolean> | null;
+  /** Hidden by the student. Hidden, not deleted — a delete would re-import (120). */
+  lms_hidden_at: string | null;
+  /** When a sync last disagreed with a field the student owns (120). */
+  lms_conflict_at: string | null;
   collaboration_deadline_id: string | null;
   group_assignment_id: string | null;
   created_at: string;

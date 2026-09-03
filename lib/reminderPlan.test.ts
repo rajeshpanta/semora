@@ -210,13 +210,31 @@ Deno.test('readings shed before assignments at equal distance', () => {
     `assignments ${keptAssignments} should outrank readings ${keptReadings}`);
 });
 
-Deno.test('protection may legitimately exceed the budget, and it is reported honestly', () => {
-  // 30 exams in the next fortnight is not a real week, but the planner must not
-  // silently break its own promise if it happens.
+Deno.test('protection wins the contest but never exceeds the budget', () => {
+  // This test used to assert the opposite — that protected reminders were
+  // exempt from the budget entirely, on the reasoning that 30 exams in a
+  // fortnight is a genuinely full fortnight and the planner should not
+  // silently break its promise.
+  //
+  // The exemption was the silent break. iOS holds at most 64 pending
+  // notifications per app and discards the overflow without reporting it, so
+  // going over the budget never delivered the extra reminders; it handed the
+  // OS an arbitrary choice about which of the student's PROTECTED reminders to
+  // throw away. Honouring 10 guarantees beats promising 120 and keeping an
+  // unknowable subset.
   const exams = Array.from({ length: 30 }, (_, i) => at(1 + (i % 10), 'exam'));
   const p = plan(exams, ALL_ON, 10);
-  assertEquals(p.reminders.length, 30 * 4);
-  assertEquals(p.scheduled, p.reminders.length);
+  assertEquals(p.reminders.length, 10);
+  assertEquals(p.scheduled, 10);
+  // Everything that did not fit is still accounted for, not lost.
+  assertEquals(p.scheduled + p.pruned.reduce((n, x) => n + x.count, 0), p.projected);
+});
+
+Deno.test('a protected reminder outranks an unprotected one for a scarce slot', () => {
+  // Ranking, not exemption: with one slot free the exam must take it.
+  const p = plan([at(1, 'exam'), ...Array.from({ length: 20 }, () => at(1, 'reading'))], ALL_ON, 1);
+  assertEquals(p.reminders.length, 1);
+  assertEquals(p.reminders[0].type, 'exam');
 });
 
 // ── accounting ─────────────────────────────────────────────────────────────

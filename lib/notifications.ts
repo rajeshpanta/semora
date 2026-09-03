@@ -841,6 +841,9 @@ export async function reconcileTaskReminders(userId: string): Promise<number> {
       .select('id')
       .eq('user_id', userId)
       .eq('is_completed', false)
+      // A hidden assignment (120) is absent here, so the reconcile treats it
+      // exactly like a completed one and withdraws its reminders.
+      .is('lms_hidden_at', null)
       .in('id', scheduledIds);
     // An unreachable or erroring database is NOT evidence that every task is
     // finished. Treating it as such would cancel every pending reminder on the
@@ -975,7 +978,9 @@ export async function rescheduleAllTaskReminders(
       .from('tasks')
       .select('id, title, type, priority, due_date, due_time, reminder_offsets_minutes, courses(name)')
       .eq('user_id', userId)
-      .eq('is_completed', false);
+      .eq('is_completed', false)
+      // Never spend a scarce notification slot on something the student hid.
+      .is('lms_hidden_at', null);
     if (!data) return;
 
     // Decide the whole allocation once, before touching the OS.
@@ -1063,6 +1068,21 @@ export async function rescheduleAllTaskReminders(
     rememberTimezone();
     writeHealthState({ lastScheduledAt: new Date().toISOString(), lastError: null });
 
+    // WHAT THE OS ACTUALLY TOOK, as opposed to what we asked it for.
+    //
+    // plan.scheduled is an intention. iOS caps an app at 64 pending
+    // notifications and silently discards the rest, so the two numbers can
+    // disagree with nothing anywhere reporting it — which is precisely how the
+    // protected-reminder overflow stayed invisible until it was reasoned about
+    // on paper. Task and class reminders share that one ceiling, so this
+    // counts everything pending, not just this plan's share.
+    let accepted = -1;
+    try {
+      accepted = (await Notifications.getAllScheduledNotificationsAsync()).length;
+    } catch {
+      // Best-effort telemetry; -1 means "could not read", never "zero".
+    }
+
     track('reminder_plan_built', {
       screen: 'notifications',
       trigger,
@@ -1071,6 +1091,8 @@ export async function rescheduleAllTaskReminders(
       tasks_beyond_horizon: plan.tasksBeyondHorizon,
       projected: plan.projected,
       scheduled: plan.scheduled,
+      // accepted < scheduled means the OS dropped some on the floor.
+      accepted,
       pruned: plan.projected - plan.scheduled,
       is_pro: prefetched.isPro,
       // Which intensity the student is actually on, derived rather than stored
@@ -1321,6 +1343,7 @@ async function checkWebDueSoonReminders(userId: string) {
     .select('id, title, due_date, due_time, courses(name)')
     .eq('user_id', userId)
     .eq('is_completed', false)
+    .is('lms_hidden_at', null)
     .eq('due_date', today);
   if (!data) return;
   const now = Date.now();

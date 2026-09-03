@@ -27,7 +27,9 @@ object belongs to the app you're working on.
 `course_collaboration_members`, `course_collaboration_invites`,
 `shared_deadlines`, `group_assignments` (037–039, connected learning platform),
 `support_requests` (064, marketing-site contact form),
-`lecture_recordings`, `lecture_segments`, `lecture_usage_log`, `lecture_quota_day` (065–067, lecture recording)
+`lecture_recordings`, `lecture_segments`, `lecture_usage_log`, `lecture_quota_day` (065–067, lecture recording),
+`lms_pending_courses` (103, new-term detection),
+`lms_suppressed_items` (120, LMS items the student has hidden)
 
 ### 🟩 CITIZEN (other app) — DO NOT TOUCH from Semora
 `whisper_usage` — whisper/voice usage + rate-limit log (`client_id`-based, anonymous,
@@ -58,7 +60,10 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
   `release_finished_lecture_reservations` (111), `notify_lecture_notes_ready` (112),
   `resync_lecture_transcripts` (115-116),
   `lecture_audio_awaiting_deletion`, `alert_lecture_audio_retained` (117),
-  `lecture_orphaned_audio` (118)
+  `lecture_orphaned_audio` (118),
+  `note_lms_removal_refused`, `mark_canvas_calendar_feed_removed` + `apply_lms_assignment_sync_service` (guarded in 119),
+  `tasks_record_lms_override`, `set_lms_task_hidden` (120),
+  `lms_sync_pending_count`, `lms_unstick_resolved_pending`, `lms_vault_orphans` (122)
 - **Citizen:** `whisper_rate_limit_ok` ← DO NOT modify from Semora
 
 ## Edge functions
@@ -134,6 +139,33 @@ something else.
 Currently held: **108** — the "Canvas has classes waiting" push. The Today
 banner half already shipped; this half targets students who have drifted away
 and is parked until on or after 2026-09-09. See that folder's README.
+
+## LMS / Canvas ownership model (migrations 119–123) — **SEMORA only**
+
+- **A sync must never be trusted to prove absence.** `mark_canvas_calendar_feed_removed`
+  and `apply_lms_assignment_sync_service` both refuse to delete anything when the
+  feed came back empty, or with fewer than half the items already on file, and
+  raise `ops_alerts.kind = 'lms_removal_refused'` when they do. The guard is
+  inside the SQL deliberately — it used to be one `&&` in the edge function, so
+  any other caller could have wiped a student's semester.
+- **`tasks.lms_field_overrides`** records which fields the student has edited.
+  The sync stops overwriting those. The single exception is a due date Canvas
+  moves EARLIER, which always wins so ownership can never cause a missed
+  deadline; `lms_conflict_at` is stamped either way so the app can say what
+  changed. Ownership is recorded by the `tasks_record_lms_override` trigger,
+  which ignores anything not written by an `authenticated` role — that is how
+  the sync's own service_role writes are excluded.
+- **`tasks.lms_hidden_at` + `lms_suppressed_items`** are the hide feature, and
+  they must be written together (use `set_lms_task_hidden`). Deleting a synced
+  task does not work: the next sync re-imports it. Hidden rows are filtered out
+  of every list, count, reminder and calendar export; `useTask()` deliberately
+  does NOT filter, so the task screen can still open one to restore it.
+- **`tasks.source` is `'lms'`** for anything with an `lms_external_id` (121/122).
+  It claimed `'manual'` for 2,788 rows before that, because the enum had no
+  other value.
+- **The cron job is defined in migration 123**, not only in `supabase/cron/`.
+  The live job had been applied out of band and the migration history described
+  an older, weaker one (limit 20, no wake step).
 
 ## Rules to avoid cross-app accidents
 1. Only `DROP`/`ALTER`/`TRUNCATE` a table whose comment names **your** app (or that's listed above under your app).

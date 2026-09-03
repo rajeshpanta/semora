@@ -21,6 +21,8 @@ export interface CanvasConnectionFacts {
   free_promo_claimed_at?: string | null;
   background_sync_enabled?: boolean | null;
   last_sync_status?: string | null;
+  /** Needed to tell a connection that is retrying from one that has stopped. */
+  last_successful_sync_at?: string | null;
   pending_courses_count?: number | null;
 }
 
@@ -194,9 +196,20 @@ export function canvasOfferFor<T extends CanvasConnectionFacts>(
 
   if (!canvas) return { offer: 'none', connection: null, free };
 
+  // A credential problem needs the student. A transient one does not.
+  //
+  // Treating every 'error' as needing attention meant a single Canvas hiccup
+  // put "Finish Canvas setup" in front of a student whose connection was
+  // working perfectly and would sync again within the hour — training them to
+  // ignore the one prompt that matters. A plain error only counts once the
+  // connection has actually stopped delivering: no successful sync for a day.
+  const syncedRecently = canvas.last_successful_sync_at
+    ? Date.now() - new Date(canvas.last_successful_sync_at).getTime() < 24 * 60 * 60 * 1000
+    : false;
   const stalled =
     !canvas.background_sync_enabled ||
-    ['error', 'credentials_required'].includes(canvas.last_sync_status ?? '');
+    canvas.last_sync_status === 'credentials_required' ||
+    (canvas.last_sync_status === 'error' && !syncedRecently);
   if (stalled) return { offer: 'needs_attention', connection: canvas, free };
 
   // Syncing perfectly AND holding courses back is not healthy.

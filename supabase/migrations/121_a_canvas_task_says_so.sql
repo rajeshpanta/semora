@@ -1,0 +1,26 @@
+-- ============================================================
+-- SEMORA (121): A CANVAS TASK SHOULD SAY IT CAME FROM CANVAS
+-- ============================================================
+-- Every one of the 2,788 tasks Canvas has imported claims source = 'manual' —
+-- the enum had no other honest option, so the sync picked the least wrong one
+-- and 092 wrote it in with a bare `'manual'::public.source_type`.
+--
+-- It is not cosmetic. `source` is the only column that answers "where did this
+-- come from", and with Canvas absent from it:
+--
+--   * a student cannot be shown which tasks are synced and which are theirs,
+--     which is the first thing 122's hide/edit affordances need to know;
+--   * every funnel number that splits typed-in work from imported work is
+--     wrong, in the direction that flatters us;
+--   * `courses.source` ALREADY says 'lms' (it is plain text, and
+--     enforce_free_course_limit reads it), so a Canvas course holds Canvas
+--     tasks that deny being Canvas tasks.
+--
+-- ─── WHY THIS MIGRATION CONTAINS ONLY ONE LINE ──────────────
+-- Postgres will not let a new enum value be USED in the same transaction that
+-- adds it. Every migration runs in its own transaction, so the value has to
+-- land here and be committed before 122 can write it or backfill with it.
+-- Splitting it is the requirement, not a preference.
+-- ============================================================
+
+alter type public.source_type add value if not exists 'lms';

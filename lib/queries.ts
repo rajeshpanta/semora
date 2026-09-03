@@ -151,7 +151,11 @@ export function useTasks(filters?: TaskFilters) {
     queryFn: async () => {
       let query = supabase
         .from('tasks')
-        .select('*, courses!inner(name, color, icon, semester_id)');
+        .select('*, courses!inner(name, color, icon, semester_id)')
+        // Hidden LMS assignments (120) are out of every list, count, reminder
+        // and calendar export. useTask() below deliberately does NOT filter, so
+        // the task screen can still open one by id and restore it.
+        .is('lms_hidden_at', null);
 
       if (filters?.semesterId) {
         query = query.eq('courses.semester_id', filters.semesterId);
@@ -339,7 +343,8 @@ export function useTaskStats(semesterId: string | null) {
       const { data, error } = await supabase
         .from('tasks')
         .select('is_completed, courses!inner(semester_id)')
-        .eq('courses.semester_id', semesterId!);
+        .eq('courses.semester_id', semesterId!)
+        .is('lms_hidden_at', null);
       if (error) throw error;
 
       const total = data.length;
@@ -370,7 +375,8 @@ export function useHasPendingTasks() {
         .from('tasks')
         .select('id', { count: 'exact', head: true })
         .eq('user_id', userId)
-        .eq('is_completed', false);
+        .eq('is_completed', false)
+        .is('lms_hidden_at', null);
       if (error) throw error;
       return (count ?? 0) > 0;
     },

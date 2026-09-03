@@ -172,6 +172,13 @@ async function fetchJson(
     return fetchJson(next.toString(), init, expectedOrigin, redirects + 1);
   }
   const raw = await response.text();
+  // BEFORE the parse, deliberately. Canvas answers a throttle with the plain
+  // text "403 Forbidden (Rate Limit Exceeded)", which is not JSON — checking
+  // after the parse meant the parse threw first and the throttle was reported
+  // as an unreadable response. Same rule as the calendar feed: a throttle must
+  // never be mistaken for a revoked token, because only one of those two costs
+  // the student their stored credential.
+  if (!response.ok && isThrottleResponse(response.status, response.headers, raw)) throw throttleError();
   let data: any = null;
   try {
     data = raw ? JSON.parse(raw) : null;
@@ -270,7 +277,17 @@ async function fetchCanvasCalendar(rawUrl: string) {
       continue;
     }
 
-    if ([401, 403, 404, 410].includes(response.status)) {
+    if (response.status === 429 || response.status === 403) {
+      // Read it before deciding. A 403 is the ONLY status Canvas uses for both
+      // "this feed is gone" and "you are asking too often", and the two must
+      // not share an outcome — see isThrottleResponse above.
+      const throttleBody = await response.text().catch(() => '');
+      if (isThrottleResponse(response.status, response.headers, throttleBody)) throw throttleError();
+      const expired: any = new Error('This Canvas Calendar Feed is no longer available. Copy a fresh Calendar Feed URL from Canvas and reconnect.');
+      expired.status = 401;
+      throw expired;
+    }
+    if ([401, 404, 410].includes(response.status)) {
       const expired: any = new Error('This Canvas Calendar Feed is no longer available. Copy a fresh Calendar Feed URL from Canvas and reconnect.');
       expired.status = 401;
       throw expired;
@@ -654,13 +671,56 @@ async function googleAssignments(token: string, courseIds: string[]): Promise<Lm
   return output;
 }
 
+// ── Throttled is not revoked (1.2) ──────────────────────────────────────────
+//
+// Canvas signals rate limiting with HTTP 403 — not 429 — and a body that says
+// "403 Forbidden (Rate Limit Exceeded)". Every 403 used to be read as a dead
+// credential, and the consequences of that mistake are not symmetric:
+//
+//   a throttled sync treated as a temporary error  → retried an hour later
+//   a throttled sync treated as revoked            → background_sync_enabled
+//                                                     set false, the feed URL
+//                                                     PURGED from the Vault,
+//                                                     and the student told to
+//                                                     reconnect a connection
+//                                                     that never broke
+//
+// The second is unrecoverable without the student re-pasting a URL from
+// Canvas, over a condition that clears itself in minutes. So a 403 has to
+// prove it is an authorization failure before it is allowed to cost that, and
+// anything that looks like throttling degrades to a plain retryable error.
+const THROTTLE_HINT = /rate.?limit|throttl|too many requests/i;
+
+function isThrottleResponse(status: number, headers: Headers, body: string) {
+  if (status === 429) return true;
+  if (status !== 403) return false;
+  if (THROTTLE_HINT.test(body)) return true;
+  // Canvas publishes its remaining bucket on every response; at zero the next
+  // 403 is the throttle, whatever the body happens to say.
+  const remaining = Number(headers.get('x-rate-limit-remaining'));
+  return Number.isFinite(remaining) && remaining <= 0;
+}
+
+function throttleError() {
+  // 503, so performConnectionSync records a plain failure with capped backoff
+  // and leaves both background_sync_enabled and the stored credential alone.
+  const error: any = new Error('Canvas is rate limiting Semora right now. The next sync will pick this up automatically.');
+  error.status = 503;
+  error.code = 'provider_throttled';
+  return error;
+}
+
 function validProvider(value: unknown): value is Provider {
   return ['canvas', 'blackboard', 'moodle', 'google_classroom'].includes(String(value));
 }
 
 function errorCode(error: unknown): 'credentials_required' | 'provider_error' {
   const status = Number((error as any)?.status);
-  return status === 401 || status === 403 || /reconnect|permission|unauthor|token/i.test(String((error as Error)?.message ?? ''))
+  const message = String((error as Error)?.message ?? '');
+  // An explicitly-classified throttle is never a credential problem, however
+  // the provider happened to spell its status code.
+  if ((error as any)?.code === 'provider_throttled' || THROTTLE_HINT.test(message)) return 'provider_error';
+  return status === 401 || status === 403 || /reconnect|permission|unauthor|token/i.test(message)
     ? 'credentials_required'
     : 'provider_error';
 }
