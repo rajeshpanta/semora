@@ -12,7 +12,6 @@ import { useCallback,
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
-  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -33,7 +32,6 @@ import {
   LMS_PROVIDER_LABELS,
   normalizeCanvasCalendarFeedUrl,
   describeCanvasFeedInput,
-  CANVAS_FEED_HINTS,
   reconnectLmsConnection,
   lmsConnectionsQuery,
   lmsFailureCode,
@@ -42,6 +40,15 @@ import {
   type LmsCredential,
 } from '@/lib/lms';
 import { track } from '@/lib/analytics';
+import { CanvasGuidedPaste } from '@/components/CanvasGuidedPaste';
+import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
+import {
+  canvasSetupStorageKey,
+  parseCanvasSetupProgress,
+  serializeCanvasSetupProgress,
+  EMPTY_PROGRESS,
+  type CanvasSetupProgress,
+} from '@/lib/canvasSetupProgress';
 import { useCourses, useSemesters } from '@/lib/queries';
 import { useResponsive } from '@/lib/responsive';
 import { useColors } from '@/lib/theme';
@@ -99,6 +106,7 @@ export default function LmsConnectScreen() {
   const { data: semesters = [], refetch: refetchSemesters } = useSemesters();
   const isPro = useAppStore((state) => state.isPro);
   const selectedSemesterId = useAppStore((state) => state.selectedSemesterId);
+  const setSelectedSemester = useAppStore((state) => state.setSelectedSemester);
 
   // Route to the paywall (teaser → upsell). The lms-sync edge function enforces
   // PRO_REQUIRED server-side; this is the client teaser so free users see the
@@ -145,7 +153,25 @@ export default function LmsConnectScreen() {
   const [courses, setCourses] = useState<DiscoveredLmsCourse[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [working, setWorking] = useState(false);
-  const [showPrivateUrl, setShowPrivateUrl] = useState(false);
+
+  // ── Progress that survives leaving the app (Phase 3) ──────────────────────
+  //
+  // Fetching a Canvas feed link REQUIRES going to a browser, and that round
+  // trip can evict Semora from memory. Everything the student had worked out —
+  // which school, which lane, how many tries — used to live in React state and
+  // died with it, so they came back holding the link and were asked "which
+  // school?" again. The feed URL itself is deliberately never stored: it is a
+  // bearer credential, and it is the one value they are arriving WITH.
+  const setupKey = session?.user?.id ? canvasSetupStorageKey(session.user.id) : null;
+  const [setupProgress, setSetupProgress] = useState<CanvasSetupProgress>(EMPTY_PROGRESS);
+  useEffect(() => {
+    if (!setupKey) return;
+    setSetupProgress(parseCanvasSetupProgress(getDeviceItem(setupKey)));
+  }, [setupKey]);
+  const saveProgress = useCallback((next: CanvasSetupProgress) => {
+    setSetupProgress(next);
+    if (setupKey) setDeviceItem(setupKey, serializeCanvasSetupProgress(next));
+  }, [setupKey]);
 
   // Existing courses in the semester the import is going into — the only place
   // a duplicate can appear. Scoped to that semester on purpose: last term's
@@ -348,6 +374,12 @@ export default function LmsConnectScreen() {
         reconnecting,
         reason: lmsFailureCode(message),
       });
+      // Escalation is keyed on this. Counted here rather than in the component
+      // so it survives the screen being torn down while the student is away in
+      // a browser — which is exactly when a second attempt happens.
+      if (isCanvasCalendar) {
+        saveProgress({ ...setupProgress, attempts: setupProgress.attempts + 1 });
+      }
       // Pro lapsed mid-session (or a patched client hit the server gate): the
       // lms-sync function replies with the PRO_REQUIRED copy. Route to the
       // paywall instead of showing it as a raw connect error. invokeLms surfaces
@@ -361,6 +393,36 @@ export default function LmsConnectScreen() {
       setWorking(false);
     }
   };
+
+  // ── Auto-validate and advance (Phase 3) ───────────────────────────────────
+  //
+  // The moment the pasted link is a valid Canvas feed, there is nothing left to
+  // ask. Requiring a button tap after that added one more thing to find at the
+  // end of a flow whose whole problem is people not getting to the end — and
+  // the button sits below a long form, so on a phone it is often off-screen at
+  // the moment it becomes relevant.
+  //
+  // Runs once per distinct valid URL: keyed on the verdict's normalised URL
+  // rather than on the raw field, so re-typing the same link does not re-fire
+  // and a keystroke inside an already-valid URL does not either.
+  const autoAdvancedFor = useRef<string | null>(null);
+  const [autoAdvancing, setAutoAdvancing] = useState(false);
+  useEffect(() => {
+    if (!isCanvasCalendar) return;
+    if (!feedVerdict || feedVerdict.state !== 'ok') return;
+    if (working || courses.length > 0) return;
+    if (autoAdvancedFor.current === feedVerdict.url) return;
+    autoAdvancedFor.current = feedVerdict.url;
+    setAutoAdvancing(true);
+    // A beat, so a student watching the field sees "looks right" register
+    // before the screen starts working. Instant would read as a glitch.
+    const timer = setTimeout(() => {
+      track('canvas_setup_auto_advanced', { screen: 'lms_connect', source, lane: reconnecting ? 'repair' : 'connect' });
+      void discover().finally(() => setAutoAdvancing(false));
+    }, 450);
+    return () => { clearTimeout(timer); setAutoAdvancing(false); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isCanvasCalendar, feedVerdict, working, courses.length]);
 
   const save = async () => {
     if (!credential || !session || working) return;
@@ -483,7 +545,30 @@ export default function LmsConnectScreen() {
         // something and delivered it; charging straight into an upsell here is
         // how a kept promise starts to feel like a setup. Pro is offered again
         // by the walls that were already there.
-        [{ text: 'Done', onPress: () => router.replace('/settings/lms' as any) }],
+        //
+        // AND NOT A SETTINGS LIST EITHER (Phase 3). "Done" used to return to
+        // /settings/lms — a page of connection plumbing. The student just
+        // imported a term of deadlines and was shown a row saying "Canvas ·
+        // syncing", which is a receipt, not the thing they came for. They land
+        // on Today instead, looking at the work that just arrived.
+        //
+        // Selecting the semester first matters: Today renders the SELECTED
+        // term, and the import may have gone into a different one — the review
+        // step creates it from the dates Canvas actually returned. Without
+        // this, the payoff screen would be empty for exactly the students whose
+        // Canvas term is not the one the app happened to be showing.
+        [{
+          text: 'See my deadlines',
+          onPress: () => {
+            if (semesterId) setSelectedSemester(semesterId);
+            if (setupKey) setDeviceItem(setupKey, serializeCanvasSetupProgress(EMPTY_PROGRESS));
+            track('canvas_setup_payoff_opened', {
+              screen: 'lms_connect', source, lane: 'connect',
+              courses: chosen.length, deadlines: result.processed,
+            });
+            router.replace('/(tabs)' as any);
+          },
+        }],
       );
     } catch (error) {
       track('lms_connect_failed', {
@@ -589,127 +674,34 @@ export default function LmsConnectScreen() {
 
               {isCanvasCalendar && (
                 <>
-                  <View style={[styles.guideCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
-                    <View style={styles.guideHeading}>
-                      <FontAwesome name="desktop" size={15} color={colors.brand} />
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.guideTitle, { color: colors.ink }]}>First, open Canvas in a web browser</Text>
-                        <Text style={[styles.guideIntro, { color: colors.ink3 }]}>Use your school’s Canvas website—the place where you normally see courses and assignments. The Canvas Student app does not show this private feed link.</Text>
-                      </View>
-                    </View>
-                    <View style={[styles.guideDivider, { backgroundColor: colors.line }]} />
-                    <View style={styles.setupStep}>
-                      <View style={[styles.stepNumber, { backgroundColor: colors.brand50 }]}><Text style={[styles.stepNumberText, { color: colors.brand }]}>1</Text></View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.stepTitle, { color: colors.ink }]}>Open Calendar</Text>
-                        <Text style={[styles.stepText, { color: colors.ink3 }]}>In Canvas, choose Calendar from the main navigation.</Text>
-                      </View>
-                    </View>
-                    <View style={styles.setupStep}>
-                      <View style={[styles.stepNumber, { backgroundColor: colors.brand50 }]}><Text style={[styles.stepNumberText, { color: colors.brand }]}>2</Text></View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.stepTitle, { color: colors.ink }]}>Choose Calendar Feed</Text>
-                        <Text style={[styles.stepText, { color: colors.ink3 }]}>Find Calendar Feed in the Calendar sidebar and open it.</Text>
-                      </View>
-                    </View>
-                    <View style={styles.setupStep}>
-                      <View style={[styles.stepNumber, { backgroundColor: colors.brand50 }]}><Text style={[styles.stepNumberText, { color: colors.brand }]}>3</Text></View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.stepTitle, { color: colors.ink }]}>Copy the complete link</Text>
-                        <Text style={[styles.stepText, { color: colors.ink3 }]}>Copy the URL Canvas displays. It usually starts with webcal:// and contains /feeds/calendars/user_.</Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => Linking.openURL('https://community.instructure.com/en/kb/articles/662804-unknown').catch(() => {})}
-                      style={styles.officialHelp}
-                    >
-                      <FontAwesome name="external-link" size={11} color={colors.brand} />
-                      <Text style={[styles.link, { color: colors.brand }]}>See Canvas’s illustrated instructions</Text>
-                    </TouchableOpacity>
-                  </View>
+                  {/* GUIDED PASTE (Phase 3).
+                      What stood here was a card of instructions: open Canvas in
+                      a browser, go to Calendar, find Calendar Feed, copy the
+                      URL. Correct, and measured over 60 days: 22 sessions
+                      reached this screen, 13 of them never attempted a paste at
+                      all, and 2 connected. Instructions cannot help a student
+                      who does not know their school's Canvas address — and
+                      almost nobody does, because it rarely resembles the
+                      school's name.
 
-                  <View style={[styles.syncExplainer, { backgroundColor: colors.brand50 }]}>
-                    <FontAwesome name="refresh" size={15} color={colors.brand} />
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.syncTitle, { color: colors.ink }]}>How automatic sync works</Text>
-                      <Text style={[styles.syncText, { color: colors.ink2 }]}>Semora securely checks your private Canvas link every few hours—even when the app is closed. If a dated assignment or event changes, Semora updates the same task instead of creating a duplicate. Semora never changes anything in Canvas.</Text>
-                    </View>
-                  </View>
+                      The component does the parts Semora can do: find the
+                      address from the school's NAME, open that calendar page in
+                      one tap, read the link back off the clipboard, rescue a
+                      wrong-page paste using the hostname it already contains,
+                      and hand the job to a laptop rather than repeating itself.
+                      The paste field, its masking and its iOS content hints are
+                      carried over unchanged. */}
+                  <CanvasGuidedPaste
+                    token={token}
+                    onTokenChange={setToken}
+                    verdict={feedVerdict}
+                    progress={setupProgress}
+                    onProgressChange={saveProgress}
+                    working={working}
+                    autoAdvancing={autoAdvancing}
+                    source={source}
+                  />
 
-                  {/* Said BEFORE the step, not after it. Tapping a webcal://
-                      link makes iOS ask to open it in Calendar — a real system
-                      prompt Semora neither triggers nor may suppress. A student
-                      who meets it unprepared reads it as Semora doing something
-                      suspicious; a student who was told to expect it just
-                      declines and carries on. */}
-                  <View style={styles.copyTip}>
-                    <FontAwesome name="hand-pointer-o" size={12} color={colors.ink3} />
-                    <Text style={[styles.copyTipText, { color: colors.ink3 }]}>
-                      Copy your Canvas Calendar Feed link and paste it here. If iOS offers to open it
-                      in Calendar, choose Cancel and return to Semora.
-                    </Text>
-                  </View>
-                  <Text style={[styles.label, { color: colors.ink2 }]}>Paste your private Calendar Feed link</Text>
-                  <View style={styles.secretField}>
-                    <TextInput
-                      value={token}
-                      onChangeText={setToken}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      keyboardType="url"
-                      secureTextEntry={!showPrivateUrl}
-                      // secureTextEntry alone tells iOS "this is a password",
-                      // and with no content-type hint iOS then applies its own
-                      // credential heuristics to the focused field — Passwords
-                      // sheet, QuickType credential bar, sometimes a Face ID
-                      // prompt. In a step whose entire instruction is "paste a
-                      // calendar link", unexplained Apple chrome reads as a
-                      // warning that something is wrong.
-                      //
-                      // These three say what the field actually is. The masking
-                      // is kept exactly as it was: this changes what iOS OFFERS,
-                      // never whether the link is hidden.
-                      textContentType="URL"
-                      autoComplete="off"
-                      importantForAutofill="no"
-                      placeholder="webcal://…/feeds/calendars/user_….ics"
-                      placeholderTextColor={colors.ink3}
-                      style={[styles.input, styles.secretInput, { color: colors.ink, backgroundColor: colors.card, borderColor: colors.line }]}
-                    />
-                    <TouchableOpacity
-                      accessibilityLabel={showPrivateUrl ? 'Hide Calendar Feed URL' : 'Show Calendar Feed URL'}
-                      onPress={() => setShowPrivateUrl((current) => !current)}
-                      style={styles.secretToggle}
-                    >
-                      <FontAwesome name={showPrivateUrl ? 'eye-slash' : 'eye'} size={15} color={colors.ink3} />
-                    </TouchableOpacity>
-                  </View>
-                  {/* Silent until they have typed something: an error sitting
-                      under an empty box reads as a failure they already made. */}
-                  {feedVerdict && feedVerdict.state !== 'empty' && (
-                    <View style={styles.privateNote}>
-                      <FontAwesome
-                        name={feedVerdict.state === 'ok' ? 'check-circle' : 'exclamation-circle'}
-                        size={12}
-                        color={feedVerdict.state === 'ok' ? colors.teal : colors.ink2}
-                      />
-                      <Text
-                        style={[
-                          styles.privateNoteText,
-                          { color: feedVerdict.state === 'ok' ? colors.teal : colors.ink2 },
-                        ]}
-                      >
-                        {/* t() explicitly: a string built by interpolation can
-                            never match a catalogue key, so the translatable
-                            half is resolved before the hostname is appended.
-                            The hints below are plain values and <Text> localizes
-                            those on their own. */}
-                        {feedVerdict.state === 'ok'
-                          ? `${t('Looks right')} — ${feedVerdict.host}`
-                          : CANVAS_FEED_HINTS[feedVerdict.code]}
-                      </Text>
-                    </View>
-                  )}
                   <View style={styles.privateNote}>
                     <FontAwesome name="lock" size={12} color={colors.ink3} />
                     <Text style={[styles.privateNoteText, { color: colors.ink3 }]}>Treat this link like a password. Semora encrypts it and never displays it after setup.</Text>
@@ -764,10 +756,24 @@ export default function LmsConnectScreen() {
                 </View>
               )}
 
+              {/* The empty submit is not a user error, it is an affordance
+                  error. `feed_url_empty` is the single most common recorded
+                  failure of this screen — 6 events from 4 devices — and every
+                  one is someone tapping the only button on the page before
+                  they had anything to submit, then being told off for it by an
+                  alert. Refusing the tap costs them nothing: the guided block
+                  directly above says what to do and offers to paste from the
+                  clipboard, so a greyed button reads as "not yet" rather than
+                  as a dead end. */}
               <TouchableOpacity
                 onPress={discover}
-                disabled={working}
-                style={[styles.primary, { backgroundColor: colors.brand }]}
+                disabled={working || (isCanvasCalendar && (!feedVerdict || feedVerdict.state === 'empty'))}
+                style={[
+                  styles.primary,
+                  { backgroundColor: working || (isCanvasCalendar && (!feedVerdict || feedVerdict.state === 'empty'))
+                      ? colors.line
+                      : colors.brand },
+                ]}
               >
                 {working ? <ActivityIndicator color="#fff" /> : (
                   <>
@@ -851,25 +857,6 @@ const styles = StyleSheet.create({
   freeOfferText: { fontSize: 12.5, lineHeight: 18, marginTop: 3 },
   label: { fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.45, marginTop: 14, marginBottom: 7 },
   input: { minHeight: 50, borderRadius: 13, borderWidth: 1.2, paddingHorizontal: 14, fontSize: 15 },
-  secretField: { position: 'relative' },
-  secretInput: { paddingRight: 48 },
-  secretToggle: { position: 'absolute', right: 4, top: 4, width: 42, height: 42, alignItems: 'center', justifyContent: 'center' },
-  guideCard: { borderWidth: StyleSheet.hairlineWidth, borderRadius: 16, padding: 14, marginBottom: 14 },
-  guideHeading: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  guideTitle: { fontSize: 14, fontWeight: '800' },
-  guideIntro: { fontSize: 12, lineHeight: 18, marginTop: 3 },
-  guideDivider: { height: StyleSheet.hairlineWidth, marginVertical: 13 },
-  setupStep: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 12 },
-  stepNumber: { width: 25, height: 25, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  stepNumberText: { fontSize: 12, fontWeight: '900' },
-  stepTitle: { fontSize: 13, fontWeight: '800' },
-  stepText: { fontSize: 12, lineHeight: 17, marginTop: 2 },
-  officialHelp: { minHeight: 34, flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
-  syncExplainer: { borderRadius: 15, padding: 13, flexDirection: 'row', gap: 10, alignItems: 'flex-start', marginBottom: 5 },
-  syncTitle: { fontSize: 13, fontWeight: '800' },
-  syncText: { fontSize: 12, lineHeight: 18, marginTop: 3 },
-  copyTip: { flexDirection: 'row', alignItems: 'flex-start', gap: 7, marginBottom: 8 },
-  copyTipText: { flex: 1, fontSize: 11.5, lineHeight: 16 },
   privateNote: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 8, paddingHorizontal: 2 },
   privateNoteText: { flex: 1, fontSize: 11, lineHeight: 16 },
   limitNote: { borderTopWidth: StyleSheet.hairlineWidth, marginTop: 14, paddingTop: 12 },

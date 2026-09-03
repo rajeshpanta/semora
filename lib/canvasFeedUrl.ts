@@ -40,7 +40,20 @@ export type CanvasFeedProblem =
 export type CanvasFeedVerdict =
   | { state: 'empty' }
   | { state: 'ok'; url: string; host: string }
-  | { state: 'problem'; code: CanvasFeedProblem };
+  /**
+   * `host` is present when the paste WAS a real Canvas URL from the wrong page.
+   *
+   * That case used to be thrown away — the hostname was parsed, used to decide
+   * the verdict, and then discarded with the rest of the input. But a student
+   * who pasted their Canvas dashboard has already told us the one thing the
+   * whole flow is otherwise stuck asking for: which school's Canvas is theirs.
+   * Production recorded 5 such pastes from 4 devices, every one of which ended
+   * in a dead end that said "go and find the right page" without saying where.
+   *
+   * Carried so the caller can offer to open that school's calendar page
+   * instead of explaining it. Only ever a hostname, never the pasted string.
+   */
+  | { state: 'problem'; code: CanvasFeedProblem; host?: string };
 
 /**
  * The refusal wording, unchanged from when it lived in lib/lms.ts.
@@ -61,7 +74,7 @@ const MESSAGES: Record<CanvasFeedProblem, string> = {
 /** Short, plain guidance for the live hint under the field. */
 export const CANVAS_FEED_HINTS: Record<CanvasFeedProblem, string> = {
   not_a_url: 'That is not a link yet. Copy the whole Calendar Feed URL from Canvas.',
-  wrong_page: 'That is a Canvas page, not the feed. In Canvas open Calendar, then Calendar Feed.',
+  wrong_page: 'That is a Canvas page, not the Calendar Feed link.',
   not_https: 'Copy the Calendar Feed URL exactly as Canvas shows it.',
   bad_host: 'Use your school Canvas web address.',
   too_long: 'That is too long to be a Calendar Feed URL.',
@@ -131,7 +144,8 @@ export function describeCanvasFeedInput(raw: string): CanvasFeedVerdict {
     return { state: 'problem', code: 'bad_host' };
   }
   if (!FEED_PATH.test(url.pathname)) {
-    return { state: 'problem', code: 'wrong_page' };
+    // Keep the hostname. It is the rescue: see the type's note above.
+    return { state: 'problem', code: 'wrong_page', host: url.hostname };
   }
 
   url.hash = '';

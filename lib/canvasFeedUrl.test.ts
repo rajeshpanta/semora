@@ -145,3 +145,41 @@ Deno.test('the extractor returns the input untouched when there is nothing to fi
   assertEquals(extractCanvasFeedCandidate('nothing here'), 'nothing here');
   assertEquals(extractCanvasFeedCandidate(''), '');
 });
+
+// ── The wrong-page rescue (Phase 3) ────────────────────────────────────────
+//
+// A student who pasted their Canvas dashboard has already told us the one fact
+// the whole flow is otherwise stuck asking for: which school's Canvas is
+// theirs. Production recorded 5 such pastes from 4 devices, every one ending in
+// a dead end that said "find the right page" without saying where.
+
+Deno.test('a wrong-page paste keeps the hostname so the flow can rescue it', () => {
+  const v = describeCanvasFeedInput('https://deanza.instructure.com/courses/12345');
+  assertEquals(v.state, 'problem');
+  if (v.state !== 'problem') throw new Error('unreachable');
+  assertEquals(v.code, 'wrong_page');
+  assertEquals(v.host, 'deanza.instructure.com');
+});
+
+Deno.test('the rescued host is the hostname alone, never the pasted URL', () => {
+  const v = describeCanvasFeedInput('https://x.instructure.com/users/9/files?token=abc');
+  if (v.state !== 'problem') throw new Error('expected a problem');
+  assertEquals(v.host, 'x.instructure.com');
+  // Nothing from the path or query may ride along.
+  assertEquals(v.host?.includes('token'), false);
+  assertEquals(v.host?.includes('/'), false);
+});
+
+Deno.test('problems that are not wrong_page carry no host to offer', () => {
+  const notUrl = describeCanvasFeedInput('hello there');
+  if (notUrl.state !== 'problem') throw new Error('expected a problem');
+  assertEquals(notUrl.code, 'not_a_url');
+  assertEquals(notUrl.host, undefined);
+});
+
+Deno.test('a valid feed is still ok and still yields its host', () => {
+  const v = describeCanvasFeedInput('https://deanza.instructure.com/feeds/calendars/user_abc123.ics');
+  assertEquals(v.state, 'ok');
+  if (v.state !== 'ok') throw new Error('unreachable');
+  assertEquals(v.host, 'deanza.instructure.com');
+});
