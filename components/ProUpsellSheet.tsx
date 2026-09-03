@@ -19,6 +19,8 @@ import {
   lmsConnectionsQuery,
 } from '@/lib/lms';
 import { useAppStore } from '@/store/appStore';
+import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
+import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 
 // The upgrade moment, as a sheet rather than a screen.
 //
@@ -301,15 +303,22 @@ export function ProUpsellSheet({
                 Suppressed once Canvas is healthy — then the student's classes
                 are already arriving and this wall is about something else. */}
             {canvasEscape && (
+              <CanvasOfferImpression screen="upsell_sheet" offer={canvasOffer} free={true} source="course_upsell" />
+            )}
+            {canvasEscape && (
               <TouchableOpacity
                 style={[styles.canvasEscape, { borderColor: colors.teal, backgroundColor: colors.teal50 }]}
                 activeOpacity={0.85}
                 accessibilityRole="button"
                 accessibilityLabel="Connect Canvas free, limited time offer"
                 onPress={() => {
-                  track('canvas_offer_tapped', { screen: 'upsell_sheet', offer: canvasOffer, free: true, reason, source: 'course_upsell' });
+                  trackCanvasOfferTapped(
+                    { screen: 'upsell_sheet', offer: canvasOffer, free: true, source: 'course_upsell' },
+                    { reason },
+                  );
                   onClose();
-                  router.push({ pathname: '/settings/lms', params: { source: 'course_upsell' } } as any);
+                  const to = canvasOfferDestination(canvasOffer, 'course_upsell');
+                  if (to.kind === 'route') router.push({ pathname: to.pathname, params: to.params } as any);
                 }}
               >
                 <FontAwesome name="university" size={15} color={colors.teal} />
@@ -402,6 +411,9 @@ export function ProUpsellSheet({
                 thing being sold, and before "Not now" — which is the outcome
                 it exists to convert. */}
             {canvasScanPromo && (
+              <CanvasOfferImpression screen="upsell_sheet" offer={canvasOffer} free={true} source={CANVAS_PROMO_SOURCE} />
+            )}
+            {canvasScanPromo && (
               <TouchableOpacity
                 style={[styles.canvasPromo, { borderColor: colors.teal, backgroundColor: colors.teal50 }]}
                 activeOpacity={0.85}
@@ -413,19 +425,13 @@ export function ProUpsellSheet({
                   // the change. `promo` and `source` are additive, and `source`
                   // is what survives into the connect flow — see the params
                   // below and lms-connect's funnel events.
-                  track('canvas_offer_tapped', {
-                    screen: 'upsell_sheet',
-                    offer: canvasOffer,
-                    free: true,
-                    reason,
-                    promo: true,
-                    source: CANVAS_PROMO_SOURCE,
-                  });
+                  trackCanvasOfferTapped(
+                    { screen: 'upsell_sheet', offer: canvasOffer, free: true, source: CANVAS_PROMO_SOURCE },
+                    { reason, promo: true },
+                  );
                   onClose();
-                  router.push({
-                    pathname: '/settings/lms',
-                    params: { source: CANVAS_PROMO_SOURCE },
-                  } as any);
+                  const to = canvasOfferDestination(canvasOffer, CANVAS_PROMO_SOURCE);
+                  if (to.kind === 'route') router.push({ pathname: to.pathname, params: to.params } as any);
                 }}
               >
                 <View style={[styles.canvasPromoPill, { backgroundColor: colors.teal }]}>

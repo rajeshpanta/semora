@@ -83,7 +83,8 @@ export default function LmsSettingsScreen() {
     queryKey: ['lmsConnections'],
     queryFn: listLmsConnections,
   });
-  const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
+  // isPending matters here, not just the data. See priceKnown below.
+  const { data: canvasFreePromo, isPending: promoPending } = useQuery(canvasFreePromoQuery);
   // The promo is named for Canvas because Canvas is what students use and what
   // it was opened up for, but the server gate (lms_access_allowed) is per
   // ACCOUNT, not per provider — so Blackboard and Moodle unlock with it. Every
@@ -92,6 +93,21 @@ export default function LmsSettingsScreen() {
   // showing a price that is not being charged.
   const lmsFree = canvasFreeFor(query.data, isPro, canvasFreePromo);
   const lmsAllowed = isPro || lmsFree;
+  // ── Do not quote a price you do not know yet ────────────────
+  //
+  // Whether the free offer is live is a NETWORK read, and canvasFreeFor treats
+  // undefined as "no". So for the first few hundred milliseconds of this screen
+  // a free student saw a padlock and "Connect Canvas · Pro" — then it flipped to
+  // "Free". That is the exact defect canvasOfferFor was changed to avoid (it
+  // returns 'healthy' while the answer is loading, after production recorded
+  // eight students being shown a PRO badge while canvas_free was active), and
+  // this screen was never given the same treatment.
+  //
+  // A Pro account already knows its own answer locally, so only a non-Pro
+  // account has to wait. Until it resolves the button is neutral: no price, no
+  // padlock, and a tap goes to the connect screen — which does its own gating
+  // properly and waits for the same answer before bouncing anyone.
+  const priceKnown = isPro || !promoPending;
   const canvasFeedConnection = query.data?.find(
     (connection) => connection.provider === 'canvas' && connection.connection_method === 'calendar_feed',
   );
@@ -131,6 +147,10 @@ export default function LmsSettingsScreen() {
                 provider: connection?.provider,
                 connectionId,
                 baseUrl: connection?.base_url ?? '',
+                // Without this a reconnect was recorded as source='settings',
+                // which is where the screen is, not where the student came
+                // from. The repair lane was therefore invisible.
+                source: 'reconnect_sync_error',
               },
             } as any),
           },
@@ -221,14 +241,17 @@ export default function LmsSettingsScreen() {
           </View>
           {!canvasFeedConnection && (
             <TouchableOpacity
-              onPress={() => (lmsAllowed
+              onPress={() => (lmsAllowed || !priceKnown
                 ? router.push({ pathname: '/settings/lms-connect', params: { provider: 'canvas', source } } as any)
                 : openPaywall())}
               style={[styles.canvasButton, { backgroundColor: colors.brand }]}
             >
-              <FontAwesome name={lmsAllowed ? 'link' : 'lock'} size={14} color="#fff" />
+              <FontAwesome name={!priceKnown || lmsAllowed ? 'link' : 'lock'} size={14} color="#fff" />
               <Text style={styles.canvasButtonText}>
-                {lmsFree ? 'Connect Canvas · Free' : lmsAllowed ? 'Connect Canvas' : 'Connect Canvas · Pro'}
+                {!priceKnown ? 'Connect Canvas'
+                  : lmsFree ? 'Connect Canvas · Free'
+                  : lmsAllowed ? 'Connect Canvas'
+                  : 'Connect Canvas · Pro'}
               </Text>
             </TouchableOpacity>
           )}
@@ -326,7 +349,12 @@ export default function LmsSettingsScreen() {
                         <TouchableOpacity
                           onPress={() => router.push({
                             pathname: '/settings/lms-connect',
-                            params: { provider: connection.provider, connectionId: connection.id, baseUrl: connection.base_url ?? '' },
+                            params: {
+                              provider: connection.provider,
+                              connectionId: connection.id,
+                              baseUrl: connection.base_url ?? '',
+                              source: 'reconnect_button',
+                            },
                           } as any)}
                           style={styles.textButton}
                         >

@@ -120,6 +120,20 @@ export function noteAppForegrounded(): void {
   if (Date.now() - lastEventAt > SESSION_IDLE_MS) sessionId = uuid();
 }
 
+/**
+ * The current session id WITHOUT touching it.
+ *
+ * currentSessionId() below both rotates a stale session and stamps
+ * lastEventAt, because it is called when an event is actually being sent. A
+ * caller that only wants to KEY something by session — de-duplicating an
+ * impression, say — must not do either: extending the session from a
+ * non-event would make a student who never acts look permanently present, and
+ * that is the number sessions exist to answer.
+ */
+export function peekSessionId(): string {
+  return sessionId;
+}
+
 function currentSessionId(): string {
   // Also rotate on a long quiet stretch, so a session cannot run for days on a
   // device that never fully backgrounds the app.

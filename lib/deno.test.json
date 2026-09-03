@@ -7,6 +7,7 @@
     "expo-secure-store": "./__testing__/expo-secure-store.stub.ts",
     "@supabase/supabase-js": "./__testing__/supabase-js.stub.ts",
     "@/store/appStore": "./__testing__/appStore.stub.ts",
-    "expo-localization": "./__testing__/expo-localization.stub.ts"
+    "expo-localization": "./__testing__/expo-localization.stub.ts",
+    "expo-constants": "./__testing__/expo-constants.stub.ts"
   }
 }

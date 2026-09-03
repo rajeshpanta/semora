@@ -26,8 +26,8 @@ import { useColors } from '@/lib/theme';
 import CourseCard, { formatMeetings, type CourseCardData } from '@/components/CourseCard';
 import AppHeader from '@/components/AppHeader';
 import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasOfferDestination, trackCanvasOfferShown, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
-import { track } from '@/lib/analytics';
 import { useResponsive } from '@/lib/responsive';
 import { differenceInCalendarDays, isToday, isPast, format } from 'date-fns';
 import type { GradeThreshold } from '@/types/database';
@@ -127,17 +127,27 @@ export default function CoursesScreen() {
               : canvasFree ? 'Connect Canvas (Free)'
               : 'Connect Canvas',
             onPress: () => {
-              track('canvas_offer_tapped', { screen: 'courses', offer: canvasOffer, free: canvasFree, source: 'courses' });
+              trackCanvasOfferTapped({ screen: 'courses', offer: canvasOffer, free: canvasFree, source: 'courses' });
               // Free account: the upgrade sheet, right here. Sending someone
               // to another screen to find out something costs money turns one
               // tap into a journey.
-              if (canvasOffer === 'locked') {
+              const to = canvasOfferDestination(canvasOffer, 'courses');
+              if (to.kind === 'upsell') {
                 setCanvasUpsell(true);
                 return;
               }
-              handleNav(canvasOffer === 'new_courses' ? '/settings/lms/new-courses' : '/settings/lms?source=courses');
+              const qs = new URLSearchParams(to.params).toString();
+              handleNav(`${to.pathname}?${qs}`);
             },
           }];
+    // An Alert has no render pass to hang a marker on, so the impression is
+    // recorded at the moment it is presented — the same moment it is seen. Only
+    // when the Canvas row is actually in it: `canvasOption` is empty for a
+    // healthy connection, and counting those would inflate the denominator with
+    // dialogs that made no offer.
+    if (canvasOption.length) {
+      trackCanvasOfferShown({ screen: 'courses', offer: canvasOffer, free: canvasFree, source: 'courses' });
+    }
     Alert.alert(
       'Add a course',
       canvasFree && canvasOffer === 'none'

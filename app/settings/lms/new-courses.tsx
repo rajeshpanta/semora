@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Alert, Text, TouchableOpacity } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -16,6 +16,7 @@ import {
   syncLmsConnection,
 } from '@/lib/lms';
 import { formatSpan, matchSemester, spanOf, suggestNewSemester } from '@/lib/termMatch';
+import { canvasSourceOf } from '@/lib/canvasPromo';
 import { useSemesters } from '@/lib/queries';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useResponsive } from '@/lib/responsive';
@@ -47,7 +48,11 @@ export default function NewCanvasCourses() {
   const { t, locale } = useI18n();
   const { contentMaxWidth } = useResponsive();
   const queryClient = useQueryClient();
-  const params = useLocalSearchParams<{ connectionId?: string }>();
+  const params = useLocalSearchParams<{ connectionId?: string; source?: string }>();
+  // Every other Canvas funnel event carries where the student came from; these
+  // three did not, so the whole expand lane was unattributable — 18 views and 6
+  // imports that could not be traced to the surface that produced them.
+  const source = canvasSourceOf(params.source);
   const showProUpsell = useProUpsell();
 
   const { data: pending, isPending } = useQuery(pendingLmsCoursesQuery);
@@ -77,9 +82,20 @@ export default function NewCanvasCourses() {
     if (courses.length) setSelected(new Set(courses.map((course) => course.id)));
   }, [courses.length]);
 
+  // ONCE, AND ONLY WITH SOMETHING TO SHOW.
+  //
+  // Keyed on rows.length, this fired twice per visit: once on the first render
+  // with 0 while the query was still loading, then again when the rows landed.
+  // So the 18 recorded views were roughly 9 real ones, measured against 6
+  // imports — a conversion rate that read as half what it actually was.
+  const viewFired = useRef(false);
   useEffect(() => {
-    track('lms_new_courses_viewed', { screen: 'lms_new_courses', count: rows.length });
-  }, [rows.length]);
+    if (viewFired.current || !rows.length) return;
+    viewFired.current = true;
+    track('lms_new_courses_viewed', {
+      screen: 'lms_new_courses', count: rows.length, source, lane: 'expand', step: 'opened',
+    });
+  }, [rows.length, source]);
 
   // Same rule as the connect screen: pre-select only on a strong match, so a
   // term that genuinely has nowhere to go leaves the choice open rather than
@@ -106,7 +122,9 @@ export default function NewCanvasCourses() {
       // Import their work immediately. Confirming and then waiting up to an
       // hour for the deadlines to appear would read as a failure.
       const result = await syncLmsConnection(connectionId, 'manual');
-      track('lms_new_courses_imported', { screen: 'lms_new_courses', count: created });
+      track('lms_new_courses_imported', {
+        screen: 'lms_new_courses', count: created, source, lane: 'expand', step: 'connected',
+      });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: pendingLmsCoursesQuery.queryKey }),
         queryClient.invalidateQueries({ queryKey: lmsConnectionsQuery.queryKey }),
@@ -137,7 +155,9 @@ export default function NewCanvasCourses() {
         queryClient.invalidateQueries({ queryKey: pendingLmsCoursesQuery.queryKey }),
         queryClient.invalidateQueries({ queryKey: lmsConnectionsQuery.queryKey }),
       ]);
-      track('lms_new_courses_dismissed', { screen: 'lms_new_courses', count: chosenCourses.length });
+      track('lms_new_courses_dismissed', {
+        screen: 'lms_new_courses', count: chosenCourses.length, source, lane: 'expand',
+      });
       router.back();
     } catch (error) {
       Alert.alert(t('Could not dismiss'), error instanceof Error ? error.message : t('Please try again.'));

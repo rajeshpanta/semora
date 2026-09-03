@@ -39,6 +39,8 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useFreeActionUsed, freeActionUsedQueryOptions } from '@/lib/queries';
 import { FREE_COURSE_LIMIT, FREE_COURSE_PHRASE } from '@/lib/syllabus';
 import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasOfferDestination, trackCanvasOfferShown, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
+import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 import { MAX_SCAN_PAGES, MAX_SCAN_RAW_BYTES, scanTooLargeMessage, type SyllabusPage } from '@/lib/ai-extraction';
 import { getFileSize } from '@/lib/readFileBase64';
 import {
@@ -211,11 +213,12 @@ export default function ScanScreen() {
 
     if (choice === 'scan') { resolve?.(true); return; }
     if (choice === 'canvas') {
-      track('canvas_offer_tapped', {
+      trackCanvasOfferTapped({
         screen: 'scan_free_action', offer: canvasOffer, free: canvasFree, source: 'scan_free_action',
       });
       resolve?.(false);
-      router.push({ pathname: '/settings/lms', params: { source: 'scan_free_action' } } as any);
+      const to = canvasOfferDestination(canvasOffer, 'scan_free_action');
+      if (to.kind === 'route') router.push({ pathname: to.pathname, params: to.params } as any);
       return;
     }
     if (choice === 'pro') {
@@ -306,6 +309,13 @@ export default function ScanScreen() {
     // refused afterwards, so the scan can cost everything and add nothing.
     return new Promise((resolve) => {
       freeScanResolver.current = resolve;
+      // The Canvas row inside this sheet is an offer like any other, and it is
+      // shown here rather than rendered in a branch we can mark — so the
+      // impression is recorded at the moment the sheet is presented, which is
+      // the moment it is seen.
+      trackCanvasOfferShown({
+        screen: 'scan_free_action', offer: canvasOffer, free: canvasFree, source: 'scan_free_action',
+      });
       setFreeScanPromptVisible(true);
     });
   };
@@ -939,27 +949,37 @@ export default function ScanScreen() {
             buttons would be offering it to someone who has already started the
             slower path. Hidden entirely once Canvas is connected and syncing. */}
         {canvasOffer !== 'healthy' && (
+          <CanvasOfferImpression screen="scan" offer={canvasOffer} free={canvasFree} source="scan_screen" />
+        )}
+        {canvasOffer !== 'healthy' && (
           <TouchableOpacity
             style={[styles.canvasCard, { backgroundColor: colors.teal50, borderColor: colors.teal }]}
             activeOpacity={0.85}
             accessibilityRole="button"
             accessibilityLabel={
+              // The card shows a FREE or PRO badge; this label has to say the
+              // same thing. It previously said a bare "Connect Canvas" for a
+              // locked offer while the badge next to it read PRO — so a student
+              // using VoiceOver was the only one not told the price, and found
+              // out at the paywall instead.
               canvasOffer === 'needs_attention' ? 'Finish Canvas setup'
               : canvasFree ? 'Connect Canvas free, limited time offer'
+              : canvasOffer === 'locked' ? 'Connect Canvas, Pro feature'
               : 'Connect Canvas'
             }
             onPress={() => {
-              track('canvas_offer_tapped', { screen: 'scan', offer: canvasOffer, free: canvasFree, source: 'scan_screen' });
+              trackCanvasOfferTapped({ screen: 'scan', offer: canvasOffer, free: canvasFree, source: 'scan_screen' });
               // A free account gets the upgrade SHEET here, not a trip to
               // another screen. The offer and the answer belong in the same
               // place — sending someone to Settings or a full paywall screen
               // to learn the price is how a tap turns into navigation.
-              if (canvasOffer === 'locked') {
+              const to = canvasOfferDestination(canvasOffer, 'scan_screen');
+              if (to.kind === 'upsell') {
                 setUpsellReason('canvas');
                 setUpsellVisible(true);
                 return;
               }
-              router.push({ pathname: '/settings/lms', params: { source: 'scan_screen' } } as any);
+              router.push({ pathname: to.pathname, params: to.params } as any);
             }}
           >
             <View style={[styles.canvasIcon, { backgroundColor: colors.teal + '22' }]}>

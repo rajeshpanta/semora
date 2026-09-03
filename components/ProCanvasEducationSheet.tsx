@@ -7,6 +7,7 @@ import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { track } from '@/lib/analytics';
 import { PRO_CANVAS_EDU_SOURCE } from '@/lib/proCanvasEducation';
+import { canvasOfferDestination } from '@/lib/canvasFunnel';
 
 /**
  * "You already have this" — for subscribers, not prospects.
@@ -59,10 +60,12 @@ export function ProCanvasEducationSheet({
     // connect implementation would be a second thing to keep correct, and this
     // one already carries the Phase 1 copy, the promo-race fix and the funnel
     // events — all of which read `source` to tell this flow apart.
-    router.push({
-      pathname: '/settings/lms',
-      params: { source: PRO_CANVAS_EDU_SOURCE },
-    } as any);
+    // Through the shared table, so this sheet lands on the connect form like
+    // every other Canvas affordance. It used to push the settings LIST, which
+    // is the extra hop the rest of Phase 2 exists to remove — and this sheet is
+    // shown 52 times a month, so it was one of the bigger contributors to it.
+    const to = canvasOfferDestination('none', PRO_CANVAS_EDU_SOURCE);
+    if (to.kind === 'route') router.push({ pathname: to.pathname, params: to.params } as any);
   };
 
   const dismiss = () => {

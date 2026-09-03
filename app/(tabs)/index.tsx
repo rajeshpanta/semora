@@ -48,6 +48,8 @@ import DecisionStrip from '@/components/DecisionStrip';
 import CoursesGlance from '@/components/CoursesGlance';
 import GradesWaitingCard from '@/components/GradesWaitingCard';
 import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, proCanvasEducationQuery } from '@/lib/lms';
+import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
+import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 import { ProCanvasEducationSheet } from '@/components/ProCanvasEducationSheet';
 import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
 import {
@@ -949,13 +951,17 @@ export default function TodayScreen() {
             courses clears pending_courses_count, so the banner is answered
             rather than hidden. */}
         {pendingCanvasCourses > 0 && (
+          <CanvasOfferImpression screen="today" offer={canvasOffer} free={canvasFree} source="today_pending" />
+        )}
+        {pendingCanvasCourses > 0 && (
           <TouchableOpacity
             style={[styles.notifBanner, { backgroundColor: colors.teal50, borderColor: colors.teal }]}
             onPress={() => {
-              track('canvas_offer_tapped', {
+              trackCanvasOfferTapped({
                 screen: 'today', offer: canvasOffer, free: canvasFree, source: 'today_pending',
               });
-              router.push('/settings/lms/new-courses' as any);
+              const to = canvasOfferDestination(canvasOffer, 'today_pending');
+              if (to.kind === 'route') router.push({ pathname: to.pathname, params: to.params } as any);
             }}
             activeOpacity={0.7}
             accessibilityRole="button"
@@ -1342,12 +1348,16 @@ export default function TodayScreen() {
                     whose Canvas is connected and syncing to "Sync Canvas" —
                     contradicting the banner directly above it. */}
                 {canvasOffer !== 'healthy' && canvasOffer !== 'new_courses' && (
+                  <CanvasOfferImpression screen="today_empty" offer={canvasOffer} free={canvasFree} source="today_empty" />
+                )}
+                {canvasOffer !== 'healthy' && canvasOffer !== 'new_courses' && (
                   <TouchableOpacity
                     style={[styles.emptyCanvas, { borderColor: colors.teal, backgroundColor: colors.teal50 }]}
                     onPress={() => {
-                      track('canvas_offer_tapped', { screen: 'today_empty', offer: canvasOffer, free: canvasFree, source: 'today_empty' });
-                      if (canvasOffer === 'locked') { showProUpsell('canvas'); return; }
-                      router.push({ pathname: '/settings/lms', params: { source: 'today_empty' } } as any);
+                      trackCanvasOfferTapped({ screen: 'today_empty', offer: canvasOffer, free: canvasFree, source: 'today_empty' });
+                      const to = canvasOfferDestination(canvasOffer, 'today_empty');
+                      if (to.kind === 'upsell') { showProUpsell('canvas'); return; }
+                      router.push({ pathname: to.pathname, params: to.params } as any);
                     }}
                     activeOpacity={0.85}
                     accessibilityRole="button"

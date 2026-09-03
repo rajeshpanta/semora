@@ -8,7 +8,7 @@ import {
 import { useCallback,
   useEffect,
   useMemo,
-  useState } from 'react';
+  useState, useRef } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -208,17 +208,40 @@ export default function LmsConnectScreen() {
   // user_id, so re-recording it here would be a second copy of the truth that
   // can disagree with the first.
   //
-  // Empty deps on purpose: one event per arrival, not one per keystroke.
+  // AFTER THE GATE, NOT ON MOUNT.
+  //
+  // This used to fire in an effect with empty deps, which meant it fired for
+  // every arrival — including the ones the gate immediately bounced to the
+  // paywall. The event's whole job is to say "a student reached a connect
+  // screen they can use", and counting the bounced ones made it say something
+  // else while looking identical. It is the denominator for discover/choose/
+  // connect, so every rate computed from it was quietly too low.
+  //
+  // Now it waits for `gateResolved` and reports which side the student landed
+  // on. Fired at most once either way — a ref rather than empty deps, because
+  // the condition genuinely changes after mount and the guard has to survive
+  // that.
+  const funnelFired = useRef(false);
   useEffect(() => {
-    track('lms_connect_opened', {
+    if (!gateResolved || funnelFired.current) return;
+    funnelFired.current = true;
+    const facts = {
       screen: 'lms_connect',
       provider,
       method: connectionMethod,
       source,
       reconnecting,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+      lane: reconnecting ? 'repair' : 'connect',
+    };
+    if (lmsAllowed) {
+      track('lms_connect_opened', { ...facts, step: 'opened' });
+    } else {
+      // The arrival still happened and is still worth counting — it is just
+      // not the same thing. Kept as a separate name so no existing query
+      // silently changes meaning.
+      track('lms_connect_blocked', { ...facts, step: 'opened', blocked: 'not_entitled' });
+    }
+  }, [gateResolved, lmsAllowed, provider, connectionMethod, source, reconnecting]);
 
   const manualCredential = (): LmsCredential => ({
     accessToken: isCanvasCalendar ? normalizeCanvasCalendarFeedUrl(token) : token.trim(),
@@ -275,6 +298,8 @@ export default function LmsConnectScreen() {
       // a feed that opens and returns zero dated courses is a real and
       // different outcome, and the one the alert below explains.
       track('lms_discover_succeeded', {
+        lane: reconnecting ? 'repair' : 'connect',
+        step: 'discovered',
         screen: 'lms_connect',
         provider,
         method: connectionMethod,
@@ -314,6 +339,8 @@ export default function LmsConnectScreen() {
       // experiment asks ("where does this flow lose people") and carries
       // nothing that could authenticate as anyone.
       track('lms_discover_failed', {
+        lane: reconnecting ? 'repair' : 'connect',
+        step: 'discovered',
         screen: 'lms_connect',
         provider,
         method: connectionMethod,
@@ -408,6 +435,8 @@ export default function LmsConnectScreen() {
     // everyone importing everything and everyone importing one class are very
     // different products, and the counts alone tell them apart.
     track('lms_courses_selected', {
+      lane: reconnecting ? 'repair' : 'connect',
+      step: 'chosen',
       screen: 'lms_connect',
       provider,
       method: connectionMethod,
@@ -438,6 +467,8 @@ export default function LmsConnectScreen() {
       // deadline is not the same success as one that imports 74, and the
       // difference decides whether this experiment actually helped anybody.
       track('lms_connect_completed', {
+        lane: reconnecting ? 'repair' : 'connect',
+        step: 'connected',
         screen: 'lms_connect',
         provider,
         method: connectionMethod,
@@ -456,6 +487,8 @@ export default function LmsConnectScreen() {
       );
     } catch (error) {
       track('lms_connect_failed', {
+        lane: reconnecting ? 'repair' : 'connect',
+        step: 'connected',
         screen: 'lms_connect',
         provider,
         method: connectionMethod,

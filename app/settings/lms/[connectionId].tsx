@@ -281,7 +281,7 @@ export default function LmsConnectionDetailScreen() {
         </TouchableOpacity>
         {needsReconnect && (
           <TouchableOpacity
-            onPress={() => router.push({ pathname: '/settings/lms-connect', params: { provider: connection.provider, connectionId, baseUrl: connection.base_url ?? '' } } as any)}
+            onPress={() => router.push({ pathname: '/settings/lms-connect', params: { provider: connection.provider, connectionId, baseUrl: connection.base_url ?? '', source: 'connection_detail' } } as any)}
             style={[styles.secondary, { borderColor: colors.brand }]}
           >
             <Text style={[styles.secondaryText, { color: colors.brand }]}>Reconnect {LMS_PROVIDER_LABELS[connection.provider]}</Text>

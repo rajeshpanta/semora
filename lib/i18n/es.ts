@@ -1819,7 +1819,7 @@ export const ES: Record<string, string> = {
     'Tus clases y todas las tareas con fecha llegan juntas: sin escribir nada y sin importarlas una por una.',
   'It stays right on its own': 'Se mantiene correcto solo',
   'Semora re-checks Canvas every few hours. When an instructor moves a due date, yours moves with it.':
-    'Semora vuelve a consultar Canvas más o menos cada hora. Si un profesor cambia una fecha de entrega, la tuya cambia con ella.',
+    'Semora vuelve a consultar Canvas cada pocas horas. Si un profesor cambia una fecha de entrega, la tuya cambia con ella.',
   'Read-only, and private': 'Solo lectura, y privado',
   'Your private Canvas calendar link, encrypted on our side. Semora can read your deadlines — never post, submit or change anything.':
     'Tu enlace privado del calendario de Canvas, cifrado de nuestro lado. Semora puede leer tus fechas de entrega, nunca publicar, entregar ni cambiar nada.',
@@ -2317,6 +2317,17 @@ export const ES: Record<string, string> = {
   // subject where being misunderstood costs money. Added with the strings
   // rather than after them for that reason.
   'FREE': 'GRATIS',
+  // The two halves of the same price sentence. '(Free)' was translated and
+  // '(Pro)' was not, so a Spanish student saw one of them in English —
+  // precisely the pair where a difference in wording reads as a difference in
+  // the offer.
+  'Connect Canvas (Pro)': 'Conectar Canvas (Pro)',
+  'Pro · every class imports itself and stays up to date':
+    'Pro · cada clase se importa sola y se mantiene al día',
+  'Connect Canvas and your classes arrive on their own — or scan a syllabus, or type it yourself.':
+    'Conecta Canvas y tus clases llegan solas: o escanea un programa, o escríbelo tú.',
+  'Deadlines arrive on their own, and update when your teacher changes them':
+    'Las fechas de entrega llegan solas y se actualizan cuando tu profesor las cambia',
   'Connect Canvas (Free)': 'Conectar Canvas (Gratis)',
   'Connect Canvas · Free': 'Conectar Canvas · Gratis',
   'Sync Canvas free — every class imports itself':

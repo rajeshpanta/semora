@@ -12,6 +12,8 @@ import { useAppStore } from '@/store/appStore';
 import { useCourses } from '@/lib/queries';
 import { useQuery } from '@tanstack/react-query';
 import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
+import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 
 // Floating action menu opened by the "+" tab button. The tab press itself is
@@ -44,6 +46,8 @@ type MenuRow = {
   needsCourse?: boolean;
   /** Free account: show the Pro sheet here instead of navigating. */
   opensUpsell?: boolean;
+  /** The Canvas offer row, which carries its own funnel attribution. */
+  isCanvas?: boolean;
 };
 
 const ROOT_ACTIONS: MenuRow[] = [
@@ -221,6 +225,9 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
   const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
   const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
   const [canvasUpsell, setCanvasUpsell] = useState(false);
+  // The "+" menu produced NO analytics of any kind — not an impression, not a
+  // tap. It was the one Canvas surface that was completely dark, so a zero from
+  // it was unreadable: nobody sees it, or everybody sees it and nobody taps.
   const canvasRow: MenuRow | null =
     canvasOffer === 'healthy'
       ? null
@@ -232,6 +239,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
             sub: 'Pro · every class imports itself and stays up to date',
             // No route: a free account gets the upgrade sheet, not a screen.
             opensUpsell: true,
+            isCanvas: true,
           }
       : canvasOffer === 'needs_attention'
         ? {
@@ -240,6 +248,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
             title: 'Finish Canvas setup',
             sub: 'Connected, but not syncing on its own yet',
             route: { pathname: '/settings/lms' },
+            isCanvas: true,
           }
       // Syncing perfectly, and holding a term's worth of classes it could not
       // place. Same rank as the other two problems on purpose: from here it is
@@ -252,6 +261,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
             title: 'New Canvas courses',
             sub: 'Canvas has classes Semora has not imported yet',
             route: { pathname: '/settings/lms/new-courses' },
+            isCanvas: true,
           }
         : {
             icon: 'university',
@@ -263,6 +273,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
               ? 'Free, limited time · every class imports itself and stays up to date'
               : 'Deadlines arrive on their own, and update when your teacher changes them',
             route: { pathname: '/settings/lms' },
+            isCanvas: true,
           };
 
   const rootRows = canvasRow ? [canvasRow, ...baseRows] : baseRows;
@@ -319,6 +330,9 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
           ]}
         >
           <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            {canvasRow && rows.includes(canvasRow) && (
+              <CanvasOfferImpression screen="plus_menu" offer={canvasOffer} free={canvasFree} source="plus_menu" />
+            )}
             {rows.map((a) => (
               <TouchableOpacity
                 key={a.title}
@@ -326,6 +340,20 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
                 activeOpacity={0.7}
                 onPress={() => {
                   if (a.expands) return openScanPage();
+                  // Attribute the Canvas row before doing anything with it, so
+                  // the tap is recorded whichever branch below handles it.
+                  if (a.isCanvas) {
+                    trackCanvasOfferTapped({
+                      screen: 'plus_menu', offer: canvasOffer, free: canvasFree, source: 'plus_menu',
+                    });
+                    const to = canvasOfferDestination(canvasOffer, 'plus_menu');
+                    if (to.kind === 'upsell') {
+                      onClose();
+                      setCanvasUpsell(true);
+                      return;
+                    }
+                    return go(to.pathname, to.params);
+                  }
                   // An upsell row carries no route on purpose (see canvasRow
                   // below: a free account gets the Pro sheet, not a screen).
                   // Without this branch the two lines under it dereferenced

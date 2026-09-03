@@ -19,6 +19,8 @@ import type { Session } from '@supabase/supabase-js';
 import { useColors } from '@/lib/theme';
 import { useQuery } from '@tanstack/react-query';
 import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
+import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 import CommandPalette from '@/components/CommandPalette';
 import { useAppStore } from '@/store/appStore';
 import { MARKETING_URL } from '@/lib/constants';
@@ -65,6 +67,14 @@ const CANVAS_NEW_ITEM: NavigationItem = { label: 'New Canvas courses', icon: 'pl
 // intercepts it and opens the upgrade sheet in place. A free student should
 // meet the price where they met the offer, not on another screen.
 const CANVAS_UPSELL_PATH = '__canvas_upsell__';
+/** Every Canvas sidebar row, named once so none can be added without attribution. */
+const CANVAS_ITEM_LABELS = new Set([
+  'Connect Canvas', 'Finish Canvas setup', 'New Canvas courses',
+  'Connect Canvas · Pro', 'Connect Canvas · Free',
+]);
+function isCanvasItem(item: { label: string }) {
+  return CANVAS_ITEM_LABELS.has(item.label);
+}
 const CANVAS_PRO_ITEM: NavigationItem = { label: 'Connect Canvas · Pro', icon: 'university', path: CANVAS_UPSELL_PATH };
 // While the canvas_free offer is live the sidebar row says what it now costs.
 // Same position, same icon, one word changed — the rail is glanced at, not
@@ -364,16 +374,31 @@ function DesktopSidebar({ session }: { session: Session }) {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.navGroup}>
+          {canvasOffer !== 'healthy' && (
+            <CanvasOfferImpression screen="web_sidebar" offer={canvasOffer} free={canvasFree} source="web_sidebar" />
+          )}
           {primaryItems.map((item) => (
             <SidebarItem
               key={item.path}
               item={item}
               active={isActive(pathname, item)}
-              onPress={() =>
-                item.path === CANVAS_UPSELL_PATH
-                  ? setCanvasUpsellOpen(true)
-                  : navigate(item.path)
-              }
+              onPress={() => {
+                // The sidebar is the longest-lived Canvas surface in the app —
+                // it is on screen for the whole desktop session — and it fired
+                // nothing at all, so every arrival from it was attributed to
+                // 'settings' by default.
+                if (isCanvasItem(item)) {
+                  trackCanvasOfferTapped({
+                    screen: 'web_sidebar', offer: canvasOffer, free: canvasFree, source: 'web_sidebar',
+                  });
+                  const to = canvasOfferDestination(canvasOffer, 'web_sidebar');
+                  if (to.kind === 'upsell') { setCanvasUpsellOpen(true); return; }
+                  const qs = new URLSearchParams(to.params).toString();
+                  navigate(`${to.pathname}?${qs}`);
+                  return;
+                }
+                navigate(item.path);
+              }}
             />
           ))}
         </View>
