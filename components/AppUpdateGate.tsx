@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
+import { useUpdates } from 'expo-updates';
 import { usePathname } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { track } from '@/lib/analytics';
@@ -34,7 +35,12 @@ const updateFlagQuery = {
   staleTime: 10 * 60 * 1000,
 };
 
-/** expo-updates, loaded defensively — it is absent on web and in Expo Go. */
+/**
+ * expo-updates, loaded defensively — it is inert on web and in Expo Go.
+ *
+ * The module's `isEnabled` is false in development and on web, which is what
+ * keeps this from doing anything there.
+ */
 function updatesModule() {
   if (Platform.OS === 'web') return null;
   try {
@@ -48,6 +54,23 @@ function updatesModule() {
 export function AppUpdateGate() {
   const pathname = usePathname();
   const { data: enabled = false, isFetched } = useQuery(updateFlagQuery);
+  // ── The ONLY place isUpdatePending exists ─────────────────────────────────
+  //
+  // The first version read `Updates.isUpdatePending`. That property is not a
+  // top-level export — it lives on the useUpdates() result — so the check was
+  // reading undefined and coercing it to false on every launch.
+  //
+  // That alone would have been survivable, because there is a fallback that
+  // checks the server directly. What made it fatal is the interaction: the
+  // native layer downloads on every launch (checkOnLaunch=ALWAYS), and once it
+  // has, checkForUpdateAsync answers "nothing NEW available" — correctly, since
+  // the newest update is already downloaded and merely waiting to be applied.
+  // So the primary signal was always false and the fallback always said no.
+  // The mechanism could not fire, on any device, ever.
+  //
+  // Only a real build on a real simulator surfaced this: three launches with a
+  // freshly published update sitting there, and no reload.
+  const { isUpdatePending } = useUpdates();
   // When this component mounted, so a slow flag read cannot turn a "cold
   // start" into a reload five seconds into someone's session.
   const mountedAt = useRef(Date.now());
@@ -60,15 +83,16 @@ export function AppUpdateGate() {
   routeRef.current = pathname;
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
+  const pendingRef = useRef(isUpdatePending);
+  pendingRef.current = isUpdatePending;
 
   const attempt = useCallback(async (moment: UpdateMoment) => {
     const Updates = updatesModule();
     if (!Updates || applied.current) return;
 
     try {
-      // What is already downloaded? On a launch after any previous one, the
-      // native layer has usually fetched it already and this is instant.
-      let pending = Boolean(Updates.isUpdatePending);
+      // What the native layer already has downloaded and is holding.
+      let pending = pendingRef.current;
 
       // Nothing waiting, and this is a cold start: ask once, briefly. This is
       // what collapses the FIRST encounter with an update to a single launch
@@ -144,6 +168,19 @@ export function AppUpdateGate() {
     if (Date.now() - mountedAt.current > COLD_START_GRACE_MS) return;
     void attempt('cold-start');
   }, [isFetched, enabled, attempt]);
+
+  // The download landing DURING launch — the ordinary case.
+  //
+  // checkOnLaunch=ALWAYS starts a background download on every launch, and it
+  // finishes a second or three later. Waiting for the next cold start to notice
+  // would put the whole mechanism one launch behind again, which is the bug it
+  // exists to fix. Inside the grace window the student has not touched anything
+  // yet, so this is still a cold start in every sense that matters.
+  useEffect(() => {
+    if (!isUpdatePending || !isFetched || !enabled) return;
+    if (Date.now() - mountedAt.current > COLD_START_GRACE_MS) return;
+    void attempt('cold-start');
+  }, [isUpdatePending, isFetched, enabled, attempt]);
 
   // Coming back from the background: they already walked away from whatever
   // they were doing, so a restart costs nothing they were in the middle of.
