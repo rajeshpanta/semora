@@ -40,6 +40,27 @@ import { withRequestLogging, errorFields } from '../_shared/log.ts';
 // for the same reason request_pending_lecture_notes refuses one: a recording
 // that is still arriving is still a recording, whatever its status column says.
 //
+// ── STRANDED SEGMENTS (127) ─────────────────────────────────────────────────
+//
+// The third pass, and the only one that adds content rather than removing it.
+// uploadSegment writes the row, uploads the audio, then flips the status; a
+// client that dies between the last two leaves a segment 'pending' with its
+// audio safely in the bucket and nothing anywhere that will ever claim it —
+// handleSegment's claim matches only 'uploaded', and maybeFinalize's write-off
+// runs only when some OTHER segment call arrives, which for a finished lecture
+// never happens.
+//
+// This runs on the same timer for the same reason the sweep above does: the
+// question does not depend on which path abandoned the segment. It asks the
+// database which segments have stopped moving, and the database answers with
+// the one fact that decides what to do — whether an object actually exists at
+// that storage_path.
+//
+//   AUDIO IS THERE  → hand it to lecture-transcribe's `recover` action, which
+//                     transcribes it and folds the text back into the lecture.
+//   AUDIO IS NOT    → the upload never landed. Write the row off so it stops
+//                     blocking its lecture from ever being marked clean.
+//
 // ── DEPLOY ──────────────────────────────────────────────────────────────────
 // MUST be deployed with --no-verify-jwt. Its only caller is a pg_cron job
 // sending a shared secret and no Authorization header; with gateway JWT
@@ -53,6 +74,16 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '
 const MAX_PATHS_PER_CALL = 100;
 /** Lectures per run. The backlog is finite and this drains it over a few ticks. */
 const MAX_LECTURES_PER_RUN = 25;
+/**
+ * Stranded segments looked at per run.
+ *
+ * Every recoverable one is a provider call against a quota the whole app
+ * shares — 28,800 audio-seconds a day, about five lectures — so this drains a
+ * backlog over several ticks rather than spending the day's capacity in one.
+ * Write-offs are free (no audio to send anywhere) but are bounded by the same
+ * number for simplicity; there has never been a backlog of them.
+ */
+const MAX_RECOVERIES_PER_RUN = 5;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -188,11 +219,93 @@ serve(withRequestLogging('lecture-retention', async (req, log) => {
     }
   }
 
+  // ── Stranded segments (127) ──────────────────────────────────────────────
+  let recovered = 0;
+  let writtenOff = 0;
+  let skipped = 0;
+  const { data: strandedRows, error: strandedErr } = await admin.rpc('lecture_stranded_segments', {
+    p_limit: MAX_RECOVERIES_PER_RUN,
+  });
+  if (strandedErr) {
+    log.error('stranded_query_failed', errorFields(strandedErr));
+    failures += 1;
+  } else {
+    const stranded = (strandedRows ?? []) as {
+      segment_id: string; lecture_id: string; seq: number;
+      seg_status: string; audio_exists: boolean;
+    }[];
+
+    for (const seg of stranded) {
+      if (!seg.audio_exists) {
+        // The upload never landed. lecture_write_off_segment re-checks that for
+        // itself before nulling anything — this pass and that one are separate
+        // transactions with a storage delete potentially in between, and a
+        // function whose job is to drop a pointer must confirm the object is
+        // gone rather than take our word for it.
+        const { data: wroteOff, error: writeOffErr } = await admin
+          .rpc('lecture_write_off_segment', { p_segment_id: seg.segment_id });
+        if (writeOffErr) {
+          log.warn('write_off_failed', { segment_id: seg.segment_id, ...errorFields(writeOffErr) });
+          failures += 1;
+        } else if (wroteOff === true) {
+          writtenOff += 1;
+          log.info('segment_written_off', {
+            segment_id: seg.segment_id, lecture_id: seg.lecture_id, seq: seg.seq,
+          });
+        }
+        continue;
+      }
+
+      // The audio is there. lecture-transcribe owns every part of turning it
+      // into text — the provider call, the usage ledger, the finalize, the
+      // audio delete — so this hands the segment over rather than growing a
+      // second copy of that logic here. The shared lecture secret is the same
+      // credential this function was itself called with.
+      try {
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/lecture-transcribe`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-semora-lecture-cron-secret': supplied,
+          },
+          body: JSON.stringify({ action: 'recover', segmentId: seg.segment_id }),
+        });
+        if (res.ok) {
+          // A 200 is not automatically a recovery. `already_done` means the
+          // client came back on its own and `exhausted` means we have stopped
+          // trying — counting either as recovered would make this run summary
+          // report success for work that did not happen, which is the same
+          // mistake the log event next door was named to avoid.
+          const outcome = await res.json().catch(() => null) as { status?: string } | null;
+          if (outcome?.status === 'already_done' || outcome?.status === 'exhausted') {
+            skipped += 1;
+          } else {
+            recovered += 1;
+          }
+        } else {
+          // The attempt is charged inside handleRecover, so a refusal here does
+          // not loop forever; alert_lecture_segments_stranded is what notices
+          // if every attempt is being refused at the door.
+          log.warn('recover_call_rejected', {
+            segment_id: seg.segment_id, status: res.status,
+          });
+          failures += 1;
+        }
+      } catch (err) {
+        log.warn('recover_call_failed', { segment_id: seg.segment_id, ...errorFields(err) });
+        failures += 1;
+      }
+    }
+  }
+
   log.info('retention_swept', {
     lectures: candidates.length,
     objects_deleted: objectsDeleted,
     orphans_deleted: orphansDeleted,
     lectures_cleared: lecturesCleared,
+    segments_recovered: recovered,
+    segments_written_off: writtenOff,
+    segments_skipped: skipped,
     failures,
   });
 
@@ -202,6 +315,9 @@ serve(withRequestLogging('lecture-retention', async (req, log) => {
     objects: objectsDeleted,
     orphans: orphansDeleted,
     cleared: lecturesCleared,
+    recovered,
+    writtenOff,
+    skipped,
     failures,
   }, 200);
 }));

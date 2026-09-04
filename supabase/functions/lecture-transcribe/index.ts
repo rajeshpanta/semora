@@ -78,6 +78,18 @@ const MAX_CONCURRENT_LECTURES = 2;
 /** A recording untouched for this long is abandoned; its capacity is reclaimed. */
 const STALE_RESERVATION_MINUTES = 180;
 
+/**
+ * How many times the unattended recovery pass may try one stranded segment.
+ *
+ * Mirrors lecture_stranded_segments' own default (127). A segment the provider
+ * will never accept — a corrupt .m4a, a path that fails the ownership prefix
+ * check — would otherwise be retried every twenty minutes forever against a
+ * shared daily quota that five lectures exhaust. Past the cap its audio also
+ * becomes eligible for deletion: nothing will transcribe it, so keeping it is
+ * liability with no purpose.
+ */
+const MAX_RECOVERY_ATTEMPTS = 3;
+
 /** Segment audio never exceeds ~1.2 MB; this is a sanity ceiling, not a budget. */
 const MAX_SEGMENT_BYTES = 12 * 1024 * 1024;
 
@@ -162,20 +174,47 @@ serve(withRequestLogging('lecture-transcribe', async (req, log) => {
     }
     if (contentLength > MAX_BODY_BYTES) return jsonResponse({ error: 'Request too large' }, 413);
 
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
     // 1. Authenticate the caller.
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return jsonResponse({ error: 'Authentication required' }, 401);
+    //
+    // TWO CALLERS, ONE OF WHICH HAS NO USER. Everything a student does arrives
+    // with their JWT. The unattended recovery pass (127) does not have one and
+    // cannot get one — it is a cron tick acting on a segment whose owner it
+    // reads from the row — so it presents the same shared lecture secret the
+    // notes worker and the retention sweep already use.
+    //
+    // That door opens onto EXACTLY ONE action. `recover` cannot start a
+    // lecture, cancel one, or name its own user; it takes a segment id and
+    // derives everything else from the database. Letting the secret stand in
+    // for a session on `start` or `segment` would mean a leaked scheduler
+    // credential could transcribe against any account.
+    const cronSecret = req.headers.get('x-semora-lecture-cron-secret');
+    let userId: string | null = null;
+    let viaCron = false;
+
+    if (cronSecret) {
+      const { data: expected, error: secretErr } = await adminClient.rpc('read_lecture_cron_secret');
+      if (secretErr || typeof expected !== 'string' || cronSecret !== expected) {
+        log.warn('cron_secret_rejected');
+        return jsonResponse({ error: 'Unauthorized scheduler' }, 401);
+      }
+      viaCron = true;
+    } else {
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return jsonResponse({ error: 'Authentication required' }, 401);
+      }
+      const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: userData, error: userError } = await userClient.auth.getUser();
+      if (userError || !userData.user) {
+        return jsonResponse({ error: 'Invalid or expired session' }, 401);
+      }
+      userId = userData.user.id;
+      log.setUser(userId);
     }
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: userData, error: userError } = await userClient.auth.getUser();
-    if (userError || !userData.user) {
-      return jsonResponse({ error: 'Invalid or expired session' }, 401);
-    }
-    const userId = userData.user.id;
-    log.setUser(userId);
 
     let body: Record<string, unknown>;
     try {
@@ -186,12 +225,20 @@ serve(withRequestLogging('lecture-transcribe', async (req, log) => {
     const locale: Locale = body.locale === 'es' ? 'es' : 'en';
     const action = typeof body.action === 'string' ? body.action : '';
 
+    // The scheduler may do one thing; a student may do everything but that.
+    if (viaCron && action !== 'recover') {
+      return jsonResponse({ error: 'Unknown action' }, 400);
+    }
+    if (!viaCron && action === 'recover') {
+      return jsonResponse({ error: 'Unknown action' }, 400);
+    }
+
     // Only the actions that actually call the provider are gated on its key.
     // Gating the whole function meant `cancel` also 503'd when the key was
     // missing — leaving a user unable to release a reservation they were
     // holding, which is the one thing they should always be able to do.
     if (
-      (action === 'start' || action === 'segment') &&
+      (action === 'start' || action === 'segment' || action === 'recover') &&
       !isProviderConfigured(providerFor(AiTask.transcription))
     ) {
       // Deliberately loud in logs, generic to the user: a missing key is our
@@ -200,7 +247,11 @@ serve(withRequestLogging('lecture-transcribe', async (req, log) => {
       return jsonResponse({ error: t('notConfigured', locale), code: 'NOT_CONFIGURED' }, 503);
     }
 
-    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    // Handled before the Pro gate below because it has no user yet: `recover`
+    // reads the owner off the segment row and runs its own is_pro lookup.
+    if (action === 'recover') return await handleRecover(adminClient, body, locale, log);
+
+    if (!userId) return jsonResponse({ error: 'Authentication required' }, 401);
 
     // 2. Pro gate. Fail CLOSED as transient (503) on an RPC blip so a paying
     //    user is never demoted to the free allowance by a database hiccup.
@@ -446,7 +497,9 @@ async function handleCancel(
       .select('storage_path')
       .eq('lecture_id', lectureId)
       .eq('user_id', userId);
-    await deleteLectureAudio(admin, lectureId, segments ?? [], log);
+    // Abandon means abandon: the student asked for this recording to go away,
+    // so every object goes, transcribed or not.
+    await deleteLectureAudio(admin, lectureId, segments ?? [], log, { includeUnfinished: true });
     const { error: delErr } = await admin
       .from('lecture_recordings')
       .delete()
@@ -510,6 +563,7 @@ async function handleSegment(
   locale: Locale,
   isPro: boolean,
   log: any,
+  recovery = false,
 ): Promise<Response> {
   const lectureId = typeof body.lectureId === 'string' ? body.lectureId : null;
   const segmentId = typeof body.segmentId === 'string' ? body.segmentId : null;
@@ -539,6 +593,16 @@ async function handleSegment(
   // file's own rule: refusing a lecture AFTER it was recorded is the worst
   // possible failure. `start` is where the shared allowance is enforced; once
   // a recording is authorized, only another completed LECTURE can stop it.
+  //
+  // A RECOVERY IS NOT EXEMPT, and an earlier draft of 127 made it exempt on the
+  // reasoning that refusing already-captured audio is this file's worst
+  // failure. That reasoning is right and the exemption was still wrong, because
+  // chargedLectureCount already encodes it: it EXCLUDES the lecture being
+  // worked on, so recovering a segment of the lecture the student was charged
+  // for passes this check on its own. The only thing an exemption would have
+  // added is the case that must not pass — a free user who starts a second
+  // lecture before the first charges, kills the app mid-upload, and collects a
+  // second free transcription twenty minutes later.
   if (!isPro) {
     const used = await chargedLectureCount(admin, userId, lectureId);
     if (used === null) {
@@ -556,14 +620,26 @@ async function handleSegment(
   // instead of paying the provider twice. A claim older than STALE_CLAIM_MS is
   // reclaimable, which is what makes a killed invocation recoverable without a
   // queue or a dead-letter table.
+  //
+  // A RECOVERY CLAIMS MORE. The normal filter is deliberately narrow — only a
+  // segment the client said it finished uploading — and that narrowness is the
+  // bug 127 fixes: a segment whose upload landed but whose status flip did not
+  // stays 'pending' and is unclaimable forever. `failed` is included too,
+  // because maybeFinalize's thirty-minute write-off can beat the recovery pass
+  // to a segment whose audio is perfectly fine. Both are safe here because the
+  // caller is a scheduler acting on rows the database itself selected as
+  // stranded, and because recovery_attempts bounds how often it may try.
   const staleBefore = new Date(Date.now() - STALE_CLAIM_MS).toISOString();
+  const claimable = recovery
+    ? `status.eq.pending,status.eq.uploaded,status.eq.failed,and(status.eq.transcribing,claimed_at.lt.${staleBefore})`
+    : `status.eq.uploaded,and(status.eq.transcribing,claimed_at.lt.${staleBefore})`;
   const { data: claimed, error: claimErr } = await admin
     .from('lecture_segments')
     .update({ status: 'transcribing', claimed_at: new Date().toISOString() })
     .eq('id', segmentId)
     .eq('lecture_id', lectureId)
     .eq('user_id', userId)
-    .or(`status.eq.uploaded,and(status.eq.transcribing,claimed_at.lt.${staleBefore})`)
+    .or(claimable)
     .select('id, seq, storage_path, seconds')
     .maybeSingle();
 
@@ -790,6 +866,136 @@ async function handleSegment(
   return await maybeFinalize(admin, userId, lecture, locale, log);
 }
 
+// ── recover (scheduler only) ────────────────────────────────────────────────
+/**
+ * Transcribe a segment that stopped moving before it reached `done`.
+ *
+ * WHY THIS IS A SEPARATE ENTRY POINT AND NOT JUST A RETRY. Everything else in
+ * this file is driven by a student holding a phone. Recovery is driven by a
+ * cron tick twenty minutes to an hour after that phone stopped talking to us,
+ * and it therefore has no session, no locale preference, and no way to ask the
+ * user anything. What it does have is a segment id chosen by
+ * lecture_stranded_segments (127), which already answered the only question
+ * that matters — is there actually an object at that storage_path — so this
+ * function never has to guess whether there is audio to work with.
+ *
+ * The owner comes off the row, never off the request. That is what keeps a
+ * leaked scheduler secret from being usable to transcribe against an arbitrary
+ * account: the caller cannot name a user, only a segment.
+ *
+ * The attempt is charged BEFORE the work, for the reason 109 stamps
+ * notes_auto_attempts before its POST — an invocation killed mid-transcription
+ * must still spend one, or a segment that reliably crashes us is retried every
+ * twenty minutes for the rest of the app's life.
+ */
+async function handleRecover(
+  admin: any,
+  body: Record<string, unknown>,
+  locale: Locale,
+  log: any,
+): Promise<Response> {
+  const segmentId = typeof body.segmentId === 'string' ? body.segmentId : null;
+  if (!segmentId) return jsonResponse({ error: 'segmentId is required' }, 400);
+
+  const { data: segment, error: segErr } = await admin
+    .from('lecture_segments')
+    .select('id, lecture_id, user_id, seq, status, recovery_attempts')
+    .eq('id', segmentId)
+    .maybeSingle();
+  if (segErr) {
+    log.error('recover_segment_lookup_failed', errorFields(segErr));
+    return jsonResponse({ error: t('transient', locale) }, 503);
+  }
+  if (!segment) return jsonResponse({ error: 'Segment not found' }, 404);
+
+  log.setUser(segment.user_id);
+
+  // Already finished — by the client coming back, or by an earlier tick. Not an
+  // error; the scheduler asking twice is normal and must be cheap.
+  if (segment.status === 'done') {
+    return jsonResponse({ ok: true, status: 'already_done' }, 200);
+  }
+
+  if ((segment.recovery_attempts ?? 0) >= MAX_RECOVERY_ATTEMPTS) {
+    log.warn('recover_attempts_exhausted', {
+      segment_id: segmentId, attempts: segment.recovery_attempts,
+    });
+    return jsonResponse({ ok: true, status: 'exhausted' }, 200);
+  }
+
+  // The owner's real entitlement, read here because the dispatch above skips
+  // the Pro gate for this action (it has no user until the row is loaded).
+  // Assuming `false` would refuse a paying subscriber their own audio the
+  // moment they had a second lecture on file. Fail CLOSED as transient, the
+  // same as the main gate: a database blip must not demote anyone.
+  const { data: proResult, error: proErr } = await admin.rpc('is_pro', { uid: segment.user_id });
+  if (proErr) {
+    log.error('recover_is_pro_failed', errorFields(proErr));
+    return jsonResponse({ error: t('transient', locale) }, 503);
+  }
+
+  await admin.rpc('lecture_note_recovery_attempt', { p_segment_id: segmentId })
+    .then(undefined, () => {});
+
+  const response = await handleSegment(
+    admin,
+    segment.user_id,
+    { lectureId: segment.lecture_id, segmentId },
+    locale,
+    proResult === true,
+    log,
+    // Recovery widens the CLAIM only — which statuses may be taken over. It
+    // buys no exemption from the free-lecture allowance.
+    true,
+  );
+
+  // FOLD IT BACK IN. maybeFinalize cannot: its terminal write is guarded
+  // against regressing a lecture that has already moved on, which is precisely
+  // the state every recovered segment's lecture is in. Without this the
+  // segment reads `done` with its text stored and the transcript the student
+  // opens is still missing that stretch of the class.
+  const { data: rebuilt, error: rebuildErr } = await admin
+    .rpc('lecture_rebuild_transcript', { p_lecture_id: segment.lecture_id });
+  if (rebuildErr) {
+    log.error('recover_rebuild_failed', {
+      lecture_id: segment.lecture_id, ...errorFields(rebuildErr),
+    });
+  }
+
+  // GIVE THE ATTEMPT BACK IF THE WORK NEVER HAPPENED (128). A 429 means the
+  // provider was busy and a 503 means we were; both leave the segment
+  // deliberately reclaimable, and both used to spend one of its three tries
+  // anyway. Three busy afternoons would have exhausted a perfectly recoverable
+  // segment's budget without its audio ever being sent anywhere — and then the
+  // audio would be deleted as something nothing will ever transcribe.
+  if (response.status === 429 || response.status === 503) {
+    await admin.rpc('lecture_refund_recovery_attempt', { p_segment_id: segmentId })
+      .then(undefined, () => {});
+  }
+
+  // Named for what actually happened. handleSegment can legitimately refuse —
+  // a free allowance already spent, a provider outage — and logging every
+  // outcome as `segment_recovered` would make the metric that tells us whether
+  // this works report 100% forever.
+  const fields = {
+    segment_id: segmentId,
+    lecture_id: segment.lecture_id,
+    seq: segment.seq,
+    from_status: segment.status,
+    attempt: (segment.recovery_attempts ?? 0) + 1,
+    attempt_refunded: response.status === 429 || response.status === 503,
+    transcript_rebuilt: rebuilt === true,
+    outcome: response.status,
+  };
+  if (response.status >= 200 && response.status < 300) {
+    log.info('segment_recovered', fields);
+  } else {
+    log.warn('segment_recovery_refused', fields);
+  }
+
+  return response;
+}
+
 /**
  * Remove every audio object for a lecture and record that it is gone.
  *
@@ -801,14 +1007,41 @@ async function handleSegment(
  * `storage_path` is nulled only AFTER the objects are confirmed gone, so a
  * failed delete leaves the paths intact and the cleanup retryable rather than
  * losing the only pointer to the orphaned files.
+ *
+ * ─── WHAT IT WILL NOT DELETE ───────────────────────────────────────────────
+ * A segment that has not reached `done` and has not exhausted its recovery
+ * attempts. Its audio is the ONLY copy of that stretch of the lecture and 127
+ * is about to try transcribing it; deleting it here would destroy the content
+ * the recovery pass exists to save, and would do it from inside the recovery
+ * pass itself — a lecture with two stranded segments would lose the second the
+ * moment the first was rescued.
+ *
+ * 117 already states this rule for the retention sweep. This function did not
+ * follow it: it filtered on `storage_path` alone, so a pending segment that
+ * happened to be in the caller's snapshot was deleted along with the rest.
+ *
+ * Once recovery has given up the audio goes, and that is the point — it stops
+ * being content we might still deliver and becomes a third party's voice in
+ * storage with no purpose left. `includeUnfinished` is for cancel, where the
+ * student has said to abandon the whole recording and every byte should go.
  */
 async function deleteLectureAudio(
   admin: any,
   lectureId: string,
-  segments: { storage_path: string | null }[],
+  segments: { storage_path: string | null; status?: string; recovery_attempts?: number }[],
   log: any,
+  opts: { includeUnfinished?: boolean } = {},
 ): Promise<void> {
-  const paths = segments.map((s) => s.storage_path).filter(Boolean) as string[];
+  const deletable = segments.filter((s) => {
+    if (!s.storage_path) return false;
+    if (opts.includeUnfinished) return true;
+    if (s.status === 'done') return true;
+    // No status in the snapshot means we cannot prove it is safe. Leave it;
+    // the retention sweep asks the same question again every twenty minutes.
+    if (!s.status) return false;
+    return (s.recovery_attempts ?? 0) >= MAX_RECOVERY_ATTEMPTS;
+  });
+  const paths = deletable.map((s) => s.storage_path).filter(Boolean) as string[];
   if (paths.length > 0) {
     const { error } = await admin.storage.from('lectures').remove(paths);
     if (error) {
@@ -865,7 +1098,7 @@ async function maybeFinalize(
 ): Promise<Response> {
   const { data: segments, error } = await admin
     .from('lecture_segments')
-    .select('id, seq, status, transcript, seconds, storage_path, has_gap, created_at')
+    .select('id, seq, status, transcript, seconds, storage_path, has_gap, created_at, recovery_attempts')
     .eq('lecture_id', lecture.id)
     .eq('user_id', userId)
     .order('seq', { ascending: true });
@@ -883,6 +1116,12 @@ async function maybeFinalize(
   // strand the whole recording behind a spinner with no path out. Anything that
   // has not moved in STALE_SEGMENT_MS is written off, and the transcript is
   // assembled around the hole rather than never being assembled at all.
+  //
+  // Since 127 this is a hole that can still be filled in. The write-off unblocks
+  // the lecture NOW, which is what the student in front of the screen needs, but
+  // it no longer destroys the chance of recovering the segment: the audio is
+  // left alone and the recovery pass will claim a `failed` segment whose object
+  // still exists, then fold the text back into the transcript.
   const staleCutoff = Date.now() - STALE_SEGMENT_MS;
   const stale = all.filter((s: any) =>
     s.status !== 'done' && s.status !== 'failed' &&
@@ -961,9 +1200,12 @@ async function maybeFinalize(
     // nothing on a second call.
     await admin.rpc('release_lecture_reservation', { p_lecture_id: lecture.id })
       .then(undefined, () => {});
-    // The audio is now dead weight: there is no transcript to make and no retry
-    // path from a terminal failure. Deleting it here is what keeps the privacy
-    // policy's retention promise true for lectures that never succeeded.
+    // The audio of everything that genuinely finished goes now. What does NOT
+    // go is a segment recovery has not finished with — since 127 a terminal
+    // failure here is no longer the end of the line, and a lecture that failed
+    // because two uploads stalled is exactly the one worth trying again. Those
+    // objects are collected by the retention sweep once the attempts run out,
+    // an hour later at the outside.
     await deleteLectureAudio(admin, lecture.id, all, log);
     log.warn('lecture_no_usable_text', {
       lecture_id: lecture.id, audio_seconds: audioSeconds, code: errorCode,

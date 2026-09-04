@@ -63,7 +63,11 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
   `lecture_orphaned_audio` (118),
   `note_lms_removal_refused`, `mark_canvas_calendar_feed_removed` + `apply_lms_assignment_sync_service` (guarded in 119),
   `tasks_record_lms_override`, `set_lms_task_hidden` (120),
-  `lms_sync_pending_count`, `lms_unstick_resolved_pending`, `lms_vault_orphans` (122)
+  `lms_sync_pending_count`, `lms_unstick_resolved_pending`, `lms_vault_orphans` (122),
+  `lecture_stranded_segments`, `lecture_note_recovery_attempt`,
+  `lecture_write_off_segment`, `lecture_rebuild_transcript`,
+  `alert_lecture_segments_stranded` (127),
+  `lecture_refund_recovery_attempt` (128)
 - **Citizen:** `whisper_rate_limit_ok` ← DO NOT modify from Semora
 
 ## Edge functions
@@ -73,7 +77,8 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
   `lecture-transcribe`, `lecture-study-kit` (065; deploy `--no-verify-jwt` since 109 —
   the unattended notes job posts to it with a shared secret and no Authorization header),
   `lecture-retention` (117-118, deploy `--no-verify-jwt` — deletes lecture audio whose
-  transcript is already written, plus objects no segment row points at, every 20 minutes)
+  transcript is already written, plus objects no segment row points at, and since 127
+  recovers or writes off stranded segments, every 20 minutes)
 
 ## Lecture recording (migration 065) — **SEMORA only**
 - `lecture_recordings` / `lecture_segments` — owner-only RLS, realtime enabled.
@@ -81,6 +86,29 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
   and is **deleted by `lecture-transcribe` the moment the transcript is written**
   (`audio_deleted_at` records when). A `done` segment with a null `storage_path`
   is the normal end state.
+- **A stranded segment is recovered, not lost (127).** `uploadSegment` writes the
+  row, uploads the audio, then flips the status; a client that dies in between
+  leaves a `pending` row whose audio is in the bucket and which nothing will
+  ever claim. `lecture_stranded_segments` finds them and answers the only
+  question that separates the two cases — is there an object at that
+  `storage_path`. Audio present goes to `lecture-transcribe`'s `recover`
+  action; audio absent is written off by `lecture_write_off_segment`, which
+  re-checks absence itself before nulling the pointer.
+  - `recover` is the ONE action reachable with the shared lecture cron secret
+    instead of a user JWT. It takes a segment id and reads the owner off the
+    row, so the credential can never name a user. It does NOT waive the
+    free-lecture allowance: `chargedLectureCount` excludes the lecture being
+    worked on, which already permits recovering an already-charged lecture and
+    still refuses a second free one.
+  - An attempt is charged before the work so a crash still costs one, and
+    refunded (128) when the caller SEES a 429 or 503 — a busy provider or a
+    database blip left the segment reclaimable on purpose, and spending its
+    budget on those would delete recoverable audio.
+  - `deleteLectureAudio` no longer deletes a segment that has not reached
+    `done` and has not exhausted `recovery_attempts`. It used to filter on
+    `storage_path` alone, so recovering one stranded segment would have
+    destroyed the audio of any other stranded segment in the same lecture.
+    `cancel` passes `includeUnfinished` — abandon means abandon.
 - `lecture_usage_log` — the free-lecture quota ledger. RLS on with **no policies**
   and `revoke all` from `authenticated`: it must stay unwritable by clients, or
   delete-and-retry resets the free allowance forever. Counting
