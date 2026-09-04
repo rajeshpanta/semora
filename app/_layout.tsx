@@ -80,6 +80,7 @@ import { CollaborationSyncBridge } from '@/components/CollaborationSyncBridge';
 import { RealtimeSyncBridge } from '@/components/RealtimeSyncBridge';
 import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
 import { WebAppFrame } from '@/components/WebAppFrame';
+import { AppUpdateGate } from '@/components/AppUpdateGate';
 import { WebAlertHost } from '@/components/WebAlertHost';
 import { getAppLocale, useI18n } from '@/lib/i18n';
 import { setDefaultOptions } from 'date-fns';
@@ -1379,6 +1380,10 @@ function RootLayoutNav() {
               </Stack>
               </NavigationFrame>
             </AuthGate>
+            {/* Applies a downloaded OTA in the session it arrives rather than
+                the one after. Ships inert: it does nothing until the
+                auto_update_reload flag is switched on. See lib/appUpdate.ts. */}
+            <AppUpdateGate />
             <TaskCompletionCelebration />
             <WebAlertHost />
           </ProUpsellHost>
