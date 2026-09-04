@@ -11,6 +11,8 @@ import { assertEquals, assert } from 'https://deno.land/std@0.224.0/assert/mod.t
 import {
   classifyRequest,
   describeStorageError,
+  keychainStatusFromMessage,
+  looksLikeLocation,
   isAnonAuthorization,
   isDegradedRead,
   noteProtectedRequest,
@@ -390,6 +392,81 @@ Deno.test('the iOS locked-keychain status survives intact', () => {
   assert(out!.includes('ERR_SECURE_STORE_READ'));
 });
 
+// ─── The shape expo-secure-store ACTUALLY throws (Phase 0) ─────────────────
+//
+// The test above encodes a message with the number already in it, which is the
+// SecCopyErrorMessageString path — real but rare. Every NAMED case in
+// KeyChainException returns prose and no number, which is why two days of
+// production failures produced `ERR_KEY_CHAIN` and zero OSStatus values.
+
+Deno.test('errSecInteractionNotAllowed is recognised from its sentence alone', () => {
+  // Verbatim from expo-secure-store/ios/SecureStoreExceptions.swift, wrapped
+  // the way expo-modules-core delivers it to JS.
+  const err = Object.assign(
+    new Error("Calling the 'getValueWithKeyAsync' function has failed → Caused by: User interaction is not allowed."),
+    { code: 'ERR_KEY_CHAIN' },
+  );
+  const out = describeStorageError(err);
+  assertEquals(out, 'ERR_KEY_CHAIN/-25308');
+});
+
+Deno.test('every keychain reason in the native switch maps to its OSStatus', () => {
+  const cases: [string, number][] = [
+    ['User interaction is not allowed.', -25308],
+    ['The specified item could not be found in the keychain.', -25300],
+    ['The specified item already exists in the keychain.', -25299],
+    ['No keychain is available. You may need to restart your computer.', -25291],
+    ['Authentication failed. Provided passphrase/PIN is incorrect or there is no user authentication method configured for this device.', -25293],
+    ['Unable to decode the provided data.', -26275],
+    ['Bad parameter or invalid state for operation.', -909],
+    ['User canceled the operation.', -128],
+    ['Failed to allocate memory.', -108],
+    ['One or more parameters passed to a function where not valid.', -50],
+    // Upstream's duplicated word, copied deliberately.
+    ['File already open with with write permission.', -49],
+    ['I/O error.', -36],
+    ['Function or operation not implemented.', -4],
+  ];
+  for (const [reason, status] of cases) {
+    assertEquals(keychainStatusFromMessage(reason), status, reason);
+    assertEquals(
+      keychainStatusFromMessage(`Calling the 'x' function has failed → Caused by: ${reason}`),
+      status,
+      reason,
+    );
+  }
+});
+
+Deno.test('an unrecognised keychain message contributes NOTHING but its code', () => {
+  // The whole safety property: a sentence we do not know is not summarised,
+  // truncated or echoed — it simply does not appear.
+  const err = Object.assign(
+    new Error('Caused by: could not read sb-usglgeosqhtxbyxsugre-auth-token for hunter@example.edu'),
+    { code: 'ERR_KEY_CHAIN' },
+  );
+  assertEquals(describeStorageError(err), 'ERR_KEY_CHAIN');
+});
+
+Deno.test('matching emits our constant, never a slice of the input', () => {
+  // A hostile message that both matches AND carries secrets must still emit
+  // only the number the match resolved to.
+  const err = Object.assign(
+    new Error('token=eyJhbGciOiJIUzI1NiJ9.secret.sig User interaction is not allowed. https://canvas.edu/feeds/user_abc123.ics'),
+    { code: 'ERR_KEY_CHAIN' },
+  );
+  const out = describeStorageError(err) ?? '';
+  assertEquals(out, 'ERR_KEY_CHAIN/-25308');
+  assert(!out.includes('eyJ'), out);
+  assert(!out.includes('canvas'), out);
+  assert(!out.includes('.ics'), out);
+});
+
+Deno.test('keychainStatusFromMessage rejects non-strings without throwing', () => {
+  for (const junk of [null, undefined, 42, {}, [], '']) {
+    assertEquals(keychainStatusFromMessage(junk), null);
+  }
+});
+
 Deno.test('the message itself NEVER travels', () => {
   // A keychain error can name the key it was reading, and these keys are named
   // after the Supabase project and the auth token. Only a code and an OSStatus
@@ -404,6 +481,30 @@ Deno.test('the message itself NEVER travels', () => {
   assert(!out.includes('@'), out);
   assert(!out.includes('hunter'), out);
   assertEquals(out, 'ERR_X/-25308');
+});
+
+Deno.test('an error code shaped like a location is refused, not trimmed', () => {
+  // Found by the Phase 0 adversarial sweep. The character filter keeps ':' and
+  // '/', so before this a URI in `code` survived intact.
+  for (const hostile of [
+    'https://canvas.instructure.com/feeds/calendars/user_AbCdEf123.ics',
+    'file:///private/var/mobile/Containers/Data/Application/X/BIOL101.pdf',
+    '/private/var/mobile/Containers/Data/Application/X',
+    'student@university.edu',
+    'sb-usglgeosqhtxbyxsugre-auth-token/chunk/3',
+  ]) {
+    const err = Object.assign(new Error('User interaction is not allowed.'), { code: hostile });
+    // The OSStatus still lands; only the bogus code is dropped.
+    assertEquals(describeStorageError(err), '-25308');
+  }
+});
+
+Deno.test('a real expo error code is still kept', () => {
+  for (const good of ['ERR_KEY_CHAIN', 'ERR_SECURE_STORE_READ', 'E-25308', 'ERR_PICKING_IN_PROGRESS']) {
+    assertEquals(looksLikeLocation(good), false, good);
+    const err = Object.assign(new Error('boom'), { code: good });
+    assertEquals(describeStorageError(err), good);
+  }
 });
 
 Deno.test('a bare throw still yields something comparable', () => {

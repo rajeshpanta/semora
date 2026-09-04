@@ -206,6 +206,67 @@ export function isDegradedRead(outcome: StorageReadOutcome): boolean {
 const MAX_ERROR_CODE_CHARS = 48;
 
 /**
+ * expo-secure-store's keychain messages, mapped back to the OSStatus they came from.
+ *
+ * WHY THIS EXISTS. The instrumentation shipped on 2026-09-01 to answer one
+ * question — which OSStatus the keychain refuses with — and after two days of
+ * real failures it had captured `ERR_KEY_CHAIN` and nothing else. Twenty-two
+ * degraded reads across seven devices, zero OSStatus values.
+ *
+ * The reason is in the native source. `KeyChainException` is a
+ * `GenericException<OSStatus>` whose `reason` is a `switch` over the status
+ * that returns ENGLISH PROSE and never the number
+ * (expo-secure-store/ios/SecureStoreExceptions.swift). So
+ * errSecInteractionNotAllowed does not arrive as `-25308`; it arrives as the
+ * sentence "User interaction is not allowed." — and the regex below it, which
+ * looks for a negative integer, correctly found nothing to match.
+ *
+ * The switch is a closed set of compile-time constants, which is what makes
+ * recognising them safe: these strings are in the binary, not in anyone's data.
+ * A match emits OUR number for it. The message itself still never travels.
+ *
+ * The entry that matters is -25308. Session items are written with
+ * expo-secure-store's default accessibility, `kSecAttrAccessibleWhenUnlocked`,
+ * and iOS answers a read of one on a locked device with exactly that status.
+ * Seeing it closes the diagnosis; seeing something else says the theory was
+ * wrong before a release is spent on it.
+ *
+ * `errSecOpWr`'s duplicated word is copied verbatim from the native source. It
+ * is a typo upstream and matching anything else would silently never fire.
+ */
+const KEYCHAIN_REASON_STATUS: ReadonlyArray<readonly [string, number]> = [
+  ['user interaction is not allowed.', -25308],
+  ['the specified item could not be found in the keychain.', -25300],
+  ['the specified item already exists in the keychain.', -25299],
+  ['no keychain is available. you may need to restart your computer.', -25291],
+  ['authentication failed. provided passphrase/pin is incorrect or there is no user authentication method configured for this device.', -25293],
+  ['unable to decode the provided data.', -26275],
+  ['bad parameter or invalid state for operation.', -909],
+  ['user canceled the operation.', -128],
+  ['failed to allocate memory.', -108],
+  ['one or more parameters passed to a function where not valid.', -50],
+  ['file already open with with write permission.', -49],
+  ['i/o error.', -36],
+  ['function or operation not implemented.', -4],
+];
+
+/**
+ * The OSStatus behind a keychain message, or null if it is not one we know.
+ *
+ * Compares a lowercased copy against the closed list above and returns a
+ * NUMBER. Nothing derived from the input string is ever returned, so no part
+ * of a message can travel through here even if a future runtime reshapes it.
+ */
+export function keychainStatusFromMessage(message: unknown): number | null {
+  if (typeof message !== 'string' || message.length === 0) return null;
+  const haystack = message.toLowerCase();
+  for (const [needle, status] of KEYCHAIN_REASON_STATUS) {
+    if (haystack.includes(needle)) return status;
+  }
+  return null;
+}
+
+/**
  * A safe, comparable description of WHY a keychain read threw.
  *
  * `outcome: 'error'` says the read failed and stops there, which is one
@@ -236,21 +297,57 @@ const MAX_ERROR_CODE_CHARS = 48;
  * discards the rest. The result is filtered to a conservative character set so
  * no stray text can ride along even if a future runtime changes shape.
  */
+/**
+ * Does this string name a place — a URI, a path, or an address?
+ *
+ * Used to refuse an error `code` that is not the constant it is supposed to
+ * be. Deliberately broad: the cost of a false positive is one missing
+ * diagnostic field, and the cost of a false negative is a credential in an
+ * analytics table forever.
+ */
+export function looksLikeLocation(value: string): boolean {
+  // A slash covers every path and URI shape at once (`://`, a leading `/`, a
+  // bare `a/b`); `@` covers an address. No real error code contains either.
+  return value.includes('/') || value.includes('@');
+}
+
 export function describeStorageError(err: unknown): string | null {
   if (err === null || err === undefined) return null;
 
   const parts: string[] = [];
 
   const code = (err as { code?: unknown }).code;
-  if (typeof code === 'string' && code.length > 0) parts.push(code);
+  // `code` is trusted content in a way the message is not — expo-modules-core
+  // derives it from an exception CLASS NAME, so it is a compile-time constant
+  // like ERR_KEY_CHAIN and can never be user data. The character filter at the
+  // bottom leaned on that.
+  //
+  // It leaned too hard. That filter keeps ':' and '/', so a `code` that was
+  // ever a URI or a path would travel intact — a Phase 0 adversarial sweep put
+  // a Canvas feed URL in the field and watched it come out the other side. No
+  // runtime does that today and none is expected to, which is exactly the kind
+  // of assumption worth not depending on when the field it guards is a
+  // student's credentials. Anything shaped like a location is refused outright
+  // rather than trimmed, so a future runtime that reshapes `code` degrades into
+  // a missing diagnostic instead of a leak.
+  if (typeof code === 'string' && code.length > 0 && !looksLikeLocation(code)) parts.push(code);
   else if (typeof code === 'number' && Number.isFinite(code)) parts.push(String(code));
 
-  // OSStatus, and only OSStatus: a negative integer standing on its own. The
-  // message itself never travels.
+  // OSStatus, and only OSStatus. Two ways in, because expo-secure-store uses
+  // both: the `default` branch of its switch falls through to
+  // SecCopyErrorMessageString, whose text sometimes carries the number, while
+  // every named case returns prose that never does. The message itself never
+  // travels either way — the literal path emits a matched constant, and the
+  // regex path emits only the digits it matched.
   const message = (err as { message?: unknown }).message;
   if (typeof message === 'string') {
-    const status = message.match(/-\d{3,6}\b/);
-    if (status && !parts.includes(status[0])) parts.push(status[0]);
+    const named = keychainStatusFromMessage(message);
+    if (named !== null && !parts.includes(String(named))) {
+      parts.push(String(named));
+    } else if (named === null) {
+      const status = message.match(/-\d{3,6}\b/);
+      if (status && !parts.includes(status[0])) parts.push(status[0]);
+    }
   }
 
   if (parts.length === 0) {
