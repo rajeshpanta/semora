@@ -1,7 +1,8 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
   decideUpdate, isProtectedRoute, NEVER_RELOAD_ROUTES, AUTO_UPDATE_FLAG_KEY, FETCH_TIMEOUT_MS,
-  COLD_START_GRACE_MS, TRACK_FLUSH_MS,
+  COLD_START_GRACE_MS, TRACK_FLUSH_MS, parseReloadGuard, serializeReloadGuard,
+  reloadBlocked, nextReloadGuard, MAX_RELOAD_ATTEMPTS,
 } from '@/lib/appUpdate.ts';
 
 const base = {
@@ -95,4 +96,51 @@ Deno.test('the timings are bounded, so neither can stall a launch', () => {
   assertEquals(TRACK_FLUSH_MS > 0 && TRACK_FLUSH_MS <= 1000, true);
   // Worst-case added launch time if everything is slow.
   assertEquals(FETCH_TIMEOUT_MS * 2 + TRACK_FLUSH_MS <= 9000, true);
+});
+
+// ── The circuit breaker ────────────────────────────────────────────────────
+//
+// The one catastrophic failure: a bundle that downloads, fails to apply, stays
+// pending, and reloads the app on every launch forever. applied.current cannot
+// stop that — reloadAsync destroys the memory holding it.
+
+Deno.test('a first reload from a given bundle is allowed', () => {
+  assertEquals(reloadBlocked(null, 'update-A'), false);
+  assertEquals(reloadBlocked({ from: 'update-A', tries: 1 }, 'update-A'), false);
+});
+
+Deno.test('a third attempt from the SAME bundle is refused', () => {
+  assertEquals(reloadBlocked({ from: 'update-A', tries: MAX_RELOAD_ATTEMPTS }, 'update-A'), true);
+  assertEquals(reloadBlocked({ from: 'update-A', tries: 9 }, 'update-A'), true);
+});
+
+Deno.test('a successful reload resets the count by no longer matching', () => {
+  // We were on A, reloaded, and are now running B. The record for A is moot.
+  assertEquals(reloadBlocked({ from: 'update-A', tries: 9 }, 'update-B'), false);
+});
+
+Deno.test('the counter increments per bundle and restarts on a new one', () => {
+  const first = nextReloadGuard(null, 'A');
+  assertEquals(first, { from: 'A', tries: 1 });
+  const second = nextReloadGuard(first, 'A');
+  assertEquals(second, { from: 'A', tries: 2 });
+  // now running B: a fresh slate, not a carried-over count
+  assertEquals(nextReloadGuard(second, 'B'), { from: 'B', tries: 1 });
+});
+
+Deno.test('an unknown running id never blocks — we cannot key on nothing', () => {
+  assertEquals(reloadBlocked({ from: 'A', tries: 9 }, null), false);
+  assertEquals(reloadBlocked({ from: 'A', tries: 9 }, undefined), false);
+});
+
+Deno.test('corrupt or absent storage degrades to no guard, not to a crash', () => {
+  for (const bad of [null, undefined, '', 'not json', '{}', '[]', '{"tries":3}']) {
+    assertEquals(parseReloadGuard(bad as any), null, String(bad));
+  }
+  assertEquals(parseReloadGuard(serializeReloadGuard({ from: 'A', tries: 2 })), { from: 'A', tries: 2 });
+});
+
+Deno.test('a negative or absurd stored count cannot re-enable looping', () => {
+  assertEquals(parseReloadGuard('{"from":"A","tries":-5}')!.tries, 0);
+  assertEquals(reloadBlocked(parseReloadGuard('{"from":"A","tries":1e9}'), 'A'), true);
 });

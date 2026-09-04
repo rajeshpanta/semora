@@ -4,9 +4,11 @@ import { usePathname } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { track } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
+import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
 import {
   decideUpdate, AUTO_UPDATE_FLAG_KEY, FETCH_TIMEOUT_MS, COLD_START_GRACE_MS,
-  TRACK_FLUSH_MS, type UpdateMoment,
+  TRACK_FLUSH_MS, RELOAD_GUARD_KEY, parseReloadGuard, serializeReloadGuard,
+  reloadBlocked, nextReloadGuard, type UpdateMoment,
 } from '@/lib/appUpdate';
 
 /**
@@ -93,6 +95,22 @@ export function AppUpdateGate() {
         alreadyAppliedThisSession: applied.current,
       });
       if (!decision.apply) return;
+
+      // ── Circuit breaker, across reloads ──────────────────
+      // applied.current only survives this session; reloadAsync ends it. If a
+      // downloaded bundle fails to apply and stays pending, every launch would
+      // reload forever and the app would be unusable — worse than any bug this
+      // delivers. The record is keyed on the bundle we are leaving, so a
+      // successful reload resets it by simply no longer matching.
+      const runningId: string | null = Updates.updateId ?? null;
+      const guard = parseReloadGuard(getDeviceItem(RELOAD_GUARD_KEY));
+      if (reloadBlocked(guard, runningId)) {
+        track('ota_reload_blocked', { moment, tries: guard?.tries ?? 0 });
+        return;
+      }
+      if (runningId) {
+        setDeviceItem(RELOAD_GUARD_KEY, serializeReloadGuard(nextReloadGuard(guard, runningId)));
+      }
 
       applied.current = true;
       // track() is fire-and-forget and reloadAsync tears down this JS context
