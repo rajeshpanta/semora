@@ -191,7 +191,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
   },
   "syllabus-scanner": {
     "metaTitle": "AI Syllabus Scanner for College Students",
-    "metaDescription": "Turn a syllabus photo, PDF, or pasted text into every deadline, class time, and grade cutoff. Review each item before it saves. Free tier: one AI action per account.",
+    "metaDescription": "Turn a syllabus photo, PDF, or pasted text into every deadline, class time, and grade cutoff \u2014 and review each item before anything saves.",
     "h1": "AI Syllabus Scanner",
     "lede": "Photograph, upload, or paste your syllabus and Semora returns the course, the class schedule, the grading scale, and every deadline it can find. You review the list before a single item is saved.",
     "intro": [

@@ -36,11 +36,11 @@ export const BLOG_POSTS: BlogPostMeta[] = [
   },
   {
     slug: 'canvas-deadline-reminders',
-    title: 'Canvas Deadline Reminders: Get Advance Alerts',
+    title: 'Does Canvas Remind You Before Deadlines?',
     description:
-      "Why Canvas notifications are easy to miss, and how to layer real advance reminders and grade tracking on top of your existing Canvas assignments.",
+      "Canvas tells you when a due date is set or changed, but has no 'remind me 3 days before' option. How to check your notification settings — and what to add.",
     date: '2026-07-23',
-    modified: '2026-08-09',
+    modified: '2026-09-04',
     image: '/illustrations/bell-reminder.svg',
     imageAlt: 'A friendly character waving beside a clock radiating signal rings into notification cards',
   },
