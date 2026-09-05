@@ -21,7 +21,16 @@ export const SITE_DESCRIPTION =
   // timer, and an AI tutor") was the least load-bearing half of the sentence.
   'Semora turns a syllabus photo or PDF into a full semester calendar, with every deadline, exam and grading weight organized automatically.';
 
-export const APP_STORE_URL = 'https://apps.apple.com/us/app/semora-ai-syllabus-scanner/id6762589321';
+/**
+ * The numeric App Store id, on its own.
+ *
+ * Needed separately from APP_STORE_URL because Safari's Smart App Banner takes
+ * the bare id, not a link. Derived here rather than written twice so the two
+ * cannot drift apart.
+ */
+export const APP_STORE_ID = '6762589321';
+
+export const APP_STORE_URL = `https://apps.apple.com/us/app/semora-ai-syllabus-scanner/id${APP_STORE_ID}`;
 
 /**
  * Where every "Get the app" control points.

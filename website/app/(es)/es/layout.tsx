@@ -10,7 +10,7 @@ import { Nav } from '@/components/Nav';
 import { Footer } from '@/components/Footer';
 import { JsonLd } from '@/components/JsonLd';
 import { organizationSchema, webSiteSchema } from '@/lib/schema';
-import { SITE_NAME } from '@/lib/semora-facts';
+import { SITE_NAME, APP_STORE_ID } from '@/lib/semora-facts';
 import { SITE_DESCRIPTION_ES } from '@/lib/es-facts';
 import { SITE_URL } from '@/lib/site';
 
@@ -34,6 +34,12 @@ export const metadata: Metadata = {
     alternateLocale: ['en_US'],
   },
   twitter: { card: 'summary_large_image' },
+  // Same Smart App Banner as the English layout — this tree has its own root,
+  // so leaving it out here would have silently exempted every /es/ page. The
+  // App Store listing it points at is the same one; the store localises itself.
+  itunes: {
+    appId: APP_STORE_ID,
+  },
 };
 
 export default function SpanishRootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
