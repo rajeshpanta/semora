@@ -19,6 +19,9 @@ import {
 } from '../_shared/ai.ts';
 import { prepareImagePayload } from '../_shared/heic.ts';
 import {
+  buildTeaching, normalizeAnswer, sanitizeDistractorNotes,
+} from './practiceTeaching.ts';
+import {
   DOCUMENT_EXTRACTION_FAILED_CODE,
   documentExtractionFailedMessage,
   normalizeSupportedDocument,
@@ -178,10 +181,6 @@ function clamp(text: string, max: number): string {
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 type TutorCitation = { kind: 'syllabus' | 'deadline' | 'note' | 'assignment'; label: string };
-
-function normalizeAnswer(value: string) {
-  return value.trim().toLocaleLowerCase().replace(/^[a-d][).:\s-]+/, '').replace(/\s+/g, ' ');
-}
 
 function parseModelJson(raw: string) {
   const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -637,7 +636,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       }
       const { data: question } = await adminClient
         .from('tutor_practice_questions')
-        .select('id, course_id, expected_answer, explanation, topics')
+        .select('id, course_id, expected_answer, explanation, topics, distractor_notes')
         .eq('id', practiceId)
         .eq('user_id', userId)
         .eq('course_id', groundCourseId)
@@ -665,7 +664,19 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
         log.error('record_practice_attempt_failed', errorFields(recordErr));
         return jsonResponse({ error: 'Could not save your practice result' }, 503);
       }
-      return jsonResponse({ evaluation: { correct, feedback, topics } }, 200);
+      // ADDITIVE. `feedback` is byte-for-byte what it has always been, so the
+      // released client renders exactly what it renders today and this deploy
+      // is invisible to students until Phase 3B reads the new field. `teaching`
+      // is null for a correct answer — getting it right is not a misconception
+      // — and null for a question generated before notes existed.
+      const teaching = buildTeaching({
+        correct,
+        submittedAnswer,
+        explanation: String(question.explanation ?? ''),
+        topics,
+        distractorNotes: (question as { distractor_notes?: unknown }).distractor_notes,
+      });
+      return jsonResponse({ evaluation: { correct, feedback, topics, teaching } }, 200);
     }
 
     // Reserved HERE, not before the body is parsed. evaluate_practice returns
@@ -1008,9 +1019,9 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     }
 
     const modeInstruction = mode === 'quiz'
-      ? `Create one concise multiple-choice quiz question from the grounded course material.${masteryDirective} Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names).`
+      ? `Create one concise multiple-choice quiz question from the grounded course material.${masteryDirective} Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names), distractor_notes (object). distractor_notes has one key per INCORRECT choice, written exactly as that choice appears, mapping to one or two sentences that name what a student who chose it was most likely thinking and the specific distinction that makes it wrong. Teach that distinction — do not merely restate that the choice is incorrect, do not say only that another option is better, and do not refer to choices by letter or position. If the choice contains a false statement, correct that statement outright; naming which concept it resembles is not enough, because a student who believes the false part will read the resemblance as agreement. Name the student's likely reasoning only when the choice makes it clear — otherwise give the distinction plainly rather than guessing at a motive.`
       : mode === 'practice'
-        ? `Create one low-stakes multiple-choice practice question from the grounded course material.${masteryDirective} Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names).`
+        ? `Create one low-stakes multiple-choice practice question from the grounded course material.${masteryDirective} Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names), distractor_notes (object). distractor_notes has one key per INCORRECT choice, written exactly as that choice appears, mapping to one or two sentences that name what a student who chose it was most likely thinking and the specific distinction that makes it wrong. Teach that distinction — do not merely restate that the choice is incorrect, do not say only that another option is better, and do not refer to choices by letter or position. If the choice contains a false statement, correct that statement outright; naming which concept it resembles is not enough, because a student who believes the false part will read the resemblance as agreement. Name the student's likely reasoning only when the choice makes it clear — otherwise give the distinction plainly rather than guessing at a motive.`
         : mode === 'explain_assignment'
           ? 'Explain the selected assignment as a student-friendly checklist: what it asks for, a first step, suggested milestones, and one question to ask the instructor if the brief is unclear. Do not fabricate requirements.'
           : '';
@@ -1221,6 +1232,11 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
         ? practice.topics.filter((topic: unknown) => typeof topic === 'string')
           .map((topic: string) => topic.trim().slice(0, 160)).filter(Boolean).slice(0, 3)
         : [];
+      // Best-effort, and deliberately NOT part of the gate below: a question
+      // the student can answer is worth more than one with tidy teaching notes,
+      // so a model that returns nothing usable here still produces a question
+      // and evaluation simply falls back to what shipped before.
+      const distractorNotes = sanitizeDistractorNotes(practice?.distractor_notes, choices, expectedAnswer);
       if (!prompt || choices.length < 2 || !expectedAnswer || !choices.some((choice) => normalizeAnswer(choice) === normalizeAnswer(expectedAnswer)) || !explanation || !topics.length) {
         log.error('invalid_practice_json', { sample: assistantText.slice(0, 300) });
         return jsonResponse({ error: "Couldn't create a usable practice question. Please try again." }, 502);
@@ -1230,6 +1246,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
         .insert({
           user_id: userId, course_id: groundCourseId, mode, prompt, choices,
           expected_answer: expectedAnswer, explanation, topics, citations,
+          distractor_notes: distractorNotes,
         })
         .select('id')
         .single();
