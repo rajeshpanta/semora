@@ -7,6 +7,7 @@ import React, { useMemo } from 'react';
 // the middle of a sentence.
 import { StyleSheet, Text, View } from 'react-native';
 import { toUnicodeMath } from '@/lib/unicodeMath';
+import { parseBlocks, type Block } from '@/lib/markdownBlocks';
 
 // ── Rendering a tutor's answer ──────────────────────────────────────────────
 //
@@ -56,94 +57,6 @@ function parseInline(line: string): InlineSpan[] {
   return spans.map((span) => (span.code ? span : { ...span, text: toUnicodeMath(span.text) }));
 }
 
-type Block =
-  | { kind: 'heading'; level: 2 | 3; text: string }
-  | { kind: 'paragraph'; text: string }
-  | { kind: 'bullet'; text: string; depth: number }
-  | { kind: 'ordered'; text: string; marker: string }
-  | { kind: 'quote'; text: string }
-  | { kind: 'code'; text: string; language: string }
-  | { kind: 'math'; text: string }
-  | { kind: 'rule' };
-
-function parseBlocks(markdown: string): Block[] {
-  const lines = markdown.replace(/\r\n/g, '\n').split('\n');
-  const blocks: Block[] = [];
-  let index = 0;
-
-  while (index < lines.length) {
-    const raw = lines[index];
-    const line = raw.trim();
-
-    // Fenced code, taken verbatim to the closing fence (or the end, when a
-    // reply was cut off mid-block).
-    if (line.startsWith('```')) {
-      const language = line.slice(3).trim();
-      const body: string[] = [];
-      index++;
-      while (index < lines.length && !lines[index].trim().startsWith('```')) {
-        body.push(lines[index]);
-        index++;
-      }
-      index++;
-      blocks.push({ kind: 'code', text: body.join('\n'), language });
-      continue;
-    }
-
-    // A display equation on its own line keeps its own space.
-    if (/^\\\[[\s\S]*\\\]$/.test(line) || /^\$\$[\s\S]*\$\$$/.test(line)) {
-      blocks.push({ kind: 'math', text: toUnicodeMath(line) });
-      index++;
-      continue;
-    }
-
-    if (!line) { index++; continue; }
-
-    if (/^(-{3,}|_{3,}|\*{3,})$/.test(line)) {
-      blocks.push({ kind: 'rule' });
-      index++;
-      continue;
-    }
-    if (line.startsWith('### ')) {
-      blocks.push({ kind: 'heading', level: 3, text: line.slice(4) });
-      index++;
-      continue;
-    }
-    if (line.startsWith('## ')) {
-      blocks.push({ kind: 'heading', level: 2, text: line.slice(3) });
-      index++;
-      continue;
-    }
-    if (line.startsWith('# ')) {
-      blocks.push({ kind: 'heading', level: 2, text: line.slice(2) });
-      index++;
-      continue;
-    }
-    if (line.startsWith('> ')) {
-      blocks.push({ kind: 'quote', text: line.slice(2) });
-      index++;
-      continue;
-    }
-    const ordered = line.match(/^(\d{1,2})[.)]\s+(.*)$/);
-    if (ordered) {
-      blocks.push({ kind: 'ordered', marker: `${ordered[1]}.`, text: ordered[2] });
-      index++;
-      continue;
-    }
-    if (/^[-*•]\s+/.test(line)) {
-      // Two leading spaces is one level of nesting — enough for the sub-points
-      // a tutor writes, without pretending to support arbitrary depth.
-      const depth = /^\s{2,}/.test(raw) ? 1 : 0;
-      blocks.push({ kind: 'bullet', text: line.replace(/^[-*•]\s+/, ''), depth });
-      index++;
-      continue;
-    }
-    blocks.push({ kind: 'paragraph', text: line });
-    index++;
-  }
-
-  return blocks;
-}
 
 function Spans({ line, style, boldColor, codeStyle }: {
   line: string;

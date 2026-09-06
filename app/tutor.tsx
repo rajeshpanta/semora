@@ -22,8 +22,11 @@ import {
   // wraps .alert alone). Every other dialog on this screen goes through the
   // wrapper so its buttons stay translated.
   Alert as NativeAlert,
+  type NativeSyntheticEvent,
+  type NativeScrollEvent,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
@@ -56,6 +59,26 @@ import {
   unsupportedDocumentMessage,
 } from '@/lib/documentFiles';
 import { FileWorkProgress } from '@/components/FileWorkProgress';
+
+/**
+ * A thread rail is only worth its width if what remains still holds a full
+ * reading measure. These three numbers are the whole adaptive rule; there is
+ * no device check anywhere in this screen.
+ */
+const RAIL_MIN = 240;
+const RAIL_MAX = 320;
+const GUTTER_MIN = 32;
+/** Treat "within 24pt of the bottom" as still reading the newest message. */
+const END_SLACK = 24;
+/** Points that hold a typical source name at the default text size. */
+const CITATION_BASE = 190;
+/** Left to the column so a chip never runs edge to edge with the prose. */
+const CHIP_GUTTER = 24;
+/** Points that hold a typical starter sentence at the default text size. */
+const STARTER_BASE = 340;
+
+/** An opener for an empty thread. Most fill the composer; one runs a quiz. */
+type Starter = { label: string; practiceFocus?: string };
 
 export default function TutorScreen() {
   const router = useRouter();
@@ -135,7 +158,63 @@ function TutorChat({
   const router = useRouter();
   const colors = useColors();
   const showProUpsell = useProUpsell();
-  const { contentMaxWidth, isDesktop } = useResponsive();
+  const { contentMaxWidth, proseMaxWidth, measureScale, fontScale, isDesktop, width: winWidth } = useResponsive();
+
+  // ── Adaptive geometry, derived rather than named ────────────────────────
+  //
+  // No device is mentioned here on purpose. Every value below answers "what
+  // does this content need?", so a window Apple has not shipped yet lands in
+  // the right layout without a code change.
+  //
+  // The rail appears exactly when the window can pay for it in full: a rail,
+  // a complete reading measure, and a gutter on each side. One pixel short of
+  // that and the sheet is the better answer, because a rail that squeezes the
+  // prose has taken the thing it was meant to serve.
+  // The rail holds thread titles, so its spatial need scales with the text the
+  // same way the prose measure does. Deriving both from measureScale is what
+  // keeps a student on Larger Text from getting a rail of bare ellipses: the
+  // rail asks for more room, the threshold rises with it, and below that the
+  // rail simply steps aside and gives the whole window to the answer.
+  const railMin = Math.round(RAIL_MIN * measureScale);
+  const railMax = Math.round(RAIL_MAX * measureScale);
+  const railWidth = Math.round(Math.min(railMax, Math.max(railMin, winWidth * 0.22)));
+  const showThreadRail = winWidth >= railMin + proseMaxWidth + GUTTER_MIN * 2;
+  // Derived from what is left AFTER the rail, not from the window. Using the
+  // window happened to fit at today's sizes and would have overflowed silently
+  // the first time either constant moved.
+  const columnWidth = Math.min(proseMaxWidth, winWidth - (showThreadRail ? railWidth : 0));
+
+  // A source chip is a name, and a name it cannot finish saying is worth very
+  // little. Its width therefore comes from the same two facts everything else
+  // here uses — how big the text actually is, and how much column there is to
+  // spend — rather than from a constant. Unlike the prose measure this is NOT
+  // clamped: a measure has an upper bound because over-long lines hurt to
+  // read, whereas a chip only ever wants to be exactly as wide as its label.
+  // When even the whole column cannot hold it, the chip has run out of room to
+  // grow and wrapping is the only way left to show the name, so it takes a
+  // second line instead of an ellipsis.
+  const citationIdeal = Math.round(CITATION_BASE * fontScale);
+  const citationMaxWidth = Math.max(
+    CITATION_BASE,
+    Math.min(columnWidth - CHIP_GUTTER, citationIdeal),
+  );
+  const citationLines = citationIdeal > citationMaxWidth ? 2 : 1;
+  const citationIcon = Math.round(9 * measureScale);
+
+  // Starter chips hold a whole sentence, so they answer the same question the
+  // citation chips do — how wide does this text need to be here? — and get the
+  // same answer. Without this they stay 340pt while the words inside them
+  // treble, which turns four openers into four narrow towers of text in a
+  // column with room to spare.
+  const starterMaxWidth = Math.max(
+    STARTER_BASE,
+    Math.min(columnWidth - CHIP_GUTTER, Math.round(STARTER_BASE * fontScale)),
+  );
+
+  // The navigation bar is not 44pt. It grows with Dynamic Type and differs by
+  // presentation, so asking for its real height is the only version of this
+  // that survives an accessibility text size.
+  const headerHeight = useHeaderHeight();
 
   // Resolve the semester by derivation rather than reading global state alone:
   // selectedSemesterId is only populated by the tabs that set it, so arriving
@@ -179,6 +258,7 @@ function TutorChat({
 
   const [draft, setDraft] = useState('');
   const [threadSheetOpen, setThreadSheetOpen] = useState(false);
+  const [contextSheetOpen, setContextSheetOpen] = useState(false);
   /** The answer as it is being written, before it becomes a stored turn. */
   const [streamingText, setStreamingText] = useState<string | null>(null);
   const [attachment, setAttachment] = useState<
@@ -200,6 +280,18 @@ function TutorChat({
   const streamingRef = useRef(false);
   const tutorWorkInFlightRef = useRef(false);
   const fileProgressClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // One line that says what is actually behind the next answer. Names the
+  // course because that is the fact a student checks before trusting a reply,
+  // and counts the material because "3 notes" is the difference between a
+  // grounded answer and a general one. Kept to nouns — no controls, no state
+  // the student has to maintain.
+  const contextSummary = useMemo(() => {
+    if (!courseId) return translate('All courses · your deadlines');
+    const parts: string[] = [course?.name || translate('Course')];
+    if (notes.length) parts.push(`${notes.length} ${notes.length === 1 ? translate('note') : translate('notes')}`);
+    return parts.join(' · ');
+  }, [courseId, course?.name, notes.length]);
+
   const isTutorWorking = tutorWork !== null || sendMessage.isPending || generatePractice.isPending;
   // `conversationId` belongs in here, not only inside handleSend. handleSend
   // returns silently when it is null — during the cold-start window, and
@@ -218,6 +310,22 @@ function TutorChat({
     requestAnimationFrame(() =>
       scrollRef.current?.scrollToEnd({ animated: !streamingRef.current }));
   }, []);
+
+  // onContentSizeChange covers the list growing. It does NOT cover the list's
+  // own frame SHRINKING, which is what happens when the composer gets taller —
+  // on Larger Text, or when the keyboard comes up. Content size is unchanged,
+  // so nothing re-scrolls and the newest message ends up behind the composer.
+  // Only re-pin when the student was actually at the bottom; someone who has
+  // scrolled up to re-read an earlier step keeps their place.
+  const atEndRef = useRef(true);
+  const handleScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    atEndRef.current =
+      contentOffset.y + layoutMeasurement.height >= contentSize.height - END_SLACK;
+  }, []);
+  const keepEndVisible = useCallback(() => {
+    if (atEndRef.current) scrollToEnd();
+  }, [scrollToEnd]);
 
   // Switching course must not carry the previous course's thread along.
   useEffect(() => { setPickedThreadId(null); }, [courseId]);
@@ -302,7 +410,22 @@ function TutorChat({
    * first exchange demonstrates the only reason to use the tutor here rather
    * than somewhere else.
    */
-  const starterPrompts = useMemo(() => {
+  /**
+   * What is worth being quizzed on right now, or null when nothing is.
+   *
+   * Reuses the judgement the coach brief already makes — a topic practised
+   * and got wrong more often than not is the one to revisit — and falls back
+   * to the work actually coming up. If a course has neither, Semora has no
+   * opinion worth offering and the starter does not appear at all.
+   */
+  const practiceAnchor = useMemo(() => {
+    if (!courseId) return null;
+    const weak = topicMastery.find((t) => t.attempts > 0 && t.correct / t.attempts < 0.7);
+    if (weak) return weak.topic;
+    return upcomingWork[0]?.title ?? null;
+  }, [courseId, topicMastery, upcomingWork]);
+
+  const starterPrompts = useMemo<Starter[]>(() => {
     // Translated HERE, not at render. The chip both displays this string and
     // becomes the draft, so translating only the <Text> would show a Spanish
     // chip that types an English question into the composer.
@@ -311,20 +434,30 @@ function TutorChat({
         translate('What should I work on tonight?'),
         translate('Which deadline should I worry about first?'),
         translate('Help me plan the next two weeks.'),
-      ];
+      ].map((label) => ({ label }));
     }
-    const prompts: string[] = [];
+    const prompts: Starter[] = [];
     // The task title is the student's own text and is never translated.
-    if (upcomingWork[0]) prompts.push(`${translate('Help me get started on')} ${upcomingWork[0].title}`);
-    if (notes.length > 0) prompts.push(translate('Summarise the key ideas from my notes.'));
-    if (gradeSnapshot?.percentage != null) {
-      prompts.push(translate('What do I need on the rest to finish with an A?'));
+    if (upcomingWork[0]) prompts.push({ label: `${translate('Help me get started on')} ${upcomingWork[0].title}` });
+    // Second, so that when it shares an anchor with the opener above the two
+    // read as one item you can either begin or be tested on — not as a repeat.
+    // The focus string steers the question the generator writes, so the label
+    // is a promise the backend actually keeps.
+    if (practiceAnchor) {
+      prompts.push({
+        label: `${translate('Quiz me on')} ${practiceAnchor}`,
+        practiceFocus: `Create a quiz question on ${practiceAnchor}.`,
+      });
     }
-    prompts.push(translate('What should I study first for this course?'));
+    if (notes.length > 0) prompts.push({ label: translate('Summarise the key ideas from my notes.') });
+    if (gradeSnapshot?.percentage != null) {
+      prompts.push({ label: translate('What do I need on the rest to finish with an A?') });
+    }
+    prompts.push({ label: translate('What should I study first for this course?') });
     return prompts.slice(0, 4);
-  }, [courseId, upcomingWork, notes.length, gradeSnapshot?.percentage]);
+  }, [courseId, upcomingWork, notes.length, gradeSnapshot?.percentage, practiceAnchor]);
 
-  const handleGeneratePractice = async (mode: 'practice' | 'quiz') => {
+  const handleGeneratePractice = async (mode: 'practice' | 'quiz', focus?: string) => {
     if (tutorWorkInFlightRef.current || isTutorWorking) return;
     if (!courseId) {
       Alert.alert(
@@ -344,11 +477,11 @@ function TutorChat({
         });
       }
       setTutorWork({ kind: 'practice', stage: 'creating' });
-      const next = await generatePractice.mutateAsync({ mode });
+      const next = await generatePractice.mutateAsync({ mode, focus });
       setPractice(next);
       setSelectedAnswer(null);
       setPracticeFeedback(null);
-      track('tutor_practice_generated', { screen: 'tutor', mode });
+      track('tutor_practice_generated', { screen: 'tutor', mode, focused: !!focus });
       scrollToEnd();
     } catch (e: any) {
       if (e?.code === 'PRO_REQUIRED') {
@@ -695,209 +828,120 @@ function TutorChat({
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: translate('AI Tutor') }} />
+      {/* Thread identity belongs in the navigation bar, where iOS puts a
+          document's title, not in a bar of its own below it. Reclaiming that
+          row is the first 44pt of the 278pt the chrome used to spend before
+          the student saw a single word of an answer. */}
+      <Stack.Screen
+        options={{
+          title: activeThread?.title || translate('AI Tutor'),
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={handleNewThread}
+              disabled={isTutorWorking || createThread.isPending}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel="New chat"
+            >
+              <FontAwesome
+                name="pencil-square-o"
+                size={19}
+                color={isTutorWorking || createThread.isPending ? colors.ink3 : colors.brand}
+              />
+            </TouchableOpacity>
+          ),
+        }}
+      />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? headerHeight : 0}
       >
-        {/* Which conversation this is, and the way out to another one. A
-            thread was previously an invisible, permanent, per-course singleton
-            — this is the whole of the UI that changes that. */}
-        <View style={[styles.threadBar, { borderBottomColor: colors.line, maxWidth: contentMaxWidth }]}>
-          <TouchableOpacity
-            style={styles.threadTitleBtn}
-            onPress={() => setThreadSheetOpen(true)}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="Switch chat"
-          >
-            <FontAwesome name="comments-o" size={13} color={colors.ink3} />
-            <Text style={[styles.threadTitle, { color: colors.ink }]} numberOfLines={1}>
-              {activeThread?.title || 'New chat'}
-            </Text>
-            <FontAwesome name="angle-down" size={14} color={colors.ink3} />
-          </TouchableOpacity>
-          {/* Only worth the space once it is close enough to matter. Before
-              this the cap was invisible until the moment it refused a
-              question, which is the one moment it is too late to be useful. */}
-          {!!quota && quota.cap - quota.used <= 10 && (
-            <Text style={[styles.quotaPill, { color: colors.amber, backgroundColor: colors.amber50 }]}>
-              {`${Math.max(0, quota.cap - quota.used)} left today`}
-            </Text>
-          )}
-          <TouchableOpacity
-            style={[styles.newThreadBtn, { borderColor: colors.line }]}
-            onPress={handleNewThread}
-            disabled={isTutorWorking || createThread.isPending}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel="New chat"
-          >
-            <FontAwesome name="plus" size={11} color={colors.brand} />
-            <Text style={[styles.newThreadText, { color: colors.brand }]}>New</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Course scope picker — only worth showing when there's a choice to
-            make. "General" keeps the unscoped chat that this screen already
-            offered, so nothing is taken away by adding the scope. */}
-        {semesterCourses.length > 0 && (
-          <View style={[styles.scopeBar, { borderBottomColor: colors.line, maxWidth: contentMaxWidth }]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scopeRow}>
-              <Text style={[styles.scopeLabel, { color: colors.ink3 }]}>Course</Text>
-              <TouchableOpacity
-                style={[
-                  styles.scopeChip,
-                  { borderColor: colors.line, backgroundColor: colors.card },
-                  courseId === null && { borderColor: colors.brand, backgroundColor: colors.brand50 },
-                ]}
-                onPress={() => {
-                  if (Platform.OS !== 'web') Haptics.selectionAsync();
-                  setCourseId(null);
-                }}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.scopeChipText, { color: courseId === null ? colors.brand : colors.ink2 }]}>
-                  General
-                </Text>
-              </TouchableOpacity>
-              {semesterCourses.map((c) => {
-                const active = c.id === courseId;
-                return (
-                  <TouchableOpacity
-                    key={c.id}
-                    style={[
-                      styles.scopeChip,
-                      { borderColor: colors.line, backgroundColor: colors.card },
-                      active && { borderColor: colors.brand, backgroundColor: colors.brand50 },
-                    ]}
-                    onPress={() => {
-                      if (Platform.OS !== 'web') Haptics.selectionAsync();
-                      setCourseId(c.id);
-                      track('tutor_course_scoped', { screen: 'tutor' });
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.scopeDot, { backgroundColor: c.color || colors.brand }]} />
-                    <Text
-                      style={[styles.scopeChipText, { color: active ? colors.brand : colors.ink2 }]}
-                      numberOfLines={1}
+        <View style={styles.workspace}>
+          {/* iPad, wide only: the thread list earns a permanent column here
+              because it REPLACES navigation rather than adding decoration —
+              switching chats stops being "open a sheet, choose, dismiss". It
+              collapses back into the sheet the moment the window narrows, so
+              Split View and portrait keep the phone behaviour. */}
+          {showThreadRail && (
+            <View style={[styles.rail, { width: railWidth, borderRightColor: colors.line }]}>
+              <Text style={[styles.railHead, { color: colors.ink3 }]}>Chats</Text>
+              <ScrollView contentContainerStyle={styles.railList}>
+                {threads.map((t) => {
+                  const active = t.id === conversationId;
+                  return (
+                    <TouchableOpacity
+                      key={t.id}
+                      style={[styles.railRow, active && { backgroundColor: colors.brand50 }]}
+                      onPress={() => {
+                        setPickedThreadId(t.id);
+                        setPractice(null); setPracticeFeedback(null); setSelectedAnswer(null);
+                      }}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={t.title || 'Untitled chat'}
+                      accessibilityState={{ selected: active }}
                     >
-                      {c.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Notes / grounding bar */}
-        <View style={[styles.notesBar, { borderBottomColor: colors.line, maxWidth: contentMaxWidth }]}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.notesRow}
-          >
-            <TouchableOpacity
-              style={[styles.addNoteChip, { borderColor: colors.brand, backgroundColor: colors.brand50 }]}
-              onPress={handleAddNotes}
-              disabled={uploadNote.isPending}
-              activeOpacity={0.8}
-            >
-              {uploadNote.isPending ? (
-                <ActivityIndicator size="small" color={colors.brand} />
-              ) : (
-                <FontAwesome name="paperclip" size={12} color={colors.brand} />
-              )}
-              <Text style={[styles.addNoteText, { color: colors.brand }]}>Add notes</Text>
-            </TouchableOpacity>
-            {notes.map((n) => (
-              <TouchableOpacity
-                key={n.id}
-                style={[styles.noteChip, { backgroundColor: colors.card, borderColor: colors.line }]}
-                onPress={() => confirmDeleteNote(n)}
-                activeOpacity={0.7}
-              >
-                <FontAwesome name="file-text-o" size={11} color={colors.ink3} />
-                <Text style={[styles.noteChipText, { color: colors.ink2 }]} numberOfLines={1}>
-                  {n.filename}
-                </Text>
-                <FontAwesome name="times" size={11} color={colors.ink3} />
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          {fileProgress && (
-            <View style={styles.fileProgressWrap}>
-              <FileWorkProgress
-                compact
-                title={fileProgress.stage === 'uploading'
-                  ? `Uploading ${fileProgress.percent ?? 0}%`
-                  : fileProgress.stage === 'reading'
-                    ? 'Reading document…'
-                    : fileProgress.stage === 'saving'
-                      ? 'Saving document…'
-                      : fileProgress.stage === 'ready'
-                        ? 'Document ready'
-                        : 'Preparing document…'}
-                detail={fileProgress.filename}
-                percent={fileProgress.stage === 'uploading' ? fileProgress.percent : undefined}
-                complete={fileProgress.stage === 'ready'}
-              />
+                      <Text
+                        style={[styles.railRowText, { color: active ? colors.brand : colors.ink2 }]}
+                        numberOfLines={1}
+                      >
+                        {t.title || 'New chat'}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             </View>
           )}
-        </View>
 
-        {courseId && (
-          <View style={[styles.intelligencePanel, { borderBottomColor: colors.line, maxWidth: contentMaxWidth }]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionRow}>
-              <TouchableOpacity style={[styles.actionChip, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]} onPress={() => handleGeneratePractice('practice')} disabled={isTutorWorking}>
-                <FontAwesome name="pencil" size={12} color={colors.brand} />
-                <Text style={[styles.actionText, { color: colors.brand }]}>{tutorWork?.kind === 'practice' ? 'Creating…' : 'Practice me'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.actionChip, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={() => handleGeneratePractice('quiz')} disabled={isTutorWorking}>
-                <FontAwesome name="list-ol" size={12} color={colors.ink2} />
-                <Text style={[styles.actionText, { color: colors.ink2 }]}>Quick quiz</Text>
-              </TouchableOpacity>
-              {upcomingWork.filter((task) => task.type === 'assignment' || task.type === 'project').slice(0, 2).map((task) => (
-                <TouchableOpacity key={task.id} style={[styles.actionChip, { backgroundColor: colors.card, borderColor: colors.line }]} onPress={() => handleExplainAssignment(task)} disabled={isTutorWorking}>
-                  <FontAwesome name="lightbulb-o" size={13} color={colors.ink2} />
-                  <Text style={[styles.actionText, { color: colors.ink2 }]} numberOfLines={1}>Explain {task.title}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            {/* Boolean, not a raw count. `a || b.length || c.length` yields the
-                NUMBER 0 when everything is empty, and `0 && <View/>` renders a
-                literal "0" on screen — which is what every brand-new user saw
-                floating under the action chips. */}
-            {(topicMastery.length > 0 || (riskReport?.recoveryPlan.length ?? 0) > 0 || upcomingWork.length > 0) && (
-              <View style={[styles.coachBrief, { backgroundColor: colors.card, borderColor: colors.line }]}>
-                <View style={styles.coachBriefHead}>
-                  <FontAwesome name="compass" size={13} color={colors.teal} />
-                  <Text style={[styles.coachBriefTitle, { color: colors.ink }]}>Course intelligence</Text>
-                </View>
-                {topicMastery.filter((topic) => topic.attempts > 0 && topic.correct / topic.attempts < 0.7).slice(0, 2).map((topic) => (
-                  <Text key={topic.id} style={[styles.coachBriefText, { color: colors.ink3 }]}>Review {topic.topic} — {Math.round((topic.correct / topic.attempts) * 100)}% in practice.</Text>
-                ))}
-                {riskReport?.recoveryPlan.slice(0, 1).map((step) => (
-                  <Text key={step.id} style={[styles.coachBriefText, { color: colors.ink3 }]}>{step.title}: {step.detail}</Text>
-                ))}
-                {!topicMastery.length && !riskReport?.recoveryPlan.length && upcomingWork[0] && (
-                  <Text style={[styles.coachBriefText, { color: colors.ink3 }]}>Start with {upcomingWork[0].title} due {upcomingWork[0].due_date}.</Text>
-                )}
-              </View>
-            )}
-          </View>
-        )}
+          <View style={styles.mainCol}>
+            {/* ONE context line replaces four stacked bars.
+                What is permanently true — which course is grounding this answer,
+                and how much material is behind it — stays visible, because that
+                is the thing a student needs to trust the answer. The CONTROLS
+                for changing it do not need to be on screen at all times, so they
+                moved behind this row. Progressive disclosure, applied to the
+                distinction between a fact and a control. */}
+            <TouchableOpacity
+              style={[styles.contextBar, { borderBottomColor: colors.line, maxWidth: columnWidth }]}
+              onPress={() => setContextSheetOpen(true)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Context: ${contextSummary}. Opens course, notes and study tools.`}
+            >
+              {courseId ? (
+                <View style={[styles.contextDot, { backgroundColor: course?.color || colors.brand }]} />
+              ) : (
+                <FontAwesome name="globe" size={12} color={colors.ink3} />
+              )}
+              <Text style={[styles.contextText, { color: colors.ink2 }]} numberOfLines={1}>
+                {contextSummary}
+              </Text>
+              {!!quota && quota.cap - quota.used <= 10 && (
+                <Text style={[styles.quotaPill, { color: colors.amber, backgroundColor: colors.amber50 }]}>
+                  {`${Math.max(0, quota.cap - quota.used)} left`}
+                </Text>
+              )}
+              <FontAwesome name="sliders" size={13} color={colors.ink3} />
+            </TouchableOpacity>
 
-        {/* Message list */}
+        {/* Message list.
+            Pinning to the newest thing is a CONVERSATION affordance, so the
+            two handlers below are gated on there being one. An empty thread is
+            a page you read from the top, and at large text its openers are
+            taller than a small phone — anchoring it to the bottom opened a
+            fresh Tutor on its last two starters with the heading scrolled
+            away. */}
         <ScrollView
           ref={scrollRef}
           style={{ flex: 1 }}
-          contentContainerStyle={[styles.messages, { maxWidth: contentMaxWidth }]}
+          contentContainerStyle={[styles.messages, { maxWidth: columnWidth }]}
           keyboardShouldPersistTaps="handled"
-          onContentSizeChange={scrollToEnd}
+          onContentSizeChange={messages.length ? scrollToEnd : undefined}
+          onLayout={messages.length ? keepEndVisible : undefined}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
         >
           {isLoading ? (
             <ActivityIndicator style={{ marginTop: 40 }} color={colors.brand} />
@@ -910,27 +954,42 @@ function TutorChat({
                 {course?.name ? `Ask about ${course.name}` : 'Ask your study question'}
               </Text>
               <Text style={[styles.emptyText, { color: colors.ink3 }]}>
+                {/* "above" was true when four bars sat over this. The
+                    controls now live behind the context line, so the copy
+                    points there instead of at empty space. */}
                 {courseId
-                  ? 'Answers are grounded in this course’s syllabus, deadlines, grades, and any notes you attach above.'
-                  : 'Ask across every course — your deadlines are already here. Pick a course above to add its syllabus and notes.'}
+                  ? 'Answers are grounded in this course’s syllabus, deadlines, grades, and any notes you add.'
+                  : 'Ask across every course — your deadlines are already here. Choose a course from the context bar to add its syllabus and notes.'}
               </Text>
               {/* A blank chat box is a hard thing to start. These are the
                   questions this app can answer better than a general chatbot,
                   because it is holding the material — so the first question a
                   student asks is one that shows that. */}
-              <View style={styles.starterWrap}>
-                {starterPrompts.map((prompt) => (
+              <View style={[styles.starterWrap, { maxWidth: starterMaxWidth }]}>
+                {starterPrompts.map((starter) => (
                   <TouchableOpacity
-                    key={prompt}
+                    key={starter.label}
                     style={[styles.starterChip, { borderColor: colors.line, backgroundColor: colors.card }]}
+                    disabled={!!starter.practiceFocus && isTutorWorking}
                     onPress={() => {
                       if (Platform.OS !== 'web') Haptics.selectionAsync();
-                      setDraft(prompt);
-                      track('tutor_starter_tapped', { screen: 'tutor', scoped: !!courseId });
+                      track('tutor_starter_tapped', {
+                        screen: 'tutor', scoped: !!courseId,
+                        kind: starter.practiceFocus ? 'practice' : 'prompt',
+                      });
+                      // The prompts hand the student a sentence to send. This
+                      // one is already the whole request, so making them press
+                      // send again would be ceremony; it runs the quiz.
+                      if (starter.practiceFocus) handleGeneratePractice('quiz', starter.practiceFocus);
+                      else setDraft(starter.label);
                     }}
                     activeOpacity={0.75}
+                    accessibilityRole="button"
                   >
-                    <Text style={[styles.starterText, { color: colors.ink2 }]}>{prompt}</Text>
+                    {!!starter.practiceFocus && (
+                      <FontAwesome name="list-ol" size={Math.round(13 * measureScale)} color={colors.brand} />
+                    )}
+                    <Text style={[styles.starterText, { color: colors.ink2 }]}>{starter.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -938,11 +997,16 @@ function TutorChat({
           ) : (
             messages.map((m) => (
               <View key={m.id} style={m.role === 'user' ? styles.messageUserWrap : styles.messageAssistantWrap}>
+                {/* A question is an utterance and keeps its bubble. An answer
+                    is material — often two thousand words of it — and a
+                    rounded, bordered, filled card around that much prose reads
+                    as a chat transcript when it should read as something you
+                    settle in to study. So the answer sits on the paper itself:
+                    no fill, no border, no radius, full measure. What lost is
+                    decoration; what won is the answer. */}
                 <View style={[
-                  styles.bubble,
-                  m.role === 'user'
-                    ? [styles.bubbleUser, { backgroundColor: colors.brand }]
-                    : [styles.bubbleAssistant, { backgroundColor: colors.card, borderColor: colors.line }],
+                  m.role === 'user' ? styles.bubble : styles.answer,
+                  m.role === 'user' ? [styles.bubbleUser, { backgroundColor: colors.brand }] : null,
                 ]}>
                   {m.role === 'user' ? (
                     // RawText, NOT the localized wrapper: this is the student's
@@ -967,9 +1031,12 @@ function TutorChat({
                 {m.role === 'assistant' && m.citations?.length > 0 && (
                   <View style={styles.citationRow}>
                     {m.citations.slice(0, 3).map((citation, index) => (
-                      <View key={`${citation.kind}-${citation.label}-${index}`} style={[styles.citationChip, { borderColor: colors.line, backgroundColor: colors.paper }]}>
-                        <FontAwesome name="book" size={9} color={colors.ink3} />
-                        <Text style={[styles.citationText, { color: colors.ink3 }]} numberOfLines={1}>{citation.label}</Text>
+                      <View
+                        key={`${citation.kind}-${citation.label}-${index}`}
+                        style={[styles.citationChip, { borderColor: colors.line, backgroundColor: colors.paper, maxWidth: citationMaxWidth }]}
+                      >
+                        <FontAwesome name="book" size={citationIcon} color={colors.ink3} />
+                        <Text style={[styles.citationText, { color: colors.ink3 }]} numberOfLines={citationLines}>{citation.label}</Text>
                       </View>
                     ))}
                   </View>
@@ -1031,7 +1098,9 @@ function TutorChat({
               frame with both. */}
           {streamingText !== null && (
             <View style={styles.messageAssistantWrap}>
-              <View style={[styles.bubble, styles.bubbleAssistant, { backgroundColor: colors.card, borderColor: colors.line }]}>
+              {/* Must match the stored turn exactly, or the answer visibly
+                  reflows the instant streaming finishes. */}
+              <View style={styles.answer}>
                 <RichText
                   text={streamingText}
                   color={colors.ink}
@@ -1053,15 +1122,39 @@ function TutorChat({
               <Text style={[styles.practicePrompt, { color: colors.ink }]}>{practice.prompt}</Text>
               {practice.choices.map((choice) => {
                 const selected = selectedAnswer === choice;
+                // Selection was conveyed by border colour alone, so a
+                // VoiceOver user could not tell which option they had picked
+                // before pressing Check answer.
                 return (
-                  <TouchableOpacity key={choice} style={[styles.answerChoice, { borderColor: selected ? colors.brand : colors.line, backgroundColor: selected ? colors.brand50 : colors.paper }]} onPress={() => !practiceFeedback && setSelectedAnswer(choice)} disabled={!!practiceFeedback}>
+                  <TouchableOpacity
+                    key={choice}
+                    style={[styles.answerChoice, { borderColor: selected ? colors.brand : colors.line, backgroundColor: selected ? colors.brand50 : colors.paper }]}
+                    onPress={() => !practiceFeedback && setSelectedAnswer(choice)}
+                    disabled={!!practiceFeedback}
+                    accessibilityRole="radio"
+                    accessibilityLabel={choice}
+                    accessibilityState={{ selected, disabled: !!practiceFeedback }}
+                  >
                     <Text style={[styles.answerChoiceText, { color: colors.ink2 }]}>{choice}</Text>
                   </TouchableOpacity>
                 );
               })}
+              {/* Same arithmetic as the send button: #fff on colors.line is
+                  about 1.24:1 over light-mode paper, so until a choice was
+                  tapped this primary action read as an empty pill. The label
+                  colour follows the fill. */}
               {!practiceFeedback ? (
-                <TouchableOpacity style={[styles.checkAnswerButton, { backgroundColor: selectedAnswer ? colors.brand : colors.line }]} onPress={handleCheckPractice} disabled={!selectedAnswer || evaluatePractice.isPending}>
-                  {evaluatePractice.isPending ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.checkAnswerText}>Check answer</Text>}
+                <TouchableOpacity
+                  style={[styles.checkAnswerButton, { backgroundColor: selectedAnswer ? colors.brand : colors.line }]}
+                  onPress={handleCheckPractice}
+                  disabled={!selectedAnswer || evaluatePractice.isPending}
+                  accessibilityRole="button"
+                  accessibilityLabel="Check answer"
+                  accessibilityState={{ disabled: !selectedAnswer || evaluatePractice.isPending }}
+                >
+                  {evaluatePractice.isPending
+                    ? <ActivityIndicator size="small" color={colors.ink2} />
+                    : <Text style={[styles.checkAnswerText, { color: selectedAnswer ? '#fff' : colors.ink2 }]}>Check answer</Text>}
                 </TouchableOpacity>
               ) : (
                 <View style={[styles.feedbackCard, { backgroundColor: practiceFeedback.correct ? colors.teal50 : colors.amber50 }]}>
@@ -1090,7 +1183,7 @@ function TutorChat({
 
         {/* Composer */}
         {!!attachment && (
-          <View style={[styles.attachmentBar, { borderTopColor: colors.line, backgroundColor: colors.paper, maxWidth: contentMaxWidth }]}>
+          <View style={[styles.attachmentBar, { borderTopColor: colors.line, backgroundColor: colors.paper, maxWidth: columnWidth }]}>
             <Image source={{ uri: attachment.uri }} style={styles.attachmentThumb} />
             <Text style={[styles.attachmentLabel, { color: colors.ink2 }]} numberOfLines={2}>
               Attached to your next question. It isn{'\u2019'}t saved to your course.
@@ -1105,7 +1198,7 @@ function TutorChat({
             </TouchableOpacity>
           </View>
         )}
-        <View style={[styles.composer, { borderTopColor: colors.line, backgroundColor: colors.paper, maxWidth: contentMaxWidth }]}>
+        <View style={[styles.composer, { borderTopColor: colors.line, backgroundColor: colors.paper, maxWidth: columnWidth }]}>
           <TouchableOpacity
             style={[styles.attachBtn, { borderColor: colors.line }]}
             onPress={handleAttachPhoto}
@@ -1157,7 +1250,181 @@ function TutorChat({
             )}
           </TouchableOpacity>
         </View>
+          </View>
+        </View>
       </KeyboardAvoidingView>
+
+      {/* The controls the four stacked bars used to hold. Same handlers, same
+          capabilities — they simply stopped charging rent on every screen. */}
+      <Modal
+        visible={contextSheetOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setContextSheetOpen(false)}
+      >
+        <TouchableOpacity
+          style={styles.sheetBackdrop}
+          activeOpacity={1}
+          onPress={() => setContextSheetOpen(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
+        />
+        <View style={[styles.sheet, { backgroundColor: colors.paper }]}>
+          <View style={[styles.sheetHandle, { backgroundColor: colors.line }]} />
+          <ScrollView contentContainerStyle={{ paddingBottom: 28 }}>
+            {semesterCourses.length > 0 && (
+              <View style={styles.ctxSection}>
+                <Text style={[styles.ctxLabel, { color: colors.ink3 }]}>Course</Text>
+                <View style={styles.ctxChipWrap}>
+                  <TouchableOpacity
+                    style={[styles.scopeChip, { borderColor: colors.line, backgroundColor: colors.card },
+                      courseId === null && { borderColor: colors.brand, backgroundColor: colors.brand50 }]}
+                    onPress={() => {
+                      if (Platform.OS !== 'web') Haptics.selectionAsync();
+                      setCourseId(null);
+                      setPractice(null); setPracticeFeedback(null); setSelectedAnswer(null);
+                    }}
+                    activeOpacity={0.8}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: courseId === null }}
+                  >
+                    <Text style={[styles.scopeChipText, { color: courseId === null ? colors.brand : colors.ink2 }]}>
+                      General
+                    </Text>
+                  </TouchableOpacity>
+                  {semesterCourses.map((c) => {
+                    const active = c.id === courseId;
+                    return (
+                      <TouchableOpacity
+                        key={c.id}
+                        style={[styles.scopeChip, { borderColor: colors.line, backgroundColor: colors.card },
+                          active && { borderColor: colors.brand, backgroundColor: colors.brand50 }]}
+                        onPress={() => {
+                          if (Platform.OS !== 'web') Haptics.selectionAsync();
+                          setCourseId(c.id);
+                          setPractice(null); setPracticeFeedback(null); setSelectedAnswer(null);
+                          track('tutor_course_scoped', { screen: 'tutor' });
+                        }}
+                        activeOpacity={0.8}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: active }}
+                      >
+                        <View style={[styles.scopeDot, { backgroundColor: c.color || colors.brand }]} />
+                        <Text style={[styles.scopeChipText, { color: active ? colors.brand : colors.ink2 }]} numberOfLines={1}>
+                          {c.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            )}
+
+            <View style={styles.ctxSection}>
+              <Text style={[styles.ctxLabel, { color: colors.ink3 }]}>Material</Text>
+              <View style={styles.ctxChipWrap}>
+                <TouchableOpacity
+                  style={[styles.addNoteChip, { borderColor: colors.brand, backgroundColor: colors.brand50 }]}
+                  onPress={handleAddNotes}
+                  disabled={uploadNote.isPending}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add notes"
+                >
+                  {uploadNote.isPending
+                    ? <ActivityIndicator size="small" color={colors.brand} />
+                    : <FontAwesome name="paperclip" size={12} color={colors.brand} />}
+                  <Text style={[styles.addNoteText, { color: colors.brand }]}>Add notes</Text>
+                </TouchableOpacity>
+                {notes.map((n) => (
+                  <TouchableOpacity
+                    key={n.id}
+                    style={[styles.noteChip, { backgroundColor: colors.card, borderColor: colors.line }]}
+                    onPress={() => confirmDeleteNote(n)}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={n.filename}
+                    accessibilityHint="Removes this note from the tutor's material"
+                  >
+                    <FontAwesome name="file-text-o" size={11} color={colors.ink3} />
+                    <Text style={[styles.noteChipText, { color: colors.ink2 }]} numberOfLines={1}>{n.filename}</Text>
+                    <FontAwesome name="times" size={11} color={colors.ink3} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {fileProgress && (
+                <View style={styles.fileProgressWrap}>
+                  <FileWorkProgress
+                    compact
+                    title={fileProgress.stage === 'uploading' ? `Uploading ${fileProgress.percent ?? 0}%`
+                      : fileProgress.stage === 'reading' ? 'Reading document…'
+                      : fileProgress.stage === 'saving' ? 'Saving document…'
+                      : fileProgress.stage === 'ready' ? 'Document ready' : 'Preparing document…'}
+                    detail={fileProgress.filename}
+                    percent={fileProgress.stage === 'uploading' ? fileProgress.percent : undefined}
+                    complete={fileProgress.stage === 'ready'}
+                  />
+                </View>
+              )}
+            </View>
+
+            {courseId && (
+              <View style={styles.ctxSection}>
+                <Text style={[styles.ctxLabel, { color: colors.ink3 }]}>Study tools</Text>
+                <View style={styles.ctxChipWrap}>
+                  <TouchableOpacity
+                    style={[styles.actionChip, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]}
+                    onPress={() => { setContextSheetOpen(false); handleGeneratePractice('practice'); }}
+                    disabled={isTutorWorking}
+                    accessibilityRole="button"
+                  >
+                    <FontAwesome name="pencil" size={12} color={colors.brand} />
+                    <Text style={[styles.actionText, { color: colors.brand }]}>Practice me</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionChip, { backgroundColor: colors.card, borderColor: colors.line }]}
+                    onPress={() => { setContextSheetOpen(false); handleGeneratePractice('quiz'); }}
+                    disabled={isTutorWorking}
+                    accessibilityRole="button"
+                  >
+                    <FontAwesome name="list-ol" size={12} color={colors.ink2} />
+                    <Text style={[styles.actionText, { color: colors.ink2 }]}>Quick quiz</Text>
+                  </TouchableOpacity>
+                  {upcomingWork.filter((t) => t.type === 'assignment' || t.type === 'project').slice(0, 2).map((task) => (
+                    <TouchableOpacity
+                      key={task.id}
+                      style={[styles.actionChip, { backgroundColor: colors.card, borderColor: colors.line }]}
+                      onPress={() => { setContextSheetOpen(false); handleExplainAssignment(task); }}
+                      disabled={isTutorWorking}
+                      accessibilityRole="button"
+                    >
+                      <FontAwesome name="lightbulb-o" size={13} color={colors.ink2} />
+                      <Text style={[styles.actionText, { color: colors.ink2 }]} numberOfLines={1}>Explain {task.title}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                {(topicMastery.length > 0 || (riskReport?.recoveryPlan.length ?? 0) > 0 || upcomingWork.length > 0) && (
+                  <View style={[styles.coachBrief, { backgroundColor: colors.card, borderColor: colors.line, marginHorizontal: 0 }]}>
+                    <View style={styles.coachBriefHead}>
+                      <FontAwesome name="compass" size={13} color={colors.teal} />
+                      <Text style={[styles.coachBriefTitle, { color: colors.ink }]}>Course intelligence</Text>
+                    </View>
+                    {topicMastery.filter((t) => t.attempts > 0 && t.correct / t.attempts < 0.7).slice(0, 2).map((t) => (
+                      <Text key={t.id} style={[styles.coachBriefText, { color: colors.ink3 }]}>Review {t.topic} — {Math.round((t.correct / t.attempts) * 100)}% in practice.</Text>
+                    ))}
+                    {riskReport?.recoveryPlan.slice(0, 1).map((step) => (
+                      <Text key={step.id} style={[styles.coachBriefText, { color: colors.ink3 }]}>{step.title}: {step.detail}</Text>
+                    ))}
+                    {!topicMastery.length && !riskReport?.recoveryPlan.length && upcomingWork[0] && (
+                      <Text style={[styles.coachBriefText, { color: colors.ink3 }]}>Start with {upcomingWork[0].title} due {upcomingWork[0].due_date}.</Text>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
 
       {/* Every chat in this scope. Ordered by last use, because the one you
           were in five minutes ago is the one you want back. */}
@@ -1295,6 +1562,37 @@ function TutorChat({
 }
 
 const styles = StyleSheet.create({
+  // ── Workspace ────────────────────────────────────────────────────────────
+  workspace: { flex: 1, flexDirection: 'row' },
+  mainCol: { flex: 1 },
+  rail: { borderRightWidth: 0.5 },
+  railHead: {
+    fontSize: 11, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase',
+    paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6,
+  },
+  railList: { paddingHorizontal: 10, paddingBottom: 20, gap: 2 },
+  railRow: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 10, borderRadius: 8 },
+  railRowText: { fontSize: 13.5, fontWeight: '600' },
+
+  // ── The one context line ─────────────────────────────────────────────────
+  contextBar: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    minHeight: 44, paddingHorizontal: 16, paddingVertical: 10,
+    borderBottomWidth: 0.5, width: '100%', alignSelf: 'center',
+  },
+  contextDot: { width: 9, height: 9, borderRadius: 5 },
+  /** An answer on the page, not in a box. Full measure, breathing room. */
+  answer: { alignSelf: 'stretch', paddingHorizontal: 2, paddingVertical: 4 },
+  contextText: { flex: 1, fontSize: 13, fontWeight: '600' },
+
+  // ── Context sheet ────────────────────────────────────────────────────────
+  ctxSection: { paddingHorizontal: 18, paddingTop: 18 },
+  ctxLabel: {
+    fontSize: 11, fontWeight: '700', letterSpacing: 0.6,
+    textTransform: 'uppercase', marginBottom: 9,
+  },
+  ctxChipWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+
   safe: { flex: 1, backgroundColor: COLORS.paper },
   content: { padding: 20, paddingBottom: 100, width: '100%', maxWidth: SCREEN_MAX_WIDTH, alignSelf: 'center' },
 
@@ -1307,22 +1605,15 @@ const styles = StyleSheet.create({
   upgradeText: { fontSize: 15, fontWeight: '700', color: '#fff' },
 
   // Notes bar
-  scopeBar: { borderBottomWidth: 1, width: '100%', alignSelf: 'center' },
-  scopeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
-  scopeLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, textTransform: 'uppercase', marginRight: 2 },
-  scopeChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7, maxWidth: 190 },
+  scopeChip: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7, maxWidth: 190 },
   scopeChipText: { fontSize: 13, fontWeight: '600' },
   scopeDot: { width: 7, height: 7, borderRadius: 999 },
-  notesBar: { borderBottomWidth: 0.5, width: '100%', alignSelf: 'center' },
-  notesRow: { paddingHorizontal: 14, paddingVertical: 10, gap: 8, alignItems: 'center' },
   fileProgressWrap: { paddingHorizontal: 14, paddingBottom: 10 },
-  addNoteChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
+  addNoteChip: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   addNoteText: { fontSize: 13, fontWeight: '700' },
-  noteChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20, borderWidth: 0.5, maxWidth: 180 },
+  noteChip: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20, borderWidth: 0.5, maxWidth: 180 },
   noteChipText: { fontSize: 12.5, fontWeight: '500', flexShrink: 1 },
-  intelligencePanel: { borderBottomWidth: 0.5, width: '100%', alignSelf: 'center', paddingVertical: 10 },
-  actionRow: { paddingHorizontal: 14, gap: 8, alignItems: 'center' },
-  actionChip: { maxWidth: 210, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 20, paddingHorizontal: 11, paddingVertical: 8 },
+  actionChip: { minHeight: 44, maxWidth: 210, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 20, paddingHorizontal: 11, paddingVertical: 8 },
   actionText: { fontSize: 12, fontWeight: '700', flexShrink: 1 },
   coachBrief: { marginHorizontal: 14, marginTop: 10, borderWidth: 0.5, borderRadius: 12, padding: 11 },
   coachBriefHead: { flexDirection: 'row', gap: 7, alignItems: 'center', marginBottom: 5 },
@@ -1333,22 +1624,21 @@ const styles = StyleSheet.create({
   messages: { padding: 16, paddingBottom: 24, width: '100%', alignSelf: 'center', gap: 10 },
   bubble: { maxWidth: '86%', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 16 },
   bubbleUser: { alignSelf: 'flex-end', borderBottomRightRadius: 4 },
-  bubbleAssistant: { alignSelf: 'flex-start', borderBottomLeftRadius: 4, borderWidth: 0.5 },
   bubbleText: { fontSize: 15, lineHeight: 21 },
   messageUserWrap: { alignSelf: 'flex-end', maxWidth: '86%' },
   messageAssistantWrap: { alignSelf: 'flex-start', maxWidth: '92%' },
   citationRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 5 },
-  citationChip: { maxWidth: 190, flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 0.5, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 4 },
+  citationChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 0.5, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 4 },
   citationText: { fontSize: 9.5, fontWeight: '600', flexShrink: 1 },
   practiceCard: { borderWidth: 1, borderRadius: 16, padding: 14, marginTop: 4 },
   practiceHead: { flexDirection: 'row', justifyContent: 'space-between', gap: 8, alignItems: 'center' },
   practiceEyebrow: { fontSize: 10.5, fontWeight: '800', letterSpacing: 0.8 },
   practiceTopics: { flex: 1, fontSize: 10.5, textAlign: 'right' },
   practicePrompt: { fontSize: 15, fontWeight: '700', lineHeight: 21, marginTop: 10, marginBottom: 10 },
-  answerChoice: { borderWidth: 1, borderRadius: 11, paddingHorizontal: 11, paddingVertical: 10, marginTop: 7 },
+  answerChoice: { minHeight: 44, justifyContent: 'center', borderWidth: 1, borderRadius: 11, paddingHorizontal: 11, paddingVertical: 10, marginTop: 7 },
   answerChoiceText: { fontSize: 13, lineHeight: 18 },
   checkAnswerButton: { height: 42, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginTop: 12 },
-  checkAnswerText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  checkAnswerText: { fontSize: 13, fontWeight: '800' },
   feedbackCard: { borderRadius: 11, padding: 11, marginTop: 12 },
   feedbackTitle: { fontSize: 13, fontWeight: '800' },
   feedbackText: { fontSize: 12.5, lineHeight: 18, marginTop: 4 },
@@ -1360,12 +1650,7 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 13.5, textAlign: 'center', lineHeight: 19, maxWidth: 280 },
 
   // Threads
-  threadBar: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 9, borderBottomWidth: 0.5, width: '100%', alignSelf: 'center' },
-  threadTitleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 7 },
-  threadTitle: { flex: 1, fontSize: 13.5, fontWeight: '700' },
   quotaPill: { fontSize: 10.5, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, overflow: 'hidden' },
-  newThreadBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  newThreadText: { fontSize: 12, fontWeight: '700' },
   sheetBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
   sheet: { maxHeight: '70%', width: '100%', alignSelf: 'center', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 8 },
   sheetHandleWrap: { alignItems: 'center', paddingTop: 8, paddingBottom: 4 },
@@ -1399,9 +1684,9 @@ const styles = StyleSheet.create({
   answerAction: { paddingVertical: 5, paddingHorizontal: 7 },
 
   // Starters
-  starterWrap: { gap: 8, marginTop: 14, width: '100%', maxWidth: 340 },
-  starterChip: { borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11 },
-  starterText: { fontSize: 13.5, lineHeight: 18 },
+  starterWrap: { gap: 8, marginTop: 14, width: '100%' },
+  starterChip: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 9, borderWidth: 1, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 11 },
+  starterText: { flex: 1, fontSize: 13.5, lineHeight: 18 },
 
   // Attachment
   attachmentBar: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingTop: 10, borderTopWidth: 0.5, width: '100%', alignSelf: 'center' },

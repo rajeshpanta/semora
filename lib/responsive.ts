@@ -13,6 +13,8 @@ export const WIDE_BREAKPOINT = 720;
 export const XWIDE_BREAKPOINT = 1080;
 export const DESKTOP_SHELL_BREAKPOINT = 980;
 export const WEB_SIDEBAR_WIDTH = 256;
+/** Points that hold ~68 characters at the default text size. */
+export const PROSE_BASE = 540;
 
 export interface Responsive {
   width: number;
@@ -42,10 +44,35 @@ export interface Responsive {
    * than absent so an ultrawide does not stretch a task list to 3000px.
    */
   deckMaxWidth: number;
+  /**
+   * Max width for a column of CONTINUOUS PROSE — a tutor answer, and nothing
+   * else so far.
+   *
+   * contentMaxWidth was supposed to be this. Its own comment says it "exists
+   * to stop prose from running to unreadable line lengths", and for a form or
+   * a settings list it still does. But its isXWide branch was widened to 1120
+   * for the two-column dashboard, and every prose caller was carried along:
+   * on a 13" iPad in landscape a tutor answer was setting at roughly 123
+   * characters per line, against a comfortable measure of 45–75.
+   *
+   * 540 puts a 15pt body at about 68 characters — the middle of that range —
+   * and is below every phone width, so nothing on iPhone changes. This is a
+   * separate field rather than a narrower contentMaxWidth because the 114
+   * call sites that depend on the current value are not all prose.
+   */
+  proseMaxWidth: number;
+  /**
+   * fontScale clamped to 2 — the factor proseMaxWidth was grown by. Anything
+   * else that has to hold text at a readable size (the thread rail) sizes off
+   * this so the whole Tutor stays one rule rather than two that drift apart.
+   */
+  measureScale: number;
+  /** Raw OS text scale, unclamped — for things that should track the text exactly. */
+  fontScale: number;
 }
 
 export function useResponsive(): Responsive {
-  const { width, height } = useWindowDimensions();
+  const { width, height, fontScale } = useWindowDimensions();
   // Hiding the sidebar is only worth doing if the screen actually claims the
   // space it gave back, so the width every layout measures against has to
   // know about it. Native never sets this flag.
@@ -56,6 +83,19 @@ export function useResponsive(): Responsive {
   const isXWide = availableWidth >= XWIDE_BREAKPOINT;
   // Data-heavy browser screens can use a wider canvas, while phone/tablet
   // layouts and forms retain their established readable measure.
+  /**
+   * A measure is a count of CHARACTERS, not a count of points. 540pt holds
+   * ~68 characters at the default text size, but a student on Larger Text has
+   * tripled the size of every glyph — at 540pt the same column falls to ~20
+   * characters, which is far worse to read than the 126 it started at. So the
+   * measure travels with the text: the character count stays put while the
+   * column grows. Capped at 2x because past that no iPad is wide enough to
+   * honour it and Math.min(availableWidth, ...) would be doing all the work
+   * anyway. Not floored at 1 on purpose — a student on Smaller Text wants a
+   * narrower column for the same reason.
+   */
+  const measureScale = Math.min(fontScale, 2);
+
   const contentMaxWidth = isXWide
     ? Math.min(availableWidth - 64, 1120)
     : isWide
@@ -70,6 +110,9 @@ export function useResponsive(): Responsive {
     isDesktop,
     columns: isXWide ? 3 : isWide ? 2 : 1,
     contentMaxWidth,
+    proseMaxWidth: Math.min(availableWidth, Math.round(PROSE_BASE * measureScale)),
+    measureScale,
+    fontScale,
     // Only the desktop shell has the second column worth widening for; below
     // it, a dense screen is still a single column and keeps the reading
     // measure so a phone browser is unaffected.
