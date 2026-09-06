@@ -201,6 +201,13 @@ function TutorChat({
   const tutorWorkInFlightRef = useRef(false);
   const fileProgressClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTutorWorking = tutorWork !== null || sendMessage.isPending || generatePractice.isPending;
+  // `conversationId` belongs in here, not only inside handleSend. handleSend
+  // returns silently when it is null — during the cold-start window, and
+  // permanently if the conversation query fails — while the button stayed
+  // fully brand-coloured and did nothing when tapped. One derived flag now
+  // drives the fill, the glyph colour, `disabled` and the VoiceOver state, so
+  // they cannot disagree again.
+  const sendEnabled = !!draft.trim() && !isTutorWorking && !!conversationId;
 
   useEffect(() => () => {
     if (fileProgressClearRef.current) clearTimeout(fileProgressClearRef.current);
@@ -1118,19 +1125,35 @@ function TutorChat({
             multiline
             maxLength={4000}
           />
+          {/* The glyph colour has to follow the pill, not be assumed white.
+              `colors.line` is a near-transparent hairline — over light-mode
+              paper it resolves to roughly #E8E7E4, and white on that is about
+              1.2:1. The arrow and the in-flight spinner were both invisible,
+              so for the whole duration of every answer the primary control of
+              this screen was a blank grey disc.
+
+              Labelled too: this is the one control on the screen VoiceOver
+              could not name. Its only child is a glyph in a Unicode
+              private-use codepoint, so there is no text to fall back on, and
+              every other icon-only control here is already labelled. */}
           <TouchableOpacity
             style={[
               styles.sendBtn,
-              { backgroundColor: draft.trim() && !isTutorWorking ? colors.brand : colors.line },
+              { backgroundColor: sendEnabled ? colors.brand : colors.line },
             ]}
             onPress={handleSend}
-            disabled={!draft.trim() || isTutorWorking}
+            disabled={!sendEnabled}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={isTutorWorking ? 'Sending your question' : 'Send'}
+            accessibilityState={{ disabled: !sendEnabled, busy: isTutorWorking }}
           >
             {isTutorWorking ? (
-              <ActivityIndicator size="small" color="#fff" />
+              <ActivityIndicator size="small" color={colors.ink2} />
             ) : (
-              <FontAwesome name="arrow-up" size={16} color="#fff" />
+              /* ink2, not ink3: ink3 clears 3:1 against the disabled pill in
+                 neither theme (2.72 light, 2.75 dark). ink2 is 5.98 and 5.51. */
+              <FontAwesome name="arrow-up" size={16} color={sendEnabled ? '#fff' : colors.ink2} />
             )}
           </TouchableOpacity>
         </View>
