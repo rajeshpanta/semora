@@ -26,9 +26,24 @@
  * normalised even slightly differently from the grader, a student could be told
  * they were wrong and then have no note found for the very choice they picked,
  * which is the one case this whole file exists to handle.
+ *
+ * The leading strip exists so "a) Mitochondria" and "Mitochondria" compare
+ * equal — models label their options inconsistently. But the pattern also
+ * matches a letter grade, and a letter grade is ANSWER CONTENT, not a label:
+ * "A-" is `a` followed by a separator with nothing after it, so it used to
+ * normalise to the empty string. Live consequence, on a real PSY 100 question
+ * whose choices were ["A-","B+","B","A"] — and far worse on the grade-scale
+ * questions that course generates, where ["A-","B-","C-","D-"] collapsed to a
+ * single empty key and made EVERY answer compare equal to the expected one.
+ *
+ * So the strip now only applies when something survives it. A token that is
+ * entirely prefix was never a prefix. Semora's own grade vocabulary is
+ * [A-F][+-]? (lib/grades.ts), and every form in it now round-trips intact.
  */
 export function normalizeAnswer(value: string): string {
-  return value.trim().toLocaleLowerCase().replace(/^[a-d][).:\s-]+/, '').replace(/\s+/g, ' ');
+  const base = value.trim().toLocaleLowerCase().replace(/\s+/g, ' ');
+  const stripped = base.replace(/^[a-d][).:\s-]+/, '');
+  return stripped.length > 0 ? stripped : base;
 }
 
 /** One or two sentences per wrong choice; anything longer is a lecture. */

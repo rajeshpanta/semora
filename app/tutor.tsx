@@ -54,6 +54,7 @@ import {
   useRateTutorMessage, useTutorQuota, useOpenPractice,
   type TutorConversation, type TutorGradeSnapshot, type TutorPracticeEvaluation,
 } from '@/lib/tutor';
+import { needsReinforcement, reinforcementTopics } from '@/lib/learningEvidence';
 import { RichText } from '@/components/RichText';
 import { shareText, shareTextMessage } from '@/lib/shareLink';
 import {
@@ -509,10 +510,21 @@ function TutorChat({
    */
   const practiceAnchor = useMemo(() => {
     if (!courseId) return null;
-    const weak = topicMastery.find((t) => t.attempts > 0 && t.correct / t.attempts < 0.7);
+    const weak = reinforcementTopics(topicMastery)[0];
     if (weak) return weak.topic;
     return upcomingWork[0]?.title ?? null;
   }, [courseId, topicMastery, upcomingWork]);
+
+  /**
+   * Topics Semora has earned the right to raise, worst first.
+   *
+   * Practising a topic is not the same as being weak at it. The panel below
+   * used to print every row with `attempts > 0` and accuracy under 70%, so a
+   * student who answered one question about "Exam 1" and missed it was told to
+   * review it — indistinguishable from missing twelve. lib/learningEvidence
+   * holds the floor; this is just the list that clears it.
+   */
+  const weakTopics = useMemo(() => reinforcementTopics(topicMastery), [topicMastery]);
 
   const starterPrompts = useMemo<Starter[]>(() => {
     // Translated HERE, not at render. The chip both displays this string and
@@ -1327,8 +1339,9 @@ function TutorChat({
                     const mastered = focusTopic ? topicMastery.find((t) => t.topic === focusTopic) : undefined;
                     // "Repeatedly", not "once" — a single slip does not earn a
                     // whole re-explanation, and each one spends a message from
-                    // the student's daily allowance.
-                    const repeatedMiss = !!mastered && mastered.attempts >= 2 && mastered.correct / mastered.attempts < 0.7;
+                    // the student's daily allowance. The bar used to be a local
+                    // `attempts >= 2`, one of the four thresholds D'0 unified.
+                    const repeatedMiss = needsReinforcement(mastered);
                     return (
                       <>
                         {!!teaching && (
@@ -1627,19 +1640,19 @@ function TutorChat({
                     </TouchableOpacity>
                   ))}
                 </View>
-                {(topicMastery.length > 0 || (riskReport?.recoveryPlan.length ?? 0) > 0 || upcomingWork.length > 0) && (
+                {(weakTopics.length > 0 || (riskReport?.recoveryPlan.length ?? 0) > 0 || upcomingWork.length > 0) && (
                   <View style={[styles.coachBrief, { backgroundColor: colors.card, borderColor: colors.line, marginHorizontal: 0 }]}>
                     <View style={styles.coachBriefHead}>
                       <FontAwesome name="compass" size={13} color={colors.teal} />
                       <Text style={[styles.coachBriefTitle, { color: colors.ink }]}>Course intelligence</Text>
                     </View>
-                    {topicMastery.filter((t) => t.attempts > 0 && t.correct / t.attempts < 0.7).slice(0, 2).map((t) => (
-                      <Text key={t.id} style={[styles.coachBriefText, { color: colors.ink3 }]}>Review {t.topic} — {Math.round((t.correct / t.attempts) * 100)}% in practice.</Text>
+                    {weakTopics.slice(0, 2).map((t) => (
+                      <Text key={t.id} style={[styles.coachBriefText, { color: colors.ink3 }]}>Review {t.topic} — {t.correct} of {t.attempts} correct in practice.</Text>
                     ))}
                     {riskReport?.recoveryPlan.slice(0, 1).map((step) => (
                       <Text key={step.id} style={[styles.coachBriefText, { color: colors.ink3 }]}>{step.title}: {step.detail}</Text>
                     ))}
-                    {!topicMastery.length && !riskReport?.recoveryPlan.length && upcomingWork[0] && (
+                    {!weakTopics.length && !riskReport?.recoveryPlan.length && upcomingWork[0] && (
                       <Text style={[styles.coachBriefText, { color: colors.ink3 }]}>Start with {upcomingWork[0].title} due {upcomingWork[0].due_date}.</Text>
                     )}
                   </View>

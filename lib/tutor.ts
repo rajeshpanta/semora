@@ -120,6 +120,8 @@ export interface CourseTopicMastery {
   topic: string;
   attempts: number;
   correct: number;
+  /** Migration 133. Subset of `correct`; never subtracted from it. */
+  assisted_correct: number;
   last_practiced_at: string;
 }
 
@@ -772,12 +774,17 @@ export function useCourseTopicMastery(courseId?: string | null) {
   return useQuery({
     queryKey: tutorKeys.mastery(courseId),
     queryFn: async () => {
+      // Ordered by EVIDENCE, not by raw correct count. Sorting on `correct`
+      // ascending put the least-evidenced rows first — a topic answered once
+      // and missed outranked one missed six times out of ten — so the six-row
+      // window filled up with exactly the rows lib/learningEvidence refuses to
+      // judge, and better-evidenced topics never reached the screen at all.
       const { data, error } = await supabase
         .from('course_topic_mastery')
         .select('*')
         .eq('course_id', courseId!)
-        .order('correct', { ascending: true })
         .order('attempts', { ascending: false })
+        .order('correct', { ascending: true })
         .limit(6);
       if (error) throw error;
       return (data || []) as CourseTopicMastery[];

@@ -22,6 +22,7 @@ import {
   buildTeaching, normalizeAnswer, sanitizeDistractorNotes,
 } from './practiceTeaching.ts';
 import { answerBudget, asReadingSpace, depthDirective } from './responseDepth.ts';
+import { establishedTopics, reinforcementTopics } from './learningEvidence.ts';
 import {
   DOCUMENT_EXTRACTION_FAILED_CODE,
   documentExtractionFailedMessage,
@@ -983,7 +984,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     if ((mode === 'practice' || mode === 'quiz') && groundCourseId) {
       const { data: mastery } = await adminClient
         .from('course_topic_mastery')
-        .select('topic, attempts, correct')
+        .select('topic, attempts, correct, assisted_correct')
         .eq('user_id', userId)
         .eq('course_id', groundCourseId)
         .gt('attempts', 0)
@@ -992,18 +993,24 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       const rated = (mastery ?? [])
         .map((row: any) => ({
           topic: String(row.topic ?? '').slice(0, 160),
-          ratio: row.attempts > 0 ? row.correct / row.attempts : 1,
-          attempts: row.attempts as number,
+          attempts: Number(row.attempts) || 0,
+          correct: Number(row.correct) || 0,
+          assisted_correct: Number(row.assisted_correct) || 0,
         }))
         .filter((row) => row.topic);
-      const weakest = rated.slice().sort((a, b) => (a.ratio - b.ratio) || (b.attempts - a.attempts))[0];
-      if (weakest && weakest.ratio < 0.7) {
-        masteryDirective = ` The student is weakest on "${weakest.topic}" (${Math.round(weakest.ratio * 100)}% correct across ${weakest.attempts} attempts) — ask about THAT, from a different angle than a definition check, unless the course material genuinely does not support another question on it.`;
-      } else if (rated.length) {
-        // Everything practised is solid, so widen rather than re-test. Without
-        // this, a student who has answered well gets the same few topics for
-        // ever, because those are the only ones with any data.
-        masteryDirective = ` The student is already solid on: ${rated.slice(0, 6).map((r) => r.topic).join(', ')}. Cover something from the course material they have NOT been asked about yet.`;
+      // Both branches used to run off a bare ratio, so a topic answered once
+      // and missed was "weakest" and a topic answered once and passed was
+      // "already solid". learningEvidence.ts holds the floor for both, and it
+      // is the same floor the screen uses — see lib/learningEvidence.ts.
+      const weakest = reinforcementTopics(rated)[0];
+      const established = establishedTopics(rated);
+      if (weakest) {
+        masteryDirective = ` The student is weakest on "${weakest.topic}" (${weakest.correct} of ${weakest.attempts} correct) — ask about THAT, from a different angle than a definition check, unless the course material genuinely does not support another question on it.`;
+      } else if (established.length) {
+        // Everything with enough evidence behind it is solid, so widen rather
+        // than re-test. Without this, a student who has answered well gets the
+        // same few topics for ever, because those are the only ones with data.
+        masteryDirective = ` The student is already solid on: ${established.slice(0, 6).map((r) => r.topic).join(', ')}. Cover something from the course material they have NOT been asked about yet.`;
       }
     }
 

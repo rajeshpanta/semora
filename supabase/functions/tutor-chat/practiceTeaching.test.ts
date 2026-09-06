@@ -183,3 +183,50 @@ Deno.test('focus is omitted when the question carried no usable topic', () => {
   assertEquals(t?.focus, null);
   assertNotEquals(t?.misconception, null);
 });
+
+// ── D'0: letter grades are answers, not option labels ──────────────────
+// The strip that turns "a) Mitochondria" into "Mitochondria" also ate "A-".
+
+Deno.test("normalizeAnswer keeps Semora's whole grade vocabulary intact", () => {
+  // lib/grades.ts DEFAULT_GPA_SCALE — every form Semora recognises.
+  const scale = ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'D-', 'F'];
+  for (const letter of scale) {
+    assertEquals(normalizeAnswer(letter), letter.toLowerCase(), `${letter} must survive normalisation`);
+  }
+  // ...and stay distinguishable from one another, which is the actual bug.
+  const keys = new Set(scale.map(normalizeAnswer));
+  assertEquals(keys.size, scale.length, 'every grade must normalise to a distinct key');
+});
+
+Deno.test('a grade-scale question can no longer grade every answer correct', () => {
+  // The catastrophic case: all four choices used to collapse to "".
+  const choices = ['A-', 'B-', 'C-', 'D-'];
+  assertEquals(new Set(choices.map(normalizeAnswer)).size, 4);
+  // Picking the wrong grade is wrong again.
+  assertEquals(normalizeAnswer('B-') === normalizeAnswer('A-'), false);
+  // And the live PSY 100 question grades the way a human would.
+  assertEquals(normalizeAnswer('B') === normalizeAnswer('B+'), false, 'B is not B+');
+  assertEquals(normalizeAnswer('A-') === normalizeAnswer('A-'), true);
+});
+
+Deno.test('option labels are still stripped when there is an option behind them', () => {
+  assertEquals(normalizeAnswer('a) Mitochondria'), 'mitochondria');
+  assertEquals(normalizeAnswer('B. Ribosome'), 'ribosome');
+  assertEquals(normalizeAnswer('c: Golgi'), 'golgi');
+  assertEquals(normalizeAnswer('d - Nucleus'), 'nucleus');
+  assertEquals(normalizeAnswer('A  Cytoplasm'), 'cytoplasm');
+  // Unlabelled answers are untouched, including ones starting with a-d.
+  assertEquals(normalizeAnswer('Diffusion'), 'diffusion');
+  assertEquals(normalizeAnswer('  active   transport '), 'active transport');
+});
+
+Deno.test('answers that are entirely label-shaped survive as themselves', () => {
+  // Nothing left after the strip means it was never a label.
+  assertEquals(normalizeAnswer('A-'), 'a-');
+  assertEquals(normalizeAnswer('a)'), 'a)');
+  assertEquals(normalizeAnswer('b.'), 'b.');
+  assertEquals(normalizeAnswer('c:'), 'c:');
+  assertEquals(normalizeAnswer('d '), 'd');
+  assertEquals(normalizeAnswer(''), '');
+  assertEquals(normalizeAnswer('   '), '');
+});
