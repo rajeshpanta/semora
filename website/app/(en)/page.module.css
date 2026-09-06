@@ -332,7 +332,7 @@
   font-family: var(--font-fraunces), Georgia, serif;
   font-size: clamp(2.1rem, 5.5vw, 3rem);
   line-height: 1;
-  color: var(--brand-100);
+  color: var(--brand-300);
   margin-bottom: 12px;
 }
 

@@ -1289,7 +1289,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Las tareas sin fecha de entrega en Canvas se saltan. Semora marca la conexión como «parcial» y te dice cuántas.',
           'Si ya creaste una asignatura escaneando su programa, importar esa misma clase desde Canvas crea una segunda.',
           'Semora no trae los nombres de los profesores de la lista de asignaturas de Canvas, así que llegan sin ese dato.',
-          'Canvas limita el enlace del calendario a 1.000 elementos, así que un historial muy largo puede llegar recortado; cuando la respuesta parece incompleta, Semora conserva lo ya importado en lugar de borrar nada. Blackboard y Moodle, que sincronizan curso por curso con un token, cubren hasta 50 asignaturas por sincronización.',
+          'Semora lee como máximo 1.000 elementos de un enlace del calendario, así que un historial muy largo puede llegar recortado; cuando la respuesta parece incompleta, Semora conserva lo ya importado en lugar de borrar nada. Blackboard y Moodle, que sincronizan curso por curso con un token, cubren hasta 50 asignaturas por sincronización.',
           'No hay un interruptor por asignatura después de importar. Para cambiar cuáles se sincronizan, desconecta y vuelve a conectar.',
           'El enlace del calendario de Canvas no caduca. Si lo restableces en Canvas, la conexión muestra «se requieren credenciales» y la acción de volver a conectar acepta el enlace nuevo.',
         ],

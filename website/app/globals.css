@@ -15,6 +15,13 @@
   --brand: #6b46c1;
   --brand-50: #eeedfe;
   --brand-100: #cecbf6;
+  /*
+   * The lightest purple that still reads as text on --bg (#faf9f5): 3.46:1,
+   * against the 3:1 WCAG needs for large text. --brand-100 is 1.48:1, which is
+   * fine for the borders and fills it is used for and was not fine for the
+   * step numerals on the homepage, where it was the only text using it.
+   */
+  --brand-300: #8878dc;
   --coral: #d85a30;
   --coral-50: #faece7;
   --teal: #0f6e56;

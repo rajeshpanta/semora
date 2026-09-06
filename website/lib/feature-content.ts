@@ -1208,7 +1208,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "What actually gets imported from each assignment",
         "paragraphs": [
           "For every dated item in the courses you selected, Semora pulls what the Calendar Feed carries: the title, the date, and whatever description Canvas put in the entry. Descriptions arrive unescaped from the calendar entry and trimmed to a readable length, and a long one is cut at a sentence break rather than mid-word.",
-          "Semora also guesses a type for each item so your calendar is not one undifferentiated wall of “assignment.” The Calendar Feed does not say what kind of item something is, so the title is matched: midterm, exam, or test becomes an exam (a “final draft” or “final paper” stays an assignment); quiz becomes a quiz; project becomes a project; read, reading, or chapter becomes a reading; everything else stays an assignment. It is a keyword match, not comprehension, so a paper called “Unit 3 Response” lands as a plain assignment. You can change the type on any task in two taps.",
+          "Semora also guesses a type for each item so your calendar is not one undifferentiated wall of “assignment.” The Calendar Feed does not say what kind of item something is, so the title is matched: midterm, exam, test, or a bare “final” becomes an exam, while “final draft” and “final paper” stay assignments; quiz becomes a quiz; project becomes a project; read, reading, or chapter becomes a reading; everything else stays an assignment. It is a keyword match, not comprehension, so a paper called “Unit 3 Response” lands as a plain assignment. You can change the type on any task in two taps.",
           "Here is what ends up on each imported task:"
         ],
         "bullets": [
@@ -1274,7 +1274,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
           "Assignments with no due date in Canvas are skipped. Semora marks the connection “partial” and tells you exactly how many were skipped, so it is visible rather than silent.",
           "If you already created a course by scanning its syllabus, importing that same class from Canvas creates a second course. Semora does not merge the two — pick one route per class.",
           "Semora does not pull instructor names from the Canvas course list, so imported courses arrive with the instructor field blank. You can fill it in yourself.",
-          "Canvas bounds the Calendar Feed at 1,000 items, so a very long history can arrive truncated; when a response looks incomplete Semora keeps what it already imported rather than deleting from it. Blackboard and Moodle, which sync course by course with a token, cover up to 50 courses at a time.",
+          "Semora reads at most 1,000 items from a Calendar Feed, so an unusually long history can arrive truncated; when a response looks incomplete Semora keeps what it already imported rather than deleting from it. Blackboard and Moodle, which sync course by course with a token, cover up to 50 courses at a time.",
           "There is no per-course on/off switch after import. To change which courses sync, disconnect and reconnect with a different selection.",
           "A Calendar Feed link does not expire. If you reset it in Canvas, the connection shows “credentials required” and offers a Reconnect action that takes the new link."
         ]

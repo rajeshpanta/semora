@@ -1534,7 +1534,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Qué cuesta y para quién no vale la pena',
         paragraphs: [
-          'La importación desde Canvas, Blackboard y Moodle es gratis en todos los planes. Canvas llega por el enlace del calendario, que trae hasta 1.000 elementos; Blackboard y Moodle sincronizan hasta 50 cursos por vez con el token de tu institución.',
+          'La importación desde Canvas, Blackboard y Moodle es gratis en todos los planes. Canvas llega por el enlace del calendario, del que Semora lee hasta 1.000 elementos; Blackboard y Moodle sincronizan hasta 50 cursos por vez con el token de tu institución.',
           'El plan Gratis cubre buena parte de ese mismo trabajo desde el lado del programa: una acción de IA para toda la vida de la cuenta, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano dentro de un semestre, seguimiento completo de tareas y fechas, calificaciones con medias ponderadas y recordatorios el mismo día.',
           'No vale la pena si tu profesor no publica en Canvas y lo mantiene todo en el programa: ahí escanear es mejor, y el primero es gratis. Tampoco si lo que buscas es entregar trabajos o escribir a tu profesor, porque eso sigue ocurriendo en Canvas. Y si tu institución desactiva el enlace del calendario, la respuesta correcta es escanear el programa de la materia.',
         ],
