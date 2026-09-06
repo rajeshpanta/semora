@@ -38,6 +38,7 @@ import type { GradeThreshold } from '@/types/database';
 import { useColors } from '@/lib/theme';
 import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
+import { splitPracticeFeedback } from '@/lib/practiceFeedback';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { track } from '@/lib/analytics';
 import { useCourse, useCourses, useSemesters, useGradeCategories, useTasks } from '@/lib/queries';
@@ -49,7 +50,7 @@ import {
   prepareCourseNotes, type CourseNoteReadProgress, type CourseNoteUploadProgress,
   useTutorThreads, useCreateTutorThread, useRenameTutorThread, useDeleteTutorThread,
   useRateTutorMessage, useTutorQuota, useOpenPractice,
-  type TutorConversation, type TutorGradeSnapshot,
+  type TutorConversation, type TutorGradeSnapshot, type TutorPracticeEvaluation,
 } from '@/lib/tutor';
 import { RichText } from '@/components/RichText';
 import { shareText, shareTextMessage } from '@/lib/shareLink';
@@ -266,7 +267,7 @@ function TutorChat({
   >(null);
   const [practice, setPractice] = useState<TutorPracticeQuestion | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
-  const [practiceFeedback, setPracticeFeedback] = useState<{ correct: boolean; feedback: string } | null>(null);
+  const [practiceFeedback, setPracticeFeedback] = useState<TutorPracticeEvaluation | null>(null);
   const [fileProgress, setFileProgress] = useState<CourseNoteUploadProgress | null>(null);
   const [readProgress, setReadProgress] = useState<CourseNoteReadProgress | null>(null);
   const [tutorWork, setTutorWork] = useState<{
@@ -493,6 +494,49 @@ function TutorChat({
       tutorWorkInFlightRef.current = false;
       setTutorWork(null);
       setReadProgress(null);
+    }
+  };
+
+  /**
+   * The move after a miss: a NEW question on the same idea, not the same one
+   * again.
+   *
+   * Retrying the question they just missed cannot measure understanding — the
+   * correct answer is on screen by then — and record_tutor_practice_attempt
+   * increments attempts AND correct on every call with no per-question
+   * uniqueness, so a re-answer would inflate mastery and could be repeated to
+   * farm it. A fresh question on the same concept proves the same thing
+   * honestly and counts once, like any other question.
+   */
+  const handleAnotherOnTopic = (mode: 'practice' | 'quiz', topic: string | null) => {
+    handleGeneratePractice(
+      mode,
+      topic ? `Create a ${mode} question on ${topic}, testing the same idea from a different angle than the last one.` : undefined,
+    );
+  };
+
+  /**
+   * Offered only when mastery says this topic has been missed before. One
+   * re-explanation after a single slip is noise; after a pattern it is the
+   * thing the student actually needs, and it costs a message from their
+   * daily allowance, so it should not be offered on a whim.
+   */
+  const handleExplainDifferently = async (topic: string | null, misconception: string) => {
+    if (!conversationId || tutorWorkInFlightRef.current || isTutorWorking) return;
+    tutorWorkInFlightRef.current = true;
+    const subject = topic ? `"${topic}"` : 'this';
+    try {
+      setTutorWork({ kind: 'answer', stage: 'creating' });
+      await runTurn({
+        message: `I keep getting ${subject} wrong. I just answered a practice question incorrectly and the issue was: ${misconception} Explain the underlying idea a different way, starting from something simpler, and give one concrete example.`,
+      });
+      track('tutor_practice_reexplain', { screen: 'tutor' });
+      scrollToEnd();
+    } catch (e: any) {
+      Alert.alert('Could not explain that', e?.message || 'Please try again.');
+    } finally {
+      tutorWorkInFlightRef.current = false;
+      setTutorWork(null);
     }
   };
 
@@ -1122,20 +1166,42 @@ function TutorChat({
               <Text style={[styles.practicePrompt, { color: colors.ink }]}>{practice.prompt}</Text>
               {practice.choices.map((choice) => {
                 const selected = selectedAnswer === choice;
-                // Selection was conveyed by border colour alone, so a
-                // VoiceOver user could not tell which option they had picked
-                // before pressing Check answer.
+                // Once answered, the choice they picked says so on the choice
+                // itself. It carries "what did I put" and "was it right" where
+                // the student is already looking, which is why the card below
+                // no longer has to repeat either one back to them.
+                //
+                // Marked in WORDS, not by colour alone — and never in red. A
+                // wrong answer here is the ordinary way practice works, so it
+                // is marked the way a tutor would point at it, not the way a
+                // form marks a validation error.
+                const answered = !!practiceFeedback;
+                const isTheirs = answered && selected;
+                const markColor = isTheirs ? (practiceFeedback!.correct ? colors.teal : colors.amber) : colors.line;
                 return (
                   <TouchableOpacity
                     key={choice}
-                    style={[styles.answerChoice, { borderColor: selected ? colors.brand : colors.line, backgroundColor: selected ? colors.brand50 : colors.paper }]}
+                    style={[styles.answerChoice, {
+                      borderColor: isTheirs ? markColor : (selected && !answered ? colors.brand : colors.line),
+                      backgroundColor: isTheirs
+                        ? (practiceFeedback!.correct ? colors.teal50 : colors.amber50)
+                        : (selected && !answered ? colors.brand50 : colors.paper),
+                      opacity: answered && !selected ? 0.55 : 1,
+                    }]}
                     onPress={() => !practiceFeedback && setSelectedAnswer(choice)}
                     disabled={!!practiceFeedback}
                     accessibilityRole="radio"
-                    accessibilityLabel={choice}
+                    accessibilityLabel={isTheirs
+                      ? `${choice}. ${translate(practiceFeedback!.correct ? 'Your answer, correct.' : 'Your answer, not correct.')}`
+                      : choice}
                     accessibilityState={{ selected, disabled: !!practiceFeedback }}
                   >
                     <Text style={[styles.answerChoiceText, { color: colors.ink2 }]}>{choice}</Text>
+                    {isTheirs && (
+                      <Text style={[styles.choiceMark, { color: markColor }]}>
+                        {practiceFeedback!.correct ? 'Your answer · correct' : 'Your answer'}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -1159,8 +1225,72 @@ function TutorChat({
               ) : (
                 <View style={[styles.feedbackCard, { backgroundColor: practiceFeedback.correct ? colors.teal50 : colors.amber50 }]}>
                   <Text style={[styles.feedbackTitle, { color: practiceFeedback.correct ? colors.teal : colors.amber }]}>{practiceFeedback.correct ? 'Correct' : 'Keep working at it'}</Text>
-                  <Text style={[styles.feedbackText, { color: colors.ink2 }]}>{practiceFeedback.feedback}</Text>
-                  <TouchableOpacity onPress={() => handleGeneratePractice(practice.mode)}><Text style={[styles.nextQuestionText, { color: colors.brand }]}>Next question</Text></TouchableOpacity>
+                  {(() => {
+                    // Order follows the recovery, not the grading: what you
+                    // were thinking, then what the idea actually is. The
+                    // duplicated explanation is removed from the verdict line
+                    // rather than printed twice (see lib/practiceFeedback).
+                    const teaching = practiceFeedback.correct ? null : practiceFeedback.teaching ?? null;
+                    const split = splitPracticeFeedback(practiceFeedback.feedback, teaching?.why_correct);
+                    const focusTopic = teaching?.focus ?? practice.topics[0] ?? null;
+                    const mastered = focusTopic ? topicMastery.find((t) => t.topic === focusTopic) : undefined;
+                    // "Repeatedly", not "once" — a single slip does not earn a
+                    // whole re-explanation, and each one spends a message from
+                    // the student's daily allowance.
+                    const repeatedMiss = !!mastered && mastered.attempts >= 2 && mastered.correct / mastered.attempts < 0.7;
+                    return (
+                      <>
+                        {!!teaching && (
+                          <Text style={[styles.feedbackText, { color: colors.ink2 }]}>{teaching.misconception}</Text>
+                        )}
+                        {!!split.verdict && (
+                          <Text style={[teaching ? styles.feedbackAnswer : styles.feedbackText, { color: teaching ? colors.ink : colors.ink2 }]}>
+                            {split.verdict}
+                          </Text>
+                        )}
+                        {!!split.whyCorrect && (
+                          <Text style={[styles.feedbackWhy, { color: colors.ink2 }]}>{split.whyCorrect}</Text>
+                        )}
+                        <View style={styles.recoveryRow}>
+                          {practiceFeedback.correct ? (
+                            <TouchableOpacity
+                              onPress={() => handleGeneratePractice(practice.mode)}
+                              style={styles.recoveryAction}
+                              accessibilityRole="button"
+                            >
+                              <Text style={[styles.nextQuestionText, { color: colors.brand }]}>Next question</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <>
+                              <TouchableOpacity
+                                onPress={() => handleAnotherOnTopic(practice.mode, focusTopic)}
+                                style={styles.recoveryAction}
+                                disabled={isTutorWorking}
+                                accessibilityRole="button"
+                                accessibilityLabel={focusTopic ? `${translate('Another question on')} ${focusTopic}` : 'Next question'}
+                              >
+                                <Text style={[styles.nextQuestionText, { color: colors.brand }]} numberOfLines={2}>
+                                  {focusTopic ? `${translate('Another on')} ${focusTopic}` : 'Next question'}
+                                </Text>
+                              </TouchableOpacity>
+                              {!!teaching && repeatedMiss && (
+                                <TouchableOpacity
+                                  onPress={() => handleExplainDifferently(focusTopic, teaching.misconception)}
+                                  style={styles.recoveryAction}
+                                  disabled={isTutorWorking}
+                                  accessibilityRole="button"
+                                >
+                                  <Text style={[styles.recoverySecondary, { color: colors.brand }]} numberOfLines={2}>
+                                    Explain this differently
+                                  </Text>
+                                </TouchableOpacity>
+                              )}
+                            </>
+                          )}
+                        </View>
+                      </>
+                    );
+                  })()}
                 </View>
               )}
               {practice.citations?.length > 0 && <Text style={[styles.practiceSources, { color: colors.ink3 }]}>Sources: {practice.citations.map((citation) => citation.label).join(' · ')}</Text>}
@@ -1642,7 +1772,16 @@ const styles = StyleSheet.create({
   feedbackCard: { borderRadius: 11, padding: 11, marginTop: 12 },
   feedbackTitle: { fontSize: 13, fontWeight: '800' },
   feedbackText: { fontSize: 12.5, lineHeight: 18, marginTop: 4 },
-  nextQuestionText: { fontSize: 12.5, fontWeight: '800', marginTop: 9 },
+  nextQuestionText: { fontSize: 12.5, fontWeight: '800' },
+  /** Small caption on the choice the student actually picked. */
+  choiceMark: { fontSize: 10.5, fontWeight: '700', marginTop: 3, letterSpacing: 0.2 },
+  /** The correct answer, once, after the diagnosis. */
+  feedbackAnswer: { fontSize: 12.5, fontWeight: '700', lineHeight: 17, marginTop: 8 },
+  feedbackWhy: { fontSize: 12.5, lineHeight: 17, marginTop: 4 },
+  /** Wraps rather than scrolls: at large text each action takes its own row. */
+  recoveryRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 20, rowGap: 0, marginTop: 4 },
+  recoveryAction: { minHeight: 44, justifyContent: 'center' },
+  recoverySecondary: { fontSize: 12.5, fontWeight: '600' },
   practiceSources: { fontSize: 10.5, lineHeight: 15, marginTop: 10 },
 
   emptyState: { alignItems: 'center', paddingVertical: 50, gap: 10 },

@@ -14,6 +14,27 @@ export const ES: Record<string, string> = {
   'Help me plan the next two weeks.': 'Ayúdame a planificar las próximas dos semanas.',
   'What should I study first for this course?': '¿Qué debería estudiar primero en este curso?',
   'Help me get started on': 'Ayúdame a empezar con',
+  // Found during the Phase 3B Spanish pass: the practice starter added in
+  // Phase 2 uses the same translate-the-phrase-append-the-topic shape as the
+  // recovery action below, and its phrase was never added, so the whole chip
+  // stayed English. Same for the empty-state line, whose copy was reworded in
+  // Phase 2 while the catalogue kept the old wording as its key.
+  'Quiz me on': 'Ponme a prueba sobre',
+  'Answers are grounded in this course’s syllabus, deadlines, grades, and any notes you add.': 'Las respuestas se basan en el programa, las entregas y las calificaciones de este curso, y en los apuntes que añadas.',
+
+  // ── Wrong-answer recovery on a practice question (Phase 3B) ─────────────
+  // "Another on" and "Another question on" are PHRASES, not whole sentences:
+  // the topic is appended untranslated because it comes from the student's own
+  // course material, the same way "Help me get started on" carries a task
+  // title. "Otra"/"otra pregunta" agree with the implied feminine "pregunta".
+  'Your answer': 'Tu respuesta',
+  'Your answer · correct': 'Tu respuesta · correcta',
+  'Your answer, correct.': 'Tu respuesta, correcta.',
+  'Your answer, not correct.': 'Tu respuesta, incorrecta.',
+  'Another on': 'Otra sobre',
+  'Another question on': 'Otra pregunta sobre',
+  'Explain this differently': 'Explícalo de otra forma',
+  'Could not explain that': 'No se pudo explicar eso',
   'Summarise the key ideas from my notes.': 'Resume las ideas clave de mis apuntes.',
   'What do I need on the rest to finish with an A?': '¿Qué necesito en lo que queda para terminar con sobresaliente?',
   'New chat': 'Chat nuevo',

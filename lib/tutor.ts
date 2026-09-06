@@ -90,10 +90,27 @@ export interface TutorPracticeQuestion {
   citations: TutorCitation[];
 }
 
+/**
+ * What Phase 3A writes about the wrong choice the student actually made.
+ * Null for a correct answer, and null for a question generated before
+ * distractor notes existed — so nothing here may be required to render.
+ */
+export interface TutorPracticeTeaching {
+  /** The choice they picked, echoed by the server. */
+  chosen: string;
+  /** What that choice confuses, and why it was tempting. */
+  misconception: string;
+  /** What the correct answer turns on. Same text as the tail of `feedback`. */
+  why_correct: string;
+  /** The concept worth returning to, when the question named one. */
+  focus: string | null;
+}
+
 export interface TutorPracticeEvaluation {
   correct: boolean;
   feedback: string;
   topics: string[];
+  teaching?: TutorPracticeTeaching | null;
 }
 
 export interface CourseTopicMastery {
