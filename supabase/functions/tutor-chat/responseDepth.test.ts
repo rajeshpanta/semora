@@ -1,5 +1,5 @@
 import { assertEquals, assertNotEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
-import { answerBudget, depthDirective, detectIntent, isScheduleLookup } from './responseDepth.ts';
+import { answerBudget, asReadingSpace, depthDirective, detectIntent, isScheduleLookup } from './responseDepth.ts';
 
 const chat = (message: string, hasImage = false) => answerBudget('chat', message, hasImage);
 
@@ -216,4 +216,84 @@ Deno.test('every rung carries the same two non-negotiables', () => {
 Deno.test('the output cap is one generous guard, not a length control', () => {
   const all = [chat('What is mitosis?'), chat('Derive it in full detail'), chat('Briefly, what is mitosis?')];
   for (const b of all) assertEquals(b.maxTokens, 6144);
+});
+
+// ── Reading space (Phase 3B.5B) ─────────────────────────────────────────────
+
+const spaced = (message: string, space: 'compact'|'regular'|'roomy'|null) =>
+  answerBudget('chat', message, false, space);
+
+Deno.test('READING SPACE NEVER TOUCHES REASONING', () => {
+  for (const m of ['What is mitosis?', 'Derive the Michaelis-Menten equation.', 'When is my exam?']) {
+    const efforts = (['compact','regular','roomy',null] as const).map((s) => spaced(m, s).effort);
+    assertEquals(new Set(efforts).size, 1, `${m} changed effort with space: ${efforts.join()}`);
+  }
+});
+
+Deno.test('a compact screen shortens an ordinary answer; a roomy one does not lengthen it', () => {
+  const q = 'What does it mean that the pump is electrogenic?';
+  assertEquals(spaced(q, 'compact').depth, 'compact');
+  assertEquals(spaced(q, 'regular').depth, 'standard');
+  // Room is permission, not obligation — roomy must NOT reach for deep.
+  assertEquals(spaced(q, 'roomy').depth, 'standard');
+});
+
+Deno.test('explicit intent beats the environment in both directions', () => {
+  // Compact screen must not suppress a requested walkthrough...
+  assertEquals(spaced('Walk me through it step by step.', 'compact').depth, 'deep');
+  assertEquals(spaced('Deduce la ecuación paso a paso.', 'compact').depth, 'deep');
+  // ...and a roomy screen must not inflate a requested one-liner.
+  assertEquals(spaced('What is mitosis? One sentence.', 'roomy').depth, 'compact');
+  assertEquals(spaced('En pocas palabras, ¿qué es la mitosis?', 'roomy').depth, 'compact');
+});
+
+Deno.test('mode still outranks the environment', () => {
+  assertEquals(answerBudget('explain_assignment', 'Explain this assignment.', false, 'compact').depth, 'deep');
+  assertEquals(answerBudget('quiz', 'Create a quiz question.', false, 'roomy').depth, 'compact');
+});
+
+Deno.test('an older client that sends nothing behaves exactly as before', () => {
+  for (const m of ['What is mitosis?', 'Briefly, what is mitosis?', 'Walk me through it.', 'When is my exam?']) {
+    assertEquals(spaced(m, null).depth, answerBudget('chat', m, false).depth, m);
+    assertEquals(spaced(m, null).effort, answerBudget('chat', m, false).effort, m);
+  }
+});
+
+Deno.test('the roomy permission clause appears only on a roomy standard answer', () => {
+  assertEquals(depthDirective('standard', 'roomy').includes('room on this screen'), true);
+  assertEquals(depthDirective('standard', 'regular').includes('room on this screen'), false);
+  assertEquals(depthDirective('standard', 'compact').includes('room on this screen'), false);
+  assertEquals(depthDirective('compact', 'roomy').includes('room on this screen'), false);
+  // The non-negotiables survive on every variant.
+  for (const s of ['compact','regular','roomy'] as const) {
+    assertEquals(depthDirective('standard', s).includes('Never drop a step'), true);
+  }
+});
+
+Deno.test('compact forbids a summary WITHOUT forbidding a caveat that changes the reading', () => {
+  // Blind review found compact dropping "one factor dominates" clauses on hard
+  // conceptual questions, reading them as the closing summary the rung bans.
+  // Screen-size routing would have handed that loss to every small-phone
+  // student who never asked for brevity, so the exemption is explicit.
+  const c = depthDirective('compact');
+  assertEquals(c.includes('Do not end with a summary'), true);
+  assertEquals(c.includes('is not a summary'), true);
+  assertEquals(c.includes('one factor dominates'), true);
+  assertEquals(c.includes('holds only under a condition'), true);
+  // The blanket ban that caused the loss must be gone, not merely softened.
+  assertEquals(c.includes('no closing summary'), false);
+  // Every rung still carries the non-negotiables, compact included.
+  for (const d of ['compact', 'standard', 'deep'] as const) {
+    assertEquals(depthDirective(d).includes('Never drop a step'), true, d);
+  }
+  // The exemption belongs to compact alone; it is meaningless on the wider rungs.
+  assertEquals(depthDirective('standard').includes('is not a summary'), false);
+  assertEquals(depthDirective('deep').includes('is not a summary'), false);
+});
+
+Deno.test('a junk readingSpace value is ignored rather than trusted', () => {
+  assertEquals(asReadingSpace('roomy'), 'roomy');
+  for (const junk of ['ROOMY', 'huge', '', null, undefined, 3, {}, ['compact']]) {
+    assertEquals(asReadingSpace(junk), null, JSON.stringify(junk));
+  }
 });

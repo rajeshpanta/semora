@@ -22,6 +22,7 @@ import {
   // wraps .alert alone). Every other dialog on this screen goes through the
   // wrapper so its buttons stay translated.
   Alert as NativeAlert,
+  type LayoutChangeEvent,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
 } from 'react-native';
@@ -39,6 +40,7 @@ import { useColors } from '@/lib/theme';
 import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { splitPracticeFeedback } from '@/lib/practiceFeedback';
+import { readingSpaceFor } from '@/lib/readingSpace';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { track } from '@/lib/analytics';
 import { useCourse, useCourses, useSemesters, useGradeCategories, useTasks } from '@/lib/queries';
@@ -159,7 +161,7 @@ function TutorChat({
   const router = useRouter();
   const colors = useColors();
   const showProUpsell = useProUpsell();
-  const { contentMaxWidth, proseMaxWidth, measureScale, fontScale, isDesktop, width: winWidth } = useResponsive();
+  const { contentMaxWidth, proseMaxWidth, measureScale, fontScale, isDesktop, width: winWidth, height: winHeight } = useResponsive();
 
   // ── Adaptive geometry, derived rather than named ────────────────────────
   //
@@ -217,6 +219,7 @@ function TutorChat({
   // that survives an accessibility text size.
   const headerHeight = useHeaderHeight();
 
+
   // Resolve the semester by derivation rather than reading global state alone:
   // selectedSemesterId is only populated by the tabs that set it, so arriving
   // here straight from Study Tools left it null and the picker had no courses
@@ -246,6 +249,9 @@ function TutorChat({
   const activeThread = threads.find((t) => t.id === conversationId) ?? null;
 
   const { data: messages = [], isLoading } = useTutorMessages(conversationId);
+  /** Read inside the layout handler so measuring does not re-bind on every turn. */
+  const messagesRef = useRef(0);
+  messagesRef.current = messages.length;
   const sendMessage = useSendTutorMessage(conversationId, courseId);
   const rateMessage = useRateTutorMessage(conversationId);
   const generatePractice = useGenerateTutorPractice(conversationId, courseId);
@@ -258,6 +264,11 @@ function TutorChat({
   const deleteNote = useDeleteCourseNote(courseId);
 
   const [draft, setDraft] = useState('');
+  // Mirrored during render so the composer's onLayout — a native callback that
+  // can fire before an effect would have run — always sees the current draft
+  // when deciding whether this height is the composer's resting height.
+  const draftRef = useRef('');
+  draftRef.current = draft;
   const [threadSheetOpen, setThreadSheetOpen] = useState(false);
   const [contextSheetOpen, setContextSheetOpen] = useState(false);
   /** The answer as it is being written, before it becomes a stored turn. */
@@ -327,6 +338,83 @@ function TutorChat({
   const keepEndVisible = useCallback(() => {
     if (atEndRef.current) scrollToEnd();
   }, [scrollToEnd]);
+
+  /**
+   * The height of the conversation viewport as it is actually laid out.
+   *
+   * This is the space the student can genuinely read in, and it is already
+   * correct for every case a fixed reserve had to guess at: the context line
+   * wrapping, the composer growing to two lines, Dynamic Type inflating both,
+   * longer Spanish copy, and the keyboard — the ScrollView sits inside the
+   * KeyboardAvoidingView, so its frame shrinks when the keyboard appears
+   * without anything here knowing what a keyboard is.
+   *
+   * Rounded to 8pt so ordinary layout jitter does not re-render, and it feeds
+   * only the readingSpace word sent to the server, never layout, so measuring
+   * it cannot feed back into what it measures.
+   */
+  const [viewportHeight, setViewportHeight] = useState<number | null>(null);
+  const handleViewportLayout = useCallback((e: LayoutChangeEvent) => {
+    const measured = e.nativeEvent.layout.height;
+    setViewportHeight((previous) => (
+      previous == null || Math.abs(previous - measured) >= 8 ? measured : previous
+    ));
+    if (messagesRef.current > 0) keepEndVisible();
+  }, [keepEndVisible]);
+  /**
+   * How much of an answer fits on one screenful here — the same content-need
+   * question Phase 2 asks about layout, asked about the answer.
+   *
+   * Reserves the chrome that always sits between the student and the prose:
+   * the navigation bar, the one context line, and the composer. Sent to the
+   * server as a single word so presentation can adapt without anything about
+   * the device leaving the phone.
+   */
+  /**
+   * The composer's own height, and the height it returns to once it is empty.
+   *
+   * The ScrollView frame is the right thing to measure, but it is measured at
+   * the wrong instant: the composer is at its TALLEST when the student presses
+   * send, and collapses the moment the draft clears. Rendering the real screen
+   * caught it — a three-line question on an iPhone 15 drops the frame from
+   * 612pt to about 570pt, and the compact boundary sits at 587pt, so the answer
+   * was sized for a screen the student no longer had by the time it arrived.
+   * Two composer lines are enough to flip that device; the iPad needs twelve,
+   * and the already-compact cases cannot move.
+   *
+   * Worse than the size of the error is its direction: long questions are hard
+   * questions, so the student asking the most involved thing was getting the
+   * most compressed answer. That is the opposite of what this phase is for.
+   *
+   * Both terms are measured — no reserve, no device rule, no estimate of what a
+   * keyboard or a line of text "usually" costs. `restingComposerHeight` is
+   * simply the composer's own height whenever the draft is empty, which is its
+   * height at mount and again after every send.
+   */
+  const [composerHeight, setComposerHeight] = useState<number | null>(null);
+  const restingComposerHeight = useRef<number | null>(null);
+  const handleComposerLayout = useCallback((e: LayoutChangeEvent) => {
+    const measured = e.nativeEvent.layout.height;
+    if (draftRef.current.length === 0) restingComposerHeight.current = measured;
+    setComposerHeight((previous) => (
+      previous == null || Math.abs(previous - measured) >= 8 ? measured : previous
+    ));
+  }, []);
+
+  const readingSpace = useMemo(() => {
+    // Nothing has been laid out yet, so there is nothing honest to say. The
+    // field is omitted and the server keeps its own default, exactly as it
+    // does for a client that predates this signal.
+    if (viewportHeight == null) return null;
+    // Give back only what the composer is currently borrowing beyond its
+    // resting height. Empty draft, unknown resting height, or a composer that
+    // has not grown all leave this at zero.
+    const borrowed = composerHeight != null && restingComposerHeight.current != null
+      ? Math.max(0, composerHeight - restingComposerHeight.current)
+      : 0;
+    return readingSpaceFor({ columnWidth, usableHeight: viewportHeight + borrowed, fontScale });
+  }, [columnWidth, viewportHeight, composerHeight, fontScale]);
+
 
   // Switching course must not carry the previous course's thread along.
   useEffect(() => { setPickedThreadId(null); }, [courseId]);
@@ -601,6 +689,9 @@ function TutorChat({
       await sendMessage.mutateAsync({
         ...input,
         grades: gradeSnapshot,
+        // Added at the funnel rather than at each call site so no send path
+        // can quietly ship without it.
+        readingSpace,
         onDelta: (soFar) => {
           latest = soFar;
           const now = Date.now();
@@ -983,7 +1074,7 @@ function TutorChat({
           contentContainerStyle={[styles.messages, { maxWidth: columnWidth }]}
           keyboardShouldPersistTaps="handled"
           onContentSizeChange={messages.length ? scrollToEnd : undefined}
-          onLayout={messages.length ? keepEndVisible : undefined}
+          onLayout={handleViewportLayout}
           onScroll={handleScroll}
           scrollEventThrottle={16}
         >
@@ -1328,7 +1419,10 @@ function TutorChat({
             </TouchableOpacity>
           </View>
         )}
-        <View style={[styles.composer, { borderTopColor: colors.line, backgroundColor: colors.paper, maxWidth: columnWidth }]}>
+        <View
+          onLayout={handleComposerLayout}
+          style={[styles.composer, { borderTopColor: colors.line, backgroundColor: colors.paper, maxWidth: columnWidth }]}
+        >
           <TouchableOpacity
             style={[styles.attachBtn, { borderColor: colors.line }]}
             onPress={handleAttachPhoto}

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getFileSize, readFileAsBase64 } from '@/lib/readFileBase64';
 import { supabase } from '@/lib/supabase';
 import { getAppLocale } from '@/lib/i18n';
+import type { ReadingSpace } from '@/lib/readingSpace';
 import {
   courseNoteTooLargeMessage,
   MAX_COURSE_NOTE_BYTES,
@@ -446,6 +447,13 @@ export type TutorSendInput = {
   image?: { base64: string; mimeType: string } | null;
   /** What the course screen shows, so the tutor can talk about grades. */
   grades?: TutorGradeSnapshot | null;
+  /**
+   * How much of an answer fits on one screenful where the student is reading:
+   * 'compact' | 'regular' | 'roomy', derived from the Phase 2 geometry. It
+   * biases presentation only — never reasoning — and omitting it leaves the
+   * server on its previous default.
+   */
+  readingSpace?: ReadingSpace | null;
   /** Called with the answer SO FAR as it arrives. */
   onDelta?: (textSoFar: string) => void;
 };
@@ -486,6 +494,7 @@ export function useSendTutorMessage(conversationId: string | null, courseId?: st
           assignmentId: input.assignmentId ?? null,
           image: input.image ?? null,
           grades: input.grades ?? null,
+          readingSpace: input.readingSpace ?? null,
           stream: true,
           locale: getAppLocale(),
         }),

@@ -21,7 +21,7 @@ import { prepareImagePayload } from '../_shared/heic.ts';
 import {
   buildTeaching, normalizeAnswer, sanitizeDistractorNotes,
 } from './practiceTeaching.ts';
-import { answerBudget, depthDirective } from './responseDepth.ts';
+import { answerBudget, asReadingSpace, depthDirective } from './responseDepth.ts';
 import {
   DOCUMENT_EXTRACTION_FAILED_CODE,
   documentExtractionFailedMessage,
@@ -1050,13 +1050,18 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     // Reasoning depth and visible length, decided independently (see
     // responseDepth.ts). Computed here because the prompt below now carries the
     // length directive, and the model call further down carries the parameters.
-    const budget = answerBudget(mode, message, !!attachedImage);
+    // One word — 'compact' | 'regular' | 'roomy' — derived by the client from
+    // geometry it already has. No device, no model, no measurements: three
+    // values carry no more identifying information than the locale beside
+    // them, and an older client that sends nothing behaves exactly as before.
+    const readingSpace = asReadingSpace((body as { readingSpace?: unknown }).readingSpace);
+    const budget = answerBudget(mode, message, !!attachedImage, readingSpace);
 
     // Practice and quiz answer with one JSON object whose shape MODE already
     // fixes, so a prose-length instruction there would only be noise.
     const lengthDirective = mode === 'practice' || mode === 'quiz'
       ? ''
-      : `\n${depthDirective(budget.depth)}\n`;
+      : `\n${depthDirective(budget.depth, readingSpace)}\n`;
     // The length directive goes LAST, after the course context, for prompt
     // caching. Everything above it is identical on every turn of a
     // conversation — same system prompt, same date, same syllabus and notes —

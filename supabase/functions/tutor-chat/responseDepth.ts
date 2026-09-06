@@ -24,6 +24,16 @@ export type Effort = 'low' | 'medium';
 export type Verbosity = 'low' | 'medium';
 export type Depth = 'compact' | 'standard' | 'deep';
 export type Intent = 'brief' | 'deep' | null;
+/**
+ * How much of an answer fits on one screenful where the student is reading.
+ * Derived on the client from the Phase 2 geometry (lib/readingSpace.ts) and
+ * sent as this one word — never a device, a model or a pixel measurement.
+ */
+export type ReadingSpace = 'compact' | 'regular' | 'roomy';
+
+export function asReadingSpace(value: unknown): ReadingSpace | null {
+  return value === 'compact' || value === 'regular' || value === 'roomy' ? value : null;
+}
 
 export interface AnswerBudget {
   effort: Effort;
@@ -147,7 +157,11 @@ export function reasoningEffort(opts: { message: string; mode: string; hasImage:
  * to think about — the model sizes the explanation to the concept, and this
  * only says how much room it has to do that in.
  */
-export function responseDepth(opts: { message: string; mode: string; hasImage: boolean }): Depth {
+export function responseDepth(opts: {
+  message: string; mode: string; hasImage: boolean; readingSpace?: ReadingSpace | null;
+}): Depth {
+  // Order matters, and it is the order the student would expect: what they
+  // asked for, then what the task is, then where they happen to be reading.
   const intent = detectIntent(opts.message);
   if (intent === 'brief') return 'compact';
   if (intent === 'deep') return 'deep';
@@ -156,11 +170,20 @@ export function responseDepth(opts: { message: string; mode: string; hasImage: b
   // A photo of a problem is nearly always worked through rather than answered.
   if (opts.hasImage) return 'standard';
   if (isScheduleLookup(opts.message)) return 'compact';
+  // Reading space is the LAST word, and only where nothing above spoke. A
+  // roomy screen deliberately does not reach for 'deep': room is permission to
+  // elaborate where it helps, which the directive grants, not an instruction
+  // to produce a walkthrough nobody asked for.
+  if (opts.readingSpace === 'compact') return 'compact';
   return 'standard';
 }
 
-export function answerBudget(mode: string, message: string, hasImage: boolean): AnswerBudget {
-  const input = { message: message ?? '', mode, hasImage };
+export function answerBudget(
+  mode: string, message: string, hasImage: boolean, readingSpace?: ReadingSpace | null,
+): AnswerBudget {
+  // readingSpace is passed to depth only. Reasoning never sees it: where a
+  // student is reading cannot change how hard the question is.
+  const input = { message: message ?? '', mode, hasImage, readingSpace: readingSpace ?? null };
   const depth = responseDepth(input);
   return {
     effort: reasoningEffort(input),
@@ -189,14 +212,31 @@ export function answerBudget(mode: string, message: string, hasImage: boolean): 
  * nothing for the model to reconcile. Every rung repeats the same two
  * non-negotiables — size to the concept, never drop a step — because those are
  * what stop this becoming "short answers on small screens".
+ *
+ * The compact rung earns its extra sentence. Blind three-judge review of 12
+ * matched compact/regular pairs (36 judgements) found compact won readability
+ * 20-0 and cost nothing on ordinary or quantitative questions — but on
+ * DIFFICULT CONCEPTUAL questions it was charged with 8 essential omissions to
+ * regular's 0, every one of them the same kind: the clause that says one factor
+ * dominates ("the pump is electrogenic, but K+ leak supplies most of the
+ * resting potential"). The model was reading that clause as the "closing
+ * summary" the rung forbids and cutting it, even though the shared rule already
+ * says never to drop a caveat. Before this phase compact only happened when a
+ * student ASKED for brevity; routing to it by screen size would have handed
+ * that loss to every small-phone student who never asked, which is the one
+ * outcome this whole design exists to prevent. So the prohibition now names
+ * what it does not cover.
  */
-export function depthDirective(depth: Depth): string {
+export function depthDirective(depth: Depth, readingSpace?: ReadingSpace | null): string {
+  const roomy = readingSpace === 'roomy'
+    ? ' There is room on this screen for an extra step or a short example, so include one where it genuinely improves understanding — but do not pad an answer that is already complete.'
+    : '';
   const shared = 'Match the explanation to what the question actually requires: a simple question stays short even when there is room, and a genuinely multi-step one keeps every step it needs even when the answer is meant to be brief. Never drop a step, a caveat or a citation to save space. If the student asks for more or less detail than this, follow the student.';
   if (depth === 'compact') {
-    return `LENGTH: Answer first, in the opening sentence. Then give only the reasoning needed to trust it. No preamble, no recap of the question, no closing summary, and no example unless the answer is wrong without one. ${shared}`;
+    return `LENGTH: Answer first, in the opening sentence. Then give only the reasoning needed to trust it. No preamble, no recap of the question, and no example unless the answer is wrong without one. Do not end with a summary — but a clause that stops the answer being misread is not a summary: if one factor dominates the others, or the result holds only under a condition, keep it. ${shared}`;
   }
   if (depth === 'deep') {
     return `LENGTH: Give the full walkthrough — the reasoning, the steps in order, the assumptions being made, and a worked example where one earns its place. Name the misconception nearby if there is an obvious one. ${shared}`;
   }
-  return `LENGTH: Lead with the answer, then explain it. Include the distinction or the steps that matter, and an example only where it materially helps. ${shared}`;
+  return `LENGTH: Lead with the answer, then explain it. Include the distinction or the steps that matter, and an example only where it materially helps.${roomy} ${shared}`;
 }
