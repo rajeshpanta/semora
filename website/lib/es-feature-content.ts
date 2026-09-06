@@ -1281,7 +1281,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Qué cuesta, para quién es y dónde se pone incómodo',
         paragraphs: [
-          'Conectar Canvas es gratis por tiempo limitado, sin Pro y sin límite de clases, y quien lo conecte ahora lo conserva gratis. Blackboard y Moodle también son gratis: usan un token que emite tu universidad, y algunos centros lo desactivan o lo prohíben. Pro cuesta 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual, y se aplica a toda la cuenta lo compres en la web o en la app de iOS.',
+          'Conectar Canvas es gratis por tiempo limitado, sin Pro y sin límite de clases, y quien lo conecte ahora no pierde nunca esa importación gratuita. El plan Gratis cubre un semestre, así que empezar el siguiente es donde entra Pro; lo ya conectado sigue sincronizándose. Blackboard y Moodle también son gratis: usan un token que emite tu universidad, y algunos centros lo desactivan o lo prohíben. Pro cuesta 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual, y se aplica a toda la cuenta lo compres en la web o en la app de iOS.',
           'Sigues teniendo el seguimiento completo de entregas y tareas, las calificaciones con promedios ponderados, los recordatorios el mismo día, unirte al espacio de un compañero y una acción con IA gratuita para toda la vida de la cuenta.',
           'La sincronización con Canvas no es para todo el mundo. Si tu profesor no publica nunca tareas en Canvas y lo deja todo en el programa, escanear el programa es el mejor camino, y la acción con IA gratuita de la cuenta sirve justo para eso.',
         ],

@@ -1520,6 +1520,31 @@ export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
     ],
     "sections": [
         {
+            "heading": "The problem Semora was built for",
+            "paragraphs": [
+                "A semester's dates arrive scattered: a PDF attached to an email, a page inside a learning platform, an announcement made out loud in class and written down nowhere. None of those is in a shape you can plan from, and gathering them is manual work that has to be repeated every term.",
+                "The usual result is not one forgotten assignment. It is finding three at once in week six, next to a project worth more of the grade than you remembered. That is not a failure of effort. The information was spread across too many documents to hold in your head.",
+                "Semora starts from the document that already contains the whole semester \u2014 the syllabus \u2014 and turns it into courses, deadlines, meeting times and grade weights you can review. From there the calendar, reminders, grades and planning work with real academic context instead of an empty list."
+            ]
+        },
+        {
+            "heading": "Why it starts with the syllabus, not your learning platform",
+            "paragraphs": [
+                "This is the most consequential design decision in the product, so it is worth stating plainly.",
+                "A learning-platform connection reflects what an instructor publishes inside that platform. The syllabus is where grade weights, exam dates, the reading schedule, office hours and the grading scale usually live, and much of that never becomes an entry in any platform at all.",
+                "There is a practical reason too. Not everyone's school runs a supported platform, and some instructors post dates only in the syllabus. A product that depended on that connection would leave those students with no route in.",
+                "So Canvas, Blackboard and Moodle import is free on every plan, and it is deliberately not the front door. The free path \u2014 scan the syllabus, or paste the text \u2014 works for anyone."
+            ]
+        },
+        {
+            "heading": "Nothing the AI extracts is saved without your review",
+            "paragraphs": [
+                "This is a principle rather than a feature. Extracted deadlines pass through a review screen, and none of them is saved until you have looked at the list and approved it.",
+                "That screen does three specific things: it flags what the model returned with lower confidence, marks dates that fall outside the term's range, and keeps items that arrived with no date separate instead of inventing one for them.",
+                "The reasoning is that a wrong date you trust costs more than a date you never had. A tool that files things on your behalf without showing you what it filed keeps the convenience and hands you the risk."
+            ]
+        },
+        {
             "heading": "Start with the semester, then plan the week",
             "paragraphs": [
                 "A syllabus often contains the term outline before all assignments appear in your learning platform. Semora reads it for deadlines, meeting times and grading information. You review the extracted deadlines before saving them.",
@@ -1531,6 +1556,14 @@ export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
             "paragraphs": [
                 "Use Semora to see what is coming up, track grades from the scores and weights you enter, and keep your plan available across devices. Pro adds tools such as study planning, flashcards and an AI tutor grounded in your course material.",
                 "Your instructor’s syllabus, announcements and official gradebook remain the source of truth. AI extraction can make mistakes. Check uncertain dates and grading rules, and submit assignments in your school’s own system."
+            ]
+        },
+        {
+            "heading": "Limits are enforced in the database, not just on the screen",
+            "paragraphs": [
+                "The free plan's one-semester cap is not an interface detail. It is enforced both in the app and by a trigger on the database itself, so a free account cannot start a second term by any route. That matters most at a term boundary: your connected classes keep syncing, but setting up the next semester is the point where Pro is required.",
+                "The same is true of Pro features. Hosting a Course Space is checked on the server and returns an explicit error rather than a greyed-out button. Learning-platform import is no longer on that list \u2014 it is free on every plan.",
+                "It is mentioned here because it governs what this site can honestly promise. A limit that exists only in the interface is a suggestion; one that exists in the database is a fact, and only the second kind belongs on a pricing page written as fact."
             ]
         },
         {

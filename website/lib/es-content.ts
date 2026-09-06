@@ -522,7 +522,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
           'El precio es 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes y alrededor de un 58 % menos que pagando mes a mes. La compra ocurre con tarjeta en la web, donde cobra Stripe, o dentro de la app de iOS a través de StoreKit, y la suscripción se aplica a toda tu cuenta, incluida la app web. Pagues donde pagues no hay nada que activar después: la app y la web leen la misma suscripción.',
         ],
         bullets: [
-          'Gratis: una acción de IA, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, entregas y tareas ilimitadas, calificaciones ponderadas y nota media del semestre, recordatorios el mismo día, Hoy y Calendario completos.',
+          'Gratis: una acción de IA, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, entregas y tareas ilimitadas, calificaciones ponderadas y nota media del semestre, recordatorios el mismo día, Hoy y Calendario completos. Todo ello dentro de un semestre: la cuenta gratuita cubre un solo periodo y empezar el siguiente requiere Pro.',
           'Capacidad de Pro: cursos y semestres ilimitados, y sin tope de escaneos ni de grabaciones — el único techo que queda es el de uso razonable, 20 escaneos en cualquier ventana de 24 horas, que ningún semestre real alcanza.',
           'Decisiones de Pro: Plan Inteligente, carga académica, revisión académica, escala de calificación propia y pronósticos, y análisis del progreso con gráficos y exportación.',
           'Estudio con Pro: tarjetas con repetición espaciada, temporizador de enfoque y el Tutor con IA anclado en tu propio curso.',
