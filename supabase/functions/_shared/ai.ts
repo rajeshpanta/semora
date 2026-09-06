@@ -546,6 +546,10 @@ export type AiTelemetry = {
   attempts?: number;
   promptTokens?: number | null;
   outputTokens?: number | null;
+  /** Billed at a tenth of the input rate; absent means the field was not returned. */
+  cachedTokens?: number | null;
+  /** Counted inside outputTokens, not additional to it. */
+  reasoningTokens?: number | null;
 };
 
 export function usageFromGemini(data: any) {
@@ -555,7 +559,17 @@ export function usageFromGemini(data: any) {
 
 export function usageFromOpenAI(data: any) {
   const u = data?.usage;
-  return { promptTokens: u?.input_tokens ?? null, outputTokens: u?.output_tokens ?? null };
+  return {
+    promptTokens: u?.input_tokens ?? null,
+    outputTokens: u?.output_tokens ?? null,
+    // Both of these were being thrown away, which made every cost question
+    // unanswerable. `cached_tokens` is billed at a tenth of the input rate, so
+    // without it there is no way to tell whether prompt caching is working;
+    // `reasoning_tokens` are counted INSIDE output_tokens, so without it the
+    // logged output figure overstates how much the student actually reads.
+    cachedTokens: u?.input_tokens_details?.cached_tokens ?? null,
+    reasoningTokens: u?.output_tokens_details?.reasoning_tokens ?? null,
+  };
 }
 
 /**
@@ -589,6 +603,8 @@ export async function logAiCall(
       attempts: t.attempts ?? null,
       prompt_tokens: t.promptTokens ?? null,
       output_tokens: t.outputTokens ?? null,
+      cached_tokens: t.cachedTokens ?? null,
+      reasoning_tokens: t.reasoningTokens ?? null,
     });
     if (error) {
       console.warn('[ai] telemetry insert rejected (non-fatal):', String(error.message ?? error).slice(0, 200));

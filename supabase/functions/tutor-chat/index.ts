@@ -21,6 +21,7 @@ import { prepareImagePayload } from '../_shared/heic.ts';
 import {
   buildTeaching, normalizeAnswer, sanitizeDistractorNotes,
 } from './practiceTeaching.ts';
+import { answerBudget, depthDirective } from './responseDepth.ts';
 import {
   DOCUMENT_EXTRACTION_FAILED_CODE,
   documentExtractionFailedMessage,
@@ -148,7 +149,7 @@ Ground your answers in the COURSE CONTEXT provided (syllabus info, uploaded lect
 Rules:
 - Be a tutor, not an answer key. Explain concepts, walk through reasoning, and check understanding. For graded work, guide the student to the answer rather than just handing it over.
 - If the course context doesn't cover the question, say so briefly, then help using general knowledge.
-- Be concise and encouraging. Short paragraphs, or a numbered list when the answer really is a sequence of steps.
+- Be encouraging. Short paragraphs, or a numbered list when the answer really is a sequence of steps. How long the answer should be is set by the LENGTH line below, which is the only instruction about length in this prompt.
 - If asked about deadlines/dates, use the DEADLINES section; never invent dates.
 - If asked about grades, use the GRADES section verbatim. Those are the figures the student sees on their course screen, so never recompute them or contradict them — explain them and work forward from them.
 - If a photo is attached, read it and work from what is actually in it. Say what you can see before you explain it, so a mis-read is obvious to the student rather than silent.
@@ -317,18 +318,6 @@ function rankNotesByRelevance<T extends { filename?: string | null; extracted_te
  * The old single setting (low/low/2048) was tuned for the first kind and made
  * the second kind impossible: a worked derivation ran out of tokens mid-proof.
  */
-function answerBudget(mode: string, message: string, hasImage: boolean): {
-  effort: 'low' | 'medium';
-  verbosity: 'low' | 'medium';
-  maxTokens: number;
-} {
-  const deep = /\b(why|how|derive|derivation|prove|proof|explain|walk me|step by step|steps|difference between|compare|understand|confused|stuck|work through|solve|show me)\b/i;
-  const wantsWork = hasImage || mode === 'explain_assignment' || deep.test(message) || message.length > 180;
-  return wantsWork
-    ? { effort: 'medium', verbosity: 'medium', maxTokens: 6144 }
-    : { effort: 'low', verbosity: 'low', maxTokens: 2048 };
-}
-
 async function makeSafetyIdentifier(userId: string): Promise<string> {
   const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(userId));
   const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -1058,9 +1047,26 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       `HOY: ${weekday} (${todayLocal}, ${studentZone}). Todas las fechas del contexto están en formato ISO YYYY-MM-DD y en esta misma zona horaria. Calcula "hoy", "esta semana", "atrasado" y "cuánto tiempo queda" a partir de esta fecha — nunca a partir de otra suposición sobre la fecha actual.`,
     );
 
+    // Reasoning depth and visible length, decided independently (see
+    // responseDepth.ts). Computed here because the prompt below now carries the
+    // length directive, and the model call further down carries the parameters.
+    const budget = answerBudget(mode, message, !!attachedImage);
+
+    // Practice and quiz answer with one JSON object whose shape MODE already
+    // fixes, so a prose-length instruction there would only be noise.
+    const lengthDirective = mode === 'practice' || mode === 'quiz'
+      ? ''
+      : `\n${depthDirective(budget.depth)}\n`;
+    // The length directive goes LAST, after the course context, for prompt
+    // caching. Everything above it is identical on every turn of a
+    // conversation — same system prompt, same date, same syllabus and notes —
+    // so it forms a long stable prefix the provider can cache at a tenth of the
+    // input price. The directive is the one part that changes when a student
+    // says "briefly", and putting it earlier would push ~1,500 tokens of
+    // course context out of that prefix every time the rung changed.
     const groundingIntro = contextBlock
-      ? `${TUTOR_SYSTEM_PROMPT}\n\n${dateAnchor}\n\n${languageInstruction}\n${modeInstruction ? `\nMODE: ${modeInstruction}\n` : ''}\n${asUntrustedDocument(contextBlock, 'COURSE_CONTEXT')}`
-      : `${TUTOR_SYSTEM_PROMPT}\n\n${dateAnchor}\n\n${languageInstruction}\n\n(No course material is attached to this conversation yet — help using general knowledge and invite the student to add their syllabus or notes for grounded answers.)`;
+      ? `${TUTOR_SYSTEM_PROMPT}\n\n${dateAnchor}\n\n${languageInstruction}\n${modeInstruction ? `\nMODE: ${modeInstruction}\n` : ''}\n${asUntrustedDocument(contextBlock, 'COURSE_CONTEXT')}\n${lengthDirective}`
+      : `${TUTOR_SYSTEM_PROMPT}\n\n${dateAnchor}\n\n${languageInstruction}\n\n(No course material is attached to this conversation yet — help using general knowledge and invite the student to add their syllabus or notes for grounded answers.)\n${lengthDirective}`;
 
     // Prior turns are text; only the turn being sent can carry a photo, and
     // only then does it need the content-array shape.
@@ -1082,11 +1088,10 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       { role: 'user', content: finalUserContent },
     ];
 
-    // 8. Call GPT-5.6 Luna. Effort and length are chosen per question (see
-    //    answerBudget) rather than fixed: the old single setting was tuned for
-    //    "when is the midterm" and truncated every derivation. Responses are
-    //    not stored by OpenAI.
-    const budget = answerBudget(mode, message, !!attachedImage);
+    // 8. Call GPT-5.6 Luna. Reasoning effort follows the QUESTION and visible
+    //    length follows what the STUDENT ASKED FOR — two decisions, not one, so
+    //    a concise answer is never a less well reasoned one (responseDepth.ts).
+    //    Responses are not stored by OpenAI.
     const safetyIdentifier = await makeSafetyIdentifier(userId);
     // Titling a thread costs nothing when the first question is already in
     // hand, and a list of threads all called "Tutor" is not a list.
@@ -1199,7 +1204,10 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
           task: TASK, provider: providerFor(TASK), model: MODELS.tutor,
           status: 'success', durationMs: openAIResult.durationMs,
           attempts: openAIResult.attempts,
-          promptTokens: u.promptTokens, outputTokens: u.outputTokens,
+          // Spread, not two named fields: cached and reasoning counts are the
+          // whole point of widening this, and picking fields by hand is how
+          // they would go missing.
+          ...u,
         });
       }
 
@@ -1509,11 +1517,13 @@ async function streamTutorTurn(opts: {
         isFirstTurn: opts.isFirstTurn,
       });
 
-      const usage = completion ? usageFromOpenAI(completion) : { promptTokens: null, outputTokens: null };
+      const usage = completion
+        ? usageFromOpenAI(completion)
+        : { promptTokens: null, outputTokens: null, cachedTokens: null, reasoningTokens: null };
       await logAiCall(opts.admin, opts.userId, {
         task: opts.task, provider: 'openai', model: MODELS.tutor,
         status: 'success', durationMs,
-        promptTokens: usage.promptTokens, outputTokens: usage.outputTokens,
+        ...usage,
       });
 
       send({
