@@ -23,6 +23,7 @@ import {
 } from './practiceTeaching.ts';
 import { answerBudget, asReadingSpace, depthDirective } from './responseDepth.ts';
 import { establishedTopics, reinforcementTopics } from './learningEvidence.ts';
+import { academicDescription, isAcademicTopic } from './academicTopic.ts';
 import {
   DOCUMENT_EXTRACTION_FAILED_CODE,
   documentExtractionFailedMessage,
@@ -480,6 +481,13 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     // the JSON body it has always got, from the same handler.
     const wantsStream = (body as { stream?: unknown }).stream === true;
     const gradeSummary = formatGradeSnapshot((body as { grades?: unknown }).grades);
+    // Set by the client when the STUDENT picked the topic — tapping "Another
+    // on this topic", or a chip naming a concept. Provenance, not text: the
+    // default request carries a generic sentence that is indistinguishable
+    // from a typed one, so matching on the message would be guesswork. An
+    // older client omits it, which reads as false — the safe default, since
+    // it leaves automatic targeting working rather than silently off.
+    const studentChoseTopic = (body as { studentChoseTopic?: unknown }).studentChoseTopic === true;
 
     // A photo attached to this one question. Decoded here (HEIC included, since
     // that is what an iPhone camera produces) so the model never receives bytes
@@ -778,7 +786,16 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
           const lines = items.slice(0, MAX_TASKS).map((it: any) => {
             const w = typeof it.weight === 'number' ? ` (${it.weight}%)` : '';
             const d = it.due_date ? ` — due ${it.due_date}${it.due_time ? ` ${it.due_time}` : ''}` : '';
-            return `- ${it.title}${w}${d}${it.type ? ` [${it.type}]` : ''}`;
+            // The parser has always extracted a description per item and this
+            // line has always thrown it away, so for 263 courses the ONLY
+            // academic text Semora holds never reached the model — which is
+            // why ungrounded courses produced topics like "Grade scale".
+            // Most descriptions are grading and submission logistics, so they
+            // are filtered rather than dumped: feeding deadline prose to a
+            // generator whose known failure is asking about deadlines makes
+            // the problem worse, not better.
+            const about = academicDescription(it.description);
+            return `- ${it.title}${w}${d}${it.type ? ` [${it.type}]` : ''}${about ? `\n    covers: ${about}` : ''}`;
           });
           parts.push('Syllabus items:\n' + lines.join('\n'));
         }
@@ -790,7 +807,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       //     they're the source of truth for "what's due").
       const { data: tasks } = await adminClient
         .from('tasks')
-        .select('title, type, due_date, due_time, weight, is_completed')
+        .select('title, type, due_date, due_time, weight, is_completed, description, source')
         .eq('course_id', groundCourseId)
         .eq('user_id', userId)
         .order('due_date', { ascending: true })
@@ -801,7 +818,14 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
             const status = t.is_completed ? '[done] ' : '';
             const w = typeof t.weight === 'number' ? ` (${t.weight}%)` : '';
             const time = t.due_time ? ` ${t.due_time}` : '';
-            return `- ${status}${t.title}${w} — ${t.due_date ?? 'no date'}${time}`;
+            // Canvas assignment descriptions arrive through the ICS feed and
+            // average ~1,100 characters of real content. They are the only
+            // academic text 119 courses have, and they are disjoint from the
+            // syllabus descriptions above — of the courses with one, exactly
+            // one also has the other. Syllabus-parsed rows are skipped here
+            // because 95% of them repeat the item description verbatim.
+            const about = t.source === 'lms' ? academicDescription(t.description) : null;
+            return `- ${status}${t.title}${w} — ${t.due_date ?? 'no date'}${time}${about ? `\n    covers: ${clamp(about, 400)}` : ''}`;
           })
           .join('\n');
         citations.push({ kind: 'deadline', label: 'Current course deadlines' });
@@ -997,14 +1021,25 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
           correct: Number(row.correct) || 0,
           assisted_correct: Number(row.assisted_correct) || 0,
         }))
-        .filter((row) => row.topic);
+        // A mastery row for "Course grading" is a true record and not a study
+        // target. Semora may keep counting it; it may not go looking for more
+        // evidence of it, and it may not tell a student they are weak at their
+        // own syllabus. This filters TARGETING only — the claim policy in
+        // learningEvidence.ts is untouched and the row still counts.
+        .filter((row) => row.topic && isAcademicTopic(row.topic));
       // Both branches used to run off a bare ratio, so a topic answered once
       // and missed was "weakest" and a topic answered once and passed was
       // "already solid". learningEvidence.ts holds the floor for both, and it
       // is the same floor the screen uses — see lib/learningEvidence.ts.
       const weakest = reinforcementTopics(rated)[0];
       const established = establishedTopics(rated);
-      if (weakest) {
+      if (studentChoseTopic) {
+        // The student named the topic. Automatic targeting is not a tiebreak
+        // against that — it is silent. Without this the prompt carried both
+        // "ask about photosynthesis" and "the student is weakest on X", and
+        // which one won was the model's choice rather than the product's.
+        masteryDirective = '';
+      } else if (weakest) {
         masteryDirective = ` The student is weakest on "${weakest.topic}" (${weakest.correct} of ${weakest.attempts} correct) — ask about THAT, from a different angle than a definition check, unless the course material genuinely does not support another question on it.`;
       } else if (established.length) {
         // Everything with enough evidence behind it is solid, so widen rather
@@ -1015,9 +1050,9 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     }
 
     const modeInstruction = mode === 'quiz'
-      ? `Create one concise multiple-choice quiz question from the grounded course material.${masteryDirective} Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names), distractor_notes (object). distractor_notes has one key per INCORRECT choice, written exactly as that choice appears, mapping to one or two sentences that name what a student who chose it was most likely thinking and the specific distinction that makes it wrong. Teach that distinction — do not merely restate that the choice is incorrect, do not say only that another option is better, and do not refer to choices by letter or position. If the choice contains a false statement, correct that statement outright; naming which concept it resembles is not enough, because a student who believes the false part will read the resemblance as agreement. Name the student's likely reasoning only when the choice makes it clear — otherwise give the distinction plainly rather than guessing at a motive.`
+      ? `Create one concise multiple-choice quiz question from the grounded course material. Ask about the SUBJECT MATTER of the course, never about how the course is run: no questions about grading scales, weightings, due dates, submission rules, attendance, or which assessment covers what. If the material in front of you is only logistics, draw on the course subject generally rather than quizzing the syllabus.${masteryDirective} Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names), distractor_notes (object). distractor_notes has one key per INCORRECT choice, written exactly as that choice appears, mapping to one or two sentences that name what a student who chose it was most likely thinking and the specific distinction that makes it wrong. Teach that distinction — do not merely restate that the choice is incorrect, do not say only that another option is better, and do not refer to choices by letter or position. If the choice contains a false statement, correct that statement outright; naming which concept it resembles is not enough, because a student who believes the false part will read the resemblance as agreement. Name the student's likely reasoning only when the choice makes it clear — otherwise give the distinction plainly rather than guessing at a motive.`
       : mode === 'practice'
-        ? `Create one low-stakes multiple-choice practice question from the grounded course material.${masteryDirective} Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names), distractor_notes (object). distractor_notes has one key per INCORRECT choice, written exactly as that choice appears, mapping to one or two sentences that name what a student who chose it was most likely thinking and the specific distinction that makes it wrong. Teach that distinction — do not merely restate that the choice is incorrect, do not say only that another option is better, and do not refer to choices by letter or position. If the choice contains a false statement, correct that statement outright; naming which concept it resembles is not enough, because a student who believes the false part will read the resemblance as agreement. Name the student's likely reasoning only when the choice makes it clear — otherwise give the distinction plainly rather than guessing at a motive.`
+        ? `Create one low-stakes multiple-choice practice question from the grounded course material. Ask about the SUBJECT MATTER of the course, never about how the course is run: no questions about grading scales, weightings, due dates, submission rules, attendance, or which assessment covers what. If the material in front of you is only logistics, draw on the course subject generally rather than quizzing the syllabus.${masteryDirective} Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names), distractor_notes (object). distractor_notes has one key per INCORRECT choice, written exactly as that choice appears, mapping to one or two sentences that name what a student who chose it was most likely thinking and the specific distinction that makes it wrong. Teach that distinction — do not merely restate that the choice is incorrect, do not say only that another option is better, and do not refer to choices by letter or position. If the choice contains a false statement, correct that statement outright; naming which concept it resembles is not enough, because a student who believes the false part will read the resemblance as agreement. Name the student's likely reasoning only when the choice makes it clear — otherwise give the distinction plainly rather than guessing at a motive.`
         : mode === 'explain_assignment'
           ? 'Explain the selected assignment as a student-friendly checklist: what it asks for, a first step, suggested milestones, and one question to ask the instructor if the brief is unclear. Do not fabricate requirements.'
           : '';

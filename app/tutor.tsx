@@ -55,6 +55,7 @@ import {
   type TutorConversation, type TutorGradeSnapshot, type TutorPracticeEvaluation,
 } from '@/lib/tutor';
 import { needsReinforcement, reinforcementTopics } from '@/lib/learningEvidence';
+import { isAcademicTopic } from '@/lib/academicTopic';
 import { RichText } from '@/components/RichText';
 import { shareText, shareTextMessage } from '@/lib/shareLink';
 import {
@@ -82,7 +83,7 @@ const CHIP_GUTTER = 24;
 const STARTER_BASE = 340;
 
 /** An opener for an empty thread. Most fill the composer; one runs a quiz. */
-type Starter = { label: string; practiceFocus?: string };
+type Starter = { label: string; practiceFocus?: string; studentChose?: boolean };
 
 export default function TutorScreen() {
   const router = useRouter();
@@ -510,10 +511,14 @@ function TutorChat({
    */
   const practiceAnchor = useMemo(() => {
     if (!courseId) return null;
-    const weak = reinforcementTopics(topicMastery)[0];
-    if (weak) return weak.topic;
-    return upcomingWork[0]?.title ?? null;
-  }, [courseId, topicMastery, upcomingWork]);
+    // Only a real concept anchors a "Quiz me on X" chip. This used to fall
+    // through to upcomingWork[0].title, so on the 603 courses with no mastery
+    // row the chip read "Quiz me on Homework 1" — offering an assignment title
+    // as though it were something to learn. Returning null hides the chip, and
+    // the generic practice action beside it still works.
+    const weak = reinforcementTopics(topicMastery).find((t) => isAcademicTopic(t.topic));
+    return weak?.topic ?? null;
+  }, [courseId, topicMastery]);
 
   /**
    * Topics Semora has earned the right to raise, worst first.
@@ -524,7 +529,10 @@ function TutorChat({
    * review it — indistinguishable from missing twelve. lib/learningEvidence
    * holds the floor; this is just the list that clears it.
    */
-  const weakTopics = useMemo(() => reinforcementTopics(topicMastery), [topicMastery]);
+  const weakTopics = useMemo(
+    () => reinforcementTopics(topicMastery).filter((t) => isAcademicTopic(t.topic)),
+    [topicMastery],
+  );
 
   const starterPrompts = useMemo<Starter[]>(() => {
     // Translated HERE, not at render. The chip both displays this string and
@@ -548,6 +556,7 @@ function TutorChat({
       prompts.push({
         label: `${translate('Quiz me on')} ${practiceAnchor}`,
         practiceFocus: `Create a quiz question on ${practiceAnchor}.`,
+        studentChose: true,
       });
     }
     if (notes.length > 0) prompts.push({ label: translate('Summarise the key ideas from my notes.') });
@@ -558,7 +567,14 @@ function TutorChat({
     return prompts.slice(0, 4);
   }, [courseId, upcomingWork, notes.length, gradeSnapshot?.percentage, practiceAnchor]);
 
-  const handleGeneratePractice = async (mode: 'practice' | 'quiz', focus?: string) => {
+  const handleGeneratePractice = async (
+    mode: 'practice' | 'quiz',
+    focus?: string,
+    // True only when the STUDENT picked the topic. The server suppresses its
+    // own targeting when this is set, so their choice is never competing with
+    // a "the student is weakest on X" line in the same prompt.
+    studentChoseTopic = false,
+  ) => {
     if (tutorWorkInFlightRef.current || isTutorWorking) return;
     if (!courseId) {
       Alert.alert(
@@ -578,7 +594,7 @@ function TutorChat({
         });
       }
       setTutorWork({ kind: 'practice', stage: 'creating' });
-      const next = await generatePractice.mutateAsync({ mode, focus });
+      const next = await generatePractice.mutateAsync({ mode, focus, studentChoseTopic });
       setPractice(next);
       setSelectedAnswer(null);
       setPracticeFeedback(null);
@@ -612,6 +628,7 @@ function TutorChat({
     handleGeneratePractice(
       mode,
       topic ? `Create a ${mode} question on ${topic}, testing the same idea from a different angle than the last one.` : undefined,
+      !!topic,
     );
   };
 
@@ -1127,7 +1144,7 @@ function TutorChat({
                       // The prompts hand the student a sentence to send. This
                       // one is already the whole request, so making them press
                       // send again would be ceremony; it runs the quiz.
-                      if (starter.practiceFocus) handleGeneratePractice('quiz', starter.practiceFocus);
+                      if (starter.practiceFocus) handleGeneratePractice('quiz', starter.practiceFocus, !!starter.studentChose);
                       else setDraft(starter.label);
                     }}
                     activeOpacity={0.75}

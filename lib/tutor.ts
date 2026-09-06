@@ -717,11 +717,18 @@ export function useTutorQuota() {
 
 export function useGenerateTutorPractice(conversationId: string | null, courseId?: string | null) {
   return useMutation({
-    mutationFn: async ({ mode, focus }: { mode: 'practice' | 'quiz'; focus?: string }) => {
+    mutationFn: async (
+      { mode, focus, studentChoseTopic }:
+        { mode: 'practice' | 'quiz'; focus?: string; studentChoseTopic?: boolean },
+    ) => {
       if (!conversationId || !courseId) throw new Error('Open the Tutor from a course first');
       const data = await callTutor({
         conversationId, courseId, mode,
         message: focus?.trim() || `Create a ${mode} question from the most important current course material.`,
+        // Provenance, not text. The default message below is generic and a
+        // typed one would be indistinguishable from it, so the client says
+        // outright whether the student picked the topic.
+        studentChoseTopic: studentChoseTopic === true,
       }) as { practice: TutorPracticeQuestion };
       return data.practice;
     },
