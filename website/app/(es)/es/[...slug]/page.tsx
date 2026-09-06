@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import styles from './spanish.module.css';
+import { ProductWalkthrough } from '@/components/ProductWalkthrough';
 import { LongFormPage } from '@/components/LongFormPage';
 import { DownloadPageBody } from '@/components/DownloadPageBody';
 import { BlogIndex } from '@/components/BlogIndex';
@@ -220,7 +221,11 @@ export default async function SpanishPage({ params }: { params: Params }) {
     return <DownloadPageBody content={config.content} locale="es" />;
   }
 
-  const widget = config.kind === 'standard' ? undefined : <DirectoryWidget config={config} />;
+  const widget = config.path === '/es/escaner-de-programa-de-estudios'
+    ? <ProductWalkthrough locale="es" />
+    : config.path === '/es/seguimiento-de-fechas-de-canvas'
+      ? <ProductWalkthrough kind="canvas" locale="es" />
+      : config.kind === 'standard' ? undefined : <DirectoryWidget config={config} />;
 
   // Blog posts carry the same illustration their card uses on the index. The
   // English posts have had one since launch via BlogPostHero; the Spanish ones
@@ -246,11 +251,14 @@ export default async function SpanishPage({ params }: { params: Params }) {
   // its posts use, not through LongFormPage — see BlogIndex.tsx and
   // BlogPostArticle.tsx for why the two locales had drifted apart.
   if (config.kind === 'blog-index') {
+    // Retired article entries remain in the registry for legacy page configs.
+    // The index should link only to current articles, not redirected tools.
+    const activePosts = SPANISH_BLOG_POSTS.filter((b) => b.englishPath.startsWith('/blog/'));
     return (
       <>
         <JsonLd
           data={blogIndexSchema(
-            SPANISH_BLOG_POSTS.map((b) => ({
+            activePosts.map((b) => ({
               path: b.path, title: b.title, description: b.description, datePublished: b.isoDate,
             })),
             { path: '/es/blog', name: 'El blog de Semora', inLanguage: 'es' },
@@ -259,7 +267,7 @@ export default async function SpanishPage({ params }: { params: Params }) {
         <BlogIndex
           heading={config.content.h1}
           sub={config.content.lede}
-          posts={SPANISH_BLOG_POSTS.map((b) => ({
+          posts={activePosts.map((b) => ({
             path: b.path,
             title: b.title,
             description: b.description,

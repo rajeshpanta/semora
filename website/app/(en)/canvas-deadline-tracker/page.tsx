@@ -1,227 +1,63 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { enAlternates } from '@/lib/hreflang';
 import styles from '@/components/Prose.module.css';
-import { TierTable } from '@/components/TierTable';
 import { Faq } from '@/components/Faq';
-import { Cta } from '@/components/Cta';
 import { JsonLd } from '@/components/JsonLd';
 import { ArticleShell } from '@/components/ArticleShell';
 import { Breadcrumb } from '@/components/Breadcrumb';
+import { ProductWalkthrough } from '@/components/ProductWalkthrough';
+import { RelatedLinks } from '@/components/RelatedLinks';
 import { faqPageSchema } from '@/lib/schema';
-import { PRO_LABEL } from '@/lib/semora-facts';
-import { PageSections } from '@/components/PageSections';
-import { getPageContent } from '@/lib/page-content';
 
 export const metadata: Metadata = {
-  title: 'Canvas Deadline Tracker: Grades and Reminders',
-  description:
-    'Semora is a Canvas deadline tracker app. Import Canvas assignments on Pro, or scan your syllabus free, with grade tracking, reminders, and a real study plan.',
+  title: 'Free Canvas Deadline Tracker for College Students',
+  description: 'Connect Canvas free to see assignments across your classes in Semora. Track deadlines, plan your week and check changes on iPhone, iPad and web.',
   alternates: enAlternates('/canvas-deadline-tracker'),
 };
 
 const FAQ = [
-  {
-    question: 'Does Semora replace Canvas?',
-    answer:
-      "No. Canvas remains where instructors post materials and where you submit work. Semora connects to your Canvas assignments and adds grade tracking, reminders, and (on Pro) calendar sync plus planning and study tools on top. It's an organizing layer, not a replacement for the LMS.",
-  },
-  {
-    question: 'How do I connect Canvas to Semora?',
-    answer:
-      "Canvas import is free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. If it is unavailable or not permitted, scan your syllabus or paste the Canvas assignment list into Semora instead.",
-  },
-  {
-    question: 'Is Semora free to use alongside Canvas?',
-    answer:
-      'Yes. Importing assignments from Canvas is free on every plan, and the syllabus side of the same job is free too — you can also paste Canvas assignment text straight into the scanner. The free tier includes one AI action for the lifetime of the account—a syllabus scan, a lecture recording, or a document turned into notes—plus unlimited classes synced free from Canvas plus one course you add by hand within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no scan cap, plus Smart Plan, the Workload dashboard, Grade Scale & Forecasting, Academic Risk alerts, Flashcards, Focus timer, AI tutor, custom reminder timing, calendar sync with .ics export, Progress Insights, and Share & Streaks.',
-  },
-  {
-    question: 'Does Semora work on iPhone, iPad, and web?',
-    answer:
-      'Yes. Semora is available on iPhone, iPad, and the web, sharing one account and database that sync in near real time. Pro can be bought by card on the web or through the App Store in the app, and applies account-wide either way, including on web.',
-  },
+  { question: 'Is the Canvas deadline tracker free?', answer: 'Connecting Canvas and importing synced classes is free. Free includes one semester, one course you add yourself, deadline tracking, grade tracking and same-day reminders. Synced classes do not count toward the manual-course limit. Pro adds study planning, earlier reminder options and calendar export.' },
+  { question: 'Do I need a Canvas access token?', answer: 'No. Copy your private Calendar Feed link from Canvas and paste it into Semora. Keep that link private. If the feed is unavailable or your institution does not permit its use, you can enter assignments manually or use your syllabus instead.' },
+  { question: 'Does the Calendar Feed include my grades?', answer: 'The feed provides dated calendar items; it is not a full gradebook. Use Semora’s grade tracking with the scores and weights you enter, and refer to Canvas or your instructor for official grades.' },
+  { question: 'Will a deadline change appear immediately?', answer: 'Updates depend on what Canvas publishes in the feed and when Semora next syncs. Check the last sync time and use the sync control when needed. For a recent announcement or an urgent deadline, confirm the date in Canvas itself.' },
+  { question: 'Can I submit assignments through Semora?', answer: 'No. Submit work, read instructor announcements and check official course records in Canvas. Semora helps you organize and plan around that coursework.' },
 ];
-
-const TABLE_ROWS = [
-  { feature: 'AI actions (scan, lecture, or notes)', free: '1 per account, lifetime', pro: 'Unlimited' },
-  { feature: 'Courses', free: 'Up to 4 within one semester', pro: 'Unlimited' },
-  { feature: 'Semesters', free: '1 total', pro: 'Unlimited' },
-  { feature: 'Task & deadline tracking', free: 'Full', pro: 'Full' },
-  { feature: 'Grade tracking', free: 'Included', pro: 'Included' },
-  { feature: 'Same-day reminders', free: 'Included', pro: 'Included' },
-  { feature: 'Calendar sync (device + .ics export)', free: '—', pro: 'Included', proOnly: true },
-  {
-    feature: 'Custom reminder timing + quiet hours',
-    free: '—',
-    pro: 'Included',
-    proOnly: true,
-  },
-  { feature: 'Smart Plan (AI study schedule)', free: '—', pro: 'Included', proOnly: true },
-  { feature: 'Workload dashboard', free: '—', pro: 'Included', proOnly: true },
-  { feature: 'Grade Scale & Forecasting', free: '—', pro: 'Included', proOnly: true },
-  { feature: 'Academic Risk alerts', free: '—', pro: 'Included', proOnly: true },
-  { feature: 'Flashcards, Focus timer, AI tutor', free: '—', pro: 'Included', proOnly: true },
-  {
-    feature: 'Progress Insights (charts, CSV, print)',
-    free: '—',
-    pro: 'Included',
-    proOnly: true,
-  },
-  { feature: 'Share & Streaks', free: '—', pro: 'Included', proOnly: true },
-];
-
-
-// The long-form body adds more questions; merge them so the page renders one
-// list and emits a single FAQPage block rather than two.
-const FAQ_ALL = [...FAQ, ...(getPageContent('canvas-deadline-tracker')?.faq ?? [])];
 
 export default function CanvasDeadlineTrackerPage() {
   return (
-    <ArticleShell
-      ctaHeading="Bring Canvas into one view"
-      ctaSubheading="Canvas import on Pro, with a syllabus-scan fallback."
-    >
-    <article className={styles.prose}>
-      <JsonLd data={faqPageSchema(FAQ_ALL)} />
-      <Breadcrumb
-        trail={[
-          { name: 'Home', path: '/' },
-          { name: 'Canvas Deadline Tracker', path: '/canvas-deadline-tracker' },
-        ]}
-      />
-      <p className={styles.eyebrow}>Canvas + Semora</p>
+    <ArticleShell ctaHeading="Connect Canvas free" ctaSubheading="Bring dated coursework together and see what is coming up.">
+      <article className={`${styles.prose} article-body`}>
+        <JsonLd data={faqPageSchema(FAQ)} />
+        <Breadcrumb trail={[{ name: 'Home', path: '/' }, { name: 'Canvas Deadline Tracker', path: '/canvas-deadline-tracker' }]} />
+        <h1>A Free Canvas Deadline Tracker for Your College Classes</h1>
+        <p>See upcoming coursework across your classes without copying each due date by hand. Semora connects to your Canvas Calendar Feed and brings dated items into one place on iPhone, iPad and the web. Pro adds a study plan and earlier reminder options.</p>
+        <ProductWalkthrough kind="canvas" />
 
-      <h1>A Canvas Deadline Tracker App That Adds Grades, Reminders, and an Actual Study Plan</h1>
-      <p className={styles.lede}>
-        Semora is a Canvas deadline tracker app. Canvas import is free on every plan and connects with
-        the private Calendar Feed link Canvas already gives you — no access token, no school approval.
-        Semora layers grade tracking, same-day reminders, and an AI-generated study schedule on top
-        of your assignments across iPhone, iPad, and web.
-      </p>
+        <h2>Turn a list of due dates into a weekly routine</h2>
+        <ol>
+          <li><strong>Check the week ahead.</strong> Look across your courses for exams and assignments that land close together.</li>
+          <li><strong>Confirm anything that changed.</strong> Check the last sync time. An instructor’s new announcement may reach you before the feed updates.</li>
+          <li><strong>Decide when to start.</strong> Put study time before the due date, especially for a project that needs several sessions. Pro’s Smart Plan helps schedule that work.</li>
+          <li><strong>Submit in Canvas.</strong> Completing a task in your planner does not submit the assignment to your instructor.</li>
+        </ol>
+        <p>For setup details and what each sync can update, read <Link href="/features/canvas-sync">how to connect Canvas and check sync status</Link>. For alert settings, see <Link href="/blog/canvas-deadline-reminders">Canvas deadline reminders explained</Link>.</p>
 
-      <p>
-        Canvas is where your instructors post assignments. Semora sits alongside Canvas and adds
-        grade tracking, same-day reminders, and, on Pro, an AI-generated study plan built from
-        your actual syllabus.
-      </p>
+        <h2>Know what the feed includes</h2>
+        <p>A calendar connection can only import what Canvas publishes in that feed. An undated assignment, unpublished item or deadline mentioned only in an announcement may not appear. It does not provide the full gradebook, grading weights or every detail of your syllabus.</p>
+        <p>Use the <Link href="/ai-syllabus-scanner">syllabus scanner</Link> when you need the term outline, class meeting times or grading rules. Review overlapping assignments if you use both sources. Your instructor’s course page remains the place to confirm official dates and grades.</p>
 
-      <h2>What Semora adds on top of Canvas</h2>
-      <p>Once your Canvas assignments are in Semora, you get a layer of organization Canvas doesn&apos;t provide on its own:</p>
-      <ul>
-        <li>
-          <strong>Grade tracking:</strong> see where you stand across your courses, not just a
-          list of due dates.
-        </li>
-        <li>
-          <strong>Same-day reminders:</strong> built into every tier, so nothing quietly slips by.
-        </li>
-        <li>
-          <strong>Calendar sync (Pro):</strong> deadlines sync to your device calendar or export
-          as an .ics file.
-        </li>
-        <li>
-          <strong>Cross-device sync</strong>, one account, shared in near real time across the
-          iPhone app, iPad, and web (via Supabase Realtime), so a deadline you check off on one
-          device updates everywhere else instantly.
-        </li>
-        <li>
-          <strong>Course Spaces:</strong> share a course with classmates through an invite link;
-          shared deadlines and group assignments sync in real time.
-        </li>
-      </ul>
-      <p>
-        On Pro ($3.99/month or $19.99/year, bought by card on the web or through the App Store
-        in the app, and applied account-wide including web), Semora goes further:
-      </p>
-      <ul>
-        <li>
-          <strong>Smart Plan:</strong> an AI-generated, timed study schedule that adapts as
-          deadlines move.
-        </li>
-        <li>
-          <strong>Workload dashboard:</strong> a crunch-week and exam-density view across all your
-          courses at once.
-        </li>
-        <li>
-          <strong>Academic Risk alerts:</strong> flags for falling grades, missing work, or
-          overloaded weeks, each with a recovery-step plan.
-        </li>
-        <li>
-          <strong>Flashcards:</strong> spaced-repetition cards built from your own course material.
-        </li>
-        <li>
-          <strong>Focus timer:</strong> a Pomodoro-style timer for study sessions.
-        </li>
-        <li>
-          <strong>AI tutor:</strong> a chat assistant that knows the contents of your syllabus.
-        </li>
-        <li>
-          <strong>Custom reminder timing + quiet hours:</strong> control exactly when and how
-          you&apos;re notified.
-        </li>
-        <li>
-          <strong>Progress Insights:</strong> trend charts, CSV export, and a print view on web.
-        </li>
-      </ul>
-
-      <h2>How Canvas sync works</h2>
-      <p>
-        Canvas, Blackboard and Moodle import is free on every plan. Connecting Canvas takes one
-        step: copy the private Calendar Feed link Canvas already gives you, under Calendar then
-        Calendar Feed, and paste it in. There is no access token to generate and nothing for your
-        school to approve. You then choose which courses to bring into Semora. If you would rather
-        not connect Canvas at all, scan the syllabus or paste the Canvas assignment list into the
-        scanner instead.
-      </p>
-      <p>
-        Canvas sync covers your assignments. Semora adds a syllabus-derived view alongside it,
-        surfacing office hours, the instructor&apos;s grading scale, semester start/end dates, and
-        exact meeting times next to your Canvas assignments. For that, Semora reads the syllabus
-        itself: a photo (camera, multi-page, up to 5 pages), a PDF upload, a drag-and-drop file
-        (web), or pasted raw text copied from a PDF or LMS page (web). OpenAI GPT-5.6 Luna extracts the course
-        name, instructor, meeting times, office hours, semester dates, grading scale, and every
-        assignment, exam, quiz, project, and reading with its due date. Used together, Canvas sync
-        and syllabus import give you a fuller picture than either source alone.
-      </p>
-
-      <h2>Free vs. Pro</h2>
-      <TierTable rows={TABLE_ROWS} caption="What's included at each tier" proLabel={PRO_LABEL} />
-      <p className={styles.note}>
-        Pro is $3.99/month or $19.99/year, bought by card on the web or through the App Store in
-        the app. It applies to your whole account, including web.
-      </p>
-
-      <h2>How this compares to doing it manually or with a generic to-do app</h2>
-      <p>Most students land on one of two workarounds before trying a dedicated tool:</p>
-      <ul>
-        <li>
-          <strong>Manually copying Canvas into a calendar or planner.</strong> Each assignment has
-          to be entered by hand, one at a time, and grade weighting, office hours, and exam density
-          across courses aren&apos;t captured anywhere.
-        </li>
-        <li>
-          <strong>Using a generic to-do app.</strong> A plain to-do list can hold a due date and a
-          checkbox, but it isn&apos;t built around a grading scale or a semester structure. Semora
-          adds grading-scale awareness, plus, on Pro, overload detection across your courses and a
-          study plan built directly from your actual syllabus.
-        </li>
-      </ul>
-      <p>
-        Semora is built specifically around a syllabus and a Canvas course, not a generic task list:
-        it imports the whole structure at once (course, instructor, meeting times, grading scale,
-        and every deadline) from either a syllabus or the Canvas Calendar Feed link,
-        then tracks grades and workload against that structure automatically.
-      </p>
-
-      <h2>FAQ</h2>
-      <Faq items={FAQ_ALL} />
-
-      <PageSections content={getPageContent('canvas-deadline-tracker')} emitFaq={false} />
-      <Cta
-        heading="Bring your Canvas assignments into one organized view"
-        subheading="Deadlines, grades, and reminders together."
-      />
-    </article>
+        <h2>What you can do free</h2>
+        <p>Connect Canvas, bring in synced classes and track deadlines within one semester. Free also includes one course you add yourself, grade tracking, same-day reminders and one AI action for the life of the account. Canvas connection does not spend that AI action.</p>
+        <p>Pro adds more semesters and manually added courses, Smart Plan, earlier reminder options and calendar export. Reminder behavior differs between iOS and the web; an open browser tab should not be your only deadline reminder. <Link href="/pricing">Compare the plans</Link> for the full breakdown.</p>
+        <h2>Frequently asked questions</h2>
+        <Faq items={FAQ} />
+        <RelatedLinks links={[
+          { href: '/features/canvas-sync', label: 'Canvas connection, updates and sync limitations' },
+          { href: '/blog/first-two-weeks-of-semester', label: 'Set up your semester before deadlines pile up' },
+          { href: '/blog/how-to-study-for-midterms', label: 'Plan study time when several midterms land together' },
+        ]} />
+      </article>
     </ArticleShell>
   );
 }

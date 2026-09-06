@@ -187,11 +187,15 @@ export const FEATURES: FeatureFact[] = [
     name: 'Canvas Sync',
     shortDescription:
       'Connect Canvas free and every class you are enrolled in imports itself, then stays right when an instructor moves a deadline.',
-    // Pro, NOT free. Gated in three places in the shipping app: a server-side
-    // is_pro() check in supabase/functions/lms-sync (402 PRO_REQUIRED), the
-    // provider list in app/settings/lms.tsx, and a paywall bounce in
-    // app/settings/lms-connect.tsx. Do not flip this back to 'free' — a free
-    // user who installs on that promise hits a paywall at the first tap.
+    // Free while the `canvas_free` promo runs, and the promo row currently has
+    // no end date. The gate is lms_access_allowed(uid) in migration 090, which
+    // is is_pro() OR the promo OR an account that connected while it ran — so a
+    // free user connecting today passes the server check in lms-sync, the
+    // provider list in app/settings/lms.tsx, and app/settings/lms-connect.tsx.
+    //
+    // This is therefore only true while that row stays active. If the promo is
+    // ever switched off, this must go back to 'pro' in the same change, or a
+    // free user who installs on the promise here hits a 402 at the first tap.
     tier: 'free',
     description:
       "Canvas sync is free right now, on every account, with no limit on how many classes come across — this is a limited-time offer, and an account that connects while it runs keeps free Canvas sync for good. It uses the private calendar feed Canvas already gives you, so there is no access token to generate and nothing for your IT department to approve. Once connected it re-checks Canvas every few hours on its own — hourly if you are mid-semester and using the app: a deadline your instructor moves is right in Semora without anyone doing anything, and an assignment they delete disappears from your list instead of nagging you. One honest limit — the calendar feed carries dates, not marks, so your grades are still yours to enter. Blackboard and Moodle import is free on every plan, uses a school-issued token, and varies by school.",

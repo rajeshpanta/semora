@@ -53,7 +53,7 @@ export default async function FeaturePage({
   // Without these the landers sit with zero inbound internal links.
   const DEEP_LINKS: Record<string, { href: string; label: string }[]> = {
     'syllabus-scanner': [
-      { href: '/ai-syllabus-scanner', label: 'How the AI syllabus scanner works, end to end' },
+      { href: '/ai-syllabus-scanner', label: 'Try a sample syllabus and choose how to start' },
       { href: '/blog/syllabus-to-semester-calendar', label: 'Turning a syllabus into a semester calendar' },
     ],
     'canvas-sync': [
@@ -70,7 +70,8 @@ export default async function FeaturePage({
     // Google discounts. A contextual link from the indexed feature page that
     // shares their topic is the signal that actually carries crawl priority.
     'grade-tracking': [
-      { href: '/gpa-calculator', label: 'Work out a weighted course grade with the free calculator' },
+      { href: '/gpa-calculator', label: 'Calculate your semester or cumulative GPA' },
+      { href: '/blog/what-assignment-weights-mean', label: 'Understand how assignment weights affect a course grade' },
     ],
     'focus-timer': [
       { href: '/pomodoro-timer', label: 'Run a focus session with the free Pomodoro timer' },

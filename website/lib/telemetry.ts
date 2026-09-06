@@ -148,7 +148,11 @@ export function report(event: TelemetryEvent, props: Props = {}): void {
   //    site and the app, and handing a stable per-visitor identifier to a
   //    third party is a materially different privacy posture from keeping it
   //    in our own table. GA gets the event and its shape, not the person.
-  gaEvent(event, { ...payload, automated: identity.automated });
+  // GA's own page-view measurement already handles page loads and history
+  // changes. Keep our page_view in Supabase without double-counting it in GA.
+  if (event !== TELEMETRY_EVENTS.pageView) {
+    gaEvent(event, { ...payload, automated: identity.automated });
+  }
 
   try {
     // identity is spread at the TOP level, not inside props: /api/telemetry

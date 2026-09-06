@@ -281,7 +281,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'Para quién es de verdad, y cuándo usar otra cosa',
         paragraphs: [
           'Está pensado para un estudiante con un programa que contiene un calendario: una tabla de semanas y fechas, una lista de exámenes, un desglose de la calificación. Si tu profesor escribe un programa de verdad, esto convierte media hora de tecleo en un par de minutos de revisión.',
-          'Encaja peor en unos cuantos casos, y conviene decirlos. Si tu programa no trae ninguna fecha porque todo vive en la plataforma académica, usa el conector actual de Canvas solo si tu institución permite tokens personales en servicios externos; si no está disponible o permitido, pega la lista de tareas en el escáner de la web. Si lo que tienes es una foto borrosa o torcida de una fotocopia, el resultado será peor que el de un PDF nítido.',
+          'Encaja peor en unos cuantos casos, y conviene decirlos. Si tu programa no trae ninguna fecha porque todo vive en la plataforma académica, conecta Canvas pegando el enlace privado de su calendario, sin token ni permiso de tu universidad; si ese enlace no está disponible, pega la lista de tareas en el escáner de la web. Si lo que tienes es una foto borrosa o torcida de una fotocopia, el resultado será peor que el de un PDF nítido.',
           'Una expectativa más que conviene dejar clara: el escaneo se cuenta cuando la extracción sale bien, no cuando guardas. Si los resultados vuelven y cierras la app sin guardar nada, el trabajo ya se hizo y el escaneo ya se contó.',
         ],
       },
@@ -1222,15 +1222,15 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Qué se importa realmente de cada tarea',
         paragraphs: [
-          'De cada tarea de las asignaturas que elegiste, Semora trae el registro completo y no solo un título y una fecha. Las descripciones llegan con el HTML limpiado.',
-          'Semora también deduce un tipo para cada elemento para que tu calendario no sea un muro indiferenciado de «tarea». Si Canvas marca el tipo de entrega como cuestionario, se convierte en cuestionario.',
+          'De cada elemento con fecha de las asignaturas que elegiste, Semora trae lo que lleva el enlace del calendario: el título, la fecha y la descripción que Canvas haya puesto en la entrada. Las descripciones llegan sin los escapes del calendario y recortadas a una longitud legible, cortando por el final de una frase y no a mitad de palabra.',
+          'Semora también deduce un tipo para cada elemento para que tu calendario no sea un muro indiferenciado de «tarea». El enlace del calendario no dice de qué tipo es cada cosa, así que el tipo se deduce del título.',
           'Esto es lo que acaba en cada tarea importada:',
         ],
         bullets: [
           'El título, y la descripción como texto legible.',
           'La fecha y la hora de entrega, convertidas al reloj local de tu dispositivo desde la marca absoluta que devuelve Canvas.',
-          'Puntos posibles, tus puntos obtenidos y un porcentaje calculado a partir de los dos cuando ambos existen.',
-          'Estado de entrega: si Canvas la muestra como entregada, calificada o pendiente de revisión, y cuándo se entregó.',
+          'Notas no. El enlace del calendario trae fechas, no calificaciones, así que los puntos y las notas los sigues poniendo tú en el seguimiento de calificaciones de Semora.',
+          'Estado de entrega tampoco. El enlace del calendario no guarda qué has entregado, así que marcar algo como hecho en Semora depende solo de ti.',
           'Un enlace a la propia página de la tarea en Canvas, que se abre directamente desde la tarea en Semora.',
         ],
       },
@@ -1289,7 +1289,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Las tareas sin fecha de entrega en Canvas se saltan. Semora marca la conexión como «parcial» y te dice cuántas.',
           'Si ya creaste una asignatura escaneando su programa, importar esa misma clase desde Canvas crea una segunda.',
           'Semora no trae los nombres de los profesores de la lista de asignaturas de Canvas, así que llegan sin ese dato.',
-          'Una sincronización cubre hasta 50 asignaturas de una vez, y la paginación de las tareas de cada una se detiene en un límite.',
+          'Canvas limita el enlace del calendario a 1.000 elementos, así que un historial muy largo puede llegar recortado; cuando la respuesta parece incompleta, Semora conserva lo ya importado en lugar de borrar nada. Blackboard y Moodle, que sincronizan curso por curso con un token, cubren hasta 50 asignaturas por sincronización.',
           'No hay un interruptor por asignatura después de importar. Para cambiar cuáles se sincronizan, desconecta y vuelve a conectar.',
           'El enlace del calendario de Canvas no caduca. Si lo restableces en Canvas, la conexión muestra «se requieren credenciales» y la acción de volver a conectar acepta el enlace nuevo.',
         ],
@@ -1324,7 +1324,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         question: '¿Funciona con Blackboard y Moodle?',
         answer:
-          'Ambas forman parte de la misma importación Pro, y la configuración varía según la institución. Una sincronización cubre hasta 50 cursos a la vez, y la paginación de las tareas de cada curso se detiene en un número acotado de páginas: generoso para una carga normal, pero no ilimitado.',
+          'Sí, y las dos son gratis en todos los planes, igual que Canvas. Lo que cambia es la configuración: Blackboard y Moodle usan un token que emite tu institución, así que la disponibilidad depende de tu universidad, y una sincronización cubre hasta 50 cursos a la vez con una paginación acotada en las tareas de cada uno.',
       },
     ],
   },

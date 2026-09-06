@@ -197,7 +197,7 @@ export default function SpanishHome() {
               fechas, horarios, calificaciones y herramientas de estudio, todo conectado.
             </p>
             <div className={styles.heroActions}>
-              <SignupButton className={styles.primaryBtn}>Empezar gratis</SignupButton>
+              <SignupButton className={styles.primaryBtn} placement="home-hero">Empezar gratis</SignupButton>
               <a href={downloadPath('es')} className={styles.secondaryBtn}>Descargar la app</a>
             </div>
             <ul className={styles.chips}>

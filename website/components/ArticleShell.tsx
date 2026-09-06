@@ -29,7 +29,7 @@ export function ArticleShell({
         <div className={styles.railCta}>
           <p className={styles.railCtaHeading}>{ctaHeading}</p>
           <p className={styles.railCtaSub}>{ctaSubheading}</p>
-          <SignupButton className={styles.railCtaBtn}>
+          <SignupButton className={styles.railCtaBtn} placement="article-rail">
             {ctaLabel}
           </SignupButton>
         </div>

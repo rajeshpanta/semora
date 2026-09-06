@@ -200,7 +200,7 @@ export default function Home() {
               grade weights and study tools, all connected.
             </p>
             <div className={styles.heroActions}>
-              <SignupButton className={styles.primaryBtn}>
+              <SignupButton className={styles.primaryBtn} placement="home-hero">
                 Try it for free
               </SignupButton>
               <a href={downloadPath()} className={styles.secondaryBtn}>

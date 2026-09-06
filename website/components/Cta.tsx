@@ -25,7 +25,7 @@ export function Cta({
       </h2>
       {subheading && <p className={styles.subheading}>{subheading}</p>}
       <div className={styles.actions}>
-        <SignupButton className={styles.button}>
+        <SignupButton className={styles.button} placement="page-footer-cta">
           {locale === 'es' ? 'Empezar gratis' : 'Try it for free'}
         </SignupButton>
         <a href={downloadPath(locale)} className={styles.buttonGhost}>

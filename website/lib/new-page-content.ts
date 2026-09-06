@@ -873,7 +873,7 @@ export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
           "The free plan is one AI action for the life of the account, and unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, with one semester total. That action is yours to spend on whichever you reach for first: a syllabus scan, a lecture recording, or a document turned into notes. Inside that, it is not a stripped-down demo: deadlines, tasks, and subtasks are unlimited, grade tracking with weighted averages is included, your semester GPA sits on the courses screen, same-day reminders work, and joining a Course Space a classmate invites you to is free permanently. Five pages photographed in a single pass counts as that one scan rather than five, and everything you add or correct by hand afterwards costs nothing at all.",
           "Here is the boundary that matters most, stated plainly because it is the one people meet late: a free account gets one semester in total, not one per term. It is enforced by the database on insert, not just by the app, so there is no way around it. Free is a full semester of real use, start to finish — it is not something you renew every August.",
           "Pro is $3.99 a month or $19.99 a year, which works out to about $1.67 a month. It removes the course, semester, and AI action limits, subject to a fair-use daily ceiling, and adds Canvas, Blackboard, and Moodle import subject to school policy and platform configuration, hosting your own Course Space, Smart Plan, the Workload dashboard, Flashcards, a Focus timer, an AI Tutor, Grade Scale and Forecasting, device calendar sync with .ics export, 1-day and 3-day reminder timing with quiet hours, Academic Risk alerts, Progress Insights, and Share and Streaks. It is bought either with a card on the web or inside the iOS app, and the subscription applies account-wide either way, so you pay once whichever route you take.",
-          "Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. If you would rather not connect Canvas at all, open your assignments page, select the list, and paste it into the scanner on the web. You get the same extraction and the same review screen without the Pro LMS connection."
+          "Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. If you would rather not connect Canvas at all, open your assignments page, select the list, and paste it into the scanner on the web. You get the same extraction and the same review screen without connecting anything at all."
         ]
       },
       {
@@ -1037,7 +1037,7 @@ export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
         "heading": "Moving a semester across without paying for it first",
         "paragraphs": [
           "If Semora survives your own version of the questions above, the migration is cheap enough to test with a real semester rather than a demo. You do not need to export anything from your current tool, and you do not need to connect an LMS to try it.",
-          "Take each syllabus and run it through whichever import path is least effort. If the PDF is on your laptop, drag it onto the web app. If it is a paper handout, photograph up to five pages in one pass — that counts as one scan, not five. If the dates only exist on a Canvas assignments page, select the text, copy it, and paste it into the scanner, which accepts anything from 20 to 60,000 characters and runs the same extraction. That paste route is also how a free account gets Canvas coursework in, and it remains the fallback when the current token-based connector is unavailable or not permitted; direct Canvas, Blackboard, and Moodle connections are free. A free account has one AI action to spend, so put your worst syllabus through first: that is the one where the extraction is worth judging, and scanning the other three is what Pro is for.",
+          "Take each syllabus and run it through whichever import path is least effort. If the PDF is on your laptop, drag it onto the web app. If it is a paper handout, photograph up to five pages in one pass — that counts as one scan, not five. If the dates only exist on a Canvas assignments page, select the text, copy it, and paste it into the scanner, which accepts anything from 20 to 60,000 characters and runs the same extraction. That paste route is also how a free account gets Canvas coursework in, and it remains the fallback when a connector is unavailable or not permitted; direct Canvas, Blackboard, and Moodle connections are free. A free account has one AI action to spend, so put your worst syllabus through first: that is the one where the extraction is worth judging, and scanning the other three is what Pro is for.",
           "Re-scanning a course you already have merges into it, matched by course code or by exact name when the syllabus has no code. That costs an AI action but not a course slot, which matters when the free cap is four. Joining a Course Space that a classmate is hosting is free too, though the course it imports does take one of your four slots, so count it. Hosting a space of your own is the part that needs Pro.",
           "The genuinely sensible thing to do, if you are undecided, is to run both for two weeks. Keep the tool you have doing the scheduling and put your worst syllabus through Semora to see whether the capture and the running grade are what was actually missing. Two weeks is enough to find out, and the scan itself costs nothing, because that is exactly what the one free AI action is for."
         ]
@@ -1510,139 +1510,73 @@ export const NEW_PAGES: Partial<Record<NewPageKey, NewPage>> =
     ]
   },
   "about": {
-    "metaTitle": "About Semora: Who Builds It and How It Works",
-    "metaDescription": "Semora is an independently built syllabus scanner and academic planner for college students. How it works, how your data is handled, and who to email.",
+    "metaTitle": "About Semora: The Product and Editorial Approach",
+    "metaDescription": "Learn why Semora starts with your syllabus, how its study guides are researched, what the app can do, and how to get support or report a correction.",
     "h1": "About Semora",
-    "lede": "Semora is an independently built syllabus scanner and academic planner for college students. This page covers what it does, why it starts with the syllabus, how it is built, how it is paid for, and the standard every claim on this website is held to.",
+    "lede": "Semora helps college students turn scattered course information into a semester they can plan. It brings syllabus deadlines, Canvas coursework, grades and study tools into one account on iPhone, iPad and the web.",
     "intro": [
-      "Semora turns a course syllabus into a working semester. You photograph it, upload the PDF, or paste the text on the web app, and you get back the course, the instructor, the class meeting blocks, the term dates, the letter-grade cutoffs, and every assignment, quiz, exam, project and reading it can find, each with a due date and its weight toward your final grade. You review that list, approve it, and the rest of the app — the calendar, the grade math, the planning tools — reads what the scan produced. It runs as one universal iOS app on iPhone and iPad plus a web app in any browser, on one account, syncing in near real time.",
-      "That is the whole product in three sentences. This page is about everything around it: the specific problem it was built for, why it starts with a syllabus rather than a learning management system, where your data physically sits and who can read it, how the free limits are enforced, how the subscription pays for the parts that cost money, and how this website is written.",
-      "One thing to state up front, because it changes how you should read the rest. Semora is new and it is small. It went live on the App Store in spring 2026. There are no user numbers, no press coverage and no awards to cite here, and this site does not quote reviews or testimonials. What follows is a description of a product and a method, not a track record."
+        "A syllabus, a calendar feed and an instructor’s announcement can each tell you something different about the same course. Semora helps you bring that information together, review it and decide what to work on next.",
+        "Semora is an independent product. This website and its guides are published under the Semora name. Product questions and corrections go to the same support address: semora365@gmail.com."
     ],
     "sections": [
-      {
-        "heading": "The problem it was built for",
-        "paragraphs": [
-          "Every date you need for the next four months is already written down before the term starts. That is the strange thing about a college semester. The midterm date, the final project weight, whether Friday is a lecture or a lab, what percentage the participation grade is worth — all of it is printed in a document your professor handed you in week one. The information problem is solved. The transcription problem is not.",
-          "Because that is what standing between you and an organized semester actually is: transcription. Four or five syllabi, eight to twenty pages each, and the dates you need are scattered between the attendance policy and the academic-integrity statement. Copying them into a calendar by hand takes an evening you do not have in the first week of term, so almost nobody does it. The PDFs stay in the email attachment. The dates live in your head.",
-          "The failure that follows is not forgetfulness, and it does not happen in week one. It happens in week six, when two exams land in the same 48 hours and a project you half-remembered turns out to be worth 25 percent. By then the problem is not that you did not know — it is that you never saw the shape of the term, so you could not have started earlier even if you had wanted to.",
-          "So Semora is built around deleting the transcription step and nothing else. You handle each syllabus once, in about the time it takes to photograph five pages. What comes out is not a summary or a chat window: it is structured rows (dated deadlines with weights, meeting blocks with days and rooms, letter-grade cutoffs) because rows are what a calendar, a weighted average and a workload calculation can actually be built on. Everything else the app does is downstream of that one step."
-        ],
-        "bullets": [
-          "The input is whatever you have, and it differs by surface: on iPhone and iPad, a photo of up to five pages or a PDF picked from Files; on the web app, a drag-and-dropped file or text pasted straight into the scanner, between 20 and 60,000 characters. The paste path is web-only, because that is the surface with a keyboard and a clipboard rather than a camera.",
-          "A photo scan carries a size budget of 10 MB across all its pages, checked in the app as each page is added, so you find out one page early rather than after capturing everything.",
-          "The output is structured: course and instructor, meeting and office-hour blocks, term start and end, the grading scale, and every dated item with a type, a weight and a confidence score.",
-          "Nothing about your deadlines saves silently. The course, its meeting times and its grading scale are written for you; the deadlines wait on a review screen where you edit, deselect and approve them.",
-          "Anything the model was unsure about is badged rather than hidden — items scored under 0.8 confidence, and dates that fall outside the term.",
-          "Undated items are not thrown away and not given an invented date. They sit deselected in a group called \"Needs a date.\""
-        ]
-      },
-      {
-        "heading": "Why syllabus-first rather than LMS-first",
-        "paragraphs": [
-          "The obvious alternative is to read Canvas. Plenty of planners do exactly that, and it is a reasonable design — the assignments are already there, already dated, already tied to a course. Semora starts somewhere else on purpose, and the reason is worth stating precisely rather than as a slogan.",
-          "A learning management system tells you what has been posted. A syllabus tells you what is coming. In week one, a Canvas course page is frequently close to empty; the term is real but the assignments have not been created yet. The syllabus, on the other hand, is complete on day one by definition, because a professor has to publish the whole term's plan before it starts. If the point is to see the shape of the semester before it happens, the syllabus is the only document that contains it.",
-          "The syllabus also carries things a course page usually does not. Percentage weights per item, which is what makes a weighted average possible at all — a grade tracker that does not know the midterm is worth 30 percent is just a list of scores. The letter-grade cutoffs your specific professor uses, which is what turns 87.4 into a B+ rather than a guess. The meeting blocks with days, times and rooms, and the office hours, including the by-appointment ones with a location and no fixed days. Term start and end dates, which is how a date that parses to next February gets flagged as suspicious instead of quietly filed.",
-          "There is a second reason, and it is structural rather than editorial. Building on someone else's platform means availability depends on that platform and the institution running it. Semora supports Canvas, Blackboard, and Moodle import free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. An LMS connection is a useful second input; it is a poor foundation for the product.",
-          "If you are on the free tier and your deadlines live in Canvas anyway, there is a path that costs nothing: sign in to the web app on a laptop, open your Canvas assignments page, select the text, and paste it into the scanner there. Same extraction, same review screen, and on free it spends your one AI action. It is the web app specifically, because pasting text is not an entry point on iPhone or iPad."
-        ]
-      },
-      {
-        "heading": "How it is built",
-        "paragraphs": [
-          "The apps are one codebase. React Native through Expo compiles to a universal iOS app that runs on iPhone and iPad, and the same source builds the web app you sign in to in a browser. That is why the surfaces do not drift apart: a fix to the grade math is a fix everywhere, not three separate implementations that disagree in the third decimal place. The surfaces differ only where the hardware differs — the camera and device calendar sync on iOS, drag-and-drop and pasted text on the web.",
-          "Data sits in Postgres on Supabase, with authentication handled by the same service. Anything that costs money or must not be trusted to the device runs server-side in an edge function: the syllabus parse, the tutor, flashcard generation, LMS import, receipt validation. The client asks; the server decides.",
-          "The extraction itself uses OpenAI GPT-5.6 Luna through the Responses API. The model is not asked for prose. It is asked for one structured JSON object with named fields, and every field is validated on the server before it reaches your account, so an unparseable date becomes a null you can fix on the review screen rather than a corrupt row inside your course. Each call is logged with its outcome, which is also how the scan quota is counted.",
-          "None of that is exotic. It is worth writing down because the architecture is the reason for two things you can actually observe: the free limits behave identically on iPhone, iPad and web, and a Pro-only feature cannot be turned on by a client that decides to skip a check."
-        ]
-      },
-      {
-        "heading": "Where your data lives and who can read it",
-        "paragraphs": [
-          "Your account data — semesters, courses, deadlines, grades, notes — lives in a Postgres database with row-level security switched on for every personal table. In practice that means each table carries a policy comparing your authenticated user id to the row's owner, so a request for somebody else's rows does not return a permission error to work around; it returns nothing at all. That check happens in the database, underneath the API, so it holds regardless of what a client sends.",
-          "Files you upload are handled the same way. Syllabi and course notes go into private storage buckets where the path begins with your own user id, and the read policy requires that folder to match the account making the request. Syllabus documents routinely contain names, emails, office locations and schedules, which is exactly the kind of content that should never sit behind a guessable public URL.",
-          "Syllabus content and any notes you attach are sent to the OpenAI API for processing by GPT-5.6 Luna. OpenAI states that API data is not used to train its models unless a customer explicitly opts in. Semora disables response storage, while OpenAI may still retain abuse-monitoring logs for up to 30 days unless a stricter retention control applies.",
-          "Product analytics are deliberately blunt. Events are app-level (a scan completed, a paywall viewed) and they are tagged with a random identifier generated on first install. There is no user id on those rows, so usage data is not tied to your account, your name or your email. It is enough to know which screens are used and where people get stuck, and not enough to reconstruct a person.",
-          "Deleting is self-serve and permanent. Settings has a Delete Account screen that requires a hardware identity check (Face ID, Touch ID or your passcode) and a fresh sign-in before anything happens, because an irreversible action should not be reachable by anyone with thirty seconds of physical access to your phone. It then removes your uploaded files, deletes your rows, and deletes the auth user itself. Nothing is archived and nothing is recoverable afterward, which is the point."
-        ],
-        "bullets": [
-          "Row-level security on every personal table, scoped to your authenticated user id.",
-          "Private storage buckets for syllabi and course notes, path-scoped to your account folder.",
-          "Syllabus and note content sent to OpenAI for processing with response storage disabled; API data is not used for training unless explicitly opted in.",
-          "Semora session tokens use the device's secure storage on iOS.",
-          "Anonymous, device-scoped analytics with no user id attached.",
-          "In-app account deletion behind a biometric or passcode check plus a fresh sign-in. Files, rows and the account itself, all removed."
-        ]
-      },
-      {
-        "heading": "The limits are enforced in the database, not just in the interface",
-        "paragraphs": [
-          "This belongs on an About page rather than a pricing page, because it is a statement about how the product treats you rather than what it costs. The free tier's limits are not screens that hide buttons. They are database triggers.",
-          "A free account gets 1 AI action for the life of the account — a syllabus scan, a lecture recording, or a document turned into notes, whichever you reach for first — unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand, and one semester in total. That one action is checked in three separate places: in the app, in the parsing function on the server before any paid extraction runs, and again by a trigger on insert. The course limit and the semester limit are checked in two: in the app, and by a BEFORE INSERT trigger that refuses the row outright. Pro replaces the single action with one fair-use ceiling, around 20 scans in any rolling 24 hours, which exists to stop scripted abuse of a paid endpoint and which a normal term does not approach.",
-          "This cuts in both directions, and that is why it is worth telling you. It means nobody gets Pro features by patching a client, which is the part that keeps the price at $3.99 a month. It also means the limits are exactly what this site says they are, with no quiet grace period and no soft edge, including the one that is genuinely unflattering. One semester means one, for the life of the account, not one at a time. A free account cannot start a second term in January. The only way to free that slot is to delete the finished semester, which cascades through its courses, deadlines and grades and archives nothing.",
-          "We would rather you read that sentence here than discover it in January. A limit you find out about at the moment it blocks you is a bad experience regardless of how reasonable the limit is."
-        ]
-      },
-      {
-        "heading": "The editorial standard for this website",
-        "paragraphs": [
-          "Marketing pages drift from products. It happens honestly — a feature moves behind a paywall, a limit changes, and the page describing it was written six months earlier by someone reading a different page. So this site is written against the shipping source instead of against other marketing copy. When a page here says a feature is Pro, that claim was checked against the actual gate: the server-side entitlement check, the database migration, the constant in the file. When it states a number, the number came from the code that enforces it.",
-          "That method is not decoration, and the proof is that it caught real errors. On the first pass, four separate tier claims on this site were wrong, all four in the flattering direction, and all four were corrected against the app: whether Canvas import is free, whether hosting a Course Space is free, whether device calendar sync is free, and the one-semester cap on free accounts. Each of those would have been a student installing the app on a promise and hitting a paywall at the first tap.",
-          "The same standard requires disclosing limits that do not help us. That free is one semester in total. That the fifth course stops you whether it arrives by scan, by hand, or by joining a classmate's Course Space. That hosting a Course Space is Pro, while joining one is free. That device calendar sync writes to your phone's calendar and does not run in a browser, where the equivalent is downloading an .ics file, which the web app does do. That Pro is sold two ways — with a card on the web through Stripe, or inside the iOS app — with no free trial on the web checkout, and that you cancel wherever you bought it: from Settings inside Semora for a card subscription, through your Apple ID settings for an App Store one.",
-          "Comparison pages carry an extra rule, because they describe products we do not build. Every factual claim about a named competitor comes from that company's own site or store listing, is attributed as such, and is hedged where the behavior is not publicly confirmed — those rows say so in the table rather than guessing. Nothing about a competitor is inferred, and nothing is invented to make a column look worse. Where a competitor is genuinely better on a point, including on price, the page says so.",
-          "And there is a rule about what this site will never contain. No testimonials, no star ratings, no user counts, no university logos, no awards, no press quotes. Not as a stylistic choice — those things simply do not exist yet, and inventing them is the single most common way a new product lies. If you find an error anywhere on this site, email it and it gets fixed."
-        ]
-      },
-      {
-        "heading": "How Semora is paid for",
-        "paragraphs": [
-          "One subscription, two prices, two ways to buy it. Pro is $3.99 a month or $19.99 a year, which works out to about $1.67 a month. You can pay by card on the web at app.semoraai.com, where Stripe processes the payment, or buy it inside the iOS app through Apple's StoreKit. Either way the entitlement attaches to your account rather than your device, so signing in on iPhone, iPad or the web with the same account turns Pro on there with no second charge and nothing to activate. Cancelling follows the same split: a card subscription is managed from Manage Semora Plan in Settings, which opens Stripe's billing portal, and an App Store subscription is cancelled through your Apple ID settings, at least 24 hours before the period ends.",
-          "That is the entire business model. There are no ads anywhere in the app or on this site, and no advertising SDK in the build. Your data is not sold, brokered or shared with data partners — the third parties involved are the ones required to run the thing, and they are listed in the privacy policy: the database and auth provider, the AI processing API, the speech-to-text API used only if you record a lecture, Apple and Stripe for purchases, and the push delivery service.",
-          "It is also worth being straightforward about why the free tier is metered the way it is. Every scan is a paid model call, and so is every tutor answer and every generated flashcard deck. Those costs are per use, not per user, which is why the free limit lands on the AI actions rather than on the parts that cost nothing to run. Deadlines, tasks and subtasks are unlimited on free and always have been. Grade tracking, weighted averages and semester GPA are free. Same-day reminders are free. Joining a Course Space a classmate hosts is free, permanently.",
-          "The free tier has no expiry date, either. The one AI action is granted once for the life of the account rather than refilled on the 1st of the month, and the free features around it do not degrade if you never subscribe. If you subscribe and then stop, nothing is deleted. Your courses, deadlines, grades and notes stay readable and editable, and the free limits reapply only when you add something new. What does change is access to the Pro surfaces: flashcard decks, the Workload dashboard, Smart Plan, Progress Insights, the AI tutor and device calendar sync go back behind the paywall until you resubscribe. The data behind them is still sitting there (a lapsed subscription pauses an active calendar sync rather than unwriting it, and a deck you built is locked, not erased) but you cannot open those screens again until Pro is back on the account."
-        ]
-      },
-      {
-        "heading": "New, small, and how to reach the person who builds it",
-        "paragraphs": [
-          "Semora is independent. It is not the product of a company you have heard of, it has no outside funding to point at, and it launched recently enough that there is no track record to point at either. Every claim on this site is about the product, because the product is the only thing there is evidence for.",
-          "There is a real upside to that, and it is the one thing worth selling here. A bug report goes to the person who wrote the code, not to a queue. Feature requests genuinely move the order of what gets built, because the roadmap is not defending a quarterly plan. The fact-checking method described above exists precisely because a small product cannot afford a reputation for overstating what it does.",
-          "The honest downsides belong in the same paragraph. There is no Android app and no Mac app; the platforms are iPhone, iPad and any browser. Google Calendar and Google Classroom sync are not shipped, and the device calendar sync that does exist is iOS-only — in a browser the equivalent is exporting an .ics file, which the web app downloads directly. Pasting syllabus text into the scanner is likewise web-only. There is no phone support, no live chat and no enterprise agreement. Response times are a person's response times.",
-          "Email is semora365@gmail.com, and it is the same address for support, bug reports, privacy questions, data export requests and corrections to this website. If you are reporting something broken, the three things that make it fixable fastest are which surface you were on (iPhone, iPad or browser), what you tapped immediately before it happened, and what you expected instead. Deleting your account does not require emailing anyone — it is in Settings, and it is immediate."
-        ]
-      }
+        {
+            "heading": "Start with the semester, then plan the week",
+            "paragraphs": [
+                "A syllabus often contains the term outline before all assignments appear in your learning platform. Semora reads it for deadlines, meeting times and grading information. You review the extracted deadlines before saving them.",
+                "Canvas connection adds dated coursework from your private Calendar Feed. Copy the link from Canvas and paste it into Semora; you do not need to generate an access token. A calendar feed may omit unpublished or undated work, so check important changes against the official course page."
+            ]
+        },
+        {
+            "heading": "What Semora can help with",
+            "paragraphs": [
+                "Use Semora to see what is coming up, track grades from the scores and weights you enter, and keep your plan available across devices. Pro adds tools such as study planning, flashcards and an AI tutor grounded in your course material.",
+                "Your instructor’s syllabus, announcements and official gradebook remain the source of truth. AI extraction can make mistakes. Check uncertain dates and grading rules, and submit assignments in your school’s own system."
+            ]
+        },
+        {
+            "heading": "How this website and its guides are researched",
+            "paragraphs": [
+                "Semora publishes its own product pages and study guides. Descriptions of Semora are checked against the app’s implementation. Comparison articles identify Semora’s role as the publisher and distinguish research from hands-on testing.",
+                "Where a guide discusses another product, use its linked sources and check the vendor for current pricing and features. An article based on public documentation is not a claim that every product was personally tested.",
+                "Examples and app previews may use illustrative course data. They are not student testimonials or measured outcomes. If you find an error, send the page URL and the specific claim to support so it can be checked."
+            ]
+        },
+        {
+            "heading": "Free and Pro, on one account",
+            "paragraphs": [
+                "Free includes one AI action for the life of the account, one semester, one course you add yourself, unlimited Canvas-synced classes, deadline tracking and grade tracking. That AI action can be a syllabus scan, a lecture recording or a document turned into notes.",
+                "Pro is $3.99 a month or $19.99 a year, with the full feature breakdown on the Pricing page. A subscription applies to your account across supported devices. AI use is subject to fair-use limits."
+            ]
+        },
+        {
+            "heading": "Your data and your choices",
+            "paragraphs": [
+                "Academic information and uploaded course material are stored in your account. Features that process a syllabus, notes or a recording send the relevant material to the services described in the Privacy Policy.",
+                "Account deletion is available in Settings. Read the Privacy Policy for the current details of storage, processing and deletion, or contact support with a specific question before uploading material."
+            ]
+        },
+        {
+            "heading": "Get help or suggest a correction",
+            "paragraphs": [
+                "Email semora365@gmail.com or use the Support page. Include the device you are using, what you expected and what happened instead. For a website correction, include the page address. You do not need to send a password or private Canvas feed link."
+            ]
+        }
     ],
     "faq": [
-      {
-        "question": "Who makes Semora?",
-        "answer": "Semora is built independently, without outside funding or a company behind it, and the address on the support page reaches the person who writes the code. There is no team size, headcount or investor list to publish here, because publishing one would mean inventing it. What is verifiable is the product: an iOS app on the App Store, a web app, a privacy policy, and this site's claims checked against the shipping source. Email semora365@gmail.com and a person reads it."
-      },
-      {
-        "question": "Is my syllabus used to train an AI model?",
-        "answer": "No. Syllabus content and any lecture notes you attach are sent to the OpenAI API for processing by GPT-5.6 Luna. OpenAI states that API data is not used to train its models unless a customer explicitly opts in. Semora disables response storage, although OpenAI may retain abuse-monitoring logs for up to 30 days unless a stricter retention control applies. The files themselves are stored in a private bucket scoped to your account folder, not at a public URL, and are deleted with the rest of your data if you delete your account."
-      },
-      {
-        "question": "Does Semora sell my data or show ads?",
-        "answer": "No to both. There is no advertising anywhere in the app or on this site, no ad SDK in the build, and no arrangement to sell, broker or share your data with data partners. The revenue is the $3.99 a month or $19.99 a year subscription, and that is the whole model. Product analytics do exist, but they are app-level events tagged with a random per-install identifier and carry no user id, so they cannot be tied back to your account, your name or your email."
-      },
-      {
-        "question": "How do I delete my account and everything in it?",
-        "answer": "In the app, under Settings, there is a Delete Account screen. It requires a hardware identity check (Face ID, Touch ID or your device passcode) and a fresh sign-in before it will proceed, so it cannot be triggered by somebody with brief physical access to your phone. It then removes your uploaded syllabi and notes, deletes your semesters, courses, deadlines and grades, and deletes the account itself. It is immediate and irreversible; nothing is archived and nothing can be restored afterward. If you want a copy of your data first, email before you delete."
-      },
-      {
-        "question": "What happens to my data if I subscribe to Pro and then cancel?",
-        "answer": "Nothing is deleted. The free-tier limits are enforced by triggers that fire when a new row is created, so your existing semesters, courses, deadlines, grades and notes stay readable and editable no matter how many of them you accumulated on Pro — the limits only bite again the next time you try to add something new. The Pro-only screens do close: flashcard decks, the Workload dashboard, Smart Plan, Progress Insights and the AI tutor show the locked view again, and an active device calendar sync is paused rather than left silently broken. Everything behind those screens is preserved and comes straight back if you resubscribe."
-      },
-      {
-        "question": "How do I know the feature and pricing claims on this site are accurate?",
-        "answer": "Because they are written against the code that enforces them rather than against other marketing pages, and because the method has already caught its own mistakes: four tier claims on this site were wrong on the first pass, all four flattering, and all four were corrected against the app. The same standard is why the unflattering limits are stated plainly here, including that free accounts get one semester in total, that hosting a Course Space is Pro while joining one is free, and that the web checkout carries no free trial. If you find something that does not match the app you are using, email it and it gets corrected."
-      },
-      {
-        "question": "Is Semora available on Android, or as a Mac app?",
-        "answer": "Not currently. Semora runs as one universal iOS app on iPhone and iPad, plus a web app that works in any browser, including on an Android phone or a Mac. It is the same account and the same data across all of them, syncing in near real time. The practical gaps on the web are the ones tied to hardware: no camera capture path (drag-and-drop a file or paste the text instead), no home-screen widgets, and no device calendar sync, though the .ics export does work in the browser. Buying Pro is not one of those gaps: you can pay by card on the web or subscribe in the iOS app, and it covers the whole account either way."
-      }
+        {
+            "question": "Who publishes Semora’s guides?",
+            "answer": "Semora publishes the guides under its own brand. Product comparisons disclose that relationship and explain their research method. Sources are linked where relevant so readers can check the claims."
+        },
+        {
+            "question": "Is Semora a school or learning management system?",
+            "answer": "No. Semora is a personal academic planner and study app. It complements your school’s systems; it does not replace the official course page, submission system or gradebook."
+        },
+        {
+            "question": "Where can I use Semora?",
+            "answer": "On iPhone, iPad and the web with one account. Device-specific capabilities differ; the Download page explains the available versions."
+        }
     ]
-  },
+},
   download: {
     metaTitle: 'Download Semora — iPhone, iPad, Apple Watch, and web',
     metaDescription:

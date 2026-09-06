@@ -79,7 +79,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...compareRoutes,
   ];
 
-  const englishRoutes = [...routes, ...blogRoutes];
+  // Only pages materially revised in this release get a new lastmod.
+  const revisedPaths = new Set([
+    '/about', '/ai-syllabus-scanner', '/canvas-deadline-tracker',
+    '/features/syllabus-scanner', '/features/canvas-sync',
+  ]);
+  const englishRoutes = [...routes, ...blogRoutes].map((route) => ({
+    ...route,
+    ...(revisedPaths.has(new URL(route.url).pathname) ? { lastModified: '2026-09-05' } : {}),
+  }));
   const pairByEnglish = new Map(INDEXABLE_LOCALE_ROUTE_PAIRS.map((pair) => [pair.en, pair]));
   const englishByPath = new Map(
     englishRoutes.map((route) => [route.url.replace(SITE_URL, '') || '/', route]),

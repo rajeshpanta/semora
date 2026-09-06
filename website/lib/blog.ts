@@ -139,8 +139,11 @@ export function formatBlogDate(iso: string): string {
 }
 
 const RELATED_POST_SLUGS: Record<string, string[]> = {
+  'first-two-weeks-of-semester': ['syllabus-to-semester-calendar', 'what-assignment-weights-mean', 'canvas-deadline-reminders'],
+  'how-to-study-for-midterms': ['finals-week-study-plan', 'grade-needed-on-final-exam', 'pomodoro-technique-between-classes'],
+  'what-assignment-weights-mean': ['grade-needed-on-final-exam', 'first-two-weeks-of-semester', 'how-to-study-for-midterms'],
   'syllabus-to-semester-calendar': [
-    'best-college-deadline-tracking-apps-2026',
+    'first-two-weeks-of-semester',
     'canvas-deadline-reminders',
     'grade-needed-on-final-exam',
   ],
@@ -160,7 +163,7 @@ const RELATED_POST_SLUGS: Record<string, string[]> = {
     'best-ai-study-apps-for-college-2026',
   ],
   'finals-week-study-plan': [
-    'pomodoro-technique-between-classes',
+    'how-to-study-for-midterms',
     'grade-needed-on-final-exam',
     'syllabus-to-semester-calendar',
   ],
@@ -175,7 +178,7 @@ const RELATED_POST_SLUGS: Record<string, string[]> = {
     'finals-week-study-plan',
   ],
   'grade-needed-on-final-exam': [
-    'finals-week-study-plan',
+    'what-assignment-weights-mean',
     'syllabus-to-semester-calendar',
     'best-college-deadline-tracking-apps-2026',
   ],

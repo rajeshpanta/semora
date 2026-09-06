@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { enAlternates } from '@/lib/hreflang';
 import { notFound } from 'next/navigation';
+import Link from 'next/link';
 import { LongFormPage } from '@/components/LongFormPage';
 import { getNewPage } from '@/lib/new-page-content';
 import { OG_IMAGE } from '@/lib/og';
@@ -26,7 +27,7 @@ export default function Page() {
       path="/about"
       content={content}
       crumb={{ href: '/', label: 'Home' }}
-      widget={undefined}
+      widget={<p><Link href="/support">Contact support</Link> · <Link href="/privacy">Privacy policy</Link> · <Link href="/pricing">Free and Pro plans</Link></p>}
     />
   );
 }

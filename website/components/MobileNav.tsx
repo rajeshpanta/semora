@@ -126,7 +126,7 @@ export function MobileNav({ links, locale = 'en' }: { links: { href: string; lab
               {copy.dashboard} &rarr;
             </a>
           ) : (
-            <SignupButton className={styles.sheetCta} onClick={close}>
+            <SignupButton className={styles.sheetCta} placement="mobile-nav" onClick={close}>
               {copy.tryFree}
             </SignupButton>
           )}

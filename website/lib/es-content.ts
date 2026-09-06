@@ -177,7 +177,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
         heading: 'Nuevo, pequeño, y cómo llegar a quien lo construye',
         paragraphs: [
           'Semora es un proyecto reciente y pequeño. Eso tiene consecuencias en las dos direcciones y conviene decirlas.',
-          'En contra: hay menos funciones que en productos con años de recorrido, algunas rutas todavía tienen aristas, y no hay un equipo de soporte por turnos. La conexión con Canvas depende de un token y de la política de cada institución, que es una limitación real y no una preferencia.',
+          'En contra: hay menos funciones que en productos con años de recorrido, algunas rutas todavía tienen aristas, y no hay un equipo de soporte por turnos. Para conectar Canvas, copias su enlace privado de Calendar Feed y lo pegas en Semora; no necesitas generar un token de acceso. Si tu institución no ofrece ese enlace o no permite usarlo, puedes escanear el programa de la materia.',
           'A favor: un correo llega a la persona que escribe el código, y una corrección concreta suele poder aplicarse en días y no en trimestres. Buena parte de lo que hoy hace la app salió de mensajes de estudiantes describiendo el caso exacto en el que fallaba.',
           'Si algo no funciona, o si tu programa se extrajo mal, escribir con el detalle concreto —qué materia, qué esperabas, qué salió— es la vía más rápida. La dirección de soporte está en el pie de cada página y en la sección de ayuda.',
         ],
@@ -1493,7 +1493,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
         heading: 'Cómo se conecta, y cuándo no deberías conectarte',
         paragraphs: [
           'La importación desde Canvas, Blackboard y Moodle es gratis en todos los planes. Conectar Canvas es un solo paso: copia el enlace privado del calendario que Canvas ya te da y pégalo. No hay ningún token que generar ni nada que tu universidad tenga que aprobar.',
-          'Aquí hay una advertencia que conviene leer entera. Algunas instituciones desactivan la creación de tokens, y otras la permiten técnicamente pero prohíben en su normativa el uso por parte de terceros. Confirma la política de tu centro antes de conectar nada; si no está permitido, no lo hagas.',
+          'Aquí hay una advertencia que conviene leer entera. Ese enlace es privado: quien lo tenga puede ver tus fechas, así que no lo compartas y restablécelo desde Canvas si crees que se filtró. Y trae solo lo que Canvas publica con fecha en el calendario; lo que no tenga fecha, no esté publicado o solo se haya anunciado en un aviso puede no aparecer.',
           'La alternativa cubre el mismo trabajo y además es gratuita: escanea el programa de la materia, o pega la lista de tareas de Canvas directamente en el escáner. Si tu profesor mantiene las fechas en el programa y no en la plataforma, escanear es de todos modos el mejor camino.',
         ],
       },
@@ -1534,9 +1534,9 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Qué cuesta y para quién no vale la pena',
         paragraphs: [
-          'La importación desde Canvas, Blackboard y Moodle es gratis en todos los planes. Una sincronización cubre hasta 50 cursos a la vez.',
+          'La importación desde Canvas, Blackboard y Moodle es gratis en todos los planes. Canvas llega por el enlace del calendario, que trae hasta 1.000 elementos; Blackboard y Moodle sincronizan hasta 50 cursos por vez con el token de tu institución.',
           'El plan Gratis cubre buena parte de ese mismo trabajo desde el lado del programa: una acción de IA para toda la vida de la cuenta, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano dentro de un semestre, seguimiento completo de tareas y fechas, calificaciones con medias ponderadas y recordatorios el mismo día.',
-          'No vale la pena si tu profesor no publica en Canvas y lo mantiene todo en el programa: ahí escanear es mejor, y el primero es gratis. Tampoco si lo que buscas es entregar trabajos o escribir a tu profesor, porque eso sigue ocurriendo en Canvas. Y si tu institución no permite el uso de tokens por terceros, la respuesta correcta es no conectarlo y usar el escáner.',
+          'No vale la pena si tu profesor no publica en Canvas y lo mantiene todo en el programa: ahí escanear es mejor, y el primero es gratis. Tampoco si lo que buscas es entregar trabajos o escribir a tu profesor, porque eso sigue ocurriendo en Canvas. Y si tu institución desactiva el enlace del calendario, la respuesta correcta es escanear el programa de la materia.',
         ],
       },
     ],
@@ -1600,9 +1600,9 @@ const FEATURE_DETAILS: Record<string, FeatureDetail> = {
   },
   'canvas-sync': {
     why: 'Las plataformas académicas mantienen cada curso por separado. Semora reúne todas las fechas en un solo lugar y conserva el historial de sincronización.',
-    steps: ['Para Canvas, usa el conector con token personal solo si tu institución permite introducirlo en un servicio externo.', 'Relaciona cada curso de tu plataforma con el curso correspondiente en Semora.', 'Elige entre sincronización manual y automática.', 'Consulta la última actualización y cualquier error.'],
+    steps: ['Para Canvas, copia el enlace privado de Calendar Feed que Canvas ya te da y pégalo; no hay ningún token que generar.', 'Relaciona cada curso de tu plataforma con el curso correspondiente en Semora.', 'Elige entre sincronización manual y automática.', 'Consulta la última actualización y cualquier error.'],
     result: 'Las tareas, entregas y calificaciones seleccionadas se mantienen sincronizadas sin crear duplicados.',
-    faq: [{ question: '¿Dónde se guarda el token?', answer: 'De forma predeterminada permanece en el dispositivo. Si activas la sincronización automática, el token se guarda cifrado en Supabase Vault hasta que la desactives o desconectes la plataforma.' }],
+    faq: [{ question: '¿Dónde se guarda la credencial?', answer: 'Canvas se conecta con el enlace privado de su calendario, no con un token. Esa credencial permanece en el dispositivo de forma predeterminada; si activas la sincronización automática, se guarda cifrada en Supabase Vault hasta que la desactives o desconectes la plataforma. Blackboard y Moodle sí usan un token que emite tu institución.' }],
   },
 };
 
@@ -2433,7 +2433,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
         paragraphs: [
           'Semora escanea el programa desde una foto, un PDF, un archivo arrastrado o texto pegado, y extrae cada tarea, examen, cuestionario, proyecto y lectura con su fecha de entrega, además de la escala de calificaciones, los horarios y las horas de consulta. Entregas y calificaciones quedan en la misma pantalla y en el mismo plan.',
           'El plan Gratis incluye una acción de IA para toda la vida de la cuenta —un escaneo de programa, una grabación de clase o unos apuntes a partir de un documento—, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, y un semestre total. No caduca por tiempo, pero esa acción no se renueva y una cuenta gratuita no puede iniciar un segundo periodo. La sincronización con tu calendario mediante exportación .ics es una función de Pro.',
-          'Pro añade la importación de tareas desde Canvas, Blackboard y Moodle. Conectar Canvas es un solo paso: copia el enlace privado del calendario que Canvas ya te da y pégalo. No hay ningún token que generar ni nada que tu universidad tenga que aprobar.',
+          'La importación de tareas desde Canvas, Blackboard y Moodle es gratis en todos los planes. Conectar Canvas es un solo paso: copia el enlace privado del calendario que Canvas ya te da y pégalo. No hay ningún token que generar ni nada que tu universidad tenga que aprobar.',
           'Es nuestro producto, así que léelo con eso en mente: hay situaciones en las que otra de estas apps te va a servir mejor, y las detallamos más abajo.',
         ],
       },
@@ -2618,7 +2618,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Qué conviene sumarle a Canvas',
         paragraphs: [
-          'La importación desde Canvas es gratis y el conector actual usa un token personal. Algunas instituciones desactivan o prohíben su uso con servicios externos; confirma la política de tu universidad. Si no está disponible o permitido, puedes escanear el programa o pegar en Semora la lista de tareas de Canvas.',
+          'La importación desde Canvas es gratis y conectar Canvas es un solo paso: copia el enlace privado del calendario que Canvas ya te da y pégalo. No hay ningún token que generar ni nada que tu universidad tenga que aprobar. Si no está disponible o permitido, puedes escanear el programa o pegar en Semora la lista de tareas de Canvas.',
           'El plan Gratis incluye una acción de IA para toda la vida de la cuenta, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, y un semestre total, además de tareas, fechas de entrega, calificaciones ponderadas y recordatorios el mismo día. Con eso puedes armar ese primer periodo escaneando el programa de la materia que peor tengas controlada, añadir las demás a mano y comprobar cómo se comporta el sistema antes de decidir si quieres además la sincronización automática.',
           'Pro cuesta $3.99 al mes o $19.99 al año, se contrata desde la app y, junto con la conexión con Canvas, responde directamente a los límites anteriores: puedes elegir la anticipación del aviso —uno o tres días, se configura una vez y se aplica automáticamente a las entregas siguientes—, definir horas de silencio para que un recordatorio de las dos de la madrugada se mueva a un momento en el que puedas actuar, y recibir alertas de riesgo académico que señalan calificaciones a la baja, trabajo pendiente o semanas en las que se apilan varias materias, con pasos concretos de recuperación.',
           'Todo funciona en iPhone y en la web con la misma cuenta, y los recordatorios y las tareas se sincronizan casi al instante. En la práctica significa abrir Canvas desde la laptop en el salón y revisar los recordatorios desde el teléfono entre una clase y otra, sin volver a capturar nada. El historial de sincronización deja ver cuándo se revisó la plataforma por última vez.',

@@ -52,7 +52,7 @@ export function NavAuthActions({
       <SignupButton mode="signin" className={ghostClassName}>
         {signIn}
       </SignupButton>
-      <SignupButton className={ctaClassName}>{tryFree}</SignupButton>
+      <SignupButton className={ctaClassName} placement="nav">{tryFree}</SignupButton>
     </>
   );
 }

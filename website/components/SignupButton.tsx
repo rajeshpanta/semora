@@ -33,11 +33,15 @@ export function SignupButton({
     <a
       href={href}
       className={className}
+      data-cta-placement={placement}
       onClick={() => {
         // Every CTA on the site funnels through here, so this one call answers
         // which page actually drives signups. Reported before the caller's own
         // handler so a handler that throws cannot swallow the event.
-        report(TELEMETRY_EVENTS.signupClick, { mode });
+        // One event, not two: every handoff to the app leaves through this
+        // button, so an app_handoff fired here would duplicate signup_click on
+        // the same click and double any count that sums both names.
+        report(TELEMETRY_EVENTS.signupClick, { mode, ...(placement ? { placement } : {}) });
         onClick?.();
       }}
     >

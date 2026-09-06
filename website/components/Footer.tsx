@@ -98,7 +98,7 @@ export function Footer({ locale = 'en' }: { locale?: SiteLocale }) {
           </div>
           <div>
             <p className={styles.heading}>{copy.get}</p>
-            <SignupButton>{copy.tryFree}</SignupButton>
+            <SignupButton placement="footer">{copy.tryFree}</SignupButton>
             <Link href={downloadPath(locale)}>{copy.download}</Link>
             <Link href={path('/pricing')}>{copy.pricing}</Link>
             <Link href={path('/blog')}>{copy.blog}</Link>

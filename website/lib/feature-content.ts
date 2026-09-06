@@ -190,7 +190,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
     ]
   },
   "syllabus-scanner": {
-    "metaTitle": "AI Syllabus Scanner for College Students",
+    "metaTitle": "Syllabus Scanner: File Inputs, Review Steps and Limits",
     "metaDescription": "Turn a syllabus photo, PDF, or pasted text into every deadline, class time, and grade cutoff \u2014 and review each item before anything saves.",
     "h1": "AI Syllabus Scanner",
     "lede": "Photograph, upload, or paste your syllabus and Semora returns the course, the class schedule, the grading scale, and every deadline it can find. You review the list before a single item is saved.",
@@ -411,7 +411,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "How it connects to everything else in Semora",
         "paragraphs": [
           "Grades are not a standalone screen. The scores you enter feed the rest of the app.",
-          "Your Courses tab shows each course's letter and percentage under its name, next to what is due next. Canvas import brings dates rather than scores, so the running average is built from marks you enter yourself, with the same arithmetic as average. Canvas can also carry the late flag, and Semora tracks late submissions separately: you can record an expected penalty and the task screen will show the estimated maximum you can still earn until the real grade is posted, without ever docking a posted score twice.",
+          "Your Courses tab shows each course's letter and percentage under its name, next to what is due next. Canvas import brings dates rather than scores, so the running average is built from marks you enter yourself, with the same arithmetic as average. Semora tracks late submissions separately, from what you mark yourself — the Canvas Calendar Feed carries no submission state: you can record an expected penalty and the task screen will show the estimated maximum you can still earn until the real grade is posted, without ever docking a posted score twice.",
           "On the Pro side, Academic Risk alerts read your grade history directly. A course needs at least two graded items; Semora then compares the average of your three most recent grades against the three before them, ordered by when the work was due rather than when you happened to enter it, and raises a falling-grade alert when the drop is seven points or more, or when the course estimate sits below 70. Below 65 it escalates to high severity. Progress Insights needs four graded items before it will draw a trend, and exports a semester CSV with columns for current grade, letter, completion percentage, on-time percentage, missing work, and graded count, plus a print view you can bring to an advising appointment. The Workload dashboard shows how much of each course's grade is still in play.",
           "All of it is one account across iPhone, iPad, and web, syncing in near real time, so a score you enter walking out of a lecture hall is on your laptop when you open it."
         ]
@@ -1162,7 +1162,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
     ]
   },
   "canvas-sync": {
-    "metaTitle": "Canvas Sync for Semora — Import Canvas Deadlines",
+    "metaTitle": "Canvas Sync Setup and Troubleshooting | Semora",
     "metaDescription": "Canvas Sync imports assignments and due dates free on every plan, using the private Calendar Feed link Canvas already gives you.",
     "h1": "Canvas Sync: pull your Canvas assignments into Semora",
     "lede": "Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve.",
@@ -1176,7 +1176,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "The current Canvas connector and its limits",
         "paragraphs": [
           "Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. They do not currently provide a Semora OAuth or institution-managed sign-in flow.",
-          "Canvas's Calendar Feed needs no administrator involvement at all. Canvas documents OAuth as the approved authorization route for applications used by multiple users. Do not use the token connector unless your institution permits it.",
+          "Canvas's Calendar Feed needs no administrator involvement at all. Canvas documents OAuth as the approved authorization route for applications used by multiple users. Keep the feed link private, and follow your institution's policy on connecting outside services.",
           "If the connector is unavailable or not permitted, scan the course syllabus or copy the Canvas assignment list and paste it into the scanner on the web app. Both routes keep a review step before deadlines are added."
         ]
       },
@@ -1207,14 +1207,14 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       {
         "heading": "What actually gets imported from each assignment",
         "paragraphs": [
-          "For every assignment in the courses you selected, Semora pulls the full record, not just a title and a date. Descriptions arrive with the HTML stripped out (script and style blocks removed, tags flattened, the common entities decoded, whitespace collapsed) so you get readable text instead of Canvas markup pasted into your planner.",
-          "Semora also guesses a type for each item so your calendar is not one undifferentiated wall of “assignment.” If Canvas marks the submission type as a quiz, it becomes a quiz. Otherwise the title is matched: midterm, final, exam, or test becomes an exam; quiz becomes a quiz; project becomes a project; read, reading, or chapter becomes a reading; everything else stays an assignment. It is a keyword match, not comprehension, so a paper called “Unit 3 Response” lands as a plain assignment. You can change the type on any task in two taps.",
+          "For every dated item in the courses you selected, Semora pulls what the Calendar Feed carries: the title, the date, and whatever description Canvas put in the entry. Descriptions arrive unescaped from the calendar entry and trimmed to a readable length, and a long one is cut at a sentence break rather than mid-word.",
+          "Semora also guesses a type for each item so your calendar is not one undifferentiated wall of “assignment.” The Calendar Feed does not say what kind of item something is, so the title is matched: midterm, exam, or test becomes an exam (a “final draft” or “final paper” stays an assignment); quiz becomes a quiz; project becomes a project; read, reading, or chapter becomes a reading; everything else stays an assignment. It is a keyword match, not comprehension, so a paper called “Unit 3 Response” lands as a plain assignment. You can change the type on any task in two taps.",
           "Here is what ends up on each imported task:"
         ],
         "bullets": [
           "The title, and the description as plain readable text.",
           "The due date and time, converted to your device's local clock from the absolute timestamp Canvas returns, so an 11:59 p.m. deadline stays 11:59 p.m. instead of drifting by your UTC offset.",
-          "Points possible, your points earned, and a percentage score computed from the two when both exist.",
+          "Not grades. The Calendar Feed carries dates, not marks, so points and scores stay yours to enter in Semora's grade tracking.",
           "Not submission status. The Calendar Feed carries no record of what you have handed in, so completion in Semora is yours to set.",
           "A link back to the assignment's own Canvas page, opened straight from the task in Semora."
         ]
@@ -1233,7 +1233,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         "heading": "What Semora can do with a Canvas connection",
         "paragraphs": [
           "Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve.",
-          "Semora uses the connection to list courses and read assignments and gradebook data. It does not submit coursework, post, edit, or delete anything in Canvas.",
+          "For Canvas, Semora reads one thing: the dated items in the Calendar Feed link you pasted. That feed carries no grades and no submission state. Blackboard and Moodle, which connect with a school-issued token, can also read gradebook columns. Semora never submits coursework, posts, edits, or deletes anything in your learning platform.",
           "There are guardrails on any school address you enter. The URL must be HTTPS; localhost, .local hostnames, and private network ranges are refused, while redirects are limited to the same origin.",
           "Disconnecting removes the connection from Semora. Coursework already imported into your planner, including your completion history and grades, remains available unless you delete it separately."
         ]
@@ -1274,7 +1274,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
           "Assignments with no due date in Canvas are skipped. Semora marks the connection “partial” and tells you exactly how many were skipped, so it is visible rather than silent.",
           "If you already created a course by scanning its syllabus, importing that same class from Canvas creates a second course. Semora does not merge the two — pick one route per class.",
           "Semora does not pull instructor names from the Canvas course list, so imported courses arrive with the instructor field blank. You can fill it in yourself.",
-          "A sync covers up to 50 courses at a time, and pagination through each course's assignments stops at a bounded number of pages — generous for a normal course load, but not unlimited.",
+          "Canvas bounds the Calendar Feed at 1,000 items, so a very long history can arrive truncated; when a response looks incomplete Semora keeps what it already imported rather than deleting from it. Blackboard and Moodle, which sync course by course with a token, cover up to 50 courses at a time.",
           "There is no per-course on/off switch after import. To change which courses sync, disconnect and reconnect with a different selection.",
           "A Calendar Feed link does not expire. If you reset it in Canvas, the connection shows “credentials required” and offers a Reconnect action that takes the new link."
         ]
@@ -1303,7 +1303,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       },
       {
         "question": "Does it work with Blackboard and Moodle?",
-        "answer": "Both are part of the same Pro learning-platform import, and setup varies by school. A sync covers up to 50 courses at a time, and pagination through each course's assignments stops at a bounded number of pages \u2014 generous for a normal course load, but not unlimited."
+        "answer": "Yes, and both are free on every plan, exactly like Canvas. They differ in setup: Blackboard and Moodle use a school-issued token, so availability depends on your institution, and a sync covers up to 50 courses at a time with bounded pagination through each course's assignments."
       }
     ]
   }

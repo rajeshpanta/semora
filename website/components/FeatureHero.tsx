@@ -54,7 +54,7 @@ export function FeatureHero({
           <p className={styles.lede}>{lede}</p>
 
           <div className={styles.actions}>
-            <SignupButton className={styles.primary}>Get started free</SignupButton>
+            <SignupButton className={styles.primary} placement="feature-hero">Get started free</SignupButton>
             <Link href={downloadPath()} className={styles.secondary}>
               Get the app
             </Link>
