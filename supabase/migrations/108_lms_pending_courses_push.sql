@@ -117,6 +117,43 @@ select cron.schedule(
     from public.lms_connections c
     join public.profiles p on p.id = c.user_id
     where c.pending_courses_count > 0
+      -- ─── Something still worth being interrupted for ──────────
+      -- pending_courses_count alone counts a finished Canvas shell the same
+      -- as next week's midterm. Of the six students who qualified when this
+      -- was first measured, one had nothing pending but coursework already
+      -- in the past: an unprompted 9am notification about a course that is
+      -- over is how a channel earns itself a Settings visit.
+      --
+      -- Three signals, and the two fallbacks both err towards notifying,
+      -- because the cost of a needless push is one tap and the cost of a
+      -- silent miss is a semester of deadlines:
+      --
+      --   last_due >= today   the work itself is still ahead. On calendar-feed
+      --                       connections this is the ONLY usable signal, and
+      --                       all 40 live connections are calendar_feed.
+      --   last_due is null    no dated items to judge by. Never hide a course
+      --                       for lacking the evidence to condemn it.
+      --   term_end >= today   the school stated the term outright (token
+      --                       connections only). A course whose loaded
+      --                       assignments are all past can still be a live
+      --                       term with more to come.
+      --
+      -- Deliberately NOT filtered on item_count: a course legitimately shows
+      -- up before its first assignment is posted, and refusing to mention it
+      -- until work appears would reintroduce the silence 103 removed.
+      and exists (
+        select 1
+        from public.lms_pending_courses pc
+        where pc.user_id = c.user_id
+          and pc.connection_id = c.id
+          and pc.resolved_at is null
+          and pc.ignored_at is null
+          and (
+            pc.last_due is null
+            or pc.last_due >= current_date
+            or pc.term_end >= current_date
+          )
+      )
       and p.lms_pending_push_enabled
       and (
         p.lms_pending_push_last_sent_at is null

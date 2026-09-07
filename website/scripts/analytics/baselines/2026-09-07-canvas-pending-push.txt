@@ -1,0 +1,60 @@
+# Canvas pending-course push (migration 108) — baseline at activation
+
+Applied 2026-09-07T05:0xZ. Job `semora-lms-pending-courses`, '7 * * * *', active.
+
+## Pending state at activation
+
+  open pending courses     26
+  users affected           15
+  items behind them        519   (live feed counts, not stored deadlines)
+  age                      1-14 days, avg 9, NONE older than 14
+  with future work         22 of 26
+
+## First 24h of sending
+
+  eligible after relevance filter   5 users, one push each
+  13:07Z  1  (America/New_York)
+  15:07Z  1  (America/Boise)
+  16:07Z  3  (America/Los_Angeles x2, America/Phoenix)
+
+  excluded, only past-dated work    1
+  suppressed, active in last 3 days 3
+  unreachable, no push token        6
+
+## The funnel to watch — NOT notification opens
+
+  pending discovered -> eligible -> attempted -> review screen reached
+  -> course linked -> immediate sync succeeds -> deadlines land -> pending clears
+
+  Existing events: lms_new_courses_viewed, lms_new_courses_imported.
+  Server truth: lms_pending_courses (open/resolved/ignored), lms_course_links.
+  Count links, not pending rows marked resolved — resolved rows are deleted by
+  the next sync, so `resolved_at is not null` reads 0 and means nothing.
+
+## The actual success test
+
+  Does the AGE DISTRIBUTION of open pending courses fall?
+
+  Today nothing is older than 14 days, but that is not yet evidence of health:
+  the Today banner only shipped 2026-09-01 and 17 of the 26 rows predate it.
+  Both channels need time to reach people before the number means anything.
+
+  Re-check on or after 2026-09-21 (~2 weeks).
+
+  Watch for: max age climbing past 14 days (communication is failing), or the
+  same users reappearing every 7 days without ever linking (the push is being
+  ignored and should be reconsidered rather than repeated).
+
+## Known interaction, not a defect
+
+  Local 09:00 for Pacific/Arizona is 16:00Z, the same hour as
+  semora-flashcards-due. Zero of the three had cards due at activation. If both
+  ever fire together for the same student, that is two notifications in one
+  hour, not a loop.
+
+## Disable path (no schema rollback)
+
+  select cron.unschedule('semora-lms-pending-courses');
+
+  The two profiles columns are additive and inert with the job gone. Do not
+  drop them to disable the feature.
