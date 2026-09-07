@@ -204,14 +204,30 @@
   flex-direction: column;
   gap: 6px;
   opacity: 0;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.4s ease, inset 0.45s ease;
   pointer-events: none;
+  /* Five rows are taller than the band left for them once the week chart or
+     the Up next card takes the bottom of the panel, so without this the last
+     row slides UNDER the card. Clipping at the list's own edge reads as a
+     list that continues below, which is what a real Today screen does; the
+     fade makes the cut deliberate rather than abrupt. */
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 18px), transparent 100%);
 }
 
-.window[data-stage='extract'] .list,
-.window[data-stage='organized'] .list { opacity: 1; }
+.window[data-stage='organized'] .list,
+.window[data-stage='current'] .list,
+.window[data-stage='next'] .list { opacity: 1; }
 
-.window[data-stage='organized'] .list { inset: 14px 14px 96px; }
+/* Room underneath for the week chart, then for the Up next card. Both
+   occupy the same band, so the list never has to move between them. */
+.window[data-stage='organized'] .list,
+.window[data-stage='current'] .list { inset: 14px 14px 96px; }
+
+/* 10px more, because the Up next card is taller than the week chart it
+   replaces. Transitioned above, so the list eases rather than jumps. */
+.window[data-stage='next'] .list { inset: 14px 14px 114px; }
 
 .row {
   display: flex;
@@ -227,11 +243,15 @@
 
 /* Rows land one after another, so it reads as extraction happening rather
    than a list that was always there. */
-.window[data-stage='extract'] .row,
-.window[data-stage='organized'] .row {
+.window[data-stage='organized'] .row,
+.window[data-stage='current'] .row,
+.window[data-stage='next'] .row {
   animation: land 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   animation-delay: calc(var(--i) * 90ms);
 }
+
+.window[data-stage='current'] .row,
+.window[data-stage='next'] .row { animation-delay: 0s; }
 
 @keyframes land {
   to { opacity: 1; transform: none; }
@@ -293,7 +313,8 @@
   transition: opacity 0.45s ease, transform 0.45s ease;
 }
 
-.window[data-stage='organized'] .week { opacity: 1; transform: none; }
+.window[data-stage='organized'] .week,
+.window[data-stage='current'] .week { opacity: 1; transform: none; }
 
 .day { display: flex; flex-direction: column; align-items: center; gap: 5px; }
 
@@ -305,7 +326,8 @@
   height: 0;
 }
 
-.window[data-stage='organized'] .bar {
+.window[data-stage='organized'] .bar,
+.window[data-stage='current'] .bar {
   animation: grow 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
   animation-delay: calc(var(--i) * 55ms + 120ms);
 }
@@ -360,6 +382,140 @@
 
 .tick[data-on='true'] { background: var(--glow-light); }
 
+
+/* ── The Canvas update pill (beat 3) ───────────────────────── */
+
+/* Sits beside the course name on the one row Canvas moved. The row's due date
+   changes in the same frame, which is the whole point: nobody touched it. */
+.rowPill {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #eeedfe;
+  border: 1px solid #d9d5fb;
+  color: #5b3fb8;
+  font-size: 7.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: 1px;
+  white-space: nowrap;
+  animation: pillIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes pillIn {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* The moved date arrives with the pill rather than silently swapping. */
+.row[data-updated] .rowDue { animation: pillIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* ── "Up next" (beat 4) ────────────────────────────────────── */
+
+/*
+ * Occupies the same band as the week chart — bottom-anchored, 74px — so the
+ * two swap without the panel resizing and without the deadline list above
+ * having to move. That is why the list's inset is identical on all three
+ * later beats.
+ */
+.upnext {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  height: 92px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid rgba(28, 27, 31, 0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.window[data-stage='next'] .upnext { opacity: 1; transform: none; }
+
+.upnextHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.upnextTitle {
+  font-size: 10px;
+  font-weight: 700;
+  color: #1c1b1f;
+}
+
+.upnextLink {
+  font-size: 8.5px;
+  font-weight: 600;
+  color: #6b46c1;
+}
+
+.upnextRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  opacity: 0;
+}
+
+.window[data-stage='next'] .upnextRow {
+  animation: land 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  animation-delay: calc(180ms + var(--i) * 110ms);
+}
+
+.upnextDot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex: none;
+  background: #6b46c1;
+}
+
+.upnextRow[data-tone='now'] .upnextDot { background: #d85a30; }
+.upnextRow[data-tone='soon'] .upnextDot { background: #c08a2e; }
+
+.upnextText { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0; }
+
+.upnextRowTitle {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #1c1b1f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The stake clause lives at the END of this string, so it is the first thing
+   an ellipsis would eat — and it is the new information. Allowed to wrap to a
+   second line instead, exactly as the app's own card does. */
+.upnextSub {
+  font-size: 8px;
+  line-height: 1.25;
+  color: #6b6975;
+}
+
+.upnextBadge {
+  flex: none;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #6b46c1;
+}
+
+.upnextRow[data-tone='now'] .upnextBadge { color: #b8461f; }
+.upnextRow[data-tone='soon'] .upnextBadge { color: #96661a; }
+
 /* ── Narrow screens ────────────────────────────────────────── */
 
 @media (max-width: 720px) {
@@ -373,6 +529,20 @@
   /* Below this the sidebar costs more than it communicates. */
   .body { grid-template-columns: minmax(0, 1fr); height: 310px; }
   .sidebar { display: none; }
+
+  /* One ranked item is enough to make the point on a phone, and dropping the
+     second is what keeps the first one's subtitle from truncating — the stake
+     clause sits at the end of that string and would be the first thing cut.
+     :last-child, NOT :nth-of-type(2): .upnextHead is also a div, so
+     nth-of-type would have hidden the row that carries the stake. */
+  .upnextRow:last-child { display: none; }
+  .upnext { height: 76px; }
+  .window[data-stage='next'] .list { inset: 14px 14px 98px; }
+
+  /* The pill is the longest string in the row. On a narrow panel it pushes
+     the due date off, so the row keeps the moved DATE and drops the label —
+     the caption underneath is already saying where the change came from. */
+  .rowPill { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -384,4 +554,14 @@
   .row { opacity: 1; transform: none; }
   .bar { height: calc(var(--h) * 0.42px); }
   .caption { animation: none; }
+
+  /* The demo holds on the final beat rather than looping, so the Up next card
+     is the resting state and must be visible without its entrance. */
+  .upnextRow,
+  .rowPill,
+  .row[data-updated] .rowDue {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
 }

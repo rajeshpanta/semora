@@ -27,7 +27,11 @@ export const metadata: Metadata = {
   openGraph: { url: '/', ...OG_IMAGE },
 };
 
+// "Canvas sync, free" earns the first slot rather than being a footnote: it is
+// the only free capability that demonstrates Semora keeps working after setup,
+// which is the half of the product the hero used to leave out entirely.
 const HERO_CHIPS = [
+  'Canvas sync, free',
   'Your first AI action is free',
   'Synced across iPhone, iPad and web',
 ];
@@ -57,6 +61,11 @@ const STEPS = [
     n: '02',
     title: 'Start from Canvas',
     body: 'Paste one calendar link. Every assignment, quiz and exam, kept in sync with Canvas automatically.',
+    // The only place on the homepage where a reader is already thinking about
+    // Canvas and had nowhere to go. Canvas is the site's strongest earned
+    // search cluster, and this was the missing internal link into it.
+    href: '/features/canvas-sync',
+    linkLabel: 'How Canvas sync works',
   },
 ];
 
@@ -195,9 +204,18 @@ export default function Home() {
               Scan your syllabus.{' '}
               <span className={styles.gradient}>Never miss a deadline.</span>
             </h1>
+            {/* The first sentence is unchanged: it is the entry hook, and it
+                is the sentence the scanner pages rank on. The second is the
+                half that was missing — the site described how a semester gets
+                IN and stopped, while the product's whole argument is what
+                happens for the fourteen weeks afterwards. Both clauses are
+                literal: connected Canvas classes re-sync on their own, and
+                "Up next" ranks by due date and by what the work counts
+                toward. */}
             <p className={styles.sub}>
-              Turn a syllabus photo or PDF into a reviewed semester plan—deadlines, class times,
-              grade weights and study tools, all connected.
+              Turn a syllabus photo or PDF into a reviewed semester plan—deadlines, class times and
+              grade weights. Connect Canvas free and it stays current on its own, so Semora can tell
+              you what matters next.
             </p>
             <div className={styles.heroActions}>
               <SignupButton className={styles.primaryBtn} placement="home-hero">
@@ -240,6 +258,11 @@ export default function Home() {
                   <span className={styles.stepNum}>{s.n}</span>
                   <h3>{s.title}</h3>
                   <p>{s.body}</p>
+                  {'href' in s && s.href && (
+                    <Link href={s.href} className={styles.stepLink}>
+                      {s.linkLabel} →
+                    </Link>
+                  )}
                 </div>
               </Reveal>
             </li>

@@ -31,7 +31,10 @@ export const metadata: Metadata = {
   },
 };
 
+// "Canvas gratis" va primero por la misma razón que en inglés: es lo único
+// gratuito que demuestra que Semora sigue trabajando después del primer día.
 const CHIPS = [
+  'Canvas gratis',
   '1 acción con IA gratis por cuenta',
   'App completa en español',
   'Tus datos al día en iPhone, iPad y la web',
@@ -192,9 +195,14 @@ export default function SpanishHome() {
               Sube el programa.{' '}
               <span className={styles.gradient}>Ten todo el semestre bajo control.</span>
             </h1>
+            {/* La primera frase no cambia: es el gancho de entrada. La
+                segunda es la mitad que faltaba — la web contaba cómo entra el
+                semestre y se detenía ahí, cuando lo que defiende al producto
+                es lo que pasa durante las catorce semanas siguientes. */}
             <p className={styles.sub}>
               Convierte una foto o PDF del programa en un plan revisable para todo el semestre:
-              fechas, horarios, calificaciones y herramientas de estudio, todo conectado.
+              fechas, horarios y ponderaciones. Conecta Canvas gratis y se mantiene al día solo,
+              para que Semora te diga qué es lo siguiente que importa.
             </p>
             <div className={styles.heroActions}>
               <SignupButton className={styles.primaryBtn} placement="home-hero">Empezar gratis</SignupButton>

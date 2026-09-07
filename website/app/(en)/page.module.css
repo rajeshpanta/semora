@@ -664,3 +664,18 @@
 .faqBody {
   min-width: 0;
 }
+
+
+/* Optional link on a "how it works" card. Only the Canvas step carries one,
+   so it is styled as a quiet continuation of the card rather than a button
+   that would make the two entry routes look unequal. */
+.stepLink {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.stepLink:hover { text-decoration: underline; }

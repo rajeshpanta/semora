@@ -1,0 +1,26 @@
+# Positioning baseline — captured before the hero change
+#
+# Commit at capture: b0ca33c (foundation fixes; hero unchanged)
+# Query: website/scripts/analytics/positioning-funnel.sql
+#
+# Read it back with the same query after the change has been live long
+# enough to accumulate a comparable number of accounts. n=28 is far too
+# small to call a winner — this exists so the comparison starts from a
+# recorded number instead of a memory, not so 28 can be over-read.
+#
+# Every figure is a FLOOR: App Store installs cannot be joined to a
+# marketing visit, and iOS is the majority of scans.
+
+SEMORA POSITIONING BASELINE — 2026-09-06
+taken on commit b0ca33c, BEFORE the hero change
+
+landing_page                       accts  course  canvas  tasks  pro
+/                                     17      13       6     10    4
+/features/syllabus-scanner             5       4       0      2    1
+/ai-syllabus-scanner                   2       1       0      1    0
+/blackboard-assignment-tracker         2       1       0      1    0
+/canvas-deadline-tracker               1       0       0      0    0
+/pricing                               1       1       0      0    0
+TOTAL                                 28      20       6     14    5
+
+rates: course 71%  canvas 21%  tasks 50%  pro 18%
