@@ -237,6 +237,18 @@ function spanishPattern(input: string): string | null {
   if (match) {
     return `Tienes ${match[1]} ${match[1] === '1' ? 'tarea atrasada' : 'tareas atrasadas'}. Empieza por la más antigua: ${match[2]} (${match[3]}) — ${match[4]} ${match[4] === '1' ? 'día' : 'días'} de retraso.`;
   }
+  // The Today exam banner interpolates the course name before translate() sees
+  // it, so no dictionary key can ever match — it shipped in English under a
+  // fully Spanish screen. Same shape as the "Next exam:" line just below.
+  match = input.match(/^Exam (today|tomorrow|in (\d+) days) · (.+)$/);
+  if (match) {
+    const when = match[1] === 'today'
+      ? 'Examen hoy'
+      : match[1] === 'tomorrow'
+        ? 'Examen mañana'
+        : `Examen en ${match[2]} ${match[2] === '1' ? 'día' : 'días'}`;
+    return `${when} · ${match[3]}`;
+  }
   match = input.match(/^Next exam: (.+) · (.+) — (.+) \((today|\d+ days?)\)\. A good time to start preparing\.$/);
   if (match) {
     const when = match[4] === 'today'

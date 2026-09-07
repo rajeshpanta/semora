@@ -376,7 +376,16 @@ export default function DeckDetailScreen() {
               ) : (
                 <TouchableOpacity
                   style={[styles.revealBtn, { backgroundColor: colors.brand }]}
-                  onPress={() => { if (Platform.OS !== 'web') Haptics.selectionAsync(); setRevealed(true); }}
+                  onPress={() => {
+                    if (Platform.OS !== 'web') Haptics.selectionAsync();
+                    // Both ways of seeing the answer have to count as seeing it.
+                    // Only the card tap used to set this, so a student who used
+                    // THIS button — the obvious one — got the answer and no way
+                    // to grade it: the button stayed put and the grades never
+                    // appeared, which ends the review with nothing recorded.
+                    setRevealed(true);
+                    setSeenAnswer(true);
+                  }}
                 >
                   <Text style={styles.upgradeText}>Show Answer</Text>
                 </TouchableOpacity>

@@ -1650,6 +1650,7 @@ export const ES: Record<string, string> = {
   'MY SEMESTER': 'MI SEMESTRE',
   'New password': 'Contraseña nueva',
   'Nice work!': '¡Muy bien!',
+  'Keep at it': 'Sigue practicando',
   'No matching tasks': 'No hay tareas que coincidan',
   'now': 'ahora',
   'one snap.': 'una sola foto.',

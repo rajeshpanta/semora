@@ -156,13 +156,17 @@ export default function StudySuggestionsCard({ limit }: { limit?: number }) {
               <Text style={[styles.rowTitle, { color: colors.ink }]} numberOfLines={1}>
                 {s.title}
               </Text>
-              {/* Two lines, because the stake clause sits at the END of this
-                  string and a single line truncates it away — Spanish runs to
+              {/* Three lines, because the stake clause sits at the END of this
+                  string and a shorter cap truncates it away — Spanish runs to
                   60 characters against English's 49, and a real course name
                   ("AGSC 100.1001 Elements of Livestock Production") is longer
                   than both. The new information must not be the first thing
-                  cut. Short subtitles still render on one line. */}
-              <Text style={[styles.rowSub, { color: colors.ink3 }]} numberOfLines={2}>
+                  cut. Two lines held it at the default text size and lost it
+                  entirely at the largest non-accessibility size on an SE,
+                  where the row read "Cell Biology 240 · vence…" and nothing
+                  else. A cap is a maximum, so short subtitles still render on
+                  one line and nothing changes at ordinary sizes. */}
+              <Text style={[styles.rowSub, { color: colors.ink3 }]} numberOfLines={3}>
                 {s.courseName} · {translate(duePhrase(s))}
                 {s.reason.stake ? ` · ${translate(stakePhrase(s.reason.stake))}` : ''}
               </Text>

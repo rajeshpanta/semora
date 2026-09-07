@@ -123,7 +123,12 @@ export default function LectureQuizScreen() {
             accessibilityRole="button"
             accessibilityLabel={taskId ? 'Back to study session' : 'Back to lecture'}
           >
-            <Text style={[styles.secondaryBtnText, { color: colors.ink2 }]}>Back to lecture</Text>
+            {/* Say where the tap actually goes. Launched from a study session
+                this returns to the tutor, not to the lecture — the screen
+                reader was already told so, the visible label was not. */}
+            <Text style={[styles.secondaryBtnText, { color: colors.ink2 }]}>
+              {taskId ? 'Back to study session' : 'Back to lecture'}
+            </Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>

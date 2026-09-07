@@ -557,12 +557,20 @@ function TutorChat({
   // The one external activity the conductor can currently launch and hear back
   // from. Offered only when this course actually has one — never navigated to
   // without the student choosing it.
+  //
+  // ...and only in an ASSESSMENT session, because that is the only scope where
+  // hearing back works: the result is read by useLatestQuizAttemptForTask,
+  // which is keyed on the session's task. A course session has no task, so it
+  // could launch the quiz and would then never acknowledge the outcome — and
+  // the launch itself dereferenced that missing task and threw. Offering an
+  // activity whose result cannot come back is the thing this session bar is
+  // supposed not to do.
   const { data: courseLectures = [] } = useCourseLectures(courseId);
   const sessionQuizLecture = useMemo(
-    () => (sessionScope
+    () => (isExamSession
       ? courseLectures.find((l: any) => Array.isArray(l.quiz) && l.quiz.length > 0)
       : undefined),
-    [sessionScope, courseLectures],
+    [isExamSession, courseLectures],
   );
   // The result comes back through the database rather than through navigation
   // params, because the quiz is a modal and a dismissed modal cannot hand
