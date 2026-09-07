@@ -56,6 +56,7 @@ import {
 } from '@/lib/tutor';
 import { needsReinforcement, reinforcementTopics } from '@/lib/learningEvidence';
 import { isAcademicTopic } from '@/lib/academicTopic';
+import { examCoverage, firstStudyStep, nextStudyStep } from '@/lib/examSession';
 import { RichText } from '@/components/RichText';
 import { shareText, shareTextMessage } from '@/lib/shareLink';
 import {
@@ -509,6 +510,28 @@ function TutorChat({
    * to the work actually coming up. If a course has neither, Semora has no
    * opinion worth offering and the starter does not appear at all.
    */
+  // The assessment this session is about, when the student entered from one.
+  // Session-scoped only: which topics they have worked on since opening it.
+  // Nothing is persisted — none of it is a claim about the student, only about
+  // where they are in one sitting.
+  const [sessionDone, setSessionDone] = useState<string[]>([]);
+  const sessionTask = useMemo(
+    () => (explainAssignmentId ? courseTasks.find((t) => t.id === explainAssignmentId) : undefined),
+    [explainAssignmentId, courseTasks],
+  );
+  const isExamSession = !!sessionTask && (sessionTask.type === 'exam' || sessionTask.type === 'quiz');
+  const sessionCoverage = useMemo(
+    () => (isExamSession ? examCoverage(sessionTask?.description ?? null) : []),
+    [isExamSession, sessionTask?.description],
+  );
+  // Deterministic: no model call decides where to begin.
+  const sessionStep = useMemo(() => {
+    if (!isExamSession) return null;
+    const remaining = nextStudyStep(sessionCoverage, sessionDone);
+    if (sessionDone.length === 0) return firstStudyStep(sessionCoverage, topicMastery as any);
+    return remaining ? { topic: remaining, reason: 'coverage' as const } : null;
+  }, [isExamSession, sessionCoverage, sessionDone, topicMastery]);
+
   const practiceAnchor = useMemo(() => {
     if (!courseId) return null;
     // Only a real concept anchors a "Quiz me on X" chip. This used to fall
@@ -1459,6 +1482,49 @@ function TutorChat({
             </TouchableOpacity>
           </View>
         )}
+        {/* One obvious next action while an exam session is open. The composer
+            is directly below it, so the student is never trapped: they can type
+            anything, change topic, or leave. Tapping this is an explicit
+            choice, which is why it suppresses automatic targeting. */}
+        {isExamSession && sessionStep && messages.length > 0 && (
+          <View style={[styles.sessionBar, { maxWidth: columnWidth, borderTopColor: colors.line }]}>
+            <Text style={[styles.sessionReason, { color: colors.ink3 }]} numberOfLines={2}>
+              {sessionStep.reason === 'reinforce'
+                ? `${translate('This is on the exam, and you have missed it before')}`
+                : sessionStep.reason === 'coverage'
+                  ? `${translate('The exam covers this')}`
+                  : `${translate('No topic list for this exam — working from your course material')}`}
+            </Text>
+            <TouchableOpacity
+              style={[styles.sessionAction, { borderColor: colors.brand100, backgroundColor: colors.brand50 }]}
+              disabled={isTutorWorking}
+              onPress={() => {
+                const topic = sessionStep.topic;
+                track('study_session_step', {
+                  screen: 'tutor', reason: sessionStep.reason,
+                  step: sessionDone.length, has_coverage: sessionCoverage.length > 0,
+                });
+                if (topic) setSessionDone((prev) => [...prev, topic]);
+                handleGeneratePractice(
+                  'quiz',
+                  topic
+                    ? `Create a quiz question on ${topic}, from the course material.`
+                    : undefined,
+                  true,
+                );
+              }}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+            >
+              <FontAwesome name="list-ol" size={12} color={colors.brand} />
+              <Text style={[styles.sessionActionText, { color: colors.brand }]} numberOfLines={1}>
+                {sessionStep.topic
+                  ? `${translate('Quiz me on')} ${sessionStep.topic}`
+                  : translate('Quiz me on this course')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <View
           onLayout={handleComposerLayout}
           style={[styles.composer, { borderTopColor: colors.line, backgroundColor: colors.paper, maxWidth: columnWidth }]}
@@ -1913,6 +1979,10 @@ const styles = StyleSheet.create({
   feedbackAnswer: { fontSize: 12.5, fontWeight: '700', lineHeight: 17, marginTop: 8 },
   feedbackWhy: { fontSize: 12.5, lineHeight: 17, marginTop: 4 },
   /** Wraps rather than scrolls: at large text each action takes its own row. */
+  sessionBar: { alignSelf: 'center', width: '100%', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth, gap: 6 },
+  sessionReason: { fontSize: 11.5, lineHeight: 16 },
+  sessionAction: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12, minHeight: 44 },
+  sessionActionText: { fontSize: 14, fontWeight: '600', flexShrink: 1 },
   recoveryRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 20, rowGap: 0, marginTop: 4 },
   recoveryAction: { minHeight: 44, justifyContent: 'center' },
   recoverySecondary: { fontSize: 12.5, fontWeight: '600' },

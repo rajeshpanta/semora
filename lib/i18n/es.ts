@@ -361,6 +361,12 @@ export const ES: Record<string, string> = {
   'Smart Plan': 'Plan inteligente',
   'Up next': 'Lo siguiente',
   'Prepare for this': 'Prepárate para esto',
+  'The exam covers this': 'El examen cubre esto',
+  'This is on the exam, and you have missed it before':
+    'Esto entra en el examen y ya lo has fallado antes',
+  'No topic list for this exam — working from your course material':
+    'No hay lista de temas para este examen: trabajaremos con el material de tu curso',
+  'Quiz me on this course': 'Hazme preguntas de este curso',
   'Your tutor knows this course — study from its material.':
     'Tu tutor conoce este curso: estudia con su material.',
   'due today': 'vence hoy',

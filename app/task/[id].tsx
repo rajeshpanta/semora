@@ -27,6 +27,8 @@ import { TASK_TYPE_LABELS, TASK_TYPES, COLORS, SCREEN_MAX_WIDTH, type TaskType }
 import { DatePicker } from '@/components/DatePicker';
 import { NotFound } from '@/components/NotFound';
 import { useColors } from '@/lib/theme';
+import { useAppStore } from '@/store/appStore';
+import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive, gridItemBasis } from '@/lib/responsive';
 import { formatLocalDate } from '@/lib/dates';
 import { track } from '@/lib/analytics';
@@ -41,6 +43,8 @@ import { useTaskCompletionFlow } from '@/components/TaskCompletionFlow';
 export default function TaskDetailScreen() {
   const { id, grade } = useLocalSearchParams<{ id: string; grade?: string }>();
   const router = useRouter();
+  const isPro = useAppStore((s) => s.isPro);
+  const showProUpsell = useProUpsell();
   const { data: task, isLoading, isError } = useTask(id!);
   const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
@@ -389,7 +393,13 @@ export default function TaskDetailScreen() {
               track('tutor_offered_tapped', {
                 screen: 'task_detail', type: task.type,
                 entry_kind: task.type === 'exam' || task.type === 'quiz' ? 'assessment' : 'assignment',
+                is_pro: isPro,
               });
+              // The course screen has always shown the upsell before opening
+              // the tutor; this one navigated first and let the server answer
+              // with a 402, so a free student's paywall was an error message.
+              // Same entitlement, shown the same way.
+              if (!isPro) { showProUpsell('tutor'); return; }
               router.push({
                 pathname: '/tutor',
                 params: { courseId: task.course_id, assignmentId: task.id },

@@ -1446,7 +1446,11 @@ export default function TodayScreen() {
                   track('tutor_offered_tapped', {
                     screen: 'dashboard', type: nextUp.type,
                     entry_kind: nextUp.type === 'exam' || nextUp.type === 'quiz' ? 'assessment' : 'assignment',
+                    is_pro: isPro,
                   });
+                  // Same upsell the course screen shows, rather than letting
+                  // the server's 402 be a free student's paywall.
+                  if (!isPro) { showProUpsell('tutor'); return; }
                   router.push({
                     pathname: '/tutor',
                     params: { courseId: nextUp.course_id, assignmentId: nextUp.id },
