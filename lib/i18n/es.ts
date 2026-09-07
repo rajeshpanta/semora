@@ -48,7 +48,9 @@ export const ES: Record<string, string> = {
   'The whole conversation is removed. This cannot be undone.': 'Se elimina toda la conversación. No se puede deshacer.',
   'Couldn’t start a new chat': 'No se pudo empezar un chat nuevo',
   'Show the tutor a problem': 'Muéstrale un problema al tutor',
-  'It reads the photo for this question only — it is not saved to your course.': 'Lee la foto solo para esta pregunta; no se guarda en tu curso.',
+  'The photo itself is not saved to your course. Semora keeps a short note of what it shows, so it can help with this course later — you can remove it any time.':
+    'La foto en sí no se guarda en tu curso. Semora guarda una nota breve de lo que muestra para poder ayudarte con este curso más adelante; puedes eliminarla cuando quieras.',
+  'Shared in Tutor': 'Compartido en el tutor',
   'Choose from library': 'Elegir de la galería',
   'Choose an image': 'Elegir una imagen',
   'Semora needs access so you can show the tutor a problem. You can enable it in Settings.': 'Semora necesita acceso para que puedas mostrarle un problema al tutor. Puedes activarlo en Ajustes.',
@@ -2306,7 +2308,8 @@ export const ES: Record<string, string> = {
   'Add every class': 'Añade todas tus clases',
   'This recording didn’t finish': 'Esta grabación no se completó',
   'Delete this recording': 'Eliminar esta grabación',
-  'Attached to your next question. It isn’t saved to your course.': 'Se adjunta a tu próxima pregunta. No se guarda en tu curso.',
+  'Attached to your next question. Semora keeps a short note of it, not the photo.':
+    'Se adjunta a tu próxima pregunta. Semora guarda una nota breve, no la foto.',
   'Help & feedback': 'Ayuda y comentarios',
 
   // ── Pro upsell sheet, Canvas entry points and the course screen (build 50)

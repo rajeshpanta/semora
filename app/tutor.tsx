@@ -995,7 +995,7 @@ function TutorChat({
     ];
     Alert.alert(
       'Show the tutor a problem',
-      'It reads the photo for this question only — it is not saved to your course.',
+      'The photo itself is not saved to your course. Semora keeps a short note of what it shows, so it can help with this course later — you can remove it any time.',
       options,
     );
   };
@@ -1086,8 +1086,25 @@ function TutorChat({
     );
   };
 
-  const confirmDeleteNote = (note: { id: string; storage_path: string; filename: string }) => {
-    Alert.alert('Remove note?', `“${note.filename}” will no longer ground the tutor.`, [
+  // What to call a note on screen. A retained tutor row's filename is an
+  // internal identity ("Shared in chat — 3044d3c8"), which is not something to
+  // show a student, and presenting AI-derived text under a filename would read
+  // as a file they added. Name it for where it came from instead.
+  const noteLabel = (note: { source?: string | null; filename: string }) =>
+    note.source === 'tutor' ? translate('Shared in Tutor') : note.filename;
+
+  // Citations arrive from the server carrying the note's stored filename, and a
+  // retained tutor row's filename is its content hash. The chip under an answer
+  // is where a student checks WHERE something came from, so "Shared in chat —
+  // 5b148140e21d" is the least useful thing it could say. Same name as the
+  // material chip, so the two surfaces agree. Display only — the stored
+  // identity is untouched, which is what keeps duplicates collapsing.
+  const RETAINED_NOTE_NAME = /^Shared in chat — [0-9a-f]{6,32}$/;
+  const citationLabel = (label: string) =>
+    RETAINED_NOTE_NAME.test(label) ? translate('Shared in Tutor') : label;
+
+  const confirmDeleteNote = (note: { id: string; storage_path: string | null; filename: string; source?: string | null }) => {
+    Alert.alert('Remove note?', `“${noteLabel(note)}” will no longer ground the tutor.`, [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Remove',
@@ -1311,7 +1328,7 @@ function TutorChat({
                         style={[styles.citationChip, { borderColor: colors.line, backgroundColor: colors.paper, maxWidth: citationMaxWidth }]}
                       >
                         <FontAwesome name="book" size={citationIcon} color={colors.ink3} />
-                        <Text style={[styles.citationText, { color: colors.ink3 }]} numberOfLines={citationLines}>{citation.label}</Text>
+                        <Text style={[styles.citationText, { color: colors.ink3 }]} numberOfLines={citationLines}>{citationLabel(citation.label)}</Text>
                       </View>
                     ))}
                   </View>
@@ -1548,7 +1565,7 @@ function TutorChat({
           <View style={[styles.attachmentBar, { borderTopColor: colors.line, backgroundColor: colors.paper, maxWidth: columnWidth }]}>
             <Image source={{ uri: attachment.uri }} style={styles.attachmentThumb} />
             <Text style={[styles.attachmentLabel, { color: colors.ink2 }]} numberOfLines={2}>
-              Attached to your next question. It isn{'\u2019'}t saved to your course.
+              Attached to your next question. Semora keeps a short note of it, not the photo.
             </Text>
             <TouchableOpacity
               onPress={() => setAttachment(null)}
@@ -1826,11 +1843,11 @@ function TutorChat({
                     onPress={() => confirmDeleteNote(n)}
                     activeOpacity={0.7}
                     accessibilityRole="button"
-                    accessibilityLabel={n.filename}
+                    accessibilityLabel={noteLabel(n)}
                     accessibilityHint="Removes this note from the tutor's material"
                   >
-                    <FontAwesome name="file-text-o" size={11} color={colors.ink3} />
-                    <Text style={[styles.noteChipText, { color: colors.ink2 }]} numberOfLines={1}>{n.filename}</Text>
+                    <FontAwesome name={n.source === 'tutor' ? 'comment-o' : 'file-text-o'} size={11} color={colors.ink3} />
+                    <Text style={[styles.noteChipText, { color: colors.ink2 }]} numberOfLines={1}>{noteLabel(n)}</Text>
                     <FontAwesome name="times" size={11} color={colors.ink3} />
                   </TouchableOpacity>
                 ))}
@@ -2094,7 +2111,11 @@ const styles = StyleSheet.create({
   fileProgressWrap: { paddingHorizontal: 14, paddingBottom: 10 },
   addNoteChip: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   addNoteText: { fontSize: 13, fontWeight: '700' },
-  noteChip: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20, borderWidth: 0.5, maxWidth: 180 },
+  // 220, not 180: the provenance label has to survive. "Compartido en el tutor"
+  // truncated to "Compartido en el t…", which tells a student nothing about
+  // where the material came from — the one thing this chip exists to say.
+  // Filenames simply get more room before their own ellipsis.
+  noteChip: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 11, paddingVertical: 7, borderRadius: 20, borderWidth: 0.5, maxWidth: 220 },
   noteChipText: { fontSize: 12.5, fontWeight: '500', flexShrink: 1 },
   actionChip: { minHeight: 44, maxWidth: 210, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 20, paddingHorizontal: 11, paddingVertical: 8 },
   actionText: { fontSize: 12, fontWeight: '700', flexShrink: 1 },

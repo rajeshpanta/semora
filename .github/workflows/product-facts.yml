@@ -18,6 +18,15 @@
 # Zero dependencies and no secrets: the script is Node stdlib only and reads
 # files out of the checkout, so this needs no install step and cannot leak
 # anything.
+#
+# RUN IT LOCALLY WITH `node scripts/check-product-facts.mjs`, and please do not
+# add an npm alias for it back into package.json. app.json pins
+# `runtimeVersion: {policy: 'fingerprint'}`, and package.json is one of the
+# inputs eas-cli hashes to compute that runtime — so a one-line script entry
+# here changed the shipped app's runtime from e88b9845 to cb5d767f and sent an
+# OTA into a mailbox no installed build reads. A developer convenience is not
+# worth an unreachable release. CI calls the script directly, which is why this
+# workflow never needed the alias in the first place.
 
 name: product-facts
 

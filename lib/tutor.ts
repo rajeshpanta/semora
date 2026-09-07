@@ -138,10 +138,13 @@ export interface TutorConversation {
 export interface CourseNote {
   id: string;
   course_id: string;
-  storage_path: string;
+  /** Null for rows with no file behind them — see useCourseNotes. */
+  storage_path: string | null;
   filename: string;
   mime_type: string | null;
   created_at: string;
+  /** 'upload' (a file the student added) or 'tutor' (kept from a shared image). */
+  source?: string | null;
   /**
    * Whether the server has already cached this file's text (generated column,
    * migration 087). Lets the client skip asking about a note it can already
@@ -806,18 +809,25 @@ export function useCourseNotes(courseId?: string | null) {
   return useQuery({
     queryKey: tutorKeys.notes(courseId),
     queryFn: async () => {
-      // `source = 'upload'` only. Lecture notes are mirrored into course_notes
-      // so the tutor and flashcard generator can ground on them, but they are
-      // NOT files the student uploaded: they have no storage object behind
-      // them, and every row this hook returns is rendered as a chip that
-      // deletes on tap. Showing them here would offer to delete a lecture from
-      // a screen that has no idea it is doing that — and would call
-      // storage.remove([null]). The lecture screen owns their lifecycle.
+      // 'upload' and 'tutor', never 'lecture'. Every row this hook returns is
+      // rendered as a chip that deletes on tap, so the test is not "is it a
+      // file" but "does this screen own its lifecycle". Uploads it owns.
+      // Tutor-retained material it owns too: S6 keeps a short description of an
+      // image the student shared, that text grounds later sessions, and a
+      // student who cannot see it cannot remove it — material that answers
+      // questions from behind the curtain is the one thing this feature must
+      // not be. Lecture notes stay out: they are mirrored here for grounding
+      // but the lecture screen owns them, and deleting one from here would
+      // orphan a recording the chip knows nothing about.
+      //
+      // storage_path is NULL on tutor rows (no file was ever stored), which is
+      // exactly why useDeleteCourseNote below skips the storage call when it is
+      // missing rather than passing null into storage.remove().
       const { data, error } = await supabase
         .from('course_notes')
-        .select('id, course_id, storage_path, filename, mime_type, created_at, extracted')
+        .select('id, course_id, storage_path, filename, mime_type, created_at, extracted, source')
         .eq('course_id', courseId!)
-        .eq('source', 'upload')
+        .in('source', ['upload', 'tutor'])
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as CourseNote[];
@@ -939,10 +949,14 @@ export function useUploadCourseNote(courseId?: string | null) {
 export function useDeleteCourseNote(courseId?: string | null) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (note: { id: string; storage_path: string }) => {
+    mutationFn: async (note: { id: string; storage_path: string | null }) => {
       // Remove the file first (fire-and-forget — a dangling object is harmless
-      // and RLS keeps it private), then the row.
-      supabase.storage.from('course-notes').remove([note.storage_path]).catch(() => {});
+      // and RLS keeps it private), then the row. Tutor-retained material never
+      // had a file, so there is nothing to remove and storage.remove([null])
+      // would be a wasted call with a confusing failure.
+      if (note.storage_path) {
+        supabase.storage.from('course-notes').remove([note.storage_path]).catch(() => {});
+      }
       const { error } = await supabase.from('course_notes').delete().eq('id', note.id);
       if (error) throw error;
     },
