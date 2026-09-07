@@ -31,10 +31,11 @@ export const metadata: Metadata = {
   },
 };
 
-// "Canvas gratis" va primero por la misma razón que en inglés: es lo único
-// gratuito que demuestra que Semora sigue trabajando después del primer día.
+// Va primero por la misma razón que en inglés: es lo único gratuito que
+// demuestra que Semora sigue trabajando después del primer día, y decir
+// "todas tus clases" responde de antemano al "1 curso" del plan gratis.
 const CHIPS = [
-  'Canvas gratis',
+  'Todas tus clases de Canvas, gratis',
   '1 acción con IA gratis por cuenta',
   'App completa en español',
   'Tus datos al día en iPhone, iPad y la web',
@@ -153,7 +154,7 @@ const FAQ = [
   {
     question: '¿Qué añade Pro?',
     answer:
-      'Pro añade cursos y escaneos ilimitados, conexiones LMS, planificación adaptable, herramientas de estudio basadas en tus materias y análisis avanzados de calificaciones. Las opciones vigentes están en la página de Precios y se aplican a la misma cuenta en iPhone, iPad y la web.',
+      'Pro añade cursos y escaneos ilimitados, planificación adaptable, herramientas de estudio basadas en tus materias y análisis avanzados de calificaciones. Conectar Canvas, Blackboard o Moodle es gratis en todos los planes, incluido el gratuito. Las opciones vigentes están en la página de Precios y se aplican a la misma cuenta en iPhone, iPad y la web.',
   },
   {
     question: '¿Qué tipos de archivo puedo añadir?',

@@ -54,8 +54,13 @@ function mustNotSay(pattern, why) {
 // Singular-aware: at a limit of 1 the old template produced "Up to 1 courses",
 // which is the sentence a limit change writes for you when the plural is
 // hardcoded beside an interpolated number.
+// Anchored on the NUMBER next to the thing it limits, not on a sentence
+// opener. The previous assertion demanded the literal "Up to 1 course", so
+// rewording the bullet to lead with the Canvas exemption tripped it even
+// though the number was still right — a guard that fails on rephrasing
+// teaches people to route around it.
 mustSay(
-  `Up to ${app.freeCourses} ${app.freeCourses === 1 ? 'course' : 'courses'}`,
+  `${app.freeCourses} ${app.freeCourses === 1 ? 'course' : 'courses'} you add by hand`,
   `lib/syllabus.ts says FREE_COURSE_LIMIT = ${app.freeCourses}`,
 );
 // Canvas sync is free for everyone while the canvas_free promo runs (migration
@@ -66,6 +71,54 @@ mustNotSay(
   /Canvas[^.]{0,60}(is|part of|requires)\s+Pro|Pro[^.]{0,40}(includes|adds)[^.]{0,30}Canvas import/i,
   'Canvas sync is free while the canvas_free promo is active (migration 090)',
 );
+// ─── Canvas is free, and the course cap does not apply to it ─────────────
+//
+// The negative check above only fires on the word "Canvas". It sailed past
+// "Pro adds unlimited courses and scans, LMS connections, adaptive planning"
+// on both homepages, which told a free reader in the plainest possible terms
+// that the thing they can have for nothing costs $3.99 — the exact claim this
+// file was written to prevent, wearing a different noun.
+// Scanned across the PAGES too, not just the facts file. The claim this
+// catches lived in app/(en)/page.tsx and app/(es)/es/page.tsx, which
+// mustNotSay never opens — the same one-file blind spot that let the
+// four-course claim run for sixteen days.
+const LMS_IS_PRO =
+  /Pro[^.'"\n]{0,60}\b(adds|includes|a\u00f1ade|incluye)\b[^.'"\n]{0,60}\bLMS\b|\bLMS\b[^.'"\n]{0,40}(is|requires|needs)\s+Pro/i;
+for (const file of [
+  'website/lib/semora-facts.ts',
+  'website/lib/es-facts.ts',
+  'website/app/(en)/page.tsx',
+  'website/app/(es)/es/page.tsx',
+  'website/app/(en)/pricing/page.tsx',
+]) {
+  const m = read(file).match(LMS_IS_PRO);
+  if (m) {
+    failures.push(
+      `${file} says "${m[0].trim()}" — LMS import is free on every plan. ` +
+        'Naming it as something Pro adds is the costliest wrong claim on the ' +
+        'site, and the word "LMS" evades the Canvas check above.',
+    );
+  }
+}
+
+// The POSITIVE half, which did not exist. Everything about Canvas was checked
+// by asserting what the site must not say, so deleting the exemption entirely
+// would have passed silently — and that sentence is the only thing standing
+// between "1 free course" and a student concluding Semora is a one-class app
+// until they pay. It is exact: enforce_free_course_limit returns early for
+// source='lms' rows and never counts them, identically on free and on Pro.
+for (const [file, phrase] of [
+  ['website/lib/semora-facts.ts', 'never count toward that limit'],
+  ['website/lib/es-facts.ts', 'nunca cuentan para ese límite'],
+]) {
+  if (!read(file).includes(phrase)) {
+    failures.push(
+      `missing "${phrase}" in ${file} — the free-course cap must never be ` +
+        'stated without saying in the same breath that Canvas classes are exempt',
+    );
+  }
+}
+
 mustSay(
   'in one semester',
   `FREE_SEMESTER_LIMIT = ${app.freeSemesters}, so the free cap is a single semester`,
@@ -87,9 +140,10 @@ mustNotSay(
 // The Spanish facts file is a separate canonical restatement, so it needs its
 // own assertion — mustSay() above only ever reads the English one.
 const esFacts = read('website/lib/es-facts.ts');
-if (!esFacts.includes(`Hasta ${app.freeCourses} curso`)) {
+const esCoursePhrase = `${app.freeCourses} curso${app.freeCourses === 1 ? '' : 's'} que añades a mano`;
+if (!esFacts.includes(esCoursePhrase)) {
   failures.push(
-    `missing "Hasta ${app.freeCourses} curso" in website/lib/es-facts.ts — ` +
+    `missing "${esCoursePhrase}" in website/lib/es-facts.ts — ` +
       `FREE_COURSE_LIMIT = ${app.freeCourses}`,
   );
 }

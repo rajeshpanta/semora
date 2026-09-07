@@ -27,11 +27,19 @@ export const metadata: Metadata = {
   openGraph: { url: '/', ...OG_IMAGE },
 };
 
-// "Canvas sync, free" earns the first slot rather than being a footnote: it is
-// the only free capability that demonstrates Semora keeps working after setup,
+// This chip earns the first slot rather than being a footnote: Canvas is the
+// only free capability that demonstrates Semora keeps working after setup,
 // which is the half of the product the hero used to leave out entirely.
+//
+// "All your Canvas classes" rather than "Canvas sync, free", because free alone
+// answers the wrong question. The free tier's visible number is ONE course, and
+// a student who reads that and stops has concluded Semora is a one-class app
+// until they pay. The count is the reassurance, and it is exact: the course-cap
+// trigger never counts an LMS-sourced row, so a free account carries as many
+// Canvas classes as a paid one. It says nothing about grades, because the
+// calendar feed carries dates and not marks.
 const HERO_CHIPS = [
-  'Canvas sync, free',
+  'All your Canvas classes, free',
   'Your first AI action is free',
   'Synced across iPhone, iPad and web',
 ];
@@ -166,7 +174,7 @@ const HOME_FAQ = [
   {
     question: 'What does Pro add?',
     answer:
-      'Pro adds unlimited courses and scans, LMS connections, adaptive planning, course-aware study tools and advanced grade insights. The current options are listed on the Pricing page and apply to the same account on iPhone, iPad and the web.',
+      'Pro adds unlimited courses and scans, adaptive planning, course-aware study tools and advanced grade insights. Connecting Canvas, Blackboard or Moodle is free on every plan, including free. The current options are listed on the Pricing page and apply to the same account on iPhone, iPad and the web.',
   },
   {
     question: 'What can I feed the scanner?',

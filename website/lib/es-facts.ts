@@ -7,8 +7,12 @@ export const SITE_DESCRIPTION_ES =
 
 export const FREE_FEATURES_ES = [
   '1 acción con IA para toda la vida de la cuenta: un escaneo, una grabación o un documento en apuntes',
-  'Sincronización con Canvas gratis y sin límite: conéctalo y todas tus clases se importan solas y se mantienen al día, sin Pro, sin token y sin permiso de informática',
-  'Hasta 1 curso que añades a mano dentro de un único semestre (las clases que llegan de Canvas no cuentan); una cuenta gratis admite un semestre en total',
+  // Ver la nota en semora-facts.ts: elegir qué clases entran es un paso del
+  // estudiante, así que "se importan solas" prometía de más. Lo automático es
+  // lo de después. El "sin límite" sí es exacto: es una afirmación sobre el
+  // plan, y las clases de Canvas nunca se cuentan.
+  'Sincronización con Canvas gratis: trae todas las clases que curses, sin límite de cuántas, sin Pro, sin token y sin permiso de informática, y se mantienen al día solas',
+  'Además, 1 curso que añades a mano dentro de un único semestre: las clases de Canvas nunca cuentan para ese límite; una cuenta gratis admite un semestre en total',
   'Seguimiento de tareas y fechas de entrega',
   'Calificaciones con promedios ponderados',
   'Recordatorios el mismo día',
@@ -60,7 +64,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     name: 'Sincronización con Canvas',
     shortDescription: 'Importa tus tareas de Canvas, Blackboard o Moodle y mantenlas al día cuando cambien.',
     tier: 'free',
-    description: 'Conecta Canvas gratis y todas tus clases se importan solas y se mantienen al día, sin token ni permiso de informática.',
+    description: 'Conecta Canvas gratis, trae todas las clases que curses y se mantienen al día solas, sin token ni permiso de informática.',
   },
   {
     slug: 'calificaciones',

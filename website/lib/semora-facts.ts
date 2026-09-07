@@ -113,8 +113,21 @@ export const PRO_ANNUAL_SAVINGS_PCT = Math.round(
 // every AI action is Pro. Never reintroduce "per month" language here.
 export const FREE_FEATURES = [
   'One AI action for the lifetime of the account: a syllabus scan, a lecture recording, or a document turned into notes',
-  'Canvas sync, free and unlimited: connect Canvas and every class you take imports itself, then keeps itself up to date — no Pro, no token, no IT approval',
-  'Up to 1 course you add by hand in one semester (classes that arrive from Canvas do not count towards it); one semester total on free',
+  // "Imports itself" was doing too much work. Choosing which classes to bring
+  // across is a step the student takes — at connect, and again when a new term
+  // fills the feed. Right now 26 detected courses across 15 accounts are
+  // waiting to be linked, holding 519 deadlines, so a promise that every class
+  // arrives on its own is one this product does not keep. What IS automatic is
+  // everything after: a class you bring across stays right on its own.
+  //
+  // "No limit on how many" is an entitlement claim and it is exact — the
+  // course-cap trigger returns early for source='lms' rows and never counts
+  // them, on free exactly as on Pro. Real free accounts hold up to 8.
+  'Canvas sync, free: bring across as many classes as you take, with no limit on how many — no Pro, no token, no IT approval — and they keep themselves up to date afterwards',
+  // The exemption travels WITH the limit, in the same breath. Read alone, "1
+  // course" says Semora is a one-class app unless you pay, which is the
+  // opposite of what the free tier actually offers a Canvas student.
+  'Plus 1 course you add by hand, within one semester — Canvas classes never count toward that limit; one semester total on free',
   'Full deadline and task tracking',
   'Grade tracking with weighted averages',
   'Same-day reminders',
@@ -186,7 +199,7 @@ export const FEATURES: FeatureFact[] = [
     slug: 'canvas-sync',
     name: 'Canvas Sync',
     shortDescription:
-      'Connect Canvas free and every class you are enrolled in imports itself, then stays right when an instructor moves a deadline.',
+      'Connect Canvas free, bring across as many classes as you take, and they stay right when an instructor moves a deadline.',
     // Free while the `canvas_free` promo runs, and the promo row currently has
     // no end date. The gate is lms_access_allowed(uid) in migration 090, which
     // is is_pro() OR the promo OR an account that connected while it ran — so a
