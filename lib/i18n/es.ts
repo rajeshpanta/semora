@@ -359,6 +359,8 @@ export const ES: Record<string, string> = {
   'Settings': 'Configuración',
   'Import syllabus': 'Importar programa',
   'Smart Plan': 'Plan inteligente',
+  'Up next': 'Lo siguiente',
+  'due today': 'vence hoy',
   'Workload': 'Carga académica',
   'Progress': 'Progreso',
   'Progress Insights': 'Análisis del progreso',

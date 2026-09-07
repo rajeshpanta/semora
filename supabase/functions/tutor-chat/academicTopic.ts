@@ -57,8 +57,23 @@ const ADMIN_HEAD =
 const NUMBERED_HEAD =
   /^(midterms?|finals|final|exams?|tests?|quiz(?:zes)?|projects?|papers?|essays?|discussions?|labs?|modules?|units?|weeks?|days?|lectures?|chapters?|ch|sections?|sec|pages?|pp|problem sets?|psets?|readings?|parts?|topics?)\b/i;
 
-/** What must follow a NUMBERED_HEAD for the label to still be an artifact. */
-const ONLY_AN_INDEX = /^[\s#:.\-–—]*(\d+(?:\.\d+)*[a-z]?|[ivxlc]+|[a-z])?[\s.)-]*$/i;
+/**
+ * What must follow a NUMBERED_HEAD for the label to still be an artifact.
+ *
+ * A RANGE OR LIST of indices is still just a location in the material, and the
+ * first version of this only matched a single one — so "Chapter 9" was
+ * correctly rejected while "Chapters 1-4", "Sections 3.1, 3.2", "Modules 4-6"
+ * and "Unit 1 and 2" all passed as concepts. That was latent rather than live,
+ * because nothing yet emits those strings as topic labels, but any feature
+ * that put chapter pointers in front of the generator would have armed it.
+ */
+const INDEX = String.raw`\d+(?:\.\d+)*[a-z]?|[ivxlc]+`;
+const ONLY_AN_INDEX = new RegExp(
+  // an optional leading separator, then one index, then any number of further
+  // indices joined by a range or list separator, then trailing punctuation
+  String.raw`^[\s#:.\-–—]*(?:(?:${INDEX})(?:(?:\s*(?:[-–—,&+]|and|to|through|thru))+\s*(?:${INDEX}))*|[a-z])?[\s.)\-–—]*$`,
+  'i',
+);
 
 /**
  * True when the label names an idea worth measuring, rather than a piece of

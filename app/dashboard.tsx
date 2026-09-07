@@ -16,7 +16,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { format, differenceInCalendarWeeks, startOfISOWeek } from 'date-fns';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
-import { useSemesters, useCourses, useTasks } from '@/lib/queries';
+import { useSemesters, useCourses, useTasks, useSemesterGradeCategories } from '@/lib/queries';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH, DEFAULT_GRADE_SCALE } from '@/lib/constants';
 import type { GradeThreshold } from '@/types/database';
 import { useColors } from '@/lib/theme';
@@ -26,6 +26,7 @@ import {
   buildWeeklyWorkload, perCourseLoad, examDensity, type WorkloadTask,
 } from '@/lib/workload';
 import { getStudySuggestions, type UrgencyTier } from '@/lib/studySuggestions';
+import { stakesByTask } from '@/lib/taskStake';
 import { WorkloadChart } from '@/components/WorkloadChart';
 import { track } from '@/lib/analytics';
 
@@ -94,9 +95,13 @@ export default function DashboardScreen() {
     [workloadTasks, courses],
   );
   const examWeeks = useMemo(() => examDensity(workloadTasks), [workloadTasks]);
+  // Same breakdown the Today card reads, so both surfaces rank identically.
+  const { data: gradeCategories = [] } = useSemesterGradeCategories(selectedSemesterId);
   const topSuggestions = useMemo(
-    () => getStudySuggestions(workloadTasks, undefined, new Date(), 3),
-    [workloadTasks],
+    () => getStudySuggestions(workloadTasks, undefined, new Date(), 3, {
+      stakes: stakesByTask(workloadTasks as any, gradeCategories as any),
+    }),
+    [workloadTasks, gradeCategories],
   );
 
   // Free tier sees this week for real; Pro sees the whole semester. The
@@ -286,7 +291,9 @@ export default function DashboardScreen() {
             {topSuggestions.length > 0 && (
               <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
                 <View style={styles.cardHead}>
-                  <Text style={[styles.cardTitle, { color: colors.ink }]}>Smart Plan</Text>
+                  {/* The same basic deterministic list as Today. "Smart Plan"
+                      is the Pro timed planner behind the link below. */}
+                  <Text style={[styles.cardTitle, { color: colors.ink }]}>Up next</Text>
                   <TouchableOpacity style={styles.plannerLink} onPress={() => router.push('/planner' as any)}>
                     <Text style={[styles.plannerLinkText, { color: colors.brand }]}>Open timed plan</Text>
                     <FontAwesome name="chevron-right" size={9} color={colors.brand} />

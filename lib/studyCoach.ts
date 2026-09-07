@@ -30,11 +30,16 @@ export interface StudyCoachProfile {
   reliableWeekdays: number[];
 }
 
+import type { TaskStake } from '@/lib/taskStake';
+
 export interface AdaptivePlannerContext {
   preferredStartByWeekday: Array<number | null>;
   preferredStartMinutes: number | null;
   examTaskIds: string[];
   gradeRiskCourseIds: string[];
+  /** Derived grade-category stakes (lib/taskStake). Optional — absent means
+   *  the plain deadline ranking, never a different one. */
+  stakes?: ReadonlyMap<string, TaskStake>;
 }
 
 type CoachBlock = Pick<StudyBlock,

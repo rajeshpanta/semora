@@ -1,15 +1,17 @@
 // Study-suggestions engine — a deterministic (NO AI) ranker that turns the
 // student's incomplete deadlines into a short, prioritized "start on this next"
-// list. Shares the weight×typeWeight model with lib/workload.ts and divides by
-// urgency so a heavy exam three days out outranks a light reading due tomorrow.
+// list. Scoring lives in lib/taskPriority, shared with the timed planner; the
+// stake that makes a heavy exam outrank a light reading comes from
+// lib/taskStake, inferred from the syllabus grade breakdown at read time.
 //
 // Pure functions only — no React, no fetching. The card/screen callers pass in
 // the tasks (and optionally meetings + a fixed `now` for testing) they already
 // hold.
 
 import type { TaskType } from '@/lib/constants';
-import { taskLoadScore, type WorkloadTask } from '@/lib/workload';
+import { type WorkloadTask } from '@/lib/workload';
 import { TASK_TYPE_LABELS } from '@/lib/constants';
+import { priorityScore, reasonFor, type PriorityContext, type PriorityReason } from '@/lib/taskPriority';
 
 export type UrgencyTier = 'now' | 'soon' | 'ahead';
 
@@ -22,8 +24,13 @@ export interface Suggestion {
   dueDate: string;
   /** Whole days from `now` until the due date (0 = due today). */
   daysUntilDue: number;
-  /** weight×typeWeight ÷ max(daysUntilDue, 0.5) — higher = do sooner. */
+  /** From lib/taskPriority — the one ranking Semora uses everywhere. */
   score: number;
+  /**
+   * Why this is here, as parts for the caller to translate. Never a score:
+   * a student should read "Friday, and exams are 30% of this course".
+   */
+  reason: PriorityReason;
   tier: UrgencyTier;
   /** Ready-to-render one-liner, e.g. "Start on Midterm for Chem — exam due in 3 days". */
   line: string;
@@ -64,9 +71,10 @@ function duephrase(days: number): string {
 
 /**
  * Rank the student's incomplete, dated, still-future tasks into a prioritized
- * study list. score = taskLoadScore ÷ max(daysUntilDue, 0.5): heavier work and
- * nearer deadlines both push a task up. Deterministic — same input always
- * yields the same order (ties broken by due date then title).
+ * study list. Ranked by lib/taskPriority — the one scoring Semora uses
+ * everywhere, so this card and the timed planner cannot disagree about what
+ * matters most. Deterministic: same input always yields the same order (ties
+ * broken by due date then title).
  *
  * @param tasks    incomplete/complete task rows (completed + past + undated are filtered out)
  * @param meetings optional course meetings (reserved; see MeetingLike)
@@ -78,7 +86,10 @@ export function getStudySuggestions(
   meetings?: MeetingLike[],
   now: Date = new Date(),
   limit = 5,
+  /** Exam/risk boosts and derived stakes. Absent = plain deadline ranking. */
+  context: Omit<PriorityContext, 'now'> = {},
 ): Suggestion[] {
+  const ctx: PriorityContext = { ...context, now };
   const suggestions: Suggestion[] = [];
 
   for (const t of tasks ?? []) {
@@ -97,9 +108,17 @@ export function getStudySuggestions(
     }
 
     const courseName = t.courses?.name ?? 'your course';
-    // Divide by urgency, flooring at 0.5 so a task due today doesn't explode to
-    // infinity or divide by zero.
-    const score = taskLoadScore(t) / Math.max(days, 0.5);
+    // One ranking, shared with the timed planner. This used to be a local
+    // expression that ignored priority, exam proximity, grade risk and the
+    // derived stake — which is why the two "Smart Plan" surfaces could put
+    // different work first for the same student on the same day.
+    const result = priorityScore(
+      { id: t.id, type: t.type, due_date: t.due_date, weight: t.weight ?? null,
+        priority: (t as { priority?: 'high' | 'normal' | 'low' | null }).priority ?? null,
+        course_id: (t as { course_id?: string | null }).course_id ?? null },
+      ctx,
+    );
+    const score = result.score;
     const tier = tierFor(days);
     const typeLabel = (TASK_TYPE_LABELS[t.type] ?? 'task').toLowerCase();
 
@@ -112,6 +131,7 @@ export function getStudySuggestions(
       dueDate: t.due_date,
       daysUntilDue: days,
       score,
+      reason: reasonFor(result),
       tier,
       line: `Start on ${t.title} for ${courseName} — ${typeLabel} ${duephrase(days)}`,
     });

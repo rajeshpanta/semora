@@ -47,6 +47,19 @@ function spanishPattern(input: string): string | null {
   match = input.match(/^Today · (\d+) items?$/i);
   if (match) return `Hoy · ${match[1]} ${match[1] === '1' ? 'elemento' : 'elementos'}`;
 
+  // "Up next" card — the course name and the numbers are interpolated, so the
+  // whole subtitle never appears in the phrase map. The stake clause names the
+  // KIND of work, never the single task, because a category is split across
+  // every sibling in it (see lib/taskStake.ts).
+  match = input.match(/^due in (\d+) days$/);
+  if (match) return `vence en ${match[1]} días`;
+  match = input.match(/^(exams|quizzes|assignments|projects|readings|labs) are (\d+)%$/);
+  if (match) {
+    const kind = { exams: 'los exámenes', quizzes: 'los cuestionarios', assignments: 'las tareas',
+      projects: 'los proyectos', readings: 'las lecturas', labs: 'los laboratorios' }[match[1]]!;
+    return `${kind} son el ${match[2]} %`;
+  }
+
   // Lecture recorder + quiz summaries — durations, counts and scores are
   // interpolated, so the whole sentence never appears in the phrase map.
   match = input.match(/^(\d+) of (\d+) parts uploaded$/);

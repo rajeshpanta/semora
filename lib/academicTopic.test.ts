@@ -44,6 +44,24 @@ const TOPICS: { label: string; academic: boolean; why: string }[] = [
   { label: 'Topic sentences', academic: true, why: '"Topic" head, real writing topic' },
   { label: 'Class struggle', academic: true, why: 'sociology — "class" is deliberately NOT an admin head' },
 
+  // ── index RANGES and LISTS are still just a place in the material ──
+  // These all passed as concepts until the range repair: ONLY_AN_INDEX
+  // matched one index and stopped.
+  { label: 'Chapters 1-4', academic: false, why: 'range' },
+  { label: 'Chapters 1–4', academic: false, why: 'en-dash range' },
+  { label: 'Chapters 9-16', academic: false, why: 'two-digit range' },
+  { label: 'Sections 3.1, 3.2', academic: false, why: 'dotted list' },
+  { label: 'Modules 4-6', academic: false, why: 'range' },
+  { label: 'Unit 1 and 2', academic: false, why: 'word separator' },
+  { label: 'Units 2 & 3', academic: false, why: 'ampersand' },
+  { label: 'Chapters 1, 2, and 3', academic: false, why: 'compound separator ", and"' },
+  { label: 'Weeks 4 through 7', academic: false, why: 'word range' },
+  { label: 'Parts I-III', academic: false, why: 'roman range' },
+  { label: 'pp. 20-30', academic: false, why: 'page range' },
+  // ...and the concepts that must survive the widened pattern.
+  { label: 'Chapter analysis techniques', academic: true, why: 'head, but prose follows' },
+  { label: 'Unit conversion in chemistry', academic: true, why: 'head, but prose follows' },
+
   // ── artifacts named by index ───────────────────────────────────────
   { label: 'Unit 4', academic: false, why: 'index follows' },
   { label: 'Chapter 5', academic: false, why: 'a place in the book' },

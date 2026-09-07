@@ -3,7 +3,7 @@ import type { TaskType } from '@/lib/constants';
 import type {
   StudyPlannerSettings, StudySessionMinutes, TaskPriority,
 } from '@/types/database';
-import { taskLoadScore } from '@/lib/workload';
+import { priorityScore } from '@/lib/taskPriority';
 import type { AdaptivePlannerContext } from '@/lib/studyCoach';
 
 export const DEFAULT_STUDY_PLANNER_SETTINGS: StudyPlannerSettings = {
@@ -210,14 +210,19 @@ function taskUrgency(
   settings: StudyPlannerSettings,
   adaptive?: AdaptivePlannerContext,
 ) {
-  const due = parseDateKey(task.due_date) ?? day;
-  const days = differenceInCalendarDays(due, day);
-  const urgencyDays = Math.max(0.5, days + 0.5);
-  const priority = task.priority === 'high' ? 1.55 : task.priority === 'low' ? 0.78 : 1;
+  // Urgency and stakes semantics live in ONE place — lib/taskPriority — so the
+  // timed plan and the Up next card cannot rank the same work differently.
+  // The planner adds only what is genuinely its own: pacing, which needs the
+  // remaining effort and the days left to spread it over, and which no other
+  // surface has the state to compute.
+  const core = priorityScore(
+    { id: task.id, type: task.type, due_date: task.due_date, weight: task.weight ?? null,
+      priority: task.priority ?? null, course_id: task.course_id },
+    { now: day, examTaskIds: adaptive?.examTaskIds, riskCourseIds: adaptive?.gradeRiskCourseIds,
+      stakes: adaptive?.stakes },
+  );
   const pace = task.remaining / daysAvailable(day, task, settings);
-  const examBoost = adaptive?.examTaskIds.includes(task.id) ? 1.7 : 1;
-  const gradeRiskBoost = adaptive?.gradeRiskCourseIds.includes(task.course_id) ? 1.28 : 1;
-  return ((taskLoadScore({ type: task.type, weight: task.weight ?? null }) * priority * examBoost * gradeRiskBoost) / urgencyDays) + pace;
+  return core.score + pace;
 }
 
 function normalizeSettings(settings?: Partial<StudyPlannerSettings>): StudyPlannerSettings {

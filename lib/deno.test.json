@@ -8,6 +8,7 @@
     "@supabase/supabase-js": "./__testing__/supabase-js.stub.ts",
     "@/store/appStore": "./__testing__/appStore.stub.ts",
     "expo-localization": "./__testing__/expo-localization.stub.ts",
-    "expo-constants": "./__testing__/expo-constants.stub.ts"
+    "expo-constants": "./__testing__/expo-constants.stub.ts",
+    "date-fns": "./../node_modules/date-fns/index.js"
   }
 }

@@ -33,6 +33,7 @@ import {
 import { getPlannerCalendarConflicts } from '@/lib/plannerCalendar';
 import type { StudyPlannerSettings, StudySessionMinutes } from '@/types/database';
 import { DatePicker } from '@/components/DatePicker';
+import { stakesByTask } from '@/lib/taskStake';
 import { useColors } from '@/lib/theme';
 import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
@@ -142,6 +143,8 @@ export default function PlannerScreen() {
       ? await getPlannerCalendarConflicts(now, horizonDays, reason === 'settings')
       : { intervals: [], permission: 'denied' as const };
     const adaptive = buildAdaptivePlannerContext(tasks, blocks, academicRiskReport, now);
+    // Same derived stakes the Up next card uses, so both rank identically.
+    adaptive.context.stakes = stakesByTask(tasks as any, categories as any);
     const generated = generateStudyPlan(
       tasks, meetings, blocks, settings, now, horizonDays, calendar.intervals, adaptive.context,
     );
