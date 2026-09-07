@@ -1334,6 +1334,47 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       userId, conversationId, message, reply: assistantText, citations, isFirstTurn,
     });
 
+    // 9b. Keep material the student SHOWED us, so they only have to show it
+    //     once. A real student photographed nine lecture slides into this
+    //     endpoint; every practice question that course ever produced came out
+    //     of the replies describing them, and then the exchange slid past
+    //     MAX_HISTORY_TURNS and the course had no material again.
+    //
+    //     The understanding was already bought — this reply IS it — so filing
+    //     it in course_notes costs nothing extra and no second vision call.
+    //     Conditions are deliberately narrow: an image was actually attached
+    //     (the one deterministic signal that the student was supplying source
+    //     material rather than asking a question), a course was chosen (so it
+    //     cannot attach itself to an arbitrary one), and the reply is long
+    //     enough to be a description rather than a refusal.
+    if (attachedImage && groundCourseId && assistantText.trim().length >= 200) {
+      const digest = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(attachedImage.base64.slice(0, 200_000)),
+      );
+      const hash = Array.from(new Uint8Array(digest).slice(0, 6))
+        .map((b) => b.toString(16).padStart(2, '0')).join('');
+      // The filename is the chunk header AND the citation label, so it has to
+      // say what this is: the assistant's reading of something the student
+      // showed it, not the student's own notes.
+      const filename = `Shared in chat — ${hash}`;
+      const { error: mirrorErr } = await adminClient.from('course_notes').insert({
+        user_id: userId,
+        course_id: groundCourseId,
+        filename,
+        mime_type: 'text/plain',
+        extracted_text: assistantText.slice(0, 12_000),
+        source: 'tutor',
+      });
+      // Duplicate (23505) means this exact image was already filed — the
+      // student re-sent the same slide, which is not an error.
+      if (mirrorErr && (mirrorErr as { code?: string }).code !== '23505') {
+        log.warn('course_material_mirror_failed', errorFields(mirrorErr));
+      } else if (!mirrorErr) {
+        log.info('course_material_retained', { course_id: groundCourseId, kind: 'image' });
+      }
+    }
+
     // Usage was already reserved atomically in step 3 (try_consume_tutor_usage)
     // BEFORE the paid model call, so there is no post-success insert here —
     // that would double-count. Reserving up front means a rare failed call
