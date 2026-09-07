@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { reportError } from '@/lib/errorReport';
 import { supabase } from '@/lib/supabase';
 import type {
@@ -11,6 +11,8 @@ import type {
 } from '@/types/database';
 import { format, addDays } from 'date-fns';
 import { useAppStore } from '@/store/appStore';
+import { getStudySuggestions, type Suggestion } from '@/lib/studySuggestions';
+import { stakesByTask } from '@/lib/taskStake';
 import { scheduleTaskReminders, cancelTaskReminders } from '@/lib/notifications';
 import {
   syncTaskToCalendar, removeTaskFromCalendar, isSyncEnabled, isSyncTrackingActive,
@@ -247,6 +249,27 @@ export function useGradeCategories(courseId?: string | null) {
     },
     enabled: !!courseId,
   });
+}
+
+/**
+ * The semester's ranked priority list — the single source both the Today "Up
+ * next" card and the tutor's end-of-session offer read, so the two can never
+ * name a different next thing. Ranking lives in lib/studySuggestions; this
+ * only supplies it with the semester's tasks and the grade breakdown that
+ * produces the stake clause.
+ */
+export function useSemesterPriorities(limit = 3): Suggestion[] {
+  const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
+  const { data: tasks = [] } = useTasks(
+    selectedSemesterId ? { semesterId: selectedSemesterId } : { semesterId: null },
+  );
+  const { data: categories = [] } = useSemesterGradeCategories(selectedSemesterId);
+  return useMemo(
+    () => getStudySuggestions(tasks as any, undefined, new Date(), limit, {
+      stakes: stakesByTask(tasks as any, categories as any),
+    }),
+    [tasks, categories, limit],
+  );
 }
 
 export function useSemesterGradeCategories(semesterId?: string | null) {

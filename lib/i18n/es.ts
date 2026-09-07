@@ -51,6 +51,7 @@ export const ES: Record<string, string> = {
   'The photo itself is not saved to your course. Semora keeps a short note of what it shows, so it can help with this course later — you can remove it any time.':
     'La foto en sí no se guarda en tu curso. Semora guarda una nota breve de lo que muestra para poder ayudarte con este curso más adelante; puedes eliminarla cuando quieras.',
   'Shared in Tutor': 'Compartido en el tutor',
+  'Next in your semester': 'Lo siguiente en tu semestre',
   'Choose from library': 'Elegir de la galería',
   'Choose an image': 'Elegir una imagen',
   'Semora needs access so you can show the tutor a problem. You can enable it in Settings.': 'Semora necesita acceso para que puedas mostrarle un problema al tutor. Puedes activarlo en Ajustes.',

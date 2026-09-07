@@ -43,7 +43,8 @@ import { splitPracticeFeedback } from '@/lib/practiceFeedback';
 import { readingSpaceFor } from '@/lib/readingSpace';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { track } from '@/lib/analytics';
-import { useCourse, useCourses, useSemesters, useGradeCategories, useTasks } from '@/lib/queries';
+import { duePhrase, nextSemesterPriority, stakePhrase } from '@/lib/semesterPriority';
+import { useCourse, useCourses, useSemesters, useGradeCategories, useTasks, useSemesterPriorities } from '@/lib/queries';
 import { buildAcademicRiskReport } from '@/lib/academicRisk';
 import {
   useTutorConversation, useTutorMessages, useSendTutorMessage,
@@ -554,6 +555,24 @@ function TutorChat({
       : null;
   }, [sessionScope, isExamSession, sessionCoverage, sessionDone, topicMastery]);
 
+  // ── S7: the semester, seen from inside one session ──────────────
+  //
+  // The conductor has always known what to do next INSIDE a course. It has
+  // never known what to do next across the semester, so a finished session
+  // ended in silence and the student went back to the Today tab to decide
+  // again. This reads the SAME ranked list the "Up next" card renders — one
+  // list, one order, no second engine — and offers its top item that is not
+  // the thing just worked on.
+  //
+  // A few extra rows are requested because the current task is dropped before
+  // the top one is taken; getStudySuggestions truncates AFTER ranking, so a
+  // larger ask cannot reorder a smaller one.
+  const semesterPriorities = useSemesterPriorities(6);
+  const nextPriority = useMemo(
+    () => (sessionScope ? nextSemesterPriority(semesterPriorities, explainAssignmentId ?? null) : null),
+    [sessionScope, semesterPriorities, explainAssignmentId],
+  );
+
   // The one external activity the conductor can currently launch and hear back
   // from. Offered only when this course actually has one — never navigated to
   // without the student choosing it.
@@ -596,6 +615,25 @@ function TutorChat({
     useCardsReviewedSince(sessionDeck?.id, deckOpenedAt);
   useFocusEffect(useCallback(() => { if (deckOpenedAt) refetchReviewed(); }, [deckOpenedAt, refetchReviewed]));
 
+  // Accepting an S7 offer navigates to /tutor with a different assignmentId,
+  // and Expo Router REUSES this screen when only params change — the same
+  // behaviour the courseId follow above exists for. TutorChat therefore does
+  // not remount, so without this the new session would inherit the old one's
+  // progress: topics already crossed off (sessionDone), a "Quiz done — 1/3"
+  // line from the previous course, a "Reviewed 3 cards" that belongs to a deck
+  // the student is no longer studying. The first two would also be WRONG about
+  // the new assessment, which is worse than merely stale.
+  //
+  // Adjusted during render for the same reason the courseId is: it converges
+  // on the same commit with no extra pass and no dependency array to get wrong.
+  const [lastAssignment, setLastAssignment] = useState<string | null>(explainAssignmentId);
+  if (explainAssignmentId !== lastAssignment) {
+    setLastAssignment(explainAssignmentId);
+    setSessionDone([]);
+    setQuizLaunchedAt(null);
+    setDeckOpenedAt(null);
+  }
+
   // What to offer, and which to lead with. Deterministic — no model call
   // decides which kind of activity a student needs.
   const activityOffers = useMemo(
@@ -609,6 +647,21 @@ function TutorChat({
       : []),
     [sessionScope, sessionStep?.topic, sessionQuizLecture, sessionDeck, cardsReviewed],
   );
+
+  // A BOUNDARY, not an idle moment. The offer appears only where the student
+  // has visibly finished something — a graded quiz came back, a deck was
+  // reviewed, or the covered ground ran out — because interrupting someone
+  // mid-topic to suggest a different course is the opposite of conducting.
+  //
+  // The third case is why this lives OUTSIDE the session bar: when the covered
+  // ground is exhausted sessionStep becomes null and the bar unmounts (see its
+  // render guard), so an offer nested inside it would vanish at exactly the
+  // moment it is most useful.
+  const sessionAtBoundary =
+    !!sessionScope
+    && messages.length > 0
+    && (!!freshQuizResult || cardsReviewed > 0 || (sessionDone.length > 0 && !sessionStep));
+
 
   const practiceAnchor = useMemo(() => {
     if (!courseId) return null;
@@ -1542,7 +1595,7 @@ function TutorChat({
                   })()}
                 </View>
               )}
-              {practice.citations?.length > 0 && <Text style={[styles.practiceSources, { color: colors.ink3 }]}>Sources: {practice.citations.map((citation) => citation.label).join(' · ')}</Text>}
+              {practice.citations?.length > 0 && <Text style={[styles.practiceSources, { color: colors.ink3 }]}>Sources: {practice.citations.map((citation) => citationLabel(citation.label)).join(' · ')}</Text>}
             </View>
           )}
           {isTutorWorking && streamingText === null && (
@@ -1693,6 +1746,54 @@ function TutorChat({
                 </Text>
               </TouchableOpacity>
             )}
+          </View>
+        )}
+        {/* S7. Deliberately a sibling of the session bar rather than a child:
+            it has to survive the bar unmounting when the covered ground runs
+            out. An offer, never a redirect — nothing here navigates on its
+            own, and the composer directly below still takes anything the
+            student would rather do instead. No time estimate is shown because
+            Semora cannot honestly predict how long this will take. */}
+        {sessionAtBoundary && nextPriority && (
+          <View style={[styles.nextUpBar, { maxWidth: columnWidth, borderTopColor: colors.line }]}>
+            <Text style={[styles.sessionReason, { color: colors.ink3 }]} numberOfLines={1}>
+              {translate('Next in your semester')}
+            </Text>
+            <TouchableOpacity
+              style={[styles.sessionAction, { borderColor: colors.line, backgroundColor: colors.card }]}
+              onPress={() => {
+                if (Platform.OS !== 'web') Haptics.selectionAsync();
+                track('semester_next_accepted', {
+                  screen: 'tutor',
+                  from_scope: sessionScope,
+                  same_course: nextPriority.courseId === courseId,
+                  tier: nextPriority.tier,
+                  has_stake: !!nextPriority.reason.stake,
+                });
+                router.push({
+                  pathname: '/tutor',
+                  params: {
+                    ...(nextPriority.courseId ? { courseId: nextPriority.courseId } : {}),
+                    assignmentId: nextPriority.taskId,
+                  },
+                } as any);
+              }}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={`${nextPriority.title}. ${nextPriority.courseName}. ${translate(duePhrase(nextPriority))}`}
+            >
+              <View style={[styles.tierDot, { backgroundColor: nextPriority.courseColor || colors.brand }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.sessionActionText, { color: colors.ink }]} numberOfLines={1}>
+                  {nextPriority.title}
+                </Text>
+                <Text style={[styles.nextUpSub, { color: colors.ink3 }]} numberOfLines={2}>
+                  {nextPriority.courseName} · {translate(duePhrase(nextPriority))}
+                  {nextPriority.reason.stake ? ` · ${translate(stakePhrase(nextPriority.reason.stake))}` : ''}
+                </Text>
+              </View>
+              <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
+            </TouchableOpacity>
           </View>
         )}
         <View
@@ -2154,6 +2255,9 @@ const styles = StyleSheet.create({
   feedbackWhy: { fontSize: 12.5, lineHeight: 17, marginTop: 4 },
   /** Wraps rather than scrolls: at large text each action takes its own row. */
   sessionBar: { alignSelf: 'center', width: '100%', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth, gap: 6 },
+  nextUpBar: { alignSelf: 'center', width: '100%', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, borderTopWidth: StyleSheet.hairlineWidth, gap: 6 },
+  nextUpSub: { fontSize: 11.5, marginTop: 1 },
+  tierDot: { width: 8, height: 8, borderRadius: 4 },
   sessionReason: { fontSize: 11.5, lineHeight: 16 },
   sessionAction: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 12, minHeight: 44 },
   sessionActionText: { fontSize: 14, fontWeight: '600', flexShrink: 1 },

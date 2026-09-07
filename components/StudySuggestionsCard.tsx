@@ -12,10 +12,9 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, WEB_CARD_SHADOW } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { translate } from '@/lib/i18n';
-import { useAppStore } from '@/store/appStore';
-import { useSemesterGradeCategories, useTasks } from '@/lib/queries';
-import { getStudySuggestions, type Suggestion, type UrgencyTier } from '@/lib/studySuggestions';
-import { stakesByTask } from '@/lib/taskStake';
+import { type Suggestion, type UrgencyTier } from '@/lib/studySuggestions';
+import { duePhrase, stakePhrase } from '@/lib/semesterPriority';
+import { useSemesterPriorities } from '@/lib/queries';
 import { track } from '@/lib/analytics';
 
 // The "Up next" card. Fetches its OWN data (tasks scoped to the selected
@@ -33,51 +32,14 @@ const TIER_META: Record<UrgencyTier, { label: string; icon: 'exclamation-circle'
   ahead: { label: 'Plan ahead', icon: 'calendar-o' },
 };
 
-/**
- * "exams are 30%" — the kind, never the single task. A category is split across
- * every sibling in it, so "this quiz is 30% of your grade" would be false.
- */
-const STAKE_NOUN: Record<string, string> = {
-  exam: 'exams', quiz: 'quizzes', assignment: 'assignments',
-  project: 'projects', reading: 'readings', lab: 'labs',
-};
-
-/** Atomic phrases, so each is a whole string lib/i18n can look up or pattern-match. */
-function duePhrase(s: Suggestion): string {
-  if (s.daysUntilDue <= 0) return 'due today';
-  if (s.daysUntilDue === 1) return 'due tomorrow';
-  return `due in ${s.daysUntilDue} days`;
-}
-function stakePhrase(stake: { bucket: string; weightPercent: number }): string {
-  return `${STAKE_NOUN[stake.bucket]} are ${stake.weightPercent}%`;
-}
-
 export default function StudySuggestionsCard({ limit }: { limit?: number }) {
   const max = limit ?? 3;
   const colors = useColors();
   const router = useRouter();
-  const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
-
-  // Fetch its own tasks — matches the semesterId-scoped useTasks call the rest
-  // of the app makes; the hook no-ops (returns []) until a semester is set.
-  const { data: tasks = [] } = useTasks(
-    selectedSemesterId ? { semesterId: selectedSemesterId } : { semesterId: null },
-  );
-
-  // Recompute only when the task set changes. `now` is read once per render via
-  // Date() inside the memo dep-free branch — fine here since suggestions only
-  // need day-granularity and the Today tab already re-renders each minute.
-  // The grade breakdown the syllabus scan already extracted. Only 25 of 8,441
-  // tasks carry a category link, so without this the ranker sees a weight on
-  // fewer than one task in ten and orders nine of them on type alone.
-  const { data: categories = [] } = useSemesterGradeCategories(selectedSemesterId);
-
-  const suggestions = useMemo(
-    () => getStudySuggestions(tasks as any, undefined, new Date(), max, {
-      stakes: stakesByTask(tasks as any, categories as any),
-    }),
-    [tasks, categories, max],
-  );
+  // One reader, shared with the tutor's end-of-session offer (S7). Both
+  // surfaces name the same next thing because there is only one list; the
+  // grade breakdown that produces the stake clause is fetched in there too.
+  const suggestions = useSemesterPriorities(max);
 
 
   // Fire once per mount that actually shows something. Without a denominator

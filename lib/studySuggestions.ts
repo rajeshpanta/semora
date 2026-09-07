@@ -19,6 +19,13 @@ export interface Suggestion {
   taskId: string;
   title: string;
   type: TaskType;
+  /**
+   * The course this belongs to. Present so a caller can open the task's study
+   * session directly — S7's end-of-session offer needs it, and deriving it a
+   * second time from the task list is how two surfaces start disagreeing.
+   * Null only for a task with no course, which the ranker still accepts.
+   */
+  courseId: string | null;
   courseName: string;
   courseColor: string | null;
   dueDate: string;
@@ -126,6 +133,7 @@ export function getStudySuggestions(
       taskId: t.id,
       title: t.title,
       type: t.type,
+      courseId: (t as { course_id?: string | null }).course_id ?? null,
       courseName,
       courseColor: t.courses?.color ?? null,
       dueDate: t.due_date,
