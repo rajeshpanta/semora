@@ -1121,9 +1121,16 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     // input price. The directive is the one part that changes when a student
     // says "briefly", and putting it earlier would push ~1,500 tokens of
     // course context out of that prefix every time the rung changed.
+    // Asked of both paths, because both build their request from this string.
+    // The model already tends to open an image reply by naming what it sees;
+    // this makes that opening dependable, because it is the part retained as
+    // durable course material and it must describe the SOURCE, not the answer.
+    const sharedImageDirective = attachedImage && groundCourseId
+      ? '\n\nThe student has attached an image. Open your reply with one paragraph that describes only what the image ITSELF shows — its own content, faithfully, including any text, headings or figures on it. Do not put your answer, solution or advice in that first paragraph. Leave a blank line, then respond to what they asked.'
+      : '';
     const groundingIntro = contextBlock
-      ? `${TUTOR_SYSTEM_PROMPT}\n\n${dateAnchor}\n\n${languageInstruction}\n${modeInstruction ? `\nMODE: ${modeInstruction}\n` : ''}\n${asUntrustedDocument(contextBlock, 'COURSE_CONTEXT')}\n${lengthDirective}`
-      : `${TUTOR_SYSTEM_PROMPT}\n\n${dateAnchor}\n\n${languageInstruction}\n\n(No course material is attached to this conversation yet — help using general knowledge and invite the student to add their syllabus or notes for grounded answers.)\n${lengthDirective}`;
+      ? `${TUTOR_SYSTEM_PROMPT}\n\n${dateAnchor}\n\n${languageInstruction}\n${modeInstruction ? `\nMODE: ${modeInstruction}\n` : ''}\n${asUntrustedDocument(contextBlock, 'COURSE_CONTEXT')}\n${lengthDirective}${sharedImageDirective}`
+      : `${TUTOR_SYSTEM_PROMPT}\n\n${dateAnchor}\n\n${languageInstruction}\n\n(No course material is attached to this conversation yet — help using general knowledge and invite the student to add their syllabus or notes for grounded answers.)\n${lengthDirective}${sharedImageDirective}`;
 
     // Prior turns are text; only the turn being sent can carry a photo, and
     // only then does it need the content-array shape.
@@ -1170,6 +1177,8 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
         safetyIdentifier,
         citations,
         task: TASK,
+        courseId: groundCourseId,
+        image: attachedImage,
         usage: tutorUsage,
         startTime,
         isFirstTurn,
@@ -1335,45 +1344,11 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     });
 
     // 9b. Keep material the student SHOWED us, so they only have to show it
-    //     once. A real student photographed nine lecture slides into this
-    //     endpoint; every practice question that course ever produced came out
-    //     of the replies describing them, and then the exchange slid past
-    //     MAX_HISTORY_TURNS and the course had no material again.
-    //
-    //     The understanding was already bought — this reply IS it — so filing
-    //     it in course_notes costs nothing extra and no second vision call.
-    //     Conditions are deliberately narrow: an image was actually attached
-    //     (the one deterministic signal that the student was supplying source
-    //     material rather than asking a question), a course was chosen (so it
-    //     cannot attach itself to an arbitrary one), and the reply is long
-    //     enough to be a description rather than a refusal.
-    if (attachedImage && groundCourseId && assistantText.trim().length >= 200) {
-      const digest = await crypto.subtle.digest(
-        'SHA-256',
-        new TextEncoder().encode(attachedImage.base64.slice(0, 200_000)),
-      );
-      const hash = Array.from(new Uint8Array(digest).slice(0, 6))
-        .map((b) => b.toString(16).padStart(2, '0')).join('');
-      // The filename is the chunk header AND the citation label, so it has to
-      // say what this is: the assistant's reading of something the student
-      // showed it, not the student's own notes.
-      const filename = `Shared in chat — ${hash}`;
-      const { error: mirrorErr } = await adminClient.from('course_notes').insert({
-        user_id: userId,
-        course_id: groundCourseId,
-        filename,
-        mime_type: 'text/plain',
-        extracted_text: assistantText.slice(0, 12_000),
-        source: 'tutor',
-      });
-      // Duplicate (23505) means this exact image was already filed — the
-      // student re-sent the same slide, which is not an error.
-      if (mirrorErr && (mirrorErr as { code?: string }).code !== '23505') {
-        log.warn('course_material_mirror_failed', errorFields(mirrorErr));
-      } else if (!mirrorErr) {
-        log.info('course_material_retained', { course_id: groundCourseId, kind: 'image' });
-      }
-    }
+    //     once. See retainSharedMaterial — it persists the DESCRIPTION OF THE
+    //     SOURCE, never the answer.
+    await retainSharedMaterial(log, adminClient, {
+      userId, courseId: groundCourseId, image: attachedImage, reply: assistantText,
+    });
 
     // Usage was already reserved atomically in step 3 (try_consume_tutor_usage)
     // BEFORE the paid model call, so there is no post-success insert here —
@@ -1500,6 +1475,83 @@ async function persistTurns(
  * status, so a client that asked for a stream and got an error handles it
  * through the same path it always did.
  */
+/**
+ * Keep material a student SHOWED the tutor, so they only have to show it once.
+ *
+ * A real student photographed nine lecture slides into this endpoint; every
+ * practice question that course ever produced came from the replies describing
+ * them, and then the exchange slid past MAX_HISTORY_TURNS and the course had
+ * no material again. The understanding was already bought, so filing it costs
+ * no extra call.
+ *
+ * WHAT IS PERSISTED IS THE DESCRIPTION OF THE SOURCE, NOT THE ANSWER, and that
+ * distinction is the whole reason this function exists rather than an inline
+ * insert. Persisting the reply wholesale was wrong: a student who photographs
+ * a problem set and asks "solve this" gets a worked solution, and storing that
+ * as course material means the tutor later teaches from its own homework
+ * answers and can generate practice out of work the student was meant to do.
+ * Measured on the real path, that reply was 3,292 characters of solution.
+ *
+ * The distinction is available without classifying anything, because the model
+ * already opens an image reply by saying what it sees — "I can see your BIOL
+ * 240 Lecture 12 slide on secondary active transport", "I can see the image:
+ * it asks you to calculate the osmolarity of 0.9% NaCl". The first paragraph
+ * is a description of the SOURCE in both cases; everything after it is the
+ * answer. So only the opening is kept, and the grounding instructions ask for
+ * that opening explicitly so it is reliable rather than incidental.
+ *
+ * Nothing is retained when there was no image (no source was supplied), no
+ * course (nothing to attach it to), or the opening is too short to be a
+ * description — a refusal reads "its slide text isn't readable on my end" at
+ * 186 characters and is correctly dropped.
+ */
+async function retainSharedMaterial(
+  log: EdgeLogger,
+  admin: any,
+  turn: {
+    userId: string;
+    courseId: string | null;
+    image: { base64: string; mimeType: string } | null;
+    reply: string;
+  },
+): Promise<void> {
+  if (!turn.image || !turn.courseId) return;
+
+  // The opening paragraph — what the model says the image shows. A blank line
+  // ends it; failing that, take a bounded prefix rather than the whole answer.
+  const text = turn.reply.trim();
+  const firstBreak = text.indexOf('\n\n');
+  const opening = (firstBreak > 0 ? text.slice(0, firstBreak) : text.slice(0, 1200)).trim();
+  if (opening.length < 120) return;
+
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(turn.image.base64.slice(0, 200_000)),
+  );
+  const hash = Array.from(new Uint8Array(digest).slice(0, 6))
+    .map((b) => b.toString(16).padStart(2, '0')).join('');
+  // The filename is the grounding chunk header AND the citation label, so it
+  // has to say what this is: the tutor's reading of something the student
+  // showed it, not the student's own notes.
+  const filename = `Shared in chat — ${hash}`;
+
+  const { error } = await admin.from('course_notes').insert({
+    user_id: turn.userId,
+    course_id: turn.courseId,
+    filename,
+    mime_type: 'text/plain',
+    extracted_text: opening.slice(0, 4000),
+    source: 'tutor',
+  });
+  // 23505 means this exact image was already filed — the student re-sent the
+  // same slide, which is not an error.
+  if (error && (error as { code?: string }).code !== '23505') {
+    log.warn('course_material_mirror_failed', errorFields(error));
+  } else if (!error) {
+    log.info('course_material_retained', { course_id: turn.courseId, kind: 'image' });
+  }
+}
+
 async function streamTutorTurn(opts: {
   log: EdgeLogger;
   admin: any;
@@ -1514,6 +1566,10 @@ async function streamTutorTurn(opts: {
   task: AiTask;
   usage: { used: number; cap: number };
   startTime: number;
+  /** For retainSharedMaterial — the real client always streams, so a mirror
+   *  that only ran on the non-streaming path would never run at all. */
+  courseId?: string | null;
+  image?: { base64: string; mimeType: string } | null;
   isFirstTurn: boolean;
 }): Promise<Response> {
   const started = Date.now();
@@ -1605,6 +1661,11 @@ async function streamTutorTurn(opts: {
         finish();
         return;
       }
+
+      await retainSharedMaterial(opts.log, opts.admin, {
+        userId: opts.userId, courseId: opts.courseId ?? null,
+        image: opts.image ?? null, reply: full,
+      });
 
       const persisted = await persistTurns(opts.log, opts.admin, {
         userId: opts.userId,
