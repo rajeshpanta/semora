@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { deckRelatesToTopic } from '@/lib/activityChoice';
 import { getAppLocale } from '@/lib/i18n';
 
 // Flashcards + spaced repetition (Pro). Types, React Query hooks, and a
@@ -543,5 +544,82 @@ export function useReviewCard() {
         reps: grade === 'again' ? 0 : card.reps + 1,
       });
     },
+  });
+}
+
+// ── Orchestration (S4) ──────────────────────────────────────────────
+// Flashcards join the conductor as a REVIEW activity, never as evidence. The
+// two hooks below are the whole contract: find a deck defensibly about the
+// thing being studied, and afterwards notice that a review happened. Neither
+// writes anything, neither needs a schema change, and neither concludes
+// anything about what the student knows.
+
+/**
+ * A deck in this course that is defensibly about `topic`, or null.
+ *
+ * Matched on the deck title first, then on what its cards actually say —
+ * because half the real decks in production are called "Lecture · Aug 17",
+ * which relates to nothing. No match means no card offer, not a guess.
+ */
+export function useDeckForTopic(courseId?: string | null, topic?: string | null) {
+  return useQuery({
+    queryKey: ['deckForTopic', courseId ?? null, topic ?? null],
+    queryFn: async () => {
+      const { data: decks, error } = await supabase
+        .from('decks')
+        .select('id, title, course_id')
+        .eq('course_id', courseId!)
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      if (!decks?.length) return null;
+
+      // No topic in play: any deck in the course is an honest review of it.
+      if (!topic) return decks[0] as Deck;
+
+      const byTitle = decks.find((d) => deckRelatesToTopic(d.title, [], topic));
+      if (byTitle) return byTitle as Deck;
+
+      // Otherwise ask the cards. One query across the course's decks, not one
+      // per deck — the card text is the only real evidence a deck covers this.
+      const { data: cards } = await supabase
+        .from('cards')
+        .select('deck_id, front, back')
+        .in('deck_id', decks.map((d) => d.id));
+      const textByDeck = new Map<string, string[]>();
+      for (const c of cards ?? []) {
+        const list = textByDeck.get(c.deck_id) ?? [];
+        list.push(String(c.front ?? ''), String(c.back ?? ''));
+        textByDeck.set(c.deck_id, list);
+      }
+      const byCards = decks.find((d) => deckRelatesToTopic(d.title, textByDeck.get(d.id) ?? [], topic));
+      return (byCards ?? null) as Deck | null;
+    },
+    enabled: !!courseId,
+  });
+}
+
+/**
+ * How many cards in this deck were reviewed since `since`.
+ *
+ * The completion signal, read from the scheduler state the review already
+ * writes — no new table, no new column, and nothing the student has to finish
+ * "properly" for it to count. It says a review happened and how much of one.
+ * It says nothing about how it went, because Again/Hard/Good/Easy is the
+ * student's own report and 92% of every rating ever recorded is positive.
+ */
+export function useCardsReviewedSince(deckId?: string | null, since?: number | null) {
+  return useQuery({
+    queryKey: ['cardsReviewedSince', deckId ?? null, since ?? null],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('cards')
+        .select('id', { count: 'exact', head: true })
+        .eq('deck_id', deckId!)
+        .gt('reps', 0)
+        .gte('updated_at', new Date(since!).toISOString());
+      if (error) throw error;
+      return count ?? 0;
+    },
+    enabled: !!deckId && !!since,
   });
 }

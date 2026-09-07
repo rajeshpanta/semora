@@ -47,6 +47,11 @@ function spanishPattern(input: string): string | null {
   match = input.match(/^Today · (\d+) items?$/i);
   if (match) return `Hoy · ${match[1]} ${match[1] === '1' ? 'elemento' : 'elementos'}`;
 
+  // Guided study session — the count is interpolated, so the phrase never
+  // appears in the map whole.
+  match = input.match(/^Reviewed (\d+) cards?$/);
+  if (match) return `Repasaste ${match[1]} ${match[1] === '1' ? 'tarjeta' : 'tarjetas'}`;
+
   // Contextual study entry — the task title is interpolated, so neither
   // sentence appears in the phrase map as a whole.
   match = input.match(/^Help me prepare for “(.+)”\.$/);

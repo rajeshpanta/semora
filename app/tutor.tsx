@@ -58,6 +58,8 @@ import { needsReinforcement, reinforcementTopics } from '@/lib/learningEvidence'
 import { isAcademicTopic } from '@/lib/academicTopic';
 import { examCoverage, firstStudyStep, nextStudyStep } from '@/lib/examSession';
 import { useCourseLectures, useLatestQuizAttemptForTask } from '@/lib/lectures';
+import { useCardsReviewedSince, useDeckForTopic } from '@/lib/flashcards';
+import { offeredActivities } from '@/lib/activityChoice';
 import { RichText } from '@/components/RichText';
 import { shareText, shareTextMessage } from '@/lib/shareLink';
 import {
@@ -555,6 +557,31 @@ function TutorChat({
     if (!sessionQuizResult || !quizLaunchedAt) return null;
     return new Date(sessionQuizResult.created_at).getTime() >= quizLaunchedAt ? sessionQuizResult : null;
   }, [sessionQuizResult, quizLaunchedAt]);
+
+  // The second orchestrated activity. A deck only qualifies when it is
+  // defensibly about the thing being studied — see lib/activityChoice.
+  const { data: sessionDeck } = useDeckForTopic(
+    isExamSession ? courseId : null,
+    sessionStep?.topic ?? null,
+  );
+  const [deckOpenedAt, setDeckOpenedAt] = useState<number | null>(null);
+  const { data: cardsReviewed = 0, refetch: refetchReviewed } =
+    useCardsReviewedSince(sessionDeck?.id, deckOpenedAt);
+  useFocusEffect(useCallback(() => { if (deckOpenedAt) refetchReviewed(); }, [deckOpenedAt, refetchReviewed]));
+
+  // What to offer, and which to lead with. Deterministic — no model call
+  // decides which kind of activity a student needs.
+  const activityOffers = useMemo(
+    () => (isExamSession
+      ? offeredActivities({
+          topic: sessionStep?.topic ?? null,
+          hasLectureQuiz: !!sessionQuizLecture,
+          hasRelatedDeck: !!sessionDeck,
+          reviewedThisSession: cardsReviewed > 0,
+        })
+      : []),
+    [isExamSession, sessionStep?.topic, sessionQuizLecture, sessionDeck, cardsReviewed],
+  );
 
   const practiceAnchor = useMemo(() => {
     if (!courseId) return null;
@@ -1519,6 +1546,23 @@ function TutorChat({
                   ? `${translate('The exam covers this')}`
                   : `${translate('No topic list for this exam — working from your course material')}`}
             </Text>
+            {/* A review happened. Say so, and steer to a check — never to a
+                conclusion. Again/Hard/Good/Easy is the student's own report. */}
+            {cardsReviewed > 0 && !freshQuizResult && (
+              <Text style={[styles.sessionReason, { color: colors.ink2 }]} numberOfLines={2}>
+                {`${translate(`Reviewed ${cardsReviewed} cards`)}. ${translate('Ready to check that with a question?')}`}
+              </Text>
+            )}
+            {/* The graded activity came back. Acknowledge the score and offer
+                the next step; never fabricate mastery from one quiz. An
+                abandoned attempt writes no row, so nothing lands here. */}
+            {freshQuizResult && (
+              <Text style={[styles.sessionReason, { color: colors.ink2 }]} numberOfLines={2}>
+                {freshQuizResult.correct_count >= Math.ceil(freshQuizResult.question_count * 0.7)
+                  ? `${translate('Quiz done')} — ${freshQuizResult.correct_count}/${freshQuizResult.question_count}. ${translate('Ready for the next one?')}`
+                  : `${translate('Quiz done')} — ${freshQuizResult.correct_count}/${freshQuizResult.question_count}. ${translate('Want me to go over what you missed?')}`}
+              </Text>
+            )}
             <TouchableOpacity
               style={[styles.sessionAction, { borderColor: colors.brand100, backgroundColor: colors.brand50 }]}
               disabled={isTutorWorking}
@@ -1547,6 +1591,30 @@ function TutorChat({
                   : translate('Quiz me on this course')}
               </Text>
             </TouchableOpacity>
+            {/* Review, not assessment. Offered only when a deck is defensibly
+                about this topic — never generated, never silently created. */}
+            {activityOffers.some((o) => o.activity === 'flashcards') && !!sessionDeck && (
+              <TouchableOpacity
+                style={[styles.sessionAction, { borderColor: colors.line, backgroundColor: colors.card }]}
+                disabled={isTutorWorking}
+                onPress={() => {
+                  track('study_session_activity_launched', {
+                    screen: 'tutor', activity: 'flashcards',
+                    has_topic: !!sessionStep.topic,
+                    primary: activityOffers[0]?.activity === 'flashcards',
+                  });
+                  setDeckOpenedAt(Date.now());
+                  router.push({ pathname: `/flashcards/${sessionDeck.id}` } as any);
+                }}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+              >
+                <FontAwesome name="clone" size={12} color={colors.ink2} />
+                <Text style={[styles.sessionActionText, { color: colors.ink2 }]} numberOfLines={1}>
+                  {translate('Review the cards first')}
+                </Text>
+              </TouchableOpacity>
+            )}
             {/* The one external activity that can report an objective result.
                 Offered, never auto-launched, and only when the course has one. */}
             {!!sessionQuizLecture && !freshQuizResult && (
