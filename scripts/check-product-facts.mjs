@@ -84,14 +84,150 @@ mustNotSay(
   'Semora has no user counts, ratings or institutional customers to cite',
 );
 
+// The Spanish facts file is a separate canonical restatement, so it needs its
+// own assertion — mustSay() above only ever reads the English one.
+const esFacts = read('website/lib/es-facts.ts');
+if (!esFacts.includes(`Hasta ${app.freeCourses} curso`)) {
+  failures.push(
+    `missing "Hasta ${app.freeCourses} curso" in website/lib/es-facts.ts — ` +
+      `FREE_COURSE_LIMIT = ${app.freeCourses}`,
+  );
+}
+
+// ─── The long-form registries ────────────────────────────────────────────
+//
+// Everything above reads ONE file. semora-facts.ts holds a few hundred words;
+// the content registries below hold tens of thousands, and they are where the
+// free-course claim actually drifted.
+//
+// The history is worth writing down, because it explains the shape of this
+// check. Migration 091 dropped the free manual-course cap from 4 to 1 on
+// 2026-08-21 (commit c899ae2, a deliberate product decision: Canvas is free
+// and uncapped, so paying for the tedious path was subsidising the chore).
+// The site was corrected 1h47m later in 8502b5b — but that pass matched on the
+// canonical phrasings ("up to four courses", "4 courses within one semester")
+// and rewrote every one of them. What it could not see were the narrative
+// restatements: "Four courses is a ceiling", "it is the fifth course that gets
+// blocked", "enter the other three by hand". Twenty-two of those survived for
+// sixteen days on the homepage and the pricing page.
+//
+// So this does not grep for a number. It greps for CAP-SHAPED SENTENCES and
+// checks the quantity in them against the app constant. Prose that merely
+// mentions a typical course load ("about twenty minutes for four courses",
+// "when four courses' assignments collide") names no cap and is left alone —
+// which is the whole reason the naive check was never written.
+//
+// It is a heuristic, not a parser. It is aimed squarely at the class of
+// sentence that actually drifted, and it is expected to grow a pattern the
+// first time a new phrasing gets past it.
+const WORD_NUM = {
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6,
+  un: 1, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6,
+};
+const ORDINAL = {
+  first: 1, second: 2, third: 3, fourth: 4, fifth: 5, sixth: 6,
+  primer: 1, segundo: 2, tercer: 3, cuarto: 4, quinto: 5, sexto: 6,
+};
+const quantity = (t) => {
+  const s = String(t).toLowerCase();
+  return /^\d+$/.test(s) ? Number(s) : (WORD_NUM[s] ?? null);
+};
+
+const REGISTRIES = [
+  'website/lib/page-content.ts',
+  'website/lib/new-page-content.ts',
+  'website/lib/compare-content.ts',
+  'website/lib/feature-content.ts',
+  'website/lib/competitors.ts',
+  'website/lib/es-content.ts',
+  'website/lib/es-feature-content.ts',
+];
+
+/**
+ * Sentences that state the cap. Each yields the quantity it claims; anything
+ * that is not FREE_COURSE_LIMIT is drift.
+ */
+const CAP_CLAIMS = [
+  // "4 courses per semester", "up to four courses a semester"
+  /(?:up to )?([a-z]+|\d+)[- ]cours(?:e|es)\s+(?:per|a|each)\s+(?:semester|term)/gi,
+  // "the course limit is four", "course cap is 4"
+  /course (?:limit|cap) is (?:up to )?([a-z]+|\d+)/gi,
+  // "free accounts support up to 4 courses"
+  /free accounts? supports?\s+(?:up to\s+)?([a-z]+|\d+)\s+courses?/gi,
+  // "up to four courses within one semester"
+  /up to ([a-z]+|\d+) courses? (?:within|inside|in)\b/gi,
+  // Spanish: "hasta 4 cursos", "4 cursos por semestre"
+  /hasta ([a-z]+|\d+) cursos?/gi,
+  /([a-z]+|\d+) cursos? (?:por|al) (?:semestre|periodo)/gi,
+];
+
+/**
+ * The ordinal that gets refused. At a limit of N it is always N+1, so
+ * "the fifth course is where free stops" is drift the moment the cap moves.
+ */
+const CAP_ORDINALS = [
+  /\b(first|second|third|fourth|fifth|sixth)\s+(?:[a-z-]+\s+){0,2}course\b(?=[^.]{0,70}(?:blocked|stops|refus|is where|needs Pro|requires Pro|gets you|hits? the (?:wall|cap|limit)))/gi,
+  /\b(primer|segundo|tercer|cuarto|quinto|sexto)\s+curso\b(?=[^.]{0,70}(?:topa|bloquea|Pro|l[ií]mite))/gi,
+];
+
+for (const file of REGISTRIES) {
+  let text;
+  try {
+    text = read(file);
+  } catch {
+    failures.push(`missing registry ${file} — was it renamed? update REGISTRIES`);
+    continue;
+  }
+  // Not every "N courses" is an entitlement claim. Blackboard and Moodle
+  // paginate at 50 courses per sync and the Calendar Feed stops at 1,000
+  // items — real, correct numbers that have nothing to do with the free tier.
+  // A quantity only counts as a cap claim when the sentence around it is
+  // talking about the plan, and is not talking about a provider's sync.
+  const isEntitlementContext = (i) => {
+    const w = text.slice(Math.max(0, i - 140), i + 140);
+    if (/blackboard|moodle|token|sincroniz|per sync|at a time|a la vez|por vez|calendar feed/i.test(w)) {
+      return false;
+    }
+    return /\bfree\b|gratis|gratuit|plan|\bPro\b|limit|l[ií]mite|cap\b/i.test(w);
+  };
+
+  const flag = (m, claimed, kind) => {
+    const at = text.slice(0, m.index).split('\n').length;
+    failures.push(
+      `${file}:${at} claims ${kind} of ${claimed} — FREE_COURSE_LIMIT is ${app.freeCourses}\n` +
+        `      …${text.slice(Math.max(0, m.index - 60), m.index + 110).replace(/\s+/g, ' ').trim()}…`,
+    );
+  };
+  for (const re of CAP_CLAIMS) {
+    for (const m of text.matchAll(re)) {
+      const n = quantity(m[1]);
+      if (n !== null && n !== app.freeCourses && isEntitlementContext(m.index)) {
+        flag(m, n, 'a free course cap');
+      }
+    }
+  }
+  for (const re of CAP_ORDINALS) {
+    for (const m of text.matchAll(re)) {
+      const n = ORDINAL[m[1].toLowerCase()];
+      if (n != null && n !== app.freeCourses + 1) {
+        flag(m, `the ${m[1]} course`, 'the refused course');
+      }
+    }
+  }
+}
+
 if (failures.length) {
   console.error('product-facts drift — the site claims something the app does not do:\n');
   for (const f of failures) console.error(`  ✗ ${f}`);
-  console.error('\nFix website/lib/semora-facts.ts, or update the app constant it mirrors.');
+  console.error(
+    '\nFix the file named above, or update the app constant it mirrors.' +
+      '\nsemora-facts.ts / es-facts.ts are the canonical restatement; the registries must agree with them.',
+  );
   process.exit(1);
 }
 
 console.log('product facts consistent:');
 console.log(`  free courses    ${app.freeCourses}  (in ${app.freeSemesters} semester)`);
 console.log(`  study plan      ${app.freePlanHorizon}d free / ${app.planHorizon}d Pro`);
+console.log(`  registries      ${REGISTRIES.length} long-form files carry no contradicting course cap`);
 console.log('  no free-trial or invented-social-proof claims on the site');

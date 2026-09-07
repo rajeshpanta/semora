@@ -105,8 +105,8 @@ export const PRO_ANNUAL_SAVINGS_PCT = Math.round(
 // lib/syllabus.ts is enforced client-side AND by the
 // enforce_free_semester_limit_trigger BEFORE INSERT trigger on
 // public.semesters (migration 010). A free account cannot start a second
-// term at all, so "4 courses per semester" alone reads as if terms roll
-// over — they do not. Do not drop this line.
+// term at all, so a per-semester course cap stated on its own reads as if
+// terms roll over — they do not. Do not drop this line.
 // The free AI allowance is ONE action for the lifetime of the account — not a
 // monthly quota. Nothing resets on the 1st. The student picks what to spend it
 // on (syllabus scan, lecture recording, or document-to-notes), and after that

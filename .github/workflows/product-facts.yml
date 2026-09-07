@@ -1,0 +1,56 @@
+# Does the website still describe the app we actually ship?
+#
+# The website and the app share zero code — different frameworks, separate
+# package.json, separate node_modules — so every number on semoraai.com is a
+# hand-typed restatement of a constant in lib/. scripts/check-product-facts.mjs
+# reads the app's constants and fails when the site contradicts them.
+#
+# That script has existed for a while and passed the whole time the site was
+# advertising four free courses against a product that allows one: it only ever
+# read website/lib/semora-facts.ts, and the false claims were in the long-form
+# content registries. It now reads those too, and this workflow is what makes it
+# run without anyone remembering to.
+#
+# WHY THIS MATTERS ON PUSH AND NOT ONLY ON PR: the website auto-deploys from
+# `main`. A failing check here does not block that deploy — it is a smoke alarm,
+# not a gate — so a red run means "the live site is wrong, go fix it now".
+#
+# Zero dependencies and no secrets: the script is Node stdlib only and reads
+# files out of the checkout, so this needs no install step and cannot leak
+# anything.
+
+name: product-facts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'website/lib/**'
+      - 'lib/syllabus.ts'
+      - 'lib/studyPlanner.ts'
+      - 'scripts/check-product-facts.mjs'
+      - '.github/workflows/product-facts.yml'
+  pull_request:
+    paths:
+      - 'website/lib/**'
+      - 'lib/syllabus.ts'
+      - 'lib/studyPlanner.ts'
+      - 'scripts/check-product-facts.mjs'
+      - '.github/workflows/product-facts.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: product-facts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check the site against the app's constants
+        run: node scripts/check-product-facts.mjs
