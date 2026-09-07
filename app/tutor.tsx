@@ -28,7 +28,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useHeaderHeight } from '@react-navigation/elements';
-import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import * as DocumentPicker from 'expo-document-picker';
@@ -57,6 +57,7 @@ import {
 import { needsReinforcement, reinforcementTopics } from '@/lib/learningEvidence';
 import { isAcademicTopic } from '@/lib/academicTopic';
 import { examCoverage, firstStudyStep, nextStudyStep } from '@/lib/examSession';
+import { useCourseLectures, useLatestQuizAttemptForTask } from '@/lib/lectures';
 import { RichText } from '@/components/RichText';
 import { shareText, shareTextMessage } from '@/lib/shareLink';
 import {
@@ -531,6 +532,29 @@ function TutorChat({
     if (sessionDone.length === 0) return firstStudyStep(sessionCoverage, topicMastery as any);
     return remaining ? { topic: remaining, reason: 'coverage' as const } : null;
   }, [isExamSession, sessionCoverage, sessionDone, topicMastery]);
+
+  // The one external activity the conductor can currently launch and hear back
+  // from. Offered only when this course actually has one — never navigated to
+  // without the student choosing it.
+  const { data: courseLectures = [] } = useCourseLectures(courseId);
+  const sessionQuizLecture = useMemo(
+    () => (isExamSession
+      ? courseLectures.find((l: any) => Array.isArray(l.quiz) && l.quiz.length > 0)
+      : undefined),
+    [isExamSession, courseLectures],
+  );
+  // The result comes back through the database rather than through navigation
+  // params, because the quiz is a modal and a dismissed modal cannot hand
+  // anything to its caller. Refetched when this screen regains focus.
+  const { data: sessionQuizResult, refetch: refetchQuizResult } =
+    useLatestQuizAttemptForTask(isExamSession ? sessionTask?.id : null);
+  const [quizLaunchedAt, setQuizLaunchedAt] = useState<number | null>(null);
+  useFocusEffect(useCallback(() => { if (quizLaunchedAt) refetchQuizResult(); }, [quizLaunchedAt, refetchQuizResult]));
+  // Only an attempt from THIS session, so yesterday's result does not reappear.
+  const freshQuizResult = useMemo(() => {
+    if (!sessionQuizResult || !quizLaunchedAt) return null;
+    return new Date(sessionQuizResult.created_at).getTime() >= quizLaunchedAt ? sessionQuizResult : null;
+  }, [sessionQuizResult, quizLaunchedAt]);
 
   const practiceAnchor = useMemo(() => {
     if (!courseId) return null;
@@ -1523,6 +1547,36 @@ function TutorChat({
                   : translate('Quiz me on this course')}
               </Text>
             </TouchableOpacity>
+            {/* The one external activity that can report an objective result.
+                Offered, never auto-launched, and only when the course has one. */}
+            {!!sessionQuizLecture && !freshQuizResult && (
+              <TouchableOpacity
+                style={[styles.sessionAction, { borderColor: colors.line, backgroundColor: colors.card }]}
+                disabled={isTutorWorking}
+                onPress={() => {
+                  track('study_session_activity_launched', {
+                    screen: 'tutor', activity: 'lecture_quiz',
+                    has_topic: !!sessionStep.topic,
+                  });
+                  setQuizLaunchedAt(Date.now());
+                  router.push({
+                    pathname: '/lecture/quiz',
+                    params: {
+                      id: sessionQuizLecture.id,
+                      taskId: sessionTask!.id,
+                      ...(sessionStep.topic ? { topic: sessionStep.topic } : {}),
+                    },
+                  } as any);
+                }}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+              >
+                <FontAwesome name="check-square-o" size={12} color={colors.ink2} />
+                <Text style={[styles.sessionActionText, { color: colors.ink2 }]} numberOfLines={1}>
+                  {translate('Check with a lecture quiz')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
         <View

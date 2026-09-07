@@ -775,3 +775,84 @@ export function useLectureSegmentProgress(lectureId: string | null, enabled: boo
     },
   });
 }
+
+// ── Cross-activity outcome (migration 134) ──────────────────────────
+// The first study activity that can tell the conductor what happened. The
+// client sends WHICH CHOICES were picked, never a score: the quiz jsonb has to
+// reach the device to be rendered, so answerIndex is already in its hands and
+// a score it reported would be a claim about a key it owns. The RPC grades
+// against the stored quiz and is the only thing that can write the row.
+
+export interface LectureQuizAttempt {
+  id: string;
+  lecture_id: string;
+  course_id: string | null;
+  correct_count: number;
+  question_count: number;
+  source_task_id: string | null;
+  source_topic: string | null;
+  created_at: string;
+}
+
+export function useRecordLectureQuizAttempt() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (
+      { lectureId, answers, sourceTaskId, sourceTopic }:
+        { lectureId: string; answers: number[]; sourceTaskId?: string | null; sourceTopic?: string | null },
+    ) => {
+      const { data, error } = await supabase.rpc('record_lecture_quiz_attempt', {
+        p_lecture_id: lectureId,
+        p_answers: answers,
+        p_source_task_id: sourceTaskId ?? null,
+        p_source_topic: sourceTopic ?? null,
+      });
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      return row as { correct_count: number; question_count: number; attempt_id: string };
+    },
+    onSuccess: (_r, vars) => {
+      qc.invalidateQueries({ queryKey: ['lectureQuizAttempts', vars.lectureId] });
+      qc.invalidateQueries({ queryKey: ['lectureQuizAttemptsForTask'] });
+    },
+  });
+}
+
+/**
+ * The latest attempt tied to a guided session, so the conductor can pick the
+ * thread back up when the student returns. Scoped to one task, newest first;
+ * the caller decides whether it is recent enough to act on.
+ */
+export function useLatestQuizAttemptForTask(taskId?: string | null) {
+  return useQuery({
+    queryKey: ['lectureQuizAttemptsForTask', taskId ?? null],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lecture_quiz_attempts')
+        .select('id, lecture_id, course_id, correct_count, question_count, source_task_id, source_topic, created_at')
+        .eq('source_task_id', taskId!)
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      return (data?.[0] ?? null) as LectureQuizAttempt | null;
+    },
+    enabled: !!taskId,
+  });
+}
+
+/** Lectures for one course, for the conductor to find a quiz it can launch. */
+export function useCourseLectures(courseId?: string | null) {
+  return useQuery({
+    queryKey: ['courseLectures', courseId ?? null],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lecture_recordings')
+        .select('id, title, quiz, course_id, created_at')
+        .eq('course_id', courseId!)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!courseId,
+  });
+}

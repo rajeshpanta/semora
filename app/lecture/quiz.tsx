@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, TouchableOpacity } from '@/components/LocalizedReactNative';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,7 +8,8 @@ import * as Haptics from 'expo-haptics';
 import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
-import { useLecture } from '@/lib/lectures';
+import { useRecordLectureQuizAttempt, useLecture } from '@/lib/lectures';
+import { track } from '@/lib/analytics';
 
 // Interactive multiple-choice quiz for one lecture. Pick an answer → instant
 // correct/incorrect feedback with the explanation → next question → score.
@@ -17,13 +18,22 @@ export default function LectureQuizScreen() {
   const colors = useColors();
   const router = useRouter();
   const { contentMaxWidth } = useResponsive();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // taskId/topic arrive when the guided study session launched this quiz, so
+  // the outcome can be read back into the right session. Absent for a student
+  // who opened it straight from the lecture screen — an ordinary attempt.
+  const { id, taskId, topic } = useLocalSearchParams<{ id: string; taskId?: string; topic?: string }>();
   const { data: lecture } = useLecture(id);
 
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<number | null>(null);
   const [correctCount, setCorrectCount] = useState(0);
   const [finished, setFinished] = useState(false);
+  // What was picked, in order. The server grades these — the device already
+  // holds answerIndex, so a score it reported would be a claim about a key it
+  // owns. -1 means the question was never answered.
+  const [picks, setPicks] = useState<number[]>([]);
+  const recordAttempt = useRecordLectureQuizAttempt();
+  const submittedRef = useRef(false);
 
   const quiz = lecture?.quiz ?? [];
 
@@ -42,6 +52,7 @@ export default function LectureQuizScreen() {
   const handlePick = (choiceIndex: number) => {
     if (picked !== null) return;
     setPicked(choiceIndex);
+    setPicks((prev) => { const next = [...prev]; next[index] = choiceIndex; return next; });
     const correct = choiceIndex === question.answerIndex;
     if (correct) setCorrectCount((c) => c + 1);
     if (Platform.OS !== 'web') {
@@ -54,6 +65,18 @@ export default function LectureQuizScreen() {
   const handleNext = () => {
     if (index + 1 >= quiz.length) {
       setFinished(true);
+      // Persist once per completion. Fire-and-forget: a failed write must not
+      // block the student seeing their own result.
+      if (!submittedRef.current) {
+        submittedRef.current = true;
+        const answers = Array.from({ length: quiz.length }, (_, i) => picks[i] ?? -1);
+        recordAttempt.mutate({ lectureId: id, answers, sourceTaskId: taskId ?? null, sourceTopic: topic ?? null });
+        track('lecture_quiz_completed', {
+          screen: 'lecture_quiz',
+          from_session: !!taskId,
+          questions: quiz.length,
+        });
+      }
     } else {
       setIndex((i) => i + 1);
       setPicked(null);
@@ -65,6 +88,8 @@ export default function LectureQuizScreen() {
     setPicked(null);
     setCorrectCount(0);
     setFinished(false);
+    setPicks([]);
+    submittedRef.current = false;
   };
 
   if (finished) {
@@ -96,7 +121,7 @@ export default function LectureQuizScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel="Back to lecture"
+            accessibilityLabel={taskId ? 'Back to study session' : 'Back to lecture'}
           >
             <Text style={[styles.secondaryBtnText, { color: colors.ink2 }]}>Back to lecture</Text>
           </TouchableOpacity>
