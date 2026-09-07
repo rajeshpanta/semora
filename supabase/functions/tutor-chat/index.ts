@@ -739,6 +739,8 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
     let notesText = '';
     let deadlinesText = '';
     let courseHeader = '';
+    // Set from the task row when an assessment is the subject of this turn.
+    let isAssessment = false;
     const citations: TutorCitation[] = [];
 
     if (groundCourseId) {
@@ -840,6 +842,12 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
           .eq('user_id', userId)
           .maybeSingle();
         if (!assignment) return jsonResponse({ error: 'Assignment not found in this course' }, 404);
+        // What KIND of thing this is decides how the tutor should help, and the
+        // row already says so — no model call is needed to work it out. Until
+        // now every entry produced an assignment checklist, so a student
+        // tapping "Help me study for this" on an exam was told to email their
+        // instructor about the brief. 37% of real taps are an exam or a quiz.
+        isAssessment = assignment.type === 'exam' || assignment.type === 'quiz';
         const details = [
           `Title: ${assignment.title}`,
           assignment.description ? `Description: ${assignment.description}` : '',
@@ -847,7 +855,7 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
           assignment.due_date ? `Due: ${assignment.due_date}${assignment.due_time ? ` ${assignment.due_time}` : ''}` : '',
           assignment.weight != null ? `Weight: ${assignment.weight}%` : '',
         ].filter(Boolean).join('\n');
-        deadlinesText += `\n\nASSIGNMENT TO EXPLAIN:\n${details}`;
+        deadlinesText += `\n\n${isAssessment ? 'ASSESSMENT TO PREPARE FOR' : 'ASSIGNMENT TO EXPLAIN'}:\n${details}`;
         citations.push({ kind: 'assignment', label: assignment.title });
       }
 
@@ -1054,7 +1062,9 @@ serve(withRequestLogging('tutor-chat', async (req, log) => {
       : mode === 'practice'
         ? `Create one low-stakes multiple-choice practice question from the grounded course material. Ask about the SUBJECT MATTER of the course, never about how the course is run: no questions about grading scales, weightings, due dates, submission rules, attendance, or which assessment covers what. If the material in front of you is only logistics, draw on the course subject generally rather than quizzing the syllabus.${masteryDirective} Return ONLY valid JSON with keys: prompt (string), choices (array of 2-4 strings), expected_answer (must exactly equal one choice), explanation (string), topics (array of 1-3 short topic names), distractor_notes (object). distractor_notes has one key per INCORRECT choice, written exactly as that choice appears, mapping to one or two sentences that name what a student who chose it was most likely thinking and the specific distinction that makes it wrong. Teach that distinction — do not merely restate that the choice is incorrect, do not say only that another option is better, and do not refer to choices by letter or position. If the choice contains a false statement, correct that statement outright; naming which concept it resembles is not enough, because a student who believes the false part will read the resemblance as agreement. Name the student's likely reasoning only when the choice makes it clear — otherwise give the distinction plainly rather than guessing at a motive.`
         : mode === 'explain_assignment'
-          ? 'Explain the selected assignment as a student-friendly checklist: what it asks for, a first step, suggested milestones, and one question to ask the instructor if the brief is unclear. Do not fabricate requirements.'
+          ? (isAssessment
+            ? 'Help the student PREPARE FOR this assessment. Do not produce an assignment checklist and do not suggest emailing the instructor about the brief — there is no brief to clarify. Work from the course material you have been given: say what it indicates this assessment covers, then give a short, concrete study approach for the time remaining, and offer to quiz them on it. If the material does not say what the assessment covers, say plainly that you do not know what will be on it and offer to work through the course material you do have. Never invent a syllabus, a topic list, or an exam format.'
+            : 'Explain the selected assignment as a student-friendly checklist: what it asks for, a first step, suggested milestones, and one question to ask the instructor if the brief is unclear. Do not fabricate requirements.')
           : '';
     const languageInstruction = locale === 'es'
       ? 'LANGUAGE: Respond in natural, neutral Spanish. Keep course-specific names and source titles unchanged. Quiz questions, choices, explanations, topic labels, assignment checklists, and recommendations must all be in Spanish.'

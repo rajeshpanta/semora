@@ -1443,7 +1443,10 @@ export default function TodayScreen() {
               <TouchableOpacity
                 style={styles.heroTutor}
                 onPress={() => {
-                  track('tutor_offered_tapped', { screen: 'dashboard', type: nextUp.type });
+                  track('tutor_offered_tapped', {
+                    screen: 'dashboard', type: nextUp.type,
+                    entry_kind: nextUp.type === 'exam' || nextUp.type === 'quiz' ? 'assessment' : 'assignment',
+                  });
                   router.push({
                     pathname: '/tutor',
                     params: { courseId: nextUp.course_id, assignmentId: nextUp.id },

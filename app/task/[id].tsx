@@ -386,7 +386,10 @@ export default function TaskDetailScreen() {
             style={[styles.tutorCta, { backgroundColor: colors.brand50, borderColor: colors.brand100 }]}
             onPress={() => {
               if (Platform.OS !== 'web') Haptics.selectionAsync();
-              track('tutor_offered_tapped', { screen: 'task_detail', type: task.type });
+              track('tutor_offered_tapped', {
+                screen: 'task_detail', type: task.type,
+                entry_kind: task.type === 'exam' || task.type === 'quiz' ? 'assessment' : 'assignment',
+              });
               router.push({
                 pathname: '/tutor',
                 params: { courseId: task.course_id, assignmentId: task.id },
@@ -398,9 +401,15 @@ export default function TaskDetailScreen() {
           >
             <FontAwesome name="comments" size={14} color={colors.brand} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.tutorCtaTitle, { color: colors.brand }]}>Stuck on this?</Text>
+              {/* An exam is not something you get "stuck on" — it is something
+                  you prepare for, and the tutor now behaves that way too. */}
+              <Text style={[styles.tutorCtaTitle, { color: colors.brand }]}>
+                {task.type === 'exam' || task.type === 'quiz' ? 'Prepare for this' : 'Stuck on this?'}
+              </Text>
               <Text style={[styles.tutorCtaSub, { color: colors.ink2 }]} numberOfLines={2}>
-                Your tutor knows this course — ask it where to start.
+                {task.type === 'exam' || task.type === 'quiz'
+                  ? 'Your tutor knows this course — study from its material.'
+                  : 'Your tutor knows this course — ask it where to start.'}
               </Text>
             </View>
             <FontAwesome name="angle-right" size={16} color={colors.brand} />

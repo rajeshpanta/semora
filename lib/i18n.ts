@@ -47,6 +47,13 @@ function spanishPattern(input: string): string | null {
   match = input.match(/^Today · (\d+) items?$/i);
   if (match) return `Hoy · ${match[1]} ${match[1] === '1' ? 'elemento' : 'elementos'}`;
 
+  // Contextual study entry — the task title is interpolated, so neither
+  // sentence appears in the phrase map as a whole.
+  match = input.match(/^Help me prepare for “(.+)”\.$/);
+  if (match) return `Ayúdame a prepararme para “${match[1]}”.`;
+  match = input.match(/^Explain the assignment “(.+)” and help me make a plan to complete it\.$/);
+  if (match) return `Explica la tarea “${match[1]}” y ayúdame a hacer un plan para completarla.`;
+
   // "Up next" card — the course name and the numbers are interpolated, so the
   // whole subtitle never appears in the phrase map. The stake clause names the
   // KIND of work, never the single task, because a category is split across

@@ -360,6 +360,9 @@ export const ES: Record<string, string> = {
   'Import syllabus': 'Importar programa',
   'Smart Plan': 'Plan inteligente',
   'Up next': 'Lo siguiente',
+  'Prepare for this': 'Prepárate para esto',
+  'Your tutor knows this course — study from its material.':
+    'Tu tutor conoce este curso: estudia con su material.',
   'due today': 'vence hoy',
   'Workload': 'Carga académica',
   'Progress': 'Progreso',

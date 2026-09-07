@@ -671,7 +671,13 @@ function TutorChat({
   const handleExplainAssignment = async (task: typeof courseTasks[number]) => {
     if (!conversationId || tutorWorkInFlightRef.current || isTutorWorking) return;
     tutorWorkInFlightRef.current = true;
-    const text = `Explain the assignment “${task.title}” and help me make a plan to complete it.`;
+    // An exam has no brief to explain. The server branches the same way from
+    // the task row, but the student's own turn is what the thread shows, so it
+    // has to read correctly too.
+    const isAssessment = task.type === 'exam' || task.type === 'quiz';
+    const text = isAssessment
+      ? `Help me prepare for “${task.title}”.`
+      : `Explain the assignment “${task.title}” and help me make a plan to complete it.`;
     try {
       if (courseId && notes.length > 0) {
         await prepareCourseNotes(courseId, notes, (progress) => {
@@ -681,7 +687,11 @@ function TutorChat({
       }
       setTutorWork({ kind: 'answer', stage: 'creating' });
       await runTurn({ message: text, mode: 'explain_assignment', assignmentId: task.id });
-      track('tutor_assignment_explained', { screen: 'tutor' });
+      track('tutor_assignment_explained', {
+        screen: 'tutor',
+        entry_kind: isAssessment ? 'assessment' : 'assignment',
+        task_type: task.type,
+      });
       scrollToEnd();
     } catch (e: any) {
       Alert.alert('Could not explain assignment', e?.message || 'Please try again.');
