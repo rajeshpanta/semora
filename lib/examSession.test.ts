@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
-import { examCoverage, firstStudyStep, nextStudyStep } from '@/lib/examSession';
+import { courseStudyTopics, examCoverage, firstCourseStep, firstStudyStep, nextStudyStep } from '@/lib/examSession';
 
 const m = (topic: string, attempts: number, correct: number) =>
   ({ topic, attempts, correct, assisted_correct: 0 });
@@ -132,4 +132,29 @@ Deno.test('the session walks the covered ground once, then stops', () => {
 Deno.test('no coverage means no next step to walk to', () => {
   assertEquals(nextStudyStep([], []), null);
   assertEquals(nextStudyStep([], ['anything']), null);
+});
+
+// ── course-level study (S5) ──────────────────────────────────────────
+
+Deno.test('a course names a topic only when the student has demonstrably missed one', () => {
+  // There is no course-topic extraction. Deriving topics from task
+  // descriptions produced "employing both primary" and "take-home" on real
+  // data, so the only trustworthy source is a D'0 reinforce verdict.
+  assertEquals(firstCourseStep([]), { topic: null, reason: 'material' });
+  assertEquals(firstCourseStep([m('osmosis', 1, 0)]), { topic: null, reason: 'material' }, 'thin evidence is not a weakness');
+  assertEquals(firstCourseStep([m('osmosis', 5, 5)]), { topic: null, reason: 'material' }, 'strong is not a reason');
+  assertEquals(firstCourseStep([m('osmosis', 5, 1)]), { topic: 'osmosis', reason: 'reinforce' });
+});
+
+Deno.test('a course session can never speak with an exam\'s authority', () => {
+  for (const mast of [[], [m('osmosis', 5, 1)], [m('x', 1, 0)]]) {
+    assertEquals(firstCourseStep(mast).reason === 'coverage', false);
+  }
+});
+
+Deno.test('a course session walks only demonstrated weaknesses', () => {
+  const mast = [m('osmosis', 5, 1), m('diffusion', 1, 0), m('mitosis', 4, 0)];
+  assertEquals(courseStudyTopics(mast), ['osmosis', 'mitosis']);
+  assertEquals(nextStudyStep(courseStudyTopics(mast), ['osmosis']), 'mitosis');
+  assertEquals(courseStudyTopics([]), []);
 });

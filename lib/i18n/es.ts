@@ -362,6 +362,8 @@ export const ES: Record<string, string> = {
   'Up next': 'Lo siguiente',
   'Prepare for this': 'Prepárate para esto',
   'The exam covers this': 'El examen cubre esto',
+  'You have missed this before': 'Ya has fallado esto antes',
+  'Working from your course material': 'Trabajando con los materiales de tu curso',
   'Check with a lecture quiz': 'Compruébalo con un cuestionario de clase',
   'Review the cards first': 'Repasa primero las tarjetas',
   'Ready to check that with a question?': '¿Listo para comprobarlo con una pregunta?',

@@ -56,7 +56,7 @@ import {
 } from '@/lib/tutor';
 import { needsReinforcement, reinforcementTopics } from '@/lib/learningEvidence';
 import { isAcademicTopic } from '@/lib/academicTopic';
-import { examCoverage, firstStudyStep, nextStudyStep } from '@/lib/examSession';
+import { courseStudyTopics, examCoverage, firstCourseStep, firstStudyStep, nextStudyStep } from '@/lib/examSession';
 import { useCourseLectures, useLatestQuizAttemptForTask } from '@/lib/lectures';
 import { useCardsReviewedSince, useDeckForTopic } from '@/lib/flashcards';
 import { offeredActivities } from '@/lib/activityChoice';
@@ -522,28 +522,47 @@ function TutorChat({
     () => (explainAssignmentId ? courseTasks.find((t) => t.id === explainAssignmentId) : undefined),
     [explainAssignmentId, courseTasks],
   );
-  const isExamSession = !!sessionTask && (sessionTask.type === 'exam' || sessionTask.type === 'quiz');
-  const sessionCoverage = useMemo(
-    () => (isExamSession ? examCoverage(sessionTask?.description ?? null) : []),
-    [isExamSession, sessionTask?.description],
-  );
-  // Deterministic: no model call decides where to begin.
+  // A session has a SCOPE. 'assessment' is S1-S4: the student picked an exam,
+  // and the exam's own description says what it covers. 'course' is the same
+  // machinery entered from a course with no assessment in play — the topics
+  // come from the course's material and carry no exam claim whatsoever, which
+  // is why the two never share a reason string.
+  const sessionScope: 'assessment' | 'course' | null =
+    sessionTask && (sessionTask.type === 'exam' || sessionTask.type === 'quiz')
+      ? 'assessment'
+      : (!explainAssignmentId && courseId ? 'course' : null);
+  const isExamSession = sessionScope === 'assessment';
+  const isCourseSession = sessionScope === 'course';
+
+  const sessionCoverage = useMemo(() => {
+    if (isExamSession) return examCoverage(sessionTask?.description ?? null);
+    if (isCourseSession) return courseStudyTopics(topicMastery as any);
+    return [];
+  }, [isExamSession, isCourseSession, sessionTask?.description, topicMastery]);
+
+  // Deterministic: no model call decides where to begin, in either scope.
   const sessionStep = useMemo(() => {
-    if (!isExamSession) return null;
+    if (!sessionScope) return null;
     const remaining = nextStudyStep(sessionCoverage, sessionDone);
-    if (sessionDone.length === 0) return firstStudyStep(sessionCoverage, topicMastery as any);
-    return remaining ? { topic: remaining, reason: 'coverage' as const } : null;
-  }, [isExamSession, sessionCoverage, sessionDone, topicMastery]);
+    if (sessionDone.length === 0) {
+      return isExamSession
+        ? firstStudyStep(sessionCoverage, topicMastery as any)
+        : firstCourseStep(topicMastery as any);
+    }
+    return remaining
+      ? { topic: remaining, reason: isExamSession ? ('coverage' as const) : ('reinforce' as const) }
+      : null;
+  }, [sessionScope, isExamSession, sessionCoverage, sessionDone, topicMastery]);
 
   // The one external activity the conductor can currently launch and hear back
   // from. Offered only when this course actually has one — never navigated to
   // without the student choosing it.
   const { data: courseLectures = [] } = useCourseLectures(courseId);
   const sessionQuizLecture = useMemo(
-    () => (isExamSession
+    () => (sessionScope
       ? courseLectures.find((l: any) => Array.isArray(l.quiz) && l.quiz.length > 0)
       : undefined),
-    [isExamSession, courseLectures],
+    [sessionScope, courseLectures],
   );
   // The result comes back through the database rather than through navigation
   // params, because the quiz is a modal and a dismissed modal cannot hand
@@ -561,7 +580,7 @@ function TutorChat({
   // The second orchestrated activity. A deck only qualifies when it is
   // defensibly about the thing being studied — see lib/activityChoice.
   const { data: sessionDeck } = useDeckForTopic(
-    isExamSession ? courseId : null,
+    sessionScope ? courseId : null,
     sessionStep?.topic ?? null,
   );
   const [deckOpenedAt, setDeckOpenedAt] = useState<number | null>(null);
@@ -572,7 +591,7 @@ function TutorChat({
   // What to offer, and which to lead with. Deterministic — no model call
   // decides which kind of activity a student needs.
   const activityOffers = useMemo(
-    () => (isExamSession
+    () => (sessionScope
       ? offeredActivities({
           topic: sessionStep?.topic ?? null,
           hasLectureQuiz: !!sessionQuizLecture,
@@ -580,7 +599,7 @@ function TutorChat({
           reviewedThisSession: cardsReviewed > 0,
         })
       : []),
-    [isExamSession, sessionStep?.topic, sessionQuizLecture, sessionDeck, cardsReviewed],
+    [sessionScope, sessionStep?.topic, sessionQuizLecture, sessionDeck, cardsReviewed],
   );
 
   const practiceAnchor = useMemo(() => {
@@ -1537,14 +1556,18 @@ function TutorChat({
             is directly below it, so the student is never trapped: they can type
             anything, change topic, or leave. Tapping this is an explicit
             choice, which is why it suppresses automatic targeting. */}
-        {isExamSession && sessionStep && messages.length > 0 && (
+        {sessionScope && sessionStep && messages.length > 0 && (
           <View style={[styles.sessionBar, { maxWidth: columnWidth, borderTopColor: colors.line }]}>
             <Text style={[styles.sessionReason, { color: colors.ink3 }]} numberOfLines={2}>
               {sessionStep.reason === 'reinforce'
-                ? `${translate('This is on the exam, and you have missed it before')}`
+                ? (isExamSession
+                  ? translate('This is on the exam, and you have missed it before')
+                  : translate('You have missed this before'))
                 : sessionStep.reason === 'coverage'
-                  ? `${translate('The exam covers this')}`
-                  : `${translate('No topic list for this exam — working from your course material')}`}
+                  ? translate('The exam covers this')
+                  : (isExamSession
+                      ? translate('No topic list for this exam — working from your course material')
+                      : translate('Working from your course material'))}
             </Text>
             {/* A review happened. Say so, and steer to a check — never to a
                 conclusion. Again/Hard/Good/Easy is the student's own report. */}
@@ -1569,7 +1592,7 @@ function TutorChat({
               onPress={() => {
                 const topic = sessionStep.topic;
                 track('study_session_step', {
-                  screen: 'tutor', reason: sessionStep.reason,
+                  screen: 'tutor', entry_scope: sessionScope, reason: sessionStep.reason,
                   step: sessionDone.length, has_coverage: sessionCoverage.length > 0,
                 });
                 if (topic) setSessionDone((prev) => [...prev, topic]);
@@ -1599,7 +1622,7 @@ function TutorChat({
                 disabled={isTutorWorking}
                 onPress={() => {
                   track('study_session_activity_launched', {
-                    screen: 'tutor', activity: 'flashcards',
+                    screen: 'tutor', entry_scope: sessionScope, activity: 'flashcards',
                     has_topic: !!sessionStep.topic,
                     primary: activityOffers[0]?.activity === 'flashcards',
                   });
@@ -1623,7 +1646,7 @@ function TutorChat({
                 disabled={isTutorWorking}
                 onPress={() => {
                   track('study_session_activity_launched', {
-                    screen: 'tutor', activity: 'lecture_quiz',
+                    screen: 'tutor', entry_scope: sessionScope, activity: 'lecture_quiz',
                     has_topic: !!sessionStep.topic,
                   });
                   setQuizLaunchedAt(Date.now());

@@ -42,9 +42,9 @@ export interface ExamStep {
   topic: string | null;
   /**
    * Why this one — the session says it out loud rather than showing a score.
-   *   reinforce  the assessment covers it and the student has missed it before
-   *   coverage   the assessment names it
-   *   material   no coverage is known; work from the course material
+   *   reinforce  the student has missed it before, and it is in scope
+   *   coverage   the ASSESSMENT names it — only ever set for an exam session
+   *   material   no defensible topic; work from the course material generally
    */
   reason: 'reinforce' | 'coverage' | 'material';
 }
@@ -144,4 +144,39 @@ export function nextStudyStep(
 ): string | null {
   const seen = new Set(done.map((d) => d.toLocaleLowerCase().trim()));
   return coverage.find((c) => !seen.has(c.toLocaleLowerCase().trim())) ?? null;
+}
+
+/**
+ * Where to start when the student picked a COURSE rather than an assessment.
+ *
+ * A course has no equivalent of an assessment description — nothing in it
+ * declares "this course is about X". I tried deriving topics from the course's
+ * own task descriptions and the result was not defensible: run across real
+ * data it produced "employing both primary", "take-home" and "1.1 to 2.7",
+ * because an assignment brief is prose and prose with commas in it is not a
+ * topic list. Tightening the extraction further would be the lexical-firewall
+ * mistake this codebase has already made once. So there is no course-topic
+ * extraction here at all.
+ *
+ * That leaves exactly one trustworthy source of a course-level topic: a
+ * weakness the student has actually demonstrated, under D'0's rules, on a
+ * label D'1A accepts as academic. When one exists it is worth naming. When
+ * none does — the normal case today — the session names nothing and works
+ * from the course material, which is a real session and an honest one.
+ *
+ * It can never return `coverage`, so a course session cannot speak with an
+ * assessment's authority.
+ */
+export function firstCourseStep(
+  mastery: readonly (TopicEvidence & { topic: string })[] = [],
+): ExamStep {
+  const weak = (mastery ?? []).find((m) => readTopicEvidence(m).verdict === 'reinforce');
+  return weak ? { topic: weak.topic, reason: 'reinforce' } : { topic: null, reason: 'material' };
+}
+
+/** Reinforce-verdict topics, in order — what a course session can walk. */
+export function courseStudyTopics(
+  mastery: readonly (TopicEvidence & { topic: string })[] = [],
+): string[] {
+  return (mastery ?? []).filter((m) => readTopicEvidence(m).verdict === 'reinforce').map((m) => m.topic);
 }
