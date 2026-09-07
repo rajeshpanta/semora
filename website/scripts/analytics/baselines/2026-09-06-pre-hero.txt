@@ -24,3 +24,24 @@ landing_page                       accts  course  canvas  tasks  pro
 TOTAL                                 28      20       6     14    5
 
 rates: course 71%  canvas 21%  tasks 50%  pro 18%
+
+────────────────────────────────────────────────────────────────
+DEPLOYMENT BOUNDARY
+
+The hero/positioning change went to production with commit 65bef33.
+
+  pushed to origin/main      2026-09-07T04:38:55Z  (2026-09-06 21:38 PDT)
+  production deploy green   2026-09-07T04:39:46Z  (2026-09-06 21:39 PDT)  <- the boundary
+
+Everything ABOVE this line is the before. Split post-change traffic on that
+timestamp, in America/Los_Angeles for anything reported by day.
+
+Commits in the change:
+  fe87f19  Show the fourteen weeks after the syllabus, not just the first day
+  65bef33  Say what the free tier is for, not only what it withholds
+
+DO NOT call a result yet. The before side is 28 attributed accounts, which is
+small enough that an early swing either way is noise. Wait for a comparable
+number of accounts on the after side before reading anything into it — and
+remember every figure here is a floor, because an App Store install cannot be
+joined to a marketing visit at all.
