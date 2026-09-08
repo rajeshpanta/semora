@@ -143,6 +143,53 @@ function currentSessionId(): string {
 }
 
 /**
+ * Which JS bundle produced this event.
+ *
+ * WHY THIS EXISTS. The Canvas funnel spent a week unreadable because two
+ * events — `canvas_offer_shown` and `lms_connect_completed` — appeared to be
+ * badly broken: 19 students "saw" an offer that 26 tapped, and 2 connections
+ * were reported against 40 real rows in `lms_connections`. Both events were
+ * correctly wired at every call site. They were simply younger than the
+ * traffic being measured (shown shipped 2026-09-03, the connect funnel
+ * 2026-09-01), and an OTA reaches devices over days, so most of those students
+ * were running JS that could not emit them.
+ *
+ * Nothing in the row said so. `app_version` is the store version and does not
+ * move for an OTA, so a missing event looked exactly like a bug, and the only
+ * way to tell them apart was to read git log and guess. That is the gap this
+ * closes: with a bundle on every row, "did this cohort's app even contain the
+ * event" becomes a filter rather than an argument.
+ *
+ * Resolved ONCE per launch and cached — `track` is on a hot path and must not
+ * pay for a require() per event. Null on web and in development, where
+ * expo-updates is inert, exactly as AppUpdateGate treats it. Not personal data:
+ * an update id identifies a release, never a person.
+ */
+let bundleTagCache: string | null | undefined;
+function bundleTag(): string | null {
+  if (bundleTagCache !== undefined) return bundleTagCache;
+  bundleTagCache = (() => {
+    if (Platform.OS === 'web') return null;
+    try {
+      const Updates = require('expo-updates');
+      if (!Updates?.isEnabled) return null;
+      // An embedded launch has no update id; it is still a distinct bundle and
+      // has to be nameable, or every store install reads as "unknown".
+      const id = Updates.updateId;
+      return typeof id === 'string' && id.length > 0 ? id.slice(0, 8) : 'embedded';
+    } catch {
+      return null;
+    }
+  })();
+  return bundleTagCache;
+}
+
+/** Test seam. Never call this from app code. */
+export function resetBundleTagForTest(): void {
+  bundleTagCache = undefined;
+}
+
+/**
  * Fire-and-forget analytics event. Inserts into the shared `analytics_events`
  * table tagged app_name='semora'. Include a `screen` in `properties` so every
  * event records which page it came from. Never throws and never blocks the UI —
@@ -158,7 +205,11 @@ export function track(eventName: string, properties: Record<string, any> = {}): 
         event_name: eventName,
         // getDeviceId() runs first so `ephemeralDeviceId` reflects THIS call
         // rather than a previous one — the flag is set inside it.
-        properties: { ...properties, ...(deviceIdWasEphemeral() ? { ephemeral: true } : {}) },
+        properties: {
+          ...properties,
+          ...(deviceIdWasEphemeral() ? { ephemeral: true } : {}),
+          ...(bundleTag() ? { bundle: bundleTag() } : {}),
+        },
         device_id: getDeviceId(),
         session_id: currentSessionId(),
         platform: Platform.OS,
@@ -222,7 +273,11 @@ export async function trackBeforeLeaving(
       body: JSON.stringify({
         app_name: 'semora',
         event_name: eventName,
-        properties: { ...properties, ...(deviceIdWasEphemeral() ? { ephemeral: true } : {}) },
+        properties: {
+          ...properties,
+          ...(deviceIdWasEphemeral() ? { ephemeral: true } : {}),
+          ...(bundleTag() ? { bundle: bundleTag() } : {}),
+        },
         device_id: getDeviceId(),
         session_id: currentSessionId(),
         platform: Platform.OS,
