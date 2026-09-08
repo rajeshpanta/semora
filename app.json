@@ -130,7 +130,7 @@
     },
     "android": {
       "package": "com.rajeshpanta.syllabussnap",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon-foreground.png",
         "backgroundColor": "#080d33"
