@@ -119,3 +119,19 @@
   font-style: italic;
   margin: 8px 0 0;
 }
+
+/* Pointer to the matching "X alternative" guide. Styled as a normal body
+   paragraph with a visible link rather than a callout box: it is an aside for
+   the minority of readers who have already made the decision this page is
+   about, and it should not compete with the verdict directly above it. */
+.siblingLink {
+  color: var(--ink2);
+  font-size: 15px;
+  line-height: 1.7;
+  margin: 20px 0 0;
+}
+
+.siblingLink a {
+  color: var(--brand);
+  font-weight: 600;
+}

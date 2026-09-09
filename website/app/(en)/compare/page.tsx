@@ -5,6 +5,7 @@ import styles from './compare-index.module.css';
 import { Reveal } from '@/components/Reveal';
 import { Cta } from '@/components/Cta';
 import { COMPETITORS } from '@/lib/competitors';
+import { ALTERNATIVE_BY_COMPETITOR } from '@/lib/routes';
 import { APP_URL } from '@/lib/semora-facts';
 import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
@@ -73,6 +74,29 @@ export default function CompareIndexPage() {
             </Reveal>
           ))}
         </div>
+
+        {/* Each of these pages already names /compare as its breadcrumb
+            parent, but the hub listed only the "Semora vs X" comparisons, so
+            half its children had no path in except the site footer. A reader
+            who has decided to leave a tool wants the survey, not the head to
+            head, and that reader had no way to get from here to it. */}
+        <section className={styles.alternatives}>
+          <h2 className={styles.altHeading}>Already leaving one of these?</h2>
+          <p className={styles.altSub}>
+            A comparison weighs Semora against one named tool. These guides answer the
+            different question: what actually replaces the app you are giving up, including
+            the options that are not Semora.
+          </p>
+          <ul className={styles.altList}>
+            {COMPETITORS.filter((c) => ALTERNATIVE_BY_COMPETITOR[c.slug]).map((c) => (
+              <li key={c.slug}>
+                <Link href={`/${ALTERNATIVE_BY_COMPETITOR[c.slug]}`} className={styles.altLink}>
+                  {c.name} alternatives
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
 
         <Cta
           heading="See your own syllabus turned into a semester plan"

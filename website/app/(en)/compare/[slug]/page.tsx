@@ -9,7 +9,9 @@ import { ArticleShell } from '@/components/ArticleShell';
 import { JsonLd } from '@/components/JsonLd';
 import { faqPageSchema } from '@/lib/schema';
 import { Breadcrumb } from '@/components/Breadcrumb';
+import Link from 'next/link';
 import { COMPETITORS, getCompetitor } from '@/lib/competitors';
+import { ALTERNATIVE_BY_COMPETITOR } from '@/lib/routes';
 import { getCompareExtra } from '@/lib/compare-content';
 import { pageTitle } from '@/lib/title';
 
@@ -48,6 +50,12 @@ export default async function ComparePage({
   const extra = getCompareExtra(slug);
   const extraSections = [...(competitor.extraSections ?? []), ...(extra?.extraSections ?? [])];
   const faq = [...competitor.faq, ...(extra?.faq ?? [])];
+
+  // Five of the seven competitors also have a standalone "X alternative"
+  // guide. That page is for the reader this one cannot serve: someone who has
+  // already decided to leave and wants the whole field rather than a head to
+  // head with us. Taskade and Studley AI have no such page, hence the lookup.
+  const alternativeSlug = ALTERNATIVE_BY_COMPETITOR[competitor.slug];
 
   return (
     <ArticleShell
@@ -140,6 +148,16 @@ export default async function ComparePage({
       )}
 
       {competitor.extraNote && <p className={styles.note}>{competitor.extraNote}</p>}
+
+      {alternativeSlug && (
+        <p className={styles.siblingLink}>
+          Already decided to leave {competitor.name}?{' '}
+          <Link href={`/${alternativeSlug}`}>
+            See the wider set of {competitor.name} alternatives
+          </Link>
+          , which covers the other tools that do this job rather than only Semora.
+        </p>
+      )}
 
       <h2>Frequently asked questions</h2>
       <Faq items={faq} />
