@@ -23,6 +23,14 @@ import { SITE_NAME } from './semora-facts';
 export const OG_DEFAULTS = {
   siteName: SITE_NAME,
   type: 'website' as const,
+  // Stated here rather than inherited. Next REPLACES a parent `openGraph`
+  // wholesale (see above), so a page that sets its own drops the layout's
+  // locale exactly the way it dropped the image — which is why every English
+  // page emitted og:locale nothing while every Spanish page emitted es_US.
+  // The Spanish tree solves it by writing the locale into each page's own
+  // openGraph; spreading it from here does the same job once.
+  locale: 'en_US',
+  alternateLocale: ['es_US'],
   // Points at the stable /og.png route handler, NOT the file-convention path.
   // The bare '/opengraph-image' literal that used to live here 404s in this
   // Next version (the file-convention image is only served content-hashed),

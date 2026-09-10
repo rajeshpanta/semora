@@ -20,14 +20,14 @@ export function Footer({ locale = 'en' }: { locale?: SiteLocale }) {
     ? {
         tagline: TAGLINE_ES, features: 'Funciones', compare: 'Comparar', tools: 'Herramientas gratis',
         gpa: 'Calculadora de GPA', pomodoro: 'Temporizador Pomodoro', get: 'Empieza con Semora',
-        tryFree: 'Empezar gratis', download: 'Descargar en el App Store', pricing: 'Precios', blog: 'Blog',
+        tryFree: 'Empezar gratis', download: 'Descargar la app', pricing: 'Precios', blog: 'Blog',
         guides: 'Guías', company: 'Empresa', about: 'Acerca de', support: 'Ayuda', privacy: 'Privacidad', terms: 'Términos',
         alternative: 'alternativa', featureBase: '/es/funciones', compareBase: '/es/comparar',
       }
     : {
         tagline: TAGLINE, features: 'Features', compare: 'Compare', tools: 'Free tools',
         gpa: 'GPA calculator', pomodoro: 'Pomodoro timer', get: 'Get Semora',
-        tryFree: 'Try it for free', download: 'Download on the App Store', pricing: 'Pricing', blog: 'Blog',
+        tryFree: 'Try it for free', download: 'Get the app', pricing: 'Pricing', blog: 'Blog',
         guides: 'Guides', company: 'Company', about: 'About', support: 'Support', privacy: 'Privacy', terms: 'Terms',
         alternative: 'alternative', featureBase: '/features', compareBase: '/compare',
       };

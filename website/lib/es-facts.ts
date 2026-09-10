@@ -5,28 +5,42 @@ export const TAGLINE_ES = 'Organiza el programa de tus materias y ten cada entre
 export const SITE_DESCRIPTION_ES =
   'Semora convierte una foto o PDF del programa de tu materia en un calendario con tareas, exámenes y criterios de evaluación organizados.';
 
+// Espejo de FREE_FEATURES en semora-facts.ts. El límite de un semestre ya no
+// se repite en estas viñetas: se dice una sola vez, y bien visible, en la
+// página de precios. No lo vuelvas a esparcir por aquí.
 export const FREE_FEATURES_ES = [
-  '1 acción con IA para toda la vida de la cuenta: un escaneo, una grabación o un documento en apuntes',
-  // Ver la nota en semora-facts.ts: elegir qué clases entran es un paso del
-  // estudiante, así que "se importan solas" prometía de más. Lo automático es
-  // lo de después. El "sin límite" sí es exacto: es una afirmación sobre el
-  // plan, y las clases de Canvas nunca se cuentan.
-  'Sincronización con Canvas gratis: trae todas las clases que curses, sin límite de cuántas, sin Pro, sin token y sin permiso de informática, y se mantienen al día solas',
-  'Además, 1 curso que añades a mano dentro de un único semestre: las clases de Canvas nunca cuentan para ese límite; una cuenta gratis admite un semestre en total',
-  'Seguimiento de tareas y fechas de entrega',
-  'Calificaciones con promedios ponderados',
-  'Recordatorios el mismo día',
+  // Va primero porque es lo más grande que hace el plan Gratis, y lo que un
+  // estudiante puede hacer esta misma noche. Los tres proveedores son gratis
+  // en todos los planes. El "sin límite" es exacto: las clases del LMS nunca
+  // se cuentan para el tope de cursos, ni en Gratis ni en Pro.
+  'Todas tus clases, gratis: Canvas, Blackboard y Moodle se sincronizan en el plan Gratis, sin límite de cuántas, y se actualizan si el profesor mueve una fecha',
+  // Lo de "un solo paso" vale SOLO para Canvas. Blackboard y Moodle también
+  // son gratis, pero usan un token que emite la universidad.
+  'Canvas se conecta en un paso: pega el enlace que Canvas ya te da. Sin token y sin permiso de informática',
+  'Tu primera acción con IA, gratis: un escaneo, una grabación o un documento en apuntes; tú eliges',
+  // Igual que en semora-facts.ts: el límite y la exención van en la misma
+  // frase. Lo verifica scripts/check-product-facts.mjs.
+  'Además, 1 curso que añades a mano dentro de un semestre: las clases de Canvas, Blackboard y Moodle nunca cuentan para ese límite',
+  'Todas tus entregas, tareas y exámenes de todos los cursos en una sola lista',
+  'Calificaciones con promedios ponderados, para saber cómo vas de verdad',
+  'Recordatorios el mismo día, activados desde el principio',
   'Espacios de curso: únete gratis al espacio que comparta un compañero',
 ] as const;
 
+// Aquí NO va ninguna línea de LMS. Canvas, Blackboard y Moodle son gratis en
+// todos los planes. Esta lista llegó a vender Canvas como función de Pro
+// mientras la tarjeta Gratis, en la misma pantalla, lo regalaba. No la
+// vuelvas a añadir. Y "sin límite de escaneos" tampoco: en Pro no hay cupo,
+// pero sí un tope de uso justo de 20 escaneos por cada 24 horas.
 export const PRO_FEATURES_ES = [
-  'Cursos y semestres ilimitados, sin límite de escaneos',
-  'Importación de tareas desde Canvas, Blackboard y Moodle',
+  'Cursos y semestres ilimitados: el próximo se arma igual que este',
+  'Sin cupo de IA: escanea, graba y genera todo el semestre, con un uso justo de 20 escaneos al día',
+  'Graba todas tus clases, no solo una: transcripción, apuntes, cuestionario y tarjetas de cada una',
   'Crea Espacios de curso e invita a tus compañeros',
-  'Plan Inteligente que se adapta a tus fechas de entrega',
+  'Plan inteligente que se adapta a tus fechas de entrega',
   'Panel de carga académica para detectar semanas pesadas',
   'Tarjetas de estudio generadas a partir del programa y tus apuntes',
-  'Temporizador de concentración estilo Pomodoro',
+  'Temporizador de enfoque estilo Pomodoro',
   'Tutor con IA basado en el programa, tus apuntes y fechas reales',
   'Escala de calificaciones, pronósticos y simulador de escenarios «¿qué pasa si…?»',
   'Sincronización con el calendario del dispositivo y exportación .ics',
@@ -42,6 +56,16 @@ export interface SpanishFeatureFact {
   name: string;
   shortDescription: string;
   tier: 'free' | 'pro';
+  /**
+   * Descripción para buscadores, cuando la de la tarjeta se queda corta.
+   *
+   * shortDescription se ve en pantalla: en la cuadrícula de /es/funciones y en
+   * el pie de página. Ahí lo bueno es que sea breve. Como meta description,
+   * esas mismas frases medían 61-97 caracteres, la mitad de lo útil, así que
+   * Google descartaba la nuestra y escribía la suya. Esto separa las dos: la
+   * tarjeta sigue siendo corta y el buscador recibe algo completo.
+   */
+  metaDescription?: string;
   /** Ver FeatureFact.freeNote: gratis para PROBAR, no gratis sin límite. */
   freeNote?: string;
   description: string;
@@ -53,6 +77,8 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     englishSlug: 'syllabus-scanner',
     name: 'Escaneo de programas con IA',
     shortDescription: 'Convierte una foto o un PDF en fechas de entrega, horarios y criterios de evaluación organizados.',
+    metaDescription:
+      'Convierte una foto o un PDF del programa en el semestre completo: cada entrega, examen y criterio de evaluación, listos para que los revises antes de guardar.',
     tier: 'free',
     freeNote:
       'Gratis para probar. El plan gratuito incluye una acción de IA para toda la vida de la cuenta: gástala en un escaneo. Pro no tiene límite.',
@@ -63,6 +89,8 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     englishSlug: 'canvas-sync',
     name: 'Sincronización con Canvas',
     shortDescription: 'Importa tus tareas de Canvas, Blackboard o Moodle y mantenlas al día cuando cambien.',
+    metaDescription:
+      'Conecta Canvas, Blackboard o Moodle gratis en cualquier plan, sin límite de clases: pega el enlace del calendario y tus tareas llegan y se mantienen al día.',
     tier: 'free',
     description: 'Conecta Canvas gratis, trae todas las clases que curses y se mantienen al día solas, sin token ni permiso de informática.',
   },
@@ -71,6 +99,8 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     englishSlug: 'grade-tracking',
     name: 'Seguimiento de calificaciones',
     shortDescription: 'Conoce tu promedio ponderado y qué calificación necesitas en lo que queda del semestre.',
+    metaDescription:
+      'Tu promedio ponderado al día con lo ya calificado, gratis. Pro añade los pronósticos que dicen qué nota necesitas en lo que queda para llegar a tu objetivo.',
     tier: 'free',
     description: 'Registra cada calificación y su peso. Semora calcula tu promedio con lo que ya está calificado y Pro añade pronósticos para explorar distintos escenarios.',
   },
@@ -95,8 +125,10 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
   {
     slug: 'plan-inteligente',
     englishSlug: 'smart-plan',
-    name: 'Plan Inteligente',
+    name: 'Plan inteligente',
     shortDescription: 'Un horario de estudio que se reajusta cuando cambian tus fechas.',
+    metaDescription:
+      'Un horario de estudio armado con tus fechas reales que se reajusta solo cuando el profesor mueve un examen o se te acumulan varias entregas la misma semana.',
     tier: 'pro',
     description: 'Semora distribuye bloques de estudio según tus fechas, exámenes, carga académica y tiempo disponible, y explica por qué reajustó el plan.',
   },
@@ -105,6 +137,8 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     englishSlug: 'ai-tutor',
     name: 'Tutor con IA',
     shortDescription: 'Respuestas, práctica y recomendaciones basadas en tus cursos reales.',
+    metaDescription:
+      'Un tutor con IA que responde desde el programa de tu materia, tus apuntes y tus fechas reales, cita lo que usó y nunca se inventa una fecha de entrega.',
     tier: 'pro',
     description: 'Pregunta sobre una tarea, practica con cuestionarios o identifica los temas que necesitas reforzar. El Tutor incluye referencias al programa y a tus apuntes cuando los utiliza.',
   },
@@ -113,6 +147,8 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     englishSlug: 'flashcards',
     name: 'Tarjetas de estudio',
     shortDescription: 'Genera tarjetas a partir de tus apuntes y repásalas con repetición espaciada.',
+    metaDescription:
+      'Genera un mazo desde el programa y tus apuntes, enfócalo en un examen concreto y repásalo con repetición espaciada. Incluido en Semora Pro.',
     tier: 'pro',
     description: 'Crea un mazo para todo el curso o para un examen específico usando el programa y los apuntes que hayas seleccionado.',
   },
@@ -121,14 +157,18 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     englishSlug: 'collaboration',
     name: 'Espacios de curso',
     shortDescription: 'Comparte fechas y trabajos de grupo con tus compañeros en tiempo real.',
+    metaDescription:
+      'Comparte un curso por enlace y las fechas y trabajos de grupo se sincronizan en tiempo real. Unirte es gratis; crear tu propio espacio es parte de Pro.',
     tier: 'pro',
     description: 'El anfitrión comparte un enlace del curso y todos ven las mismas fechas actualizadas. Crear un espacio requiere Pro; unirse es gratis.',
   },
   {
     slug: 'temporizador-de-enfoque',
     englishSlug: 'focus-timer',
-    name: 'Temporizador de concentración',
+    name: 'Temporizador de enfoque',
     shortDescription: 'Sesiones Pomodoro que se adaptan a los espacios entre clases.',
+    metaDescription:
+      'Sesiones Pomodoro de 15, 25, 45 o 50 minutos con descansos ajustables, pensadas para los huecos reales entre clases. Incluido en Semora Pro.',
     tier: 'pro',
     description: 'Elige sesiones de 15, 25, 45 o 50 minutos y descansos cortos para aprovechar los huecos que de verdad tienes en tu horario.',
   },
@@ -190,9 +230,12 @@ export const SHOWCASE_ES = [
   {
     image: '/screenshots/es/canvas-sync.png',
     alt: 'Pantalla de plataformas educativas de Semora con los cursos conectados y el estado de sincronización',
-    tier: 'pro' as const,
-    title: 'Importa tareas desde Canvas',
-    body: 'La sincronización con Canvas es gratis ahora mismo, en todas las cuentas y sin límite de clases: es una oferta por tiempo limitado, y quien lo conecte mientras dure no pierde nunca la importación gratuita de Canvas. Conviene saber una cosa antes del siguiente semestre: el plan Gratis cubre un semestre, así que empezar uno nuevo es donde entra Pro. Las clases que ya conectaste siguen sincronizándose igual. Usa el calendario privado que Canvas ya te da, así que no hay ningún token que generar ni nada que aprobar en informática. Una vez conectado se revisa solo cada pocas horas —cada hora si estás en mitad del semestre y usando la app—: si tu profesor mueve una fecha, en Semora aparece cambiada sin que nadie haga nada, y si borra una tarea, esta desaparece de tu lista en vez de seguir dándote la lata. Un límite honesto: el calendario trae fechas, no notas, así que las calificaciones las sigues poniendo tú. La importación de Blackboard y Moodle también es gratis, usa un token que emite tu universidad y depende de cada centro.',
+    // Era 'pro'. La tarjeta mostraba una insignia "Pro" justo encima de un
+    // párrafo que empieza diciendo que Canvas es gratis, en la única página
+    // de funciones en español. La versión inglesa siempre dijo 'free'.
+    tier: 'free' as const,
+    title: 'Importa tus clases desde Canvas, Blackboard o Moodle',
+    body: 'La sincronización con Canvas es gratis ahora mismo, en todas las cuentas y sin límite de clases: es una oferta por tiempo limitado, y quien lo conecte mientras dure no pierde nunca la importación gratuita de Canvas. Usa el calendario privado que Canvas ya te da, así que no hay ningún token que generar ni nada que aprobar en informática. Una vez conectado se revisa solo cada pocas horas —cada hora si estás en mitad del semestre y usando la app—: si tu profesor mueve una fecha, en Semora aparece cambiada sin que nadie haga nada, y si borra una tarea, esta desaparece de tu lista en vez de seguir dándote la lata. Un límite honesto: el calendario trae fechas, no notas, así que las calificaciones las sigues poniendo tú. La importación de Blackboard y Moodle también es gratis, usa un token que emite tu universidad y depende de cada centro.',
     bullets: [
       'Sin token de acceso y sin permiso de tu universidad',
       'Las tareas con fecha se importan solas y se mantienen al día',

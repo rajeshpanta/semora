@@ -121,6 +121,15 @@ function DirectoryWidget({ config }: { config: SpanishPageConfig }) {
           </Link>
         ))}
         </div>
+        {/* The English features page has ended in a free-vs-Pro banner since
+            launch; this page ended at the grid, so a reader who had just gone
+            through all ten features had no link to the prices anywhere in the
+            body — the footer was the only way out. Same strip the individual
+            Spanish feature pages already use, so no new styles. */}
+        <div className={styles.featureStrip}>
+          <span>Gratis para empezar, Pro cuando quieras más. Todas tus clases se sincronizan gratis.</span>
+          <Link href="/es/precios">Ver precios →</Link>
+        </div>
       </>
     );
   }

@@ -65,18 +65,8 @@
   align-items: center;
 }
 
-.primaryBtn,
-.secondaryBtn {
-  display: inline-block;
-  text-decoration: none;
-  font-weight: 650;
-  font-size: clamp(14px, 2.2vw, 16px);
-  padding: 14px clamp(20px, 3.4vw, 30px);
-  border-radius: 999px;
-  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
-}
-
 .primaryBtn {
+  composes: buttonBase from './PrimaryButton.module.css';
   background: var(--ink);
   color: #fff;
   border: 1px solid var(--ink);
@@ -91,6 +81,7 @@
 }
 
 .secondaryBtn {
+  composes: buttonBase from './PrimaryButton.module.css';
   background: #fff;
   color: var(--ink);
   border: 1px solid var(--border);

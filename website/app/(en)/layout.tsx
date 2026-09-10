@@ -32,6 +32,11 @@ export const metadata: Metadata = {
   openGraph: {
     siteName: SITE_NAME,
     type: 'website',
+    // Mirrors the Spanish root layout, which has declared its locale since
+    // launch. Only reaches pages that do NOT set their own openGraph; the
+    // ones that do pick it up from OG_DEFAULTS instead.
+    locale: 'en_US',
+    alternateLocale: ['es_US'],
   },
   twitter: {
     card: 'summary_large_image',

@@ -41,30 +41,33 @@
   margin-bottom: 40px;
 }
 
+/* Ink at rest, purple on hover — the site standard. This button used to be a
+   lighter weight with fixed padding and no transition at all, so it sat dead
+   under the cursor on one of the highest-intent pages on the site. It now
+   takes its shape from the shared file and behaves like every other CTA. */
 .primaryBtn {
+  composes: buttonBase from '../../../components/PrimaryButton.module.css';
   background: var(--ink);
   color: #fff;
-  text-decoration: none;
-  font-weight: 600;
-  padding: 14px 28px;
-  border-radius: 999px;
+  border: 1px solid var(--ink);
 }
 
 .primaryBtn:hover {
   background: var(--brand);
+  border-color: var(--brand);
+  transform: translateY(-1px);
 }
 
 .secondaryBtn {
+  composes: buttonBase from '../../../components/PrimaryButton.module.css';
+  background: #fff;
   color: var(--ink);
-  text-decoration: none;
-  font-weight: 600;
-  padding: 14px 24px;
-  border-radius: 999px;
   border: 1px solid var(--border);
 }
 
 .secondaryBtn:hover {
-  border-color: var(--brand);
+  border-color: var(--brand-100);
+  transform: translateY(-1px);
 }
 
 .chipRow {
@@ -155,6 +158,10 @@
   margin-bottom: 14px;
 }
 
+/* Free/Pro badge on a grid card. Same shape and the same two colour pairs as
+   the showcase badge above it (FeatureShowcase.module.css) so one page does
+   not label the same distinction two ways. It sits above the title rather
+   than beside it, which is why there is no margin-left here. */
 .cardTier {
   display: inline-block;
   font-size: 11px;
@@ -164,8 +171,16 @@
   padding: 3px 9px;
   border-radius: 999px;
   margin-bottom: 10px;
-  margin-left: 8px;
-  vertical-align: middle;
+}
+
+.tierFree {
+  background: var(--teal-50);
+  color: var(--teal);
+}
+
+.tierPro {
+  background: var(--brand-50);
+  color: var(--brand);
 }
 
 .cardTitle {

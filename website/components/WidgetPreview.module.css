@@ -20,7 +20,7 @@
   flex: none;
   padding: 10px;
   border-radius: 16px;
-  background: linear-gradient(145deg, #efe9ff 0%, #f7f3ff 55%, #faf9f5 100%);
+  background: linear-gradient(145deg, #efe9ff 0%, #f7f3ff 55%, var(--bg) 100%);
   border: 1px solid var(--border);
 }
 

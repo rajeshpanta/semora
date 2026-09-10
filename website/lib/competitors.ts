@@ -76,7 +76,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Study planning / workload tools',
         semora:
-          'Pro includes Smart Plan (AI-generated study schedule that adapts to deadlines), a Workload dashboard (crunch-week/exam-density view), Flashcards (spaced repetition), a Focus timer, and an AI tutor chat.',
+          'Pro includes Smart Plan (AI-generated study schedule that adapts to deadlines), a Workload dashboard (crunch-week/exam-density view), Flashcards (spaced repetition), a Focus Timer, and an AI Tutor chat.',
         competitor:
           'An "Ace" AI assistant answers policy questions with citations, plus a per-course "Intelligence" tab (difficulty rating, weekly hour estimate).',
       },
@@ -170,7 +170,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Study planning',
         semora:
-          'Pro-tier Smart Plan builds an AI study schedule that adapts to deadlines, plus a Workload dashboard, Focus timer, and Academic Risk alerts.',
+          'Pro-tier Smart Plan builds an AI study schedule that adapts to deadlines, plus a Workload dashboard, Focus Timer, and Academic Risk alerts.',
         competitor:
           'Core to the product — a time-blocked schedule from available time vs. estimated time-per-task, plus "The Cushion™" conflict alerts and reading-time estimators.',
       },
@@ -215,7 +215,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         heading: 'Study planning & Pro features',
         body: [
-          'On Semora, deadline and grade tracking are free; the study-planning layer is part of Pro ($3.99/month or $19.99/year): Smart Plan (an AI-generated, deadline-adaptive study schedule), a Workload dashboard for spotting crunch weeks, Flashcards with spaced repetition built from your own material, a Focus timer, an AI tutor that knows your syllabus, custom reminder timing with quiet hours, and Academic Risk alerts (falling grades, missing work, overloaded weeks) with a recovery-step plan.',
+          'On Semora, deadline and grade tracking are free; the study-planning layer is part of Pro ($3.99/month or $19.99/year): Smart Plan (an AI-generated, deadline-adaptive study schedule), a Workload dashboard for spotting crunch weeks, Flashcards with spaced repetition built from your own material, a Focus Timer, an AI Tutor that knows your syllabus, custom reminder timing with quiet hours, and Academic Risk alerts (falling grades, missing work, overloaded weeks) with a recovery-step plan.',
           'On Shovel, time-blocked study scheduling is central to the product from the start — calculating available time versus estimated time-per-task across the semester, with predictive conflict alerts ("The Cushion™"), reading-time/task-duration estimators, streak-based motivation tracking, and free supplementary "how to study" courses.',
         ],
       },
@@ -385,7 +385,7 @@ export const COMPETITORS: CompetitorFact[] = [
     intro:
       "If you're comparing the two, the short version is this: Semora is built around your syllabus — it reads the PDF or photo you give it and builds your semester calendar, task list, and grade tracker from it. Mindgrasp is built around your study material (lecture recordings, PDFs, slides, videos) and turns whatever you feed it into notes, flashcards, and a quiz. Read on for how each one actually works, a side-by-side feature table, and honest guidance on which fits your situation.",
     semoraParagraph:
-      'Semora (iPhone, iPad, and web) starts with your syllabus. You can import it by taking a photo (including multi-page scans, up to 5 pages), uploading a PDF, dragging a file onto the web app, or pasting raw text copied from a PDF or your school\'s LMS page. OpenAI GPT-5.6 Luna then extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading, each with its due date, and builds them into your semester automatically. The free tier includes one AI action for the lifetime of the account — a syllabus scan, a lecture recording, or a document turned into notes, whichever you reach for first — unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited scans and courses, Smart Plan, a Workload dashboard, Grade Scale & Forecasting, spaced-repetition Flashcards, a Focus timer, an AI tutor, custom reminder timing, calendar sync (device + .ics export), Academic Risk alerts, Progress Insights, and Share & Streaks. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Course Spaces let you share a course with classmates via an invite link so shared deadlines and group assignments sync in real time (hosting a space is Pro; joining one is free). Web, iPhone, and iPad share one account and sync in near real time. (Google Classroom and Google Calendar sync exist in Semora\'s codebase but are not currently enabled or shipped — they aren\'t live features today.)',
+      'Semora (iPhone, iPad, and web) starts with your syllabus. You can import it by taking a photo (including multi-page scans, up to 5 pages), uploading a PDF, dragging a file onto the web app, or pasting raw text copied from a PDF or your school\'s LMS page. OpenAI GPT-5.6 Luna then extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading, each with its due date, and builds them into your semester automatically. The free tier includes one AI action for the lifetime of the account — a syllabus scan, a lecture recording, or a document turned into notes, whichever you reach for first — unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited scans and courses, Smart Plan, a Workload dashboard, Grade Scale & Forecasting, spaced-repetition Flashcards, a Focus Timer, an AI Tutor, custom reminder timing, calendar sync (device + .ics export), Academic Risk alerts, Progress Insights, and Share & Streaks. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Course Spaces let you share a course with classmates via an invite link so shared deadlines and group assignments sync in real time (hosting a space is Pro; joining one is free). Web, iPhone, and iPad share one account and sync in near real time. (Google Classroom and Google Calendar sync exist in Semora\'s codebase but are not currently enabled or shipped — they aren\'t live features today.)',
     competitorParagraph:
       'Mindgrasp takes a different starting point: you upload or link a piece of content — a PDF, DOCX, PowerPoint, MP3/MP4, YouTube video, web article, or a lecture you record live, and it generates a linked bundle of AI notes, a summary, flashcards, a quiz, and an "AI Tutor" chat for asking questions about that content. A higher Scholar/Premium tier adds an "AI math expert" for step-by-step math help, and there\'s a Chrome extension for capturing content from the browser. Mindgrasp also states compatibility with Canvas, Blackboard, and Panopto, though this appears to be for importing or processing files from those platforms rather than parsing a syllabus for deadlines. Mindgrasp\'s marketing targets a broad range of learners — high school through graduate students, self-learners, professionals, and exam-prep candidates.',
     comparisonCaption:
@@ -705,7 +705,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Study planning',
         semora:
-          "Pro's Smart Plan builds an AI-generated, deadline-adapting study schedule; the Workload dashboard flags crunch weeks; Flashcards, a Focus timer, and an AI tutor are included.",
+          "Pro's Smart Plan builds an AI-generated, deadline-adapting study schedule; the Workload dashboard flags crunch weeks; Flashcards, a Focus Timer, and an AI Tutor are included.",
         competitor:
           'No dedicated study-schedule, flashcard, or tutor feature found. The app focuses on the planner itself: themes, widgets, and notifications.',
       },
@@ -726,7 +726,7 @@ export const COMPETITORS: CompetitorFact[] = [
       'Want deadlines and grades extracted automatically from a syllabus instead of typing every assignment in by hand',
       'Want grade tracking with a weighted average included free',
       'Want free Canvas import from the private Calendar Feed link Canvas already gives you, with syllabus scanning or pasted assignment text as the fallback',
-      'Want study tools — Smart Plan, Flashcards, a Focus timer, an AI tutor — built around your own courses',
+      'Want study tools — Smart Plan, Flashcards, a Focus Timer, an AI Tutor — built around your own courses',
     ],
     whereCompetitorFits: [
       'Want one planner that runs natively on Mac, Windows, Kindle Fire, and Chrome, not just iPhone, iPad, and web',
@@ -752,7 +752,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Which has more study tools beyond a calendar?',
         answer:
-          'Semora Pro adds Smart Plan, a Workload dashboard, Flashcards, a Focus timer, and an AI tutor on top of free deadline and grade tracking. myHomework is focused on the planner itself — no dedicated study-schedule, flashcard, or tutor feature was found in its available materials.',
+          'Semora Pro adds Smart Plan, a Workload dashboard, Flashcards, a Focus Timer, and an AI Tutor on top of free deadline and grade tracking. myHomework is focused on the planner itself — no dedicated study-schedule, flashcard, or tutor feature was found in its available materials.',
       },
     ],
   },

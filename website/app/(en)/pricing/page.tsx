@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { enAlternates } from '@/lib/hreflang';
+import { OG_IMAGE } from '@/lib/og';
 import styles from './pricing.module.css';
 import { Faq } from '@/components/Faq';
 import { Cta } from '@/components/Cta';
@@ -15,13 +16,14 @@ export const metadata: Metadata = {
   title: 'Pricing',
   description: "Semora is free to start. Pro is $3.99/month or $19.99/year, bought by card on the web or in the iOS app, and applied account-wide including web.",
   alternates: enAlternates('/pricing'),
+  openGraph: { url: '/pricing', ...OG_IMAGE },
 };
 
 const PRICING_FAQ = [
   {
     question: 'Is Semora free?',
     answer:
-      'Yes. The free tier includes one AI action for the lifetime of your account—a syllabus scan, a lecture recording or a document turned into notes, whichever you use it on—plus unlimited classes synced free from Canvas plus one course you add by hand within one semester, full deadline and grade tracking, and same-day reminders. No credit card required. Calendar sync (device + .ics export) is a Pro feature.',
+      'Yes, and not as a trial that expires. Every class you are taking syncs across from Canvas, Blackboard or Moodle at no cost, with no cap on how many, plus a course you add by hand. Your first AI action is free—a syllabus scan, a lecture recording or a document turned into notes, whichever you use it on. Full deadline and grade tracking and same-day reminders are included, with no credit card. Free covers one semester start to finish; a second term is where Pro begins. Calendar sync (device + .ics export) is a Pro feature.',
   },
   {
     question: 'How do I upgrade to Pro?',
@@ -36,7 +38,7 @@ const PRICING_FAQ = [
   {
     question: 'What happens to my data if I cancel Pro?',
     answer:
-      'Your account and academic data stay intact. You keep everything from the free tier. You just lose access to Pro-only features like Smart Plan, Flashcards, and the AI tutor.',
+      'Your account and academic data stay intact. You keep everything from the free tier. You just lose access to Pro-only features like Smart Plan, Flashcards, and the AI Tutor.',
   },
 ];
 
@@ -61,7 +63,19 @@ export default function PricingPage() {
           ]}
         />
         <h1>Simple pricing</h1>
-        <p>Start free. Upgrade only if you want more.</p>
+        {/* This line is where the one-semester limit lives now. It used to be
+            bolted onto the free card's course bullet and repeated through the
+            copy, which made the free tier read as a list of things withheld.
+            Said once, up front, it does the opposite: Pro becomes the obvious
+            next step rather than a wall. Phrased as "a second semester is
+            where Pro comes in" rather than "free covers one semester",
+            because the Free card beside it reads "$0 Forever" — and the free
+            TIER genuinely is forever, it just holds one term. Saying free
+            lasts a semester next to a card saying forever reads as a
+            contradiction and costs trust on the page where trust converts.
+            Do not delete it — free accounts genuinely cannot start a second
+            term (DB trigger, migration 010). */}
+        <p>Start free — every class synced, no credit card, no trial that expires. A second semester is where Pro comes in.</p>
       </header>
 
       <PricingCards />

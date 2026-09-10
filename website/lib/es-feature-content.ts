@@ -10,7 +10,7 @@
  * Cada entrada aquí cubre la misma información que su equivalente inglesa,
  * escrita en español y no traducida frase a frase, con el vocabulario de la app:
  * programa, entrega, tarea, curso, calificación, semestre, Tutor, Tarjetas de
- * estudio, Plan Inteligente, carga académica.
+ * estudio, Plan inteligente, carga académica.
  *
  * La clave es el slug INGLÉS, igual que en FEATURE_DETAILS, para que el
  * generador de es-content.ts pueda buscarla sin otra tabla de equivalencias.
@@ -274,7 +274,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         paragraphs: [
           'El escaneo es la puerta de entrada, no una herramienta suelta. Todo lo que produce son datos normales de Semora desde el momento en que los guardas, y por eso tu primera acción con IA es gratis: es lo que hace que el resto de la app funcione.',
           'Las entregas se convierten en tareas de la pestaña Hoy —ordenadas en atrasadas, vencen hoy y esta semana— con recordatorios el mismo día en el plan gratuito. Las ponderaciones alimentan el seguimiento de calificaciones, así que un promedio ponderado aparece sin que tengas que teclear ningún porcentaje.',
-          'Del lado de Pro, esa misma extracción alimenta el horario del Plan Inteligente y la vista de semanas cargadas de la carga académica, y ambos valen exactamente lo que valgan las entregas que tengan. El Tutor con IA responde desde el programa de ese curso, y las tarjetas de estudio se generan a partir del mismo material.',
+          'Del lado de Pro, esa misma extracción alimenta el horario del Plan inteligente y la vista de semanas cargadas de la carga académica, y ambos valen exactamente lo que valgan las entregas que tengan. El Tutor con IA responde desde el programa de ese curso, y las tarjetas de estudio se generan a partir del mismo material.',
         ],
       },
       {
@@ -474,15 +474,15 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
   },
 
   'smart-plan': {
-    lede: 'El Plan Inteligente toma cada entrega pendiente que tengas y la reparte como sesiones de estudio con día y hora a lo largo de los próximos 14 días: alrededor de tus clases, dentro del presupuesto diario que fijes tú y en la duración de sesión que elijas.',
+    lede: 'El Plan inteligente toma cada entrega pendiente que tengas y la reparte como sesiones de estudio con día y hora a lo largo de los próximos 14 días: alrededor de tus clases, dentro del presupuesto diario que fijes tú y en la duración de sesión que elijas.',
     intro: [
       'Una lista de entregas no es un plan. Te dice que un parcial del 25 % cae el día 14 y que un informe de laboratorio cae el 16. No te dice qué tarde te vas a sentar de verdad, cuánto rato ni con qué. En ese hueco es donde se pierden la mayoría de los semestres.',
       'Los dos fallos parecen distintos pero salen del mismo sitio. El primero es subestimar algo grande: un proyecto que en una lista de tareas ocupa una línea y resulta ser seis horas de trabajo que no se comprimen en la noche anterior. El segundo es repartir mal el tiempo que sí tienes.',
-      'El Plan Inteligente cierra ese hueco con datos que Semora ya guarda. Lee todas las entregas pendientes de todas las asignaturas del semestre seleccionado, estima el esfuerzo que necesita cada una y coloca ese esfuerzo como sesiones con hora a lo largo de los próximos 14 días. Después se reajusta cuando cambia una fecha o te saltas una sesión.',
+      'El Plan inteligente cierra ese hueco con datos que Semora ya guarda. Lee todas las entregas pendientes de todas las asignaturas del semestre seleccionado, estima el esfuerzo que necesita cada una y coloca ese esfuerzo como sesiones con hora a lo largo de los próximos 14 días. Después se reajusta cuando cambia una fecha o te saltas una sesión.',
     ],
     sections: [
       {
-        heading: 'Cómo construye el Plan Inteligente tus próximas dos semanas',
+        heading: 'Cómo construye el Plan inteligente tus próximas dos semanas',
         paragraphs: [
           'El horizonte de planificación son 14 días contando desde hoy. Todo lo que ocurre dentro es un recorrido directo y repetible sobre tus datos: no hay llamada a ningún modelo ni ida y vuelta por la red en la planificación en sí, y por eso es instantánea y da siempre el mismo resultado con los mismos datos.',
           'Empieza recogiendo cada tarea pendiente del semestre seleccionado que tenga una fecha legible. Una tarea con fecha de inicio en el futuro se reserva hasta que llega ese día, así que el trabajo que aplazaste a propósito no reaparece antes de tiempo.',
@@ -531,7 +531,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Cuando una fecha se mueve, o te saltas una sesión',
         paragraphs: [
-          'Abrir el Plan Inteligente ES la acción de reprogramar. Se ejecuta cada vez que la pantalla recibe el foco, no solo la primera vez que abres la app, así que volver después de tres días siempre produce un plan construido para hoy.',
+          'Abrir el Plan inteligente ES la acción de reprogramar. Se ejecuta cada vez que la pantalla recibe el foco, no solo la primera vez que abres la app, así que volver después de tres días siempre produce un plan construido para hoy.',
           'Una sesión cuenta como perdida cuando sigue sin terminar y está fechada antes de hoy, o fechada hoy a una hora de inicio que ya pasó. La regeneración descarta todas las sesiones abiertas del semestre y las vuelve a colocar.',
           'Esa combinación es lo que hace que regenerar sea seguro una y otra vez. Es determinista y nunca cuenta dos veces, así que abrir la pantalla cinco veces en una tarde no te duplica la semana cinco veces.',
           'Si prefieres que el plan se quede quieto, desactiva la reprogramación automática. La pantalla te avisa de que está desactivada, y el botón de actualizar de arriba a la derecha pasa a ser lo único que lo regenera.',
@@ -548,7 +548,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'La carga académica, que son los mismos datos vistos de lejos',
         paragraphs: [
-          'El Plan Inteligente se ocupa de los próximos 14 días. La carga académica, también incluida en Pro, se ocupa del semestre, y sinceramente es la más útil de las dos en la primera semana de curso, cuando todavía no hay nada urgente.',
+          'El Plan inteligente se ocupa de los próximos 14 días. La carga académica, también incluida en Pro, se ocupa del semestre, y sinceramente es la más útil de las dos en la primera semana de curso, cuando todavía no hay nada urgente.',
           'El gráfico semanal reparte cada entrega pendiente en semanas ISO entre las fechas de inicio y fin de tu semestre, o el rango de tus propias fechas cuando el semestre no las trae. Cada barra es la suma de las mismas puntuaciones de carga ponderada.',
         ],
         bullets: [
@@ -562,7 +562,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Para quién es de verdad, y para quién no',
         paragraphs: [
-          'El Plan Inteligente está pensado para un estudiante con tres asignaturas o más con programas ponderados de verdad, donde al menos una tenga un proyecto de varias semanas o un examen pesado y las fechas estén lo bastante juntas como para que el orden importe.',
+          'El Plan inteligente está pensado para un estudiante con tres asignaturas o más con programas ponderados de verdad, donde al menos una tenga un proyecto de varias semanas o un examen pesado y las fechas estén lo bastante juntas como para que el orden importe.',
           'Te vale menos si llevas una asignatura con dos entregas: el problema de ordenación que estarías pagando por resolver todavía no existe. También encaja mal si lo que quieres es un horario fijo e inamovible, porque este se reajusta a propósito.',
           'Un límite que conviene decir claro: la consulta del calendario que hace el planificador es de solo lectura y solo en iOS. Nunca crea, edita ni borra un evento en tu calendario. Escribir tu horario en la app de calendario, y la exportación .ics, son cosas aparte.',
         ],
@@ -580,7 +580,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
     ],
     faq: [
       {
-        question: '¿Con cuánta antelación planifica el Plan Inteligente?',
+        question: '¿Con cuánta antelación planifica el Plan inteligente?',
         answer:
           'Catorce días a partir de hoy, y lo reconstruye entero cada vez que lo abres. Un plan que ignoraste ayer no se queda ahí como una lista de pendientes caducada: se recalcula según dónde estás realmente.',
       },
@@ -600,7 +600,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Sí. La capacidad diaria de estudio es de 1 h, 1 h 30 m, 2 h o 3 h, con 1 h 30 m por defecto. Entre semana las sesiones empiezan a las 17:00 por defecto y los fines de semana a las 10:00, ambas ajustables, y los fines de semana se pueden desactivar por completo. Evitar conflictos con el calendario del dispositivo está activado por defecto, con un margen de 10 minutos a cada lado de cada evento.',
       },
       {
-        question: '¿El Plan Inteligente está en el plan Gratis?',
+        question: '¿El Plan inteligente está en el plan Gratis?',
         answer:
           'No, forma parte de Pro, que cuesta 3,99 USD al mes o 19,99 USD al año. Pro se compra con tarjeta en la web, en app.semoraai.com, o dentro de la app de iOS a través de la App Store, y en ambos casos se aplica a toda tu cuenta, incluida la versión web.',
       },
@@ -790,8 +790,8 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         paragraphs: [
           'Hay cuatro vías de entrada. La pestaña Mi cuenta lista el temporizador entre las herramientas académicas; la app web lo lista en la barra lateral con el mismo nombre; la pantalla de detalle de una tarea tiene un botón para empezar una sesión de concentración.',
           'Las dos últimas son las que merece la pena usar. Abrir el temporizador desde una tarea pasa el identificador y el título de esa tarea, y la pantalla muestra una banda enlazada arriba con el nombre de lo que estás trabajando.',
-          'Abrirlo desde una sesión del Plan Inteligente pasa algo más: la duración propia de ese bloque y su identificador. Si esa duración no es una de las cuatro estándar, se respeta igualmente.',
-          'Terminar un bloque de concentración que venía de una sesión planificada marca esa sesión exacta como completada en tu Plan Inteligente, que es el único registro duradero que el temporizador escribe en algún sitio.',
+          'Abrirlo desde una sesión del Plan inteligente pasa algo más: la duración propia de ese bloque y su identificador. Si esa duración no es una de las cuatro estándar, se respeta igualmente.',
+          'Terminar un bloque de concentración que venía de una sesión planificada marca esa sesión exacta como completada en tu Plan inteligente, que es el único registro duradero que el temporizador escribe en algún sitio.',
         ],
       },
       {
@@ -800,7 +800,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Pasan dos cosas, y son independientes entre sí a propósito.',
           'La primera es una notificación. Al pulsar empezar, Semora programa con el sistema operativo un aviso real con fecha para el momento exacto en que acaba la fase, con sonido.',
           'La segunda es lo que ocurre en pantalla. El temporizador avanza a la fase siguiente (concentración pasa a descanso, descanso pasa a concentración) y se detiene ahí, en pausa, con la nueva duración completa en el reloj.',
-          'Solo una fase de concentración completada cuenta para algo. Incrementa el recuento de esta sentada, incrementa el total histórico y marca como completada la sesión enlazada del Plan Inteligente.',
+          'Solo una fase de concentración completada cuenta para algo. Incrementa el recuento de esta sentada, incrementa el total histórico y marca como completada la sesión enlazada del Plan inteligente.',
         ],
       },
       {
@@ -837,8 +837,8 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Cómo encaja un bloque de concentración en el resto de Semora',
         paragraphs: [
-          'El temporizador es el último paso de una cadena que construye el resto de la app. Tu programa se escanea y se convierte en entregas reales. El Plan Inteligente toma esas entregas y reparte sesiones de estudio a lo largo de los días.',
-          'Los números encajan a propósito. El ajuste de duración de sesión del Plan Inteligente ofrece 25, 45 o 50 minutos y viene con 45 por defecto: tres de las cuatro duraciones del selector de concentración.',
+          'El temporizador es el último paso de una cadena que construye el resto de la app. Tu programa se escanea y se convierte en entregas reales. El Plan inteligente toma esas entregas y reparte sesiones de estudio a lo largo de los días.',
+          'Los números encajan a propósito. El ajuste de duración de sesión del Plan inteligente ofrece 25, 45 o 50 minutos y viene con 45 por defecto: tres de las cuatro duraciones del selector de concentración.',
           'Lo que hagas dentro del bloque es trabajo del resto de Semora. Las tarjetas pueden generar un mazo para un examen concreto a partir del programa y de los apuntes que hayas subido.',
         ],
       },
@@ -877,7 +877,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         question: '¿Puedo lanzar el temporizador desde una sesión planificada?',
         answer:
-          'Sí. Abrirlo desde una sesión del Plan Inteligente pasa la duración de ese bloque. El Plan Inteligente programa en incrementos de 15 minutos, así que si la duración no es una de las cuatro estándar el selector añade un chip extra para ella: una sesión planificada de 30 minutos se abre como un bloque de 30 y no se redondea. Las duraciones pasadas así se aceptan entre 15 y 180 minutos.',
+          'Sí. Abrirlo desde una sesión del Plan inteligente pasa la duración de ese bloque. El Plan inteligente programa en incrementos de 15 minutos, así que si la duración no es una de las cuatro estándar el selector añade un chip extra para ella: una sesión planificada de 30 minutos se abre como un bloque de 30 y no se redondea. Las duraciones pasadas así se aceptan entre 15 y 180 minutos.',
       },
       {
         question: '¿El temporizador de enfoque es gratis?',
@@ -971,7 +971,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'Cómo se conecta con el resto de Semora',
         paragraphs: [
           'El Tutor no guarda copia de nada. Lee los mismos registros que escribe el resto de la app, y por eso importa el orden en que haces las cosas.',
-          'Conviene ser igual de claro con lo que no toca. No lee tu horario de atención, ni tus notas introducidas, ni tu Plan Inteligente, ni tus otras asignaturas.',
+          'Conviene ser igual de claro con lo que no toca. No lee tu horario de atención, ni tus notas introducidas, ni tu Plan inteligente, ni tus otras asignaturas.',
         ],
         bullets: [
           'El escaneo de tu programa rellena los elementos estructurados que el Tutor te cita de vuelta.',
@@ -1098,7 +1098,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         paragraphs: [
           'Publicar es deliberado. Quien organiza toca publicar y Semora copia al espacio las tareas todavía sin completar de su propia copia de la asignatura, como entregas compartidas.',
           'Del lado que recibe, sincronizar trae esas entregas compartidas y todos los trabajos de grupo a tu propio planificador como tareas normales.',
-          'Una vez están en tu planificador, se comportan como cualquier otra tarea. Se aplican los recordatorios del mismo día. Si tienes Pro, alimentan el Plan Inteligente y aparecen en la carga académica.',
+          'Una vez están en tu planificador, se comportan como cualquier otra tarea. Se aplican los recordatorios del mismo día. Si tienes Pro, alimentan el Plan inteligente y aparecen en la carga académica.',
           'La línea entre lo compartido y lo privado se traza estrecha y se sostiene en el propio esquema. Se sincronizan tres tablas: miembros, entregas compartidas y trabajos de grupo. Tu estado de completado no.',
         ],
         bullets: [

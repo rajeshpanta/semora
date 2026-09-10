@@ -204,7 +204,7 @@ export function HeroDemo({ locale = 'en' }: { locale?: SiteLocale }) {
   const upNextLink = es ? 'Abrir plan' : 'Open plan';
   const canvasPill = es ? 'Actualizado desde Canvas' : 'Updated from Canvas';
   const nav = es ? ['Hoy', 'Cursos', 'Calendario', 'Añadir programa'] : NAV;
-  const tools = es ? ['Plan Inteligente', 'Carga académica', 'Tarjetas'] : TOOLS;
+  const tools = es ? ['Plan inteligente', 'Carga académica', 'Tarjetas'] : TOOLS;
 
   useEffect(() => {
     // Honour the OS setting: hold on the finished state rather than looping.

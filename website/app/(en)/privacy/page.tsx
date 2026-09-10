@@ -7,7 +7,7 @@ import { ArticleShell } from '@/components/ArticleShell';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
-  description: 'How Semora collects, uses, and safeguards your information.',
+  description: 'How Semora collects, uses, stores and deletes your academic and personal data, what the AI features are sent, and the controls you have over all of it.',
   alternates: enAlternates('/privacy'),
   openGraph: { url: '/privacy', ...OG_IMAGE },
 };

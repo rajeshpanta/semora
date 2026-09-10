@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { enAlternates } from '@/lib/hreflang';
+import { OG_IMAGE } from '@/lib/og';
 import { notFound } from 'next/navigation';
 import styles from './compare.module.css';
 import { CompareTable } from '@/components/CompareTable';
@@ -33,6 +34,7 @@ export async function generateMetadata({
     title: pageTitle(competitor.title),
     description: competitor.metaDescription,
     alternates: enAlternates(`/compare/${competitor.slug}`),
+    openGraph: { url: `/compare/${competitor.slug}`, ...OG_IMAGE },
   };
 }
 

@@ -96,6 +96,18 @@ export const PRO_LABEL = `Pro (${PRICING.pro.monthly.priceLabel} or ${PRICING.pr
 // Derived once here so the pricing toggle (and anywhere else that needs the
 // per-month-when-billed-annually figure or the savings callout) never
 // hand-computes it from the raw numbers above.
+// The bare amount, with no period attached.
+//
+// priceLabel already reads "$3.99/month", which the pricing cards cannot use:
+// they print the period themselves in separate markup ("per month" / "al
+// mes"), so priceLabel would render it twice. So the cards hardcoded '$3.99'
+// and '$19.99' — four times, in a file that imports PRICING on line three.
+// A price change would have edited the constant above, left the pricing page
+// showing the old number, and looked correct on review because the import was
+// right there. Derived here so that cannot happen.
+export const PRO_MONTHLY_AMOUNT = `$${PRICING.pro.monthly.price.toFixed(2)}`;
+export const PRO_ANNUAL_AMOUNT = `$${PRICING.pro.annual.price.toFixed(2)}`;
+
 export const PRO_ANNUAL_MONTHLY_EQUIVALENT = `$${(PRICING.pro.annual.price / 12).toFixed(2)}`;
 export const PRO_ANNUAL_SAVINGS_PCT = Math.round(
   (1 - PRICING.pro.annual.price / 12 / PRICING.pro.monthly.price) * 100
@@ -104,48 +116,76 @@ export const PRO_ANNUAL_SAVINGS_PCT = Math.round(
 // The one-semester cap is NOT cosmetic: FREE_SEMESTER_LIMIT = 1 in
 // lib/syllabus.ts is enforced client-side AND by the
 // enforce_free_semester_limit_trigger BEFORE INSERT trigger on
-// public.semesters (migration 010). A free account cannot start a second
-// term at all, so a per-semester course cap stated on its own reads as if
-// terms roll over — they do not. Do not drop this line.
+// public.semesters (migration 010). A free account cannot start a second term
+// at all, and the site must keep saying so.
+//
+// It is no longer repeated inside these bullets. Bolted onto the course line
+// it turned the free card into a list of things you do not get, which is the
+// wrong argument to make to someone who has not started yet. It is stated
+// once, plainly and prominently, on the pricing page itself — the header line
+// in app/(en)/pricing/page.tsx and the "Is Semora free?" answer beneath it.
+// Do not remove it from there, and do not scatter it back through here.
+//
 // The free AI allowance is ONE action for the lifetime of the account — not a
 // monthly quota. Nothing resets on the 1st. The student picks what to spend it
 // on (syllabus scan, lecture recording, or document-to-notes), and after that
 // every AI action is Pro. Never reintroduce "per month" language here.
 export const FREE_FEATURES = [
-  'One AI action for the lifetime of the account: a syllabus scan, a lecture recording, or a document turned into notes',
-  // "Imports itself" was doing too much work. Choosing which classes to bring
-  // across is a step the student takes — at connect, and again when a new term
-  // fills the feed. Right now 26 detected courses across 15 accounts are
-  // waiting to be linked, holding 519 deadlines, so a promise that every class
-  // arrives on its own is one this product does not keep. What IS automatic is
-  // everything after: a class you bring across stays right on its own.
+  // This leads because it is the biggest thing the free tier does, and the
+  // thing a student can act on tonight. All three providers are free on every
+  // plan — see the note above PRO_FEATURES for why no LMS line belongs there.
   //
-  // "No limit on how many" is an entitlement claim and it is exact — the
+  // "No cap on how many" is an entitlement claim and it is exact: the
   // course-cap trigger returns early for source='lms' rows and never counts
   // them, on free exactly as on Pro. Real free accounts hold up to 8.
-  'Canvas sync, free: bring across as many classes as you take, with no limit on how many — no Pro, no token, no IT approval — and they keep themselves up to date afterwards',
-  // The exemption travels WITH the limit, in the same breath. Read alone, "1
-  // course" says Semora is a one-class app unless you pay, which is the
-  // opposite of what the free tier actually offers a Canvas student.
-  'Plus 1 course you add by hand, within one semester — Canvas classes never count toward that limit; one semester total on free',
-  'Full deadline and task tracking',
-  'Grade tracking with weighted averages',
-  'Same-day reminders',
+  //
+  // "Bring across" rather than "imports itself" — choosing which classes come
+  // over is a step the student takes, at connect and again when a new term
+  // fills the feed. What IS automatic is everything after, which is the half
+  // of the product the bullet has to earn.
+  'Every class you take, free: Canvas, Blackboard and Moodle all sync on the free plan, with no cap on how many — and they stay right when an instructor moves a deadline',
+  // The one-step claim is true of CANVAS ONLY. Blackboard and Moodle are free
+  // too, but they use a school-issued token, so this must not be folded into
+  // the bullet above.
+  'Canvas connects in one step: paste the link Canvas already gives you. No token, nothing for IT to approve',
+  'Your first AI action, free: a syllabus scan, a lecture recording, or a document turned into notes — you choose',
+  // Exact, and the exemption travels WITH the limit in the same breath — the
+  // product-facts check enforces that, because "1 course" read alone says
+  // Semora is a one-class app until you pay, which is the opposite of what the
+  // free tier gives a Canvas student. "Plus a course you add by hand" was too
+  // vague to carry the number at all.
+  'Plus 1 course you add by hand, in one semester — Canvas, Blackboard and Moodle classes never count toward that limit',
+  'Every deadline, task and exam from every course, in one list',
+  'Grade tracking with weighted averages, so you know where you actually stand',
+  'Same-day reminders, on by default',
   'Course Spaces: join a course a classmate shares with you',
 ] as const;
 
 // Calendar sync (device calendar + .ics export) is Pro-only in the shipping
 // app (app/settings/calendar.tsx gates handleExport behind isPro) — do not
 // move it back to FREE_FEATURES without re-checking the app first.
+//
+// There is deliberately NO LMS line here. Canvas, Blackboard and Moodle are
+// all free on every plan. A Pro bullet claiming otherwise outlived four
+// separate commits that made the LMS free across the rest of the site, and
+// the Spanish card was still selling Canvas itself while the Free card beside
+// it gave Canvas away. Do not re-add it.
+//
+// "No cap on AI actions" is gone for the same reason. Pro scanning has no
+// quota, but a fair-use ceiling of 20 extractions per rolling 24 hours applies
+// to every account including Pro — page-content.ts says in as many words that
+// Pro should be described as having no quota rather than as unlimited. The
+// bullet now says both halves, because the number is not embarrassing.
 export const PRO_FEATURES = [
-  'Unlimited courses you add by hand, unlimited semesters, and no cap on AI actions',
-  'Blackboard and Moodle assignment import (Canvas is free for everyone)',
+  'Unlimited courses and semesters — next term sets up just like this one',
+  'No AI quota: scan, record and generate all term, with fair use of 20 scans a day',
+  'Record every lecture, not just one — transcript, notes, a practice quiz and flashcards from each',
   'Course Spaces: host your own shared course and invite classmates',
   'Smart Plan: an AI-generated study schedule that adapts to your deadlines',
   'Workload dashboard: see crunch weeks and exam-dense stretches coming',
   'AI-generated flashcards from your syllabus and notes, with spaced repetition',
-  'Focus timer (Pomodoro-style)',
-  'AI tutor chat grounded in your syllabus, notes, and deadlines',
+  'Focus Timer (Pomodoro-style)',
+  'AI Tutor chat grounded in your syllabus, notes, and deadlines',
   'Grade Scale & Forecasting: customize your grading scale, plus what-if calculators for your final grade',
   "Calendar sync to your device's calendar app, with .ics export",
   'Custom reminder timing (1-day and 3-day advance notice)',
@@ -254,7 +294,7 @@ export const FEATURES: FeatureFact[] = [
   {
     slug: 'ai-tutor',
     name: 'AI Tutor',
-    shortDescription: 'An AI tutor chat grounded in your actual syllabus, notes, and deadlines.',
+    shortDescription: 'An AI Tutor chat grounded in your actual syllabus, notes, and deadlines.',
     tier: 'pro',
     description:
       "Open a chat scoped to any course and ask it anything. The tutor answers from that course's real syllabus, your live tracked deadlines, and any lecture notes you upload (PDF or photo), instead of guessing from generic knowledge. It cites what it used naturally, like \"your syllabus lists…\" or \"from your Week 3 notes…\", and for deadline questions it answers strictly from your actual tracked tasks. It never invents a date. Ask if a question falls outside what you've given it, it says so plainly and helps with general knowledge instead of making something up.",

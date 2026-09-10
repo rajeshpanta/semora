@@ -36,7 +36,7 @@
   background:
     radial-gradient(circle at 88% 10%, rgba(201, 184, 255, 0.70), transparent 32%),
     radial-gradient(circle at 8% 86%, rgba(238, 237, 254, 0.95), transparent 34%),
-    linear-gradient(135deg, #faf9f5 0%, #f7f3ff 52%, #f2ecff 100%);
+    linear-gradient(135deg, var(--bg) 0%, #f7f3ff 52%, #f2ecff 100%);
   color: var(--ink);
   padding: clamp(48px, 7vw, 84px) clamp(20px, 4vw, 40px) clamp(44px, 6vw, 72px);
 
@@ -128,18 +128,13 @@
   gap: 12px;
 }
 
-.primaryBtn,
-.secondaryBtn {
-  display: inline-block;
-  text-decoration: none;
-  font-weight: 650;
-  font-size: clamp(14px, 2.2vw, 16px);
-  padding: 14px clamp(20px, 3.4vw, 30px);
-  border-radius: 999px;
-  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
-}
-
+/* Purple at rest, where every other page is ink. This is DELIBERATE: the home
+   hero is the one place the CTA is meant to carry extra weight, and it is the
+   only page that inverts the pattern. Do not "fix" it to match the others.
+   Shape comes from the shared file, so the two can never drift on anything
+   except the colour that is supposed to differ. */
 .primaryBtn {
+  composes: buttonBase from '../../components/PrimaryButton.module.css';
   background: var(--brand);
   color: #fff;
   border: 1px solid var(--brand);
@@ -152,6 +147,7 @@
 }
 
 .secondaryBtn {
+  composes: buttonBase from '../../components/PrimaryButton.module.css';
   color: var(--ink);
   border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.55);
@@ -474,7 +470,7 @@
   border: 1px solid var(--border);
   background:
     radial-gradient(120% 90% at 50% 0%, rgba(155, 122, 232, 0.16) 0%, rgba(155, 122, 232, 0) 62%),
-    linear-gradient(180deg, #ffffff 0%, #f4f2fb 100%);
+    linear-gradient(180deg, var(--card) 0%, #f4f2fb 100%);
   overflow: hidden;
 }
 

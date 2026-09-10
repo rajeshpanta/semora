@@ -37,7 +37,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
   page('/es/descargar', '/download', 'download', {
     metaTitle: 'Descargar Semora — iPhone, iPad, Apple Watch y web',
     metaDescription:
-      'Instala Semora en iPhone, iPad y Apple Watch, o ábrela en cualquier navegador. Una sola cuenta mantiene sincronizadas tus entregas, calificaciones y materias. Android, Wear OS y Mac están en desarrollo.',
+      'Instala Semora en iPhone, iPad y Apple Watch, o ábrela en el navegador. Una cuenta mantiene tus entregas, notas y materias al día. Android y Mac, pronto.',
     h1: 'Una cuenta. Todos los dispositivos donde estudias.',
     lede:
       'Semora funciona hoy en iPhone, iPad, Apple Watch y la web, y todo lo que agregas en uno aparece en los demás. Escanea un programa con el teléfono entre clases y el semestre completo ya está ahí cuando abres la computadora.',
@@ -228,7 +228,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
         paragraphs: [
           'Pro quita los tres topes y añade la capa de automatización y estudio construida sobre los mismos datos.',
           'La parte de organización: cursos y semestres ilimitados, sin tope de escaneos ni de grabaciones de clase, importación desde Canvas, Blackboard y Moodle donde tu institución lo permita, sincronización con el calendario del dispositivo con exportación .ics, y recordatorios con antelación de uno y tres días.',
-          'La parte de planificación: el Plan Inteligente, que reparte sesiones de estudio con día, hora y duración en un horizonte de catorce días alrededor de tus clases; y la vista de carga académica, que señala las semanas cargadas y densas en exámenes con semanas de antelación.',
+          'La parte de planificación: el Plan inteligente, que reparte sesiones de estudio con día, hora y duración en un horizonte de catorce días alrededor de tus clases; y la vista de carga académica, que señala las semanas cargadas y densas en exámenes con semanas de antelación.',
           'La parte de estudio y calificación: Tarjetas de estudio generadas a partir del programa y tus apuntes con repaso espaciado, el temporizador de enfoque, el Tutor con IA anclado a tu material real, la escala de calificación editable con calculadoras de hipótesis, las alertas de riesgo académico, las tendencias de progreso con exportación CSV y vista de impresión, y alojar tus propios Espacios de curso.',
         ],
       },
@@ -259,7 +259,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
         heading: 'Quién no necesita Pro',
         paragraphs: [
           'Vale la pena decirlo en una página de precios. Si llevas cuatro materias o menos en un solo periodo y lo que necesitas es no perder fechas y saber tu nota, el plan Gratis hace ese trabajo completo y no hay motivo para pagar.',
-          'Pro empieza a tener sentido en tres situaciones concretas. La primera es el volumen: cinco o más materias, o querer llevar más de un periodo. La segunda es que tu problema no sea la memoria sino la asignación de tiempo, que es lo que resuelven el Plan Inteligente y la carga académica. La tercera es querer que las entregas entren desde Canvas en lugar de desde el programa, si tu institución lo permite.',
+          'Pro empieza a tener sentido en tres situaciones concretas. La primera es el volumen: cinco o más materias, o querer llevar más de un periodo. La segunda es que tu problema no sea la memoria sino la asignación de tiempo, que es lo que resuelven el Plan inteligente y la carga académica. La tercera es querer que las entregas entren desde Canvas en lugar de desde el programa, si tu institución lo permite.',
           'Si lo que buscas es únicamente generar material de estudio a partir de una lectura, hay herramientas centradas en eso que probablemente lo hagan mejor, y usar dos productos suele salir bien y no caro.',
         ],
       },
@@ -297,7 +297,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
         heading: 'Editar lo que ya está dentro',
         paragraphs: [
           'Todo lo que entró por un escaneo se puede corregir después, y corregirlo no rompe nada de lo que hay encima.',
-          'Toca una entrega para ver su detalle y edítala para cambiar el título, la fecha, la hora, el tipo o la descripción. El tipo importa más de lo que parece: alimenta la puntuación de carga académica y la estimación de esfuerzo del Plan Inteligente, así que marcar un examen como examen cambia cómo se planifica.',
+          'Toca una entrega para ver su detalle y edítala para cambiar el título, la fecha, la hora, el tipo o la descripción. El tipo importa más de lo que parece: alimenta la puntuación de carga académica y la estimación de esfuerzo del Plan inteligente, así que marcar un examen como examen cambia cómo se planifica.',
           'Los horarios de clase y la escala de calificación se editan desde la pantalla del curso. Conviene saberlo porque un reescaneo no los sobrescribe: si tu profesor publica una versión revisada del programa, las entregas nuevas entran solas, pero el aula nueva o la ponderación cambiada las actualizas tú desde ahí.',
         ],
       },
@@ -355,7 +355,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
   }),
   page('/es/privacidad', '/privacy', 'standard', {
     metaTitle: 'Política de privacidad',
-    metaDescription: 'Cómo Semora recopila, usa, protege y elimina tu información académica y personal.',
+    metaDescription: 'Cómo Semora recopila, usa, guarda y elimina tu información académica y personal, qué se envía a las funciones con IA y qué control tienes sobre todo ello.',
     h1: 'Política de privacidad',
     lede: 'Última actualización: 8 de agosto de 2026. Esta traducción explica la misma política que la versión en inglés.',
     intro: [
@@ -414,7 +414,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
   }),
   page('/es/terminos', '/terms', 'standard', {
     metaTitle: 'Términos de servicio',
-    metaDescription: 'Los términos que rigen el uso de Semora, sus funciones con IA y las suscripciones de Semora Pro.',
+    metaDescription: 'Los términos que rigen el uso de Semora: las funciones con IA, las suscripciones Pro, el cobro y la cancelación, y qué pasa con tus materias si te vas.',
     h1: 'Términos de servicio',
     lede: 'Última actualización: 19 de abril de 2026. Esta traducción comunica los mismos términos que la versión en inglés.',
     intro: [
@@ -447,7 +447,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
 const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
   page('/es/funciones', '/features', 'features-index', {
     metaTitle: 'Funciones de Semora',
-    metaDescription: 'Escaneo de programas con IA, calificaciones ponderadas, Plan Inteligente, Tutor, tarjetas y Canvas. Lo que hace cada función y qué es gratis.',
+    metaDescription: 'Escaneo de programas con IA, calificaciones ponderadas, Plan inteligente, Tutor, tarjetas y Canvas. Lo que hace cada función y qué es gratis.',
     h1: 'Todo lo que necesitas para organizar el semestre',
     lede: 'Desde la primera foto del programa de una materia hasta la semana de finales: una sola cuenta para tus entregas, calificaciones y tiempo de estudio.',
     intro: [
@@ -464,12 +464,12 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Un escaneo, y el resto viene detrás',
         paragraphs: [
-          'Semora no es una carpeta de herramientas sueltas: es una cadena. El escaneo es el paso de entrada y todo lo demás lee lo que ese escaneo produjo. Por eso la lista de funciones parece larga aunque el trabajo real sea corto — cada programa se toca una vez, más o menos lo que tardas en fotografiar cinco páginas, y las entregas, los horarios de clase, las ponderaciones y los cortes de la escala de notas que salen de ahí son la materia prima del calendario, de las calificaciones, del Plan Inteligente y del Tutor.',
+          'Semora no es una carpeta de herramientas sueltas: es una cadena. El escaneo es el paso de entrada y todo lo demás lee lo que ese escaneo produjo. Por eso la lista de funciones parece larga aunque el trabajo real sea corto — cada programa se toca una vez, más o menos lo que tardas en fotografiar cinco páginas, y las entregas, los horarios de clase, las ponderaciones y los cortes de la escala de notas que salen de ahí son la materia prima del calendario, de las calificaciones, del Plan inteligente y del Tutor.',
           'La cadena corre en un orden concreto. El escáner extrae el curso y el profesor, los bloques de clase con sus días y aulas, el inicio y el final del semestre, la escala de calificación, y cada tarea, cuestionario, examen, proyecto y lectura que encuentra, con su fecha, su hora, su porcentaje y una puntuación de confianza. En un curso que creas por primera vez, la ficha del curso, sus horarios y su escala se escriben directamente. Solo las entregas esperan: aparecen en una pantalla de revisión donde editas, descartas y apruebas.',
           'Un reescaneo se comporta distinto a propósito, y conviene saberlo antes de que tu profesor publique la versión dos. Escanear un programa revisado sobre un curso que ya tienes incorpora las entregas nuevas, pero no reescribe el horario que ya tocaste: las filas de clases y de horario de atención solo se escriben al crear el curso, y la escala de calificación se sustituye únicamente si la dejaste como estaba por defecto. Una revisión que cambia el aula o convierte un 30 % de parcial en un 25 % llega como entregas y nada más; el horario y la escala los actualizas tú desde la pantalla del curso. Es un intercambio deliberado: la app prefiere conservar tus correcciones antes que sobrescribirlas con una suposición nueva.',
-          'Todo lo que hay por encima de esa capa es análisis de esas mismas filas. El motor de carga académica puntúa cada tarea con fecha como su ponderación multiplicada por un factor de esfuerzo — un examen cuenta el triple, un proyecto 2,5, un cuestionario 1,5, una tarea 1,2 y una lectura 1 — así que una semana con dos exámenes se lee como pesada aunque tu profesor no imprimiera ningún porcentaje al lado. El Plan Inteligente toma esas mismas tareas y reparte sesiones de estudio en un horizonte de catorce días, esquivando las clases que el escaneo ya conoce. La revisión académica vigila tres cosas concretas: una nota que baja, trabajo que falta y una semana sobrecargada.',
+          'Todo lo que hay por encima de esa capa es análisis de esas mismas filas. El motor de carga académica puntúa cada tarea con fecha como su ponderación multiplicada por un factor de esfuerzo — un examen cuenta el triple, un proyecto 2,5, un cuestionario 1,5, una tarea 1,2 y una lectura 1 — así que una semana con dos exámenes se lee como pesada aunque tu profesor no imprimiera ningún porcentaje al lado. El Plan inteligente toma esas mismas tareas y reparte sesiones de estudio en un horizonte de catorce días, esquivando las clases que el escaneo ya conoce. La revisión académica vigila tres cosas concretas: una nota que baja, trabajo que falta y una semana sobrecargada.',
           'Nada de esto obliga a usar el escáner. Puedes crear un curso a mano y añadir tú las entregas, las subtareas y las notas, y el cálculo de calificaciones, el Calendario, Hoy y los recordatorios se comportan igual con datos escritos a mano. El escaneo es un atajo para la parte tediosa, no un requisito de entrada — lo que pasa es que esa parte tediosa son cuatro programas de golpe en la primera semana.',
-          'La consecuencia práctica conviene decirla claro: cada función de planificación y de estudio vale exactamente lo que tengas metido del semestre. Dos cursos a medias no le dan al Plan Inteligente ni a la carga académica casi nada sobre lo que razonar. Cuatro cursos escaneados, con sus ponderaciones reales y algunas notas puestas, afilan los dos en una semana. Escanea primero, califica sobre la marcha, y el resto del producto tiene con qué trabajar.',
+          'La consecuencia práctica conviene decirla claro: cada función de planificación y de estudio vale exactamente lo que tengas metido del semestre. Dos cursos a medias no le dan al Plan inteligente ni a la carga académica casi nada sobre lo que razonar. Cuatro cursos escaneados, con sus ponderaciones reales y algunas notas puestas, afilan los dos en una semana. Escanea primero, califica sobre la marcha, y el resto del producto tiene con qué trabajar.',
         ],
         bullets: [
           'Escanear: curso, profesor, días, horas y aulas, fechas del semestre, escala de notas y cada elemento con fecha, ponderación y confianza.',
@@ -477,7 +477,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
           'Revisar: solo las entregas necesitan tu aprobación. Lo que baja de 0,8 de confianza se marca para verificar, las fechas fuera del semestre se señalan y lo que llega sin fecha se separa.',
           'Seguir: Hoy muestra lo siguiente y lo atrasado; el Calendario enseña el semestre en vista de mes o de lista, con un color por curso.',
           'Calificar: un promedio ponderado que refleja solo lo ya corregido, con los puntos extra sumando al numerador sin inflar el denominador.',
-          'Planificar: la carga académica nombra las semanas cargadas, el Plan Inteligente llena los días y la revisión académica dice qué se está escapando y por dónde empezar.',
+          'Planificar: la carga académica nombra las semanas cargadas, el Plan inteligente llena los días y la revisión académica dice qué se está escapando y por dónde empezar.',
           'Estudiar: las tarjetas y el Tutor trabajan sobre un curso que ya escaneaste.',
         ],
       },
@@ -524,7 +524,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
         bullets: [
           'Gratis: una acción de IA, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, entregas y tareas ilimitadas, calificaciones ponderadas y nota media del semestre, recordatorios el mismo día, Hoy y Calendario completos. Todo ello dentro de un semestre: la cuenta gratuita cubre un solo periodo y empezar el siguiente requiere Pro.',
           'Capacidad de Pro: cursos y semestres ilimitados, y sin tope de escaneos ni de grabaciones — el único techo que queda es el de uso razonable, 20 escaneos en cualquier ventana de 24 horas, que ningún semestre real alcanza.',
-          'Decisiones de Pro: Plan Inteligente, carga académica, revisión académica, escala de calificación propia y pronósticos, y análisis del progreso con gráficos y exportación.',
+          'Decisiones de Pro: Plan inteligente, carga académica, revisión académica, escala de calificación propia y pronósticos, y análisis del progreso con gráficos y exportación.',
           'Estudio con Pro: tarjetas con repetición espaciada, temporizador de enfoque y el Tutor con IA anclado en tu propio curso.',
           'Conexiones de Pro: organizar espacios de curso, sincronización con el calendario del dispositivo con exportación .ics, y recordatorios con uno y tres días de antelación.',
         ],
@@ -533,12 +533,12 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
         heading: 'Empieza por lo que se te esté rompiendo',
         paragraphs: [
           'Las listas de funciones son una mala forma de elegir por dónde empezar, porque no tienes un problema de funciones: tienes algo concreto yendo mal. Busca el síntoma. Casi todo esto se configura en menos de diez minutos, y las dos cosas que más importan en la primera semana — el primer escaneo y llevar las notas — no cuestan nada.',
-          'Si el problema es que de verdad no sabes qué tienes que entregar, escanea el programa del curso que peor tengas controlado —esa es la acción gratuita—, añade los demás a mano y párate ahí por hoy. Hoy y el Calendario te sostienen durante semanas solo con el plan gratuito. Si el problema es que sabes lo que hay pero siempre empiezas tarde, eso es el Plan Inteligente: viene con 90 minutos al día en sesiones de 45 y se reajusta cuando una fecha se mueve.',
+          'Si el problema es que de verdad no sabes qué tienes que entregar, escanea el programa del curso que peor tengas controlado —esa es la acción gratuita—, añade los demás a mano y párate ahí por hoy. Hoy y el Calendario te sostienen durante semanas solo con el plan gratuito. Si el problema es que sabes lo que hay pero siempre empiezas tarde, eso es el Plan inteligente: viene con 90 minutos al día en sesiones de 45 y se reajusta cuando una fecha se mueve.',
           'Si el problema es que no sabes si vas bien en una asignatura, empieza por las calificaciones: mete las notas que ya tienes y lee el promedio ponderado. Añade la escala propia y los pronósticos cuando necesites la pregunta al revés, que es cuánto te hace falta en lo que queda para cerrar con una nota concreta.',
         ],
         bullets: [
           '«No sé qué tengo que entregar» — escanea y luego Hoy. Gratis.',
-          '«Lo sé, pero empiezo tarde» — Plan Inteligente, horizonte de 14 días, sesiones de 25, 45 o 50 minutos. Pro.',
+          '«Lo sé, pero empiezo tarde» — Plan inteligente, horizonte de 14 días, sesiones de 25, 45 o 50 minutos. Pro.',
           '«Me han caído dos exámenes la misma semana y no lo vi venir» — carga académica. Pro.',
           '«No sé en qué punto voy» — calificaciones y nota media del semestre (gratis), y después los pronósticos (Pro).',
           '«Pierdo los primeros veinte minutos de cada sesión» — tarjetas centradas en un examen concreto y temporizador de enfoque. Pro.',
@@ -577,7 +577,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
       {
         question: '¿Qué funciones son de Pro?',
         answer:
-          'Cursos y semestres ilimitados sin tope de escaneos ni de grabaciones de clase; importación desde Canvas, Blackboard y Moodle; alojar tu propio Espacio de curso; el Plan Inteligente y la carga académica; las Tarjetas de estudio; el temporizador de enfoque; el Tutor con IA; la escala de calificación editable y las calculadoras de hipótesis; sincronización con el calendario del dispositivo con exportación .ics; recordatorios con antelación personalizada; alertas de riesgo académico; las tendencias de progreso; y los logros compartidos.',
+          'Cursos y semestres ilimitados sin tope de escaneos ni de grabaciones de clase; importación desde Canvas, Blackboard y Moodle; alojar tu propio Espacio de curso; el Plan inteligente y la carga académica; las Tarjetas de estudio; el temporizador de enfoque; el Tutor con IA; la escala de calificación editable y las calculadoras de hipótesis; sincronización con el calendario del dispositivo con exportación .ics; recordatorios con antelación personalizada; alertas de riesgo académico; las tendencias de progreso; y los logros compartidos.',
       },
       {
         question: '¿Tengo que escanear un programa para usar lo demás?',
@@ -587,7 +587,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
       {
         question: '¿Por qué función conviene empezar?',
         answer:
-          'Por el escáner, porque cada herramienta de planificación y de estudio vale exactamente lo que tengas metido del semestre. Dos cursos a medias no le dan al Plan Inteligente ni a la carga académica casi nada sobre lo que razonar; cuatro cursos escaneados, con sus ponderaciones reales y algunas notas puestas, afilan los dos en una semana.',
+          'Por el escáner, porque cada herramienta de planificación y de estudio vale exactamente lo que tengas metido del semestre. Dos cursos a medias no le dan al Plan inteligente ni a la carga académica casi nada sobre lo que razonar; cuatro cursos escaneados, con sus ponderaciones reales y algunas notas puestas, afilan los dos en una semana.',
       },
       {
         question: '¿Funciona todo en iPhone, iPad y la web?',
@@ -603,7 +603,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
   }),
   page('/es/calculadora-gpa', '/gpa-calculator', 'gpa', {
     metaTitle: 'Calculadora de GPA gratis',
-    metaDescription: 'Calcula tu GPA universitario por créditos y entiende los puntos de calidad con una herramienta gratis.',
+    metaDescription: 'Calculadora de GPA gratis, por créditos y con la aritmética explicada: puntos de calidad, GPA del semestre y acumulado, y la nota que necesitas. Sin registro.',
     h1: 'Calculadora de GPA por créditos',
     lede: 'Añade tus cursos, calificaciones y créditos. La calculadora actualiza el GPA al instante y no guarda ninguna información.',
     intro: [
@@ -725,7 +725,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
   }),
   page('/es/temporizador-pomodoro', '/pomodoro-timer', 'pomodoro', {
     metaTitle: 'Temporizador Pomodoro gratis para estudiantes',
-    metaDescription: 'Temporizador de concentración con sesiones de 15, 25, 45 o 50 minutos y descansos ajustables.',
+    metaDescription: 'Temporizador Pomodoro gratis con sesiones de 15, 25, 45 o 50 minutos y descansos ajustables, pensado para los huecos reales entre clases. Sin registro.',
     h1: 'Temporizador Pomodoro para estudiar entre clases',
     lede: 'Elige una sesión que se adapte al tiempo que realmente tienes. El reloj sigue siendo preciso aunque cambies de pestaña.',
     intro: [
@@ -813,13 +813,13 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
         paragraphs: [
           'El temporizador de Semora ofrece bloques de 15, 25, 45 o 50 minutos y descansos de 5, 10 o 15, y abre por defecto en la pareja clásica de 25 y 5. Mantiene la cuenta en segundo plano y avisa al terminar cada fase.',
           'Los selectores desaparecen mientras un bloque está corriendo, a propósito, para que la duración que aceptaste al empezar siga significando algo en el minuto 22. Si de verdad necesitas cambiarla, primero se pausa; cambiar la duración en pausa reinicia esa fase a la nueva duración completa, no al tiempo restante.',
-          'La diferencia con un temporizador cualquiera es de contexto. Semora ya tiene tu programa, tus entregas y tu plan de estudio, así que un bloque puede arrancarse desde una sesión concreta del Plan Inteligente y quedar asociado a la tarea que estás haciendo. Como el Plan Inteligente programa en incrementos de quince minutos, una sesión planificada de 30 abre un bloque de 30 en lugar de redondearse.',
+          'La diferencia con un temporizador cualquiera es de contexto. Semora ya tiene tu programa, tus entregas y tu plan de estudio, así que un bloque puede arrancarse desde una sesión concreta del Plan inteligente y quedar asociado a la tarea que estás haciendo. Como el Plan inteligente programa en incrementos de quince minutos, una sesión planificada de 30 abre un bloque de 30 en lugar de redondearse.',
           'El temporizador forma parte de Pro, a 3,99 USD al mes o 19,99 USD al año. La herramienta de esta página, en cambio, es gratuita y no necesita cuenta: úsala tal cual si lo único que buscas es una cuenta atrás decente.',
         ],
         bullets: [
           'Enfoque de 15, 25, 45 o 50 minutos; descansos de 5, 10 o 15',
           'Cuenta en segundo plano, con aviso al final de cada fase',
-          'Se puede lanzar desde una sesión del Plan Inteligente y conservar su duración',
+          'Se puede lanzar desde una sesión del Plan inteligente y conservar su duración',
           'El temporizador de la app es Pro; el de esta página es gratuito y sin cuenta',
         ],
       },
@@ -831,7 +831,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
   }),
   page('/es/blog', '/blog', 'blog-index', {
     metaTitle: 'Guías universitarias de Semora',
-    metaDescription: 'Guías en español sobre programas, fechas, GPA, Canvas, Pomodoro y planificación de finales.',
+    metaDescription: 'Guías en español para organizar el semestre: convertir el programa en calendario, calcular tu GPA, sacar recordatorios útiles de Canvas y planear los finales.',
     h1: 'Guías para un semestre más claro',
     lede: 'Explicaciones prácticas para organizar fechas, calificaciones y tiempo de estudio sin convertir la planificación en otra clase.',
     intro: ['Cada guía se puede leer por separado y también conecta con una herramienta gratuita o una función de Semora cuando necesitas pasar de la idea a la acción.'],
@@ -840,7 +840,7 @@ const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
   }),
   page('/es/comparar', '/compare', 'compare-index', {
     metaTitle: 'Comparar Semora con otras apps para estudiantes',
-    metaDescription: 'Compara Semora con Shovel, StudyFetch, Mindgrasp, Taskade, DormWay, Studley AI y myHomework.',
+    metaDescription: 'Semora frente a Shovel, StudyFetch, Mindgrasp, Taskade, DormWay, Studley AI y myHomework: qué hace cada una, qué cuesta y cuál encaja con tu semestre.',
     h1: 'Compara según el problema que de verdad necesitas resolver',
     lede: 'No todas las aplicaciones para estudiantes resuelven el mismo problema. Estas comparaciones distinguen entre organización del semestre, estudio con IA y gestión general de tareas.',
     intro: ['Semora parte del programa de cada materia y conecta fechas de entrega, calificaciones y planificación. Otras herramientas dan prioridad a los resúmenes, las tarjetas, los proyectos generales o la entrada manual de datos.'],
@@ -1347,7 +1347,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
         paragraphs: [
           'Una vez aprobadas, las fechas dejan de ser una lista y pasan a alimentar el resto de la app sin que introduzcas nada dos veces.',
           'Aparecen en la vista Hoy, que muestra lo siguiente que vence y lo que ya está atrasado. Aparecen en el Calendario, en vista de mes o de lista, con un color por curso. Generan recordatorios el mismo día de forma automática al aprobarlas. Y las ponderaciones preparan el seguimiento de calificaciones, de modo que en cuanto introduzcas una nota exista una media ponderada real.',
-          'Por encima de esa capa hay análisis. El motor de carga académica puntúa cada tarea con fecha como su ponderación multiplicada por un factor de esfuerzo —un examen cuenta el triple, un proyecto 2,5, un cuestionario 1,5, una tarea 1,2 y una lectura 1— así que una semana con dos exámenes se lee como pesada aunque el profesor no imprimiera ningún porcentaje al lado. El Plan Inteligente reparte sesiones de estudio en un horizonte de catorce días esquivando las clases que el escaneo ya conoce.',
+          'Por encima de esa capa hay análisis. El motor de carga académica puntúa cada tarea con fecha como su ponderación multiplicada por un factor de esfuerzo —un examen cuenta el triple, un proyecto 2,5, un cuestionario 1,5, una tarea 1,2 y una lectura 1— así que una semana con dos exámenes se lee como pesada aunque el profesor no imprimiera ningún porcentaje al lado. El Plan inteligente reparte sesiones de estudio en un horizonte de catorce días esquivando las clases que el escaneo ya conoce.',
           'La consecuencia práctica: el escaneo no es el producto, es el paso de entrada. Cada función de planificación y estudio vale exactamente lo que tengas metido del semestre.',
         ],
       },
@@ -1384,9 +1384,9 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
   }),
   page('/es/planificador-de-estudio-con-ia', '/ai-study-planner-for-college', 'standard', {
     metaTitle: 'Planificador de estudio con IA para la universidad',
-    metaDescription: 'Crea un plan adaptativo desde tus fechas reales, hábitos, exámenes, calificaciones y tiempo disponible.',
+    metaDescription: 'Un planificador de estudio con IA que parte de tus fechas reales, no de una plantilla: se reajusta cuando el profesor mueve un examen o se te acumula la semana.',
     h1: 'Un plan de estudio que aprende de tu semestre',
-    lede: 'Plan Inteligente distribuye trabajo antes de las fechas importantes, reajusta lo que no completaste y explica cada cambio.',
+    lede: 'Plan inteligente distribuye trabajo antes de las fechas importantes, reajusta lo que no completaste y explica cada cambio.',
     intro: ['Una lista de tareas solo te dice qué tienes pendiente. Un plan útil también decide cuándo empezar, cuánto tiempo reservar y qué mover cuando la semana cambia.'],
     sections: [
       {
@@ -1394,7 +1394,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
         paragraphs: [
           'Una lista te dice que un parcial que vale el 25 % cae el día 14 y que un informe de laboratorio cae el 16. No te dice qué tarde vas a sentarte de verdad, durante cuánto tiempo, ni con cuál de los dos empiezas.',
           'Ese hueco es donde se tuercen la mayoría de los semestres. No se olvida nada, todo está anotado, y aun así el trabajo se acumula contra la fecha porque nunca hubo un momento asignado para hacerlo. La sensación de ir al día que da una lista bien mantenida es precisamente lo que la hace peligrosa.',
-          'Un planificador de estudio resuelve el otro problema: convertir fechas en sesiones con día, hora y duración. El Plan Inteligente de Semora hace eso con datos que la app ya tiene, y lo reconstruye entero cada vez que lo abres.',
+          'Un planificador de estudio resuelve el otro problema: convertir fechas en sesiones con día, hora y duración. El Plan inteligente de Semora hace eso con datos que la app ya tiene, y lo reconstruye entero cada vez que lo abres.',
         ],
       },
       {
@@ -1453,7 +1453,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
       {
         heading: 'La carga académica es la misma información alejada',
         paragraphs: [
-          'El Plan Inteligente cubre catorce días. La vista de carga académica, también incluida en Pro, cubre el semestre entero, y en la primera semana de un periodo es sinceramente la más útil de las dos, cuando todavía no hay nada urgente.',
+          'El Plan inteligente cubre catorce días. La vista de carga académica, también incluida en Pro, cubre el semestre entero, y en la primera semana de un periodo es sinceramente la más útil de las dos, cuando todavía no hay nada urgente.',
           'Puntúa cada semana con la misma fórmula de ponderación por factor de esfuerzo y señala las semanas cargadas y las densas en exámenes antes de que lleguen. Es la vista que responde a «¿cuándo va a ponerse fea esta materia?», que es una pregunta que solo se puede aprovechar con semanas de antelación.',
           'Las dos leen los mismos datos: las tareas con fecha y ponderación que salieron de tus programas. Sin eso, ninguna de las dos tiene sobre qué razonar.',
         ],
@@ -1464,14 +1464,14 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
           'Sirve si tu problema es la asignación de tiempo y no la memoria: sabes lo que debes, pero llegas a la semana del parcial sin haber empezado. Sirve si llevas varias materias con ponderaciones muy distintas y no tienes claro cuál merece la tarde de hoy.',
           'No sirve igual de bien si tu carga es ligera y previsible: con dos materias y entregas semanales, un plan generado añade estructura donde no hacía falta. Tampoco sustituye la decisión de qué estudiar dentro de la sesión; te dice cuándo y cuánto, no qué es lo importante del capítulo.',
           'Y no arregla un problema de volumen. Si tienes cuarenta horas de trabajo y quince disponibles, ninguna estructura cierra esa brecha: lo que hace falta es recortar alcance o pedir una prórroga, y el aviso ámbar existe precisamente para que eso se vea pronto.',
-          'El Plan Inteligente forma parte de Pro, a 3,99 USD al mes o 19,99 USD al año, comprado con tarjeta en la web o dentro de la app de iOS y aplicado a toda la cuenta, incluida la web.',
+          'El Plan inteligente forma parte de Pro, a 3,99 USD al mes o 19,99 USD al año, comprado con tarjeta en la web o dentro de la app de iOS y aplicado a toda la cuenta, incluida la web.',
         ],
       },
     ],
     faq: [
       { question: '¿El plan reemplaza mi calendario?', answer: 'No. Usa tus fechas y disponibilidad para proponer bloques. Tú decides qué aceptar y puedes sincronizarlos con tu calendario.' },
       { question: '¿Qué pasa si pierdo una sesión?', answer: 'El plan intenta redistribuir el trabajo restante y muestra la razón del cambio.' },
-      { question: '¿Es una función gratis?', answer: 'Plan Inteligente es parte de Semora Pro.' },
+      { question: '¿Es una función gratis?', answer: 'Plan inteligente es parte de Semora Pro.' },
     ],
   }),
   page('/es/seguimiento-de-fechas-de-canvas', '/canvas-deadline-tracker', 'standard', {
@@ -1569,7 +1569,7 @@ const FEATURE_DETAILS: Record<string, FeatureDetail> = {
     faq: [{ question: '¿Cuenta las tareas sin calificación?', answer: 'No. El promedio actual refleja el trabajo ya evaluado; los pronósticos tratan las actividades pendientes por separado.' }],
   },
   'smart-plan': {
-    why: 'Las fechas por sí solas no reservan tiempo. Plan Inteligente convierte la prioridad, el riesgo y la disponibilidad en bloques concretos.',
+    why: 'Las fechas por sí solas no reservan tiempo. Plan inteligente convierte la prioridad, el riesgo y la disponibilidad en bloques concretos.',
     steps: ['Semora lee tus próximas entregas y exámenes.', 'Estima bloques según tamaño y riesgo.', 'Detecta las sesiones que completaste y las que te saltaste.', 'Reajusta y explica cada cambio.'],
     result: 'Tienes una propuesta diaria que se adapta a lo que sucede, en lugar de quedarse anclada al plan del inicio del semestre.',
     faq: [{ question: '¿Puedo mover un bloque?', answer: 'Sí. El plan es una recomendación editable y usa tus cambios como nueva información.' }],
@@ -1616,7 +1616,7 @@ const FEATURE_PAGES = FEATURES_ES.map((feature) => {
   if (long) {
     return page(`/es/funciones/${feature.slug}`, `/features/${feature.englishSlug}`, 'feature', {
       metaTitle: feature.name,
-      metaDescription: feature.shortDescription,
+      metaDescription: feature.metaDescription ?? feature.shortDescription,
       h1: feature.name,
       lede: long.lede,
       intro: long.intro,
@@ -1626,7 +1626,7 @@ const FEATURE_PAGES = FEATURES_ES.map((feature) => {
   }
   return page(`/es/funciones/${feature.slug}`, `/features/${feature.englishSlug}`, 'feature', {
     metaTitle: feature.name,
-    metaDescription: feature.shortDescription,
+    metaDescription: feature.metaDescription ?? feature.shortDescription,
     h1: feature.name,
     lede: feature.shortDescription,
     intro: [feature.description, detail.why],
@@ -1693,7 +1693,7 @@ export const SPANISH_BLOG_POSTS = [
     path: '/es/blog/tecnica-pomodoro-entre-clases',
     englishPath: '/blog/pomodoro-technique-between-classes',
     title: 'La técnica Pomodoro entre clases',
-    description: 'Cómo adaptar tus sesiones de concentración a los huecos reales de un horario universitario.',
+    description: 'Cómo adaptar la técnica Pomodoro a los huecos reales de un horario universitario, en vez de a las horas seguidas e ideales que la técnica da por hechas.',
     date: '24 de julio de 2026',
     isoDate: '2026-07-24',
     modifiedDate: '2026-08-09',
@@ -1854,7 +1854,7 @@ export const SPANISH_BLOG_INDEX_BODY: PageLongForm = {
         'La semana de finales recompensa la planificación más que cualquier otro tramo del periodo, por una razón concreta: lo que la hace difícil es visible con meses de anticipación. Varios exámenes de mucho peso caen en una ventana corta, y los choques dentro de esa ventana se pueden conocer mucho antes de que lleguen. La forma de fallar no es la pereza: es tratar el orden cronológico como orden de urgencia y descubrir el día de dos exámenes el fin de semana anterior.',
         'El método de la guía es un inventario y después un juicio. Enumera cada examen final con su fecha, su hora y su peso en la calificación del curso. Después combina ese peso con el punto en el que realmente está tu calificación en esa materia. Un final que vale veinte por ciento de una clase donde llevas 92 necesita menos repaso defensivo que un final del mismo veinte por ciento en una clase que va en un 78 al límite, aunque el primero caiga antes en el calendario. Luego mapea los exámenes por densidad y no por fecha: un examen que parece tener una semana completa de repaso puede tener dos días en la práctica si está encajonado entre otros dos.',
         'La guía también cubre qué hacer dentro de los bloques de repaso, porque programar horas es solo la mitad del problema. Releer un capítulo mide sobre todo si el material te resulta familiar mientras lo tienes delante, que es una habilidad distinta de reconstruirlo en condiciones de examen. La recuperación activa (cerrar el libro y resolver ejercicios en frío, escribir una respuesta de memoria, explicar un concepto en voz alta) y repartir el repaso en varios días en lugar de una noche larga suelen aguantar mejor. Hay además una sección de logística: muchas instituciones publican un calendario maestro de finales que se impone sobre el programa, y las aulas y los materiales permitidos cambian más seguido de lo que los estudiantes esperan.',
-        'El seguimiento de calificaciones es lo que hace posible el segundo paso, y es gratuito: necesitas saber qué materia va en un 92 cómodo y cuál en un 78 al límite antes de repartir horas con honestidad, y la estimación del GPA del semestre en la pestaña de Cursos también es gratuita, y te dice cuánto vale el periodo completo en este momento. El panel de carga académica de Pro es lo que facilita el tercer paso, mostrando las semanas pesadas y los tramos densos en exámenes de todos los cursos a la vez en lugar de dejarte cruzar la información a mano. El Plan Inteligente arma después un horario de estudio con esas fechas y lo reajusta cuando algo se mueve, y las alertas de riesgo académico señalan una calificación que baja o un trabajo faltante con pasos de recuperación bastante antes de que llegue la semana de finales.',
+        'El seguimiento de calificaciones es lo que hace posible el segundo paso, y es gratuito: necesitas saber qué materia va en un 92 cómodo y cuál en un 78 al límite antes de repartir horas con honestidad, y la estimación del GPA del semestre en la pestaña de Cursos también es gratuita, y te dice cuánto vale el periodo completo en este momento. El panel de carga académica de Pro es lo que facilita el tercer paso, mostrando las semanas pesadas y los tramos densos en exámenes de todos los cursos a la vez en lugar de dejarte cruzar la información a mano. El Plan inteligente arma después un horario de estudio con esas fechas y lo reajusta cuando algo se mueve, y las alertas de riesgo académico señalan una calificación que baja o un trabajo faltante con pasos de recuperación bastante antes de que llegue la semana de finales.',
       ],
       bullets: [
         'El peso por sí solo no es el plan: el plan es el peso combinado con tu situación actual',
@@ -1870,7 +1870,7 @@ export const SPANISH_BLOG_INDEX_BODY: PageLongForm = {
         'La técnica Pomodoro —veinticinco minutos de trabajo concentrado, cinco de descanso y un descanso más largo cada cuatro ciclos— la desarrolló Francesco Cirillo a finales de los años ochenta, cuando era estudiante universitario y usaba un temporizador de cocina con forma de tomate para sacar adelante sus propias materias. Es duradera porque es simple. El problema es que casi toda explicación de la técnica asume una tarde tranquila sin nada más en la agenda, que no es como se ve un horario de clases.',
         'Un día universitario real está hecho de fragmentos: cincuenta minutos entre una clase de 10 y una de 11, noventa minutos a la hora de comer, una tarde libre. En cada uno cabe una cantidad distinta de trabajo, y lo útil es planear para el hueco que tienes y no para el que quisieras. Cincuenta minutos alcanzan para un bloque de 25 y cinco de descanso, con 20 minutos para el traslado o una tarea breve; dos bloques de 25 con un descanso necesitarían 55 minutos. Noventa minutos son dos ciclos completos con unos treinta minutos de margen. Tres horas son el conjunto tradicional de cuatro ciclos con un descanso de verdad al final. Sumado a lo largo de un martes cualquiera, eso son siete bloques de concentración sacados de huecos que ya estaban en el horario.',
         'El tamaño de la tarea es donde esto suele romperse. «Avanzar el ensayo» no es una tarea de veinticinco minutos: es un proyecto de varias sesiones disfrazado, y meterlo en un bloque produce avance difuso y ninguna sensación de qué quedó hecho. Un bloque necesita una meta concreta: redactar el segundo párrafo, resolver los ejercicios del uno al cinco, repasar las tarjetas de una materia. Los otros dos errores comunes son dejar que un descanso de cinco minutos se vuelva de quince porque costó cerrar una aplicación, y saltarse el descanso largo porque una entrega apremia, lo que cambia una pausa corta por un bajón más largo.',
-        'El temporizador de concentración de Semora es una función de Pro, igual que las tarjetas de estudio y el tutor con IA que lo acompañan. Lo que el temporizador agrega frente a cualquier temporizador gratuito es contexto: la sesión se vincula a un curso o una tarea que la app ya está siguiendo, así que el tiempo de estudio queda registrado contra trabajo real y no corriendo en una app desconectada. Está al lado del Plan Inteligente y del panel de carga académica, que es la parte que de verdad responde a qué materia conviene dedicarle la sesión de hoy.',
+        'El temporizador de concentración de Semora es una función de Pro, igual que las tarjetas de estudio y el tutor con IA que lo acompañan. Lo que el temporizador agrega frente a cualquier temporizador gratuito es contexto: la sesión se vincula a un curso o una tarea que la app ya está siguiendo, así que el tiempo de estudio queda registrado contra trabajo real y no corriendo en una app desconectada. Está al lado del Plan inteligente y del panel de carga académica, que es la parte que de verdad responde a qué materia conviene dedicarle la sesión de hoy.',
       ],
       bullets: [
         'Hueco de 50 minutos: 25 de trabajo, 5 de descanso y 20 para una tarea breve o el traslado',
@@ -1965,7 +1965,7 @@ export const SPANISH_BLOG_INDEX_BODY: PageLongForm = {
     },
     {
       question: '¿Qué puedo hacer realmente sin pagar?',
-      answer: 'Una acción de IA para toda la vida de la cuenta —un escaneo de programa, una grabación de clase o unos apuntes a partir de un documento, la que necesites primero—, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, seguimiento completo de entregas y tareas, seguimiento de calificaciones con promedios ponderados, una estimación del GPA del semestre, recordatorios el mismo día y unirte a un Course Space al que te invite un compañero. Sin tarjeta de crédito y sin límite de tiempo sobre el plan en sí: el límite es de alcance y no de reloj, con dos excepciones que conviene saber desde el principio, y son que esa acción de IA no se renueva y que una cuenta gratuita cubre un semestre, así que empezar un segundo periodo implica Pro. Pro quita el límite de acciones de IA (sigue habiendo un techo de uso razonable de veinte escaneos al día) y agrega cursos y semestres ilimitados, importación desde el LMS, ser anfitrión de tu propio Course Space, el Plan Inteligente, el panel de carga académica, las tarjetas de estudio, el temporizador de concentración, el tutor con IA y la sincronización de calendario con exportación .ics.',
+      answer: 'Una acción de IA para toda la vida de la cuenta —un escaneo de programa, una grabación de clase o unos apuntes a partir de un documento, la que necesites primero—, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, seguimiento completo de entregas y tareas, seguimiento de calificaciones con promedios ponderados, una estimación del GPA del semestre, recordatorios el mismo día y unirte a un Course Space al que te invite un compañero. Sin tarjeta de crédito y sin límite de tiempo sobre el plan en sí: el límite es de alcance y no de reloj, con dos excepciones que conviene saber desde el principio, y son que esa acción de IA no se renueva y que una cuenta gratuita cubre un semestre, así que empezar un segundo periodo implica Pro. Pro quita el límite de acciones de IA (sigue habiendo un techo de uso razonable de veinte escaneos al día) y agrega cursos y semestres ilimitados, importación desde el LMS, ser anfitrión de tu propio Course Space, el Plan inteligente, el panel de carga académica, las tarjetas de estudio, el temporizador de concentración, el tutor con IA y la sincronización de calendario con exportación .ics.',
     },
     {
       question: '¿Estas entradas citan investigación o estadísticas de usuarios?',
@@ -2037,14 +2037,14 @@ export const SPANISH_HOME_SUMMARY: PageLongForm = {
       paragraphs: [
         'El escaneo no es el producto. Lo que hace que valga la pena es que otras cuatro cosas leen de él después, sin que introduzcas nada dos veces.',
         'El seguimiento de calificaciones usa las ponderaciones que el escaneo sacó de tu programa, y calcula tu media sobre el trabajo que de verdad se ha corregido: la suma ponderada de tus notas dividida entre el peso que has cursado, no entre el peso total del semestre. Esa única decisión es lo que mantiene el número honesto en octubre, cuando un examen final sin calificar que vale el 30 % lo arrastraría hacia cero.',
-        'La vista de carga académica puntúa cada tarea con fecha como su ponderación multiplicada por un factor de esfuerzo —un examen cuenta el triple, un proyecto 2,5, un cuestionario 1,5, una tarea 1,2 y una lectura 1— así que una semana con dos exámenes se lee como pesada aunque tu profesor no imprimiera ningún porcentaje al lado. El Plan Inteligente toma esas mismas tareas y reparte sesiones de estudio a lo largo de los próximos catorce días, esquivando las clases que el escaneo ya conoce. Y el Tutor con IA responde desde el programa real de ese curso, tus entregas registradas y los apuntes que hayas subido, en lugar de suponer.',
+        'La vista de carga académica puntúa cada tarea con fecha como su ponderación multiplicada por un factor de esfuerzo —un examen cuenta el triple, un proyecto 2,5, un cuestionario 1,5, una tarea 1,2 y una lectura 1— así que una semana con dos exámenes se lee como pesada aunque tu profesor no imprimiera ningún porcentaje al lado. El Plan inteligente toma esas mismas tareas y reparte sesiones de estudio a lo largo de los próximos catorce días, esquivando las clases que el escaneo ya conoce. Y el Tutor con IA responde desde el programa real de ese curso, tus entregas registradas y los apuntes que hayas subido, en lugar de suponer.',
         'La consecuencia práctica conviene decirla claro: cada función de planificación y de estudio vale exactamente lo que tengas metido del semestre. Dos cursos a medias no le dan al planificador casi nada sobre lo que razonar. Cuatro cursos escaneados, con sus ponderaciones reales y algunas notas puestas, lo afilan todo en una semana.',
 
       ],
       bullets: [
         'Las calificaciones leen las ponderaciones que extrajo el escaneo',
         'La carga académica señala las semanas cargadas de exámenes antes de que lleguen',
-        'El Plan Inteligente programa alrededor de los horarios ya registrados',
+        'El Plan inteligente programa alrededor de los horarios ya registrados',
         'El Tutor responde desde tu programa, tus fechas y tus apuntes, y nunca inventa una fecha',
 
       ],
@@ -2503,7 +2503,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
         heading: 'Dónde encaja Semora',
         paragraphs: [
           'El plan Gratis de Semora incluye una acción de IA para toda la vida de la cuenta —un escaneo de programa, una grabación de clase o unos apuntes a partir de un documento—, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, y un semestre total, además de seguimiento completo de fechas de entrega y calificaciones y recordatorios el mismo día. Es la combinación que buscábamos al empezar esta lista: el programa convertido en calendario sin trabajo manual y las calificaciones en el mismo lugar.',
-          'Semora Pro cuesta $3.99 al mes o $19.99 al año, se compra con tarjeta en la web o dentro de la app, y quita el límite de cursos y de semestres, junto con el de acciones de IA. Añade el Plan Inteligente, el panel de carga académica, la escala de calificaciones con pronóstico, la sincronización de calendario con exportación .ics, las tarjetas de estudio, el temporizador de concentración, el Tutor con IA, las alertas de riesgo académico, las estadísticas de progreso y las funciones de compartir y rachas.',
+          'Semora Pro cuesta $3.99 al mes o $19.99 al año, se compra con tarjeta en la web o dentro de la app, y quita el límite de cursos y de semestres, junto con el de acciones de IA. Añade el Plan inteligente, el panel de carga académica, la escala de calificaciones con pronóstico, la sincronización de calendario con exportación .ics, las tarjetas de estudio, el temporizador de concentración, el Tutor con IA, las alertas de riesgo académico, las estadísticas de progreso y las funciones de compartir y rachas.',
           'Funciona en iPhone y en la web con una sola cuenta: un cambio hecho en el teléfono aparece en el navegador casi de inmediato. Si vienes de una hoja de cálculo, el primer escaneo muestra la diferencia: el programa entra completo, con ponderaciones y horarios.',
         ],
       },
@@ -2758,7 +2758,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
         heading: 'Un temporizador dentro de la app donde ya están tus fechas',
         paragraphs: [
           'El temporizador de concentración de Semora (Pro) es un temporizador tipo Pomodoro que vive en la misma app donde ya están tus fechas de entrega y tus calificaciones, así que cada sesión queda ligada a un curso concreto y a una tarea concreta. Eso resuelve de paso la pregunta que antecede a cualquier bloque de 25 minutos: qué estudiar hoy.',
-          'Al lado están el Plan Inteligente, que arma un horario de estudio con IA a partir de tus fechas reales y lo ajusta cuando esas fechas cambian, y el panel de Carga de trabajo, que muestra las semanas apretadas y los tramos con varios exámenes en todos tus cursos: el contexto para decidir a qué materia le toca el ciclo del martes.',
+          'Al lado están el Plan inteligente, que arma un horario de estudio con IA a partir de tus fechas reales y lo ajusta cuando esas fechas cambian, y el panel de Carga de trabajo, que muestra las semanas apretadas y los tramos con varios exámenes en todos tus cursos: el contexto para decidir a qué materia le toca el ciclo del martes.',
           'Puedes empezar con el plan Gratis, que incluye una acción de IA para toda la vida de la cuenta, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, y un semestre total. Pro cuesta $3.99 al mes o $19.99 al año y se compra con tarjeta en la web o dentro de la app.',
         ],
       },
@@ -2881,7 +2881,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
         heading: 'Dónde se vuelve más fácil con la información a la vista',
         paragraphs: [
           'Armar este plan a mano significa cruzar la fecha del examen, la ponderación y tu calificación actual de cada curso, y rehacerlo cada vez que algo cambia. Semora deja esa información a la vista sin ese trabajo. El seguimiento de calificaciones está en el plan Gratis —junto con una acción de IA para toda la vida de la cuenta, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, y un semestre total— y mantiene al día el promedio ponderado de cada curso conforme se califica tu trabajo, que es el número que pide el paso 2.',
-          'Semora Pro cuesta $3.99 al mes o $19.99 al año y agrega el panel de carga académica, que muestra las semanas pesadas y la densidad de exámenes de todos tus cursos en una sola vista: justo la aglomeración que el paso 3 pide detectar con anticipación. El Plan Inteligente arma un horario de estudio con esas fechas y lo reajusta cuando alguna se mueve, y las alertas de riesgo académico señalan un curso donde la calificación viene cayendo.',
+          'Semora Pro cuesta $3.99 al mes o $19.99 al año y agrega el panel de carga académica, que muestra las semanas pesadas y la densidad de exámenes de todos tus cursos en una sola vista: justo la aglomeración que el paso 3 pide detectar con anticipación. El Plan inteligente arma un horario de estudio con esas fechas y lo reajusta cuando alguna se mueve, y las alertas de riesgo académico señalan un curso donde la calificación viene cayendo.',
         ],
       },
     ],
@@ -2890,7 +2890,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
       { question: '¿Cómo priorizo dos exámenes el mismo día?', answer: 'No repartas el tiempo en partes iguales de entrada. Compara la ponderación y la calificación que llevas en cada curso, y recuerda que el examen de la tarde tiene menos margen: las horas previas se te van en el examen de la mañana.' },
       { question: '¿De verdad no sirve estudiar toda la noche anterior?', answer: 'Sirve menos de lo que cuesta. Las mismas horas repartidas en varios días retienen más, y llegar sin dormir afecta justo lo que el examen mide: recuperar información bajo presión. Fija una hora tope para cerrar los apuntes la noche previa y respétala.' },
       { question: '¿Qué hago si ya no alcanza el tiempo?', answer: 'Recorta a conciencia en lugar de fingir que todo cabe. Quédate con los temas de mayor peso en el examen y con los que peor dominas, y cambia la lectura pasiva por práctica activa: resolver ejercicios en frío rinde más que releer el capítulo entero.' },
-      { question: '¿Necesito Pro para organizar mis finales?', answer: 'No. Las fechas, los cursos y el seguimiento de calificaciones están en el plan Gratis, que incluye una acción de IA para toda la vida de la cuenta, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, y un semestre total. Pro agrega el panel de carga académica, el Plan Inteligente y las alertas de riesgo académico, que automatizan buena parte de los pasos 2 y 3.' },
+      { question: '¿Necesito Pro para organizar mis finales?', answer: 'No. Las fechas, los cursos y el seguimiento de calificaciones están en el plan Gratis, que incluye una acción de IA para toda la vida de la cuenta, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, y un semestre total. Pro agrega el panel de carga académica, el Plan inteligente y las alertas de riesgo académico, que automatizan buena parte de los pasos 2 y 3.' },
       { question: '¿Y si el programa y el calendario oficial no coinciden?', answer: 'Rige el calendario oficial de tu institución, que se publica después del programa justamente para resolver choques entre materias. Si la diferencia es de ponderación y no de fecha, pregúntale al profesor y deja registrado el dato correcto donde lleves tus cursos.' },
     ],
   }),
@@ -2940,7 +2940,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
         heading: 'Centradas en el programa: Semora y DormWay',
         paragraphs: [
           'Estas dos son la comparación más directa de la lista, porque parten de la misma premisa: el programa ya contiene tu semestre y transcribirlo a mano es el cuello de botella.',
-          'Semora importa un programa como foto (varias páginas, hasta cinco), PDF, archivo arrastrado en la versión web, o texto pegado. OpenAI GPT-5.6 Luna extrae el nombre del curso, el profesor, los horarios de clase, el horario de atención, las fechas del semestre, la escala de calificación y cada elemento evaluado con su fecha de entrega. Revisas y corriges cada entrega antes de añadirla al calendario, y eso importa más de lo que parece: los programas están llenos de frases ambiguas como «se entrega el viernes anterior al receso», y una pantalla de revisión es la diferencia entre detectar una fecha mal interpretada y heredarla. El plan Gratis cubre una acción de IA para toda la vida de la cuenta —un escaneo de programa, una grabación de clase o unos apuntes a partir de un documento—, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, y un semestre total, además de seguimiento completo de entregas y de calificaciones con promedios ponderados y recordatorios el mismo día. Pro, a $3.99 al mes o $19.99 al año, levanta los límites de acciones de IA, cursos y semestres y agrega importación desde Canvas, Blackboard y Moodle. Conectar Canvas es un solo paso: copia el enlace privado del calendario que Canvas ya te da y pégalo. No hay ningún token que generar ni nada que tu universidad tenga que aprobar. Pro también añade el Plan Inteligente de estudio, el panel de carga académica, tarjetas de estudio con repetición espaciada, temporizador de concentración, un tutor con IA basado en tu propio material, sincronización con el calendario y exportación .ics, horarios de recordatorio personalizados y alertas de riesgo académico.',
+          'Semora importa un programa como foto (varias páginas, hasta cinco), PDF, archivo arrastrado en la versión web, o texto pegado. OpenAI GPT-5.6 Luna extrae el nombre del curso, el profesor, los horarios de clase, el horario de atención, las fechas del semestre, la escala de calificación y cada elemento evaluado con su fecha de entrega. Revisas y corriges cada entrega antes de añadirla al calendario, y eso importa más de lo que parece: los programas están llenos de frases ambiguas como «se entrega el viernes anterior al receso», y una pantalla de revisión es la diferencia entre detectar una fecha mal interpretada y heredarla. El plan Gratis cubre una acción de IA para toda la vida de la cuenta —un escaneo de programa, una grabación de clase o unos apuntes a partir de un documento—, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, y un semestre total, además de seguimiento completo de entregas y de calificaciones con promedios ponderados y recordatorios el mismo día. Pro, a $3.99 al mes o $19.99 al año, levanta los límites de acciones de IA, cursos y semestres y agrega importación desde Canvas, Blackboard y Moodle. Conectar Canvas es un solo paso: copia el enlace privado del calendario que Canvas ya te da y pégalo. No hay ningún token que generar ni nada que tu universidad tenga que aprobar. Pro también añade el Plan inteligente de estudio, el panel de carga académica, tarjetas de estudio con repetición espaciada, temporizador de concentración, un tutor con IA basado en tu propio material, sincronización con el calendario y exportación .ics, horarios de recordatorio personalizados y alertas de riesgo académico.',
           'DormWay recibe programas subidos en la app o enviados por correo a su dirección de recepción, y extrae tareas, fechas de examen, desglose de calificación y políticas de entrega tardía. También ofrece sincronización de solo lectura con Canvas, Blackboard y Moodle unificadas en una sola línea de tiempo, una calculadora de GPA y calificaciones con categorías ponderadas, un asistente llamado «Ace» que responde preguntas sobre las políticas del curso citando el punto del programa de donde salió la respuesta, y una pestaña de «Intelligence» por curso con estimación de dificultad y horas semanales. Su propio sitio y su ficha en la App Store lo describen como gratuito, sin muros de pago y sin tarjeta de crédito. Funciona en web, iPhone, iPad y Mac; no tiene app para Android.',
           'La división práctica: DormWay no cuesta nada, cubre tres plataformas LMS en modo lectura desde el inicio, y su app para Mac es algo que Semora no tiene. Las ventajas de Semora son la variedad de entrada (la foto de un programa en papel que te entregaron en clase, no solo un archivo que ya tienes), el paso de revisión antes de guardar, y la profundidad del lado del estudio: tarjetas con repetición espaciada, temporizador, tutor y un generador de horarios que se reajusta con tus fechas. Si el costo es la restricción que decide, el plan gratuito de DormWay es realmente gratuito. Si quieres la capa de fechas y la de estudio en la misma cuenta, ese es el argumento a favor de Semora Pro.',
         ],
@@ -2970,7 +2970,7 @@ const BLOG_PAGES: SpanishPageConfig[] = [
         ],
         bullets: [
           '«Me enteré la noche anterior de que había una entrega». Tienes un problema de captura de fechas. La solución es una app centrada en el programa, porque la fecha tiene que existir en tu sistema desde la primera semana y no desde el día que te acordaste de escribirla.',
-          '«Sé qué se entrega, pero nunca empiezo con tiempo». Tienes un problema de planificación. Shovel está hecha exactamente para eso, y el Plan Inteligente y el panel de carga académica de Semora atacan la misma carencia desde el lado del programa.',
+          '«Sé qué se entrega, pero nunca empiezo con tiempo». Tienes un problema de planificación. Shovel está hecha exactamente para eso, y el Plan inteligente y el panel de carga académica de Semora atacan la misma carencia desde el lado del programa.',
           '«Leí el capítulo tres veces y aun así me fue mal en el cuestionario». Tienes un problema de recuperación de memoria, y releer no lo arregla. Una app centrada en el material, o las tarjetas de Semora, convierten el material pasivo en práctica activa.',
           '«No sé si voy bien en esta materia». Tienes un problema de visibilidad de la calificación, más acotado de lo que parece: necesitas seguimiento ponderado, que Semora incluye gratis y DormWay cubre con su calculadora.',
           '«Canvas me avisó demasiado tarde». Ese es específicamente un problema de momento de la notificación, y tiene su propia solución.',
@@ -3487,7 +3487,7 @@ export const SPANISH_COMPARISONS = [
 function comparisonPage(item: (typeof SPANISH_COMPARISONS)[number]): SpanishPageConfig {
   return page(`/es/comparar/${item.slug}`, `/compare/${item.slug}`, 'standard', {
     metaTitle: `Semora vs ${item.name}`,
-    metaDescription: `Compara Semora y ${item.name}: programas, fechas, calificaciones, estudio con IA, plataformas y trabajo manual.`,
+    metaDescription: `Semora frente a ${item.name}: de dónde saca cada una tus fechas, qué mantiene al día sola, qué tienes que escribir a mano y cuánto cuesta cada plan.`,
     h1: `Semora vs ${item.name}`,
     lede: `La diferencia principal es el punto de partida: Semora organiza el semestre desde el programa; ${item.name} se concentra en ${item.focus}.`,
     intro: [
@@ -3497,7 +3497,7 @@ function comparisonPage(item: (typeof SPANISH_COMPARISONS)[number]): SpanishPage
       {
         heading: 'Qué hace Semora',
         paragraphs: [
-          'Semora convierte una foto, un PDF o el texto del programa en cursos, tareas, exámenes, horarios y calificaciones que puedes revisar. También puede importar datos desde Canvas, Blackboard o Moodle. Esa información se utiliza en los recordatorios, los pronósticos, el Plan Inteligente, las tarjetas y el Tutor con IA.',
+          'Semora convierte una foto, un PDF o el texto del programa en cursos, tareas, exámenes, horarios y calificaciones que puedes revisar. También puede importar datos desde Canvas, Blackboard o Moodle. Esa información se utiliza en los recordatorios, los pronósticos, el Plan inteligente, las tarjetas y el Tutor con IA.',
         ],
       },
       {
@@ -3543,7 +3543,7 @@ const ALTERNATIVES = [
 
 const ALTERNATIVE_PAGES = ALTERNATIVES.map((item) => page(`/es/${item.slug}`, item.english, 'standard', {
   metaTitle: `Alternativa a ${item.name} para estudiantes`,
-  metaDescription: `Conoce Semora como alternativa a ${item.name} para programas, fechas, calificaciones y planificación universitaria.`,
+  metaDescription: `¿Buscas una alternativa a ${item.name}? Cómo elegir una para la universidad: qué tipo de herramienta resuelve cada problema y dónde encaja Semora.`,
   h1: `¿Buscas una alternativa a ${item.name}?`,
   lede: `Semora puede ser una buena opción si necesitas ${item.need}.`,
   intro: [
@@ -3552,7 +3552,7 @@ const ALTERNATIVE_PAGES = ALTERNATIVES.map((item) => page(`/es/${item.slug}`, it
   sections: [
     { heading: 'Por qué considerar Semora', paragraphs: ['Semora empieza con una foto, un PDF o el texto del programa de la materia. Una vez que revisas el resultado, crea las tareas, los exámenes, los horarios y la estructura de calificaciones. Las conexiones con el LMS pueden mantener esa información al día.'] },
     { heading: 'Qué puedes probar sin pagar', paragraphs: ['Crea una cuenta sin tarjeta y obtén una acción de IA para toda la vida de la cuenta —un escaneo de programa, una grabación de clase o unos apuntes a partir de un documento—, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano, y un semestre total, además de seguimiento de entregas, promedios ponderados y recordatorios el mismo día.'] },
-    { heading: 'Qué añade Pro', paragraphs: ['Pro elimina límites de cursos y semestres y añade Plan Inteligente, tarjetas, Tutor con IA, temporizador, pronósticos, alertas y sincronización de calendario.'] },
+    { heading: 'Qué añade Pro', paragraphs: ['Pro elimina límites de cursos y semestres y añade Plan inteligente, tarjetas, Tutor con IA, temporizador, pronósticos, alertas y sincronización de calendario.'] },
     { heading: 'Cómo hacer la transición', paragraphs: ['Empieza con un solo curso. Añade el programa, revisa las fechas y compara el resultado con tu sistema actual durante una semana. No dejes de usar tu herramienta anterior hasta confirmar que toda la información importante es correcta.'] },
   ],
   faq: [

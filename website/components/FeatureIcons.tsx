@@ -59,12 +59,27 @@ export function SparkleIcon(props: IconProps) {
   );
 }
 
-export function LinkIcon(props: IconProps) {
+/**
+ * Lecture Recording and Apple Watch. Both are FREE features, which is why they
+ * were never in this file: the features grid used to show the Pro toolkit only,
+ * so neither had a card to need an icon for. The grid now covers every feature
+ * the screenshot showcase does not, so both need one.
+ */
+export function MicIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>
-      <path d="M9 15l6-6" />
-      <path d="M11 6l1.5-1.5a3.5 3.5 0 015 5L16 11" />
-      <path d="M13 18l-1.5 1.5a3.5 3.5 0 01-5-5L8 13" />
+      <rect x="9" y="2.5" width="6" height="11" rx="3" />
+      <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0" />
+      <path d="M12 18v3.5M9 21.5h6" />
+    </svg>
+  );
+}
+
+export function WatchIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="6.5" y="6.5" width="11" height="11" rx="3" />
+      <path d="M9 6.5 9.5 2.6h5L15 6.5M9 17.5l.5 3.9h5l.5-3.9" />
     </svg>
   );
 }

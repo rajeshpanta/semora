@@ -79,15 +79,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...compareRoutes,
   ];
 
-  // Only pages materially revised in this release get a new lastmod.
-  const revisedPaths = new Set([
-    '/about', '/ai-syllabus-scanner', '/canvas-deadline-tracker',
-    '/features/syllabus-scanner', '/features/canvas-sync',
-  ]);
-  const englishRoutes = [...routes, ...blogRoutes].map((route) => ({
-    ...route,
-    ...(revisedPaths.has(new URL(route.url).pathname) ? { lastModified: '2026-09-05' } : {}),
-  }));
+  // No per-route override list any more. It existed because
+  // CONTENT_LAST_REVIEWED had gone stale and five pages needed a newer date
+  // than it could give them — a hardcoded 2026-09-05 sitting next to a
+  // constant whose entire job is to hold that date. Two mechanisms for one
+  // fact, and the constant was the one that drifted. The constant is current
+  // again, so bump it when you revise copy and this needs nothing.
+  const englishRoutes = [...routes, ...blogRoutes];
   const pairByEnglish = new Map(INDEXABLE_LOCALE_ROUTE_PAIRS.map((pair) => [pair.en, pair]));
   const englishByPath = new Map(
     englishRoutes.map((route) => [route.url.replace(SITE_URL, '') || '/', route]),

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { enAlternates } from '@/lib/hreflang';
+import { OG_IMAGE } from '@/lib/og';
 import Link from 'next/link';
 import styles from './compare-index.module.css';
 import { Reveal } from '@/components/Reveal';
@@ -19,6 +20,7 @@ export const metadata: Metadata = {
   description:
     'Honest, feature-by-feature comparisons of Semora against DormWay, Shovel, StudyFetch, Mindgrasp, Taskade, Studley AI, and myHomework Student Planner.',
   alternates: enAlternates('/compare'),
+  openGraph: { url: '/compare', ...OG_IMAGE },
 };
 
 export default function CompareIndexPage() {
@@ -53,7 +55,7 @@ export default function CompareIndexPage() {
           </p>
           <div className={styles.heroActions}>
             <Link href={APP_URL} className={styles.primaryBtn}>
-              Get started free
+              Try it for free
             </Link>
             <Link href="/pricing" className={styles.secondaryBtn}>
               See pricing

@@ -20,7 +20,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
     description:
       'A step-by-step guide to converting a course syllabus into a working semester calendar, plus how Semora automates the whole process.',
     date: '2026-07-20',
-    modified: '2026-08-09',
+    modified: '2026-09-10',
     image: '/illustrations/syllabus-calendar.svg',
     imageAlt: 'A friendly character waving beside a syllabus page turning into a month grid, one date highlighted',
   },
@@ -30,7 +30,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
     description:
       'A practical look at how paper planners, generic to-do apps, and syllabus-aware tools hold up for a full course load.',
     date: '2026-07-22',
-    modified: '2026-08-09',
+    modified: '2026-09-10',
     image: '/illustrations/trophy-compare.svg',
     imageAlt: 'A friendly character standing on the middle of three app cards, which carries a check mark',
   },
@@ -40,7 +40,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
     description:
       "Canvas tells you when a due date is set or changed, but has no 'remind me 3 days before' option. How to check your notification settings — and what to add.",
     date: '2026-07-23',
-    modified: '2026-09-04',
+    modified: '2026-09-10',
     image: '/illustrations/bell-reminder.svg',
     imageAlt: 'A friendly character waving beside a clock radiating signal rings into notification cards',
   },
@@ -50,7 +50,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
     description:
       'How to adapt the Pomodoro technique to the actual gaps in a college schedule, instead of the idealized unbroken hours it assumes.',
     date: '2026-07-24',
-    modified: '2026-08-09',
+    modified: '2026-09-10',
     image: '/illustrations/tomato-timer.svg',
     imageAlt: 'A friendly character sitting beside a circular focus timer reading 18:42',
   },
@@ -60,6 +60,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
     description:
       'A framework for planning finals week around exam density and weighting, and how Semora surfaces the weeks that need the plan most.',
     date: '2026-07-25',
+    modified: '2026-09-10',
     image: '/illustrations/book-stack.svg',
     imageAlt: 'A friendly character beside a week of study blocks, with one exam block highlighted',
   },
@@ -69,7 +70,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
     description:
       'Seven AI study apps compared on what they actually do — syllabus scanning, flashcards, tutoring, grade tracking — plus which category fits which problem.',
     date: '2026-08-05',
-    modified: '2026-08-09',
+    modified: '2026-09-10',
     image: '/illustrations/ai-study-apps.svg',
     imageAlt: 'A friendly character beside a shortlist of three app cards, the top one marked with a check',
   },

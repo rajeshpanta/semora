@@ -15,7 +15,7 @@ import heroStyles from './support.module.css';
 
 export const metadata: Metadata = {
   title: 'Support',
-  description: "Answers to common questions about using Semora, plus how to reach us directly.",
+  description: "Answers to what students ask most about syllabus scanning, courses, grades, Canvas sync, Pro and billing, plus a form that reaches a real person.",
   alternates: enAlternates('/support'),
   openGraph: { url: '/support', ...OG_IMAGE },
 };

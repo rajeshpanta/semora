@@ -39,7 +39,7 @@ export const metadata: Metadata = {
 // Canvas classes as a paid one. It says nothing about grades, because the
 // calendar feed carries dates and not marks.
 const HERO_CHIPS = [
-  'All your Canvas classes, free',
+  'Canvas, Blackboard and Moodle — all free',
   'Your first AI action is free',
   'Synced across iPhone, iPad and web',
 ];
@@ -82,7 +82,7 @@ const CAPABILITIES = [
     n: '01',
     eyebrow: 'Coursework in sync',
     title: 'Your courses change. Semora keeps up.',
-    body: 'Import a syllabus or, where your school allows it, connect Canvas, Blackboard or Moodle. Sync history and last-updated details make every change visible.',
+    body: 'Import a syllabus, or connect Canvas, Blackboard or Moodle free on any plan. Sync history and last-updated details make every change visible.',
     href: '/features/canvas-sync',
     linkLabel: 'Explore LMS sync',
   },
@@ -169,12 +169,12 @@ const HOME_FAQ = [
   {
     question: 'Is Semora actually free?',
     answer:
-      'Yes. The free plan includes one AI action for the lifetime of your account—a syllabus scan, a lecture recording or turning a document into notes, whichever you reach for first—plus unlimited classes synced free from Canvas plus one course you add by hand within one semester, deadline tracking, weighted grades and reminders. No credit card required.',
+      'Yes, and free covers the part that takes the most work. Every class you are taking syncs across from Canvas, Blackboard or Moodle at no cost, with no cap on how many, plus a course you add by hand. Your first AI action is free too—a syllabus scan, a lecture recording or turning a document into notes, whichever you reach for first. Deadline tracking, weighted grades and same-day reminders are all included. No credit card required. The pricing page has the full Free and Pro breakdown.',
   },
   {
     question: 'What does Pro add?',
     answer:
-      'Pro adds unlimited courses and scans, adaptive planning, course-aware study tools and advanced grade insights. Connecting Canvas, Blackboard or Moodle is free on every plan, including free. The current options are listed on the Pricing page and apply to the same account on iPhone, iPad and the web.',
+      'Pro lifts the limits and adds the layer that runs the semester for you: unlimited courses and semesters, AI you can keep using rather than spend once, Smart Plan, the Workload dashboard, Flashcards, the Focus Timer, the AI Tutor, calendar sync and Academic Risk alerts. Connecting Canvas, Blackboard or Moodle is not part of it—that is free on every plan. Pro is listed in full on the Pricing page and applies to the same account on iPhone, iPad and the web.',
   },
   {
     question: 'What can I feed the scanner?',
@@ -184,7 +184,7 @@ const HOME_FAQ = [
   {
     question: 'Do I need Canvas for this to work?',
     answer:
-      'No. Semora works from your syllabus alone. Canvas, Blackboard and Moodle connections are optional and free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Blackboard and Moodle still use a school-issued token connections.',
+      'No. Semora works from your syllabus alone. Canvas, Blackboard and Moodle connections are optional and free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Blackboard and Moodle are free on every plan too; they use a token your school issues, so availability comes down to your institution.',
   },
   {
     question: 'Does it work on iPad?',

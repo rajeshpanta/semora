@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import { FeatureShowcase, type ShowcaseItem } from '@/components/FeatureShowcase';
 import { enAlternates } from '@/lib/hreflang';
+import { OG_IMAGE } from '@/lib/og';
 import type { ComponentType } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import styles from './features.module.css';
 import { Reveal } from '@/components/Reveal';
-import { FlashcardIcon, TimerIcon, ChatIcon, PeopleIcon, SparkleIcon } from '@/components/FeatureIcons';
-import { FEATURES, APP_URL, PRICING, getFeature } from '@/lib/semora-facts';
+import { FlashcardIcon, TimerIcon, ChatIcon, PeopleIcon, SparkleIcon, MicIcon, WatchIcon } from '@/components/FeatureIcons';
+import { FEATURES, APP_URL, PRICING } from '@/lib/semora-facts';
 import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
 import { Breadcrumb } from '@/components/Breadcrumb';
@@ -19,6 +20,7 @@ export const metadata: Metadata = {
   description:
     'Everything Semora does: AI syllabus scanning, grade tracking, Smart Plan, flashcards, focus timer, AI tutor, Course Spaces, and Canvas sync.',
   alternates: enAlternates('/features'),
+  openGraph: { url: '/features', ...OG_IMAGE },
 };
 
 const SHOWCASE: ShowcaseItem[] = [
@@ -65,8 +67,8 @@ const SHOWCASE: ShowcaseItem[] = [
     image: '/screenshots/canvas-sync.png',
     alt: 'Semora Canvas sync settings screen showing connected courses and auto-sync status',
     tier: 'free',
-    title: 'Import coursework from Canvas',
-    body: "Canvas import is free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you, under Calendar then Calendar Feed, and paste it in. There is no access token to generate and nothing for your school to approve. Dated assignments then import on their own and stay right when an instructor moves a deadline, with reminders rescheduling themselves. The calendar feed carries dates rather than marks, so your grades stay yours to enter.",
+    title: 'Import your classes from Canvas, Blackboard or Moodle',
+    body: "All three are free on every plan. Canvas takes one step: copy the private Calendar Feed link Canvas already gives you, under Calendar then Calendar Feed, and paste it in. There is no access token to generate and nothing for your school to approve. Dated assignments then import on their own and stay right when an instructor moves a deadline, with reminders rescheduling themselves. The calendar feed carries dates rather than marks, so your grades stay yours to enter.",
     bullets: [
       'Connects with the private Calendar Feed link Canvas already gives you',
       'Dated assignments import automatically and stay up to date',
@@ -90,16 +92,36 @@ const SHOWCASE: ShowcaseItem[] = [
 ];
 
 const REMAINING_ICONS: Record<string, ComponentType<{ className?: string }>> = {
+  'lecture-recording': MicIcon,
+  'apple-watch': WatchIcon,
   'smart-plan': SparkleIcon,
-  flashcards: FlashcardIcon,
-  'focus-timer': TimerIcon,
   'ai-tutor': ChatIcon,
+  flashcards: FlashcardIcon,
   collaboration: PeopleIcon,
+  'focus-timer': TimerIcon,
 };
 
-const REMAINING = Object.keys(REMAINING_ICONS)
-  .map((slug) => getFeature(slug))
-  .filter((f): f is NonNullable<typeof f> => Boolean(f));
+/**
+ * Features covered by the screenshot showcase above, so they are not repeated
+ * as cards below.
+ */
+const SHOWCASED = new Set(['syllabus-scanner', 'canvas-sync', 'grade-tracking']);
+
+/**
+ * Every feature the showcase does not cover, in FEATURES order.
+ *
+ * This used to be the five PRO features and nothing else, under the heading
+ * "The rest of the toolkit, included with Semora Pro" — which was accurate for
+ * what it showed and quietly dropped two shipped features on the floor.
+ * Lecture Recording and Apple Watch are FREE, so a Pro-only grid could never
+ * hold them, and the showcase above does not cover them either. The result was
+ * that both appeared on this page as a chip and nowhere else, while the
+ * Spanish features page has given all ten a card since launch.
+ *
+ * Derived from FEATURES rather than hand-listed, so a feature added to the
+ * source of truth cannot go missing here again. It only needs an icon.
+ */
+const REMAINING = FEATURES.filter((f) => !SHOWCASED.has(f.slug) && REMAINING_ICONS[f.slug]);
 
 export default function FeaturesPage() {
   return (
@@ -132,7 +154,7 @@ export default function FeaturesPage() {
           </p>
           <div className={styles.heroActions}>
             <Link href={APP_URL} className={styles.primaryBtn}>
-              Get started free
+              Try it for free
             </Link>
             <Link href="/pricing" className={styles.secondaryBtn}>
               See pricing
@@ -157,7 +179,7 @@ export default function FeaturesPage() {
       <section className={styles.gridSection}>
         <div className={styles.gridHead}>
           <h2>Built for how you actually study</h2>
-          <p>The rest of the toolkit, included with Semora Pro.</p>
+          <p>The rest of the toolkit. Two of these are free, the rest come with Pro.</p>
         </div>
         <div className={styles.grid}>
           {REMAINING.map((feature, i) => {
@@ -168,6 +190,16 @@ export default function FeaturesPage() {
                   <div className={styles.iconWrap}>
                     <Icon />
                   </div>
+                  {/* Same Free/Pro badge the showcase above uses, so a reader
+                      does not have to open a card to find out which side of
+                      the line it sits on. */}
+                  <span
+                    className={`${styles.cardTier} ${
+                      feature.tier === 'pro' ? styles.tierPro : styles.tierFree
+                    }`}
+                  >
+                    {feature.tier === 'pro' ? 'Pro' : 'Free'}
+                  </span>
                   <h3 className={styles.cardTitle}>{feature.name}</h3>
                   <p className={styles.cardBody}>{feature.shortDescription}</p>
                 </Link>
@@ -184,11 +216,11 @@ export default function FeaturesPage() {
             <p>
               {PRICING.free.priceLabel} gets you scanning, deadlines, and grades. Pro is{' '}
               {PRICING.pro.monthly.priceLabel} or {PRICING.pro.annual.priceLabel} for Smart Plan,
-              Flashcards, Focus timer, an AI tutor, and more.
+              Flashcards, Focus Timer, an AI tutor, and more.
             </p>
             <div className={styles.bannerActions}>
               <Link href={APP_URL} className={styles.bannerLink}>
-                Get started free
+                Try it for free
               </Link>
               <Link href="/pricing" className={styles.bannerLinkSecondary}>
                 Compare Free vs Pro

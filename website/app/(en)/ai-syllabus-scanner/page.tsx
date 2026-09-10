@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { enAlternates } from '@/lib/hreflang';
+import { OG_IMAGE } from '@/lib/og';
 import styles from '@/components/Prose.module.css';
 import { Faq } from '@/components/Faq';
 import { JsonLd } from '@/components/JsonLd';
@@ -15,6 +16,7 @@ export const metadata: Metadata = {
   title: 'AI Syllabus Scanner: Photo or PDF to Calendar',
   description: 'Turn a syllabus photo, PDF or pasted text into deadlines you can review and save. Try Semora’s AI syllabus scanner free on iPhone, iPad and web.',
   alternates: enAlternates('/ai-syllabus-scanner'),
+  openGraph: { url: '/ai-syllabus-scanner', ...OG_IMAGE },
 };
 
 const FAQ = [

@@ -40,30 +40,33 @@
   flex-wrap: wrap;
 }
 
+/* Ink at rest, purple on hover — the site standard. This button used to be a
+   lighter weight with fixed padding and no transition at all, so it sat dead
+   under the cursor on one of the highest-intent pages on the site. It now
+   takes its shape from the shared file and behaves like every other CTA. */
 .primaryBtn {
+  composes: buttonBase from '../../../components/PrimaryButton.module.css';
   background: var(--ink);
   color: #fff;
-  text-decoration: none;
-  font-weight: 600;
-  padding: 14px 28px;
-  border-radius: 999px;
+  border: 1px solid var(--ink);
 }
 
 .primaryBtn:hover {
   background: var(--brand);
+  border-color: var(--brand);
+  transform: translateY(-1px);
 }
 
 .secondaryBtn {
+  composes: buttonBase from '../../../components/PrimaryButton.module.css';
+  background: #fff;
   color: var(--ink);
-  text-decoration: none;
-  font-weight: 600;
-  padding: 14px 24px;
-  border-radius: 999px;
   border: 1px solid var(--border);
 }
 
 .secondaryBtn:hover {
-  border-color: var(--brand);
+  border-color: var(--brand-100);
+  transform: translateY(-1px);
 }
 
 .section {

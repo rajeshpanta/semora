@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { enAlternates } from '@/lib/hreflang';
+import { OG_IMAGE } from '@/lib/og';
 import styles from '@/components/Prose.module.css';
 import { Faq } from '@/components/Faq';
 import { JsonLd } from '@/components/JsonLd';
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
   title: 'Free Canvas Deadline Tracker for College Students',
   description: 'Connect Canvas free to see assignments across your classes in Semora. Track deadlines, plan your week and check changes on iPhone, iPad and web.',
   alternates: enAlternates('/canvas-deadline-tracker'),
+  openGraph: { url: '/canvas-deadline-tracker', ...OG_IMAGE },
 };
 
 const FAQ = [

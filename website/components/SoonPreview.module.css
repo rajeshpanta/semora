@@ -18,7 +18,7 @@
   justify-content: center;
   border-radius: 14px;
   margin-bottom: 14px;
-  background: linear-gradient(160deg, #f1ecff 0%, #f7f4ff 48%, #faf9f5 100%);
+  background: linear-gradient(160deg, #f1ecff 0%, #f7f4ff 48%, var(--bg) 100%);
   border: 1px solid var(--border);
   overflow: hidden;
 }
@@ -32,7 +32,7 @@
   width: 74px;
   border-radius: 12px;
   padding: 4px;
-  background: #1c1b1f;
+  background: var(--ink);
   box-shadow: 0 10px 22px -12px rgba(28, 27, 31, 0.55);
 }
 
@@ -53,7 +53,7 @@
 
 .miniRow {
   border-radius: 4px;
-  background: #faf9f5;
+  background: var(--bg);
   border: 1px solid rgba(28, 27, 31, 0.08);
   padding: 4px 5px;
   margin-bottom: 4px;
@@ -83,7 +83,7 @@
   height: 74px;
   border-radius: 20px;
   padding: 5px;
-  background: #1c1b1f;
+  background: var(--ink);
   box-shadow: 0 10px 22px -12px rgba(28, 27, 31, 0.55);
 }
 
@@ -93,7 +93,7 @@
   height: 72px;
   border-radius: 50%;
   padding: 5px;
-  background: #1c1b1f;
+  background: var(--ink);
   box-shadow: 0 10px 22px -12px rgba(28, 27, 31, 0.55);
 }
 
@@ -101,7 +101,7 @@
   width: 100%;
   height: 100%;
   border-radius: inherit;
-  background: #0f0b1a;
+  background: var(--ink-deep);
   color: #fff;
   display: flex;
   flex-direction: column;
@@ -162,7 +162,7 @@
 .macSide {
   width: 30px;
   padding: 6px 4px;
-  background: #faf9f5;
+  background: var(--bg);
   border-right: 1px solid rgba(28, 27, 31, 0.07);
   display: flex;
   flex-direction: column;

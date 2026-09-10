@@ -1,0 +1,31 @@
+/*
+ * The shape of a hero button, in one place.
+ *
+ * WHY THIS FILE EXISTS. The primary call to action is the most important
+ * element on a marketing page, and recognition is what makes it get pressed: a
+ * visitor should know it is the button before they have read it. It was
+ * written out four separate times — homepage, Features, Compare, Download —
+ * and the copies had drifted. Features and Compare had ended up with a lesser
+ * button: a lighter weight, fixed padding that does not scale on a narrow
+ * phone, and no transition or hover lift at all, so it sat dead under the
+ * cursor while the same button on the homepage and Download responded. Those
+ * are the two highest-intent pages on the site, which is the worst place to
+ * have the CTA feel unfinished.
+ *
+ * DELIBERATELY NO COLOUR HERE. The homepage hero is purple at rest by design
+ * and every other page is ink; that difference is intentional and must be easy
+ * to keep. Holding only the shape means each page still declares its own
+ * colour, and the cascade order between this file and a page's own module can
+ * never decide which colour wins — there is nothing here to conflict with.
+ *
+ * Add a page with a hero button: compose from this, then set colour locally.
+ */
+.buttonBase {
+  display: inline-block;
+  text-decoration: none;
+  font-weight: 650;
+  font-size: clamp(14px, 2.2vw, 16px);
+  padding: 14px clamp(20px, 3.4vw, 30px);
+  border-radius: 999px;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}

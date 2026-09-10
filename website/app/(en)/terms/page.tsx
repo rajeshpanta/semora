@@ -7,7 +7,7 @@ import { ArticleShell } from '@/components/ArticleShell';
 
 export const metadata: Metadata = {
   title: 'Terms of Service',
-  description: 'The terms that govern your use of Semora.',
+  description: 'The terms that govern your use of Semora: the AI features, Pro subscriptions, billing and cancellation, and what happens to your coursework if you leave.',
   alternates: enAlternates('/terms'),
   openGraph: { url: '/terms', ...OG_IMAGE },
 };

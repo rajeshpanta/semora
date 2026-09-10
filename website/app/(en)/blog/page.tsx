@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { enAlternates } from '@/lib/hreflang';
+import { OG_IMAGE } from '@/lib/og';
 import { BLOG_POSTS, formatBlogDate } from '@/lib/blog';
 import { BlogIndex } from '@/components/BlogIndex';
 import { PageSections } from '@/components/PageSections';
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
   description:
     'College guides for turning syllabi into calendars, calculating weighted grades, improving Canvas reminders, planning finals, and studying effectively.',
   alternates: enAlternates('/blog'),
+  openGraph: { url: '/blog', ...OG_IMAGE },
 };
 
 export default function BlogIndexPage() {

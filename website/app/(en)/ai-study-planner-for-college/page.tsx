@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { enAlternates } from '@/lib/hreflang';
+import { OG_IMAGE } from '@/lib/og';
 import styles from '@/components/Prose.module.css';
 import { TierTable } from '@/components/TierTable';
 import { Faq } from '@/components/Faq';
@@ -17,6 +18,7 @@ export const metadata: Metadata = {
   description:
     'Semora is an AI study planner for college students: scan your syllabus and get tracked deadlines, calculated grades, and an adaptive study schedule.',
   alternates: enAlternates('/ai-study-planner-for-college'),
+  openGraph: { url: '/ai-study-planner-for-college', ...OG_IMAGE },
 };
 
 const FAQ = [
@@ -33,7 +35,7 @@ const FAQ = [
   {
     question: "Is Semora free, and what's included in Pro?",
     answer:
-      "Semora's free tier includes one AI action for the lifetime of the account—a syllabus scan, a lecture recording, or a document turned into notes—plus unlimited classes synced free from Canvas plus one course you add by hand within one semester, one semester total, full deadline and grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no scan cap, Smart Plan, the Workload dashboard, Grade Scale & Forecasting, calendar sync with .ics export, Flashcards, a Focus timer, an AI tutor, Academic Risk alerts, Progress Insights, and Share & Streaks.",
+      "Semora's free tier includes one AI action for the lifetime of the account—a syllabus scan, a lecture recording, or a document turned into notes—plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full deadline and grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no scan cap, Smart Plan, the Workload dashboard, Grade Scale & Forecasting, calendar sync with .ics export, Flashcards, a Focus Timer, an AI Tutor, Academic Risk alerts, Progress Insights, and Share & Streaks.",
   },
   {
     question: 'Does Semora sync with Canvas or other tools?',
@@ -68,7 +70,7 @@ const TABLE_ROWS = [
     pro: 'Spaced repetition, built from your material',
     proOnly: true,
   },
-  { feature: 'Focus timer', free: '—', pro: 'Pomodoro-style timer', proOnly: true },
+  { feature: 'Focus Timer', free: '—', pro: 'Pomodoro-style timer', proOnly: true },
   { feature: 'AI tutor', free: '—', pro: 'Chat that knows your syllabus', proOnly: true },
   {
     feature: 'Academic Risk alerts',

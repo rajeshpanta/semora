@@ -5,6 +5,8 @@ import {
   PRO_FEATURES,
   PRO_ANNUAL_MONTHLY_EQUIVALENT,
   PRO_ANNUAL_SAVINGS_PCT,
+  PRO_MONTHLY_AMOUNT,
+  PRO_ANNUAL_AMOUNT,
 } from '@/lib/semora-facts';
 import { FREE_FEATURES_ES, PRO_FEATURES_ES } from '@/lib/es-facts';
 import type { SiteLocale } from '@/lib/i18n';
@@ -40,8 +42,8 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         forever: 'Para siempre',
         perMonth: 'al mes',
         perYear: 'al año',
-        monthlyAmount: '$3.99',
-        annualAmount: '$19.99',
+        monthlyAmount: PRO_MONTHLY_AMOUNT,
+        annualAmount: PRO_ANNUAL_AMOUNT,
         noCard: 'Sin tarjeta de crédito.',
         monthlyNote: 'Facturación mensual. Cancela cuando quieras.',
         annualNote: `Equivale a ${PRO_ANNUAL_MONTHLY_EQUIVALENT} al mes. Cancela cuando quieras.`,
@@ -59,8 +61,8 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         forever: 'Forever',
         perMonth: 'per month',
         perYear: 'per year',
-        monthlyAmount: '$3.99',
-        annualAmount: '$19.99',
+        monthlyAmount: PRO_MONTHLY_AMOUNT,
+        annualAmount: PRO_ANNUAL_AMOUNT,
         noCard: 'No credit card required.',
         monthlyNote: 'Billed monthly. Cancel anytime.',
         annualNote: `Works out to ${PRO_ANNUAL_MONTHLY_EQUIVALENT} a month. Cancel anytime.`,
