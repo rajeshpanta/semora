@@ -256,3 +256,29 @@
   background: var(--teal);
   flex: none;
 }
+
+/* The way off this page for somebody who is not ready to buy. Quiet on
+   purpose: it must not compete with the three buttons above it, but a pricing
+   page with no exit sends an undecided reader to the back button. */
+.exploreNote {
+  text-align: center;
+  color: var(--ink-muted);
+  font-size: 13px;
+  max-width: 480px;
+  margin: 10px auto 0;
+}
+
+.exploreNote a {
+  color: var(--brand);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.exploreNote a:hover {
+  text-decoration: underline;
+}
+
+.exploreSep {
+  margin: 0 10px;
+  color: var(--ink3);
+}

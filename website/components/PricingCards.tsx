@@ -1,4 +1,5 @@
 import styles from './PricingCards.module.css';
+import Link from 'next/link';
 import { SignupButton } from './SignupButton';
 import {
   PRICING,
@@ -6,6 +7,7 @@ import {
   PRO_FEATURES,
   PRO_ANNUAL_MONTHLY_EQUIVALENT,
   PRO_ANNUAL_SAVINGS_PCT,
+  PRO_ANNUAL_SAVINGS_AMOUNT,
   PRO_MONTHLY_AMOUNT,
   PRO_ANNUAL_AMOUNT,
 } from '@/lib/semora-facts';
@@ -47,12 +49,20 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         annualAmount: PRO_ANNUAL_AMOUNT,
         noCard: 'Sin tarjeta de crédito.',
         monthlyNote: 'Facturación mensual. Cancela cuando quieras.',
-        annualNote: `Equivale a ${PRO_ANNUAL_MONTHLY_EQUIVALENT} al mes. Cancela cuando quieras.`,
+        annualNote: `Equivale a ${PRO_ANNUAL_MONTHLY_EQUIVALENT} al mes: ${PRO_ANNUAL_SAVINGS_AMOUNT} menos que pagar mes a mes.`,
         best: 'MEJOR PRECIO',
         save: `Ahorra ${PRO_ANNUAL_SAVINGS_PCT} %`,
         everything: 'Todo lo de Gratis, y además:',
+        // Lo primero que dice es lo que más miedo da: si dejas de pagar, no
+        // pierdes tu trabajo. Era la cuarta de doce preguntas frecuentes, muy
+        // por debajo del precio; aquí está donde se toma la decisión.
         purchase:
-          'Pro se compra con tarjeta en la web o en la app de iOS, y en ambos casos se aplica a toda tu cuenta.',
+          'Si dejas de pagar no desaparece nada: tus cursos, entregas y calificaciones siguen ahí y conservas todo lo del plan Gratis. Pro se compra con tarjeta en la web o en la app de iOS, y en ambos casos se aplica a toda tu cuenta.',
+        exploreLead: '¿Aún no lo tienes claro?',
+        exploreFeatures: 'Ver todas las funciones',
+        exploreCompare: 'Cómo se compara Semora',
+        featuresHref: '/es/funciones',
+        compareHref: '/es/comparar',
         ctaFree: 'Empezar gratis',
         ctaPro: 'Obtener Pro',
         // Exacto, no aspiracional: en la web, /paywall redirige a quien no ha
@@ -60,7 +70,7 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         // «Mejorar a Pro» en la pestaña Mi cuenta. Decirlo aquí evita que el
         // botón prometa un checkout que no existe todavía.
         ctaNote: 'Creas tu cuenta gratis y mejoras desde Mi cuenta.',
-        trust: ['Cancela cuando quieras', 'Pagos con Stripe', 'Una compra, todos tus dispositivos'],
+        trust: ['Cancela cuando quieras', 'Pagos con Stripe', 'iPhone, iPad y web en una cuenta'],
       }
     : {
         free: PRICING.free.name,
@@ -74,11 +84,21 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         annualAmount: PRO_ANNUAL_AMOUNT,
         noCard: 'No credit card required.',
         monthlyNote: 'Billed monthly. Cancel anytime.',
-        annualNote: `Works out to ${PRO_ANNUAL_MONTHLY_EQUIVALENT} a month. Cancel anytime.`,
+        annualNote: `Works out to ${PRO_ANNUAL_MONTHLY_EQUIVALENT} a month: ${PRO_ANNUAL_SAVINGS_AMOUNT} less than paying monthly.`,
         best: 'BEST VALUE',
         save: `Save ${PRO_ANNUAL_SAVINGS_PCT}%`,
         everything: 'Everything in Free, plus:',
-        purchase: PRICING.pro.purchaseNote,
+        // Leads with the thing students are most afraid of: that stopping
+        // payment costs them a semester of work. It does not. This was the
+        // fourth of twelve FAQ answers, thousands of words under the price —
+        // which is the wrong place for the sentence that removes the fear.
+        purchase:
+          `Stop paying and nothing disappears — your courses, deadlines and grades stay, and you keep everything on the free plan. ${PRICING.pro.purchaseNote}`,
+        exploreLead: 'Not sure yet?',
+        exploreFeatures: 'See every feature',
+        exploreCompare: 'How Semora compares',
+        featuresHref: '/features',
+        compareHref: '/compare',
         ctaFree: 'Try it for free',
         ctaPro: 'Get Pro',
         // Exact rather than aspirational. On web the app redirects a signed-out
@@ -87,7 +107,7 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         // then "Upgrade to Pro" in the Me tab. Saying so under the button costs
         // one line and stops the button promising a checkout that is not there.
         ctaNote: 'Create your free account, then upgrade from the Me tab.',
-        trust: ['Cancel anytime', 'Payments by Stripe', 'One purchase, every device'],
+        trust: ['Cancel anytime', 'Payments by Stripe', 'iPhone, iPad and web on one account'],
       };
 
   return (
@@ -165,6 +185,25 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         ))}
       </ul>
       <p className={styles.purchaseNote}>{copy.purchase}</p>
+
+      {/* /pricing linked to nothing — not one link to /features or /compare in
+          4,400 words. A reader who is not ready to buy had only the back
+          button. Deliberately NOT a competitor price table here: an obviously
+          self-flattering comparison on your own pricing page reads as a sales
+          pitch and costs the trust it is trying to buy. The comparison pages
+          already do the fair version, so point at those instead. */}
+      <p className={styles.exploreNote}>
+        {copy.exploreLead}{' '}
+        <Link href={copy.featuresHref}>{copy.exploreFeatures}</Link>
+        {/* A visible separator, because two links with only a space between
+            them render as one long underline-less phrase — on the phone this
+            read as a single link and hid the fact that there are two places
+            to go. */}
+        <span aria-hidden="true" className={styles.exploreSep}>
+          ·
+        </span>
+        <Link href={copy.compareHref}>{copy.exploreCompare}</Link>
+      </p>
     </div>
   );
 }

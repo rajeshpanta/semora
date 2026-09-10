@@ -109,6 +109,14 @@ export const PRO_MONTHLY_AMOUNT = `$${PRICING.pro.monthly.price.toFixed(2)}`;
 export const PRO_ANNUAL_AMOUNT = `$${PRICING.pro.annual.price.toFixed(2)}`;
 
 export const PRO_ANNUAL_MONTHLY_EQUIVALENT = `$${(PRICING.pro.annual.price / 12).toFixed(2)}`;
+// What annual actually saves, in money rather than a percentage.
+//
+// The percentage was the only saving on the page, and a percentage of a small
+// number reads as small. $27.89 is a figure a student recognises as money.
+// Both now appear: the badge keeps the percentage because it is punchy at a
+// glance, and the line under the price carries the dollars.
+export const PRO_ANNUAL_SAVINGS_AMOUNT = `$${(PRICING.pro.monthly.price * 12 - PRICING.pro.annual.price).toFixed(2)}`;
+
 export const PRO_ANNUAL_SAVINGS_PCT = Math.round(
   (1 - PRICING.pro.annual.price / 12 / PRICING.pro.monthly.price) * 100
 );
