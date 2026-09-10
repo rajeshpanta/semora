@@ -6,6 +6,10 @@ numbers rather than memory. Nothing in production was changed to produce this.
 Window: 90 days to 2026-09-10, `app_name='semora_site'`, automated traffic
 excluded. Sample sizes are small — treat every rate here as directional.
 
+No revenue or paid-conversion counts in here, and none belong. This repository
+is public: traffic and funnel shape are worth versioning next to the code they
+describe, purchase numbers are not. Keep those in the private notes.
+
 ## The page as it stood
 | property | value |
 |---|---|
