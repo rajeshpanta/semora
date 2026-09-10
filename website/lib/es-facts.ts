@@ -57,6 +57,16 @@ export interface SpanishFeatureFact {
   shortDescription: string;
   tier: 'free' | 'pro';
   /**
+   * Título para buscadores, cuando el nombre de la función se queda corto.
+   *
+   * name se ve en pantalla —la cuadrícula, el pie de página, el menú— y ahí
+   * lo correcto es que sea corto. Como <title> esos mismos nombres medían
+   * 11-29 caracteres frente a los 30-54 de sus equivalentes en inglés: las
+   * diez páginas de funciones en español tenían un título más pobre que su
+   * gemela inglesa. Esto separa las dos cosas.
+   */
+  metaTitle?: string;
+  /**
    * Descripción para buscadores, cuando la de la tarjeta se queda corta.
    *
    * shortDescription se ve en pantalla: en la cuadrícula de /es/funciones y en
@@ -74,6 +84,7 @@ export interface SpanishFeatureFact {
 export const FEATURES_ES: SpanishFeatureFact[] = [
   {
     slug: 'escaner-de-programas',
+    metaTitle: 'Escáner de programas con IA: foto, PDF o texto pegado',
     englishSlug: 'syllabus-scanner',
     name: 'Escaneo de programas con IA',
     shortDescription: 'Convierte una foto o un PDF en fechas de entrega, horarios y criterios de evaluación organizados.',
@@ -86,6 +97,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
   },
   {
     slug: 'sincronizacion-canvas',
+    metaTitle: 'Sincronizar Canvas: cómo conectarlo y qué esperar',
     englishSlug: 'canvas-sync',
     name: 'Sincronización con Canvas',
     shortDescription: 'Importa tus tareas de Canvas, Blackboard o Moodle y mantenlas al día cuando cambien.',
@@ -96,6 +108,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
   },
   {
     slug: 'calificaciones',
+    metaTitle: 'Calificaciones ponderadas y tu promedio, gratis',
     englishSlug: 'grade-tracking',
     name: 'Seguimiento de calificaciones',
     shortDescription: 'Conoce tu promedio ponderado y qué calificación necesitas en lo que queda del semestre.',
@@ -106,6 +119,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
   },
   {
     slug: 'grabacion-de-clases',
+    metaTitle: 'Grabar clases: transcripción, apuntes y tarjetas',
     englishSlug: 'lecture-recording',
     name: 'Grabación de clases',
     shortDescription: 'Graba una clase y recibe la transcripción, apuntes escritos, un cuestionario de práctica y un mazo de tarjetas.',
@@ -116,6 +130,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
   },
   {
     slug: 'apple-watch',
+    metaTitle: 'Apple Watch: lo que vence hoy, en tu muñeca',
     englishSlug: 'apple-watch',
     name: 'Apple Watch',
     shortDescription: 'Lo que vence hoy y lo que llevas atrasado, en la muñeca y en la esfera del reloj, y puedes marcar una tarea desde ahí.',
@@ -124,6 +139,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
   },
   {
     slug: 'plan-inteligente',
+    metaTitle: 'Plan inteligente: tu horario de estudio, hecho solo',
     englishSlug: 'smart-plan',
     name: 'Plan inteligente',
     shortDescription: 'Un horario de estudio que se reajusta cuando cambian tus fechas.',
@@ -134,6 +150,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
   },
   {
     slug: 'tutor-con-ia',
+    metaTitle: 'Tutor con IA anclado a tu programa y tus apuntes',
     englishSlug: 'ai-tutor',
     name: 'Tutor con IA',
     shortDescription: 'Respuestas, práctica y recomendaciones basadas en tus cursos reales.',
@@ -144,6 +161,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
   },
   {
     slug: 'tarjetas-de-estudio',
+    metaTitle: 'Tarjetas con IA y repetición espaciada',
     englishSlug: 'flashcards',
     name: 'Tarjetas de estudio',
     shortDescription: 'Genera tarjetas a partir de tus apuntes y repásalas con repetición espaciada.',
@@ -154,6 +172,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
   },
   {
     slug: 'espacios-de-curso',
+    metaTitle: 'Espacios de curso: comparte una materia con tu clase',
     englishSlug: 'collaboration',
     name: 'Espacios de curso',
     shortDescription: 'Comparte fechas y trabajos de grupo con tus compañeros en tiempo real.',
@@ -164,6 +183,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
   },
   {
     slug: 'temporizador-de-enfoque',
+    metaTitle: 'Temporizador de enfoque: bloques Pomodoro reales',
     englishSlug: 'focus-timer',
     name: 'Temporizador de enfoque',
     shortDescription: 'Sesiones Pomodoro que se adaptan a los espacios entre clases.',

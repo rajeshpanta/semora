@@ -1620,7 +1620,7 @@ const FEATURE_PAGES = FEATURES_ES.map((feature) => {
   const long = ES_FEATURE_CONTENT[feature.englishSlug];
   if (long) {
     return page(`/es/funciones/${feature.slug}`, `/features/${feature.englishSlug}`, 'feature', {
-      metaTitle: feature.name,
+      metaTitle: feature.metaTitle ?? feature.name,
       metaDescription: feature.metaDescription ?? feature.shortDescription,
       h1: feature.name,
       lede: long.lede,
@@ -1630,7 +1630,7 @@ const FEATURE_PAGES = FEATURES_ES.map((feature) => {
     }, feature);
   }
   return page(`/es/funciones/${feature.slug}`, `/features/${feature.englishSlug}`, 'feature', {
-    metaTitle: feature.name,
+    metaTitle: feature.metaTitle ?? feature.name,
     metaDescription: feature.metaDescription ?? feature.shortDescription,
     h1: feature.name,
     lede: feature.shortDescription,
