@@ -16,7 +16,14 @@ import { JsonLd } from '@/components/JsonLd';
 import { itemListSchema } from '@/lib/schema';
 
 export const metadata: Metadata = {
-  title: pageTitle('Compare Semora'),
+  // Was "Compare Semora" — fourteen characters, the thinnest title on the
+  // site, on a page earning one click from 68 impressions at position 7.3.
+  // It said the brand and the verb and nothing a searcher types.
+  //
+  // Leads with the category because that is what people search for; the brand
+  // and the number are what make it worth clicking. The count is derived, so
+  // adding or dropping a competitor cannot leave the title lying.
+  title: pageTitle(`Compare College Study Apps: Semora vs ${COMPETITORS.length} Alternatives`),
   description:
     'Honest, feature-by-feature comparisons of Semora against DormWay, Shovel, StudyFetch, Mindgrasp, Taskade, Studley AI, and myHomework Student Planner.',
   alternates: enAlternates('/compare'),

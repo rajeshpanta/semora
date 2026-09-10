@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { FeatureShowcase, type ShowcaseItem } from '@/components/FeatureShowcase';
 import { enAlternates } from '@/lib/hreflang';
+import { pageTitle } from '@/lib/title';
 import { OG_IMAGE } from '@/lib/og';
 import type { ComponentType } from 'react';
 import Image from 'next/image';
@@ -16,7 +17,11 @@ import { JsonLd } from '@/components/JsonLd';
 import { itemListSchema } from '@/lib/schema';
 
 export const metadata: Metadata = {
-  title: 'Features',
+  // Was "Features", rendering as "Features | Semora". Seventeen characters on
+  // the hub for ten feature pages. Names the three that carry the most search
+  // interest — the syllabus scanner page alone earns 172 impressions at
+  // position 5.6 — instead of a word that describes the template.
+  title: pageTitle('Semora Features: Syllabus Scanner, Canvas Sync, AI Tutor'),
   description:
     'Everything Semora does: AI syllabus scanning, grade tracking, Smart Plan, flashcards, focus timer, AI tutor, Course Spaces, and Canvas sync.',
   alternates: enAlternates('/features'),

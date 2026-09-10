@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { enAlternates } from '@/lib/hreflang';
+import { PRICING } from '@/lib/semora-facts';
+import { pageTitle } from '@/lib/title';
 import { OG_IMAGE } from '@/lib/og';
 import styles from './pricing.module.css';
 import { Faq } from '@/components/Faq';
@@ -13,7 +15,17 @@ import { Breadcrumb } from '@/components/Breadcrumb';
 import { RouteReporter } from '@/components/RouteReporter';
 
 export const metadata: Metadata = {
-  title: 'Pricing',
+  // Was "Pricing", which rendered as "Pricing | Semora" — sixteen characters
+  // on a page ranking at position 5.3 and converting a third as well as the
+  // homepage does from a worse position. A price in the title is one of the
+  // few things that reliably earns a click, because it answers the question
+  // the searcher typed before they have to click anything.
+  //
+  // Interpolated from PRICING rather than typed: the pricing card carried
+  // hardcoded figures for months while importing the constant that held them,
+  // and a title is a worse place to repeat that mistake because nobody looks
+  // at it.
+  title: pageTitle(`Semora Pricing: Free Forever, or Pro at ${PRICING.pro.monthly.priceLabel}`),
   description: "Semora is free to start. Pro is $3.99/month or $19.99/year, bought by card on the web or in the iOS app, and applied account-wide including web.",
   alternates: enAlternates('/pricing'),
   openGraph: { url: '/pricing', ...OG_IMAGE },

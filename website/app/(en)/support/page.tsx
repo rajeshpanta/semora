@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { enAlternates } from '@/lib/hreflang';
+import { pageTitle } from '@/lib/title';
 import styles from '@/components/Prose.module.css';
 import { Faq } from '@/components/Faq';
 import { JsonLd } from '@/components/JsonLd';
@@ -14,7 +15,11 @@ import { Breadcrumb } from '@/components/Breadcrumb';
 import heroStyles from './support.module.css';
 
 export const metadata: Metadata = {
-  title: 'Support',
+  // Was "Support". Sixteen characters on a page 14 of 16 visitors reach
+  // straight from search, which means the title IS the first impression.
+  // Naming the four things it actually answers turns it from a label into a
+  // reason to open.
+  title: pageTitle('Semora Support: Scanning, Grades, Billing and Contact'),
   description: "Answers to what students ask most about syllabus scanning, courses, grades, Canvas sync, Pro and billing, plus a form that reaches a real person.",
   alternates: enAlternates('/support'),
   openGraph: { url: '/support', ...OG_IMAGE },

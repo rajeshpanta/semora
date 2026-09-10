@@ -2,6 +2,11 @@ import type { ReactNode } from 'react';
 import type { NewPage } from './new-page-content';
 import type { PageLongForm } from './page-content';
 import { FEATURES_ES, type SpanishFeatureFact } from './es-facts';
+// Only the TITLE is interpolated. The body copy in this file still spells the
+// price out in 21 places, which is a real drift exposure — but a title is the
+// worst of them, because nobody proofreads metadata and a stale one would sit
+// in search results unnoticed.
+import { PRICING } from './semora-facts';
 import { ES_FEATURE_CONTENT } from './es-feature-content';
 
 export type SpanishPageKind =
@@ -104,7 +109,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
     ],
   }),
   page('/es/acerca-de', '/about', 'standard', {
-    metaTitle: 'Acerca de Semora',
+    metaTitle: 'Acerca de Semora: qué es, cómo funciona y quién lo hace',
     metaDescription: 'Descubre cómo Semora organiza programas de clase, entregas, calificaciones y tiempo de estudio para estudiantes universitarios.',
     h1: 'Menos tiempo organizando. Más tiempo aprendiendo.',
     lede: 'Semora nació para convertir uno de los documentos más importantes del primer día —el programa de cada materia— en un semestre fácil de entender y organizar.',
@@ -190,7 +195,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
     ],
   }),
   page('/es/precios', '/pricing', 'pricing', {
-    metaTitle: 'Precios de Semora',
+    metaTitle: `Precios de Semora: plan Gratis, o Pro por $${PRICING.pro.monthly.price} al mes`,
     metaDescription: 'Empieza gratis. Semora Pro cuesta $3.99 al mes o $19.99 al año e incluye planificación, IA, LMS y herramientas avanzadas.',
     h1: 'Precios simples para un semestre real',
     lede: 'Empieza gratis con lo esencial. Pásate a Pro cuando necesites cursos ilimitados, planificación adaptativa y herramientas de estudio avanzadas.',
@@ -272,7 +277,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
     ],
   }),
   page('/es/ayuda', '/support', 'support', {
-    metaTitle: 'Ayuda de Semora',
+    metaTitle: 'Ayuda de Semora: escaneos, notas, cobros y contacto',
     metaDescription: 'Respuestas en español sobre el escaneo de programas, cuentas, suscripciones, calificaciones y sincronización, además de contacto directo.',
     h1: '¿Cómo podemos ayudarte?',
     lede: 'Cuéntanos qué sucede o revisa las respuestas más comunes. Los mensajes llegan a semora365@gmail.com.',
@@ -446,7 +451,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
 
 const INDEX_AND_TOOL_PAGES: SpanishPageConfig[] = [
   page('/es/funciones', '/features', 'features-index', {
-    metaTitle: 'Funciones de Semora',
+    metaTitle: 'Funciones de Semora: escáner, Canvas, notas y Tutor con IA',
     metaDescription: 'Escaneo de programas con IA, calificaciones ponderadas, Plan inteligente, Tutor, tarjetas y Canvas. Lo que hace cada función y qué es gratis.',
     h1: 'Todo lo que necesitas para organizar el semestre',
     lede: 'Desde la primera foto del programa de una materia hasta la semana de finales: una sola cuenta para tus entregas, calificaciones y tiempo de estudio.',
