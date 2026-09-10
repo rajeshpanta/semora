@@ -1,4 +1,5 @@
 import styles from './PricingCards.module.css';
+import { SignupButton } from './SignupButton';
 import {
   PRICING,
   FREE_FEATURES,
@@ -52,6 +53,14 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         everything: 'Todo lo de Gratis, y además:',
         purchase:
           'Pro se compra con tarjeta en la web o en la app de iOS, y en ambos casos se aplica a toda tu cuenta.',
+        ctaFree: 'Empezar gratis',
+        ctaPro: 'Obtener Pro',
+        // Exacto, no aspiracional: en la web, /paywall redirige a quien no ha
+        // iniciado sesión, así que la ruta real es cuenta primero y después
+        // «Mejorar a Pro» en la pestaña Mi cuenta. Decirlo aquí evita que el
+        // botón prometa un checkout que no existe todavía.
+        ctaNote: 'Creas tu cuenta gratis y mejoras desde Mi cuenta.',
+        trust: ['Cancela cuando quieras', 'Pagos con Stripe', 'Una compra, todos tus dispositivos'],
       }
     : {
         free: PRICING.free.name,
@@ -70,6 +79,15 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         save: `Save ${PRO_ANNUAL_SAVINGS_PCT}%`,
         everything: 'Everything in Free, plus:',
         purchase: PRICING.pro.purchaseNote,
+        ctaFree: 'Try it for free',
+        ctaPro: 'Get Pro',
+        // Exact rather than aspirational. On web the app redirects a signed-out
+        // visitor away from /paywall (app/_layout.tsx), so a "Get Pro" button
+        // cannot deep-link to checkout today — the real route is account first,
+        // then "Upgrade to Pro" in the Me tab. Saying so under the button costs
+        // one line and stops the button promising a checkout that is not there.
+        ctaNote: 'Create your free account, then upgrade from the Me tab.',
+        trust: ['Cancel anytime', 'Payments by Stripe', 'One purchase, every device'],
       };
 
   return (
@@ -82,6 +100,9 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
             <span className={styles.period}> {copy.forever}</span>
           </p>
           <p className={styles.note}>{copy.noCard}</p>
+          <SignupButton className={styles.cta} placement="pricing-free">
+            {copy.ctaFree}
+          </SignupButton>
           <ul className={styles.list}>
             {freeFeatures.map((f) => (
               <li key={f}>{f}</li>
@@ -96,6 +117,13 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
             <span className={styles.period}> {copy.perMonth}</span>
           </p>
           <p className={styles.note}>{copy.monthlyNote}</p>
+          <SignupButton
+            className={`${styles.cta} ${styles.ctaPro}`}
+            placement="pricing-pro-monthly"
+          >
+            {copy.ctaPro}
+          </SignupButton>
+          <p className={styles.ctaNote}>{copy.ctaNote}</p>
           <p className={styles.listHead}>{copy.everything}</p>
           <ul className={styles.list}>
             {proFeatures.map((f) => (
@@ -115,6 +143,13 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
             <span className={styles.saveBadge}>{copy.save}</span>
           </p>
           <p className={styles.note}>{copy.annualNote}</p>
+          <SignupButton
+            className={`${styles.cta} ${styles.ctaPro}`}
+            placement="pricing-pro-annual"
+          >
+            {copy.ctaPro}
+          </SignupButton>
+          <p className={styles.ctaNote}>{copy.ctaNote}</p>
           <p className={styles.listHead}>{copy.everything}</p>
           <ul className={styles.list}>
             {proFeatures.map((f) => (
@@ -124,6 +159,11 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         </div>
       </div>
 
+      <ul className={styles.trustRow}>
+        {copy.trust.map((t) => (
+          <li key={t}>{t}</li>
+        ))}
+      </ul>
       <p className={styles.purchaseNote}>{copy.purchase}</p>
     </div>
   );

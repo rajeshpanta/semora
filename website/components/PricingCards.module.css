@@ -177,3 +177,82 @@
   max-width: 480px;
   margin: 0 auto;
 }
+
+/* ── The buy button, which this page did not have ──────────────────────────
+   Three cards shipped for months with no control on any of them. The only
+   CTA on /pricing sat 75% down the page, and both of the page's links went
+   to free signup, so a reader who decided on Pro Annual had nothing to press.
+   A pricing card without a button is a brochure.
+
+   Shape is composed from PrimaryButton.module.css, the same file the hero
+   buttons use, so the site has one button shape and this cannot drift into a
+   fifth variant. Colour is local, as it is everywhere else: ink on the free
+   card, brand on the Pro cards, because the Pro card is the one being
+   recommended and it already carries the brand border and gradient. */
+.cta {
+  composes: buttonBase from './PrimaryButton.module.css';
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin: 20px 0 4px;
+  background: var(--ink);
+  color: #fff;
+  border: 1px solid var(--ink);
+  cursor: pointer;
+}
+
+.cta:hover {
+  background: var(--brand);
+  border-color: var(--brand);
+  transform: translateY(-1px);
+}
+
+.ctaPro {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.ctaPro:hover {
+  background: #5637a4;
+  border-color: #5637a4;
+}
+
+/* Sits under the button, not under the whole grid: the reassurance a student
+   needs is the one they can read without moving their eyes off the control
+   they are about to press. */
+.ctaNote {
+  text-align: center;
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  margin: 0 0 4px;
+}
+
+/* Cancel anytime · Stripe · one purchase covers every device. The page said
+   all three already, in prose, thousands of words below the price. */
+.trustRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 20px;
+  margin: 0 auto 14px;
+  padding: 0;
+  list-style: none;
+  color: var(--ink2);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.trustRow li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.trustRow li::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--teal);
+  flex: none;
+}

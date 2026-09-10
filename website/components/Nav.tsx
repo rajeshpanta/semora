@@ -14,20 +14,26 @@ export const NAV_LINKS = [
   // deliberately a <button> (see the note in FeaturesMenu) so the hub page is
   // linked from the panel body and from the footer heading instead.
   //
-  // '/about' was previously footer-only. It is a hub page and the conventional
-  // sitelink slot, so it gets a plain crawlable link here.
-  // Pricing and About live in the footer, which keeps this bar short enough to
-  // read at a glance. Both are still crawlable from every page.
+  // PRICING TOOK BLOG'S SLOT (2026-09-10), and the numbers made the call.
+  // Over 90 days, Blog had a nav slot AND a footer link and drew 5 internal
+  // arrivals; Pricing had only the footer link and drew 6. A bar this short
+  // cannot carry a page that loses to one it outranks without a slot — and
+  // pricing is the last page somebody reads before they decide.
+  //
+  // Blog keeps its footer link, and individual posts keep the contextual links
+  // from the feature pages, so nothing became unreachable. About stays in the
+  // footer for the same reason this bar stays short: it has to be readable at
+  // a glance. Everything here is still crawlable from every page.
+  { href: '/pricing', label: 'Pricing' },
   { href: '/compare', label: 'Compare' },
-  { href: '/blog', label: 'Blog' },
   { href: '/support', label: 'Support' },
 ];
 
 export function Nav({ locale = 'en' }: { locale?: SiteLocale }) {
   const links = locale === 'es'
     ? [
+        { href: '/es/precios', label: 'Precios' },
         { href: '/es/comparar', label: 'Comparar' },
-        { href: '/es/blog', label: 'Blog' },
         { href: '/es/ayuda', label: 'Ayuda' },
       ]
     : NAV_LINKS;
