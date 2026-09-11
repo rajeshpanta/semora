@@ -1,4 +1,10 @@
 import Stripe from 'https://esm.sh/stripe@17.7.0?target=deno';
+// Dependency-free so its tests can run without node_modules — see the note in
+// that file. Re-exported below so existing importers of this module are
+// unaffected.
+import { priceIdList, resolvePlan } from './stripe-prices.ts';
+
+export { priceIdList, resolvePlan };
 
 /**
  * Stripe plumbing shared by the checkout, portal and webhook functions.
@@ -63,30 +69,6 @@ export function stripeClient(): Stripe {
 }
 
 export const cryptoProvider = Stripe.createSubtleCryptoProvider();
-
-/** Split a comma-separated env var into ids, dropping blanks and whitespace. */
-export function priceIdList(value: string): string[] {
-  return value
-    .split(',')
-    .map((id) => id.trim())
-    .filter((id) => id.length > 0);
-}
-
-/**
- * The pure half of planForPrice, so it can be tested without reaching into
- * Deno.env — the exported constants above are read once at module load, which
- * a test cannot change after import.
- */
-export function resolvePlan(
-  priceId: string | null | undefined,
-  monthlyIds: string[],
-  annualIds: string[],
-): 'monthly' | 'annual' | null {
-  if (!priceId) return null;
-  if (annualIds.includes(priceId)) return 'annual';
-  if (monthlyIds.includes(priceId)) return 'monthly';
-  return null;
-}
 
 /**
  * Map a Stripe price id back to the plan names the app already speaks.

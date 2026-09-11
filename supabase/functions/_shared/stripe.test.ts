@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
-import { priceIdList, resolvePlan } from './stripe.ts';
+import { priceIdList, resolvePlan } from './stripe-prices.ts';
 
 // The price ids in these tests are shaped like Stripe's but are invented.
 
