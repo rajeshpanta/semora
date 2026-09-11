@@ -45,7 +45,7 @@ current() {
 
 # The Watch app, its complication and the widget are @bacons/apple-targets
 # targets, and @expo/fingerprint does not know about them: measured here, an
-# edit to any targets/*.swift leaves the fingerprint completely unchanged, while
+# edit to any targets/*.swift (or .strings) leaves the fingerprint unchanged, while
 # the autolinked module under modules/ and each expo-target.config.js DO move
 # it. That is a hole. Two binaries whose Watch code differs would share a
 # runtime and accept each other's updates.
@@ -54,8 +54,13 @@ current() {
 # such changes are harmless — which is exactly why this needs to be visible
 # rather than assumed. Hashing those sources separately costs nothing and turns
 # a silent incompatibility into a question asked at release time.
+# .strings as well as .swift. The gallery copy a widget shows BEFORE it has any
+# data cannot travel from the phone — there is no payload at that moment — so it
+# lives in targets/*/??.lproj/Localizable.strings and ships inside the binary.
+# That makes it native surface by every definition this script cares about, and
+# @expo/fingerprint cannot see it either.
 target_sources() {
-  find targets -name '*.swift' -type f -print0 2>/dev/null \
+  find targets \( -name '*.swift' -o -name '*.strings' \) -type f -print0 2>/dev/null \
     | sort -z | xargs -0 shasum -a 256 2>/dev/null | shasum -a 256 | cut -d' ' -f1
 }
 
@@ -69,7 +74,7 @@ if [[ "${1:-}" == "--update" ]]; then
   cat > "$BASELINE" <<JSON
 {
   "//": "The native runtime fingerprint this project expects. Updated deliberately, by scripts/check-native-fingerprint.sh --update, whenever a native change is intended. If this file and the generated values disagree, something changed the native surface without anyone deciding to.",
-  "//targetSources": "A hash of every targets/*.swift file. @expo/fingerprint cannot see apple-targets sources, so the Watch app, its complication and the widget would otherwise be able to change without moving the runtime.",
+  "//targetSources": "A hash of every targets/*.swift and targets/*/*.lproj/*.strings file. @expo/fingerprint cannot see apple-targets sources, so the Watch app, its complication and the widget would otherwise be able to change without moving the runtime.",
   "platform": "$PLATFORM",
   "fingerprint": "$CURRENT",
   "targetSources": "$CURRENT_TARGETS",
@@ -79,7 +84,7 @@ if [[ "${1:-}" == "--update" ]]; then
 JSON
   echo "baseline updated"
   echo "  runtime fingerprint : $CURRENT"
-  echo "  targets/*.swift     : $CURRENT_TARGETS"
+  echo "  targets swift+strings: $CURRENT_TARGETS"
   echo "  (for $VERSION build $BUILD)"
   exit 0
 fi
@@ -96,7 +101,7 @@ RECORDED=$(node -p "const b=require('./$BASELINE'); b.recordedForVersion + ' bui
 
 if [[ "$CURRENT" == "$EXPECTED" && "$CURRENT_TARGETS" == "$EXPECTED_TARGETS" ]]; then
   echo "native runtime unchanged: $CURRENT"
-  echo "  targets/*.swift unchanged too"
+  echo "  targets/*.swift and *.strings unchanged too"
   echo "  (baseline recorded for $RECORDED)"
   echo "  An OTA published now will reach binaries built from this native state."
   exit 0
@@ -108,7 +113,7 @@ if [[ "$CURRENT" == "$EXPECTED" && "$CURRENT_TARGETS" != "$EXPECTED_TARGETS" ]];
 WATCH / WIDGET NATIVE CODE CHANGED, BUT THE RUNTIME DID NOT
 
   runtime fingerprint  $CURRENT   (unchanged)
-  targets/*.swift      $EXPECTED_TARGETS
+  targets swift+strings $EXPECTED_TARGETS
                     →  $CURRENT_TARGETS
 
 @expo/fingerprint cannot see apple-targets sources, so this change will NOT

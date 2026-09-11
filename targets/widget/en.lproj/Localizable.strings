@@ -1,0 +1,20 @@
+/* The widget gallery — what somebody reads while choosing a widget to add.
+   iOS renders that gallery before the widget has any data, so these cannot
+   travel from the phone the way every other word in this extension does.
+   They resolve here instead.
+
+   Keys are the English text, because that is what .configurationDisplayName
+   and .description receive. WidgetKit declares its plain-String overloads
+   @_disfavoredOverload, so a literal binds to LocalizedStringKey and is looked
+   up in this bundle — verified against the SDK interface, not assumed.
+
+   This English file is not strictly required: a missing key resolves to the
+   key, which is the English. It ships anyway so the bundle declares BOTH
+   localizations. With only es.lproj present and no CFBundleDevelopmentRegion
+   in Info.plist, Spanish is the bundle's sole localization and an English
+   reader can be resolved into it. */
+
+"Up Next" = "Up Next";
+"Your next deadlines at a glance." = "Your next deadlines at a glance.";
+"Due This Week" = "Due This Week";
+"Everything due in the next 7 days, plus your streak." = "Everything due in the next 7 days, plus your streak.";

@@ -96,9 +96,15 @@ const STRINGS: Record<string, { en: string; es: string }> = {
   // ── Complication ──────────────────────────────────────────────────────────
   'complication.allCaught': { en: 'All caught up', es: 'Todo al día' },
   'complication.nothingToday': { en: 'Nothing due today', es: 'Hoy no vence nada' },
-  'complication.signIn': { en: 'Sign in on iPhone', es: 'Inicia sesión en el iPhone' },
+  'complication.signIn': { en: 'Sign in on iPhone', es: 'Inicia sesión en tu iPhone' },
   'complication.late': { en: 'Late', es: 'Atrasada' },
-  'complication.lateLower': { en: 'late', es: 'atrasadas' },
+  // These two follow a NUMBER — "3 late", "1 overdue · 2 today" — and the
+  // number can be one. English does not care; Spanish does, and 'atrasadas'
+  // after a 1 is simply wrong. 'de retraso' agrees with nothing, so it reads
+  // correctly at every count. The tile labels (watch.overdue, widget.overdue)
+  // stay plural: a word sitting UNDER a figure reads as a category heading,
+  // not as a sentence, and 'Atrasadas' is the idiomatic heading there.
+  'complication.lateLower': { en: 'late', es: 'de retraso' },
   // Singular and plural kept as whole sentences rather than assembled from
   // parts. Spanish agrees the noun AND the adjective, so "{n} tarea atrasada"
   // and "{n} tareas atrasadas" differ in two places — a shared stem plus an "s"
@@ -109,12 +115,12 @@ const STRINGS: Record<string, { en: string; es: string }> = {
   'count.overdue.many': { en: '{n} tasks overdue', es: '{n} tareas atrasadas' },
   'count.dueToday.one': { en: '{n} task due today', es: '{n} tarea vence hoy' },
   'count.dueToday.many': { en: '{n} tasks due today', es: '{n} tareas vencen hoy' },
-  'complication.overdueLower': { en: 'overdue', es: 'atrasadas' },
+  'complication.overdueLower': { en: 'overdue', es: 'de retraso' },
   'complication.todayLower': { en: 'today', es: 'hoy' },
   'complication.stale': { en: 'Not synced recently', es: 'Sin sincronizar recientemente' },
   'complication.empty': { en: 'Nothing due or overdue', es: 'Nada pendiente ni atrasado' },
-  'complication.openPhone': { en: 'Open Semora on iPhone', es: 'Abre Semora en el iPhone' },
-  'complication.inlineSignedOut': { en: 'Semora · open on iPhone', es: 'Semora · ábrelo en el iPhone' },
+  'complication.openPhone': { en: 'Open Semora on iPhone', es: 'Abre Semora en tu iPhone' },
+  'complication.inlineSignedOut': { en: 'Semora · open on iPhone', es: 'Semora · ábrelo en tu iPhone' },
 
   // ── Home-screen widget ────────────────────────────────────────────────────
   'widget.overdue': { en: 'Overdue', es: 'Atrasadas' },
@@ -123,9 +129,16 @@ const STRINGS: Record<string, { en: string; es: string }> = {
   'widget.upNext': { en: 'Up Next', es: 'Lo siguiente' },
   'widget.thisWeek': { en: 'This week', es: 'Esta semana' },
   'widget.dueThisWeek': { en: 'Due This Week', es: 'Vence esta semana' },
-  'widget.allClear': { en: 'All clear', es: 'Todo despejado' },
-  'widget.weekClear': { en: "Week's clear", es: 'Semana despejada' },
+  // 'despejado' is what you say about the sky, not about coursework.
+  'widget.allClear': { en: 'All clear', es: 'Todo al día' },
+  'widget.weekClear': { en: "Week's clear", es: 'Semana libre' },
   'widget.nothingToday': { en: 'Nothing due today', es: 'Hoy no vence nada' },
+  // The count beside the "Due This Week" heading, shown when there is no streak
+  // badge to show instead. It was a Swift literal reading "3 due" — English, on
+  // a Spanish Home Screen. Two entries because Spanish agrees the noun and
+  // English does not, which is why the pair looks redundant on the left.
+  'widget.dueCount.one': { en: '{n} due', es: '{n} pendiente' },
+  'widget.dueCount.many': { en: '{n} due', es: '{n} pendientes' },
   'widget.nothingThisWeek': {
     en: 'Nothing due in the next 7 days',
     es: 'No vence nada en los próximos 7 días',

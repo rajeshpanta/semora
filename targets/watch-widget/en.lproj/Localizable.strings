@@ -1,0 +1,6 @@
+/* The complication gallery. Same reasoning as targets/widget/en.lproj.
+
+   "Semora" is deliberately absent: it is the app's name, it is identical in
+   both languages, and a key with no entry resolves to itself. */
+
+"What's due today, what's overdue, and what's next." = "What's due today, what's overdue, and what's next.";

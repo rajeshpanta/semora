@@ -112,7 +112,15 @@ func decodeComplicationSnapshot(from context: [String: Any]) -> ComplicationSnap
     nextTitle: next?["title"] as? String,
     nextDueDate: next?["dueDate"] as? String,
     nextBucket: next?["bucket"] as? String,
-    updatedAt: ISO8601DateFormatter().date(from: raw)
+    updatedAt: ISO8601DateFormatter().date(from: raw),
+    // The words, which this decoder used to drop on the floor. Everything else
+    // here was unpacked and `strings` was left on its nil default, so every
+    // lookup below fell through to its compiled English fallback and the face
+    // stayed English no matter what language the phone was in — while the
+    // translations sat unread in the same dictionary, one key away. The Watch
+    // app stores the WHOLE payload under the shared key, so nothing new has to
+    // be sent for this to work.
+    strings: ComplicationStrings(context["strings"] as? [String: String])
   )
 }
 

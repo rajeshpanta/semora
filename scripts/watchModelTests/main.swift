@@ -348,6 +348,24 @@ expect(faceView.overdueCount, appView.overdueCount, "both decoders agree on over
 expect(faceView.nextTitle ?? "-", appView.tasks[0].title, "the face leads with the app's first row")
 expect(faceView.nextBucket ?? "-", "overdue", "and keeps its bucket")
 
+// The WORDS have to survive the trip too, and this is the check that did not
+// exist. The decoder above unpacked every number and then left `strings` on its
+// nil default, so a Spanish phone produced an English watch face while the
+// translations sat unread in the very same dictionary. Nothing failed: every
+// lookup found its compiled English fallback and looked deliberate.
+//
+// Sentinels rather than real Spanish on purpose. What is under test is that the
+// value ARRIVES; pinning actual copy here would make every wording edit in
+// lib/surfaceStrings.ts fail a Swift test for no reason.
+let localizedFace = decodeComplicationSnapshot(from: shared.merging(
+  ["strings": ["complication.overdueLower": "SENTINEL-OVERDUE",
+               "complication.todayLower": "SENTINEL-TODAY"]],
+  uniquingKeysWith: { _, incoming in incoming }))!
+expect(complicationHeadline(localizedFace), "3 SENTINEL-OVERDUE · 2 SENTINEL-TODAY",
+       "the face speaks the phone's language")
+expect(complicationHeadline(faceView), "3 overdue · 2 today",
+       "and still falls back to English when the phone sends no words")
+
 expect(decodeComplicationSnapshot(from: ["type": "semora_watch_test"]) == nil, true, "diagnostic rejected")
 expect(decodeComplicationSnapshot(from: [:]) == nil, true, "empty rejected")
 

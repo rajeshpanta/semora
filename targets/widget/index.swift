@@ -298,7 +298,11 @@ struct MediumView: View {
     if let p = payload, !p.items.isEmpty {
       VStack(alignment: .leading, spacing: 6) {
         HStack {
-          Text("UP NEXT")
+          // Was Text("UP NEXT"). SmallView, two structs up, already looked this
+          // exact phrase up and uppercased it; this one printed it. So the small
+          // widget said LO SIGUIENTE to a Spanish student and the medium one said
+          // UP NEXT, on the same Home Screen.
+          Text(strings("widget.upNext", "Up Next").uppercased())
             .font(.system(size: 9, weight: .heavy))
             .foregroundStyle(Color.brand)
             .kerning(1)
@@ -472,7 +476,12 @@ struct DueMediumView: View {
           if streak > 0 {
             StreakBadge(streak: streak)
           } else {
-            Text("\(items.count) due")
+            // Written out per number rather than assembled: Spanish agrees the
+            // noun, so "1 pendiente" and "3 pendientes" differ where "1 due" and
+            // "3 due" do not.
+            Text(items.count == 1
+                 ? strings("widget.dueCount.one", "{n} due", n: items.count)
+                 : strings("widget.dueCount.many", "{n} due", n: items.count))
               .font(.system(size: 9, weight: .bold))
               .foregroundStyle(.secondary)
           }
