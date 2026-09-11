@@ -33,7 +33,7 @@ if not d.get('charges_enabled'):
     print('  REFUSING: Stripe has not enabled charges yet. Finish activation first.'); sys.exit(1)
 "
 
-echo "==> creating product + prices (\$3.99/mo, \$19.99/yr)"
+echo "==> creating product + prices (\$4.99/mo, \$29.99/yr)"
 PROD=$(api https://api.stripe.com/v1/products \
   -d name="Semora Pro" \
   -d description="Unlimited syllabus scans, courses and lectures, plus Smart Plan, flashcards, the AI tutor, grade forecasting and calendar sync." \

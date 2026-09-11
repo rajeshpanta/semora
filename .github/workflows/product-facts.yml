@@ -50,6 +50,9 @@ on:
       # The App Store listing copy is checked now too.
       - 'store.config.json'
       - 'app.json'
+      # Served at semoraai.com/llms.txt, and the SEO archive behind it.
+      - 'website/public/llms.txt'
+      - 'marketing-pages/**'
       - 'scripts/check-product-facts.mjs'
       - '.github/workflows/product-facts.yml'
   pull_request:
@@ -70,6 +73,9 @@ on:
       # The App Store listing copy is checked now too.
       - 'store.config.json'
       - 'app.json'
+      # Served at semoraai.com/llms.txt, and the SEO archive behind it.
+      - 'website/public/llms.txt'
+      - 'marketing-pages/**'
       - 'scripts/check-product-facts.mjs'
       - '.github/workflows/product-facts.yml'
   workflow_dispatch:

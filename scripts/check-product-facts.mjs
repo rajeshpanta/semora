@@ -352,14 +352,24 @@ function sourceFiles(dir) {
     if (entry.isDirectory()) {
       if (['node_modules', '.next', '.expo', 'dist', 'ios', 'android'].includes(entry.name)) continue;
       out.push(...sourceFiles(rel));
-    } else if (/\.(ts|tsx|mdx)$/.test(entry.name)) {
+    } else if (/\.(ts|tsx|mdx|html|txt)$/.test(entry.name)) {
       out.push(rel);
     }
   }
   return out;
 }
 
-const PRICED_FILES = [...sourceFiles('website/app'), ...sourceFiles('website/lib')];
+// Plus the two price surfaces that are not TypeScript and were missed by
+// exactly the blind spot this walk exists to close: llms.txt is SERVED at
+// semoraai.com/llms.txt and sat on $3.99/$19.99 for a day after every rendered
+// page had moved, and marketing-pages/ is the SEO archive kept current so a
+// future port cannot reimport retired facts.
+const PRICED_FILES = [
+  ...sourceFiles('website/app'),
+  ...sourceFiles('website/lib'),
+  'website/public/llms.txt',
+  ...sourceFiles('marketing-pages'),
+];
 
 for (const file of PRICED_FILES) {
   const text = read(file);

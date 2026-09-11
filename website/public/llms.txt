@@ -15,7 +15,7 @@ Semora runs on iPhone, iPad, and the web on one account, and the three stay in s
 - Same-day reminders
 - Course Spaces: join a shared course a classmate invites you to (hosting your own is Pro)
 
-## Pro features ($3.99/month or $19.99/year, purchased by card on the web or in the iOS app, applies account-wide including web)
+## Pro features ($4.99/month or $29.99/year, purchased by card on the web or in the iOS app, applies account-wide including web)
 
 - Unlimited courses you add by hand, unlimited semesters, and no cap on AI actions (a fair-use daily ceiling applies)
 - Blackboard and Moodle assignment import (Canvas is free for everyone — see above). Blackboard and Moodle use a user-generated access token and may be disabled or prohibited by an institution
