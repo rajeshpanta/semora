@@ -182,7 +182,16 @@ func complicationDetail(_ snapshot: ComplicationSnapshot, now: Date, calendar: C
 func complicationDueLabel(dueDate: String, now: Date, calendar: Calendar = .current, strings: ComplicationStrings = ComplicationStrings(nil)) -> String {
   let parser = DateFormatter()
   parser.dateFormat = "yyyy-MM-dd"
-  parser.calendar = calendar
+  // en_US_POSIX plus an explicit Gregorian calendar — Apple's rule for parsing
+  // a FIXED format. Without it the formatter reads the year in whatever
+  // calendar the device is set to, so "2026-08-31" became 1483 on a Buddhist
+  // device and 4044 on a Japanese one: every deadline centuries out, with no
+  // error anywhere. timeZone still comes from the caller's calendar, which is
+  // what keeps parsing and formatting on the same day. The DISPLAY formatters
+  // below stay unpinned on purpose — they are what make a weekday read 'lun'
+  // on a Spanish watch.
+  parser.locale = Locale(identifier: "en_US_POSIX")
+  parser.calendar = Calendar(identifier: .gregorian)
   parser.timeZone = calendar.timeZone
   guard let due = parser.date(from: dueDate) else { return dueDate }
 

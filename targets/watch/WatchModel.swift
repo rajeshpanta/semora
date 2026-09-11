@@ -228,7 +228,16 @@ func watchDueLabel(
 ) -> String {
     let formatter = DateFormatter()
     formatter.dateFormat = "yyyy-MM-dd"
-    formatter.calendar = calendar
+    // en_US_POSIX plus an explicit Gregorian calendar — Apple's rule for parsing
+    // a FIXED format. Without it the formatter reads the year in whatever
+    // calendar the device is set to, so "2026-08-31" became 1483 on a Buddhist
+    // device and 4044 on a Japanese one: every deadline centuries out, with no
+    // error anywhere. timeZone still comes from the caller's calendar, which is
+    // what keeps parsing and formatting on the same day. The DISPLAY formatters
+    // below stay unpinned on purpose — they are what make a weekday read 'lun'
+    // on a Spanish watch.
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.calendar = Calendar(identifier: .gregorian)
     formatter.timeZone = calendar.timeZone
     guard let due = formatter.date(from: dueDate) else { return dueDate }
 

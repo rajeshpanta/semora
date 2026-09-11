@@ -3,7 +3,7 @@
   "//targetSources": "A hash of every targets/*.swift and targets/*/*.lproj/*.strings file. @expo/fingerprint cannot see apple-targets sources, so the Watch app, its complication and the widget would otherwise be able to change without moving the runtime.",
   "platform": "ios",
   "fingerprint": "e88b984571db9c0ff2cf0b48850881cd84bc0e09",
-  "targetSources": "b07484700451ac18baad85b353dbf132b48cdfbee89a777bccd094dac684f3db",
+  "targetSources": "2a33fb6faf8ebc2b717cb6e8f1b0aa9b21407f169fc40ba2573445a4b9e0cdfa",
   "recordedForVersion": "1.13",
   "recordedForBuild": "57"
 }

@@ -366,6 +366,31 @@ expect(complicationHeadline(localizedFace), "3 SENTINEL-OVERDUE · 2 SENTINEL-TO
 expect(complicationHeadline(faceView), "3 overdue · 2 today",
        "and still falls back to English when the phone sends no words")
 
+// A device whose CALENDAR preference is not Gregorian. Measured, not assumed:
+// a DateFormatter parsing "yyyy-MM-dd" under Calendar.current reads the year in
+// that calendar's era, so "2026-08-31" becomes 1483 on a Buddhist device and
+// 4044 on a Japanese one. Every deadline then reads as centuries overdue or
+// centuries away, on the watch, the face and the widget alike. Apple's rule for
+// a FIXED format is en_US_POSIX plus an explicit calendar; display formatters
+// stay on the device's, which is what keeps weekday names translated.
+do {
+  let gregorian = Calendar(identifier: .gregorian)
+  let todayStr = { () -> String in
+    let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"
+    f.locale = Locale(identifier: "en_US_POSIX"); f.calendar = gregorian
+    f.timeZone = TimeZone.current
+    return f.string(from: Date())
+  }()
+  for name in ["buddhist", "japanese"] {
+    var cal = Calendar(identifier: name == "buddhist" ? .buddhist : .japanese)
+    cal.timeZone = TimeZone.current
+    expect(watchDueLabel(dueDate: todayStr, dueTime: nil, now: Date(), calendar: cal),
+           "Today", "watch reads today as today under the \(name) calendar")
+    expect(complicationDueLabel(dueDate: todayStr, now: Date(), calendar: cal),
+           "Today", "face reads today as today under the \(name) calendar")
+  }
+}
+
 expect(decodeComplicationSnapshot(from: ["type": "semora_watch_test"]) == nil, true, "diagnostic rejected")
 expect(decodeComplicationSnapshot(from: [:]) == nil, true, "empty rejected")
 

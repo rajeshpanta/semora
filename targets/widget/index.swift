@@ -23,6 +23,10 @@ enum DueLabel {
   static let formatter: DateFormatter = {
     let f = DateFormatter()
     f.dateFormat = "yyyy-MM-dd"
+    // Same defect as targets/watch/WatchModel.swift, one step worse: this
+    // one set no calendar at all, so it inherited the device's.
+    f.locale = Locale(identifier: "en_US_POSIX")
+    f.calendar = Calendar(identifier: .gregorian)
     f.timeZone = TimeZone.current
     return f
   }()
