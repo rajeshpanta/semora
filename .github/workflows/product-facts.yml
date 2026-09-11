@@ -35,15 +35,27 @@ on:
     branches: [main]
     paths:
       - 'website/lib/**'
+      # The price check walks website/app as well — blog posts and the keyword
+      # landers quote prices too, and without this a stale price edited in an
+      # .mdx file would never trigger the guard that exists to catch it.
+      - 'website/app/**'
       - 'lib/syllabus.ts'
       - 'lib/studyPlanner.ts'
+      - 'supabase/functions/_shared/stripe.ts'
+      - 'supabase/functions/_shared/stripe.test.ts'
       - 'scripts/check-product-facts.mjs'
       - '.github/workflows/product-facts.yml'
   pull_request:
     paths:
       - 'website/lib/**'
+      # The price check walks website/app as well — blog posts and the keyword
+      # landers quote prices too, and without this a stale price edited in an
+      # .mdx file would never trigger the guard that exists to catch it.
+      - 'website/app/**'
       - 'lib/syllabus.ts'
       - 'lib/studyPlanner.ts'
+      - 'supabase/functions/_shared/stripe.ts'
+      - 'supabase/functions/_shared/stripe.test.ts'
       - 'scripts/check-product-facts.mjs'
       - '.github/workflows/product-facts.yml'
   workflow_dispatch:
@@ -63,3 +75,13 @@ jobs:
           node-version: '24'
       - name: Check the site against the app's constants
         run: node scripts/check-product-facts.mjs
+
+      # planForPrice must keep resolving prices we no longer sell, or a
+      # grandfathered subscriber's renewal writes a null plan and the app
+      # shows a paying customer the upgrade rows. Deno is used because the
+      # edge functions are Deno, not Node.
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Stripe price mapping still honours legacy prices
+        run: deno test --allow-env supabase/functions/_shared/stripe.test.ts

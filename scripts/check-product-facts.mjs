@@ -16,7 +16,7 @@
  * Run:  node scripts/check-product-facts.mjs
  * Exit: 0 = consistent, 1 = drift found.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -270,6 +270,109 @@ for (const file of REGISTRIES) {
   }
 }
 
+
+// ─── Prices: the site may not quote a price the constant does not hold ───
+//
+// WHY. semora-facts.ts is the single source of truth for price, and exactly
+// eight files read it. The other ~296 price mentions are typed out by hand
+// across the long-form registries and the blog. Change PRICING and the
+// pricing cards update instantly while three hundred sentences keep quoting
+// the old number — a split the site cannot see and nobody proofreads.
+//
+// THE TRAP THIS AVOIDS. A blind find-and-replace is not safe here: Shovel's
+// own pricing page displays $19.99 next to $9.79, and the comparison pages
+// and two blog posts quote that faithfully. Rewriting it would turn honest
+// competitor research into a false claim, on the pages whose whole value is
+// being trustworthy about competitors. So a price pair is only checked when
+// no competitor is named near it.
+const COMPETITORS = /DormWay|Shovel|StudyFetch|Mindgrasp|Taskade|Studley|myHomework/i;
+
+// A competitor's own prices, as a PAIR. The name-window above catches most
+// quotes, but comparison tables put the brand in one cell and the price in
+// another, further apart than any sane window. Individual numbers are useless
+// as an allowlist — Shovel lists $19.99 and myHomework $4.99, which collide
+// with Semora's own prices past and future — so these are matched as pairs,
+// which are unambiguous. Add a row when a competitor's quoted pair changes.
+const COMPETITOR_PAIRS = new Set([
+  '12.88|97.76', // Studley AI, monthly and its yearly equivalent
+  '9.79|39.00', // Shovel, its own pricing page
+  '33.00|16.00', // Shovel, its buy page, which disagrees with the above
+]);
+
+function priceFromFacts(planName) {
+  const m = facts.match(new RegExp(`${planName}: \\{ price: ([\\d.]+)`));
+  if (!m) throw new Error(`could not read PRICING.pro.${planName}.price from semora-facts.ts`);
+  return Number(m[1]);
+}
+
+const priceMonthly = priceFromFacts('monthly');
+const priceAnnual = priceFromFacts('annual');
+const money = (n) => n.toFixed(2);
+// What the annual plan works out to per month. Stated by hand in the
+// registries ("about $1.67 a month on the annual plan") and equally stale
+// after a price change.
+const annualPerMonth = money(priceAnnual / 12);
+
+// "$3.99/month or $19.99/year", "$3.99 a month or $19.99 a year",
+// "$3.99 al mes o $19.99 al año", and the comma decimals used in Spanish.
+const PRICE_PAIR =
+  /\$?(\d+[.,]\d{2})\s*\$?\s*(?:\/|\s+(?:a|per|al)\s+)\s*(?:month|mes)[a-z]*\s*(?:or|o|,)\s*\$?(\d+[.,]\d{2})\s*\$?\s*(?:\/|\s+(?:a|per|al)\s+)\s*(?:year|año)/gi;
+
+// EVERY source file under the site, found by walking rather than listed by
+// hand. A hand-kept list is precisely how this file's earlier blind spots
+// happened — see the note above about the four-course claim surviving sixteen
+// days because mustNotSay only ever opened one file. Prices live in the blog
+// posts and the keyword landers too, and a list would have missed nine of
+// them on the day it was written.
+function sourceFiles(dir) {
+  const out = [];
+  for (const entry of readdirSync(resolve(root, dir), { withFileTypes: true })) {
+    const rel = `${dir}/${entry.name}`;
+    if (entry.isDirectory()) {
+      if (entry.name === 'node_modules' || entry.name === '.next') continue;
+      out.push(...sourceFiles(rel));
+    } else if (/\.(ts|tsx|mdx)$/.test(entry.name)) {
+      out.push(rel);
+    }
+  }
+  return out;
+}
+
+const PRICED_FILES = [...sourceFiles('website/app'), ...sourceFiles('website/lib')];
+
+for (const file of PRICED_FILES) {
+  const text = read(file);
+  for (const m of text.matchAll(PRICE_PAIR)) {
+    const window = text.slice(Math.max(0, m.index - 220), m.index + 220);
+    if (COMPETITORS.test(window)) continue; // somebody else's price, quoted honestly
+    const got = [m[1], m[2]].map((v) => v.replace(',', '.'));
+    if (COMPETITOR_PAIRS.has(got.join('|'))) continue;
+    if (got[0] === money(priceMonthly) && got[1] === money(priceAnnual)) continue;
+    failures.push(
+      `${file} quotes $${got[0]}/month or $${got[1]}/year — PRICING says ` +
+        `$${money(priceMonthly)} and $${money(priceAnnual)}. ` +
+        'Update the copy, or the constant, so the site and the checkout agree.',
+    );
+  }
+}
+
+// The per-month figure for the annual plan, wherever it is written by hand.
+const PER_MONTH_CLAIM = /\$(\d+[.,]\d{2})\s*(?:a|per|al)\s*(?:month|mes)[^.]{0,40}annual|annual[^.]{0,40}\$(\d+[.,]\d{2})\s*(?:a|per)\s*month/gi;
+for (const file of PRICED_FILES) {
+  const text = read(file);
+  for (const m of text.matchAll(PER_MONTH_CLAIM)) {
+    const window = text.slice(Math.max(0, m.index - 220), m.index + 220);
+    if (COMPETITORS.test(window)) continue;
+    const got = (m[1] ?? m[2]).replace(',', '.');
+    if (got === annualPerMonth) continue;
+    failures.push(
+      `${file} says the annual plan is $${got} a month — $${priceAnnual} over 12 is ` +
+        `$${annualPerMonth}. Recompute it rather than retyping it.`,
+    );
+  }
+}
+
+
 if (failures.length) {
   console.error('product-facts drift — the site claims something the app does not do:\n');
   for (const f of failures) console.error(`  ✗ ${f}`);
@@ -284,4 +387,5 @@ console.log('product facts consistent:');
 console.log(`  free courses    ${app.freeCourses}  (in ${app.freeSemesters} semester)`);
 console.log(`  study plan      ${app.freePlanHorizon}d free / ${app.planHorizon}d Pro`);
 console.log(`  registries      ${REGISTRIES.length} long-form files carry no contradicting course cap`);
+console.log(`  prices         $${money(priceMonthly)}/mo, $${money(priceAnnual)}/yr (= $${annualPerMonth}/mo) quoted consistently`);
 console.log('  no free-trial or invented-social-proof claims on the site');
