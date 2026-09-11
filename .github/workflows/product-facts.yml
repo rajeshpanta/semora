@@ -39,8 +39,11 @@ on:
       # landers quote prices too, and without this a stale price edited in an
       # .mdx file would never trigger the guard that exists to catch it.
       - 'website/app/**'
-      - 'lib/syllabus.ts'
-      - 'lib/studyPlanner.ts'
+      # The guard now also checks the APP's price fallbacks and its "Save N%"
+      # claims against the website's PRICING, so it has to run when those move.
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
       - 'supabase/functions/_shared/stripe.ts'
       - 'supabase/functions/_shared/stripe-prices.ts'
       - 'supabase/functions/_shared/stripe.test.ts'
@@ -53,8 +56,11 @@ on:
       # landers quote prices too, and without this a stale price edited in an
       # .mdx file would never trigger the guard that exists to catch it.
       - 'website/app/**'
-      - 'lib/syllabus.ts'
-      - 'lib/studyPlanner.ts'
+      # The guard now also checks the APP's price fallbacks and its "Save N%"
+      # claims against the website's PRICING, so it has to run when those move.
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
       - 'supabase/functions/_shared/stripe.ts'
       - 'supabase/functions/_shared/stripe-prices.ts'
       - 'supabase/functions/_shared/stripe.test.ts'

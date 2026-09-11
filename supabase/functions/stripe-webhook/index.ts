@@ -200,6 +200,24 @@ async function applySubscription(admin: any, event: Stripe.Subscription, log: an
   const priceId = sub.items?.data?.[0]?.price?.id ?? null;
   const plan = planForPrice(priceId);
 
+  // An ACTIVE subscription whose price we cannot name is the signature of a
+  // price change done without carrying the old ids forward — see the legacy
+  // vars in _shared/stripe-prices.ts. The row still grants Pro, because
+  // is_pro() reads the boolean and the expiry, so nothing looks broken from
+  // the outside; what breaks is `plan: null`, which flips hasPaidPlan false
+  // in app/settings/index.tsx and shows a paying customer the upgrade rows.
+  //
+  // Without this line that failure is completely silent and can sit for up to
+  // a year on an annual plan. The price id is a Stripe object id, not a
+  // customer identifier, so it is safe to log.
+  if (active && !plan) {
+    log.warn('price_unmapped', {
+      price_id: priceId,
+      subscription_id: sub.id,
+      hint: 'set STRIPE_PRICE_MONTHLY_LEGACY / STRIPE_PRICE_ANNUAL_LEGACY to the ids this account was sold at',
+    });
+  }
+
   // Paid-through date, in seconds.
   //
   // Read the ITEM, not the subscription. Stripe moved current_period_end onto

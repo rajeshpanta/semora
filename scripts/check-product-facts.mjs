@@ -329,7 +329,7 @@ function sourceFiles(dir) {
   for (const entry of readdirSync(resolve(root, dir), { withFileTypes: true })) {
     const rel = `${dir}/${entry.name}`;
     if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name === '.next') continue;
+      if (['node_modules', '.next', '.expo', 'dist', 'ios', 'android'].includes(entry.name)) continue;
       out.push(...sourceFiles(rel));
     } else if (/\.(ts|tsx|mdx)$/.test(entry.name)) {
       out.push(rel);
@@ -373,6 +373,67 @@ for (const file of PRICED_FILES) {
 }
 
 
+
+// ─── The APP's own price surfaces ────────────────────────────────────────
+//
+// The paywall, Settings, the Me tab and the upsell sheet all render the LIVE
+// StoreKit price and fall back to a hardcoded string when the store is
+// unreachable. That design is right, and it is also why these go stale
+// invisibly: the fallback only appears when the store is down, so a wrong one
+// is never seen in normal use and never noticed in review.
+//
+// They are checked against the website's PRICING because the two must agree.
+// If the site says one number and the app's fallback says another, one of
+// them is lying to a customer, and which one hardly matters.
+//
+// Walked, not listed, for the same reason the website files are: a hand-kept
+// list is how the four-course claim survived sixteen days. The scan is narrow
+// enough to be quiet — price-shaped literals appear in exactly the files that
+// talk about price.
+const APP_PRICE_DIRS = ['app', 'components', 'lib'];
+const MONEY = /\$(\d+\.\d{2})/g;
+
+// Everything the app is allowed to say, derived rather than typed.
+const annualPerWeek = money(priceAnnual / 52);
+const allowedMoney = new Set([
+  money(priceMonthly),
+  money(priceAnnual),
+  annualPerMonth,
+  annualPerWeek,
+]);
+
+for (const dir of APP_PRICE_DIRS) {
+  for (const file of sourceFiles(dir)) {
+    const text = read(file);
+    for (const m of text.matchAll(MONEY)) {
+      if (allowedMoney.has(m[1])) continue;
+      failures.push(
+        `${file} shows $${m[1]}, which is not a price Semora charges. ` +
+          `PRICING allows $${money(priceMonthly)}, $${money(priceAnnual)}, ` +
+          `$${annualPerMonth} a month and $${annualPerWeek} a week. Recompute it.`,
+      );
+    }
+  }
+}
+
+// "Save 58%" / "Ahorra 58 %" — a claim about the annual discount, written by
+// hand next to the price it describes. It goes wrong the moment either price
+// moves, and unlike the prices it has no live StoreKit value to fall back on.
+const savingsPct = Math.round((1 - priceAnnual / (priceMonthly * 12)) * 100);
+const SAVINGS_CLAIM = /(?:Save|Ahorra)\s+(\d+)\s*%/g;
+for (const dir of APP_PRICE_DIRS) {
+  for (const file of sourceFiles(dir)) {
+    for (const m of read(file).matchAll(SAVINGS_CLAIM)) {
+      if (Number(m[1]) === savingsPct) continue;
+      failures.push(
+        `${file} claims "${m[0]}" — $${money(priceAnnual)} against 12 × ` +
+          `$${money(priceMonthly)} is ${savingsPct}%. Recompute it.`,
+      );
+    }
+  }
+}
+
+
 if (failures.length) {
   console.error('product-facts drift — the site claims something the app does not do:\n');
   for (const f of failures) console.error(`  ✗ ${f}`);
@@ -388,4 +449,5 @@ console.log(`  free courses    ${app.freeCourses}  (in ${app.freeSemesters} seme
 console.log(`  study plan      ${app.freePlanHorizon}d free / ${app.planHorizon}d Pro`);
 console.log(`  registries      ${REGISTRIES.length} long-form files carry no contradicting course cap`);
 console.log(`  prices         $${money(priceMonthly)}/mo, $${money(priceAnnual)}/yr (= $${annualPerMonth}/mo) quoted consistently`);
+console.log(`  app fallbacks  paywall, Settings, Me and the upsell sheet agree with it (save ${savingsPct}%)`);
 console.log('  no free-trial or invented-social-proof claims on the site');
