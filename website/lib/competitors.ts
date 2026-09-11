@@ -45,7 +45,7 @@ export const COMPETITORS: CompetitorFact[] = [
     title: 'Semora vs DormWay: Syllabus Planner Comparison (2026)',
     metaDescription:
       "Compare Semora and DormWay on syllabus scanning, Canvas sync, grade tracking, and study planning to find the right college planner for your semester.",
-    lede: "Semora and DormWay both use AI to turn an uploaded syllabus into a semester timeline, but Semora adds Progress Insights, an AI-generated study schedule, and a workload dashboard behind an optional $3.99/month Pro tier, while DormWay pairs syllabus parsing with read-only Canvas, Blackboard, and Moodle sync and is currently free.",
+    lede: "Semora and DormWay both use AI to turn an uploaded syllabus into a semester timeline, but Semora adds Progress Insights, an AI-generated study schedule, and a workload dashboard behind an optional $4.99/month Pro tier, while DormWay pairs syllabus parsing with read-only Canvas, Blackboard, and Moodle sync and is currently free.",
     semoraParagraph:
       "Semora turns a course syllabus into an organized semester. You import a syllabus by photo (camera, up to 5 pages), PDF upload, drag-and-drop on the web, or by pasting raw text copied from a PDF or LMS page on the web. OpenAI GPT-5.6 Luna then extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading with its due date — building your deadlines, grades, and class schedule automatically. Semora is available on iPhone, iPad, and web, sharing one account so edits sync in near real time.",
     competitorParagraph:
@@ -83,7 +83,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Pricing',
         semora:
-          'Free: one AI action for the life of the account (spend it on a syllabus scan, a lecture recording, or a document turned into notes), unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full deadline & grade tracking, and same-day reminders. Pro: $3.99/month or $19.99/year for unlimited scans/courses plus calendar sync, Smart Plan, and other study tools.',
+          'Free: one AI action for the life of the account (spend it on a syllabus scan, a lecture recording, or a document turned into notes), unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full deadline & grade tracking, and same-day reminders. Pro: $4.99/month or $29.99/year for unlimited scans/courses plus calendar sync, Smart Plan, and other study tools.',
         competitor:
           'Currently free with no paid tier — site and App Store listing state "no paywalls" and "no credit card."',
       },
@@ -116,7 +116,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Is Semora or DormWay free?',
         answer:
-          "Semora's free tier includes one AI action for the lifetime of the account — a syllabus scan, a lecture recording, or a document turned into notes, whichever you reach for first — plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full task/deadline tracking, grade tracking, and same-day reminders; Pro is $3.99/month or $19.99/year for unlimited scans and courses plus calendar sync and study-planning tools. DormWay is currently free with no paid tier, per its own pricing page and App Store listing.",
+          "Semora's free tier includes one AI action for the lifetime of the account — a syllabus scan, a lecture recording, or a document turned into notes, whichever you reach for first — plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full task/deadline tracking, grade tracking, and same-day reminders; Pro is $4.99/month or $29.99/year for unlimited scans and courses plus calendar sync and study-planning tools. DormWay is currently free with no paid tier, per its own pricing page and App Store listing.",
       },
       {
         question: 'How do Semora and DormWay handle grade tracking?',
@@ -177,7 +177,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Pricing',
         semora:
-          'Free tier (one AI action for the life of the account — a syllabus scan, a lecture recording, or a document turned into notes — plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total); Pro is $3.99/month or $19.99/year, bought by card on the web or in the iOS app and applied account-wide.',
+          'Free tier (one AI action for the life of the account — a syllabus scan, a lecture recording, or a document turned into notes — plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total); Pro is $4.99/month or $29.99/year, bought by card on the web or in the iOS app and applied account-wide.',
         competitor:
           "Official pages conflicted when checked August 30, 2026. The Pricing page showed a 7-day free trial followed by $9.79/month (with $19.99 also displayed) or $39/year; the navigation-linked Buy page showed $33/month paid monthly or $16/month paid annually. Confirm the checkout amount.",
       },
@@ -189,7 +189,7 @@ export const COMPETITORS: CompetitorFact[] = [
       },
     ],
     pricingWin:
-      "Semora Pro is $3.99/month or $19.99/year. Shovel's conflicting official pages showed either a 7-day trial followed by $9.79/month or $39/year, or $33/month paid monthly and $16/month paid annually; confirm the checkout amount.",
+      "Semora Pro is $4.99/month or $29.99/year. Shovel's conflicting official pages showed either a 7-day trial followed by $9.79/month or $39/year, or $33/month paid monthly and $16/month paid annually; confirm the checkout amount.",
     extraSections: [
       {
         heading: 'Syllabus import, in detail',
@@ -215,7 +215,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         heading: 'Study planning & Pro features',
         body: [
-          'On Semora, deadline and grade tracking are free; the study-planning layer is part of Pro ($3.99/month or $19.99/year): Smart Plan (an AI-generated, deadline-adaptive study schedule), a Workload dashboard for spotting crunch weeks, Flashcards with spaced repetition built from your own material, a Focus Timer, an AI Tutor that knows your syllabus, custom reminder timing with quiet hours, and Academic Risk alerts (falling grades, missing work, overloaded weeks) with a recovery-step plan.',
+          'On Semora, deadline and grade tracking are free; the study-planning layer is part of Pro ($4.99/month or $29.99/year): Smart Plan (an AI-generated, deadline-adaptive study schedule), a Workload dashboard for spotting crunch weeks, Flashcards with spaced repetition built from your own material, a Focus Timer, an AI Tutor that knows your syllabus, custom reminder timing with quiet hours, and Academic Risk alerts (falling grades, missing work, overloaded weeks) with a recovery-step plan.',
           'On Shovel, time-blocked study scheduling is central to the product from the start — calculating available time versus estimated time-per-task across the semester, with predictive conflict alerts ("The Cushion™"), reading-time/task-duration estimators, streak-based motivation tracking, and free supplementary "how to study" courses.',
         ],
       },
@@ -255,12 +255,12 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Does Semora build a study schedule like Shovel does?',
         answer:
-          'Yes, but it\'s a Pro feature on Semora. The free tier covers deadline and grade tracking; the AI-generated Smart Plan that builds a study schedule adapting to your deadlines is part of Pro ($3.99/month or $19.99/year), alongside a Workload dashboard and Academic Risk alerts. Shovel\'s time-blocked scheduling — weighing available time against estimated time-per-task across the semester, with "The Cushion™" conflict alerts — is central to its product from the start.',
+          'Yes, but it\'s a Pro feature on Semora. The free tier covers deadline and grade tracking; the AI-generated Smart Plan that builds a study schedule adapting to your deadlines is part of Pro ($4.99/month or $29.99/year), alongside a Workload dashboard and Academic Risk alerts. Shovel\'s time-blocked scheduling — weighing available time against estimated time-per-task across the semester, with "The Cushion™" conflict alerts — is central to its product from the start.',
       },
       {
         question: 'What does Semora cost compared to Shovel?',
         answer:
-          "Semora Pro is $3.99/month or $19.99/year, bought by card on the web or as a subscription inside the iOS app, and applied account-wide across iPhone, iPad, and browser. Shovel's official pages conflicted when checked August 30, 2026: the Pricing page showed a 7-day free trial followed by $9.79/month (with $19.99 also displayed) or $39/year, while the navigation-linked Buy page showed $33/month paid monthly or $16/month paid annually. Confirm the checkout amount.",
+          "Semora Pro is $4.99/month or $29.99/year, bought by card on the web or as a subscription inside the iOS app, and applied account-wide across iPhone, iPad, and browser. Shovel's official pages conflicted when checked August 30, 2026: the Pricing page showed a 7-day free trial followed by $9.79/month (with $19.99 also displayed) or $39/year, while the navigation-linked Buy page showed $33/month paid monthly or $16/month paid annually. Confirm the checkout amount.",
       },
     ],
   },
@@ -313,7 +313,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Pricing',
         semora:
-          'Free: one AI action for the life of the account (a syllabus scan, a lecture recording, or a document turned into notes), unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full deadline and grade tracking, and same-day reminders. Pro: $3.99/month or $19.99/year for unlimited scans/courses plus calendar sync (device + .ics export) and other study tools, bought by card on the web or in the iOS app and applied account-wide.',
+          'Free: one AI action for the life of the account (a syllabus scan, a lecture recording, or a document turned into notes), unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full deadline and grade tracking, and same-day reminders. Pro: $4.99/month or $29.99/year for unlimited scans/courses plus calendar sync (device + .ics export) and other study tools, bought by card on the web or in the iOS app and applied account-wide.',
         competitor:
           "Reported by third-party review sites, not confirmed directly on StudyFetch's own pricing page: a free tier (10 Spark.E chats, 1 study set, 2 uploads), a Base tier around $7.99/month, a Premium tier around $11.99/month, a semester bundle around $49.99, and an annual plan around $99.99. Check StudyFetch's current pricing page for exact figures.",
       },
@@ -324,7 +324,7 @@ export const COMPETITORS: CompetitorFact[] = [
       },
     ],
     pricingWin:
-      "Semora Pro is $3.99/month or $19.99/year, less than half of StudyFetch's reported Base tier (~$7.99/month) and well below its reported Premium tier (~$11.99/month), per third-party review coverage.",
+      "Semora Pro is $4.99/month or $29.99/year, below StudyFetch's reported Base tier (~$7.99/month) and well below its reported Premium tier (~$11.99/month), per third-party review coverage.",
     extraSections: [
       {
         heading: 'Collaboration and sharing',
@@ -385,7 +385,7 @@ export const COMPETITORS: CompetitorFact[] = [
     intro:
       "If you're comparing the two, the short version is this: Semora is built around your syllabus — it reads the PDF or photo you give it and builds your semester calendar, task list, and grade tracker from it. Mindgrasp is built around your study material (lecture recordings, PDFs, slides, videos) and turns whatever you feed it into notes, flashcards, and a quiz. Read on for how each one actually works, a side-by-side feature table, and honest guidance on which fits your situation.",
     semoraParagraph:
-      'Semora (iPhone, iPad, and web) starts with your syllabus. You can import it by taking a photo (including multi-page scans, up to 5 pages), uploading a PDF, dragging a file onto the web app, or pasting raw text copied from a PDF or your school\'s LMS page. OpenAI GPT-5.6 Luna then extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading, each with its due date, and builds them into your semester automatically. The free tier includes one AI action for the lifetime of the account — a syllabus scan, a lecture recording, or a document turned into notes, whichever you reach for first — unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited scans and courses, Smart Plan, a Workload dashboard, Grade Scale & Forecasting, spaced-repetition Flashcards, a Focus Timer, an AI Tutor, custom reminder timing, calendar sync (device + .ics export), Academic Risk alerts, Progress Insights, and Share & Streaks. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Course Spaces let you share a course with classmates via an invite link so shared deadlines and group assignments sync in real time (hosting a space is Pro; joining one is free). Web, iPhone, and iPad share one account and sync in near real time. (Google Classroom and Google Calendar sync exist in Semora\'s codebase but are not currently enabled or shipped — they aren\'t live features today.)',
+      'Semora (iPhone, iPad, and web) starts with your syllabus. You can import it by taking a photo (including multi-page scans, up to 5 pages), uploading a PDF, dragging a file onto the web app, or pasting raw text copied from a PDF or your school\'s LMS page. OpenAI GPT-5.6 Luna then extracts the course name, instructor, meeting times, office hours, semester dates, grading scale, and every assignment, exam, quiz, project, and reading, each with its due date, and builds them into your semester automatically. The free tier includes one AI action for the lifetime of the account — a syllabus scan, a lecture recording, or a document turned into notes, whichever you reach for first — unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($4.99/month or $29.99/year) adds unlimited scans and courses, Smart Plan, a Workload dashboard, Grade Scale & Forecasting, spaced-repetition Flashcards, a Focus Timer, an AI Tutor, custom reminder timing, calendar sync (device + .ics export), Academic Risk alerts, Progress Insights, and Share & Streaks. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Course Spaces let you share a course with classmates via an invite link so shared deadlines and group assignments sync in real time (hosting a space is Pro; joining one is free). Web, iPhone, and iPad share one account and sync in near real time. (Google Classroom and Google Calendar sync exist in Semora\'s codebase but are not currently enabled or shipped — they aren\'t live features today.)',
     competitorParagraph:
       'Mindgrasp takes a different starting point: you upload or link a piece of content — a PDF, DOCX, PowerPoint, MP3/MP4, YouTube video, web article, or a lecture you record live, and it generates a linked bundle of AI notes, a summary, flashcards, a quiz, and an "AI Tutor" chat for asking questions about that content. A higher Scholar/Premium tier adds an "AI math expert" for step-by-step math help, and there\'s a Chrome extension for capturing content from the browser. Mindgrasp also states compatibility with Canvas, Blackboard, and Panopto, though this appears to be for importing or processing files from those platforms rather than parsing a syllabus for deadlines. Mindgrasp\'s marketing targets a broad range of learners — high school through graduate students, self-learners, professionals, and exam-prep candidates.',
     comparisonCaption:
@@ -422,7 +422,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Pricing',
         semora:
-          'Free tier available (one AI action for the life of the account — a scan, a lecture recording, or a document turned into notes — plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total). Pro is $3.99/month or $19.99/year, bought by card on the web or in the iOS app, applying account-wide across iPhone, iPad, and browser.',
+          'Free tier available (one AI action for the life of the account — a scan, a lecture recording, or a document turned into notes — plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total). Pro is $4.99/month or $29.99/year, bought by card on the web or in the iOS app, applying account-wide across iPhone, iPad, and browser.',
         competitor:
           "The official plan picker, with Yearly selected on August 30, 2026, showed Basic at $5.99/month billed $71.88 once per year, Scholar at $8.99/month billed $107.88 once per year, and Premium at $10.99/month billed $131.88 once per year. The official site advertises a free trial; confirm the offer and any monthly-billing prices at checkout.",
       },
@@ -434,7 +434,7 @@ export const COMPETITORS: CompetitorFact[] = [
       },
     ],
     pricingWin:
-      "Semora Pro is $3.99/month or $19.99/year. Mindgrasp's official Yearly view starts at $5.99/month billed $71.88 once per year, so Semora's listed monthly and annual prices are lower; checked August 30, 2026.",
+      "Semora Pro is $4.99/month or $29.99/year. Mindgrasp's official Yearly view starts at $5.99/month billed $71.88 once per year, so Semora's listed monthly and annual prices are lower; checked August 30, 2026.",
     whereSemoraFits: [
       'Want your syllabus turned into a calendar of deadlines automatically, instead of copying dates by hand',
       'Want grades, assignments, and class schedule tracked in one place all semester',
@@ -459,7 +459,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Is Semora free to use?',
         answer:
-          'Yes. Semora\'s free tier includes one AI action for the lifetime of the account — a syllabus scan, a lecture recording, or a document turned into notes — plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) unlocks unlimited scans and courses plus additional features like Smart Plan, calendar sync, Flashcards, and an AI tutor.',
+          'Yes. Semora\'s free tier includes one AI action for the lifetime of the account — a syllabus scan, a lecture recording, or a document turned into notes — plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full task and deadline tracking, grade tracking, and same-day reminders. Pro ($4.99/month or $29.99/year) unlocks unlimited scans and courses plus additional features like Smart Plan, calendar sync, Flashcards, and an AI tutor.',
       },
       {
         question: 'Does Semora sync with Canvas?',
@@ -469,7 +469,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Which is cheaper, Semora or Mindgrasp?',
         answer:
-          "Semora's pricing is confirmed directly: free, or Pro at $3.99/month or $19.99/year. Mindgrasp's official plan picker, with Yearly selected on August 30, 2026, showed Basic at $5.99/month billed $71.88 once per year, Scholar at $8.99/month billed $107.88 once per year, and Premium at $10.99/month billed $131.88 once per year. Semora's listed monthly and annual prices are lower, but confirm Mindgrasp's current offer and billing cadence at checkout.",
+          "Semora's pricing is confirmed directly: free, or Pro at $4.99/month or $29.99/year. Mindgrasp's official plan picker, with Yearly selected on August 30, 2026, showed Basic at $5.99/month billed $71.88 once per year, Scholar at $8.99/month billed $107.88 once per year, and Premium at $10.99/month billed $131.88 once per year. Semora's listed monthly and annual prices are lower, but confirm Mindgrasp's current offer and billing cadence at checkout.",
       },
     ],
   },
@@ -519,7 +519,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Pricing',
         semora:
-          'Free: one AI action for the life of the account (a syllabus scan, a lecture recording, or a document turned into notes), unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full task and grade tracking, and same-day reminders. Pro: $3.99/month or $19.99/year for unlimited scans and courses plus calendar sync and all other Pro features.',
+          'Free: one AI action for the life of the account (a syllabus scan, a lecture recording, or a document turned into notes), unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full task and grade tracking, and same-day reminders. Pro: $4.99/month or $29.99/year for unlimited scans and courses plus calendar sync and all other Pro features.',
         competitor:
           "Free: 1 user, 3 apps, one-time AI credits. Taskade's own pricing page lists Pro at $10/month billed annually; Business at $25/month billed annually; Max at $100/month billed annually. Non-annual (monthly-billed) rates are not publicly confirmed, and third-party sites report inconsistent numbers — check Taskade's current pricing page directly.",
       },
@@ -533,7 +533,7 @@ export const COMPETITORS: CompetitorFact[] = [
     tableNote:
       "All Semora details above come from Semora's own product specification. Taskade details are drawn from Taskade's public pricing/feature pages and independent review sources; anything not directly confirmed on Taskade's site is flagged as such.",
     pricingWin:
-      "Semora Pro is $3.99/month or $19.99/year. Taskade's own pricing page lists Pro at $10/month billed annually (about $120/year), though Taskade is priced and built for teams, not individual students, so the two aren't a direct apples-to-apples comparison.",
+      "Semora Pro is $4.99/month or $29.99/year. Taskade's own pricing page lists Pro at $10/month billed annually (about $120/year), though Taskade is priced and built for teams, not individual students, so the two aren't a direct apples-to-apples comparison.",
     whereSemoraFits: [
       'You want deadlines and grades populated automatically from a syllabus photo or PDF instead of typing them in by hand.',
       'You want free Canvas import from the private Calendar Feed link Canvas already gives you, with syllabus scanning or pasted assignment text as the fallback.',
@@ -561,7 +561,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Which is cheaper for a student?',
         answer:
-          "Semora's free tier includes one AI action for the lifetime of the account — a scan, a lecture recording, or a document turned into notes — usable across unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, with one semester total, plus full deadline and grade tracking; Pro is $3.99/month or $19.99/year. Taskade's free tier gives one user 3 apps and one-time AI credits, and Taskade's own pricing page lists Pro at $10/month billed annually — its plans and pricing are structured more around teams and seat counts than individual student use.",
+          "Semora's free tier includes one AI action for the lifetime of the account — a scan, a lecture recording, or a document turned into notes — usable across unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, with one semester total, plus full deadline and grade tracking; Pro is $4.99/month or $29.99/year. Taskade's free tier gives one user 3 apps and one-time AI credits, and Taskade's own pricing page lists Pro at $10/month billed annually — its plans and pricing are structured more around teams and seat counts than individual student use.",
       },
       {
         question: 'Can I use either one on iPhone, iPad, and web with the same account?',
@@ -616,7 +616,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Pricing',
         semora:
-          'Free tier available (one AI action for the life of the account — a scan, a lecture recording, or a document turned into notes — plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total). Pro is $3.99/month or $19.99/year, bought by card on the web or in the iOS app, applying account-wide across iPhone, iPad, and browser.',
+          'Free tier available (one AI action for the life of the account — a scan, a lecture recording, or a document turned into notes — plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total). Pro is $4.99/month or $29.99/year, bought by card on the web or in the iOS app, applying account-wide across iPhone, iPad, and browser.',
         competitor:
           'Free: 1 study set per day. Unlimited: reported at $12.88/month or $97.76/year, per third-party review coverage of the app — check Studley AI\'s current pricing directly to confirm.',
       },
@@ -627,7 +627,7 @@ export const COMPETITORS: CompetitorFact[] = [
       },
     ],
     pricingWin:
-      "Semora Pro is $3.99/month or $19.99/year — roughly a third of Studley AI's reported Unlimited plan ($12.88/month or $97.76/year), per third-party review coverage.",
+      "Semora Pro is $4.99/month or $29.99/year — under half of Studley AI's reported Unlimited plan ($12.88/month or $97.76/year), per third-party review coverage.",
     whereSemoraFits: [
       'Want your syllabus turned into a calendar of deadlines automatically, instead of typing them in by hand',
       'Want grades, assignments, and class schedule tracked in one place all semester, included free',
@@ -661,7 +661,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         question: 'Which is cheaper, Semora or Studley AI?',
         answer:
-          "Semora's pricing is confirmed directly: free, or Pro at $3.99/month or $19.99/year. Studley AI's Unlimited plan is reported at roughly $12.88/month or $97.76/year via third-party review coverage — check Studley AI's current pricing page to confirm exact figures.",
+          "Semora's pricing is confirmed directly: free, or Pro at $4.99/month or $29.99/year. Studley AI's Unlimited plan is reported at roughly $12.88/month or $97.76/year via third-party review coverage — check Studley AI's current pricing page to confirm exact figures.",
       },
     ],
   },
@@ -712,7 +712,7 @@ export const COMPETITORS: CompetitorFact[] = [
       {
         feature: 'Pricing',
         semora:
-          'Free tier available (one AI action for the life of the account — a scan, a lecture recording, or a document turned into notes — plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total). Pro is $3.99/month or $19.99/year, bought by card on the web or in the iOS app, applying account-wide across iPhone, iPad, and browser.',
+          'Free tier available (one AI action for the life of the account — a scan, a lecture recording, or a document turned into notes — plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total). Pro is $4.99/month or $29.99/year, bought by card on the web or in the iOS app, applying account-wide across iPhone, iPad, and browser.',
         competitor:
           'Free version with ads. An ad-free premium tier is reported around $4.99/year via third-party reviews (not confirmed on myHomework\'s current site), adding file attachments, external calendar access, planner sharing, and LMS imports.',
       },

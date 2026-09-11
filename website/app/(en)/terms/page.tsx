@@ -46,7 +46,7 @@ export default function TermsPage() {
       <ul>
         <li>Semora offers both free and paid subscription tiers (&quot;Semora Pro&quot;).</li>
         <li>
-          Semora Pro costs $3.99 per month or $19.99 per year. Card payments on the web are charged
+          Semora Pro costs $4.99 per month or $29.99 per year. Card payments on the web are charged
           in US dollars; on the App Store, Apple charges the local equivalent for your storefront.
           Prices are shown before purchase.
         </li>

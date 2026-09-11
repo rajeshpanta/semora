@@ -78,8 +78,8 @@ export const PRICING = {
   },
   pro: {
     name: 'Pro',
-    monthly: { price: 3.99, priceLabel: '$3.99/month' },
-    annual: { price: 19.99, priceLabel: '$19.99/year' },
+    monthly: { price: 4.99, priceLabel: '$4.99/month' },
+    annual: { price: 29.99, priceLabel: '$29.99/year' },
     // Pro can be bought two ways: with a card on the web (Stripe checkout at
     // app.semoraai.com) or inside the iOS app (StoreKit). Both grant the same
     // account-wide entitlement, so it applies on iPhone, iPad and the web.
@@ -88,7 +88,7 @@ export const PRICING = {
   },
 } as const;
 
-// "Pro ($3.99/month or $19.99/year)" — used anywhere a table/header needs
+// "Pro ($4.99/month or $29.99/year)" — used anywhere a table/header needs
 // the full price inline instead of just the tier name, so monthly AND
 // annual both stay visible without retyping the figures.
 export const PRO_LABEL = `Pro (${PRICING.pro.monthly.priceLabel} or ${PRICING.pro.annual.priceLabel})`;
@@ -98,10 +98,10 @@ export const PRO_LABEL = `Pro (${PRICING.pro.monthly.priceLabel} or ${PRICING.pr
 // hand-computes it from the raw numbers above.
 // The bare amount, with no period attached.
 //
-// priceLabel already reads "$3.99/month", which the pricing cards cannot use:
+// priceLabel already reads "$4.99/month", which the pricing cards cannot use:
 // they print the period themselves in separate markup ("per month" / "al
-// mes"), so priceLabel would render it twice. So the cards hardcoded '$3.99'
-// and '$19.99' — four times, in a file that imports PRICING on line three.
+// mes"), so priceLabel would render it twice. So the cards hardcoded '$4.99'
+// and '$29.99' — four times, in a file that imports PRICING on line three.
 // A price change would have edited the constant above, left the pricing page
 // showing the old number, and looked correct on review because the import was
 // right there. Derived here so that cannot happen.
@@ -112,7 +112,7 @@ export const PRO_ANNUAL_MONTHLY_EQUIVALENT = `$${(PRICING.pro.annual.price / 12)
 // What annual actually saves, in money rather than a percentage.
 //
 // The percentage was the only saving on the page, and a percentage of a small
-// number reads as small. $27.89 is a figure a student recognises as money.
+// number reads as small. $29.89 is a figure a student recognises as money.
 // Both now appear: the badge keeps the percentage because it is punchy at a
 // glance, and the line under the price carries the dollars.
 export const PRO_ANNUAL_SAVINGS_AMOUNT = `$${(PRICING.pro.monthly.price * 12 - PRICING.pro.annual.price).toFixed(2)}`;

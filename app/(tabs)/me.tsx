@@ -38,8 +38,8 @@ export default function MeScreen() {
   const [signingOut, setSigningOut] = useState(false);
   // Real store prices (regional/currency-correct); hardcoded strings are
   // only the fallback while products load or the store is unreachable.
-  const [annualPrice, setAnnualPrice] = useState('$19.99');
-  const [monthlyPrice, setMonthlyPrice] = useState('$3.99');
+  const [annualPrice, setAnnualPrice] = useState('$29.99');
+  const [monthlyPrice, setMonthlyPrice] = useState('$4.99');
   // Default OFF: only promise the 7-day trial once Apple confirms THIS
   // Apple ID is still intro-offer eligible. Promising a trial the payment
   // sheet won't honor (re-subscribers) is a bait-and-switch / App Review risk.

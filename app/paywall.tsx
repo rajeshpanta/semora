@@ -413,8 +413,8 @@ export default function PaywallScreen() {
     return removeSubs;
   }, []);
 
-  const annualPrice = annualSub?.displayPrice ?? '$19.99';
-  const monthlyPrice = monthlySub?.displayPrice ?? '$3.99';
+  const annualPrice = annualSub?.displayPrice ?? '$29.99';
+  const monthlyPrice = monthlySub?.displayPrice ?? '$4.99';
 
   // Derived value claims ("Just X/month", "SAVE N%") computed from the
   // STOREFRONT products — hardcoded USD math was wrong in every other

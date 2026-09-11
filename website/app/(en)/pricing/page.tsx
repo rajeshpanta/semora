@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   // and a title is a worse place to repeat that mistake because nobody looks
   // at it.
   title: pageTitle(`Semora Pricing: Free Forever, or Pro at ${PRICING.pro.monthly.priceLabel}`),
-  description: "Semora is free to start. Pro is $3.99/month or $19.99/year, bought by card on the web or in the iOS app, and applied account-wide including web.",
+  description: "Semora is free to start. Pro is $4.99/month or $29.99/year, bought by card on the web or in the iOS app, and applied account-wide including web.",
   alternates: enAlternates('/pricing'),
   openGraph: { url: '/pricing', ...OG_IMAGE },
 };

@@ -90,6 +90,7 @@ for (const file of [
   'website/app/(en)/page.tsx',
   'website/app/(es)/es/page.tsx',
   'website/app/(en)/pricing/page.tsx',
+  'store.config.json',
 ]) {
   const m = read(file).match(LMS_IS_PRO);
   if (m) {
@@ -195,6 +196,13 @@ const REGISTRIES = [
   'website/lib/competitors.ts',
   'website/lib/es-content.ts',
   'website/lib/es-feature-content.ts',
+  // The App Store listing copy. It is not wired to any pipeline — nothing
+  // pushes it to Apple — which is exactly why it rots: it looks authoritative
+  // and nobody re-reads it. It sat on "up to 4 courses in one semester" for
+  // months after migration 091 dropped the limit to one, while the live
+  // listing had already been corrected by hand. A record that quietly
+  // disagrees with the product is worse than no record.
+  'store.config.json',
 ];
 
 /**
@@ -239,7 +247,20 @@ for (const file of REGISTRIES) {
   // talking about the plan, and is not talking about a provider's sync.
   const isEntitlementContext = (i) => {
     const w = text.slice(Math.max(0, i - 140), i + 140);
-    if (/blackboard|moodle|token|sincroniz|per sync|at a time|a la vez|por vez|calendar feed/i.test(w)) {
+    // Exclude on the SYNC PHRASE, not on the provider's name.
+    //
+    // This used to skip any sentence containing "blackboard" or "moodle",
+    // which defeated the check exactly where it matters most: the free-tier
+    // sentence is REQUIRED to name those providers in the same breath as the
+    // course cap — the exemption has to travel with the limit, or "1 course"
+    // reads as though Semora is a one-class app. So the one sentence most
+    // likely to carry a stale cap was the one sentence never examined. A
+    // planted "up to 4 courses per semester" in store.config.json sailed
+    // straight through.
+    //
+    // The real sync limits all say how they are bounded — "50 courses at a
+    // time", "50 asignaturas por sincronización" — so match that instead.
+    if (/per sync|por sincronizaci[oó]n|at a time|a la vez|por vez|calendar feed|enlace privado del calendario|token/i.test(w)) {
       return false;
     }
     return /\bfree\b|gratis|gratuit|plan|\bPro\b|limit|l[ií]mite|cap\b/i.test(w);
@@ -434,6 +455,38 @@ for (const dir of APP_PRICE_DIRS) {
 }
 
 
+
+// ─── The App Store listing record tracks the app it describes ────────────
+{
+  const storeVersion = JSON.parse(read('store.config.json'))?.apple?.version;
+  const appVersion = JSON.parse(read('app.json'))?.expo?.version;
+  if (storeVersion && appVersion && storeVersion !== appVersion) {
+    failures.push(
+      `store.config.json says version ${storeVersion} but app.json says ${appVersion} — ` +
+        'the listing record is describing a build that is no longer current.',
+    );
+  }
+
+  // And the prices it quotes. The success line has always claimed this file's
+  // prices agree with the app; nothing actually read them, and they sat on
+  // $3.99/$19.99 through a price change while every other surface moved. The
+  // listing is bilingual, so both the "$4.99" and the "4,99 $" forms count.
+  const listing = read('store.config.json');
+  const LISTING_MONEY = /\$\s?(\d+\.\d{2})|(\d+,\d{2})\s?\$/g;
+  for (const m of listing.matchAll(LISTING_MONEY)) {
+    const got = (m[1] ?? m[2]).replace(',', '.');
+    if (allowedMoney.has(got)) continue;
+    failures.push(
+      `store.config.json quotes $${got}, which is not a price Semora charges. ` +
+        `PRICING allows $${money(priceMonthly)}, $${money(priceAnnual)}, ` +
+        `$${annualPerMonth} a month and $${annualPerWeek} a week. ` +
+        'The App Store listing is the one price surface a customer reads before ' +
+        'they can see the real one, so it cannot be the stale copy.',
+    );
+  }
+}
+
+
 if (failures.length) {
   console.error('product-facts drift — the site claims something the app does not do:\n');
   for (const f of failures) console.error(`  ✗ ${f}`);
@@ -450,4 +503,5 @@ console.log(`  study plan      ${app.freePlanHorizon}d free / ${app.planHorizon}
 console.log(`  registries      ${REGISTRIES.length} long-form files carry no contradicting course cap`);
 console.log(`  prices         $${money(priceMonthly)}/mo, $${money(priceAnnual)}/yr (= $${annualPerMonth}/mo) quoted consistently`);
 console.log(`  app fallbacks  paywall, Settings, Me and the upsell sheet agree with it (save ${savingsPct}%)`);
+console.log('  store listing  course cap, prices, LMS tier and version all agree with the app');
 console.log('  no free-trial or invented-social-proof claims on the site');

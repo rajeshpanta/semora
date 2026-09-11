@@ -194,8 +194,8 @@ export function ProUpsellSheet({
   const [plan, setPlan] = useState<'annual' | 'monthly'>('annual');
   // Real store prices where StoreKit gives them; these are the fallbacks and
   // the web values. Never show a price the payment sheet will not honour.
-  const [monthlyPrice, setMonthlyPrice] = useState('$3.99');
-  const [annualPrice, setAnnualPrice] = useState('$19.99');
+  const [monthlyPrice, setMonthlyPrice] = useState('$4.99');
+  const [annualPrice, setAnnualPrice] = useState('$29.99');
   const [starting, setStarting] = useState(false);
 
   useEffect(() => {
@@ -351,11 +351,18 @@ export function ProUpsellSheet({
               onPress={() => setPlan('annual')}
               name="Yearly"
               badge="MOST POPULAR"
-              // 19.99/52 ≈ 0.38. The saving is against 12 × 3.99 = 47.88,
-              // which is 58% — not a rounder number invented to look better.
-              headline="$0.38"
+              // 29.99/52 ≈ 0.58. The saving is against 12 × 4.99 = 59.88,
+              // which is 50% — not a rounder number invented to look better.
+              //
+              // These two are the only price claims in the app that never ask
+              // Apple. Every other figure here is the live storefront price with
+              // a fallback, so these are the ones that go silently wrong the
+              // moment a price moves — right beside the buy button.
+              // check-product-facts.mjs now fails on both if they drift; deriving
+              // them from the storefront the way app/paywall.tsx does is the fix.
+              headline="$0.58"
               headlineUnit="/week"
-              save="Save 58%"
+              save="Save 50%"
               strike={`${monthlyPrice}/mo`}
               footnote={`Billed ${annualPrice}/year`}
               colors={colors}
@@ -503,7 +510,7 @@ function PlanCard({
       {/* The save pill and the struck price live on the LEFT, beside the plan
           name, not stacked into the price column. Crowding all four onto one
           right-aligned row overflowed a 393pt phone: "/week" vanished and the
-          "Billed $19.99/year" footnote clipped to "Billed $19.9". */}
+          "Billed $29.99/year" footnote clipped to "Billed $19.9". */}
       <View style={styles.planRow}>
         <View style={[styles.radio, { borderColor: selected ? colors.brand : colors.ink3 }]}>
           {selected ? <View style={[styles.radioDot, { backgroundColor: colors.brand }]} /> : null}

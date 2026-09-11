@@ -181,7 +181,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       },
       {
         question: '¿La grabación de clases es gratis?',
-        answer: 'Una cuenta gratuita tiene una acción de IA para toda la vida de la cuenta, y una clase es una forma de gastarla; escanear un programa o convertir un documento en apuntes son las otras, y tú eliges. Grabar más de una clase forma parte de Pro, por $3.99 al mes o $19.99 al año, que además incluye escaneos y materias sin límite.',
+        answer: 'Una cuenta gratuita tiene una acción de IA para toda la vida de la cuenta, y una clase es una forma de gastarla; escanear un programa o convertir un documento en apuntes son las otras, y tú eliges. Grabar más de una clase forma parte de Pro, por $4.99 al mes o $29.99 al año, que además incluye escaneos y materias sin límite.',
       },
     ],
   },
@@ -249,7 +249,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Escanear entra en el plan gratuito con un número real detrás: una sola acción con IA para toda la vida de la cuenta. Tú eliges en qué la gastas —escanear un programa, grabar una clase o convertir un documento en apuntes—, y ese mismo límite lo aplican la app, el servidor antes de gastar nada en la extracción, y un disparador de la base de datos.',
           'Y no se renueva: no hay recuento mensual esperando al día 1, así que cuando la gastas el paso siguiente es Pro. Tampoco te quedas adivinando en qué punto estás. La pestaña de escaneo muestra una etiqueta del tipo «Te queda 1 acción con IA gratis», que se pone en rojo al llegar a cero, y antes de que la gastes Semora te interrumpe para avisarte de que es la única.',
           'Hay otros dos límites que conviene conocer porque son independientes de esa acción: una cuenta gratuita admite clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano dentro de un único semestre, y un semestre en total. Importa aquí porque un escaneo que crearía un segundo curso añadido a mano topa con el límite de cursos aunque todavía no hayas gastado tu acción gratuita.',
-          'Pro elimina por completo los topes de escaneos y de cursos, por 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes en el plan anual. Pro se compra de dos maneras —con tarjeta en la web, en app.semoraai.com, donde Stripe se encarga del pago, o dentro de la app de iOS a través de la App Store— y en ambos casos la suscripción se aplica a toda la cuenta, incluida la web, así que solo pagas una vez. Lo único que queda por encima es un techo de uso razonable: 20 escaneos en cualquier ventana de 24 horas.',
+          'Pro elimina por completo los topes de escaneos y de cursos, por 4,99 $ al mes o 29,99 $ al año, que sale a unos 2,50 $ al mes en el plan anual. Pro se compra de dos maneras —con tarjeta en la web, en app.semoraai.com, donde Stripe se encarga del pago, o dentro de la app de iOS a través de la App Store— y en ambos casos la suscripción se aplica a toda la cuenta, incluida la web, así que solo pagas una vez. Lo único que queda por encima es un techo de uso razonable: 20 escaneos en cualquier ventana de 24 horas.',
         ],
       },
       {
@@ -416,7 +416,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'Para quién es, qué cuesta y quién debería saltárselo',
         paragraphs: [
           'El seguimiento de calificaciones con promedios ponderados está en el plan gratuito, y eso significa el motor entero: entrada por puntos o por porcentaje, ponderaciones por entrega, categorías, reglas de descarte, las tres políticas de crédito extra, letras a partir de la escala de tu asignatura y la nota media del semestre.',
-          'Pro cuesta 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes en el plan anual. Añade editar la escala de tu asignatura, editar la escala de nota media, las dos calculadoras de supuestos, la revisión académica y el análisis del progreso.',
+          'Pro cuesta 4,99 $ al mes o 29,99 $ al año, que sale a unos 2,50 $ al mes en el plan anual. Añade editar la escala de tu asignatura, editar la escala de nota media, las dos calculadoras de supuestos, la revisión académica y el análisis del progreso.',
           'Es realmente útil si tu programa indica ponderaciones y la plataforma de tu universidad no muestra una nota ponderada en vivo, o muestra una en la que no confías. Es útil si alguna vez has reconstruido la misma hoja de cálculo en octubre.',
           'Es menos útil si tu plataforma ya publica una nota ponderada fiable que consultas a menudo y nunca te preguntas cuánto necesitas en el final. Y no es un expediente oficial: es tu estimación, construida con lo que introduces.',
         ],
@@ -602,7 +602,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         question: '¿El Plan inteligente está en el plan Gratis?',
         answer:
-          'No, forma parte de Pro, que cuesta 3,99 USD al mes o 19,99 USD al año. Pro se compra con tarjeta en la web, en app.semoraai.com, o dentro de la app de iOS a través de la App Store, y en ambos casos se aplica a toda tu cuenta, incluida la versión web.',
+          'No, forma parte de Pro, que cuesta 4,99 USD al mes o 29,99 USD al año. Pro se compra con tarjeta en la web, en app.semoraai.com, o dentro de la app de iOS a través de la App Store, y en ambos casos se aplica a toda tu cuenta, incluida la versión web.',
       },
     ],
   },
@@ -691,7 +691,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'Cómo se conectan las tarjetas con el resto de Semora',
         paragraphs: [
           'Las tarjetas van por detrás del escáner. El programa que escaneaste es la fuente de anclaje, las tareas que Semora extrajo se convierten en las fichas de enfoque, y los apuntes que adjuntaste alimentan tanto la generación como el Tutor.',
-          'Las tarjetas forman parte de Pro, por 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes en el plan anual. Pro se compra con tarjeta en la web, en app.semoraai.com, donde Stripe se encarga del pago, o dentro de la app de iOS a través de la App Store, y la suscripción se aplica a toda la cuenta pagues como pagues.',
+          'Las tarjetas forman parte de Pro, por 4,99 $ al mes o 29,99 $ al año, que sale a unos 2,50 $ al mes en el plan anual. Pro se compra con tarjeta en la web, en app.semoraai.com, donde Stripe se encarga del pago, o dentro de la app de iOS a través de la App Store, y la suscripción se aplica a toda la cuenta pagues como pagues.',
         ],
       },
       {
@@ -825,11 +825,11 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         paragraphs: [
           'El temporizador de concentración es una función de Pro por completo. Las cuentas gratuitas que lo tocan ven una pantalla de presentación con el icono, una descripción corta y un botón hacia la suscripción, en lugar de una versión recortada.',
           'Conviene decirlo claro, porque casi todo el núcleo de Semora es gratis y seguirá siéndolo. En una cuenta gratuita tienes una acción con IA para toda la vida de la cuenta —un escaneo de programa, una grabación de clase o un documento convertido en apuntes—, hasta cuatro asignaturas dentro de un único semestre, un semestre en total, entregas y tareas, promedios ponderados y recordatorios el mismo día.',
-          'Pro cuesta 3,99 $ al mes o 19,99 $ al año, que sale a unos 1,67 $ al mes en el plan anual. Se compra con tarjeta en la web, en app.semoraai.com, a través de Stripe, o dentro de la app de iOS por la App Store, y en ambos casos la suscripción se aplica a toda tu cuenta, la web incluida.',
+          'Pro cuesta 4,99 $ al mes o 29,99 $ al año, que sale a unos 2,50 $ al mes en el plan anual. Se compra con tarjeta en la web, en app.semoraai.com, a través de Stripe, o dentro de la app de iOS por la App Store, y en ambos casos la suscripción se aplica a toda tu cuenta, la web incluida.',
         ],
         bullets: [
           'Gratis: 1 acción con IA para toda la vida de la cuenta, hasta 4 asignaturas dentro de un único semestre, un semestre en total, entregas y tareas, promedios ponderados y recordatorios el mismo día.',
-          'Pro: 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual.',
+          'Pro: 4,99 $ al mes o 29,99 $ al año, unos 2,50 $ al mes en el plan anual.',
           'Pro se compra con tarjeta en la web o dentro de la app de iOS, y se aplica a toda la cuenta en ambos casos: iPhone, iPad y navegador.',
           'Las cuentas gratuitas ven una presentación del temporizador con enlace a la suscripción, no una versión reducida.',
         ],
@@ -882,7 +882,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         question: '¿El temporizador de enfoque es gratis?',
         answer:
-          'No, forma parte de Pro, a 3,99 USD al mes o 19,99 USD al año, que sale a unos 1,67 USD al mes en el plan anual. Pro se compra con tarjeta en la web, en app.semoraai.com, o dentro de la app de iOS a través de la App Store, y se aplica a toda la cuenta pagues como pagues, así que el temporizador también está disponible en la web.',
+          'No, forma parte de Pro, a 4,99 USD al mes o 29,99 USD al año, que sale a unos 2,50 USD al mes en el plan anual. Pro se compra con tarjeta en la web, en app.semoraai.com, o dentro de la app de iOS a través de la App Store, y se aplica a toda la cuenta pagues como pagues, así que el temporizador también está disponible en la web.',
       },
     ],
   },
@@ -1122,7 +1122,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         heading: 'Unirse es gratis; organizar un espacio es de Pro',
         paragraphs: [
           'Unirte al espacio de curso de un compañero es gratis y lo seguirá siendo. No necesitas Pro para aceptar una invitación, ver las entregas compartidas ni encargarte de trabajo de grupo.',
-          'Organizar tu propio espacio —crearlo y llevarlo— forma parte de Pro, que cuesta 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual.',
+          'Organizar tu propio espacio —crearlo y llevarlo— forma parte de Pro, que cuesta 4,99 $ al mes o 29,99 $ al año, unos 2,50 $ al mes en el plan anual.',
           'En la práctica eso significa que una persona del grupo necesita Pro y el resto se une gratis. Si tu Pro caduca después, los espacios que ya organizas no desaparecen.',
         ],
       },
@@ -1281,7 +1281,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Qué cuesta, para quién es y dónde se pone incómodo',
         paragraphs: [
-          'Conectar Canvas es gratis por tiempo limitado, sin Pro y sin límite de clases, y quien lo conecte ahora no pierde nunca esa importación gratuita. El plan Gratis cubre un semestre, así que empezar el siguiente es donde entra Pro; lo ya conectado sigue sincronizándose. Blackboard y Moodle también son gratis: usan un token que emite tu universidad, y algunos centros lo desactivan o lo prohíben. Pro cuesta 3,99 $ al mes o 19,99 $ al año, unos 1,67 $ al mes en el plan anual, y se aplica a toda la cuenta lo compres en la web o en la app de iOS.',
+          'Conectar Canvas es gratis por tiempo limitado, sin Pro y sin límite de clases, y quien lo conecte ahora no pierde nunca esa importación gratuita. El plan Gratis cubre un semestre, así que empezar el siguiente es donde entra Pro; lo ya conectado sigue sincronizándose. Blackboard y Moodle también son gratis: usan un token que emite tu universidad, y algunos centros lo desactivan o lo prohíben. Pro cuesta 4,99 $ al mes o 29,99 $ al año, unos 2,50 $ al mes en el plan anual, y se aplica a toda la cuenta lo compres en la web o en la app de iOS.',
           'Sigues teniendo el seguimiento completo de entregas y tareas, las calificaciones con promedios ponderados, los recordatorios el mismo día, unirte al espacio de un compañero y una acción con IA gratuita para toda la vida de la cuenta.',
           'La sincronización con Canvas no es para todo el mundo. Si tu profesor no publica nunca tareas en Canvas y lo deja todo en el programa, escanear el programa es el mejor camino, y la acción con IA gratuita de la cuenta sirve justo para eso.',
         ],

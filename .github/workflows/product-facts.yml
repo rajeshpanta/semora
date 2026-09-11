@@ -47,6 +47,9 @@ on:
       - 'supabase/functions/_shared/stripe.ts'
       - 'supabase/functions/_shared/stripe-prices.ts'
       - 'supabase/functions/_shared/stripe.test.ts'
+      # The App Store listing copy is checked now too.
+      - 'store.config.json'
+      - 'app.json'
       - 'scripts/check-product-facts.mjs'
       - '.github/workflows/product-facts.yml'
   pull_request:
@@ -64,6 +67,9 @@ on:
       - 'supabase/functions/_shared/stripe.ts'
       - 'supabase/functions/_shared/stripe-prices.ts'
       - 'supabase/functions/_shared/stripe.test.ts'
+      # The App Store listing copy is checked now too.
+      - 'store.config.json'
+      - 'app.json'
       - 'scripts/check-product-facts.mjs'
       - '.github/workflows/product-facts.yml'
   workflow_dispatch:

@@ -53,8 +53,8 @@ export default function SettingsScreen() {
   const router = useRouter();
   const [restoring, setRestoring] = useState(false);
   const [managing, setManaging] = useState(false);
-  const [monthlyPrice, setMonthlyPrice] = useState('$3.99');
-  const [annualPrice, setAnnualPrice] = useState('$19.99');
+  const [monthlyPrice, setMonthlyPrice] = useState('$4.99');
+  const [annualPrice, setAnnualPrice] = useState('$29.99');
   const syncStatus = useOfflineSyncStatus();
   const hasPaidPlan = isPro && subscriptionPlan !== null;
 

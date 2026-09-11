@@ -166,7 +166,7 @@ export const ES: Record<string, string> = {
   'Free action used — upgrade for unlimited': 'Ya usaste tu acción gratuita: mejora para tener acceso ilimitado',
   '1 free scan or lecture included': 'Incluye 1 escaneo o clase gratis',
   'MOST POPULAR': 'MÁS POPULAR',
-  'Save 58%': 'Ahorra 58 %',
+  'Save 50%': 'Ahorra 50 %',
   'Continue to checkout': 'Continuar al pago',
   // ── Stripe web billing ──────────────────────────────────────────────────
   'Payment received': 'Pago recibido',
@@ -1575,7 +1575,7 @@ export const ES: Record<string, string> = {
   'Pro feature': 'Función Pro',
   'PRO ON THE WEB': 'PRO EN LA WEB',
   'Purchase Pro in Semora for iPhone or iPad': 'Contrata Pro desde Semora para iPhone o iPad',
-  'Choose $3.99 monthly or $19.99 yearly in the app. Apple completes the purchase securely, and Pro then follows this Semora account on every device.': 'En la app puedes elegir $3.99 al mes o $19.99 al año. Apple procesa la compra de forma segura y Pro queda disponible con esta cuenta de Semora en todos tus dispositivos.',
+  'Choose $4.99 monthly or $29.99 yearly in the app. Apple completes the purchase securely, and Pro then follows this Semora account on every device.': 'En la app puedes elegir $4.99 al mes o $29.99 al año. Apple procesa la compra de forma segura y Pro queda disponible con esta cuenta de Semora en todos tus dispositivos.',
   'Open Semora in the App Store': 'Abrir Semora en App Store',
   'Purchase Failed': 'No se pudo completar la compra',
   'Ready to scan': 'Listo para escanear',

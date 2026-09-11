@@ -35,7 +35,7 @@ const FAQ = [
   {
     question: "Is Semora free, and what's included in Pro?",
     answer:
-      "Semora's free tier includes one AI action for the lifetime of the account—a syllabus scan, a lecture recording, or a document turned into notes—plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full deadline and grade tracking, and same-day reminders. Pro ($3.99/month or $19.99/year) adds unlimited courses and semesters, with no scan cap, Smart Plan, the Workload dashboard, Grade Scale & Forecasting, calendar sync with .ics export, Flashcards, a Focus Timer, an AI Tutor, Academic Risk alerts, Progress Insights, and Share & Streaks.",
+      "Semora's free tier includes one AI action for the lifetime of the account—a syllabus scan, a lecture recording, or a document turned into notes—plus unlimited classes synced free from Canvas, Blackboard or Moodle plus one course you add by hand within one semester, one semester total, full deadline and grade tracking, and same-day reminders. Pro ($4.99/month or $29.99/year) adds unlimited courses and semesters, with no scan cap, Smart Plan, the Workload dashboard, Grade Scale & Forecasting, calendar sync with .ics export, Flashcards, a Focus Timer, an AI Tutor, Academic Risk alerts, Progress Insights, and Share & Streaks.",
   },
   {
     question: 'Does Semora sync with Canvas or other tools?',
