@@ -51,7 +51,7 @@ export const EMPTY_PROGRESS: CanvasSetupProgress = {
 const MAX_AGE_MS = 12 * 60 * 60 * 1000;
 
 export function canvasSetupStorageKey(userId: string): string {
-  return `semora_canvas_setup_v1:${userId}`;
+  return `semora_canvas_setup_v1_${userId}`;
 }
 
 export function parseCanvasSetupProgress(

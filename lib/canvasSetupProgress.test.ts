@@ -1,4 +1,4 @@
-import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
+import { assert, assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
   parseCanvasSetupProgress, serializeCanvasSetupProgress, shouldEscalate,
   canvasSetupStorageKey, EMPTY_PROGRESS, ESCALATE_AFTER_ATTEMPTS,
@@ -71,7 +71,15 @@ Deno.test('escalation waits for a second failure, never the first', () => {
 });
 
 Deno.test('the storage key is scoped per user', () => {
-  assertEquals(canvasSetupStorageKey('a'), 'semora_canvas_setup_v1:a');
+  assertEquals(canvasSetupStorageKey('a'), 'semora_canvas_setup_v1_a');
+
+  // The check that was missing here too. expo-secure-store refuses any key
+  // outside /^[\w.-]+$/, lib/deviceStore swallows the throw, and the progress
+  // then silently never saved — so a student whose app was evicted while they
+  // were in Canvas came back to a reset flow holding a copied link.
+  const STORABLE = /^[\w.-]+$/;
+  assert(STORABLE.test(canvasSetupStorageKey('11111111-2222-3333-4444-555555555555')),
+    'a real uuid must produce a key the phone can actually store');
   assertEquals(canvasSetupStorageKey('a') === canvasSetupStorageKey('b'), false);
 });
 
