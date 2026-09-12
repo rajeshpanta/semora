@@ -54,7 +54,17 @@ function syncTimeLabel(value: string | null) {
 // as Google Calendar), otherwise a user/reviewer hits Google's "app not verified"
 // block — a dead-end. Re-add this entry once that verification is complete:
 //   { id: 'google_classroom', icon: 'google', detail: 'Classwork, submissions and posted grades' },
-const OTHER_PROVIDERS: Array<{ id: LmsProvider; icon: string; detail: string }> = [
+/**
+ * One chooser, not a headline act and two also-rans.
+ *
+ * Canvas used to get a hero button of its own while Blackboard and Moodle sat
+ * under "Other learning platforms" — which reads as "we support Canvas, and
+ * these two if you must". A student does not choose their LMS; their school
+ * chose it years ago. So the screen asks which one they have and treats the
+ * three answers as equals.
+ */
+const PROVIDERS: Array<{ id: LmsProvider; icon: string; detail: string }> = [
+  { id: 'canvas', icon: 'refresh', detail: 'Assignments, exams and due dates' },
   { id: 'blackboard', icon: 'black-tie', detail: 'Courses and gradebook assignments' },
   { id: 'moodle', icon: 'graduation-cap', detail: 'Enrolled courses and assignments' },
 ];
@@ -206,60 +216,35 @@ export default function LmsSettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: translate('Canvas & LMS') }} />
+      <Stack.Screen options={{ title: translate('Canvas or LMS Sync') }} />
       <ScrollView
         contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
         refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={query.refetch} tintColor={colors.brand} />}
       >
         <View style={[styles.canvasHero, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <View style={[styles.canvasHeroIcon, { backgroundColor: colors.brand50 }]}>
-            <FontAwesome name="refresh" size={21} color={colors.brand} />
-          </View>
-          <Text style={[styles.canvasHeroTitle, { color: colors.ink }]}>Canvas deadline sync</Text>
-          <Text style={[styles.canvasHeroText, { color: colors.ink3 }]}>
-            Connect Canvas once. Semora keeps dated assignments and events updated automatically when an instructor changes a deadline.
+          <Text style={[styles.canvasHeroTitle, { color: colors.ink }]}>When a due date moves, you already know.</Text>
+          <Text style={[styles.canvasHeroText, { color: colors.ink2 }]}>
+            Connecting takes about a minute, once. Every assignment, exam and due date from your courses arrives in Semora and stays right on its own. You choose which courses come across.
           </Text>
           <View style={styles.benefits}>
             <View style={styles.benefit}>
               <FontAwesome name="clock-o" size={13} color={colors.brand} />
-              <Text style={[styles.benefitText, { color: colors.ink2 }]}>Checks every few hours</Text>
+              <Text style={[styles.benefitText, { color: colors.ink2 }]}>Uses the calendar link your school already gives you</Text>
             </View>
             <View style={styles.benefit}>
               <FontAwesome name="shield" size={13} color={colors.brand} />
-              <Text style={[styles.benefitText, { color: colors.ink2 }]}>Private and read-only</Text>
+              <Text style={[styles.benefitText, { color: colors.ink2 }]}>Semora cannot change anything on Canvas, Blackboard or Moodle</Text>
             </View>
             <View style={styles.benefit}>
               <FontAwesome name="university" size={13} color={colors.brand} />
-              <Text style={[styles.benefitText, { color: colors.ink2 }]}>No school approval needed</Text>
+              <Text style={[styles.benefitText, { color: colors.ink2 }]}>Rechecks automatically every few hours</Text>
             </View>
           </View>
-          <View style={[styles.howBox, { backgroundColor: colors.brand50 }]}>
-            <Text style={[styles.howTitle, { color: colors.ink }]}>What you’ll do</Text>
-            <Text style={[styles.howText, { color: colors.ink2 }]}>1. Open your school’s Canvas website in a browser.</Text>
-            <Text style={[styles.howText, { color: colors.ink2 }]}>2. Copy the private link under Calendar → Calendar Feed.</Text>
-            <Text style={[styles.howText, { color: colors.ink2 }]}>3. Paste it into Semora and choose your courses.</Text>
-          </View>
-          {!canvasFeedConnection && (
-            <TouchableOpacity
-              onPress={() => (lmsAllowed || !priceKnown
-                ? router.push({ pathname: '/settings/lms-connect', params: { provider: 'canvas', source } } as any)
-                : openPaywall())}
-              style={[styles.canvasButton, { backgroundColor: colors.brand }]}
-            >
-              <FontAwesome name={!priceKnown || lmsAllowed ? 'link' : 'lock'} size={14} color="#fff" />
-              <Text style={styles.canvasButtonText}>
-                {!priceKnown ? 'Connect Canvas'
-                  : lmsFree ? 'Connect Canvas · Free'
-                  : lmsAllowed ? 'Connect Canvas'
-                  : 'Connect Canvas · Pro'}
-              </Text>
-            </TouchableOpacity>
-          )}
           {!!canvasFeedConnection && (
             <View style={[styles.connectedBadge, { backgroundColor: canvasFeedNeedsAttention ? `${colors.coral}12` : colors.brand50 }]}>
               <FontAwesome name={canvasFeedNeedsAttention ? 'exclamation-triangle' : 'check-circle'} size={14} color={canvasFeedNeedsAttention ? colors.coral : colors.brand} />
               <Text style={[styles.connectedBadgeText, { color: canvasFeedNeedsAttention ? colors.coral : colors.brand }]}>
-                {canvasFeedNeedsAttention ? 'Canvas sync needs attention — reconnect below' : 'Canvas is connected — manage it below'}
+                {canvasFeedNeedsAttention ? 'Canvas sync needs attention. Reconnect below' : 'Canvas is connected — manage it below'}
               </Text>
             </View>
           )}
@@ -284,11 +269,11 @@ export default function LmsSettingsScreen() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.connectionName, { color: colors.ink }]}>{connection.display_name}</Text>
-                      <Text style={[styles.meta, { color: colors.ink3 }]}>
+                      <Text style={[styles.meta, { color: colors.ink2 }]}>
                         {connection.links.length} {connection.links.length === 1 ? 'course' : 'courses'}
                         {connection.account_label ? ` · ${connection.account_label}` : ''}
                       </Text>
-                      <Text style={[styles.syncMeta, { color: colors.ink3 }]}>
+                      <Text style={[styles.syncMeta, { color: colors.ink2 }]}>
                         {syncTimeLabel(connection.last_successful_sync_at ?? connection.last_synced_at)}
                         {connection.connection_method === 'calendar_feed'
                           ? connection.background_sync_enabled ? ' · Canvas checks every few hours' : ' · Reconnect required'
@@ -300,7 +285,7 @@ export default function LmsSettingsScreen() {
                     </Text>
                   </View>
                   {connection.last_error && (
-                    <Text style={[styles.error, { color: needsAttention ? colors.coral : colors.ink3 }]} numberOfLines={3}>
+                    <Text style={[styles.error, { color: needsAttention ? colors.coral : colors.ink2 }]} numberOfLines={3}>
                       {connection.last_error}
                     </Text>
                   )}
@@ -317,7 +302,7 @@ export default function LmsSettingsScreen() {
                         <Text style={[styles.pendingTitle, { color: colors.ink }]}>
                           Action required · {pendingCount} new {pendingCount === 1 ? 'course' : 'courses'}
                         </Text>
-                        <Text style={[styles.pendingBody, { color: colors.ink3 }]}>
+                        <Text style={[styles.pendingBody, { color: colors.ink2 }]}>
                           Canvas is listing {pendingCount === 1 ? 'a course' : 'courses'} Semora has not imported. Review and choose a semester.
                         </Text>
                       </View>
@@ -387,7 +372,7 @@ export default function LmsSettingsScreen() {
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => remove(connection.id)} style={styles.textButton}>
                       <FontAwesome name="unlink" size={13} color={colors.ink3} />
-                      <Text style={[styles.textButtonLabel, { color: colors.ink3 }]}>Disconnect</Text>
+                      <Text style={[styles.textButtonLabel, { color: colors.ink2 }]}>Disconnect</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -396,8 +381,11 @@ export default function LmsSettingsScreen() {
           </>
         )}
 
-        <Text style={[styles.sectionTitle, { color: colors.ink }]}>Other learning platforms</Text>
-        {OTHER_PROVIDERS.map((provider) => (
+        <Text style={[styles.sectionTitle, { color: colors.ink }]}>Which one does your school use?</Text>
+        <Text style={[styles.chooseHint, { color: colors.ink2 }]}>
+          All three are free, with no limit on the number of classes.
+        </Text>
+        {PROVIDERS.map((provider) => (
           <TouchableOpacity
             key={provider.id}
             // Connecting a platform normally needs Pro; free users get the
@@ -407,16 +395,20 @@ export default function LmsSettingsScreen() {
               ? router.push({ pathname: '/settings/lms-connect', params: { provider: provider.id, source } } as any)
               : openPaywall())}
             style={[styles.providerRow, { backgroundColor: colors.card, borderColor: colors.line }]}
+            activeOpacity={0.75}
+            accessibilityRole="button"
           >
             <View style={[styles.providerIcon, { backgroundColor: colors.brand50 }]}>
               <FontAwesome name={provider.icon as any} size={15} color={colors.brand} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.providerName, { color: colors.ink }]}>{LMS_PROVIDER_LABELS[provider.id]}</Text>
-              <Text style={[styles.meta, { color: colors.ink3 }]}>{provider.detail}</Text>
+              <Text style={[styles.meta, { color: colors.ink2 }]}>{provider.detail}</Text>
             </View>
             {lmsAllowed ? (
-              <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
+              <View style={[styles.providerGo, { backgroundColor: colors.brand50 }]}>
+                <FontAwesome name="chevron-right" size={11} color={colors.brand} />
+              </View>
             ) : (
               <View style={[styles.proBadge, { backgroundColor: colors.brand }]}>
                 <FontAwesome name="star" size={9} color="#fff" />
@@ -436,11 +428,12 @@ const styles = StyleSheet.create({
   canvasHero: { borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, padding: 18 },
   canvasHeroIcon: { width: 46, height: 46, borderRadius: 15, alignItems: 'center', justifyContent: 'center', marginBottom: 13 },
   canvasHeroTitle: { fontSize: 24, fontFamily: 'Fraunces_700Bold' },
-  canvasHeroText: { fontSize: 14, lineHeight: 21, marginTop: 6 },
+  canvasHeroText: { fontSize: 15, lineHeight: 23, marginTop: 8 },
   benefits: { marginTop: 14, gap: 8 },
   benefit: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  benefitText: { fontSize: 12, fontWeight: '700' },
-  howBox: { borderRadius: 14, padding: 13, marginTop: 15, gap: 5 },
+  benefitText: { fontSize: 13, fontWeight: '700', lineHeight: 18, flex: 1 },
+  chooseHint: { fontSize: 14, lineHeight: 20, marginTop: -4, marginBottom: 12 },
+  providerGo: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   howTitle: { fontSize: 13, fontWeight: '800', marginBottom: 2 },
   howText: { fontSize: 12, lineHeight: 18 },
   canvasButton: { minHeight: 50, borderRadius: 14, marginTop: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
@@ -453,8 +446,8 @@ const styles = StyleSheet.create({
   providerIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   connectionName: { fontSize: 15, fontWeight: '800' },
   providerName: { fontSize: 15, fontWeight: '700' },
-  meta: { fontSize: 12, marginTop: 3, lineHeight: 17 },
-  syncMeta: { fontSize: 11, marginTop: 4, lineHeight: 16 },
+  meta: { fontSize: 13, marginTop: 3, lineHeight: 18 },
+  syncMeta: { fontSize: 12, marginTop: 4, lineHeight: 17 },
   status: { fontSize: 11, fontWeight: '800', textTransform: 'capitalize' },
   pendingBanner: {
     flexDirection: 'row',
@@ -465,11 +458,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   pendingTitle: { fontSize: 13.5, fontWeight: '700' },
-  pendingBody: { fontSize: 12, lineHeight: 16, marginTop: 2 },
-  error: { fontSize: 12, lineHeight: 17, marginTop: 10 },
+  pendingBody: { fontSize: 13, lineHeight: 18, marginTop: 3 },
+  error: { fontSize: 13, lineHeight: 18, marginTop: 10 },
   connectionActions: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 11, marginTop: 11 },
   textButton: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 30 },
-  textButtonLabel: { fontSize: 12, fontWeight: '800' },
+  textButtonLabel: { fontSize: 13, fontWeight: '800' },
   providerRow: { minHeight: 66, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12 },
   // Matches the PRO badge treatment on the calendar-sync teaser (calendar.tsx).
   proBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },

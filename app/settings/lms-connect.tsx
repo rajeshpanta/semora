@@ -41,7 +41,6 @@ import {
 } from '@/lib/lms';
 import { track } from '@/lib/analytics';
 import { CanvasGuidedPaste } from '@/components/CanvasGuidedPaste';
-import { CanvasFeedLimits } from '@/components/CanvasFeedLimits';
 import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
 import {
   canvasSetupStorageKey,
@@ -628,10 +627,10 @@ export default function LmsConnectScreen() {
         <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="handled">
           {courses.length === 0 ? (
             <>
-              <View style={[styles.heroIcon, { backgroundColor: colors.brand50 }]}>
-                <FontAwesome name={provider === 'google_classroom' ? 'google' : isCanvasCalendar ? 'refresh' : 'university'} size={22} color={colors.brand} />
-              </View>
-              {isCanvasCalendar && <Text style={[styles.eyebrow, { color: colors.brand }]}>CANVAS SETUP · STEP 1 OF 2</Text>}
+              {isCanvasCalendar && <Text style={[styles.eyebrow, { color: colors.brand }]}>
+                  {setupProgress.setupLane ? 'CANVAS SETUP · STEP 2 OF 2' : 'CANVAS SETUP · STEP 1 OF 2'}
+                </Text>}
+              {!setupProgress.setupLane && (
               <Text style={[styles.title, { color: colors.ink }]}>
                 {provider === 'google_classroom'
                   ? 'Sign in to Google Classroom'
@@ -642,14 +641,21 @@ export default function LmsConnectScreen() {
                     // should not then read three screens of instructions whose
                     // every action word is silent about it — that gap is what
                     // makes a promo feel like it had a catch.
-                    ? (lmsFree ? 'Connect Canvas — free' : 'Connect Canvas to Semora')
+                    ? (lmsFree ? 'Nice. This takes about a minute.' : 'Connect Canvas to Semora')
                     : `Connect your ${LMS_PROVIDER_LABELS[provider]} account`}
               </Text>
-              <Text style={[styles.subtitle, { color: colors.ink3 }]}>
-                {isCanvasCalendar
-                  ? 'Set this up once. Semora will keep your dated Canvas assignments and events updated when an instructor changes a deadline.'
-                  : 'Semora makes read-only requests to import classes, deadlines, points, and available submission status. It never changes your LMS.'}
-              </Text>
+              )}
+              {/* Once a lane is chosen the page stops pitching and starts
+                  instructing. This line answers "why do I have to go to Canvas",
+                  which is settled the moment they pick one — leaving it above the
+                  steps is what made the laptop screen read as repetition. */}
+              {!setupProgress.setupLane && (
+                <Text style={[styles.subtitle, { color: colors.ink2 }]}>
+                  {isCanvasCalendar
+                    ? 'Canvas keeps your calendar link behind your login, so there is one quick trip to make. Semora does the rest.'
+                    : 'Semora makes read-only requests to import classes, deadlines, points, and available submission status. It never changes your LMS.'}
+                </Text>
+              )}
 
               {/* The promise, on the screen where it is being made.
                   Two sentences and both of them have to be true. "No limit on
@@ -661,13 +667,13 @@ export default function LmsConnectScreen() {
                   time" while quietly meaning "we may switch yours off too" is
                   the version of this that would deserve the App Store review
                   it would get. */}
-              {lmsFree && !reconnecting && (
+              {lmsFree && !reconnecting && !setupProgress.setupLane && (
                 <View style={[styles.freeOffer, { backgroundColor: colors.teal50, borderColor: colors.teal }]}>
                   <FontAwesome name="gift" size={15} color={colors.teal} />
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.freeOfferTitle, { color: colors.ink }]}>Limited time offer · free sync</Text>
+                    <Text style={[styles.freeOfferTitle, { color: colors.ink }]}>Lock in free Canvas sync</Text>
                     <Text style={[styles.freeOfferText, { color: colors.ink2 }]}>
-                      No Pro needed, and no limit on how many classes come across. Connect now and it stays free on this account, even after the offer ends.
+                      Canvas sync is free while this offer runs. Connect before it ends and it stays free on this account.
                     </Text>
                   </View>
                 </View>
@@ -703,11 +709,6 @@ export default function LmsConnectScreen() {
                     source={source}
                   />
 
-                  <View style={styles.privateNote}>
-                    <FontAwesome name="lock" size={12} color={colors.ink3} />
-                    <Text style={[styles.privateNoteText, { color: colors.ink3 }]}>Treat this link like a password. Semora encrypts it and never displays it after setup.</Text>
-                  </View>
-                  <CanvasFeedLimits />
                 </>
               )}
 
@@ -763,6 +764,11 @@ export default function LmsConnectScreen() {
                   directly above says what to do and offers to paste from the
                   clipboard, so a greyed button reads as "not yet" rather than
                   as a dead end. */}
+              {/* Belongs to the paste step. Rendering it before a lane is
+                  chosen is what made this screen and the next look identical:
+                  the student picks phone or laptop and the bottom half of the
+                  page has not changed. */}
+              {(!isCanvasCalendar || setupProgress.setupLane === 'phone') && (
               <TouchableOpacity
                 onPress={discover}
                 disabled={working || (isCanvasCalendar && (!feedVerdict || feedVerdict.state === 'empty'))}
@@ -776,16 +782,17 @@ export default function LmsConnectScreen() {
                 {working ? <ActivityIndicator color="#fff" /> : (
                   <>
                     <FontAwesome name={provider === 'google_classroom' ? 'google' : isCanvasCalendar ? 'calendar' : 'search'} size={14} color="#fff" />
-                    <Text style={styles.primaryText}>{reconnecting ? 'Reconnect and sync' : provider === 'google_classroom' ? 'Continue with Google' : isCanvasCalendar ? (lmsFree ? 'Check link — free' : 'Check link and choose courses') : 'Find my courses'}</Text>
+                    <Text style={styles.primaryText}>{reconnecting ? 'Reconnect and sync' : provider === 'google_classroom' ? 'Continue with Google' : isCanvasCalendar ? (lmsFree ? 'Check my link' : 'Check link and choose courses') : 'Find my courses'}</Text>
                   </>
                 )}
               </TouchableOpacity>
+              )}
             </>
           ) : (
             <>
               {isCanvasCalendar && <Text style={[styles.eyebrow, { color: colors.brand }]}>CANVAS SETUP · STEP 2 OF 2</Text>}
               <Text style={[styles.title, { color: colors.ink }]}>{isCanvasCalendar ? 'Choose courses to sync' : 'Choose courses'}</Text>
-              <Text style={[styles.subtitle, { color: colors.ink3 }]}>
+              <Text style={[styles.subtitle, { color: colors.ink2 }]}>
                 {isCanvasCalendar
                   ? 'Select the courses you want in Semora and choose the semester where they belong. Semora creates each course and imports its current deadlines.'
                   : 'Semora creates a local course for each selection and keeps its assignments refreshed.'}

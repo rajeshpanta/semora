@@ -219,5 +219,5 @@ export function recordConnected(state: ProCanvasEduState): ProCanvasEduState {
  *  into the same phone gets their own answer, and the key is namespaced so a
  *  future revision can invalidate it without touching anything else. */
 export function proCanvasEduStorageKey(userId: string): string {
-  return `semora_pro_canvas_edu_v1:${userId}`;
+  return `semora_pro_canvas_edu_v1_${userId}`;
 }

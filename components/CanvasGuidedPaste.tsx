@@ -279,11 +279,7 @@ export function CanvasGuidedPaste({
       {/* ── Lane choice ───────────────────────────────────── */}
       {!lane && (
         <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <Text style={[s.cardTitle, { color: colors.ink }]}>How do you want to do this?</Text>
-          <Text style={[s.cardIntro, { color: colors.ink3 }]}>
-            Canvas keeps your calendar link behind your login, so one trip to Canvas is
-            unavoidable. Semora can make it a short one.
-          </Text>
+          <Text style={[s.cardTitle, { color: colors.ink }]}>How would you like to do it?</Text>
           <TouchableOpacity
             onPress={() => chooseLane('phone')}
             style={[s.laneButton, { borderColor: colors.brand, backgroundColor: colors.brand50 }]}
@@ -333,7 +329,7 @@ export function CanvasGuidedPaste({
           <View style={s.step}>
             <View style={[s.stepDot, { backgroundColor: colors.brand50 }]}><Text style={[s.stepDotText, { color: colors.brand }]}>2</Text></View>
             <Text style={[s.stepText, { color: colors.ink2 }]}>
-              Go to Settings → Connected classes → Connect Canvas, and paste the link there.
+              Open Settings, then Canvas or LMS Sync, and choose Canvas.
             </Text>
           </View>
           <View style={s.step}>
@@ -343,7 +339,7 @@ export function CanvasGuidedPaste({
                   next comes to the foreground, so the classes are simply there.
                   There is no live push, and promising one would be a small lie
                   the student would catch within a minute of staring at Today. */}
-              Your classes are here the next time you open Semora. You can close this screen.
+              Your classes appear here the next time you open Semora.
             </Text>
           </View>
           <TouchableOpacity onPress={() => chooseLane('phone')} style={s.switchLane}>
@@ -356,9 +352,9 @@ export function CanvasGuidedPaste({
       {lane === 'phone' && !host && (
         <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <Text style={[s.cardTitle, { color: colors.ink }]}>Which school?</Text>
-          <Text style={[s.cardIntro, { color: colors.ink3 }]}>
-            So Semora can open the right Canvas. Most schools’ Canvas address looks nothing
-            like their name, so it is easier to search.
+          <Text style={[s.cardIntro, { color: colors.ink2 }]}>
+              Type your college name and pick it from the list. Semora then opens your
+              school's own Canvas page for you, so you never need to know its web address.
           </Text>
           {!manualEntry ? (
             <>
@@ -380,13 +376,13 @@ export function CanvasGuidedPaste({
                 >
                   <View style={{ flex: 1 }}>
                     <Text style={[s.schoolName, { color: colors.ink }]} numberOfLines={2}>{school.name}</Text>
-                    <Text style={[s.schoolHost, { color: colors.ink3 }]}>{school.domain}</Text>
+                    <Text style={[s.schoolHost, { color: colors.ink2 }]}>{school.domain}</Text>
                   </View>
                   <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
                 </TouchableOpacity>
               ))}
               {!searching && query.trim().length >= 3 && schools.length === 0 && (
-                <Text style={[s.note, { color: colors.ink3 }]}>
+                <Text style={[s.note, { color: colors.ink2 }]}>
                   {searchFailed
                     ? 'Could not reach the school directory just now.'
                     : 'No match. Your school may use its own Canvas address.'}
@@ -432,7 +428,7 @@ export function CanvasGuidedPaste({
               {progress.schoolName ?? host}
             </Text>
           </View>
-          <Text style={[s.cardIntro, { color: colors.ink3 }]}>
+          <Text style={[s.cardIntro, { color: colors.ink2 }]}>
             Semora will open {host}. Sign in if it asks, then find
             <Text style={{ fontWeight: '700' }}> Calendar Feed</Text> in the calendar sidebar and copy the link.
           </Text>
@@ -449,9 +445,32 @@ export function CanvasGuidedPaste({
         </View>
       )}
 
-      {/* ── The paste field ───────────────────────────────── */}
-      {lane !== 'laptop' && (
+      {/* ── The paste field, only once the phone lane is chosen ── */}
+      {lane === 'phone' && (
         <>
+          {/* Where "what Canvas sends" used to sit. That fact belongs on the
+              screen before this one. What belongs HERE is the only thing between
+              a student and a finished connection: exactly where the link lives
+              inside Canvas, written so somebody who has never opened a Canvas
+              menu can follow it without guessing. */}
+          <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.line, marginBottom: 14 }]}>
+            <Text style={[s.cardTitle, { color: colors.ink }]}>Where to find your link</Text>
+            {[
+              'Sign in to your college Canvas account on the page Semora opens.',
+              'In the menu down the left side, tap Calendar.',
+              'Scroll to the very bottom of the panel on the right.',
+              'Tap Calendar Feed. A box opens with a long link starting webcal://',
+              'Press and hold that link, then tap Copy.',
+              'Come back to Semora. The link drops into the box below by itself.',
+            ].map((text, i) => (
+              <View key={i} style={s.step}>
+                <View style={[s.stepDot, { backgroundColor: colors.brand50 }]}>
+                  <Text style={[s.stepDotText, { color: colors.brand }]}>{i + 1}</Text>
+                </View>
+                <Text style={[s.stepText, { color: colors.ink2 }]}>{text}</Text>
+              </View>
+            ))}
+          </View>
           <Text style={[s.label, { color: colors.ink2 }]}>Paste your private Calendar Feed link</Text>
           <View style={s.secretField}>
             <TextInput
@@ -509,7 +528,7 @@ export function CanvasGuidedPaste({
             </TouchableOpacity>
           )}
           {clipboardMiss && !token && (
-            <Text style={[s.note, { color: colors.ink3 }]}>
+            <Text style={[s.note, { color: colors.ink2 }]}>
               Nothing that looks like a Canvas link is on your clipboard yet. Copy it in Canvas first.
             </Text>
           )}
@@ -588,12 +607,12 @@ export function CanvasGuidedPaste({
 const styles = StyleSheet.create({
   wrap: { gap: 12 },
   card: { borderWidth: 1, borderRadius: 14, padding: 16, gap: 10 },
-  cardTitle: { fontSize: 15, fontWeight: '700', marginBottom: 2 },
+  cardTitle: { fontSize: 17, fontWeight: '800', marginBottom: 10 },
   cardIntro: { fontSize: 13, lineHeight: 19 },
   rowHead: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  laneButton: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderRadius: 12, padding: 14 },
-  laneTitle: { fontSize: 14, fontWeight: '700' },
-  laneText: { fontSize: 12, lineHeight: 17, marginTop: 2 },
+  laneButton: { flexDirection: 'row', alignItems: 'center', gap: 13, borderWidth: 1.5, borderRadius: 14, padding: 16 },
+  laneTitle: { fontSize: 16, fontWeight: '800' },
+  laneText: { fontSize: 13, lineHeight: 18, marginTop: 3 },
   step: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   stepDot: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   stepDotText: { fontSize: 12, fontWeight: '700' },

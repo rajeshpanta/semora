@@ -203,7 +203,18 @@ Deno.test('storage is scoped per account', () => {
   const a = proCanvasEduStorageKey('user-a');
   const b = proCanvasEduStorageKey('user-b');
   assert(a !== b, 'two students on one phone must not share an answer');
-  assert(a.includes('user-a') && a.startsWith('semora_pro_canvas_edu_v1:'));
+  assert(a.includes('user-a') && a.startsWith('semora_pro_canvas_edu_v1_'));
+
+  // The check that did not exist, and whose absence let a broken key ship.
+  // expo-secure-store refuses any key outside /^[\w.-]+$/ — a ':' is refused —
+  // and lib/deviceStore swallows the throw, so the write silently did nothing
+  // and the read silently returned null. The sheet then counted zero showings
+  // on every launch and reappeared forever. A key this code cannot store is
+  // not a scoping bug, it is no storage at all.
+  const STORABLE = /^[\w.-]+$/;
+  assert(STORABLE.test(a), `key is not storable by expo-secure-store: ${a}`);
+  assert(STORABLE.test(proCanvasEduStorageKey('11111111-2222-3333-4444-555555555555')),
+    'a real uuid must also produce a storable key');
 });
 
 // ── Analytics isolation ─────────────────────────────────────────────────────

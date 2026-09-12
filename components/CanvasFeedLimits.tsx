@@ -42,14 +42,14 @@ export function CanvasFeedLimits({ compact = false }: { compact?: boolean }) {
         Canvas includes one — the assignment description. Every item links back to Canvas.
       </Text>
 
-      <Text style={[styles.line, { color: colors.ink3 }]}>
+      <Text style={[styles.line, { color: colors.ink2 }]}>
         <Text style={styles.strong}>Does not: </Text>
         grades and scores, whether you submitted something, file attachments, and anything with
         no due date — an undated assignment is not in the feed at all, so Semora never sees it.
       </Text>
 
       {!compact && (
-        <Text style={[styles.line, { color: colors.ink3 }]}>
+        <Text style={[styles.line, { color: colors.ink2 }]}>
           These are limits of the Calendar Feed itself, not of Semora. A very long description is
           shortened with a link to the full text in Canvas. Your grades stay in Canvas, and Semora
           never writes anything back to it.
@@ -62,7 +62,7 @@ export function CanvasFeedLimits({ compact = false }: { compact?: boolean }) {
 const styles = StyleSheet.create({
   box: { borderWidth: 1, borderRadius: 12, padding: 14, gap: 8 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  title: { fontSize: 13, fontWeight: '700' },
-  line: { fontSize: 12, lineHeight: 18 },
+  title: { fontSize: 14, fontWeight: '700' },
+  line: { fontSize: 13, lineHeight: 19 },
   strong: { fontWeight: '700' },
 });

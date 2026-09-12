@@ -237,10 +237,8 @@ export default function SettingsScreen() {
           />
           <SettingsRow
             icon="refresh"
-            label="Connect Canvas"
+            label="Canvas or LMS Sync"
             value="Automatic deadline sync"
-            pro
-            isPro={isPro}
             onPress={() => router.push('/settings/lms' as any)}
           />
           <SettingsRow

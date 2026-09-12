@@ -22,8 +22,9 @@ import { canvasOfferDestination } from '@/lib/canvasFunnel';
  * So the shape is borrowed from LectureConsentSheet instead — a card that
  * explains something and gets out of the way. No price, no plan, no badge, no
  * countdown, no second CTA competing with "Not now", and nothing that implies
- * scarcity. The eyebrow says INCLUDED WITH PRO because that is the entire
- * message: this is not an offer, it is an inventory.
+ * scarcity. The eyebrow names what the student gets — unlimited course sync,
+ * free with Canvas — because that is the entire message: this is not an offer,
+ * it is an inventory.
  */
 export function ProCanvasEducationSheet({
   visible,
@@ -105,10 +106,10 @@ export function ProCanvasEducationSheet({
 
             {/* Not a badge and not a pill — a quiet label. A badge would read as
                 promotional decoration on a screen that is trying not to sell. */}
-            <Text style={[styles.eyebrow, { color: colors.brand }]}>INCLUDED WITH PRO</Text>
+            <Text style={[styles.eyebrow, { color: colors.brand }]}>NO COURSE LIMIT · WITH CANVAS (FREE)</Text>
 
             <Text style={[styles.title, { color: colors.ink }]}>
-              Let Semora keep Canvas updated for you
+              Never get caught by a changed deadline
             </Text>
 
             {/* "the deadlines already on your Canvas calendar", not "your
@@ -116,8 +117,8 @@ export function ProCanvasEducationSheet({
                 a class with no dated work never appears in one. The connect
                 screen is held to the same standard. */}
             <Text style={[styles.body, { color: colors.ink2 }]}>
-              Connect Canvas once and Semora imports the deadlines already on your Canvas
-              calendar, then keeps them updated when an instructor moves a date.
+              Connect once. Every dated assignment on your Canvas calendar lands in Semora —
+              and when your instructor changes one, Semora changes it too.
             </Text>
             <Text style={[styles.body, { color: colors.ink2 }]}>
               Less checking Canvas. More knowing what is next.
@@ -142,9 +143,9 @@ export function ProCanvasEducationSheet({
               onPress={connect}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel="Connect Canvas"
+              accessibilityLabel="Learn more"
             >
-              <Text style={styles.ctaText}>Connect Canvas</Text>
+              <Text style={styles.ctaText}>Learn more</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.notNow} onPress={dismiss} accessibilityRole="button">
