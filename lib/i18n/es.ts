@@ -2274,6 +2274,9 @@ export const ES: Record<string, string> = {
   'Nothing to generate from yet — scan this course\'s syllabus or upload lecture notes first.': 'Todavía no hay material: escanea el programa de este curso o sube apuntes primero.',
   'That generated more than fits in one batch. Try again — it usually succeeds on retry.': 'Se generó más de lo que cabe en un lote. Inténtalo otra vez; suele funcionar al segundo intento.',
   'Couldn\'t generate flashcards from this course yet. Try again, or add more material first.': 'Todavía no se pueden generar tarjetas de este curso. Inténtalo de nuevo o añade más material.',
+  'Couldn\'t find enough in this lecture\'s notes to make flashcards.': 'No hay suficiente en los apuntes de esta clase para crear tarjetas.',
+  'This lecture\'s notes aren\'t ready yet. Try again once they appear.': 'Los apuntes de esta clase aún no están listos. Inténtalo de nuevo cuando aparezcan.',
+  'Lecture not found': 'No se encontró la clase.',
   // Returned by supabase/functions/share-course
   'Missing courseId': 'Falta el identificador del curso.',
   'Sharing a course is a Pro feature. Upgrade to share your deadlines with classmates.': 'Compartir un curso es una función Pro. Hazte Pro para compartir tus entregas con tus compañeros.',

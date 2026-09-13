@@ -327,7 +327,9 @@ export default function LectureDetailScreen() {
     // The lecture's notes are mirrored into this course's material, so the
     // existing generator picks them up with no lecture-specific plumbing.
     generateCards.mutate(
-      { courseId: lecture.course_id, deckTitle: lecture.title || 'Lecture' },
+      // lectureId makes the cards come from THIS lecture's notes, not from
+      // whatever the course happens to hold (supabase/functions/generate-flashcards).
+      { courseId: lecture.course_id, lectureId: lecture.id, deckTitle: lecture.title || 'Lecture' },
       {
         onSuccess: (result) => {
           // Remember it before navigating, so returning to this lecture offers

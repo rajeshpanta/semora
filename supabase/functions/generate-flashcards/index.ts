@@ -248,7 +248,17 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
     //    in practice this isn't required (the course_notes query below reads
     //    everything for the course), it's just an explicit signal the client
     //    can pass right after an upload for a same-request guarantee.
-    let body: { courseId?: unknown; deckId?: unknown; deckTitle?: unknown; taskId?: unknown; noteIds?: unknown; locale?: unknown };
+    //
+    //    lectureId: "Make flashcards" on a lecture. The cards are built from THAT
+    //    lecture's notes, read straight from lecture_recordings.notes_md. The
+    //    lecture screen used to send only courseId, which generated from the
+    //    course's material as a whole: the syllabus titles and whichever notes
+    //    had been mirrored into course_notes. A lecture recorded before its
+    //    course was attached was never mirrored, so on 2026-09-02 a student's
+    //    12,000-character lecture produced "Couldn't generate flashcards" from a
+    //    course holding nothing but syllabus titles. Reading the notes directly
+    //    removes that dependency for the one path that names a lecture.
+    let body: { courseId?: unknown; deckId?: unknown; deckTitle?: unknown; taskId?: unknown; noteIds?: unknown; lectureId?: unknown; locale?: unknown };
     try {
       body = await req.json();
     } catch {
@@ -258,6 +268,7 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
     const deckId = typeof body.deckId === 'string' ? body.deckId : null;
     const requestedTitle = typeof body.deckTitle === 'string' ? body.deckTitle.trim().slice(0, 80) : '';
     const taskId = typeof body.taskId === 'string' ? body.taskId : null;
+    const lectureId = typeof body.lectureId === 'string' ? body.lectureId : null;
     const requestedNoteIds = Array.isArray(body.noteIds) ? body.noteIds : null;
     const noteIdsProvided = requestedNoteIds !== null;
     const noteIds = requestedNoteIds
@@ -365,7 +376,38 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
     let syllabusText = '';
     let notesText = '';
 
-    const { data: run } = await adminClient
+    if (lectureId) {
+      // Scoped to one lecture: its own notes are the whole material. The
+      // course's syllabus and other notes are deliberately left out, because
+      // the student asked for cards about this lecture and the deck is named
+      // after it.
+      const { data: lecture, error: lectureErr } = await adminClient
+        .from('lecture_recordings')
+        .select('id, course_id, title, notes_md')
+        .eq('id', lectureId)
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (lectureErr) {
+        log.error('lecture_lookup_failed', errorFields(lectureErr));
+        return jsonResponse({ error: 'Service temporarily unavailable' }, 503);
+      }
+      if (!lecture || lecture.course_id !== courseId) {
+        return jsonResponse({ error: 'Lecture not found' }, 404);
+      }
+      const lectureNotes = typeof lecture.notes_md === 'string' ? lecture.notes_md.trim() : '';
+      if (!lectureNotes) {
+        return jsonResponse(
+          { error: "This lecture's notes aren't ready yet. Try again once they appear." },
+          422,
+        );
+      }
+      notesText = clamp(
+        `### ${String(lecture.title || 'Lecture').slice(0, 80)} (lecture notes)\n${lectureNotes}`,
+        MAX_NOTES_CHARS,
+      );
+    }
+
+    const { data: run } = lectureId ? { data: null } : await adminClient
       .from('parse_runs')
       .select('final_results, created_at')
       .eq('course_id', courseId)
@@ -392,7 +434,7 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
     // it like an omitted field used every note instead, so deselecting a bad
     // attachment in the UI could never recover from its extraction error.
     if (noteIdsProvided && noteIds.length > 0) notesQuery = notesQuery.in('id', noteIds);
-    const { data: notes } = noteIdsProvided && noteIds.length === 0
+    const { data: notes } = lectureId || (noteIdsProvided && noteIds.length === 0)
       ? { data: [] }
       : await notesQuery.limit(10);
 
@@ -542,10 +584,18 @@ serve(withRequestLogging('generate-flashcards', async (req, log) => {
       .slice(0, MAX_CARDS);
 
     if (cleanCards.length < MIN_CARDS) {
-      log.error('no_valid_cards', { sample: cleaned.slice(0, 300) });
+      // 422, not 502: the model answered, and its answer is that this material
+      // holds nothing worth a card (a syllabus of logistics, a two-line note).
+      // That is about the material, not a server fault, and filing it as 502
+      // is what made every such case look like an outage in edge_request_log.
+      log.warn('no_valid_cards', { sample: cleaned.slice(0, 300), lecture: Boolean(lectureId) });
       return jsonResponse(
-        { error: "Couldn't generate flashcards from this course yet. Try again, or add more material first." },
-        502,
+        {
+          error: lectureId
+            ? "Couldn't find enough in this lecture's notes to make flashcards."
+            : "Couldn't generate flashcards from this course yet. Try again, or add more material first.",
+        },
+        422,
       );
     }
 
