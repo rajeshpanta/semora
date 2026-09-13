@@ -15,6 +15,7 @@ import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib
 import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
+import { createDismissGate } from '@/lib/dismissGate';
 
 // Floating action menu opened by the "+" tab button. The tab press itself is
 // intercepted in app/(tabs)/_layout.tsx (preventDefault), so this menu is the
@@ -158,9 +159,26 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
     }
   }, [visible]);
 
+  // Holds "Upload a document" until this menu is actually off the screen. See
+  // lib/dismissGate.ts: the scan screen opens the document picker the moment
+  // it mounts, and on iOS a picker presented while this Modal is still up is
+  // attached to the menu and torn down with it. 53 of 62 Pro taps on this row
+  // failed that way in 30 days.
+  const dismissGate = useRef(createDismissGate()).current;
+  useEffect(() => () => dismissGate.cancel(), []);
+
   const go = (pathname: string, params?: Record<string, string>) => {
     onClose();
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Deliberately this one row only. Camera and Photos use a different native
+    // module and did not fail from here (0 of 12 Pro taps), and every other row
+    // opens an ordinary screen with nothing to present. 700ms matches the
+    // backstop FreeScanConfirmSheet uses for the same signal; a normal dismissal
+    // reports well before it.
+    if (Platform.OS === 'ios' && params?.action === 'document') {
+      dismissGate.runAfterDismiss(() => router.push({ pathname, params } as any), 700);
+      return;
+    }
     router.push({ pathname, params } as any);
   };
 
@@ -299,7 +317,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
       reason="canvas"
       onClose={() => setCanvasUpsell(false)}
     />
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} onDismiss={dismissGate.onDismissed}>
       {/* Backdrop and sheet are SIBLINGS, not parent/child: a pressable
           backdrop wrapping the sheet swallowed every row press under the new
           architecture (rows never fired while the backdrop always did). */}

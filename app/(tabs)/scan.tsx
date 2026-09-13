@@ -87,13 +87,24 @@ import { classifyPick, runPick, shouldTrackCancelled } from '@/lib/pickerFlow';
  * that was accidentally protecting free users. All four affected devices were
  * Pro.
  *
- * InteractionManager is the lifecycle-correct answer rather than a fixed
- * delay: it resolves when the animations and gestures actually finish, however
- * long they take, and immediately when nothing is running — so the ordinary
- * "tap the card on an idle screen" path costs a frame, not a timeout. It is
- * placed inside safePick rather than at any one call site so that every entry
- * point is covered by one guarantee: the deep-link, the cards, and a tap that
- * lands while an alert or the Pro sheet is still dismissing.
+ * CORRECTION (2026-09-13): this wait does NOT do what the paragraph below
+ * says, and never did in this app. React Native 0.81 ships InteractionManager
+ * disabled (the `disableInteractionManager` flag defaults to true, and the stub
+ * resolves on the next tick), and it never tracked native Modal animations
+ * anyway. So the PlusMenu race above kept happening: 53 of 62 Pro taps on
+ * "Upload a document" failed in 30 days, as ERR_PICKER_PRESENTATION_FAILED from
+ * the native watchdog. It is fixed at the source instead: PlusMenu now navigates
+ * only after its Modal reports dismissal (lib/dismissGate.ts). This call is kept
+ * because it is harmless, but nothing may rely on it to wait for a transition.
+ * Code that must wait for a Modal should use that Modal's onDismiss.
+ *
+ * Original reasoning, kept for the record: InteractionManager is the
+ * lifecycle-correct answer rather than a fixed delay: it resolves when the
+ * animations and gestures actually finish, however long they take, and
+ * immediately when nothing is running. It is placed inside safePick rather
+ * than at any one call site so that every entry point is covered by one
+ * guarantee: the deep-link, the cards, and a tap that lands while an alert or
+ * the Pro sheet is still dismissing.
  */
 function waitForTransitions(): Promise<void> {
   return new Promise<void>((resolve) => {
