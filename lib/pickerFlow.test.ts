@@ -346,3 +346,85 @@ Deno.test('a button stalled by transitions still works on the next tap', async (
   assertEquals(classifyPick(second as any), 'selected', 'the button recovered');
   assertEquals(nativeCalls, 1);
 });
+
+// ── nativeCallMayHang: the timeout belongs to the web picker, not a native one ─
+//
+// In 45 days the two-minute backstop fired 21 times, all on iOS, never on web,
+// over pickers students were actually using: browsing Files for over two
+// minutes, or leaving to fetch the file and coming back. Each got "Couldn't open
+// the picker" over an open picker, and the file they then chose was dropped.
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+Deno.test('native: a student browsing past the timeout is not a failure, and their file is kept', async () => {
+  const failures: string[] = [];
+  const result = await runPick({
+    inFlight: cell(),
+    waitForTransitions: () => Promise.resolve(),
+    work: async () => { await sleep(30); return selected; },
+    onFailure: (_e, reason) => failures.push(reason),
+    timeoutMs: 5,
+    nativeCallMayHang: false,
+  });
+  assertEquals(failures, []);
+  assertEquals(classifyPick(result), 'selected');
+});
+
+Deno.test('native: a cancel after the timeout is still a cancellation', async () => {
+  const failures: string[] = [];
+  const result = await runPick({
+    inFlight: cell(),
+    waitForTransitions: () => Promise.resolve(),
+    work: async () => { await sleep(30); return cancelled; },
+    onFailure: (_e, reason) => failures.push(reason),
+    timeoutMs: 5,
+    nativeCallMayHang: false,
+  });
+  assertEquals(failures, []);
+  assertEquals(classifyPick(result), 'cancelled');
+});
+
+Deno.test('native: a stalled wait BEFORE the picker is reached still times out and frees the button', async () => {
+  const failures: string[] = [];
+  const inFlight = cell();
+  let presented = false;
+  const result = await runPick({
+    inFlight,
+    waitForTransitions: () => new Promise<void>(() => {}),
+    work: async () => { presented = true; return selected; },
+    onFailure: (_e, reason) => failures.push(reason),
+    timeoutMs: 5,
+    nativeCallMayHang: false,
+  });
+  assertEquals(failures, ['timeout']);
+  assertEquals(classifyPick(result), 'failed');
+  assertEquals(presented, false);
+  assertEquals(inFlight.current, false);
+});
+
+Deno.test('native: a picker that throws after a long browse is still reported as threw', async () => {
+  const failures: string[] = [];
+  const result = await runPick({
+    inFlight: cell(),
+    waitForTransitions: () => Promise.resolve(),
+    work: async () => { await sleep(30); throw new Error('ERR_PICKER_PRESENTATION_FAILED'); },
+    onFailure: (_e, reason) => failures.push(reason),
+    timeoutMs: 5,
+    nativeCallMayHang: false,
+  });
+  assertEquals(failures, ['threw']);
+  assertEquals(classifyPick(result), 'failed');
+});
+
+Deno.test('web (the default): a picker that never settles still times out', async () => {
+  const failures: string[] = [];
+  const result = await runPick({
+    inFlight: cell(),
+    waitForTransitions: () => Promise.resolve(),
+    work: () => new Promise(() => {}),
+    onFailure: (_e, reason) => failures.push(reason),
+    timeoutMs: 5,
+  });
+  assertEquals(failures, ['timeout']);
+  assertEquals(classifyPick(result), 'failed');
+});

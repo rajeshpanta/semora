@@ -466,6 +466,9 @@ export default function ScanScreen() {
     // See waitForTransitions above: presenting during a dismissal is what
     // strands the native picking context.
     waitForTransitions,
+    // The 2-minute backstop is for the web picker, which can hang forever. On
+    // iOS and Android it only ever fired over a picker a student was using.
+    nativeCallMayHang: Platform.OS === 'web',
     onFailure: (err, reason, elapsedMs) => {
       track('scan_picker_failed', describePickerFailure(err, {
         method,

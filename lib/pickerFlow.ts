@@ -55,6 +55,27 @@ export interface PickFlowDeps {
   inFlight: { current: boolean };
   now?: () => number;
   timeoutMs?: number;
+  /**
+   * Whether the native picker call itself can fail to settle, and so needs the
+   * timeout even after it has been reached. Defaults to true.
+   *
+   * True only on web. expo-image-picker's web build resolves from inside a
+   * `change` listener with no reject path, so a file with no MIME mapping
+   * leaves it pending forever; that is what the timeout was written for.
+   *
+   * False on iOS and Android, and it matters. A native picker that reached the
+   * screen always settles, on Pick or on Cancel, and one that never reached the
+   * screen is caught by the document picker's own 3-second watchdog. A timeout
+   * running over a picker the student is actually using can only be wrong: in
+   * 45 days it fired 21 times, all on iOS, never on web, as students browsed
+   * Files for over two minutes or left to fetch the file and came back (141s to
+   * 407s, the timer catching up on resume). Each got "Couldn't open the picker"
+   * over an open picker, and a file chosen after that was ignored, because the
+   * race had already settled. With this false the timeout still guards the
+   * pre-native wait, the only part on native that could stall, and is disarmed
+   * the moment the native call starts.
+   */
+  nativeCallMayHang?: boolean;
 }
 
 const DUPLICATE: PickResult = { canceled: true, assets: [], duplicate: true };
@@ -65,6 +86,7 @@ export async function runPick(deps: PickFlowDeps): Promise<any> {
     waitForTransitions, work, onFailure, inFlight,
     now = () => Date.now(),
     timeoutMs = PICK_TIMEOUT_MS,
+    nativeCallMayHang = true,
   } = deps;
 
   // Read-and-set with no await in between, so two calls in the same tick
@@ -89,6 +111,12 @@ export async function runPick(deps: PickFlowDeps): Promise<any> {
   const pickPromise = (async () => {
     await waitForTransitions();
     nativeStarted = true;
+    // A native picker is now responsible for settling (see nativeCallMayHang).
+    // Disarming the timer leaves the race waiting on the picker alone.
+    if (!nativeCallMayHang && timer !== undefined) {
+      clearTimeout(timer);
+      timer = undefined;
+    }
     return work();
   })();
 
