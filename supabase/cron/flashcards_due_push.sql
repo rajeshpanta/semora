@@ -109,7 +109,8 @@ select cron.schedule(
           ),
           -- app/_layout.tsx routes on data.type; 'flashcards_due' opens /flashcards.
           'data',  jsonb_build_object('type', 'flashcards_due')
-        )
+        ),
+        timeout_milliseconds := 60000
       );
 
       -- Stamp BEFORE the async pg_net request resolves, deliberately. If the

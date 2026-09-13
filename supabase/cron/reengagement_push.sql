@@ -60,7 +60,8 @@ select cron.schedule(
             )
           ),
           'data',  jsonb_build_object('type', 'weekly_digest')
-        )
+        ),
+        timeout_milliseconds := 60000
       );
     end if;
   end
