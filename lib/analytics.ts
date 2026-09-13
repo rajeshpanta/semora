@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
 import { supabase } from '@/lib/supabase';
+import { redactSensitiveText, redactStackFrame } from '@/lib/redact';
 
 // Events are logged into the SHARED `analytics_events` table (also used by the
 // Citizen app) and tagged with app_name='semora'. Always query the
@@ -113,6 +114,17 @@ function deviceIdWasEphemeral(): boolean {
 // different answer every time you change the gap.
 const SESSION_IDLE_MS = 30 * 60 * 1000;
 let sessionId: string = uuid();
+// Context for an error that carries none of its own.
+//
+// A promise rejected with no reason arrives here as `undefined`: no name, no
+// message, no stack. One browser produced seventeen of those on 2026-09-11
+// while a student set up Canvas, and the report said nothing about where they
+// came from. What can still be known is what the app had just done and whether
+// the tab had just come back into view, so every client_error now records both.
+// Declared above track(), which writes it on every call: reading a module-level
+// `let` before its declaration line has run throws.
+let lastTracked: { name: string; screen: string | null; at: number } | null = null;
+let lastBecameVisibleAt: number | null = null;
 let lastEventAt = Date.now();
 
 /** Called when the app returns to the foreground (see app/_layout.tsx). */
@@ -197,6 +209,13 @@ export function resetBundleTagForTest(): void {
  */
 export function track(eventName: string, properties: Record<string, any> = {}): void {
   if (!ANALYTICS_ENABLED) return;
+  if (eventName !== 'client_error') {
+    lastTracked = {
+      name: eventName,
+      screen: typeof properties.screen === 'string' ? properties.screen : null,
+      at: Date.now(),
+    };
+  }
   try {
     supabase
       .from('analytics_events')
@@ -307,6 +326,7 @@ export async function trackBeforeLeaving(
 // this is meant to observe crashes, not to take ownership of them.
 let errorHandlersInstalled = false;
 
+
 export function installErrorTracking(): void {
   if (errorHandlersInstalled) return;
   errorHandlersInstalled = true;
@@ -314,14 +334,33 @@ export function installErrorTracking(): void {
   const report = (error: unknown, fatal: boolean, kind: string) => {
     try {
       const e = error as { message?: string; name?: string; stack?: string };
+      const now = Date.now();
       track('client_error', {
         kind,
         fatal,
+        // 'undefined', 'string', 'object:DOMException', 'object:Error'… Tells a
+        // bare Promise.reject() apart from a thrown value that lost its message.
+        reason_type: error === null
+          ? 'null'
+          : typeof error === 'object'
+            ? `object:${(error as object).constructor?.name ?? 'Object'}`
+            : typeof error,
+        after_event: lastTracked?.name ?? null,
+        after_screen: lastTracked?.screen ?? null,
+        ms_since_event: lastTracked ? now - lastTracked.at : null,
+        ...(Platform.OS === 'web' && typeof document !== 'undefined'
+          ? {
+              visibility: document.visibilityState,
+              ms_since_visible: lastBecameVisibleAt === null ? null : now - lastBecameVisibleAt,
+            }
+          : {}),
         name: e?.name ?? typeof error,
         // Truncated: a message is for grouping, not for reading a novel. The
-        // stack's first frame is usually enough to find the call site.
-        message: String(e?.message ?? error).slice(0, 300),
-        frame: (e?.stack ?? '').split('\n')[1]?.trim().slice(0, 160) ?? null,
+        // stack's first frame is usually enough to find the call site. Both go
+        // through lib/redact.ts so no path, filename, home folder or address
+        // leaves the device (see error_shown in lib/errorReport.ts).
+        message: redactSensitiveText(String(e?.message ?? error), { maxLength: 300 }),
+        frame: redactStackFrame((e?.stack ?? '').split('\n')[1], 160),
       });
     } catch {
       // A failure to report an error must never become a second error.
@@ -340,6 +379,11 @@ export function installErrorTracking(): void {
   } catch { /* handler unavailable — nothing to install */ }
 
   if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') lastBecameVisibleAt = Date.now();
+      });
+    }
     window.addEventListener('error', (ev) => report(ev.error ?? ev.message, true, 'window'));
     window.addEventListener('unhandledrejection', (ev: PromiseRejectionEvent) =>
       report(ev.reason, false, 'unhandled_rejection'));

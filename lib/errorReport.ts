@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
 import { track } from '@/lib/analytics';
 import { MARKETING_URL, SUPPORT_EMAIL } from '@/lib/constants';
+import { redactSensitiveText, redactStackFrame } from '@/lib/redact';
 
 /**
  * The one place a failure becomes something the user can act on.
@@ -123,16 +124,24 @@ export function reportError(err: any, opts: ReportErrorOptions = {}): void {
   // first TypeError it caught recorded "We couldn't save that change" and told
   // us nothing at all. The kind sentence is for the student; the raw one is for
   // whoever has to fix it, and both have to survive.
+  //
+  // Everything that could carry a path, a filename or an address goes through
+  // lib/redact.ts first. The stack frame used to be sliced raw, and on the
+  // iPhone app running on a Mac its first 120 characters are the student's home
+  // folder, which put a real Mac account name in analytics.
   track('error_shown', {
     screen,
     code,
     status: typeof err?.status === 'number' ? err.status : undefined,
-    message: String(summary).slice(0, 120),
-    raw: typeof err?.message === 'string' ? err.message.slice(0, 200) : String(err ?? '').slice(0, 200),
+    message: redactSensitiveText(String(summary), { maxLength: 120 }),
+    raw: redactSensitiveText(
+      typeof err?.message === 'string' ? err.message : String(err ?? ''),
+      { maxLength: 200 },
+    ),
     name: err?.name ? String(err.name).slice(0, 40) : undefined,
     // First stack frame only: enough to name the function, never a payload.
     at: typeof err?.stack === 'string'
-      ? (err.stack.split('\n')[1] ?? '').trim().slice(0, 120) || undefined
+      ? redactStackFrame(err.stack.split('\n')[1], 120) ?? undefined
       : undefined,
   });
 

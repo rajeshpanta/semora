@@ -17,6 +17,8 @@
  * is a student's own words about their own coursework.
  */
 
+import { redactSensitiveText } from './redact';
+
 /** Long enough for a native exception's shape, short enough to stay a label. */
 export const PICKER_MESSAGE_MAX = 300;
 
@@ -48,38 +50,12 @@ export interface PickerFailureContext {
 /**
  * Strip anything that could name a file, a person, or a place on disk.
  *
- * Order matters. URIs go first because a file:// URI contains path separators
- * that the later path rule would otherwise chew into pieces, leaving the
- * basename — the exact thing we are trying not to keep — stranded as a
- * separate token.
- *
- * This is deliberately aggressive. A redaction that removes one word too many
- * costs us a little diagnostic colour; one that keeps a filename puts a
- * student's coursework in an analytics table forever.
+ * The rules live in lib/redact.ts so that every error report shares them. A
+ * picker message also blanks quoted text, because in a picker error a quoted
+ * string is almost always the student's own filename.
  */
 export function redactPickerMessage(raw: unknown): string {
-  if (typeof raw !== 'string' || !raw.trim()) return '';
-  let text = raw;
-
-  // file:///…, content://…, assets-library://…, ph://…, http(s)://…
-  text = text.replace(/\b[a-z][a-z0-9+.-]*:\/\/\S*/gi, '<uri>');
-  // Absolute POSIX paths, including the /private/var/mobile/… the picker copies into.
-  text = text.replace(/(^|[\s"'(\[])\/[^\s"')\]]*/g, '$1<path>');
-  // A bare basename with a known document/image extension, quoted or not.
-  text = text.replace(
-    /\S+\.(pdf|docx?|pptx?|xlsx?|pages|key|numbers|txt|rtf|csv|heic|heif|jpe?g|png|webp|gif|tiff?|zip)\b/gi,
-    '<file>',
-  );
-  // Anything still in quotes is far more likely a filename than a constant.
-  text = text.replace(/"[^"]{0,200}"/g, '"<redacted>"');
-  text = text.replace(/'[^']{0,200}'/g, "'<redacted>'");
-  // Emails, in case a provider echoes an iCloud account back in the error.
-  text = text.replace(/\b[\w.+-]+@[\w.-]+\.\w+\b/gi, '<email>');
-
-  text = text.replace(/\s+/g, ' ').trim();
-  return text.length > PICKER_MESSAGE_MAX
-    ? `${text.slice(0, PICKER_MESSAGE_MAX - 1)}…`
-    : text;
+  return redactSensitiveText(raw, { maxLength: PICKER_MESSAGE_MAX, redactQuoted: true });
 }
 
 /**
