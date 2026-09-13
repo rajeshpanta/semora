@@ -5,6 +5,7 @@ import {
   classifyRequest,
   describeStorageError,
   isAnonAuthorization,
+  setAuthRecoveryHandler,
   noteProtectedRequest,
   recordRefreshAttempt,
   recordStorageRead,
@@ -343,4 +344,40 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     flowType: 'pkce',
   },
   global: { fetch: instrumentedFetch },
+});
+/**
+ * Put the identity back after a request has already gone out without one.
+ *
+ * WHY THIS EXISTS. supabase-js never fails when it cannot produce a session; it
+ * substitutes the anon key (`data.session?.access_token ?? this.supabaseKey`).
+ * So one unreadable storage read does not surface as an error — it surfaces as
+ * an empty database, and it STAYS that way, because the in-memory session is
+ * null and nothing ever asks storage again. That is how a locked screen at the
+ * wrong moment became devices carrying tokens dead for 24 hours.
+ *
+ * getSession() is the narrowest thing that repairs it: it re-reads storage into
+ * memory, and refreshes only if what it finds has expired. It runs once per
+ * unauthenticated window, not per request, because lib/authTelemetry.ts opens a
+ * window on the first anonymous request and not again.
+ *
+ * IT DOES NOT RESCUE THE REQUEST THAT NOTICED. That one has gone. What changes
+ * is everything after it: instead of a window that stays open until the app is
+ * killed, the next request carries a token. Rescuing the in-flight request
+ * would mean holding it while storage is retried, and a request that hangs on a
+ * locked keychain is a worse failure than one that returns empty.
+ *
+ * Safe against re-entry twice over: the flag below, and the fact that
+ * getSession only ever issues an auth_token request, which instrumentedFetch
+ * classifies away from 'protected' and so can never open a window.
+ */
+let recovering = false;
+setAuthRecoveryHandler(() => {
+  if (recovering) return;
+  recovering = true;
+  void supabase.auth
+    .getSession()
+    .catch(() => {})
+    .finally(() => {
+      recovering = false;
+    });
 });

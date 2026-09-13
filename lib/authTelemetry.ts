@@ -147,6 +147,41 @@ export function setAuthTelemetrySink(next: AuthTelemetrySink | null): void {
   sink = next;
 }
 
+/**
+ * The one thing this module ASKS someone else to do.
+ *
+ * Everything else here observes. This does not: it fires the moment an
+ * unauthenticated window OPENS, so something outside can try to put the
+ * identity back. It belongs here because this is the only place that knows the
+ * condition — a protected request going out with the anon key while the app
+ * believes it is signed in — and knowing that without acting on it is how a
+ * transient storage failure became a session that stayed dead for 24 hours.
+ *
+ * The contract is deliberately narrow:
+ *   · called ONCE per window, not once per anonymous request;
+ *   · fire and forget, never awaited, so it cannot delay or hang a request;
+ *   · a throw is swallowed, because a failed recovery must leave behaviour
+ *     exactly as it was rather than break the request that noticed;
+ *   · the handler must not issue protected requests, or it re-enters this.
+ *
+ * lib/supabase.ts owns the wiring, the way app/_layout.tsx owns the sink's.
+ */
+export type AuthRecoveryHandler = () => void;
+let recover: AuthRecoveryHandler | null = null;
+
+export function setAuthRecoveryHandler(next: AuthRecoveryHandler | null): void {
+  recover = next;
+}
+
+function attemptRecovery(): void {
+  if (!recover) return;
+  try {
+    recover();
+  } catch {
+    // Observation must survive a recovery that cannot run.
+  }
+}
+
 function emit(event: string, props: DiagnosticProps): void {
   if (!sink) return;
   try {
@@ -507,6 +542,9 @@ export function noteProtectedRequest(usedAnonKey: boolean): void {
         anon_requests: 1,
         emit_seq: 1,
       });
+        // A window opening is the first moment we can PROVE the app is signed
+        // in and the request was not. Ask for the identity back, exactly once.
+        attemptRecovery();
       return;
     }
 

@@ -18,6 +18,8 @@ import * as SecureStore from './__testing__/expo-secure-store.stub.ts';
 import {
   setAuthTelemetrySink,
   recordAuthEvent,
+  isAnonAuthorization,
+  noteProtectedRequest,
   EVENT_READ_DEGRADED,
   EVENT_IDENTITY_UNAVAILABLE,
   EVENT_IDENTITY_RECOVERED,
@@ -336,4 +338,77 @@ Deno.test('migration: signing out clears both namespaces', async () => {
   assertEquals(SecureStore.items.has(SESSION_KEY), false);
   assertEquals(SecureStore.items.has(`${SESSION_KEY}.v2`), false);
   assertEquals(await storage.getItem(SESSION_KEY), null);
+});
+
+
+// ── End to end: the locked keychain all the way to the symptom ──────────────
+//
+// Everything above tests a layer. This tests the CHAIN, because the chain is
+// what a student experiences and what production reported: a locked screen, a
+// refused read, supabase falling back to the anon key, and an app that renders
+// signed-in over an empty database. Each step below is the real code, not a
+// description of it.
+//
+// The only thing stubbed is the keychain, and it is stubbed to behave the way
+// iOS does: an attribute fixed at creation, and a locked read of a whenUnlocked
+// item throwing the prose the native module produces for -25308.
+
+/** What supabase-js does with whatever the adapter returns:
+ *  `data.session?.access_token ?? this.supabaseKey`. */
+function authorizationFor(session: string | null): string {
+  if (!session) return `Bearer ${ANON_KEY}`;
+  return `Bearer ${JSON.parse(session).access_token}`;
+}
+
+const SESSION = JSON.stringify({ access_token: 'real-user-token', refresh_token: 'r' });
+
+Deno.test('end to end: BEFORE — a locked phone makes a signed-in student anonymous', async () => {
+  const h = harness();
+  // A session written by any build before this fix.
+  SecureStore.items.set(SESSION_KEY, SESSION);
+  SecureStore.accessibility.set(SESSION_KEY, SecureStore.WHEN_UNLOCKED);
+  recordAuthEvent('SIGNED_IN', true, null);
+
+  SecureStore.lock();                                   // screen goes off
+  const read = await storage.getItem(SESSION_KEY);      // supabase asks for the session
+  const auth = authorizationFor(read);                  // and builds a header from it
+
+  assertEquals(read, null, 'the keychain refused');
+  assertEquals(isAnonAuthorization(auth, ANON_KEY), true, 'so the request goes out as nobody');
+
+  noteProtectedRequest(true);
+  assertEquals(h.names().includes(EVENT_IDENTITY_UNAVAILABLE), true,
+    'which is exactly the event 8 devices reported this week');
+});
+
+Deno.test('end to end: AFTER — the same locked phone stays signed in', async () => {
+  const h = harness();
+  SecureStore.items.set(SESSION_KEY, SESSION);
+  SecureStore.accessibility.set(SESSION_KEY, SecureStore.WHEN_UNLOCKED);
+  recordAuthEvent('SIGNED_IN', true, null);
+
+  // The migration: one ordinary write, which is what a token refresh does.
+  await storage.setItem(SESSION_KEY, SESSION);
+
+  SecureStore.lock();                                   // same screen, same moment
+  const read = await storage.getItem(SESSION_KEY);
+  const auth = authorizationFor(read);
+
+  assertEquals(read, SESSION, 'the keychain hands it over now');
+  assertEquals(isAnonAuthorization(auth, ANON_KEY), false, 'so the request carries the user');
+
+  noteProtectedRequest(false);
+  assertEquals(h.names().includes(EVENT_IDENTITY_UNAVAILABLE), false,
+    'and the window that broke people never opens');
+});
+
+Deno.test('end to end: a device that never migrates is not made worse', async () => {
+  const h = harness();
+  SecureStore.items.set(SESSION_KEY, SESSION);
+  SecureStore.accessibility.set(SESSION_KEY, SecureStore.WHEN_UNLOCKED);
+  recordAuthEvent('SIGNED_IN', true, null);
+  // Unlocked, no write yet — the state every device is in the instant it
+  // installs the update. It must read exactly as it did before.
+  assertEquals(await storage.getItem(SESSION_KEY), SESSION);
+  assertEquals(h.names().includes(EVENT_IDENTITY_UNAVAILABLE), false);
 });

@@ -16,6 +16,7 @@ import {
   isAnonAuthorization,
   isDegradedRead,
   noteProtectedRequest,
+  setAuthRecoveryHandler,
   recordAuthEvent,
   recordPhase,
   recordRefreshAttempt,
@@ -524,4 +525,63 @@ Deno.test('the description is bounded and character-filtered', () => {
   const out = describeStorageError(err) ?? '';
   assert(out.length <= 48, `length ${out.length}`);
   assert(!/[<>; ]/.test(out), out);
+});
+
+
+// ── Recovery: the hook that stops a window staying open ─────────────────────
+//
+// Detecting "signed in, but this request went out as nobody" and doing nothing
+// is what let one unreadable read become a session dead for 24 hours. These pin
+// the contract the handler is called under, because getting any of them wrong
+// is worse than not calling it at all.
+
+Deno.test('recovery: fires when a window opens', () => {
+  __resetAuthTelemetryForTests(0);
+  let calls = 0;
+  setAuthRecoveryHandler(() => { calls += 1; });
+  recordAuthEvent('SIGNED_IN', true, null);
+  noteProtectedRequest(true);
+  assertEquals(calls, 1);
+  setAuthRecoveryHandler(null);
+});
+
+Deno.test('recovery: fires ONCE per window, not once per anonymous request', () => {
+  __resetAuthTelemetryForTests(0);
+  let calls = 0;
+  setAuthRecoveryHandler(() => { calls += 1; });
+  recordAuthEvent('SIGNED_IN', true, null);
+  for (let i = 0; i < 20; i++) noteProtectedRequest(true);
+  assertEquals(calls, 1, 'twenty anonymous requests must not mean twenty recoveries');
+  setAuthRecoveryHandler(null);
+});
+
+Deno.test('recovery: never fires for a genuinely signed-out app', () => {
+  __resetAuthTelemetryForTests(0);
+  let calls = 0;
+  setAuthRecoveryHandler(() => { calls += 1; });
+  noteProtectedRequest(true);            // no SIGNED_IN — this is just signed out
+  assertEquals(calls, 0);
+  setAuthRecoveryHandler(null);
+});
+
+Deno.test('recovery: never fires for an authenticated request', () => {
+  __resetAuthTelemetryForTests(0);
+  let calls = 0;
+  setAuthRecoveryHandler(() => { calls += 1; });
+  recordAuthEvent('SIGNED_IN', true, null);
+  noteProtectedRequest(false);
+  assertEquals(calls, 0);
+  setAuthRecoveryHandler(null);
+});
+
+Deno.test('recovery: a handler that throws does not break the observation', () => {
+  __resetAuthTelemetryForTests(0);
+  const seen: string[] = [];
+  setAuthTelemetrySink((event) => { seen.push(event); });
+  setAuthRecoveryHandler(() => { throw new Error('storage still refusing'); });
+  recordAuthEvent('SIGNED_IN', true, null);
+  noteProtectedRequest(true);            // must not throw
+  assertEquals(seen.includes(EVENT_IDENTITY_UNAVAILABLE), true);
+  setAuthRecoveryHandler(null);
+  setAuthTelemetrySink(null);
 });
