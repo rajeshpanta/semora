@@ -150,12 +150,67 @@ keytool -printcert -jarfile android/app/build/outputs/bundle/release/app-release
 
 If that prints the debug fingerprint, the Gradle properties were not picked up.
 
+## Google Play Billing
+
+Pro on Android is sold through Play Billing and verified by the same
+`validate-receipt` function as the App Store, which looks each purchase token up
+with the Google Play Developer API (`supabase/functions/_shared/google-play.ts`)
+and acknowledges it. Google refunds any subscription not acknowledged within
+three days, so the server does it rather than trusting the phone to.
+
+Until September 2026 none of this existed: Play returned no products, and the
+server answered every Android token with 501. Google's pre-launch robot
+(an `@cloudtestlabaccounts.com` account) is what surfaced it.
+
+### Subscriptions (Play Console → Monetize with Play → Products → Subscriptions)
+
+Product ids cannot be renamed or reused once created, so type them exactly.
+
+| Product ID | Base plan | Period | Price | Offers |
+| --- | --- | --- | --- | --- |
+| `semora_pro_monthly` | `monthly`, auto-renewing | 1 month | $4.99 | none |
+| `semora_pro_annual` | `annual`, auto-renewing | 1 year | $29.99 | none |
+
+Grace period 7 days, account hold calculated automatically, resubscribe allowed.
+
+**Semora Pro has no free trial on any platform.** The iPhone intro offer was
+removed in September 2026 and Play was set up without one, on purpose. Do not add
+a trial offer here: the app has no trial wording or trial logic left to show one,
+and always buys the base plan.
+
+Both base plans must be **Activated**, or Play returns nothing and the paywall
+reports that subscription details could not be loaded.
+
+### Service account
+
+Google Cloud and Play Console are signed in with **different Google accounts**
+(see the gitignored `INFRA_ACCOUNTS.local.md`). That is fine: the service
+account is created in the Cloud project and invited into Play Console by its
+email address, so the two logins never need to be the same.
+
+1. Google Cloud (project `semora`) → APIs & Services → enable
+   **Google Play Android Developer API**.
+2. IAM & Admin → Service accounts → create one (no project roles needed) →
+   Keys → Add key → JSON.
+3. Play Console → Users and permissions → invite the service account's email,
+   with app access to Semora and these permissions: **View financial data**
+   and **Manage orders and subscriptions**. Google can take up to a day to
+   honour a new grant; until then every lookup is refused with 403, logged as
+   `google_play_denied`.
+4. Store the key in `~/Semora-Recovery/` and set the entire file as one secret:
+   `supabase secrets set GOOGLE_PLAY_SERVICE_ACCOUNT_JSON="$(cat <file>)"`.
+   Without it, Android validation answers 503 and nothing is downgraded.
+
+### Testing a purchase
+
+Play Console (all apps) → Settings → License testing → add the tester Gmail
+accounts. Tester purchases are free, are labelled `environment = 'Sandbox'` in
+`entitlements`, and renew on an accelerated clock (a monthly plan renews every
+few minutes). Purchases only work on a build installed **from Play**, so upload
+to closed testing first.
+
 ## Still outstanding
 
-- **Play Console** ($25): create the app, mirror the two subscription products,
-  add license testers, upload to an internal testing track. `react-native-iap`
-  cannot open a billing connection for a sideloaded build — purchases can only
-  be tested on an app installed **from Play**.
 - **Android OAuth client** in Google Cloud (project owner: `dishyjunge3@gmail.com`)
   using the package name and fingerprints above. Google sign-in is unwired until
   this exists; Apple sign-in already works on Android via the web OAuth flow.

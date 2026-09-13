@@ -18,11 +18,23 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import * as x509 from 'npm:@peculiar/x509@1.12.3';
 import { withRequestLogging, errorFields, type EdgeLogger } from '../_shared/log.ts';
+import {
+  acknowledgeSubscription,
+  fetchSubscription,
+  GooglePlayError,
+  interpretSubscription,
+  parseServiceAccount,
+  playTransactionKey,
+} from '../_shared/google-play.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const APPLE_SHARED_SECRET = Deno.env.get('APPLE_SHARED_SECRET') ?? '';
+// The whole service-account key file Google issues, pasted as one secret. It
+// must belong to an account linked in Play Console with permission to view
+// financial data and manage orders, or every lookup is refused with 403.
+const GOOGLE_PLAY_SERVICE_ACCOUNT_JSON = Deno.env.get('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON') ?? '';
 
 // When 'true', Sandbox/TestFlight transactions do NOT grant production Pro.
 // Default OFF: App Review purchases in the Sandbox environment, so blocking
@@ -116,6 +128,7 @@ async function alertOpsOfConflict(
   log: any,
   ticketId: string | null,
   oti: string,
+  platform: string,
 ): Promise<'sent' | 'failed' | 'skipped'> {
   // A deployment without the secret is degraded, not broken. Say 'skipped' so
   // the ledger stays honest rather than claiming mail that never left.
@@ -134,7 +147,7 @@ async function alertOpsOfConflict(
         Authorization: `Bearer ${ALERT_SECRET}`,
       },
       body: JSON.stringify({
-        subject: 'Apple subscription claimed by two accounts',
+        subject: `${storeName(platform)} subscription claimed by two accounts`,
         body: [
           'A paying subscriber has been blocked from using their subscription',
           'because it is already linked to a different Semora account.',
@@ -144,9 +157,13 @@ async function alertOpsOfConflict(
           '',
           'The ticket has both account ids and what to check. Usually this is',
           'one person with two sign-in methods (Apple vs Google) — confirm that',
-          'before moving anything, because a shared Family Sharing Apple ID',
-          'looks identical from here and transferring would strip a real',
-          "person's access.",
+          platform === 'android'
+            ? 'before moving anything, because a Google account shared across a'
+            : 'before moving anything, because a shared Family Sharing Apple ID',
+          platform === 'android'
+            ? 'household looks identical from here and transferring would strip a'
+            : 'looks identical from here and transferring would strip a real',
+          platform === 'android' ? "real person's access." : "person's access.",
           '',
           'Nothing has been changed automatically. No ownership was moved and',
           'no Pro was removed.',
@@ -187,6 +204,7 @@ async function fileOwnershipConflict(
   claimantId: string,
   oti: string,
   holderId: string,
+  platform: string,
 ) {
   try {
     const { count } = await adminClient
@@ -206,15 +224,19 @@ async function fileOwnershipConflict(
       topic: 'Billing',
       // Everything needed to resolve it without another investigation.
       message:
-        'An Apple subscription is claimed by two accounts, so the person ' +
+        `A ${storeName(platform)} subscription is claimed by two accounts, so the person ` +
         'paying for it cannot use it.\n\n' +
         `original_transaction_id: ${oti}\n` +
         `claimed by (blocked):    ${claimantId} <${email}>\n` +
         `currently held by:       ${holderId}\n\n` +
         'Usually one human with two sign-in methods (Apple vs Google) — but ' +
-        'confirm before transferring, because a shared Family Sharing Apple ' +
-        'ID looks identical from here and moving it would strip a real ' +
-        "person's access.",
+        (platform === 'android'
+          ? 'confirm before transferring, because a Google account shared in a ' +
+            'household looks identical from here and moving it would strip a real ' +
+            "person's access."
+          : 'confirm before transferring, because a shared Family Sharing Apple ' +
+            'ID looks identical from here and moving it would strip a real ' +
+            "person's access."),
       locale: 'en',
       source: 'auto:subscription_conflict',
       // Provisional. The row has to exist before anyone can be told to go read
@@ -237,7 +259,7 @@ async function fileOwnershipConflict(
     // is linked elsewhere — so blocking on it would make an error message the
     // student is already unhappy to see arrive seconds later still.
     const notify = (async () => {
-      const emailStatus = await alertOpsOfConflict(log, ticketId, oti);
+      const emailStatus = await alertOpsOfConflict(log, ticketId, oti, platform);
       if (emailStatus !== 'skipped' && ticketId) {
         await adminClient
           .from('support_requests')
@@ -595,7 +617,35 @@ serve(withRequestLogging('validate-receipt', async (req, log) => {
       );
     }
 
-    // 2. Apple shared secret must be configured for any validation to occur
+    // 2. Parse + validate body. Three credential shapes:
+    //    - jws: StoreKit2 signed transaction (preferred — verified locally
+    //      against Apple's pinned root, no shared secret, no receipt file)
+    //    - receipt: legacy base64 app receipt (verifyReceipt round-trip)
+    //    - purchaseToken: a Google Play subscription, resolved with Google
+    let body: { receipt?: string; jws?: string; purchaseToken?: string; platform?: string };
+    try {
+      body = await req.json();
+    } catch {
+      return jsonResponse({ error: 'Invalid request body' }, 400);
+    }
+
+    const platform = body.platform === 'android' ? 'android' : 'ios';
+
+    // 3. Android: a Play purchase token, looked up with Google. It needs none
+    //    of the Apple configuration below, so it is answered before the shared
+    //    secret check rather than failing on a secret it never uses.
+    if (platform === 'android') {
+      // Builds before the Android path existed sent the token as `jws`.
+      const purchaseToken = typeof body.purchaseToken === 'string'
+        ? body.purchaseToken
+        : typeof body.jws === 'string' ? body.jws : null;
+      if (!purchaseToken || purchaseToken.length < 20 || purchaseToken.length > 4096) {
+        return jsonResponse({ error: 'Missing or malformed purchase token' }, 400);
+      }
+      return await validateGooglePlay(adminClient, userId, purchaseToken, startTime, log);
+    }
+
+    // 4. Apple shared secret must be configured for any Apple validation
     if (!APPLE_SHARED_SECRET) {
       log.error('apple_shared_secret_not_set_in_env');
       return jsonResponse(
@@ -604,29 +654,12 @@ serve(withRequestLogging('validate-receipt', async (req, log) => {
       );
     }
 
-    // 3. Parse + validate body. Two credential shapes:
-    //    - jws: StoreKit2 signed transaction (preferred — verified locally
-    //      against Apple's pinned root, no shared secret, no receipt file)
-    //    - receipt: legacy base64 app receipt (verifyReceipt round-trip)
-    let body: { receipt?: string; jws?: string; platform?: string };
-    try {
-      body = await req.json();
-    } catch {
-      return jsonResponse({ error: 'Invalid request body' }, 400);
-    }
-
     const receipt = typeof body.receipt === 'string' ? body.receipt : null;
     const jws = typeof body.jws === 'string' ? body.jws : null;
-    const platform = body.platform === 'android' ? 'android' : 'ios';
     const receiptUsable = receipt != null && receipt.length >= 20 && receipt.length <= 200_000;
     const jwsUsable = jws != null && jws.length >= 100 && jws.length <= 64_000;
     if (!receiptUsable && !jwsUsable) {
       return jsonResponse({ error: 'Missing or malformed receipt' }, 400);
-    }
-
-    // 4. Validate (Android not yet supported)
-    if (platform !== 'ios') {
-      return jsonResponse({ error: 'Android receipt validation not yet supported' }, 501);
     }
 
     // ── Path A: signed JWS transaction ────────────────────────────
@@ -730,7 +763,118 @@ serve(withRequestLogging('validate-receipt', async (req, log) => {
 }));
 
 
-// Shared by the JWS and legacy-receipt paths: cross-account OTI guard,
+function storeName(platform: string): string {
+  return platform === 'android' ? 'Google Play' : 'Apple';
+}
+
+/**
+ * The Android path. Resolves the token with Google, then hands the answer to
+ * the same writer the Apple paths use, so a Play subscription gets the same
+ * cross-account guard, the same web-billing protection and the same refusal to
+ * downgrade on an answer that says nothing.
+ */
+async function validateGooglePlay(
+  // deno-lint-ignore no-explicit-any
+  adminClient: any,
+  userId: string,
+  purchaseToken: string,
+  startTime: number,
+  // deno-lint-ignore no-explicit-any
+  log: any,
+): Promise<Response> {
+  const serviceAccount = parseServiceAccount(GOOGLE_PLAY_SERVICE_ACCOUNT_JSON);
+  if (!serviceAccount) {
+    log.error('google_play_service_account_not_set');
+    await logCall(adminClient, userId, 'failed', Date.now() - startTime, 'google_play_not_configured');
+    // 503, not 4xx: the student's purchase is fine and our deploy is not. The
+    // client reads 5xx as "we don't know yet" and never as "not subscribed".
+    return jsonResponse(
+      { error: 'Server is not configured for Google Play purchases yet. Please try again later.' },
+      503,
+    );
+  }
+
+  let purchase;
+  try {
+    purchase = await fetchSubscription(serviceAccount, purchaseToken);
+  } catch (err) {
+    const kind = err instanceof GooglePlayError ? err.kind : 'upstream';
+    log.error('google_play_lookup_failed', { kind, ...errorFields(err) });
+    if (kind === 'gone') {
+      // Google no longer answers for a token this old. It is not evidence of
+      // anything about the account's current subscription, so it is written as
+      // 'unknown': the row that stands is left exactly as it is.
+      return await writeEntitlementAndRespond(
+        adminClient, userId, 'android', { kind: 'unknown' }, null, startTime, log);
+    }
+    const errorCode = kind === 'config' ? 'google_play_denied'
+      : kind === 'invalid' ? 'play_token_invalid'
+      : 'google_unreachable';
+    await logCall(adminClient, userId, 'failed', Date.now() - startTime, errorCode);
+    if (kind === 'invalid') {
+      return jsonResponse({ error: 'Invalid purchase token' }, 400);
+    }
+    return jsonResponse(
+      {
+        error: kind === 'config'
+          ? 'Server is not configured for Google Play purchases yet. Please try again later.'
+          : 'Could not reach Google Play. Please try again in a moment.',
+      },
+      503,
+    );
+  }
+
+  const read = interpretSubscription(purchase, [PRODUCT_MONTHLY, PRODUCT_ANNUAL]);
+  // Same policy switch as Apple: license testers are Sandbox, honoured unless
+  // BLOCK_SANDBOX_PRO is on, and declining them is never a cancellation.
+  let outcome: ValidationOutcome =
+    BLOCK_SANDBOX && read.environment !== 'Production'
+      ? { kind: 'unknown' }
+      : read.outcome.kind === 'active'
+        ? { ...read.outcome, originalTransactionId: await playTransactionKey(purchaseToken) }
+        : read.outcome;
+
+  // A Play subscription that has ended can only speak for Play. A student who
+  // lapsed on an Android phone and now pays through Apple still has a live
+  // Apple row, and Google's "expired" is no statement about it. The web case
+  // is already protected inside the writer; this covers the App Store one.
+  if (outcome.kind === 'ended') {
+    const { data: row } = await adminClient
+      .from('entitlements')
+      .select('platform, is_pro, expires_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+    const liveElsewhere =
+      row?.is_pro === true &&
+      row.platform !== 'android' &&
+      (!row.expires_at || new Date(row.expires_at) > new Date());
+    if (liveElsewhere) {
+      log.info('play_ended_ignored_live_other_store', { user_id: userId, platform: row.platform });
+      outcome = { kind: 'unknown' };
+    }
+  }
+
+  const response = await writeEntitlementAndRespond(
+    adminClient, userId, 'android', outcome, read.environment, startTime, log);
+
+  // Acknowledge only a purchase that has just become Pro on this account. A
+  // refused one (another account holds it, a web subscription already covers
+  // it) is left unacknowledged on purpose, so Google refunds a charge that
+  // bought the student nothing.
+  if (response.status === 200 && outcome.kind === 'active' && read.needsAcknowledgement) {
+    try {
+      await acknowledgeSubscription(serviceAccount, outcome.productId, purchaseToken);
+      log.info('google_play_acknowledged', { user_id: userId });
+    } catch (err) {
+      // Not fatal: the app acknowledges too when it finishes the transaction,
+      // and the next validation of this token will try again.
+      log.error('google_play_acknowledge_failed', errorFields(err));
+    }
+  }
+  return response;
+}
+
+// Shared by the JWS, legacy-receipt and Google Play paths: cross-account OTI guard,
 // entitlement upsert (inactive writes preserve the OTI binding), ledger,
 // and the success response.
 async function writeEntitlementAndRespond(
@@ -779,7 +923,7 @@ async function writeEntitlementAndRespond(
         // But it must stop being SILENT: 26 refusals in this project produced
         // zero support tickets, because a student who taps Restore, sees an
         // error and closes the app does not write in. File it ourselves.
-        await fileOwnershipConflict(adminClient, log, userId, oti, existing.user_id);
+        await fileOwnershipConflict(adminClient, log, userId, oti, existing.user_id, platform);
         await logCall(
           adminClient,
           userId,
@@ -813,7 +957,7 @@ async function writeEntitlementAndRespond(
         if (consumed?.claimed_by && consumed.claimed_by !== userId) {
           // Held by a live account that somehow has no entitlement row.
           // Treat exactly like the cross-account case above.
-          await fileOwnershipConflict(adminClient, log, userId, oti, consumed.claimed_by);
+          await fileOwnershipConflict(adminClient, log, userId, oti, consumed.claimed_by, platform);
           await logCall(
             adminClient,
             userId,
@@ -873,12 +1017,12 @@ async function writeEntitlementAndRespond(
       if (outcome.kind === 'active') {
         // Both billers think they own this account. Say so rather than
         // picking a winner and quietly cancelling someone's access.
-        log.warn('apple_receipt_over_web_subscription', { user_id: userId });
+        log.warn('store_receipt_over_web_subscription', { user_id: userId, platform });
         return jsonResponse(
           {
             error:
               'This account already has an active Semora Pro subscription billed on the web. ' +
-              'Manage or cancel it from Settings before subscribing through the App Store, ' +
+              `Manage or cancel it from Settings before subscribing through ${platform === 'android' ? 'Google Play' : 'the App Store'}, ` +
               'so you are not charged twice.',
           },
           409,

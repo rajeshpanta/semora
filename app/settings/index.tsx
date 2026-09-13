@@ -136,7 +136,9 @@ export default function SettingsScreen() {
       if (!result.opened) {
         Alert.alert(
           'Couldn\'t open subscription management',
-          'Please try again. You can also manage Semora from Settings → Apple Account → Subscriptions.',
+          Platform.OS === 'android'
+            ? 'Please try again. You can also manage Semora from the Play Store: tap your profile, then Payments & subscriptions → Subscriptions.'
+            : 'Please try again. You can also manage Semora from Settings → Apple Account → Subscriptions.',
         );
         return;
       }

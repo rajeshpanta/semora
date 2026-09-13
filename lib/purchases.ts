@@ -10,8 +10,8 @@ import {
   purchaseUpdatedListener,
   purchaseErrorListener,
   finishTransaction,
-  isEligibleForIntroOfferIOS,
   showManageSubscriptionsIOS,
+  deepLinkToSubscriptions,
   type ProductOrSubscription,
   type Purchase,
   type PurchaseError,
@@ -27,39 +27,40 @@ import { EMPTY_ENTITLEMENT, getServerEntitlement, type ProEntitlement } from '@/
 export { getServerEntitlement };
 export type { ProEntitlement };
 
-// Product IDs — must match App Store Connect
+// Product IDs — must match App Store Connect AND the subscription ids in Play
+// Console (Monetize with Play → Products → Subscriptions).
 export const PRODUCT_IDS = {
   monthly: 'semora_pro_monthly',
   annual: 'semora_pro_annual',
 };
 
-// ── Conversion analytics (purchase_success / trial_started) ─────────
+// ── Conversion analytics (purchase_success) ─────────────────────────
 // Every UI that grants Pro funnels through validateAfterPurchase, so the
 // success event fires THERE (single choke point) instead of per-screen.
 // Two wrinkles that live here:
 //  - The paywall AND the global _layout listener both receive the same
 //    StoreKit purchase event and both call validateAfterPurchase — a
 //    per-transaction dedupe set stops double-counting.
-//  - The choke point can't see paywall state (context param, trial
-//    eligibility), so the paywall registers it just before requesting
-//    the purchase and the winner of the validation race reads it.
-let purchaseAnalyticsContext: { context: string; trial: boolean } | null = null;
+//  - The choke point can't see paywall state (the context param), so the
+//    paywall registers it just before requesting the purchase and the
+//    winner of the validation race reads it.
+let purchaseAnalyticsContext: { context: string } | null = null;
 const trackedPurchaseIds = new Set<string>();
 
 /**
  * Called by the paywall right before requestPurchase so purchase_success
- * can carry {context, trial}. Pass null to clear (cancel / failure).
+ * can carry {context}. Pass null to clear (cancel / failure).
  * Background-delivered purchases (Ask to Buy approvals, redelivered
  * transactions on launch) have no registered context and are tagged
- * context:'background', trial:false.
+ * context:'background'.
  */
 export function setPurchaseAnalyticsContext(
-  ctx: { context: string; trial: boolean } | null,
+  ctx: { context: string } | null,
 ): void {
   purchaseAnalyticsContext = ctx;
 }
 
-/** Fire purchase_success (+ trial_started) exactly once per transaction. */
+/** Fire purchase_success exactly once per transaction. */
 function trackPurchaseSuccess(purchase: Purchase): void {
   try {
     const txId = purchase.id || (purchase as any)?.transactionId || '';
@@ -70,17 +71,45 @@ function trackPurchaseSuccess(purchase: Purchase): void {
     const ctx = purchaseAnalyticsContext;
     purchaseAnalyticsContext = null; // consumed — don't leak onto a later transaction
     const context = ctx?.context ?? 'background';
-    // Only the monthly plan carries the 7-day intro trial, and only when
-    // the paywall confirmed eligibility via isEligibleForIntroOfferIOS.
-    const trial = plan === 'monthly' && ctx?.trial === true;
-    track('purchase_success', { plan, context, trial });
-    if (trial) track('trial_started', { plan, context });
+    // `trial` stays on the event, always false, so every purchase_success
+    // row reads the same before and after the trial was removed
+    // (September 2026). Semora Pro has no free trial on any platform.
+    track('purchase_success', { plan, context, trial: false });
   } catch {
     // analytics must never affect the purchase flow
   }
 }
 
 const ALL_SKUS = [PRODUCT_IDS.monthly, PRODUCT_IDS.annual];
+const ANDROID_PACKAGE_NAME = 'com.rajeshpanta.syllabussnap';
+
+// ── Google Play offers ───────────────────────────────────────────────
+// A Play subscription cannot be bought by product id alone: Billing needs the
+// offer token of the exact base plan or offer being sold, and react-native-iap
+// passes nothing when none is given, so the purchase is refused. Tokens are
+// minted per user (Play only returns offers this account is eligible for) and
+// arrive with fetchProducts, so they are kept from the last successful fetch.
+type AndroidOfferDetail = {
+  basePlanId?: string;
+  offerId?: string | null;
+  offerToken?: string;
+};
+const androidOfferTokens: Record<string, string> = {};
+
+function androidOffers(product: ProductOrSubscription | null | undefined): AndroidOfferDetail[] {
+  const offers = (product as any)?.subscriptionOfferDetailsAndroid;
+  return Array.isArray(offers) ? offers : [];
+}
+
+/**
+ * The offer to buy: the plain base plan (the entry with no offerId), which is
+ * all Semora sells. Semora Pro has no free trial and no discount offers on any
+ * platform, so anything else here would be an offer nobody created.
+ */
+function chooseAndroidOffer(product: ProductOrSubscription | null | undefined): AndroidOfferDetail | null {
+  const offers = androidOffers(product).filter((o) => typeof o.offerToken === 'string' && o.offerToken.length > 0);
+  return offers.find((o) => !o.offerId) ?? offers[0] ?? null;
+}
 
 let connected = false;
 // The native layer resolves a SKU's purchase TYPE from a cache that only
@@ -128,7 +157,17 @@ export async function getProducts(): Promise<{
     // falls back to hardcoded prices (wrong for other storefronts).
     const products = await fetchProducts({ skus: ALL_SKUS, type: 'subs' });
     if (!products) return null;
-    productsFetched = products.length > 0;
+    if (Platform.OS === 'android') {
+      for (const product of products) {
+        const offer = chooseAndroidOffer(product);
+        if (offer?.offerToken) androidOfferTokens[product.id] = offer.offerToken;
+      }
+      // A product with no purchasable offer (a base plan left inactive in Play
+      // Console) cannot be bought, so it does not count as fetched.
+      productsFetched = ALL_SKUS.some((sku) => !!androidOfferTokens[sku]);
+    } else {
+      productsFetched = products.length > 0;
+    }
     return {
       monthly: products.find((p) => p.id === PRODUCT_IDS.monthly) ?? null,
       annual: products.find((p) => p.id === PRODUCT_IDS.annual) ?? null,
@@ -154,20 +193,30 @@ export async function purchaseProduct(productId: string): Promise<boolean> {
   // Warm the native product cache so the SKU is known as a SUBSCRIPTION
   // before we request it (see productsFetched note above). Without this,
   // a paywall opened before products loaded bought nothing, silently.
-  if (!productsFetched) {
+  if (!productsFetched || (Platform.OS === 'android' && !androidOfferTokens[productId])) {
     await getProducts();
-    if (!productsFetched) {
+    if (!productsFetched || (Platform.OS === 'android' && !androidOfferTokens[productId])) {
       throw new Error(Platform.OS === 'android'
         ? 'Could not load subscription details from Google Play. Please try again in a moment.'
         : 'Could not load subscription details from the App Store. Please try again in a moment.');
     }
   }
+  // Binds the Play purchase to this Semora account inside Google's own record,
+  // so support can tell whose purchase a token is without guessing. The user id
+  // is an opaque uuid, which is what Play asks for here (never an email).
+  const { data: { session } } = await supabase.auth.getSession();
   try {
     await requestPurchase({
       type: 'subs',
       request: {
         apple: { sku: productId },
-        google: { skus: [productId] },
+        google: {
+          skus: [productId],
+          subscriptionOffers: androidOfferTokens[productId]
+            ? [{ sku: productId, offerToken: androidOfferTokens[productId] }]
+            : [],
+          ...(session?.user.id ? { obfuscatedAccountId: session.user.id } : {}),
+        },
       },
     });
     return true;
@@ -194,6 +243,26 @@ export type SubscriptionManagementResult = {
  * Apple Account subscriptions list.
  */
 export async function openSubscriptionManagement(): Promise<SubscriptionManagementResult> {
+  if (Platform.OS === 'android') {
+    // Play has no in-app sheet; its subscription center is the equivalent, and
+    // cancelling or changing a Play subscription can only happen there.
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      let sku: string = PRODUCT_IDS.monthly;
+      if (session) {
+        const { data } = await supabase
+          .from('entitlements')
+          .select('product_id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        if (data?.product_id === PRODUCT_IDS.annual) sku = PRODUCT_IDS.annual;
+      }
+      await deepLinkToSubscriptions({ skuAndroid: sku, packageNameAndroid: ANDROID_PACKAGE_NAME });
+      return { opened: true, purchase: null };
+    } catch {
+      return { opened: false, purchase: null };
+    }
+  }
   if (Platform.OS !== 'ios') return { opened: false, purchase: null };
   if (!connected) {
     await initIAP();
@@ -225,6 +294,9 @@ export async function openSubscriptionManagement(): Promise<SubscriptionManageme
  * SKUs, read from Transaction.currentEntitlements — read-only and
  * PROMPT-FREE (unlike AppStore.sync). Preferred validation credential:
  * works even when the legacy receipt file is absent or stale.
+ *
+ * On Android the same read returns the Google Play purchase token of each
+ * subscription this Google account currently holds (suspended ones excluded).
  */
 async function getLatestSubscriptionJws(): Promise<string | null> {
   try {
@@ -281,6 +353,13 @@ export async function validateProEntitlement(opts?: {
     //    reach step 4, and steps 1-2 make it almost never needed.
     const jws: string | null = opts?.jws ?? (await getLatestSubscriptionJws());
 
+    // Android has no receipt file and no AppStore.sync: the purchase token is
+    // the whole credential, and Google is asked about it server-side.
+    if (Platform.OS === 'android') {
+      if (!jws) return await getServerEntitlement();
+      return await submitCredential({ purchaseToken: jws, platform: 'android' }, false);
+    }
+
     let receipt: string | null = null;
     if (!opts?.forceRefresh) {
       try {
@@ -311,15 +390,34 @@ export async function validateProEntitlement(opts?: {
       return await getServerEntitlement();
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return EMPTY_ENTITLEMENT;
-
     // Send both when available: the new server prefers the JWS (local
     // crypto verification, no Apple round-trip); an older deployed
     // server ignores `jws` and still works off the legacy receipt.
-    const { data, error } = await supabase.functions.invoke('validate-receipt', {
-      body: { ...(jws ? { jws } : {}), ...(receipt ? { receipt } : {}), platform: Platform.OS },
-    });
+    return await submitCredential(
+      { ...(jws ? { jws } : {}), ...(receipt ? { receipt } : {}), platform: Platform.OS },
+      // The rescue below re-syncs an Apple receipt, so it only applies when a
+      // JWS went out alone in a user-initiated flow.
+      !!(jws && !receipt && opts?.interactiveRefresh && !opts?.forceRefresh),
+    );
+  } catch {
+    return await getServerEntitlement();
+  }
+}
+
+/**
+ * POST one credential to validate-receipt and turn the answer into an
+ * entitlement. Shared by the App Store and Google Play paths so both read a
+ * 409, a 5xx and a success in exactly the same way.
+ */
+async function submitCredential(
+  body: Record<string, string>,
+  allowReceiptRescue: boolean,
+): Promise<ProEntitlement> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return EMPTY_ENTITLEMENT;
+
+    const { data, error } = await supabase.functions.invoke('validate-receipt', { body });
 
     if (error) {
       // 409 means the receipt is bound to a *different* Semora account
@@ -333,7 +431,7 @@ export async function validateProEntitlement(opts?: {
       // included. In user-initiated flows, manufacture the receipt once
       // (AppStore.sync — acceptable: user is mid-Restore/purchase) and
       // retry so a payer is never stranded behind a server upgrade.
-      if (status !== 409 && jws && !receipt && opts?.interactiveRefresh && !opts?.forceRefresh) {
+      if (status !== 409 && allowReceiptRescue) {
         let rescued: string | null = null;
         try { rescued = (await requestReceiptRefreshIOS()) ?? null; } catch {}
         if (rescued) {
@@ -461,11 +559,11 @@ export async function validateAfterPurchase(
   // file and no Apple-ID prompt.
   const jws = (purchase as any)?.purchaseToken as string | undefined;
   let e = await validateProEntitlement({ interactiveRefresh: interactive, jws });
-  // Rescue pass (stale legacy receipt) only when: user-initiated, the
+  // Rescue pass (stale legacy receipt, so App Store only) when: user-initiated, the
   // first pass actually validated a credential (if it had NOTHING, its
   // interactive sync already came up empty — a second sync would just
   // stack another password prompt), and the answer was a definitive no.
-  if (interactive && e.usedCredential && !e.is_pro && !e.restoreError && !e.transient) {
+  if (Platform.OS === 'ios' && interactive && e.usedCredential && !e.is_pro && !e.restoreError && !e.transient) {
     // Keep the event JWS — it's the strongest credential; forceRefresh
     // adds a freshly-synced receipt alongside it for old-server compat.
     e = await validateProEntitlement({ interactiveRefresh: true, forceRefresh: true, jws });
@@ -478,26 +576,6 @@ export async function validateAfterPurchase(
     trackPurchaseSuccess(purchase);
   }
   return e;
-}
-
-/**
- * Whether this Apple ID still qualifies for the intro trial in `groupId`.
- *
- * Wrapped here rather than imported from react-native-iap at each call site:
- * the paywall and Me tab are both web-reachable routes, and importing
- * react-native-iap from them drags react-native-nitro-modules (and its deep
- * react-native imports) into the web bundle, which white-screens the app.
- * Never throws — callers treat any failure as "not eligible", which is the
- * safe default since promising a trial the payment sheet won't honor is an
- * App Review risk.
- */
-export async function isEligibleForIntroOffer(groupId: string): Promise<boolean> {
-  if (Platform.OS === 'web') return false;
-  try {
-    return (await isEligibleForIntroOfferIOS(groupId)) === true;
-  } catch {
-    return false;
-  }
 }
 
 export function setupPurchaseListeners(

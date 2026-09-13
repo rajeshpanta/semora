@@ -1808,7 +1808,6 @@ export const ES: Record<string, string> = {
   '3. Under “Approved Integrations,” tap “+ New Access Token.”\n': '3. En “Integraciones aprobadas”, toca “+ Nuevo token de acceso”.\n',
   '4. Name it “Semora,” leave the expiry blank, then Generate Token.\n': '4. Nómbralo “Semora”, deja el vencimiento en blanco y elige Generar token.\n',
   '5. Copy the token and paste it above.\n': '5. Copia el token y pégalo arriba.\n',
-  '7-day free trial included': 'Incluye 7 días de prueba gratis',
   'A classmate shared a course': 'Un compañero compartió un curso',
   'A few things are worth correcting now': 'Hay algunos puntos que conviene corregir ahora',
   'A real syllabus.\nWatch this.': 'Un programa real.\nMira esto.',
@@ -1835,6 +1834,8 @@ export const ES: Record<string, string> = {
     'No se pudieron cargar los detalles de la suscripción desde Google Play. Inténtalo de nuevo en un momento.',
   'Your purchase went through but we couldn\'t verify it with Google Play yet. Tap Restore in a moment to retry.':
     'La compra se completó, pero todavía no pudimos verificarla con Google Play. Toca Restaurar dentro de un momento.',
+  'Please try again. You can also manage Semora from the Play Store: tap your profile, then Payments & subscriptions → Subscriptions.':
+    'Inténtalo de nuevo. También puedes administrar Semora desde Play Store: toca tu perfil y luego Pagos y suscripciones → Suscripciones.',
   'Could not open Google Play. You can search for Semora there to leave a review.':
     'No se pudo abrir Google Play. Puedes buscar Semora allí para dejar tu reseña.',
   'PDF or Word — Drive, Downloads, Files': 'PDF o Word: Drive, Descargas, Archivos',
@@ -1916,6 +1917,8 @@ export const ES: Record<string, string> = {
   'Assignment sync paused': 'Sincronización de tareas en pausa',
   'August': 'Agosto',
   'Auto-renews monthly': 'Se renueva automáticamente cada mes',
+  // Identical in Spanish; keyed so the audit knows it was checked, not missed.
+  'FLEXIBLE': 'FLEXIBLE',
   'Automatic': 'Automática',
   'Automatic background sync is on. Semora checks this connection every few hours.': 'La sincronización automática en segundo plano está activa. Semora revisa esta conexión cada pocas horas.',
   'Automatic on': 'Automática activada',
@@ -2002,7 +2005,6 @@ export const ES: Record<string, string> = {
   'For the URL, use your school’s Canvas web address — often yourschool.instructure.com.': 'Para la URL, usa la dirección web de Canvas de tu institución — a menudo yourschool.instructure.com.',
   'Found deadlines!': '¡Encontramos las entregas!',
   'Free tasks use the default reminder. Upgrade to Pro to turn reminders off or set your own custom times.': 'En el plan gratis, las tareas usan el recordatorio predeterminado. Mejora a Pro para desactivar los recordatorios o definir tus propios horarios.',
-  'FREE TRIAL': 'Prueba gratis',
   'Generate for whole course': 'Generar para todo el curso',
   'Get help on this course': 'Recibe ayuda con este curso',
   'Get your token from Canvas on the web (not the mobile app):\n': 'Obtén tu token desde Canvas en la web (no en la app móvil):\n',
@@ -2169,7 +2171,6 @@ export const ES: Record<string, string> = {
   'This share link is invalid or was already removed. Double-check the link and try again.': 'Este enlace para compartir no es válido o ya se eliminó. Revisa el enlace e inténtalo de nuevo.',
   'This task only': 'Solo esta tarea',
   'Timing pending': 'Puntualidad pendiente',
-  'Try 7 Days Free': 'Prueba 7 días gratis',
   'Try it on a real syllabus': 'Pruébalo con un programa real',
   'Try sync now': 'Intentar sincronizar ahora',
   'Turn off': 'Desactivar',

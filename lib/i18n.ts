@@ -448,8 +448,10 @@ function spanishPattern(input: string): string | null {
   // a literal key would silently fall back to English if the limit changed.
   match = input.match(/^Free semesters hold (\d+) courses\. Pro has no limit on classes or semesters\.$/i);
     if (match) return `Los semestres gratuitos admiten ${match[1]} cursos. Pro no limita las clases ni los semestres.`;
-  match = input.match(/^Or (.+?)\/month with 7-day free trial$/i);
-    if (match) return `O ${match[1]} al mes con 7 días de prueba gratis`;
+  // Me tab's monthly alternative under the annual price. Interpolates the live
+  // store price, so it is matched rather than keyed.
+  match = input.match(/^Or (.+?)\/month$/i);
+    if (match) return `O ${match[1]} al mes`;
   match = input.match(/^(\d+) (friend|friends) joined$/i);
     if (match) return `${match[1]} ${match[1] === '1' ? 'amigo se unió' : 'amigos se unieron'}`;
   match = input.match(/^You['’]ve used your (\d+) free scans this month\. They reset on the 1st — or upgrade to Pro for unlimited syllabus scanning\.$/i);
@@ -484,9 +486,7 @@ function spanishPattern(input: string): string | null {
     if (match) return `Acabas de importar ${match[1]} ${match[1] === '1' ? 'fecha de entrega' : 'fechas de entrega'} 🎉`;
   match = input.match(/^Just (.+?)\/month$/i);
     if (match) return `Solo ${match[1]} al mes`;
-  match = input.match(/^7-day free trial, then (.+?)\/month\. Cancel anytime\.$/i);
-    if (match) return `7 días de prueba gratis y luego ${match[1]} al mes. Cancela cuando quieras.`;
-  match = input.match(/^(?!7-day)(.+?)\/month\. Cancel anytime\.$/i);
+  match = input.match(/^(.+?)\/month\. Cancel anytime\.$/i);
     if (match) return `${match[1]} al mes. Cancela cuando quieras.`;
   match = input.match(/^(.+?) billed annually\. Cancel anytime\.$/i);
     if (match) return `${match[1]} al año. Cancela cuando quieras.`;

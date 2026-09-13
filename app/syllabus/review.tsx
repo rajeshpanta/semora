@@ -299,7 +299,7 @@ export default function SyllabusReviewScreen() {
       // prompt off that branch's flag meant they could never qualify for it.
       if (fullySaved) setHasImportedSyllabus(true);
 
-      // Reverse trial: at the peak of value (deadlines just imported), offer
+      // Post-scan offer: at the peak of value (deadlines just imported), offer
       // Pro once, framed as momentum rather than a block. Only for free users
       // who haven't seen this prompt yet; `replace` so Back doesn't return here.
       if (!isPro && !ahaPaywallShown && fullySaved) {

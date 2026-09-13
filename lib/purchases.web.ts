@@ -142,11 +142,6 @@ export async function openSubscriptionManagement(): Promise<SubscriptionManageme
   }
 }
 
-/** Web can never confirm a trial offer; false is the safe default. */
-export async function isEligibleForIntroOffer(_groupId: string): Promise<boolean> {
-  return false;
-}
-
 /**
  * No device receipt exists in a browser, so the server row IS the answer.
  * Mirrors the native module's own web branch.
@@ -181,7 +176,7 @@ export async function validateAfterPurchase(
 
 /** No-op analytics hook — no purchase can originate in the browser. */
 export function setPurchaseAnalyticsContext(
-  _ctx: { context: string; trial: boolean } | null,
+  _ctx: { context: string } | null,
 ): void {}
 
 /**

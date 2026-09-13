@@ -125,11 +125,11 @@ mustSay(
   `FREE_SEMESTER_LIMIT = ${app.freeSemesters}, so the free cap is a single semester`,
 );
 
-// Never re-introduce a free trial. Apple's is monthly-only and Apple-ID-gated,
-// so the site cannot promise one; this was live once already.
+// Never re-introduce a free trial. Semora Pro has none on any platform — the
+// App Store intro offer was removed in September 2026 — and this was live once.
 mustNotSay(
   /\b(free trial|7-day trial|7 day trial|try free for)\b/i,
-  'Semora has no free trial the site can promise — the Apple one is monthly-only and Apple-ID-gated',
+  'Semora Pro has no free trial on any platform (App Store offer removed, never on Play or web, Sep 2026)',
 );
 
 // No invented social proof. There are zero App Store ratings.
