@@ -85,7 +85,9 @@ Deno.test('adapter: a round-tripped large session still reads back identically',
 Deno.test('adapter: a small session still uses one key and reads back identically', async () => {
   harness();
   await storage.setItem(SESSION_KEY, 'small');
-  assertEquals(SecureStore.items.get(SESSION_KEY), 'small');
+  // Writes land in the migrated namespace now — see lib/supabase.ts for why
+  // the attribute can only be applied to a key that never existed.
+  assertEquals(SecureStore.items.get(`${SESSION_KEY}.v2`), 'small');
   assertEquals(await storage.getItem(SESSION_KEY), 'small');
 });
 
@@ -100,12 +102,12 @@ Deno.test('adapter: a torn write still returns null — and now explains itself'
   const session = JSON.stringify({ access_token: 'x'.repeat(4000) });
   await storage.setItem(SESSION_KEY, session);
 
-  const manifest = SecureStore.items.get(SESSION_KEY) ?? '';
+  const manifest = SecureStore.items.get(`${SESSION_KEY}.v2`) ?? '';
   assert(manifest.startsWith(CHUNK_MARKER), 'expected a chunked layout');
   const count = Number(manifest.slice(CHUNK_MARKER.length));
   // Exactly the state a write interrupted after clearSecureChunks leaves behind:
   // manifest intact, a chunk gone.
-  SecureStore.items.delete(`${SESSION_KEY}.chunk.${count - 1}`);
+  SecureStore.items.delete(`${SESSION_KEY}.v2.chunk.${count - 1}`);
 
   assertEquals(await storage.getItem(SESSION_KEY), null); // behaviour unchanged
   assertEquals(h.names(), [EVENT_READ_DEGRADED]);
@@ -260,4 +262,78 @@ Deno.test('fetch: the anon key itself is never handed to the sink', async () => 
   assert(h.events.length > 0);
   assert(!JSON.stringify(h.events).includes(ANON_KEY));
   assert(!JSON.stringify(h.events).includes('a-real-user-token'));
+});
+
+// ── The migration: the whole point of the .v2 namespace ─────────────────────
+//
+// Each of these is a state a real phone is in right now. The bug being fixed is
+// that a session written with WHEN_UNLOCKED cannot be read while the screen is
+// locked, supabase-js then sends the anon key instead of failing, and the app
+// draws a signed-in shell over an empty database.
+
+Deno.test('migration: a session written by an older build is still readable', async () => {
+  harness();
+  SecureStore.items.set(SESSION_KEY, 'legacy-session');
+  SecureStore.accessibility.set(SESSION_KEY, SecureStore.WHEN_UNLOCKED);
+  assertEquals(await storage.getItem(SESSION_KEY), 'legacy-session');
+});
+
+Deno.test('migration: the next write moves it, with the attribute that survives a lock', async () => {
+  harness();
+  SecureStore.items.set(SESSION_KEY, 'legacy-session');
+  SecureStore.accessibility.set(SESSION_KEY, SecureStore.WHEN_UNLOCKED);
+
+  await storage.setItem(SESSION_KEY, 'refreshed-session');
+
+  assertEquals(SecureStore.items.get(`${SESSION_KEY}.v2`), 'refreshed-session');
+  assertEquals(SecureStore.accessibility.get(`${SESSION_KEY}.v2`), SecureStore.AFTER_FIRST_UNLOCK);
+  assertEquals(SecureStore.items.has(SESSION_KEY), false, 'old copy retired only after the new one verified');
+});
+
+Deno.test('migration: THE BUG — a locked device could not read the old session', async () => {
+  harness();
+  SecureStore.items.set(SESSION_KEY, 'legacy-session');
+  SecureStore.accessibility.set(SESSION_KEY, SecureStore.WHEN_UNLOCKED);
+  SecureStore.lock();
+  // Refused, exactly as iOS does with errSecInteractionNotAllowed.
+  assertEquals(await storage.getItem(SESSION_KEY), null);
+});
+
+Deno.test('migration: THE FIX — once migrated, a locked device reads it fine', async () => {
+  harness();
+  await storage.setItem(SESSION_KEY, 'migrated-session');
+  SecureStore.lock();
+  assertEquals(await storage.getItem(SESSION_KEY), 'migrated-session');
+});
+
+Deno.test('migration: a large session migrates chunk by chunk and survives a lock', async () => {
+  harness();
+  const big = JSON.stringify({ access_token: 'x'.repeat(4000), refresh_token: 'y'.repeat(200) });
+  await storage.setItem(SESSION_KEY, big);
+  SecureStore.lock();
+  assertEquals(await storage.getItem(SESSION_KEY), big);
+});
+
+Deno.test('migration: nobody is signed out if the new copy cannot be verified', async () => {
+  harness();
+  SecureStore.items.set(SESSION_KEY, 'legacy-session');
+  SecureStore.accessibility.set(SESSION_KEY, SecureStore.WHEN_UNLOCKED);
+  // The read-back that guards the retirement fails.
+  SecureStore.throwOnGet.add(`${SESSION_KEY}.v2`);
+
+  await storage.setItem(SESSION_KEY, 'refreshed-session');
+
+  assertEquals(SecureStore.items.get(SESSION_KEY), 'legacy-session', 'old copy MUST survive');
+  SecureStore.throwOnGet.clear();
+  assertEquals(await storage.getItem(SESSION_KEY), 'refreshed-session');
+});
+
+Deno.test('migration: signing out clears both namespaces', async () => {
+  harness();
+  SecureStore.items.set(SESSION_KEY, 'legacy-session');
+  await storage.setItem(SESSION_KEY, 'current-session');
+  await storage.removeItem(SESSION_KEY);
+  assertEquals(SecureStore.items.has(SESSION_KEY), false);
+  assertEquals(SecureStore.items.has(`${SESSION_KEY}.v2`), false);
+  assertEquals(await storage.getItem(SESSION_KEY), null);
 });

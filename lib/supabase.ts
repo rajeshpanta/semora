@@ -30,16 +30,94 @@ if (__DEV__ && (!supabaseUrl || !supabaseAnonKey)) {
 // builds keep working and migrate seamlessly on the next write.
 const CHUNK_SIZE = 1500; // chars per item — comfortably under the 2048-byte limit
 const CHUNK_MARKER = '__sbchunk__'; // base-key sentinel meaning "split into N parts"
+// ── Why the session moved to a second set of keys ───────────────────────────
+//
+// expo-secure-store writes with kSecAttrAccessibleWhenUnlocked by default
+// (SecureStoreOptions.swift: `var keychainAccessible: SecureStoreAccessible =
+// .whenUnlocked`). iOS answers a read of such an item on a LOCKED device with
+// errSecInteractionNotAllowed, -25308. supabase-js does not fail there — it
+// substitutes the anon key (`data.session?.access_token ?? this.supabaseKey`)
+// — so RLS answers honestly for nobody, every list returns 200 [], nothing
+// throws, and the app keeps drawing a signed-in shell over an empty database.
+//
+// Measured over 7 days: 20 of 138 active devices hit it, 8 went fully
+// anonymous, 7 were still hitting it days later. It compounds, because
+// refreshing a token means reading and writing this same item: a phone that
+// cannot read cannot refresh, so the token expires and stays expired. Two
+// devices were carrying tokens dead for exactly 24 hours.
+//
+// AFTER_FIRST_UNLOCK fixes it: unreadable until the phone has been unlocked
+// once after a reboot, readable while locked from then on.
+//
+// It cannot be applied in place. The native set() calls SecItemAdd, gets
+// errSecDuplicateItem for an existing key, and falls through to update(),
+// which writes kSecValueData ONLY and leaves kSecAttrAccessible untouched
+// (SecureStoreModule.swift). Every phone already holding a session would keep
+// the old attribute for ever.
+//
+// So writes go to keys that have never existed, where SecItemAdd is a genuine
+// add and the attribute applies. Reads prefer those and fall back to the old
+// ones, and the old copy is deleted only after the new one has been read back
+// intact. There is no instant at which the device holds zero sessions, which is
+// the property that makes this safe to ship to people already signed in.
+const V2 = (key: string) => `${key}.v2`;
+const LOCKED_READABLE: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK,
+};
 
-async function clearSecureChunks(key: string): Promise<void> {
+async function clearSecureChunks(key: string, options?: SecureStore.SecureStoreOptions): Promise<void> {
   try {
     const head = await SecureStore.getItemAsync(key);
     if (!head || !head.startsWith(CHUNK_MARKER)) return;
     const count = parseInt(head.slice(CHUNK_MARKER.length), 10);
     if (!Number.isFinite(count)) return;
     for (let i = 0; i < count; i++) {
-      await SecureStore.deleteItemAsync(`${key}.chunk.${i}`).catch(() => {});
+      await SecureStore.deleteItemAsync(`${key}.chunk.${i}`, options).catch(() => {});
     }
+  } catch {}
+}
+
+/**
+ * Reassemble a value from one namespace.
+ *
+ * Four outcomes, not two, and collapsing them is a real bug: "nothing is
+ * stored here" must fall through to the older namespace, while "something is
+ * stored here and it is torn" must NOT — that one has to be reported as the
+ * partial read it is. Returning null for both made a torn session look like a
+ * signed-out one, which is the single most misleading answer this function can
+ * give. A throw is left to the caller; only it knows the keychain refused.
+ */
+type NamespaceRead =
+  | { kind: 'miss' }
+  | { kind: 'value'; value: string; chunks: number | null }
+  | { kind: 'partial'; expected: number; found: number }
+  | { kind: 'bad_manifest'; expected: number | null };
+
+async function readNamespace(base: string): Promise<NamespaceRead> {
+  const head = await SecureStore.getItemAsync(base);
+  if (head == null) return { kind: 'miss' };
+  if (!head.startsWith(CHUNK_MARKER)) return { kind: 'value', value: head, chunks: null };
+  const count = parseInt(head.slice(CHUNK_MARKER.length), 10);
+  if (!Number.isFinite(count) || count <= 0) {
+    return { kind: 'bad_manifest', expected: Number.isFinite(count) ? count : null };
+  }
+  let out = '';
+  for (let i = 0; i < count; i++) {
+    const part = await SecureStore.getItemAsync(`${base}.chunk.${i}`);
+    if (part == null) return { kind: 'partial', expected: count, found: i };
+    out += part;
+  }
+  return { kind: 'value', value: out, chunks: count };
+}
+
+/** Delete the pre-migration copy. Called ONLY after the new copy has been read
+ *  back and matched, so a failure here leaves a device with two good copies
+ *  rather than none. Best effort by design: a leftover old key is harmless,
+ *  because reads prefer the new namespace. */
+async function retireLegacy(key: string): Promise<void> {
+  try {
+    await clearSecureChunks(key);
+    await SecureStore.deleteItemAsync(key).catch(() => {});
   } catch {}
 }
 
@@ -50,6 +128,35 @@ const secureStorage = {
   // answers `null` for six different reasons that the server can never tell
   // apart. See lib/authTelemetry.ts.
   getItem: async (key: string): Promise<string | null> => {
+    // New namespace first. A device that has migrated never touches the legacy
+    // keys again; one that has not reads exactly what it read before.
+    //
+    // A REFUSAL here returns immediately rather than falling through. The
+    // legacy keys sit behind the stricter attribute, so a locked device would
+    // refuse those too, and the outcome would be misreported as a miss — which
+    // is the one answer that makes a signed-in student look signed out.
+    try {
+      const fresh = await readNamespace(V2(key));
+      if (fresh.kind === 'value') {
+        recordStorageRead(fresh.chunks == null ? 'hit_single' : 'hit_chunked', fresh.chunks, fresh.chunks);
+        return fresh.value;
+      }
+      // Present but broken. Reporting this as a miss, or falling through to the
+      // older keys, would hide the one state that looks identical to being
+      // signed out and is not.
+      if (fresh.kind === 'partial') {
+        recordStorageRead('partial', fresh.expected, fresh.found);
+        return null;
+      }
+      if (fresh.kind === 'bad_manifest') {
+        recordStorageRead('bad_manifest', fresh.expected, null);
+        return null;
+      }
+      // kind === 'miss' — genuinely nothing here, so try the older namespace.
+    } catch (err) {
+      recordStorageRead('error', null, null, describeStorageError(err));
+      return null;
+    }
     try {
       const head = await SecureStore.getItemAsync(key);
       if (head == null) {
@@ -94,18 +201,28 @@ const secureStorage = {
   },
   setItem: async (key: string, value: string): Promise<void> => {
     try {
-      // Clear chunks from any previous (possibly larger) write first, so we
-      // never leave stale tail chunks behind.
-      await clearSecureChunks(key);
+      // Writes go to the NEW namespace only. Those keys have never existed, so
+      // SecItemAdd is a genuine add and kSecAttrAccessible is honoured. Writing
+      // to the old ones would hit the update() path, which changes the value and
+      // leaves the attribute alone — the whole reason this migration exists.
+      const base = V2(key);
+      await clearSecureChunks(base, LOCKED_READABLE);
       if (value.length <= CHUNK_SIZE) {
-        await SecureStore.setItemAsync(key, value); // single key, legacy-compatible
-        return;
+        await SecureStore.setItemAsync(base, value, LOCKED_READABLE);
+      } else {
+        const count = Math.ceil(value.length / CHUNK_SIZE);
+        for (let i = 0; i < count; i++) {
+          await SecureStore.setItemAsync(`${base}.chunk.${i}`, value.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE), LOCKED_READABLE);
+        }
+        await SecureStore.setItemAsync(base, `${CHUNK_MARKER}${count}`, LOCKED_READABLE);
       }
-      const count = Math.ceil(value.length / CHUNK_SIZE);
-      for (let i = 0; i < count; i++) {
-        await SecureStore.setItemAsync(`${key}.chunk.${i}`, value.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE));
-      }
-      await SecureStore.setItemAsync(key, `${CHUNK_MARKER}${count}`); // base key holds the manifest
+
+      // Read it back before retiring the old copy. Until this line succeeds the
+      // legacy session is still on the device and getItem still falls back to
+      // it, so there is no instant at which a signed-in student has no session.
+      // If the check fails we keep BOTH and try again on the next write.
+      const check = await readNamespace(base);
+      if (check.kind === 'value' && check.value === value) await retireLegacy(key);
     } catch {
       // Still swallowed — changing that is the fix, not the instrumentation.
       // But a write that failed after clearSecureChunks and before the manifest
@@ -116,6 +233,11 @@ const secureStorage = {
   },
   removeItem: async (key: string): Promise<void> => {
     try {
+      // Sign-out must clear BOTH namespaces. Leaving either behind would let a
+      // stale session reappear on the next launch, which is worse than the bug
+      // this change is fixing.
+      await clearSecureChunks(V2(key), LOCKED_READABLE);
+      await SecureStore.deleteItemAsync(V2(key), LOCKED_READABLE).catch(() => {});
       await clearSecureChunks(key);
       await SecureStore.deleteItemAsync(key);
     } catch {}
