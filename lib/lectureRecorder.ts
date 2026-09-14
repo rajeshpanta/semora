@@ -213,7 +213,16 @@ export function useLectureRecorder() {
   const lectureIdRef = useRef<string | null>(null);
   const seqRef = useRef(0);
   const baseElapsedRef = useRef(0);
-  const rotatingRef = useRef(false);
+  // The rotation in flight, not merely "a rotation is in flight".
+  //
+  // A boolean could only tell a second caller to go away, and Stop was one of
+  // those callers: `await rotateSegment(...)` returned instantly while the
+  // five-minute timer's rotation was still running, so Stop declared a count
+  // the rotation had not incremented and cleared the lecture id out from under
+  // it. Holding the promise lets a duplicate rotation still be skipped while
+  // every caller waits for the one that is running. See lib/lectureLifecycle.ts
+  // for the model and its regression test.
+  const rotatingRef = useRef<Promise<void> | null>(null);
   const recordingSinceRef = useRef(0);
   const nextGapRef = useRef(false);
   const uploadChainRef = useRef<Promise<void>>(Promise.resolve());
@@ -272,49 +281,62 @@ export function useLectureRecorder() {
    */
   const rotateSegment = useCallback(
     async (opts: { resume: boolean; gap?: boolean }) => {
-      if (rotatingRef.current || discardingRef.current) return;
-      rotatingRef.current = true;
-      const seq = seqRef.current;
-      try {
-        const cacheUri = recorder.uri;
-        const before = recorder.getStatus();
-        const seconds = Math.max(0, Math.round((before?.durationMillis ?? 0) / 1000));
+      // Already rotating: do not start a second one, but do not walk away from
+      // it either. Whoever asked — the timer, the interruption detector, Stop —
+      // is waiting on the same chunk being closed.
+      const inFlight = rotatingRef.current;
+      if (inFlight) {
+        await inFlight;
+        return;
+      }
+      if (discardingRef.current) return;
+      const run = (async () => {
+        const seq = seqRef.current;
+        try {
+          const cacheUri = recorder.uri;
+          const before = recorder.getStatus();
+          const seconds = Math.max(0, Math.round((before?.durationMillis ?? 0) / 1000));
 
-        const finalized = new Promise<void>((resolve) => {
-          finalizedRef.current = () => resolve();
-          setTimeout(resolve, FINALIZE_TIMEOUT_MS);
-        });
-        await recorder.stop().catch(() => {});
-        await finalized;
-        finalizedRef.current = null;
+          const finalized = new Promise<void>((resolve) => {
+            finalizedRef.current = () => resolve();
+            setTimeout(resolve, FINALIZE_TIMEOUT_MS);
+          });
+          await recorder.stop().catch(() => {});
+          await finalized;
+          finalizedRef.current = null;
 
-        if (cacheUri) {
-          const size = await waitForFinalizedFile(cacheUri);
-          if (size > 0) {
-            const stored = await persistSegment(cacheUri, lectureIdRef.current!, seq);
-            seqRef.current = seq + 1;
-            baseElapsedRef.current += seconds;
-            setState((p) => ({ ...p, segmentsClosed: p.segmentsClosed + 1 }));
-            // nextGapRef carries the flag FORWARD. `opts.gap` describes the
-            // interruption that just ended this segment, so it belongs to the
-            // segment about to start — tagging the one that closed marks the
-            // wrong side of the hole.
-            enqueueUpload(stored, seq, seconds, nextGapRef.current);
-            nextGapRef.current = opts.gap ?? false;
+          if (cacheUri) {
+            const size = await waitForFinalizedFile(cacheUri);
+            if (size > 0) {
+              const stored = await persistSegment(cacheUri, lectureIdRef.current!, seq);
+              seqRef.current = seq + 1;
+              baseElapsedRef.current += seconds;
+              setState((p) => ({ ...p, segmentsClosed: p.segmentsClosed + 1 }));
+              // nextGapRef carries the flag FORWARD. `opts.gap` describes the
+              // interruption that just ended this segment, so it belongs to the
+              // segment about to start — tagging the one that closed marks the
+              // wrong side of the hole.
+              enqueueUpload(stored, seq, seconds, nextGapRef.current);
+              nextGapRef.current = opts.gap ?? false;
+            }
           }
-        }
 
-        if (opts.resume && !stoppedRef.current) {
-          nextGapRef.current = opts.gap ?? false;
-          await recorder.prepareToRecordAsync(LECTURE_RECORDING_OPTIONS);
-          recorder.record();
-          recordingSinceRef.current = Date.now();
+          if (opts.resume && !stoppedRef.current) {
+            nextGapRef.current = opts.gap ?? false;
+            await recorder.prepareToRecordAsync(LECTURE_RECORDING_OPTIONS);
+            recorder.record();
+            recordingSinceRef.current = Date.now();
+          }
+        } catch {
+          // A rotation that fails must not kill the session: the next tick tries
+          // again, and the segments already banked are unaffected.
         }
-      } catch {
-        // A rotation that fails must not kill the session: the next tick tries
-        // again, and the segments already banked are unaffected.
+      })();
+      rotatingRef.current = run;
+      try {
+        await run;
       } finally {
-        rotatingRef.current = false;
+        rotatingRef.current = null;
       }
     },
     [recorder, enqueueUpload],
@@ -437,6 +459,14 @@ export function useLectureRecorder() {
 
     if (state.phase === 'recording') {
       await rotateSegment({ resume: false });
+      // The rotation just waited on may have been the timer's, and the timer's
+      // asks to resume. If it got past that check in the moments before
+      // stoppedRef was set, the microphone is running again on a chunk nobody
+      // will close. One more pass closes it. It cannot loop: this pass does not
+      // resume, and stoppedRef now blocks any restart.
+      if (recorder.getStatus()?.isRecording) {
+        await rotateSegment({ resume: false });
+      }
     }
     await releaseRecordingSession();
 
@@ -483,7 +513,7 @@ export function useLectureRecorder() {
     patch({ phase: 'idle', finishedLectureId: lectureId });
     lectureIdRef.current = null;
     return { ok: true, lectureId };
-  }, [state.phase, state.interrupted, rotateSegment, patch]);
+  }, [state.phase, state.interrupted, rotateSegment, patch, recorder]);
 
   /** Abandon: stop capture, release the reservation, delete every trace of the audio. */
   const discard = useCallback(async () => {
