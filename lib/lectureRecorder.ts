@@ -31,9 +31,9 @@ import {
 import { track } from '@/lib/analytics';
 import {
   classifyLectureFailure,
-  failureProperties,
   type LectureStage,
 } from '@/lib/lectureFailure';
+import { trackLectureFailure } from '@/lib/lectureDiagnosticsStore';
 
 // ── The lecture capture state machine ───────────────────────────────────────
 // Everything hard about recording a 90-minute lecture on a phone lives here.
@@ -301,11 +301,8 @@ export function useLectureRecorder() {
             setState((p) => ({ ...p, uploadFailed: p.uploadFailed + 1 }));
             // `code: err?.code ?? null` until 2026-09-14, which is why all
             // fourteen failures in the preceding week said nothing at all.
-            const failure = classifyLectureFailure(err, err?.stage ?? 'transfer');
-            track('lecture_segment_upload_failed', {
-              screen: 'lecture_record',
-              ...failureProperties(failure, seq, 1),
-            });
+            trackLectureFailure('lecture_segment_upload_failed', 'lecture_record',
+              classifyLectureFailure(err, err?.stage ?? 'transfer'), seq, 1);
           },
         );
     },
@@ -354,14 +351,8 @@ export function useLectureRecorder() {
             // did not record rather than letting the student find out from a
             // transcript with a hole in it.
             if (size <= 0) {
-              track('lecture_segment_capture_failed', {
-                screen: 'lecture_record',
-                ...failureProperties(
-                  { stage: 'capture_finalize', code: 'NO_BYTES_CAPTURED', retry: 'permanent' },
-                  seq,
-                  1,
-                ),
-              });
+              trackLectureFailure('lecture_segment_capture_failed', 'lecture_record',
+                { stage: 'capture_finalize', code: 'NO_BYTES_CAPTURED', retry: 'permanent' }, seq, 1);
               setState((p) => ({ ...p, uploadFailed: p.uploadFailed + 1 }));
             }
             if (size > 0) {

@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { track } from '@/lib/analytics';
 import { listLocalLectureIds, retryPendingSegments, retryPendingUploads } from '@/lib/lectures';
+import { flushLectureDiagnostics } from '@/lib/lectureDiagnosticsStore';
 
 /**
  * Lectures the server is asked about per pass.
@@ -69,6 +70,12 @@ export function recoverUnfinishedLectures(): Promise<void> {
 
 async function runRecoveryPass(): Promise<void> {
   if (!CAN_RECOVER) return;
+
+  // Failures raised with no signal never reached analytics at all, which is
+  // the worst place to be blind: the lecture hall with no bars is where the
+  // audio is lost. They are kept on the device now and go out from here, on the
+  // same triggers as the recovery itself.
+  await flushLectureDiagnostics();
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return;

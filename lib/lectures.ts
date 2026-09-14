@@ -7,10 +7,10 @@ import { parseUploadJson, requestWithUploadProgress } from '@/lib/httpUpload';
 import { track } from '@/lib/analytics';
 import {
   classifyLectureFailure,
-  failureProperties,
   segmentSeqFromFilename,
   type LectureStage,
 } from '@/lib/lectureFailure';
+import { trackLectureFailure } from '@/lib/lectureDiagnosticsStore';
 import {
   eligibleParts,
   nextAttemptDelayMs,
@@ -487,10 +487,8 @@ export async function uploadSegment(input: {
     .update({ status: 'uploaded' })
     .eq('id', row.id);
   if (ackErr) {
-    track('lecture_segment_ack_failed', {
-      screen: 'lecture_record',
-      ...failureProperties(classifyLectureFailure(ackErr, 'acknowledge'), input.seq, 1),
-    });
+    trackLectureFailure('lecture_segment_ack_failed', 'lecture_record',
+      classifyLectureFailure(ackErr, 'acknowledge'), input.seq, 1);
   }
   const receipt: UploadReceipt = { acknowledged: !ackErr, segmentId: row.id };
 
@@ -515,10 +513,8 @@ export async function uploadSegment(input: {
       segmentId: row.id,
     }));
   } catch (err) {
-    track('lecture_segment_dispatch_failed', {
-      screen: 'lecture_record',
-      ...failureProperties(classifyLectureFailure(err, 'transcribe_dispatch'), input.seq, 1),
-    });
+    trackLectureFailure('lecture_segment_dispatch_failed', 'lecture_record',
+      classifyLectureFailure(err, 'transcribe_dispatch'), input.seq, 1);
   }
 
   return receipt;
@@ -666,7 +662,7 @@ export async function retryPendingUploads(lectureId: string): Promise<number> {
     } catch (err) {
       const failure = classifyLectureFailure(err, (err as { stage?: LectureStage })?.stage ?? 'transfer');
       const attempt = part.attemptCount + 1;
-      track('lecture_segment_retry_failed', { screen: 'recovery', ...failureProperties(failure, part.seq, attempt) });
+      trackLectureFailure('lecture_segment_retry_failed', 'recovery', failure, part.seq, attempt);
       await store.update((j) => patchPart(j, part.seq, {
         attemptCount: attempt,
         lastFailureStage: failure.stage,
@@ -871,10 +867,8 @@ export async function purgeLectureAudio(lectureId: string): Promise<void> {
     // retention job's problem and it can only act on what it is told about.
     const { error } = await supabase.storage.from('lectures').remove(paths);
     if (error) {
-      track('lecture_audio_purge_failed', {
-        screen: 'lecture_detail',
-        ...failureProperties(classifyLectureFailure(error, 'reconcile'), -1, 1),
-      });
+      trackLectureFailure('lecture_audio_purge_failed', 'lecture_detail',
+        classifyLectureFailure(error, 'reconcile'), -1, 1);
     }
   }
   await deleteLocalLectureAudio(lectureId);

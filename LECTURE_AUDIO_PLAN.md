@@ -605,7 +605,7 @@ the route preview builds take to the test backend. Those need the owner.
 | Step | State |
 |---|---|
 | 0 Baseline | Done, except the test account and audio fixtures |
-| 1 Diagnostics | Done, less the bounded local diagnostic history that survives a restart |
+| 1 Diagnostics | Done — stages, codes, and a bounded on-device buffer that survives a restart and flushes on the recovery triggers |
 | 2 Local journal | Done — `lectureJournal.ts`, 18 tests killing the filesystem at each boundary |
 | 3 Recording lifecycle | Done, less the port onto `lectureLifecycle.ts`; the rules are applied in the hook |
 | 4 Upload and acknowledgment | Done, less the transport itself. See below |
@@ -636,7 +636,17 @@ build it then.
 
 ### Owed before any of this reaches a student
 
-1. **The fingerprint.** An over-the-air update from this tree reaches nobody.
+1. **The fingerprint, now confirmed against live data.** Every update on the
+   `production` branch carries `e88b9845…`, and devices on 1.14 are taking them
+   (bundle `01a09d94`, 21 devices, from 2026-09-13 19:29). So the installed
+   binaries have `e88b9845…`. This tree computes `8436c8c1…`. The whole of
+   `ios/` was regenerated at 2026-09-11 02:19, forty minutes after the baseline
+   was recorded, and `ios` is a fingerprint source. `.xcode.env.local` is not
+   the cause: removing it changes nothing. An update published from here would
+   be tagged `8436c8c1…`, which no installed binary has, and would reach nobody
+   while reporting no error. Publish from a clean isolated worktree — see the
+   `ota-from-isolated-worktree` note — and re-run
+   `scripts/check-native-fingerprint.sh` until it matches before any publish.
 2. **Migrations 140 and 141.** Written, checked against the live signatures and
    columns, not applied and not dry-run. Nothing in the client depends on either.
 3. **Device testing.** None of the capture work has been on a phone. This is the
