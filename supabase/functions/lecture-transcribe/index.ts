@@ -690,10 +690,14 @@ async function handleSegment(
   // The lecture is now demonstrably being transcribed. Recording this is what
   // makes the list screen's "Transcribing" state true, and what the in-flight
   // reservation cap counts.
+  //
+  // 'failed' too (138): the stall sweep fails a lecture whose parts stopped
+  // arriving, and a part that reaches us afterwards proves it was not over.
+  // Left 'failed', that part was transcribed and then shown to no one.
   await admin.from('lecture_recordings')
-    .update({ status: 'transcribing' })
+    .update({ status: 'transcribing', error_code: null })
     .eq('id', lectureId)
-    .in('status', ['recording', 'uploading']);
+    .in('status', ['recording', 'uploading', 'failed']);
 
   // ── Keep the row's clock honest while audio is still arriving ────────────
   // The update above is guarded, correctly: it must never drag a lecture that
@@ -1081,6 +1085,43 @@ async function deleteLectureAudio(
     .eq('id', lectureId);
 }
 
+/** Statuses a lecture only reaches once its transcript has been assembled. */
+const FINISHED_STATUSES = new Set(['transcribed', 'generating', 'ready']);
+
+/**
+ * Bring a finished lecture's transcript up to date with its parts, then delete
+ * whatever audio is now safe to delete.
+ *
+ * lecture_rebuild_transcript does the work under a row lock: it reassembles from
+ * the done parts, returns false when the words are unchanged, and otherwise
+ * writes the transcript, recounts the missing parts and marks existing notes
+ * stale. The audio delete is the one handleRecover's caller relied on the
+ * not-finalized branch for.
+ */
+async function foldInLateParts(
+  admin: any,
+  lectureId: string,
+  segments: { storage_path: string | null; status?: string; recovery_attempts?: number }[],
+  log: any,
+): Promise<void> {
+  const { data: rebuilt, error: rebuildErr } = await admin
+    .rpc('lecture_rebuild_transcript', { p_lecture_id: lectureId });
+  if (rebuildErr) {
+    log.error('late_part_rebuild_failed', { lecture_id: lectureId, ...errorFields(rebuildErr) });
+  } else if (rebuilt === true) {
+    log.info('late_part_folded_in', { lecture_id: lectureId });
+  }
+
+  const { data: current } = await admin
+    .from('lecture_recordings')
+    .select('audio_deleted_at')
+    .eq('id', lectureId)
+    .maybeSingle();
+  if (current && !current.audio_deleted_at) {
+    await deleteLectureAudio(admin, lectureId, segments, log);
+  }
+}
+
 /**
  * Assemble the full transcript once every segment is done, then delete the audio.
  *
@@ -1096,6 +1137,16 @@ async function maybeFinalize(
   locale: Locale,
   log: any,
 ): Promise<Response> {
+  // Read fresh (138). The caller's copy was taken before a transcription that
+  // can run for a minute, and the stall sweep may have finished the lecture in
+  // the meantime; acting on the old status would leave this part out of it.
+  const { data: fresh } = await admin
+    .from('lecture_recordings')
+    .select('status, segment_count')
+    .eq('id', lecture.id)
+    .maybeSingle();
+  if (fresh) lecture = { ...lecture, status: fresh.status, segment_count: fresh.segment_count };
+
   const { data: segments, error } = await admin
     .from('lecture_segments')
     .select('id, seq, status, transcript, seconds, storage_path, has_gap, created_at, recovery_attempts')
@@ -1132,6 +1183,19 @@ async function maybeFinalize(
       .in('id', stale.map((s: any) => s.id));
     for (const s of stale) s.status = 'failed';
     log.warn('segments_timed_out', { lecture_id: lecture.id, count: stale.length });
+  }
+
+  // A PART THAT ARRIVES AFTER THE LECTURE WAS FINISHED (138). The terminal
+  // write below is guarded and will never match again, and the capture check
+  // below never passes while a part is still missing, so without this a late
+  // part was transcribed, stored, and left out of the transcript the student
+  // reads. Stop used to paper over it by dragging the lecture back to
+  // 'uploading'; the database no longer allows that. The rebuild compares
+  // words, so this is a no-op unless the part actually added something, and
+  // when it did it marks the notes to be rewritten.
+  if (FINISHED_STATUSES.has(lecture.status)) {
+    await foldInLateParts(admin, lecture.id, all, log);
+    return jsonResponse({ ok: true, status: lecture.status, segmentsDone: done.length }, 200);
   }
 
   const pending = all.filter((s: any) => s.status !== 'done' && s.status !== 'failed');
@@ -1233,21 +1297,18 @@ async function maybeFinalize(
     return jsonResponse({ error: t('transient', locale) }, 503);
   }
   if (!finalized) {
-    // Another invocation already finalized this lecture. One thing is still
-    // worth doing: if that invocation's audio delete failed, this is the only
-    // place it ever gets retried — the terminal update above will never match
-    // again, so without this the objects stay in the bucket forever and the
-    // retention promise quietly stops being true for that lecture.
-    const { data: current } = await admin
-      .from('lecture_recordings')
-      .select('audio_deleted_at')
-      .eq('id', lecture.id)
-      .maybeSingle();
-    if (current && !current.audio_deleted_at) {
-      await deleteLectureAudio(admin, lecture.id, all, log);
-    }
+    // Another invocation (or the stall sweep) finished this lecture between our
+    // read and this write. This part may still be missing from that transcript,
+    // and if that invocation's audio delete failed, this is the only place it
+    // ever gets retried — the terminal update above will never match again.
+    await foldInLateParts(admin, lecture.id, all, log);
     return jsonResponse({ ok: true, status: 'transcribed' }, 200);
   }
+
+  // 138: record any part the phone declared that never became a row.
+  const { error: missingErr } = await admin
+    .rpc('lecture_set_parts_missing', { p_lecture_id: lecture.id });
+  if (missingErr) log.warn('parts_missing_update_failed', errorFields(missingErr));
 
   // The lecture was already charged by its first transcribed segment; top up
   // the recorded duration now that the true total is known. (Insert-on-conflict

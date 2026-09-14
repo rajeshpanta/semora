@@ -26,6 +26,13 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '
 // A 90-minute lecture transcribes to roughly 70k characters, so this ceiling is
 // headroom rather than a routine truncation point.
 const MAX_TRANSCRIPT_CHARS = 80_000;
+
+/**
+ * A notes refresh whose claim is older than this is presumed dead (the isolate
+ * was killed) and may be taken over. The slowest notes call on record is under
+ * 150 seconds, the same bound sweep_stalled_lectures uses for 'generating'.
+ */
+const REFRESH_CLAIM_STALE_MS = 4 * 60 * 1000;
 const MAX_NOTES_CHARS = 12_000;
 const MIN_QUIZ_QUESTIONS = 3;
 // Raised from 10. A 50-minute lecture holds far more than ten testable ideas,
@@ -232,7 +239,7 @@ serve(withRequestLogging('lecture-study-kit', async (req, log) => {
     // authority and its owner is adopted below.
     let lectureQuery = adminClient
       .from('lecture_recordings')
-      .select('id, user_id, course_id, title, status, transcript, notes_md, duration_seconds, source')
+      .select('id, user_id, course_id, title, status, transcript, notes_md, duration_seconds, source, notes_stale, transcript_rev')
       .eq('id', lectureId);
     if (!isCron) lectureQuery = lectureQuery.eq('user_id', userId);
 
@@ -248,7 +255,13 @@ serve(withRequestLogging('lecture-study-kit', async (req, log) => {
       log.setUser(userId);
       // A student who opened the lecture in the meantime is already generating.
       // Re-entering here would stamp a second claim over theirs and race the
-      // write. 'transcribed' is the only state this worker has any business in.
+      // write. 'transcribed' is the only state this worker has any business in,
+      // plus (138) a finished lecture whose notes predate parts that arrived late.
+      const refresh = Boolean(lecture.notes_md) && lecture.notes_stale === true &&
+        (lecture.status === 'transcribed' || lecture.status === 'ready');
+      if (refresh) {
+        return await refreshNotes(adminClient, userId, lecture, locale, log);
+      }
       if (lecture.status !== 'transcribed' || lecture.notes_md) {
         log.info('cron_notes_skipped', { lecture_id: lecture.id, status: lecture.status });
         return jsonResponse({ ok: true, skipped: true }, 200);
@@ -351,52 +364,19 @@ async function handleNotes(
   // Stamp the claim so a client can tell "working on it" from "the isolate died
   // three minutes ago" — without it, a killed invocation leaves the lecture in
   // 'generating' and the detail screen spins forever with no retry offered.
-  await admin.from('lecture_recordings')
+  const { data: claimed } = await admin.from('lecture_recordings')
     .update({ status: 'generating', notes_started_at: new Date().toISOString() })
     .eq('id', lecture.id)
-    .eq('status', 'transcribed');
+    .eq('status', 'transcribed')
+    .select('transcript')
+    .maybeSingle();
+  // 138: a late part can grow the transcript between the read above and this
+  // claim; write the notes from what is there now. (A part that lands after the
+  // claim marks the notes stale, and the scheduler rewrites them.)
+  const claimedTranscript = typeof claimed?.transcript === 'string' ? claimed.transcript.trim() : '';
 
-  const input = [
-    NOTES_PROMPT,
-    locale === 'es'
-      ? 'LANGUAGE: Write the notes in natural, neutral Spanish. Keep proper names and technical terminology accurate.'
-      : 'LANGUAGE: Write the notes in clear U.S. English.',
-    lecture.title ? `COURSE / LECTURE TITLE: ${String(lecture.title).slice(0, 120)}` : '',
-    // The transcript is a recording of whatever was said in the room, which can
-    // include someone reading instructions aloud. Wrap it so the model treats
-    // it as data, never as instructions addressed to it.
-    asUntrustedDocument(transcript.slice(0, MAX_TRANSCRIPT_CHARS), 'LECTURE_TRANSCRIPT'),
-  ].filter(Boolean).join('\n\n');
-
-  const result = await callOpenAIResponses({
-    model: modelFor(AiTask.contentGeneration),
-    input: [{ role: 'user', content: input }],
-    reasoning: { effort: 'none' },
-    // Notes are the one output here meant to be LONG. 'low' verbosity plus a
-    // 4096 cap is what made them a handful of bullets: the model was being
-    // told to be terse and then given no room to be otherwise. A 50-minute
-    // lecture with real content needs the headroom, and nothing pads to fill
-    // it — the prompt forbids restating a point to reach a length.
-    text: { verbosity: 'medium' },
-    max_output_tokens: 12000,
-    store: false,
-    safety_identifier: await makeSafetyIdentifier(userId),
-  }, 'lecture-notes');
-
-  // Deliberately NOT logged yet. See the write below.
-  const logThisCall = () => logAiCall(admin, userId, {
-    task: AiTask.contentGeneration,
-    provider: providerFor(AiTask.contentGeneration),
-    model: modelFor(AiTask.contentGeneration),
-    status: result.ok ? 'success' : 'failed',
-    errorCode: result.ok ? null : String(result.status),
-    errorDetail: result.ok ? null : result.errorBody,
-    durationMs: result.durationMs,
-    attempts: result.attempts,
-    ...(result.ok ? usageFromOpenAI(result.data) : {}),
-  });
-
-  const notes = result.ok ? openAIText(result.data) : null;
+  const { result, notes, logThisCall } = await writeNotesWithModel(
+    admin, userId, lecture.title, claimedTranscript || transcript, locale);
   if (!notes) {
     // Nothing to protect on this path, so the log goes first as it always did.
     await logThisCall();
@@ -449,6 +429,184 @@ async function handleNotes(
 
   log.info('lecture_notes_generated', { lecture_id: lecture.id, chars: notesMd.length });
   return jsonResponse({ ok: true, notesMd }, 200);
+}
+
+/**
+ * One notes request to the model. Shared by first-time generation and the 138
+ * refresh so the two can never drift into writing different kinds of notes.
+ * The caller decides when to log the call: after the notes are saved.
+ */
+async function writeNotesWithModel(
+  admin: any,
+  userId: string,
+  title: string | null,
+  transcript: string,
+  locale: Locale,
+) {
+  const input = [
+    NOTES_PROMPT,
+    locale === 'es'
+      ? 'LANGUAGE: Write the notes in natural, neutral Spanish. Keep proper names and technical terminology accurate.'
+      : 'LANGUAGE: Write the notes in clear U.S. English.',
+    title ? `COURSE / LECTURE TITLE: ${String(title).slice(0, 120)}` : '',
+    // The transcript is a recording of whatever was said in the room, which can
+    // include someone reading instructions aloud. Wrap it so the model treats
+    // it as data, never as instructions addressed to it.
+    asUntrustedDocument(transcript.slice(0, MAX_TRANSCRIPT_CHARS), 'LECTURE_TRANSCRIPT'),
+  ].filter(Boolean).join('\n\n');
+
+  const result = await callOpenAIResponses({
+    model: modelFor(AiTask.contentGeneration),
+    input: [{ role: 'user', content: input }],
+    reasoning: { effort: 'none' },
+    // Notes are the one output here meant to be LONG. 'low' verbosity plus a
+    // 4096 cap is what made them a handful of bullets: the model was being
+    // told to be terse and then given no room to be otherwise. A 50-minute
+    // lecture with real content needs the headroom, and nothing pads to fill
+    // it — the prompt forbids restating a point to reach a length.
+    text: { verbosity: 'medium' },
+    max_output_tokens: 12000,
+    store: false,
+    safety_identifier: await makeSafetyIdentifier(userId),
+  }, 'lecture-notes');
+
+  // Deliberately NOT logged yet. See the write below.
+  const logThisCall = () => logAiCall(admin, userId, {
+    task: AiTask.contentGeneration,
+    provider: providerFor(AiTask.contentGeneration),
+    model: modelFor(AiTask.contentGeneration),
+    status: result.ok ? 'success' : 'failed',
+    errorCode: result.ok ? null : String(result.status),
+    errorDetail: result.ok ? null : result.errorBody,
+    durationMs: result.durationMs,
+    attempts: result.attempts,
+    ...(result.ok ? usageFromOpenAI(result.data) : {}),
+  });
+
+  const notes = result.ok ? openAIText(result.data) : null;
+  return { result, notes, logThisCall };
+}
+
+/**
+ * Rewrite notes whose transcript has since grown (138).
+ *
+ * Parts of a recording that reach the server after the lecture was finished are
+ * folded into the transcript by lecture_rebuild_transcript, which marks the
+ * notes stale; request_pending_lecture_notes then sends the scheduler here.
+ *
+ * What the student has is never taken away to do this. The lecture stays
+ * 'ready' (or 'transcribed') and its current notes stay on screen the whole
+ * time; the claim is notes_started_at alone, and a failure only clears that
+ * claim. The new notes replace the old ones in a single write.
+ *
+ * notes_stale is cleared only if transcript_rev did not move while the model
+ * was writing. If another part landed meanwhile, the better notes are still
+ * saved but stay stale, and the next scheduler pass rewrites them again.
+ *
+ * No free-allowance charge: a recording paid at transcription, and refreshing
+ * the notes the student already has is not a new action.
+ */
+async function refreshNotes(
+  admin: any,
+  userId: string,
+  lecture: any,
+  locale: Locale,
+  log: any,
+): Promise<Response> {
+  const now = new Date();
+  const deadClaim = new Date(now.getTime() - REFRESH_CLAIM_STALE_MS).toISOString();
+  const { data: claimed, error: claimErr } = await admin
+    .from('lecture_recordings')
+    .update({ notes_started_at: now.toISOString() })
+    .eq('id', lecture.id)
+    .eq('notes_stale', true)
+    .in('status', ['transcribed', 'ready'])
+    .or(`notes_started_at.is.null,notes_started_at.lt.${deadClaim}`)
+    .select('transcript, transcript_rev, title, course_id')
+    .maybeSingle();
+  if (claimErr) {
+    log.error('notes_refresh_claim_failed', errorFields(claimErr));
+    return jsonResponse({ error: t('transient', locale) }, 503);
+  }
+  if (!claimed) {
+    log.info('notes_refresh_skipped', { lecture_id: lecture.id });
+    return jsonResponse({ ok: true, skipped: true }, 200);
+  }
+
+  // The scheduler sends no locale, and these notes replace ones the student
+  // may have had written in Spanish. Their saved language decides.
+  const { data: profile } = await admin
+    .from('profiles')
+    .select('preferred_language')
+    .eq('id', userId)
+    .maybeSingle();
+  const notesLocale: Locale = profile?.preferred_language === 'es' ? 'es' : locale;
+
+  const transcript = typeof claimed.transcript === 'string' ? claimed.transcript.trim() : '';
+  const { result, notes, logThisCall } = await writeNotesWithModel(
+    admin, userId, claimed.title, transcript, notesLocale);
+
+  if (!notes) {
+    await logThisCall();
+    // The old notes are untouched and notes_stale is still true, so the
+    // scheduler tries again (up to its attempt limit).
+    await admin.from('lecture_recordings')
+      .update({ notes_started_at: null })
+      .eq('id', lecture.id);
+    log.error('notes_refresh_failed', { lecture_id: lecture.id, status: result.status });
+    return jsonResponse({ error: t('notesFailed', locale), code: 'NOTES_FAILED' }, 502);
+  }
+
+  const notesMd = notes.replace(/```(?:markdown)?\n?/g, '').trim().slice(0, MAX_NOTES_CHARS);
+  const refreshedAt = new Date().toISOString();
+
+  // Notes first, for the reason handleNotes gives. Clearing stale is guarded on
+  // the revision the notes were written from.
+  const { data: current, error: writeErr } = await admin
+    .from('lecture_recordings')
+    .update({
+      notes_md: notesMd,
+      status: 'ready',
+      error_code: null,
+      notes_started_at: null,
+      notes_stale: false,
+      notes_refreshed_at: refreshedAt,
+    })
+    .eq('id', lecture.id)
+    .eq('transcript_rev', claimed.transcript_rev)
+    .in('status', ['transcribed', 'ready'])
+    .select('id')
+    .maybeSingle();
+  let upToDate = Boolean(current);
+  if (!writeErr && !current) {
+    // The transcript moved on while the model was writing. These notes still
+    // cover more than the ones on screen, so save them, and leave the lecture
+    // stale for the next pass.
+    const { error: laterErr } = await admin
+      .from('lecture_recordings')
+      .update({ notes_md: notesMd, status: 'ready', error_code: null, notes_started_at: null })
+      .eq('id', lecture.id)
+      .in('status', ['transcribed', 'ready']);
+    if (laterErr) {
+      await logThisCall();
+      log.error('notes_refresh_write_failed', errorFields(laterErr));
+      return jsonResponse({ error: t('transient', locale) }, 503);
+    }
+    upToDate = false;
+  }
+  if (writeErr) {
+    await logThisCall();
+    log.error('notes_refresh_write_failed', errorFields(writeErr));
+    return jsonResponse({ error: t('transient', locale) }, 503);
+  }
+
+  await logThisCall();
+  await mirrorToCourseNotes(admin, userId, { ...lecture, title: claimed.title, course_id: claimed.course_id }, notesMd, log);
+
+  log.info('lecture_notes_refreshed', {
+    lecture_id: lecture.id, chars: notesMd.length, up_to_date: upToDate,
+  });
+  return jsonResponse({ ok: true, refreshed: true, upToDate }, 200);
 }
 
 /**
