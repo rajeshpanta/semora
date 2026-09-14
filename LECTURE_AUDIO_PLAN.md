@@ -611,7 +611,7 @@ the route preview builds take to the test backend. Those need the owner.
 | 4 Upload and acknowledgment | Done, less the transport itself. See below |
 | 5 One recovery worker | Done — mounted, single-flight, journal-driven, wakes on foreground and reconnect |
 | 6 Legacy recovery | Out of scope by the owner's decision |
-| 7 Server completeness | Migrations 140 and 141, **neither applied** |
+| 7 Server completeness | Migrations 140 and 141, dry-run and passing, **neither applied**. The late-arrival audit is done: every live function that writes `segment_count` uses `greatest`, verified against production, so no path shrinks a declared count |
 | 8 Screens tell the truth | Done, in English and Spanish |
 | 9 Deletion and retention | Done — tombstone first, receipts gate the local delete |
 | 10 Background transport | **Not built.** Needs a binary and a device |
