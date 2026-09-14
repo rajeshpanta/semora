@@ -609,7 +609,35 @@ the route preview builds take to the test backend. Those need the owner.
 | 0.3 deployed versions recorded | done — table above, fingerprint drift found |
 | 0.4 baseline counts | done — table above |
 | 0.5 test account and fixtures | **owed by the owner** |
-| 1.3 extracted lifecycle controller | started — `lib/lectureLifecycle.ts`, 9 tests green |
+| 1.1 failure stages and codes | done — `lib/lectureFailure.ts`, wired into the recorder, the uploader and the retry |
+| 1.2 local journal | **not built.** The filesystem is standing in for it (see below) |
+| 1.3 extracted lifecycle controller | built and tested, **not yet wired into the hook** |
+| 2.4 upload independent of transcription | partly — a failed transcription nudge no longer counts as a failed upload |
+| 2.5 one recovery worker | partly — `LectureRecoveryRuntime` is mounted and now drives off local files |
+| 2.9 deletion and retention | **not built** |
+| 3.7 server completeness | done — migration 140, **not applied** |
+| 3.8 screens tell the truth | done for the lecture screen; recorder wording not changed |
+| 4 background transport | **not built.** Needs a binary |
+| 5 gates and release | partial — unit gates green, device matrix not run |
 
-Not yet wired into `lib/lectureRecorder.ts`. The hook still runs the shipped
-ordering; the controller is the seam the hook moves onto in Step 3.
+### What the filesystem stands in for
+
+Step 2's journal is not built. In its place the local audio files are treated as
+the index: `listLocalLectureIds()` reads `documents/lectures/`, and
+`retryPendingUploads` drives off the files in a lecture's directory rather than
+off server rows. That covers every failure shape seen on 2026-09-14 — no row, a
+`failed` row, a `pending` row — because the file is written before the upload is
+attempted and kept when it fails.
+
+It does not cover what a real journal would: a part whose file was written while
+the lecture id was already cleared (the Stop race, fixed forward by
+`lectureLifecycle.ts` but not recoverable after the fact), the expected part
+count when the app died before Stop, or per-part attempt and backoff state.
+
+### Owed before any of this reaches a student
+
+1. **The fingerprint.** An over-the-air update from this tree reaches nobody.
+2. **Migration 140 dry run.** Written and checked against the live signatures
+   and columns, but not run in a rolled-back transaction. It has not been
+   applied. Nothing in this branch depends on it being applied first.
+3. **Device testing.** None of the capture work has been on a phone.

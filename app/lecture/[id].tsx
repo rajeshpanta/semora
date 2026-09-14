@@ -28,6 +28,7 @@ import {
   useRetryLectureNotes,
   type LectureError,
   isLectureStalled,
+  lectureCompleteness,
   useLectureSegmentProgress,
 } from '@/lib/lectures';
 
@@ -242,9 +243,18 @@ export default function LectureDetailScreen() {
   }, [lecture?.status, lecture?.notes_md, id, qc]);
 
   // Finish any segment left stranded by a killed app or a dropped connection.
+  //
+  // 2026-09-14: a lecture whose parts are missing is worth retrying WHATEVER
+  // the server calls it. Lecture 04cd64e7 was 'ready' — the server had written
+  // notes from the four parts that arrived and considered itself finished —
+  // while four more parts sat on the phone. Gating on 'uploading' or
+  // 'transcribing' meant opening the lecture did nothing for exactly the
+  // student who needed it most.
   useEffect(() => {
     if (!lecture || !id) return;
-    if (lecture.status !== 'uploading' && lecture.status !== 'transcribing') return;
+    const inFlight = lecture.status === 'uploading' || lecture.status === 'transcribing';
+    const incomplete = lectureCompleteness(lecture).kind === 'missing';
+    if (!inFlight && !incomplete) return;
     if (resumeAttemptedRef.current) return;
     resumeAttemptedRef.current = true;
     setRecovering(true);
@@ -258,7 +268,20 @@ export default function LectureDetailScreen() {
         setRecovering(false);
         qc.invalidateQueries({ queryKey: lectureKeys.detail(id) });
       });
-  }, [lecture?.status, id, qc]);
+  }, [lecture?.status, lecture?.parts_missing, id, qc]);
+
+  /** Retry on demand, for the student who came back to this screen on purpose. */
+  const retryMissingParts = useCallback(() => {
+    if (!id || recovering) return;
+    setRecovering(true);
+    retryPendingUploads(id)
+      .then(() => retryPendingSegments(id))
+      .catch(() => {})
+      .finally(() => {
+        setRecovering(false);
+        qc.invalidateQueries({ queryKey: lectureKeys.detail(id) });
+      });
+  }, [id, recovering, qc]);
 
   const handleQuiz = useCallback(() => {
     if (!lecture) return;
@@ -680,6 +703,42 @@ export default function LectureDetailScreen() {
                 <FontAwesome name="pencil-square-o" size={15} color={colors.brand} />
                 <Text style={[styles.cardTitle, { color: colors.ink }]}>Lecture notes</Text>
               </View>
+              {/* Say so when they are built from part of the lecture. The
+                  database has recorded this since migration 138 and nothing
+                  read it, so a student whose lecture lost half its audio was
+                  shown notes and sent a push calling them ready. */}
+              {(() => {
+                const completeness = lectureCompleteness(lecture);
+                if (completeness.kind !== 'missing') return null;
+                return (
+                  <View style={[styles.incomplete, { backgroundColor: colors.amber50, borderColor: colors.amber }]}>
+                    <FontAwesome name="exclamation-triangle" size={13} color={colors.amber} />
+                    <View style={{ flex: 1, gap: 6 }}>
+                      <Text style={[styles.incompleteText, { color: colors.ink2 }]}>
+                        {completeness.parts === 1
+                          ? 'These notes are incomplete. 1 part of this recording has not arrived.'
+                          : `These notes are incomplete. ${completeness.parts} parts of this recording have not arrived.`}
+                      </Text>
+                      {completeness.recoverable ? (
+                        <TouchableOpacity
+                          onPress={retryMissingParts}
+                          disabled={recovering}
+                          accessibilityRole="button"
+                          accessibilityLabel="Try the missing parts again"
+                        >
+                          <Text style={[styles.incompleteAction, { color: colors.brand }]}>
+                            {recovering ? 'Trying…' : 'Try again'}
+                          </Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <Text style={[styles.incompleteText, { color: colors.ink3 }]}>
+                          The missing audio may still be on the phone that recorded it.
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })()}
               {lecture.notes_md ? (
                 <NotesBody
                   md={lecture.notes_md}
@@ -839,6 +898,14 @@ const styles = StyleSheet.create({
   card: { borderRadius: 18, borderWidth: 0.5, padding: 16, marginTop: 12 },
   cardHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   cardTitle: { fontSize: 15, fontWeight: '700' },
+  // ink2, not ink3: ink3 is 3.37:1 and fails WCAG AA at this size, and this is
+  // the one line on the screen a student must not miss.
+  incomplete: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 9,
+    borderRadius: 12, borderWidth: 1, padding: 11, marginBottom: 12,
+  },
+  incompleteText: { fontSize: 13.5, lineHeight: 19 },
+  incompleteAction: { fontSize: 13.5, fontWeight: '700' },
   retryBtn: {
     flexDirection: 'row',
     alignItems: 'center',

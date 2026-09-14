@@ -1313,6 +1313,11 @@ function RootLayoutNav() {
             <RealtimeSyncRuntime />
             <LmsSyncRuntime />
             <CollaborationSyncRuntime />
+            {/* Defined since the lecture recovery work and never rendered, so
+                the once-per-launch pass had never run for a single student.
+                Found 2026-09-14 while tracing four parts lost from one
+                lecture. */}
+            <LectureRecoveryRuntime />
             <AuthGate>
               <NavigationFrame>
               <Stack

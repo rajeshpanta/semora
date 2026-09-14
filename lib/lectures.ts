@@ -5,6 +5,12 @@ import { getAppLocale } from '@/lib/i18n';
 import { readFileAsBase64 } from '@/lib/readFileBase64';
 import { parseUploadJson, requestWithUploadProgress } from '@/lib/httpUpload';
 import { track } from '@/lib/analytics';
+import {
+  classifyLectureFailure,
+  failureProperties,
+  segmentSeqFromFilename,
+  type LectureStage,
+} from '@/lib/lectureFailure';
 
 // ── Lecture recordings — client data layer ──────────────────────────────────
 // Owns its own query keys rather than extending lib/queries.ts, matching
@@ -62,8 +68,42 @@ export interface LectureRecording {
   notes_started_at: string | null;
   quiz_started_at: string | null;
   audio_deleted_at: string | null;
+  /**
+   * Completeness, from migration 138. Present on every row since 2026-09-13,
+   * but optional here because an older cached row will not have it and a
+   * missing value must read as "not known", never as "nothing is missing".
+   */
+  parts_missing?: number | null;
+  parts_missing_since?: string | null;
+  parts_unrecoverable_at?: string | null;
+  notes_stale?: boolean | null;
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * How honest the screen can be about this lecture.
+ *
+ * Until 2026-09-14 nothing in the app read `parts_missing`, so a student whose
+ * lecture was missing half its audio got notes and a push saying they were
+ * ready. The database knew. Nobody told them.
+ */
+export type LectureCompleteness =
+  | { kind: 'complete' }
+  | { kind: 'unknown' }
+  | { kind: 'missing'; parts: number; recoverable: boolean };
+
+export function lectureCompleteness(
+  lecture: Pick<LectureRecording, 'parts_missing' | 'parts_unrecoverable_at'>,
+): LectureCompleteness {
+  const missing = lecture.parts_missing;
+  if (missing === undefined || missing === null) return { kind: 'unknown' };
+  if (missing <= 0) return { kind: 'complete' };
+  return {
+    kind: 'missing',
+    parts: missing,
+    recoverable: lecture.parts_unrecoverable_at == null,
+  };
 }
 
 export type LectureWithCourse = LectureRecording & {
@@ -296,6 +336,25 @@ function decode(base64: string): Uint8Array {
  * path can find — the local audio file is still on disk, and a segment nobody
  * knows about is a segment nobody retries.
  */
+/**
+ * Run one stage of the upload and stamp whatever it throws with where it was.
+ *
+ * Every `lecture_segment_upload_failed` event in the seven days to 2026-09-14
+ * carried an empty code, so four students lost audio for reasons nobody could
+ * name. The stage rides on the error so the handler that reports it knows which
+ * boundary broke. See lib/lectureFailure.ts.
+ */
+async function atStage<T>(stage: LectureStage, run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (err) {
+    if (err && typeof err === 'object' && (err as { stage?: unknown }).stage === undefined) {
+      (err as { stage?: LectureStage }).stage = stage;
+    }
+    throw err;
+  }
+}
+
 export async function uploadSegment(input: {
   lectureId: string;
   seq: number;
@@ -304,7 +363,7 @@ export async function uploadSegment(input: {
   hasGap?: boolean;
   onProgress?: (percent: number) => void;
 }): Promise<void> {
-  const session = await getSession();
+  const session = await atStage('session', getSession);
   const userId = session.user.id;
   const storagePath = `${userId}/${input.lectureId}/seg_${String(input.seq).padStart(3, '0')}.m4a`;
 
@@ -326,9 +385,13 @@ export async function uploadSegment(input: {
     )
     .select('id')
     .single();
-  if (rowErr || !row) throw rowErr ?? new Error('Could not save the recording segment.');
+  if (rowErr || !row) {
+    const err = (rowErr ?? new Error('Could not save the recording segment.')) as LectureError & { stage?: LectureStage };
+    err.stage = 'register';
+    throw err;
+  }
 
-  const base64 = await readFileAsBase64(input.fileUri);
+  const base64 = await atStage('local_commit', () => readFileAsBase64(input.fileUri));
   const bytes = decode(base64);
   const rawBytes = bytes.buffer.slice(
     bytes.byteOffset,
@@ -339,9 +402,13 @@ export async function uploadSegment(input: {
   const { data: signed, error: signedErr } = await bucket.createSignedUploadUrl(storagePath, {
     upsert: true,
   });
-  if (signedErr || !signed) throw signedErr ?? new Error('Could not prepare the upload.');
+  if (signedErr || !signed) {
+    const err = (signedErr ?? new Error('Could not prepare the upload.')) as LectureError & { stage?: LectureStage };
+    err.stage = 'sign_url';
+    throw err;
+  }
 
-  const uploadResponse = await requestWithUploadProgress({
+  const uploadResponse = await atStage('transfer', () => requestWithUploadProgress({
     url: signed.signedUrl,
     method: 'PUT',
     headers: {
@@ -351,18 +418,32 @@ export async function uploadSegment(input: {
     },
     body: rawBytes,
     onProgress: input.onProgress,
-  });
+  }));
   if (!uploadResponse.ok) {
     const uploadError = parseUploadJson<{ message?: string; error?: string }>(uploadResponse);
-    throw new Error(
+    const err = new Error(
       uploadError?.message || uploadError?.error || 'That part of the recording could not be uploaded.',
-    );
+    ) as LectureError & { stage?: LectureStage };
+    err.stage = 'transfer';
+    err.status = uploadResponse.status;
+    throw err;
   }
 
-  await supabase
+  // The bytes are in the bucket. If this update fails the part is still safe:
+  // the every-minute arrival job (migration 139) finds an object no row claims
+  // and hands it to lecture-transcribe. So a failure here is logged, not thrown,
+  // because throwing would make the recorder keep a local file it no longer
+  // needs and report a loss that did not happen.
+  const { error: ackErr } = await supabase
     .from('lecture_segments')
     .update({ status: 'uploaded' })
     .eq('id', row.id);
+  if (ackErr) {
+    track('lecture_segment_ack_failed', {
+      screen: 'lecture_record',
+      ...failureProperties(classifyLectureFailure(ackErr, 'acknowledge'), input.seq, 1),
+    });
+  }
 
   track('lecture_segment_uploaded', {
     screen: 'lecture_record',
@@ -372,11 +453,24 @@ export async function uploadSegment(input: {
 
   // Transcribe now. A failure here is NOT fatal — the audio is safely uploaded
   // and the segment stays reclaimable, so the resume path can pick it up.
-  await callLectureFn('lecture-transcribe', {
-    action: 'segment',
-    lectureId: input.lectureId,
-    segmentId: row.id,
-  });
+  //
+  // Deliberately swallowed since 2026-09-14. It used to throw, which the
+  // recorder's handler counted as "bytes failed to upload" and which kept the
+  // local file forever: a provider timeout on part 3 looked identical to losing
+  // part 3. Uploading and transcribing are separate facts now, and the arrival
+  // job will ask again if this nudge never lands.
+  try {
+    await atStage('transcribe_dispatch', () => callLectureFn('lecture-transcribe', {
+      action: 'segment',
+      lectureId: input.lectureId,
+      segmentId: row.id,
+    }));
+  } catch (err) {
+    track('lecture_segment_dispatch_failed', {
+      screen: 'lecture_record',
+      ...failureProperties(classifyLectureFailure(err, 'transcribe_dispatch'), input.seq, 1),
+    });
+  }
 }
 
 /**
@@ -445,36 +539,89 @@ export async function deleteLocalLectureAudio(lectureId: string): Promise<void> 
  * unfinished, and nothing on the device would ever try again.
  */
 export async function retryPendingUploads(lectureId: string): Promise<number> {
-  const { data: segments } = await supabase
+  // Driven by the FILES, not by the rows.
+  //
+  // This used to ask the server for segments with status 'pending' and retry
+  // those. On 2026-09-14 a student lost four parts of an eight-part lecture and
+  // not one of them was 'pending': two had no row at all, because uploadSegment
+  // reads the session before it writes the row and a locked phone makes that
+  // throw, and two had been marked 'failed'. The audio for all four was sitting
+  // on the phone the whole time and this function matched none of it.
+  //
+  // The local file is the only thing that is true whatever happened on the
+  // server, so it is what drives the loop now. uploadSegment upserts, so a part
+  // with no row gets one.
+  const seqs = await localSegmentSeqs(lectureId);
+  if (seqs.length === 0) return 0;
+
+  // One query, to learn which parts the server has already finished. Anything
+  // done or in flight is left alone: re-uploading would race a transcription
+  // for the same bytes.
+  const { data: rows } = await supabase
     .from('lecture_segments')
-    .select('id, seq, seconds, has_gap, status')
-    .eq('lecture_id', lectureId)
-    .eq('status', 'pending')
-    .order('seq', { ascending: true });
+    .select('seq, seconds, has_gap, status')
+    .eq('lecture_id', lectureId);
+  const bySeq = new Map<number, { seconds: number | null; has_gap: boolean | null; status: string }>();
+  for (const r of (rows ?? []) as { seq: number; seconds: number | null; has_gap: boolean | null; status: string }[]) {
+    bySeq.set(r.seq, r);
+  }
 
   let uploaded = 0;
-  for (const segment of segments ?? []) {
-    const uri = localSegmentUri(lectureId, segment.seq);
-    const info = await FileSystem.getInfoAsync(uri).catch(() => null);
-    // The local copy is deleted once a segment uploads successfully, so a
-    // missing file here means the audio is genuinely gone — the server's stale
-    // sweep will write that segment off and assemble around it.
-    if (!info?.exists) continue;
+  for (const seq of seqs) {
+    const uri = localSegmentUri(lectureId, seq);
+    const row = bySeq.get(seq);
+    if (row && (row.status === 'done' || row.status === 'transcribing')) {
+      // Already handled. The local copy is redundant; dropping it is what
+      // stops a finished lecture keeping 22MB on the phone forever.
+      await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+      continue;
+    }
     try {
       await uploadSegment({
         lectureId,
-        seq: segment.seq,
+        seq,
         fileUri: uri,
-        seconds: segment.seconds ?? 0,
-        hasGap: segment.has_gap ?? false,
+        seconds: row?.seconds ?? 0,
+        hasGap: row?.has_gap ?? false,
       });
       await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
       uploaded += 1;
-    } catch {
-      break; // stop on first failure — the network is still bad
+    } catch (err) {
+      const failure = classifyLectureFailure(err, (err as { stage?: LectureStage })?.stage ?? 'transfer');
+      track('lecture_segment_retry_failed', { screen: 'recovery', ...failureProperties(failure, seq, 1) });
+      // A part whose bytes are gone is this part's problem, not the queue's:
+      // skip it and give the others their turn. Anything else means the network
+      // or the account is the blocker, so stop and come back later.
+      if (failure.retry === 'permanent') continue;
+      break;
     }
   }
   return uploaded;
+}
+
+/** Sequence numbers of every part still held locally for a lecture, in order. */
+export async function localSegmentSeqs(lectureId: string): Promise<number[]> {
+  const dir = `${FileSystem.documentDirectory}lectures/${lectureId}/`;
+  const names = await FileSystem.readDirectoryAsync(dir).catch(() => [] as string[]);
+  return names
+    .map(segmentSeqFromFilename)
+    .filter((seq): seq is number => seq !== null)
+    .sort((a, b) => a - b);
+}
+
+/**
+ * Every lecture with audio still on this phone.
+ *
+ * `lectures/null/` is skipped deliberately. Those files come from the Stop race
+ * fixed in lib/lectureLifecycle.ts, where a rotation still running persisted
+ * against a lecture id that Stop had already cleared. There is no reliable way
+ * to tell whose they are, and guessing from a timestamp would file one
+ * student's lecture under another's.
+ */
+export async function listLocalLectureIds(): Promise<string[]> {
+  const root = `${FileSystem.documentDirectory}lectures/`;
+  const names = await FileSystem.readDirectoryAsync(root).catch(() => [] as string[]);
+  return names.filter((name) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(name));
 }
 
 /** Retry every segment the server has not finished, in order. */

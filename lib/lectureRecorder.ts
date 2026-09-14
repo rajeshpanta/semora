@@ -25,6 +25,11 @@ import {
   type LectureError,
 } from '@/lib/lectures';
 import { track } from '@/lib/analytics';
+import {
+  classifyLectureFailure,
+  failureProperties,
+  type LectureStage,
+} from '@/lib/lectureFailure';
 
 // ── The lecture capture state machine ───────────────────────────────────────
 // Everything hard about recording a 90-minute lecture on a phone lives here.
@@ -240,14 +245,17 @@ export function useLectureRecorder() {
             // lecture would otherwise leave ~22 MB behind on the device.
             FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
           },
-          (err: LectureError) => {
-            // Keep the local file: the detail screen's resume path is the
-            // second chance, and deleting here would make the failure permanent.
+          (err: LectureError & { stage?: LectureStage }) => {
+            // Keep the local file: the launch recovery pass and the detail
+            // screen both retry from it, and deleting here would make the
+            // failure permanent.
             setState((p) => ({ ...p, uploadFailed: p.uploadFailed + 1 }));
+            // `code: err?.code ?? null` until 2026-09-14, which is why all
+            // fourteen failures in the preceding week said nothing at all.
+            const failure = classifyLectureFailure(err, err?.stage ?? 'transfer');
             track('lecture_segment_upload_failed', {
               screen: 'lecture_record',
-              seq,
-              code: err?.code ?? null,
+              ...failureProperties(failure, seq, 1),
             });
           },
         );

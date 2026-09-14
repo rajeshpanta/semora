@@ -1,7 +1,17 @@
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { track } from '@/lib/analytics';
-import { retryPendingSegments, retryPendingUploads } from '@/lib/lectures';
+import { listLocalLectureIds, retryPendingSegments, retryPendingUploads } from '@/lib/lectures';
+
+/**
+ * Lectures the server is asked about per pass.
+ *
+ * Every lecture with audio on this phone is handled regardless of this cap:
+ * that list is bounded by what the student actually recorded, and skipping any
+ * of it is how audio stays stranded. The cap is only on the server query, which
+ * is a backstop for lectures whose files are already gone.
+ */
+const MAX_LECTURES_PER_PASS = 10;
 
 // Finishing what a killed app left behind — for every unfinished recording,
 // not just the one the student happens to reopen.
@@ -46,15 +56,31 @@ export async function recoverUnfinishedLectures(): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return;
 
-  const { data: lectures, error } = await supabase
+  // Local files first, server status second.
+  //
+  // This used to ask only for lectures the server called 'uploading' or
+  // 'transcribing', newest five. Lecture 04cd64e7 on 2026-09-14 was 'ready' —
+  // the server had assembled notes from the four parts that arrived and
+  // declared itself finished — while four more parts sat on the phone. Server
+  // status cannot be the question, because the server does not know what it
+  // has not been told. The audio on the device is the thing that is true.
+  const local = await listLocalLectureIds();
+
+  const { data: lectures } = await supabase
     .from('lecture_recordings')
     .select('id')
     .in('status', ['uploading', 'transcribing'])
     .order('created_at', { ascending: false })
-    .limit(5);
-  if (error || !lectures?.length) return;
+    .limit(MAX_LECTURES_PER_PASS);
 
-  for (const lecture of lectures as { id: string }[]) {
+  // Local work leads: it is the part nothing else in the system can see.
+  const ids: string[] = [];
+  for (const id of [...local, ...((lectures ?? []) as { id: string }[]).map((l) => l.id)]) {
+    if (!ids.includes(id)) ids.push(id);
+  }
+  if (ids.length === 0) return;
+
+  for (const lecture of ids.map((id) => ({ id }))) {
     try {
       // Uploads first, then transcription — a segment whose bytes never
       // arrived cannot be transcribed, and the server will not assemble a
