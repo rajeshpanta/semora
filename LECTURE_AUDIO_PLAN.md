@@ -615,7 +615,7 @@ the route preview builds take to the test backend. Those need the owner.
 | 8 Screens tell the truth | Done, in English and Spanish |
 | 9 Deletion and retention | Done — tombstone first, receipts gate the local delete |
 | 10 Background transport | **Not built.** Needs a binary and a device |
-| 11 Release gates | Unit gates green. Device matrix not run |
+| 11 Release gates | Unit gates green, both migrations dry-run on throwaway databases. Device matrix not run |
 | 12 Release | Not started, blocked on the fingerprint |
 
 ### Two things deliberately not done
@@ -648,7 +648,17 @@ build it then.
    `ota-from-isolated-worktree` note — and re-run
    `scripts/check-native-fingerprint.sh` until it matches before any publish.
 2. **Migrations 140 and 141.** Written, checked against the live signatures and
-   columns, not applied and not dry-run. Nothing in the client depends on either.
+   columns, and **dry-run against throwaway local databases** —
+   `supabase/tests/140_*.test.sql` reproduces the defect on 138's real code
+   before proving 140 fixes it, and `supabase/tests/141_*.test.sql` stubs pg_net
+   and the vault to read the pushes the function asks for. Both pass. Neither
+   migration is applied to production; nothing in the client depends on either.
+
+   ```
+   createdb semora_mig_test
+   psql -v ON_ERROR_STOP=1 -d semora_mig_test -f supabase/tests/140_completeness_before_the_early_return.test.sql
+   dropdb semora_mig_test
+   ```
 3. **Device testing.** None of the capture work has been on a phone. This is the
    gate that matters most: the Stop boundary twenty times, a full-length
    recording, a lock, airplane mode, and a force-quit and reopen.
