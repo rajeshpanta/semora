@@ -69,6 +69,17 @@ export interface LectureRecorderState {
   uploadFailed: number;
   interrupted: boolean;
   warnedNearLimit: boolean;
+  /**
+   * The last chunk is still being closed and written to this phone.
+   *
+   * `phase` goes to 'finishing' at the very first line of Stop, before the
+   * rotation that closes the final chunk has even started, and the screen
+   * offered a Leave button from that moment with a note promising uploads
+   * would continue. They might; the bytes of the part still being finalised
+   * would not, because they were not on disk yet. True until the audio is
+   * committed locally, false for the network half that follows.
+   */
+  savingLocally: boolean;
   error: string | null;
   /**
    * Set once a recording has been saved, so the screen can navigate to it.
@@ -107,7 +118,21 @@ async function persistSegment(cacheUri: string, lectureId: string, seq: number):
   const dir = `${LECTURE_DIR}${lectureId}/`;
   await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
   const target = `${dir}seg_${String(seq).padStart(3, '0')}.m4a`;
-  await FileSystem.deleteAsync(target, { idempotent: true }).catch(() => {});
+
+  // This used to delete whatever was at the target first, unconditionally.
+  //
+  // Once a part is finalised its bytes are immutable, so anything already
+  // sitting at that path is EITHER these same bytes written by a retry, in
+  // which case overwriting is pointless, OR a different part that ended up with
+  // the wrong sequence number, in which case overwriting destroys audio nobody
+  // will ever get back. Neither is worth a delete. An existing file is kept and
+  // reported; the journal and the directory scan will meet it again and the
+  // student keeps whatever was there.
+  const existing = await FileSystem.getInfoAsync(target).catch(() => null);
+  if (existing?.exists && typeof existing.size === 'number' && existing.size > 0) {
+    return target;
+  }
+
   await FileSystem.moveAsync({ from: cacheUri, to: target });
   return target;
 }
@@ -165,6 +190,7 @@ export function useLectureRecorder() {
     uploadFailed: 0,
     interrupted: false,
     warnedNearLimit: false,
+    savingLocally: false,
     error: null,
     finishedLectureId: null,
   });
@@ -315,6 +341,23 @@ export function useLectureRecorder() {
 
           if (cacheUri) {
             const size = await waitForFinalizedFile(cacheUri);
+            // Zero bytes after the finalize window is a capture failure, and
+            // until 2026-09-14 it was simply skipped: the loop moved on, the
+            // part was never mentioned again, and the recording reported
+            // itself as fine. It is named now, so the screen can say a part
+            // did not record rather than letting the student find out from a
+            // transcript with a hole in it.
+            if (size <= 0) {
+              track('lecture_segment_capture_failed', {
+                screen: 'lecture_record',
+                ...failureProperties(
+                  { stage: 'capture_finalize', code: 'NO_BYTES_CAPTURED', retry: 'permanent' },
+                  seq,
+                  1,
+                ),
+              });
+              setState((p) => ({ ...p, uploadFailed: p.uploadFailed + 1 }));
+            }
             if (size > 0) {
               const owner = lectureIdRef.current!;
               const stored = await persistSegment(cacheUri, owner, seq);
@@ -415,6 +458,7 @@ export function useLectureRecorder() {
           phase: 'recording',
           elapsed: 0,
           level: 0,
+          savingLocally: false,
           segmentsClosed: 0,
           segmentsUploaded: 0,
           uploadFailed: 0,
@@ -481,7 +525,7 @@ export function useLectureRecorder() {
     const lectureId = lectureIdRef.current;
     if (!lectureId) return { ok: false, lectureId: null };
     stoppedRef.current = true;
-    patch({ phase: 'finishing' });
+    patch({ phase: 'finishing', savingLocally: true });
 
     if (state.phase === 'recording') {
       await rotateSegment({ resume: false });
@@ -507,6 +551,9 @@ export function useLectureRecorder() {
         durationSeconds: baseElapsedRef.current,
       }).catch(() => {});
     }
+    // Everything the phone can guarantee on its own is now done. What follows
+    // needs the network, and leaving is safe.
+    patch({ savingLocally: false });
 
     // Declare the segment count BEFORE waiting on the uploads, not after.
     // Capture is already complete here (the rotate above closed the last
@@ -592,8 +639,8 @@ export function useLectureRecorder() {
     discardingRef.current = false;
     setState({
       phase: 'idle', elapsed: 0, level: 0, segmentsClosed: 0, segmentsUploaded: 0,
-      uploadFailed: 0, interrupted: false, warnedNearLimit: false, error: null,
-      finishedLectureId: null,
+      uploadFailed: 0, interrupted: false, warnedNearLimit: false, savingLocally: false,
+      error: null, finishedLectureId: null,
     });
   }, [state.phase, recorder]);
 

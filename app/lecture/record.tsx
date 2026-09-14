@@ -69,12 +69,16 @@ export default function RecordLectureScreen() {
 
   const isLive = recorder.phase === 'recording' || recorder.phase === 'paused';
   // Nothing is being captured, so there is nothing to protect and no reason to
-  // hold the user here. 'finishing' counts: by then the audio session is already
-  // released, the uploads survive unmount (nothing aborts them), and any segment
-  // that fails keeps its local file for the lecture screen's resume path. The
-  // only thing waiting here buys is watching a spinner — on bad campus wifi that
-  // was minutes of it, with the app needing a force-quit to escape.
-  const canLeaveFreely = !isLive;
+  // hold the user here. 'finishing' MOSTLY counts: the uploads survive unmount
+  // (nothing aborts them) and any part that fails keeps its local file for the
+  // recovery pass. The only thing waiting buys is watching a spinner — on bad
+  // campus wifi that was minutes of it, with the app needing a force-quit.
+  //
+  // The exception, found 2026-09-14: 'finishing' is set on the first line of
+  // Stop, BEFORE the rotation that closes the final chunk. For that window the
+  // last part is not on disk yet, so leaving really can lose it. savingLocally
+  // is true for exactly that window and nothing longer.
+  const canLeaveFreely = !isLive && !recorder.savingLocally;
 
   // The swipe-to-dismiss lock exists so a half-finished lecture can't be thrown
   // away by a stray gesture — but it was applied to the ROUTE, unconditionally,
@@ -491,21 +495,32 @@ export default function RecordLectureScreen() {
         ) : recorder.phase === 'finishing' ? (
           <>
             <View style={[styles.bigButton, { backgroundColor: colors.ink3 }]}>
-              <Text style={styles.bigButtonText}>Saving your lecture…</Text>
+              <Text style={styles.bigButtonText}>
+                {recorder.savingLocally ? 'Saving on this phone…' : 'Saving your lecture…'}
+              </Text>
             </View>
-            <Text style={[styles.finishingNote, { color: colors.ink3 }]}>
-              Semora keeps uploading if you leave. Your lecture will be waiting under
-              Lectures.
+            {/* Two different promises, because they are two different facts.
+                While the last part is still being written to this phone there
+                is something to lose by leaving. Afterwards there is not — but
+                the honest wording is still "resumes when it can", not "keeps
+                uploading", because a suspended app does not upload and this
+                screen should not say otherwise. */}
+            <Text style={[styles.finishingNote, { color: colors.ink2 }]}>
+              {recorder.savingLocally
+                ? 'Keep Semora open for a moment while the last part is written.'
+                : 'Saved on this phone. Uploading resumes whenever Semora can, and your lecture will be waiting under Lectures.'}
             </Text>
-            <TouchableOpacity
-              style={styles.cancelBtn}
-              onPress={() => router.back()}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Leave while the lecture finishes saving"
-            >
-              <Text style={[styles.cancelText, { color: colors.brand }]}>Leave</Text>
-            </TouchableOpacity>
+            {!recorder.savingLocally && (
+              <TouchableOpacity
+                style={styles.cancelBtn}
+                onPress={() => router.back()}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Leave while the lecture finishes saving"
+              >
+                <Text style={[styles.cancelText, { color: colors.brand }]}>Leave</Text>
+              </TouchableOpacity>
+            )}
           </>
         ) : (
           <>

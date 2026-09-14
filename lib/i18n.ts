@@ -58,6 +58,25 @@ function spanishPattern(input: string): string | null {
       : `Estos apuntes están incompletos. Faltan ${match[1]} partes de esta grabación.`;
   }
 
+  // Lecture upload progress — every one of these carries a count, so none of
+  // them can live in the phrase map.
+  match = input.match(/^(\d+) parts? (?:are|is) still on this phone waiting to upload\.$/);
+  if (match) {
+    return match[1] === '1'
+      ? 'Queda 1 parte en este teléfono esperando a subirse.'
+      : `Quedan ${match[1]} partes en este teléfono esperando a subirse.`;
+  }
+  match = input.match(/^(\d+) parts? uploaded so far\.$/);
+  if (match) {
+    return match[1] === '1'
+      ? 'Se ha subido 1 parte hasta ahora.'
+      : `Se han subido ${match[1]} partes hasta ahora.`;
+  }
+  match = input.match(/^(\d+) of (\d+) parts uploaded — stay connected until this finishes$/);
+  if (match) return `${match[1]} de ${match[2]} partes subidas: mantén la conexión hasta que termine`;
+  match = input.match(/^All (\d+) parts? uploaded — safe to close the app$/);
+  if (match) return `Las ${match[1]} partes están subidas: ya puedes cerrar la app`;
+
   // Guided study session — the count is interpolated, so the phrase never
   // appears in the map whole.
   match = input.match(/^Reviewed (\d+) cards?$/);

@@ -2580,4 +2580,12 @@ export const ES: Record<string, string> = {
   'Try the missing parts again': 'Volver a intentar las partes que faltan',
   'The missing audio may still be on the phone that recorded it.':
     'El audio que falta puede seguir en el teléfono que lo grabó.',
+
+  // Honest saving states (2026-09-14). The old single line promised uploads
+  // continue after you leave, which a suspended app does not do.
+  'Saving on this phone…': 'Guardando en este teléfono…',
+  'Keep Semora open for a moment while the last part is written.':
+    'Mantén Semora abierta un momento mientras se guarda la última parte.',
+  'Saved on this phone. Uploading resumes whenever Semora can, and your lecture will be waiting under Lectures.':
+    'Guardado en este teléfono. La subida se reanuda en cuanto Semora pueda, y tu clase te estará esperando en Clases.',
 };

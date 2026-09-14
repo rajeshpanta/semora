@@ -584,11 +584,21 @@ export default function LectureDetailScreen() {
                 class needs to know whether the audio is still leaving the
                 phone: "9 of 10 parts uploaded" means stay on the wifi one more
                 minute, and an identical spinner never said that. */}
+            {/* "All N parts uploaded — safe to close the app" used to appear
+                whenever every server row had moved off 'pending'. A part that
+                never reached the server has no row, so a lecture missing half
+                its audio said exactly that. Three separate facts now: what is
+                still on this phone, what the phone declared, and what arrived.
+                When the declaration is unknown, nothing claims completeness. */}
             {segmentProgress && segmentProgress.total > 0 ? (
-              <Text style={[styles.stateText, { color: colors.ink3 }]}>
-                {segmentProgress.uploaded < segmentProgress.total
-                  ? `${segmentProgress.uploaded} of ${segmentProgress.total} parts uploaded — stay connected until this finishes`
-                  : `All ${segmentProgress.total} parts uploaded — safe to close the app`}
+              <Text style={[styles.stateText, { color: colors.ink2 }]}>
+                {segmentProgress.waitingLocally > 0
+                  ? `${segmentProgress.waitingLocally} parts are still on this phone waiting to upload.`
+                  : segmentProgress.expected === null
+                    ? `${segmentProgress.uploaded} parts uploaded so far.`
+                    : segmentProgress.uploaded < segmentProgress.expected
+                      ? `${segmentProgress.uploaded} of ${segmentProgress.expected} parts uploaded — stay connected until this finishes`
+                      : `All ${segmentProgress.expected} parts uploaded — safe to close the app`}
               </Text>
             ) : null}
             <Text style={[styles.stateText, { color: colors.ink3 }]}>

@@ -139,6 +139,11 @@ export const lectureKeys = {
   all: ['lectures'] as const,
   detail: (id: string | null | undefined) => ['lecture', id ?? null] as const,
   segments: (id: string | null | undefined) => ['lectureSegments', id ?? null] as const,
+  // Its own key. useLectureSegments and useLectureSegmentProgress shared this
+  // one while returning completely different shapes, so whichever ran first
+  // handed the other its cache and a component got an array where it expected
+  // counts, or the reverse.
+  segmentProgress: (id: string | null | undefined) => ['lectureSegmentProgress', id ?? null] as const,
 };
 
 /** Statuses where the server is still working and the client should keep looking. */
@@ -1035,25 +1040,60 @@ function stripExtension(filename: string): string {
  * what the CLIENT said to expect — and is exactly the field that reads 0 on a
  * recording whose finishing call never happened.
  */
+export interface LectureProgress {
+  /** Parts the phone knows exist, server rows and local files together. */
+  total: number;
+  uploaded: number;
+  transcribed: number;
+  /** Still on this phone, whatever the server has heard about. */
+  waitingLocally: number;
+  /**
+   * What the phone declared at Stop, or null when it never got to say.
+   *
+   * Null is not zero. A lecture whose app died mid-class has an unknown
+   * expectation, and the screen must say so rather than call the parts that
+   * happen to have arrived the whole recording.
+   */
+  expected: number | null;
+}
+
 export function useLectureSegmentProgress(lectureId: string | null, enabled: boolean) {
   return useQuery({
-    queryKey: ['lectureSegments', lectureId],
+    queryKey: lectureKeys.segmentProgress(lectureId),
     enabled: Boolean(lectureId) && enabled,
     // Matches the detail screen's own poll; this is the same wait.
     refetchInterval: enabled ? 4000 : false,
-    queryFn: async () => {
+    queryFn: async (): Promise<LectureProgress> => {
+      const id = lectureId as string;
       const { data, error } = await supabase
         .from('lecture_segments')
-        .select('status')
-        .eq('lecture_id', lectureId as string);
+        .select('seq, status')
+        .eq('lecture_id', id);
       if (error) throw error;
-      const rows = (data ?? []) as { status: string }[];
+      const rows = (data ?? []) as { seq: number; status: string }[];
+
+      // Counting server rows alone is what let a lecture missing half its
+      // audio render as finished: the four parts that never uploaded had no
+      // row, so as far as this was concerned they did not exist. The phone's
+      // own record is the other half of the answer.
+      const journal = await readJournal(lectureJournalFs, lectureDir(id)).catch(() => null);
+      const localOnly = new Set<number>();
+      if (journal) {
+        for (const part of journal.journal.parts) {
+          if (part.state === 'server_received' || part.state === 'transcribed') continue;
+          if (rows.some((r) => r.seq === part.seq && r.status !== 'pending')) continue;
+          localOnly.add(part.seq);
+        }
+      }
+
       return {
-        total: rows.length,
+        total: rows.length + [...localOnly].filter((seq) => !rows.some((r) => r.seq === seq)).length,
         // 'pending' is the only status that means the bytes are still on the
         // phone; everything else is server-side progress.
         uploaded: rows.filter((r) => r.status !== 'pending').length,
         transcribed: rows.filter((r) => r.status === 'done').length,
+        waitingLocally: localOnly.size,
+        expected: journal?.journal.finalExpectedParts ?? null,
       };
     },
   });
