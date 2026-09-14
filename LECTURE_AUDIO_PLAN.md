@@ -611,7 +611,7 @@ the route preview builds take to the test backend. Those need the owner.
 | 0.5 test account and fixtures | **owed by the owner** |
 | 1.1 failure stages and codes | done — `lib/lectureFailure.ts`, wired into the recorder, the uploader and the retry |
 | 1.2 local journal | **not built.** The filesystem is standing in for it (see below) |
-| 1.3 extracted lifecycle controller | built and tested, **not yet wired into the hook** |
+| 1.3 Stop race | **fixed in the hook** — the rotation ref holds the promise, Stop waits for it. `lectureLifecycle.ts` models the full rule set and is not yet the hook's implementation |
 | 2.4 upload independent of transcription | partly — a failed transcription nudge no longer counts as a failed upload |
 | 2.5 one recovery worker | partly — `LectureRecoveryRuntime` is mounted and now drives off local files |
 | 2.9 deletion and retention | **not built** |
