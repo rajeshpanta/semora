@@ -376,6 +376,18 @@ function decode(base64: string): Uint8Array {
  * name. The stage rides on the error so the handler that reports it knows which
  * boundary broke. See lib/lectureFailure.ts.
  */
+/**
+ * What the server said about a part, once the bytes were sent.
+ *
+ * `acknowledged` is the ONLY thing that licenses deleting the local copy. A
+ * successful PUT is not enough: it says the bytes left this phone, not that
+ * anything on the other side has a record of them.
+ */
+export interface UploadReceipt {
+  acknowledged: boolean;
+  segmentId: string;
+}
+
 async function atStage<T>(stage: LectureStage, run: () => Promise<T>): Promise<T> {
   try {
     return await run();
@@ -394,7 +406,7 @@ export async function uploadSegment(input: {
   seconds: number;
   hasGap?: boolean;
   onProgress?: (percent: number) => void;
-}): Promise<void> {
+}): Promise<UploadReceipt> {
   const session = await atStage('session', getSession);
   const userId = session.user.id;
   const storagePath = `${userId}/${input.lectureId}/seg_${String(input.seq).padStart(3, '0')}.m4a`;
@@ -464,8 +476,12 @@ export async function uploadSegment(input: {
   // The bytes are in the bucket. If this update fails the part is still safe:
   // the every-minute arrival job (migration 139) finds an object no row claims
   // and hands it to lecture-transcribe. So a failure here is logged, not thrown,
-  // because throwing would make the recorder keep a local file it no longer
-  // needs and report a loss that did not happen.
+  // because throwing would make the recorder report a loss that did not happen.
+  //
+  // It is NOT acknowledged, though, and that distinction decides whether the
+  // local file may be deleted. A 200 from the PUT says the bytes left; the row
+  // saying 'uploaded' is the server saying it knows about them. Only the second
+  // one is a receipt, and until there is one the phone keeps its copy.
   const { error: ackErr } = await supabase
     .from('lecture_segments')
     .update({ status: 'uploaded' })
@@ -476,6 +492,7 @@ export async function uploadSegment(input: {
       ...failureProperties(classifyLectureFailure(ackErr, 'acknowledge'), input.seq, 1),
     });
   }
+  const receipt: UploadReceipt = { acknowledged: !ackErr, segmentId: row.id };
 
   track('lecture_segment_uploaded', {
     screen: 'lecture_record',
@@ -503,6 +520,8 @@ export async function uploadSegment(input: {
       ...failureProperties(classifyLectureFailure(err, 'transcribe_dispatch'), input.seq, 1),
     });
   }
+
+  return receipt;
 }
 
 /**
@@ -622,17 +641,24 @@ export async function retryPendingUploads(lectureId: string): Promise<number> {
       continue;
     }
     try {
-      await uploadSegment({
+      const receipt = await uploadSegment({
         lectureId,
         seq: part.seq,
         fileUri: uri,
         seconds: part.duration || row?.seconds || 0,
         hasGap: part.hasGap || row?.has_gap || false,
       });
-      await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+      // Only a receipt licenses the delete. Without one the bytes are in the
+      // bucket but nothing on the server points at them yet; the arrival job
+      // will claim them within the minute, and the next pass sees the row and
+      // cleans up then.
+      if (receipt.acknowledged) {
+        await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+      }
       await store.update((j) => patchPart(j, part.seq, {
-        state: 'server_received',
-        lastAcknowledgment: 'uploaded',
+        state: receipt.acknowledged ? 'server_received' : 'awaiting_ack',
+        serverSegmentId: receipt.segmentId,
+        lastAcknowledgment: receipt.acknowledged ? 'uploaded' : null,
         nextAttemptAt: null,
         lastFailureStage: null,
       }));

@@ -600,44 +600,45 @@ worktree, or restore the tree to the fingerprint the binary has, and re-run
 Still owed for Step 0: a test account, synthetic speech and silence fixtures, and
 the route preview builds take to the test backend. Those need the owner.
 
-### Progress
+### Progress — 2026-09-14
 
 | Step | State |
 |---|---|
-| 0.1 branch from `8cea350` | done — `codex/lecture-audio-phase-1` |
-| 0.2 Stop-during-rotation regression test | done — `lib/lectureLifecycle.test.ts` |
-| 0.3 deployed versions recorded | done — table above, fingerprint drift found |
-| 0.4 baseline counts | done — table above |
-| 0.5 test account and fixtures | **owed by the owner** |
-| 1.1 failure stages and codes | done — `lib/lectureFailure.ts`, wired into the recorder, the uploader and the retry |
-| 1.2 local journal | **not built.** The filesystem is standing in for it (see below) |
-| 1.3 Stop race | **fixed in the hook** — the rotation ref holds the promise, Stop waits for it. `lectureLifecycle.ts` models the full rule set and is not yet the hook's implementation |
-| 2.4 upload independent of transcription | partly — a failed transcription nudge no longer counts as a failed upload |
-| 2.5 one recovery worker | partly — `LectureRecoveryRuntime` is mounted and now drives off local files |
-| 2.9 deletion and retention | **not built** |
-| 3.7 server completeness | done — migration 140, **not applied** |
-| 3.8 screens tell the truth | done for the lecture screen; recorder wording not changed |
-| 4 background transport | **not built.** Needs a binary |
-| 5 gates and release | partial — unit gates green, device matrix not run |
+| 0 Baseline | Done, except the test account and audio fixtures |
+| 1 Diagnostics | Done, less the bounded local diagnostic history that survives a restart |
+| 2 Local journal | Done — `lectureJournal.ts`, 18 tests killing the filesystem at each boundary |
+| 3 Recording lifecycle | Done, less the port onto `lectureLifecycle.ts`; the rules are applied in the hook |
+| 4 Upload and acknowledgment | Done, less the transport itself. See below |
+| 5 One recovery worker | Done — mounted, single-flight, journal-driven, wakes on foreground and reconnect |
+| 6 Legacy recovery | Out of scope by the owner's decision |
+| 7 Server completeness | Migrations 140 and 141, **neither applied** |
+| 8 Screens tell the truth | Done, in English and Spanish |
+| 9 Deletion and retention | Done — tombstone first, receipts gate the local delete |
+| 10 Background transport | **Not built.** Needs a binary and a device |
+| 11 Release gates | Unit gates green. Device matrix not run |
+| 12 Release | Not started, blocked on the fingerprint |
 
-### What the filesystem stands in for
+### Two things deliberately not done
 
-Step 2's journal is not built. In its place the local audio files are treated as
-the index: `listLocalLectureIds()` reads `documents/lectures/`, and
-`retryPendingUploads` drives off the files in a lecture's directory rather than
-off server rows. That covers every failure shape seen on 2026-09-14 — no row, a
-`failed` row, a `pending` row — because the file is written before the upload is
-attempted and kept when it fails.
+**The transport is unchanged.** The upload still reads the file through base64
+into an XHR. Switching to file-backed background uploads is the single change
+most likely to break recording for everyone, it cannot be verified without a
+device, and this plan's own rule is not to enable a new uploader before its
+recovery, ownership and deletion rules are working. Those rules are working now,
+so the transport is the next thing — with the Step 11 matrix in front of it, not
+behind it.
 
-It does not cover what a real journal would: a part whose file was written while
-the lecture id was already cleared (the Stop race, fixed forward by
-`lectureLifecycle.ts` but not recoverable after the fact), the expected part
-count when the app died before Stop, or per-part attempt and backoff state.
+**No new prepare/acknowledge endpoint.** The rule it exists to enforce is that a
+local file is deleted only against a server receipt. The segment row moving to
+`uploaded` is that receipt and it already exists, so the rule is enforced without
+a new surface to secure. If the background transport needs a richer contract,
+build it then.
 
 ### Owed before any of this reaches a student
 
 1. **The fingerprint.** An over-the-air update from this tree reaches nobody.
-2. **Migration 140 dry run.** Written and checked against the live signatures
-   and columns, but not run in a rolled-back transaction. It has not been
-   applied. Nothing in this branch depends on it being applied first.
-3. **Device testing.** None of the capture work has been on a phone.
+2. **Migrations 140 and 141.** Written, checked against the live signatures and
+   columns, not applied and not dry-run. Nothing in the client depends on either.
+3. **Device testing.** None of the capture work has been on a phone. This is the
+   gate that matters most: the Stop boundary twenty times, a full-length
+   recording, a lock, airplane mode, and a force-quit and reopen.

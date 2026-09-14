@@ -282,11 +282,17 @@ export function useLectureRecorder() {
       uploadChainRef.current = uploadChainRef.current
         .then(() => uploadSegment({ lectureId, seq, fileUri, seconds, hasGap }))
         .then(
-          () => {
+          (receipt) => {
             setState((p) => ({ ...p, segmentsUploaded: p.segmentsUploaded + 1 }));
             // Local copy is redundant once the server has it; a 90-minute
-            // lecture would otherwise leave ~22 MB behind on the device.
-            FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
+            // lecture would otherwise leave ~22 MB behind on the device. But
+            // ONLY once the server has it: a 200 from the PUT says the bytes
+            // left, and the row saying 'uploaded' says something over there
+            // knows about them. Without the second, the phone keeps its copy
+            // and the recovery pass finishes the handover.
+            if (receipt.acknowledged) {
+              FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
+            }
           },
           (err: LectureError & { stage?: LectureStage }) => {
             // Keep the local file: the launch recovery pass and the detail
