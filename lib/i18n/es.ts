@@ -2573,4 +2573,11 @@ export const ES: Record<string, string> = {
   // dialog.
   'Something went wrong starting the recording. Please try again.':
     'Algo salió mal al iniciar la grabación. Inténtalo de nuevo.',
+
+  // Incomplete lecture notes (2026-09-14). The sentence that carries the count
+  // is interpolated, so it cannot live here — see spanishPattern in lib/i18n.ts.
+  'Trying…': 'Intentando…',
+  'Try the missing parts again': 'Volver a intentar las partes que faltan',
+  'The missing audio may still be on the phone that recorded it.':
+    'El audio que falta puede seguir en el teléfono que lo grabó.',
 };

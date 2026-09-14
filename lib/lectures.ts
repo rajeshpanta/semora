@@ -11,6 +11,21 @@ import {
   segmentSeqFromFilename,
   type LectureStage,
 } from '@/lib/lectureFailure';
+import {
+  eligibleParts,
+  nextAttemptDelayMs,
+  patchPart,
+  readJournal,
+  reconcileWithFiles,
+  upsertPart,
+  withStopIntent,
+} from '@/lib/lectureJournal';
+import {
+  lectureDir,
+  lectureDirFilenames,
+  lectureJournalFs,
+  lectureJournalStore,
+} from '@/lib/lectureJournalFs';
 
 // ── Lecture recordings — client data layer ──────────────────────────────────
 // Owns its own query keys rather than extending lib/queries.ts, matching
@@ -155,6 +170,18 @@ async function getSession() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Not authenticated');
   return session;
+}
+
+/**
+ * Who is signed in, or null.
+ *
+ * Deliberately does not throw: the recorder needs an owner to file audio under
+ * and must carry on capturing when it cannot get one, because a locked phone
+ * that cannot read its session is the situation this whole path exists for.
+ */
+export async function currentUserId(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+  return session?.user.id ?? null;
 }
 
 /**
@@ -539,7 +566,7 @@ export async function deleteLocalLectureAudio(lectureId: string): Promise<void> 
  * unfinished, and nothing on the device would ever try again.
  */
 export async function retryPendingUploads(lectureId: string): Promise<number> {
-  // Driven by the FILES, not by the rows.
+  // Driven by the JOURNAL and the FILES, not by server rows.
   //
   // This used to ask the server for segments with status 'pending' and retry
   // those. On 2026-09-14 a student lost four parts of an eight-part lecture and
@@ -548,11 +575,20 @@ export async function retryPendingUploads(lectureId: string): Promise<number> {
   // throw, and two had been marked 'failed'. The audio for all four was sitting
   // on the phone the whole time and this function matched none of it.
   //
-  // The local file is the only thing that is true whatever happened on the
-  // server, so it is what drives the loop now. uploadSegment upserts, so a part
-  // with no row gets one.
-  const seqs = await localSegmentSeqs(lectureId);
-  if (seqs.length === 0) return 0;
+  // The journal records a part the moment its bytes are on disk, before
+  // anything is attempted, and the directory scan catches anything whose
+  // journal entry never got written. Between them they see every part the
+  // phone has, whatever the server thinks.
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return 0;
+
+  const store = lectureJournalStore(session.user.id, lectureId);
+  const filenames = await lectureDirFilenames(lectureId);
+  if (filenames.length === 0) return 0;
+
+  const journal = await store.update((current) => reconcileWithFiles(current, filenames));
+  const eligible = eligibleParts(journal, Date.now());
+  if (eligible.length === 0) return 0;
 
   // One query, to learn which parts the server has already finished. Anything
   // done or in flight is left alone: re-uploading would race a transcription
@@ -567,36 +603,99 @@ export async function retryPendingUploads(lectureId: string): Promise<number> {
   }
 
   let uploaded = 0;
-  for (const seq of seqs) {
-    const uri = localSegmentUri(lectureId, seq);
-    const row = bySeq.get(seq);
+  for (const part of eligible) {
+    const uri = localSegmentUri(lectureId, part.seq);
+    const row = bySeq.get(part.seq);
     if (row && (row.status === 'done' || row.status === 'transcribing')) {
       // Already handled. The local copy is redundant; dropping it is what
       // stops a finished lecture keeping 22MB on the phone forever.
       await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+      await store.update((j) => patchPart(j, part.seq, {
+        state: row.status === 'done' ? 'transcribed' : 'server_received',
+        lastAcknowledgment: row.status,
+      }));
       continue;
     }
     try {
       await uploadSegment({
         lectureId,
-        seq,
+        seq: part.seq,
         fileUri: uri,
-        seconds: row?.seconds ?? 0,
-        hasGap: row?.has_gap ?? false,
+        seconds: part.duration || row?.seconds || 0,
+        hasGap: part.hasGap || row?.has_gap || false,
       });
       await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
+      await store.update((j) => patchPart(j, part.seq, {
+        state: 'server_received',
+        lastAcknowledgment: 'uploaded',
+        nextAttemptAt: null,
+        lastFailureStage: null,
+      }));
       uploaded += 1;
     } catch (err) {
       const failure = classifyLectureFailure(err, (err as { stage?: LectureStage })?.stage ?? 'transfer');
-      track('lecture_segment_retry_failed', { screen: 'recovery', ...failureProperties(failure, seq, 1) });
-      // A part whose bytes are gone is this part's problem, not the queue's:
-      // skip it and give the others their turn. Anything else means the network
-      // or the account is the blocker, so stop and come back later.
+      const attempt = part.attemptCount + 1;
+      track('lecture_segment_retry_failed', { screen: 'recovery', ...failureProperties(failure, part.seq, attempt) });
+      await store.update((j) => patchPart(j, part.seq, {
+        attemptCount: attempt,
+        lastFailureStage: failure.stage,
+        // A part whose bytes are gone will never succeed, so it is set aside
+        // rather than spun on. It stays in the journal, because "this part is
+        // unrecoverable" is worth knowing.
+        state: failure.retry === 'permanent' ? 'quarantined' : j.parts.find((p) => p.seq === part.seq)?.state ?? 'saved_locally',
+        nextAttemptAt: failure.retry === 'permanent' ? null : Date.now() + nextAttemptDelayMs(attempt),
+      }));
+      // A dead part is this part's problem, not the queue's: skip it and give
+      // the others their turn. Anything else means the network or the account
+      // is the blocker, so stop and come back later.
       if (failure.retry === 'permanent') continue;
       break;
     }
   }
   return uploaded;
+}
+
+/**
+ * Record a part in the journal the moment its bytes are on disk.
+ *
+ * Called before any upload is attempted, which is the entire point: the two
+ * parts lost on 2026-09-14 that left no server row were lost because nothing
+ * was written anywhere until the network and the session had both cooperated.
+ */
+export async function journalPartSaved(input: {
+  ownerId: string;
+  lectureId: string;
+  seq: number;
+  seconds: number;
+  hasGap: boolean;
+  byteLength: number | null;
+}): Promise<void> {
+  const store = lectureJournalStore(input.ownerId, input.lectureId);
+  await store.update((journal) => upsertPart(journal, {
+    seq: input.seq,
+    relativeFilePath: `seg_${String(input.seq).padStart(3, '0')}.m4a`,
+    duration: Math.max(0, Math.round(input.seconds)),
+    hasGap: input.hasGap,
+    byteLength: input.byteLength,
+    contentIdentity: null,
+    state: 'saved_locally',
+    attemptCount: 0,
+    nextAttemptAt: null,
+    serverSegmentId: null,
+    lastAcknowledgment: null,
+    lastFailureStage: null,
+  }));
+}
+
+/** Record Stop locally, so the count survives a phone that cannot reach the server. */
+export async function journalStopIntent(input: {
+  ownerId: string;
+  lectureId: string;
+  expectedParts: number | null;
+  durationSeconds: number;
+}): Promise<void> {
+  const store = lectureJournalStore(input.ownerId, input.lectureId);
+  await store.update((journal) => withStopIntent(journal, input.expectedParts, input.durationSeconds));
 }
 
 /** Sequence numbers of every part still held locally for a lecture, in order. */
@@ -720,6 +819,14 @@ export function useRetryLectureNotes(lectureId: string | null | undefined) {
  * we would delete.
  */
 export async function purgeLectureAudio(lectureId: string): Promise<void> {
+  // The tombstone goes down FIRST, before a single network call.
+  //
+  // Everything below can fail or be interrupted, and the recovery worker runs
+  // on its own schedule. Without this, a delete that died halfway left a queue
+  // that would happily put the audio back, and the student would find a lecture
+  // they deleted sitting there again with fresh notes.
+  await markLectureDiscarded(lectureId);
+
   const { data: segments } = await supabase
     .from('lecture_segments')
     .select('storage_path')
@@ -728,9 +835,38 @@ export async function purgeLectureAudio(lectureId: string): Promise<void> {
     .map((s) => s.storage_path)
     .filter((p): p is string => Boolean(p));
   if (paths.length > 0) {
-    await supabase.storage.from('lectures').remove(paths).catch(() => {});
+    // Reported rather than swallowed. The delete still goes ahead — the intent
+    // is recorded and the row is going — but audio left in the bucket is the
+    // retention job's problem and it can only act on what it is told about.
+    const { error } = await supabase.storage.from('lectures').remove(paths);
+    if (error) {
+      track('lecture_audio_purge_failed', {
+        screen: 'lecture_detail',
+        ...failureProperties(classifyLectureFailure(error, 'reconcile'), -1, 1),
+      });
+    }
   }
   await deleteLocalLectureAudio(lectureId);
+}
+
+/**
+ * Stop the queue touching this lecture, permanently.
+ *
+ * `eligibleParts` returns nothing once `discardIntent` is set, so this is the
+ * whole of the stop. It deliberately does not CREATE a journal: no journal
+ * means nothing is queued, and inventing one to say "discarded" would leave a
+ * file behind for a lecture that has none.
+ */
+export async function markLectureDiscarded(lectureId: string): Promise<void> {
+  try {
+    const existing = await readJournal(lectureJournalFs, lectureDir(lectureId));
+    if (!existing) return;
+    const store = lectureJournalStore(existing.journal.ownerId, lectureId);
+    await store.update((journal) => ({ ...journal, discardIntent: true, captureState: 'discarded' }));
+  } catch {
+    // The directory is going anyway. A tombstone that cannot be written is not
+    // a reason to refuse the deletion the student asked for.
+  }
 }
 
 export function useDeleteLecture() {

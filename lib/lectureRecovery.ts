@@ -50,7 +50,24 @@ const CAN_RECOVER = Platform.OS !== 'web';
  * this runs behind whatever the student actually opened the app to do — a
  * bigger backlog than that is the sweep's problem, not the launch path's.
  */
-export async function recoverUnfinishedLectures(): Promise<void> {
+let inFlight: Promise<void> | null = null;
+
+/**
+ * One pass, never two at once.
+ *
+ * Launch, foreground, a restored connection, a recovered session and the
+ * lecture screen all ask for this, and two passes running together would each
+ * pick up the same part, each upload the same bytes, and each spend one of the
+ * three attempts that part is allowed. A second caller joins the pass already
+ * running instead of starting another.
+ */
+export function recoverUnfinishedLectures(): Promise<void> {
+  if (inFlight) return inFlight;
+  inFlight = runRecoveryPass().finally(() => { inFlight = null; });
+  return inFlight;
+}
+
+async function runRecoveryPass(): Promise<void> {
   if (!CAN_RECOVER) return;
 
   const { data: { session } } = await supabase.auth.getSession();

@@ -67,7 +67,12 @@ import { TaskCompletionFlowProvider } from '@/components/TaskCompletionFlow';
 import { TaskCompletionCelebration } from '@/components/TaskCompletionCelebration';
 import { showTaskCelebration } from '@/lib/taskCelebration';
 import { queryPersister, clearPersistedQueryCache, shouldPersistQuery } from '@/lib/queryPersistence';
-import { isNetworkFailure, clearOfflineUserState } from '@/lib/offlineSync';
+import {
+  isNetworkFailure,
+  clearOfflineUserState,
+  isDeviceOnline,
+  subscribeOfflineSync,
+} from '@/lib/offlineSync';
 import { OfflineSyncBridge } from '@/components/OfflineSyncBridge';
 import {
   readPendingCollaborationToken,
@@ -1429,6 +1434,7 @@ function LectureRecoveryRuntime() {
   const { session } = useSession();
   const userId = session?.user.id ?? null;
   const ranForRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!userId || ranForRef.current === userId) return;
     ranForRef.current = userId;
@@ -1436,6 +1442,38 @@ function LectureRecoveryRuntime() {
     // the student opened the app to do.
     void recoverUnfinishedLectures();
   }, [userId]);
+
+  // Once per launch is not enough.
+  //
+  // A part fails to upload in a lecture hall with no signal. The student keeps
+  // using the app for an hour, walks out onto wifi, and nothing asks again
+  // until the next cold start — which on iOS may be days away, by which point
+  // the launch pass is racing the retention job. So: ask again whenever the
+  // thing that was blocking it might have changed. recoverUnfinishedLectures
+  // is single-flight and an account with nothing stranded costs one indexed
+  // query, so asking often is cheap.
+  useEffect(() => {
+    if (!userId || Platform.OS === 'web') return;
+
+    const appState = AppState.addEventListener('change', (next) => {
+      if (next === 'active') void recoverUnfinishedLectures();
+    });
+
+    let wasOnline = isDeviceOnline();
+    const connectivity = subscribeOfflineSync(() => {
+      const online = isDeviceOnline();
+      // The edge, not the state: a listener that fires on every snapshot would
+      // ask on each one while the connection is fine.
+      if (online && !wasOnline) void recoverUnfinishedLectures();
+      wasOnline = online;
+    });
+
+    return () => {
+      appState.remove();
+      connectivity();
+    };
+  }, [userId]);
+
   return null;
 }
 

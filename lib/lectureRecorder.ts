@@ -23,6 +23,10 @@ import {
   startLecture,
   uploadSegment,
   type LectureError,
+  currentUserId,
+  journalPartSaved,
+  journalStopIntent,
+  markLectureDiscarded,
 } from '@/lib/lectures';
 import { track } from '@/lib/analytics';
 import {
@@ -223,6 +227,10 @@ export function useLectureRecorder() {
   // every caller waits for the one that is running. See lib/lectureLifecycle.ts
   // for the model and its regression test.
   const rotatingRef = useRef<Promise<void> | null>(null);
+  // Who this recording belongs to, read once at start. The journal needs an
+  // owner, and asking for one again mid-lecture is exactly the read that fails
+  // on a locked phone.
+  const ownerIdRef = useRef<string | null>(null);
   const recordingSinceRef = useRef(0);
   const nextGapRef = useRef(false);
   const uploadChainRef = useRef<Promise<void>>(Promise.resolve());
@@ -308,7 +316,21 @@ export function useLectureRecorder() {
           if (cacheUri) {
             const size = await waitForFinalizedFile(cacheUri);
             if (size > 0) {
-              const stored = await persistSegment(cacheUri, lectureIdRef.current!, seq);
+              const owner = lectureIdRef.current!;
+              const stored = await persistSegment(cacheUri, owner, seq);
+              // Before anything is attempted. The two parts lost on 2026-09-14
+              // that left no server row were lost because nothing was written
+              // anywhere until the network and the session had both cooperated.
+              if (ownerIdRef.current) {
+                await journalPartSaved({
+                  ownerId: ownerIdRef.current,
+                  lectureId: owner,
+                  seq,
+                  seconds,
+                  hasGap: nextGapRef.current,
+                  byteLength: size,
+                }).catch(() => {});
+              }
               seqRef.current = seq + 1;
               baseElapsedRef.current += seconds;
               setState((p) => ({ ...p, segmentsClosed: p.segmentsClosed + 1 }));
@@ -373,6 +395,10 @@ export function useLectureRecorder() {
         // Entitlement + global capacity, checked before the microphone opens.
         const started = await startLecture(input);
         lectureIdRef.current = started.lectureId;
+        // startLecture needed a session, so there is one now. Read it here,
+        // once, rather than when a part closes: by then the phone may be locked
+        // and the read may be exactly what fails.
+        ownerIdRef.current = await currentUserId();
         seqRef.current = 0;
         baseElapsedRef.current = 0;
         stoppedRef.current = false;
@@ -470,6 +496,18 @@ export function useLectureRecorder() {
     }
     await releaseRecordingSession();
 
+    // Locally first. finishLecture below needs the network and the session;
+    // this needs neither, and it is what lets a phone that stopped in a dead
+    // spot still know how many parts it captured.
+    if (ownerIdRef.current) {
+      await journalStopIntent({
+        ownerId: ownerIdRef.current,
+        lectureId,
+        expectedParts: seqRef.current,
+        durationSeconds: baseElapsedRef.current,
+      }).catch(() => {});
+    }
+
     // Declare the segment count BEFORE waiting on the uploads, not after.
     // Capture is already complete here (the rotate above closed the last
     // segment), so seqRef is final — and the server needs this number in place
@@ -526,6 +564,13 @@ export function useLectureRecorder() {
     stoppedRef.current = true;
     discardingRef.current = true;
     setState((p) => ({ ...p, phase: 'finishing', level: 0 }));
+
+    // The tombstone before the teardown, not inside it. purgeLectureAudio
+    // writes one too, but that is several awaits away and this method is a
+    // string of network calls any one of which can be the last thing that
+    // happens. Once discardIntent is set the queue will not touch this lecture
+    // again whatever else fails.
+    if (lectureId) await markLectureDiscarded(lectureId).catch(() => {});
 
     if (state.phase === 'recording' || state.phase === 'paused') {
       await recorder.stop().catch(() => {});

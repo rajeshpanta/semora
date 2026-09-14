@@ -45,3 +45,30 @@ Deno.test('the post-import confirmation no longer promises hourly', () => {
   assert(es.includes('cada pocas horas'), es);
   assert(!/cada hora/.test(es), `still promises hourly: ${es}`);
 });
+
+// ── incomplete lecture notes (2026-09-14) ──────────────────────────────────
+// The sentence carrying the count is interpolated, so it can never match a
+// phrase-map key. It has to go through spanishPattern or a Spanish student is
+// told their notes are incomplete in English.
+Deno.test('the incomplete-notes line is translated, singular and plural', () => {
+  assertEquals(
+    translate('These notes are incomplete. 1 part of this recording has not arrived.', 'es'),
+    'Estos apuntes están incompletos. Falta 1 parte de esta grabación.',
+  );
+  assertEquals(
+    translate('These notes are incomplete. 4 parts of this recording have not arrived.', 'es'),
+    'Estos apuntes están incompletos. Faltan 4 partes de esta grabación.',
+  );
+});
+
+Deno.test('the rest of the incomplete-notes wording is in the phrase map', () => {
+  for (const english of [
+    'Trying…',
+    'Try again',
+    'Try the missing parts again',
+    'The missing audio may still be on the phone that recorded it.',
+  ]) {
+    const spanish = translate(english, 'es');
+    if (spanish === english) throw new Error(`untranslated: ${english}`);
+  }
+});

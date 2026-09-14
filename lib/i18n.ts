@@ -47,6 +47,17 @@ function spanishPattern(input: string): string | null {
   match = input.match(/^Today · (\d+) items?$/i);
   if (match) return `Hoy · ${match[1]} ${match[1] === '1' ? 'elemento' : 'elementos'}`;
 
+  // Incomplete lecture notes — the count is interpolated, so this sentence
+  // never appears in the phrase map. Added 2026-09-14 with the line itself: a
+  // student whose lecture lost half its audio was told nothing at all, and
+  // telling them only in English would have been the same bug in Spanish.
+  match = input.match(/^These notes are incomplete\. (\d+) parts? of this recording (?:has|have) not arrived\.$/);
+  if (match) {
+    return match[1] === '1'
+      ? 'Estos apuntes están incompletos. Falta 1 parte de esta grabación.'
+      : `Estos apuntes están incompletos. Faltan ${match[1]} partes de esta grabación.`;
+  }
+
   // Guided study session — the count is interpolated, so the phrase never
   // appears in the map whole.
   match = input.match(/^Reviewed (\d+) cards?$/);
