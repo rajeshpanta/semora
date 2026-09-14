@@ -67,7 +67,9 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
   `lecture_stranded_segments`, `lecture_note_recovery_attempt`,
   `lecture_write_off_segment`, `lecture_rebuild_transcript`,
   `alert_lecture_segments_stranded` (127),
-  `lecture_refund_recovery_attempt` (128)
+  `lecture_refund_recovery_attempt` (128),
+  `lecture_audio_object_part`, `lecture_audio_is_actionable`,
+  `lecture_take_over_arrived_audio` (139)
 - **Citizen:** `whisper_rate_limit_ok` ← DO NOT modify from Semora
 
 ## Edge functions
@@ -77,8 +79,9 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
   `lecture-transcribe`, `lecture-study-kit` (065; deploy `--no-verify-jwt` since 109 —
   the unattended notes job posts to it with a shared secret and no Authorization header),
   `lecture-retention` (117-118, deploy `--no-verify-jwt` — deletes lecture audio whose
-  transcript is already written, plus objects no segment row points at, and since 127
-  recovers or writes off stranded segments, every 20 minutes)
+  transcript is already written, plus objects no segment row points at, and writes off
+  segments whose audio never arrived, every 20 minutes. Recovering a segment that DOES
+  have audio was its job from 127 until 139 moved it to `lecture_take_over_arrived_audio`)
 
 ## Lecture recording (migration 065) — **SEMORA only**
 - `lecture_recordings` / `lecture_segments` — owner-only RLS, realtime enabled.
@@ -86,14 +89,24 @@ no `user_id`). RLS enabled with no client policies → written server-side only.
   and is **deleted by `lecture-transcribe` the moment the transcript is written**
   (`audio_deleted_at` records when). A `done` segment with a null `storage_path`
   is the normal end state.
-- **A stranded segment is recovered, not lost (127).** `uploadSegment` writes the
-  row, uploads the audio, then flips the status; a client that dies in between
-  leaves a `pending` row whose audio is in the bucket and which nothing will
-  ever claim. `lecture_stranded_segments` finds them and answers the only
-  question that separates the two cases — is there an object at that
-  `storage_path`. Audio present goes to `lecture-transcribe`'s `recover`
-  action; audio absent is written off by `lecture_write_off_segment`, which
-  re-checks absence itself before nulling the pointer.
+- **A stranded segment is recovered, not lost (127, rebuilt in 139).**
+  `uploadSegment` writes the row, uploads the audio, then flips the status; a
+  client that dies in between leaves a `pending` row whose audio is in the
+  bucket and which nothing will ever claim. The two cases are separated by one
+  question — is there an object at that `storage_path`.
+  - **Audio present: `lecture_take_over_arrived_audio` (139), every minute.**
+    It reads the `lectures` bucket rather than the segment rows, so audio that
+    arrived with no row at all — a phone that uploaded while suspended or
+    signed out — is picked up too: it writes the row, or points a written-off
+    row back at the object, then hands the part to `lecture-transcribe`'s
+    `recover` action. `dispatched_at` is the claim and spaces retries 10
+    minutes apart; at most 2 parts per student per run. A phone can never
+    write that column (`lecture_segments_client_columns`, 138).
+  - **Audio absent: written off** by `lecture_write_off_segment`, which
+    re-checks absence itself before nulling the pointer. `lecture-retention`
+    still does this, on the rows `lecture_stranded_segments` returns — which
+    since 139 are only the ones with no audio. A write-off is no longer final:
+    if the object turns up later, the take-over job points the row back at it.
   - `recover` is the ONE action reachable with the shared lecture cron secret
     instead of a user JWT. It takes a segment id and reads the owner off the
     row, so the credential can never name a user. It does NOT waive the

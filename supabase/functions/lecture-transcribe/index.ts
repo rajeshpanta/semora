@@ -903,7 +903,7 @@ async function handleRecover(
 
   const { data: segment, error: segErr } = await admin
     .from('lecture_segments')
-    .select('id, lecture_id, user_id, seq, status, recovery_attempts')
+    .select('id, lecture_id, user_id, seq, status, recovery_attempts, claimed_at')
     .eq('id', segmentId)
     .maybeSingle();
   if (segErr) {
@@ -918,6 +918,17 @@ async function handleRecover(
   // error; the scheduler asking twice is normal and must be cheap.
   if (segment.status === 'done') {
     return jsonResponse({ ok: true, status: 'already_done' }, 200);
+  }
+
+  // Someone is transcribing it right now — usually the phone, whose own call
+  // landed moments before the scheduler's (139 asks every minute). The claim
+  // would refuse us anyway; returning here keeps that race from spending one of
+  // the part's three attempts on work that is already happening.
+  if (
+    segment.status === 'transcribing' && segment.claimed_at &&
+    Date.now() - new Date(segment.claimed_at).getTime() < STALE_CLAIM_MS
+  ) {
+    return jsonResponse({ ok: true, status: 'in_progress' }, 200);
   }
 
   if ((segment.recovery_attempts ?? 0) >= MAX_RECOVERY_ATTEMPTS) {

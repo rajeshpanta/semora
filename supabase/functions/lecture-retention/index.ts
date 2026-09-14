@@ -56,8 +56,9 @@ import { withRequestLogging, errorFields } from '../_shared/log.ts';
 // the one fact that decides what to do — whether an object actually exists at
 // that storage_path.
 //
-//   AUDIO IS THERE  → hand it to lecture-transcribe's `recover` action, which
-//                     transcribes it and folds the text back into the lecture.
+//   AUDIO IS THERE  → since 139, not this job's: lecture_take_over_arrived_audio
+//                     hands it to lecture-transcribe's `recover` action every
+//                     minute, row or no row.
 //   AUDIO IS NOT    → the upload never landed. Write the row off so it stops
 //                     blocking its lecture from ever being marked clean.
 //
@@ -75,13 +76,9 @@ const MAX_PATHS_PER_CALL = 100;
 /** Lectures per run. The backlog is finite and this drains it over a few ticks. */
 const MAX_LECTURES_PER_RUN = 25;
 /**
- * Stranded segments looked at per run.
- *
- * Every recoverable one is a provider call against a quota the whole app
- * shares — 28,800 audio-seconds a day, about five lectures — so this drains a
- * backlog over several ticks rather than spending the day's capacity in one.
- * Write-offs are free (no audio to send anywhere) but are bounded by the same
- * number for simplicity; there has never been a backlog of them.
+ * Stranded segments looked at per run. Since 139 these are write-offs only
+ * (parts whose audio never arrived), which cost nothing; the bound just keeps
+ * one run small.
  */
 const MAX_RECOVERIES_PER_RUN = 5;
 
@@ -193,8 +190,9 @@ serve(withRequestLogging('lecture-retention', async (req, log) => {
   // lecture cascades its segments away, taking the only pointer with them, and
   // purgeLectureAudio swallows a failed storage delete before that happens.
   //
-  // Safe because uploadSegment writes the row BEFORE the object, so "no row"
-  // can only mean the row was deleted, never that an upload is in flight.
+  // Since 139 "no row" no longer means "row deleted": a phone can upload with
+  // the app suspended or signed out. lecture_orphaned_audio therefore returns
+  // only audio no lecture can still use (see lecture_audio_is_actionable).
   let orphansDeleted = 0;
   const { data: orphanRows, error: orphanErr } = await admin.rpc('lecture_orphaned_audio', {
     p_limit: MAX_PATHS_PER_CALL * 2,
@@ -219,10 +217,13 @@ serve(withRequestLogging('lecture-retention', async (req, log) => {
     }
   }
 
-  // ── Stranded segments (127) ──────────────────────────────────────────────
-  let recovered = 0;
+  // ── Stranded segments (127; audio moved to 139) ─────────────────────────
+  // Only parts whose audio never arrived come back from lecture_stranded_segments
+  // now. A part WITH audio is handed to lecture-transcribe every minute by
+  // lecture_take_over_arrived_audio (139) — faster than this job's three runs
+  // an hour, and without needing the phone — so asking about it here as well
+  // would only race that job for the same claim.
   let writtenOff = 0;
-  let skipped = 0;
   const { data: strandedRows, error: strandedErr } = await admin.rpc('lecture_stranded_segments', {
     p_limit: MAX_RECOVERIES_PER_RUN,
   });
@@ -236,64 +237,26 @@ serve(withRequestLogging('lecture-retention', async (req, log) => {
     }[];
 
     for (const seg of stranded) {
-      if (!seg.audio_exists) {
-        // The upload never landed. lecture_write_off_segment re-checks that for
-        // itself before nulling anything — this pass and that one are separate
-        // transactions with a storage delete potentially in between, and a
-        // function whose job is to drop a pointer must confirm the object is
-        // gone rather than take our word for it.
-        const { data: wroteOff, error: writeOffErr } = await admin
-          .rpc('lecture_write_off_segment', { p_segment_id: seg.segment_id });
-        if (writeOffErr) {
-          log.warn('write_off_failed', { segment_id: seg.segment_id, ...errorFields(writeOffErr) });
-          failures += 1;
-        } else if (wroteOff === true) {
-          writtenOff += 1;
-          log.info('segment_written_off', {
-            segment_id: seg.segment_id, lecture_id: seg.lecture_id, seq: seg.seq,
-          });
-        }
-        continue;
-      }
+      // Belt and braces: the query excludes these, and if a row ever slips
+      // through, the take-over job is the one that acts on it.
+      if (seg.audio_exists) continue;
 
-      // The audio is there. lecture-transcribe owns every part of turning it
-      // into text — the provider call, the usage ledger, the finalize, the
-      // audio delete — so this hands the segment over rather than growing a
-      // second copy of that logic here. The shared lecture secret is the same
-      // credential this function was itself called with.
-      try {
-        const res = await fetch(`${SUPABASE_URL}/functions/v1/lecture-transcribe`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-semora-lecture-cron-secret': supplied,
-          },
-          body: JSON.stringify({ action: 'recover', segmentId: seg.segment_id }),
-        });
-        if (res.ok) {
-          // A 200 is not automatically a recovery. `already_done` means the
-          // client came back on its own and `exhausted` means we have stopped
-          // trying — counting either as recovered would make this run summary
-          // report success for work that did not happen, which is the same
-          // mistake the log event next door was named to avoid.
-          const outcome = await res.json().catch(() => null) as { status?: string } | null;
-          if (outcome?.status === 'already_done' || outcome?.status === 'exhausted') {
-            skipped += 1;
-          } else {
-            recovered += 1;
-          }
-        } else {
-          // The attempt is charged inside handleRecover, so a refusal here does
-          // not loop forever; alert_lecture_segments_stranded is what notices
-          // if every attempt is being refused at the door.
-          log.warn('recover_call_rejected', {
-            segment_id: seg.segment_id, status: res.status,
-          });
-          failures += 1;
-        }
-      } catch (err) {
-        log.warn('recover_call_failed', { segment_id: seg.segment_id, ...errorFields(err) });
+      // The upload never landed. lecture_write_off_segment re-checks that for
+      // itself before nulling anything — this pass and that one are separate
+      // transactions with a storage delete potentially in between, and a
+      // function whose job is to drop a pointer must confirm the object is
+      // gone rather than take our word for it. Not final since 139: if the
+      // audio arrives later, the take-over job points the row back at it.
+      const { data: wroteOff, error: writeOffErr } = await admin
+        .rpc('lecture_write_off_segment', { p_segment_id: seg.segment_id });
+      if (writeOffErr) {
+        log.warn('write_off_failed', { segment_id: seg.segment_id, ...errorFields(writeOffErr) });
         failures += 1;
+      } else if (wroteOff === true) {
+        writtenOff += 1;
+        log.info('segment_written_off', {
+          segment_id: seg.segment_id, lecture_id: seg.lecture_id, seq: seg.seq,
+        });
       }
     }
   }
@@ -303,9 +266,7 @@ serve(withRequestLogging('lecture-retention', async (req, log) => {
     objects_deleted: objectsDeleted,
     orphans_deleted: orphansDeleted,
     lectures_cleared: lecturesCleared,
-    segments_recovered: recovered,
     segments_written_off: writtenOff,
-    segments_skipped: skipped,
     failures,
   });
 
@@ -315,9 +276,7 @@ serve(withRequestLogging('lecture-retention', async (req, log) => {
     objects: objectsDeleted,
     orphans: orphansDeleted,
     cleared: lecturesCleared,
-    recovered,
     writtenOff,
-    skipped,
     failures,
   }, 200);
 }));
