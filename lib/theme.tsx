@@ -25,11 +25,38 @@ const DARK_COLORS = {
   amber50: '#2A2010',
 } as const;
 
-export type ColorPalette = typeof COLORS;
+// ── Text-on-tint and white-text-fill tokens ─────────────────
+// The tone colours (coral, amber) are 3.2–3.4:1 on their own 50-tints and on
+// paper in light mode, and white on them is 2.4–3.9:1 — under WCAG AA's 4.5:1
+// for the 11–15px text the lecture screens set in them. These are the same
+// hues, pushed far enough to clear AA (measured: every pair here is ≥ 5.3:1
+// on paper, card and the matching 50-tint in its theme; the fills are ≥ 6.2:1
+// with white in both themes). Use `coralText`/`amberText` for text on a tint
+// or on paper, and `coralFill`/`amberFill`/`pausedFill` behind white text.
+// The tone colours themselves stay for icons, dots and borders.
+const LIGHT_TEXT_TOKENS = {
+  coralText: '#A83F1B',
+  amberText: '#875410',
+  coralFill: '#A83F1B',
+  amberFill: '#875410',
+  pausedFill: '#4E4E56',
+} as const;
+const DARK_TEXT_TOKENS = {
+  coralText: '#EE8A63',
+  amberText: '#EDAD4C',
+  coralFill: '#A83F1B',
+  amberFill: '#875410',
+  pausedFill: '#4E4E56',
+} as const;
+
+const LIGHT_PALETTE = { ...COLORS, ...LIGHT_TEXT_TOKENS } as const;
+const DARK_PALETTE = { ...DARK_COLORS, ...DARK_TEXT_TOKENS } as const;
+
+export type ColorPalette = typeof LIGHT_PALETTE;
 
 // ── Context ─────────────────────────────────────────────────
 
-const ThemeColorsContext = createContext<ColorPalette>(COLORS);
+const ThemeColorsContext = createContext<ColorPalette>(LIGHT_PALETTE);
 
 /**
  * Returns the current color palette (light or dark).
@@ -57,7 +84,7 @@ export function useResolvedScheme(): 'light' | 'dark' {
 export function ThemeColorsProvider({ children }: { children: React.ReactNode }) {
   const scheme = useResolvedScheme();
   const colors = useMemo(
-    () => (scheme === 'dark' ? DARK_COLORS : COLORS) as ColorPalette,
+    () => (scheme === 'dark' ? DARK_PALETTE : LIGHT_PALETTE) as ColorPalette,
     [scheme],
   );
 

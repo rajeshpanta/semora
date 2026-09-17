@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
 import { useUpdates } from 'expo-updates';
 import { usePathname } from 'expo-router';
+import { isLectureWorkInFlight } from '@/lib/lectureSessionRuntime';
 import { useQuery } from '@tanstack/react-query';
 import { track } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
@@ -117,6 +118,7 @@ export function AppUpdateGate() {
         moment,
         pathname: routeRef.current,
         alreadyAppliedThisSession: applied.current,
+        lectureWorkInFlight: isLectureWorkInFlight(),
       });
       if (!decision.apply) return;
 

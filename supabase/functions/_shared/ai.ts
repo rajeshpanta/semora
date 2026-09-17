@@ -1,3 +1,4 @@
+import { isDailyQuotaError } from './lectureTranscript.ts';
 /**
  * Centralized AI configuration, routing and provider transport for Semora.
  *
@@ -152,25 +153,70 @@ export type AiResult = {
   durationMs: number;
   /** Provider error body, truncated. Never surfaced to the client verbatim. */
   errorBody?: string;
+  /** True when the call gave up because its deadline ran out (see CallDeadline). */
+  timedOut?: boolean;
 };
+
+/**
+ * An overall time budget for one call, retries included.
+ *
+ * Optional, and absent everywhere it is not asked for, so every existing caller
+ * keeps exactly the behaviour it had. It exists for the callers that run inside
+ * a 150-second edge function and must still have time to SAVE what they got:
+ * without it, three attempts with backoff could outlive the isolate, which is
+ * how a lecture part was left "transcribing" with nobody behind it.
+ */
+export type CallDeadline = {
+  /** Total milliseconds for every attempt and backoff together. */
+  deadlineMs: number;
+  /** Cap on any single attempt. Defaults to whatever time remains. */
+  attemptTimeoutMs?: number;
+};
+
+/** Statuses no attempt is retried on, per caller. Empty for everyone but transcription. */
 
 async function callWithRetry(
   label: string,
-  doFetch: () => Promise<Response>,
+  doFetch: (signal?: AbortSignal) => Promise<Response>,
+  deadline?: CallDeadline,
+  /**
+   * HTTP statuses to return on immediately instead of retrying (147). The
+   * transcription path passes 429: a Groq 429 is an organisation-wide quota,
+   * so the second and third attempts half a second later can only fail and
+   * count against the same quota — and the arrival job dispatching a batch a
+   * minute turned one outage into 60 provider requests a minute.
+   */
+  giveUp?: (status: number, body: string) => boolean,
 ): Promise<AiResult> {
   const started = Date.now();
   let status = 0;
   let networkError = false;
   let errorBody = '';
+  let timedOut = false;
+  const remaining = () => (deadline ? deadline.deadlineMs - (Date.now() - started) : Infinity);
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     let response: Response;
+    let signal: AbortSignal | undefined;
+    if (deadline) {
+      const left = remaining();
+      // Not enough left for a meaningful attempt: stop while there is still
+      // time for the caller to record the outcome.
+      if (left < 1500) { timedOut = true; networkError = true; break; }
+      signal = AbortSignal.timeout(Math.min(left, deadline.attemptTimeoutMs ?? left));
+    }
     try {
-      response = await doFetch();
+      response = await doFetch(signal);
     } catch (error) {
       networkError = true;
+      if (signal?.aborted) timedOut = true;
       console.warn(`[ai:${label}] network error (attempt ${attempt}/${MAX_ATTEMPTS}):`, String(error).slice(0, 200));
-      if (attempt < MAX_ATTEMPTS) { await sleep(backoffMs(attempt)); continue; }
+      if (attempt < MAX_ATTEMPTS) {
+        const wait = backoffMs(attempt);
+        if (deadline && remaining() < wait + 1500) { timedOut = true; break; }
+        await sleep(wait);
+        continue;
+      }
       break;
     }
 
@@ -184,6 +230,14 @@ async function callWithRetry(
           retryable: false, attempts: attempt, durationMs: Date.now() - started,
         };
       } catch (error) {
+        if (signal?.aborted) {
+          // The deadline ran out while the body was still arriving. That says
+          // nothing about the response itself: it is a timeout, and retryable.
+          return {
+            ok: false, data: null, status, networkError: true, retryable: true, timedOut: true,
+            attempts: attempt, durationMs: Date.now() - started, errorBody: 'timed out reading the response',
+          };
+        }
         console.error(`[ai:${label}] provider returned invalid JSON:`, String(error).slice(0, 200));
         return {
           ok: false, data: null, status, networkError: false, retryable: false,
@@ -194,7 +248,12 @@ async function callWithRetry(
 
     errorBody = await response.text().catch(() => '');
     console.warn(`[ai:${label}] HTTP ${status} (attempt ${attempt}/${MAX_ATTEMPTS}):`, errorBody.slice(0, 300));
-    if (RETRYABLE_HTTP.has(status) && attempt < MAX_ATTEMPTS) { await sleep(backoffMs(attempt)); continue; }
+    if (RETRYABLE_HTTP.has(status) && !giveUp?.(status, errorBody) && attempt < MAX_ATTEMPTS) {
+      const wait = backoffMs(attempt);
+      if (deadline && remaining() < wait + 1500) { timedOut = true; break; }
+      await sleep(wait);
+      continue;
+    }
     break;
   }
 
@@ -202,9 +261,10 @@ async function callWithRetry(
     ok: false, data: null, status, networkError,
     // A fallback may only act on transient failures. 4xx other than 408/429 are
     // our bug or a safety refusal — retrying or failing over hides the defect.
-    retryable: networkError || RETRYABLE_HTTP.has(status),
+    retryable: networkError || timedOut || RETRYABLE_HTTP.has(status),
     attempts: MAX_ATTEMPTS, durationMs: Date.now() - started,
     errorBody: errorBody.slice(0, 500),
+    ...(timedOut ? { timedOut: true } : {}),
   };
 }
 
@@ -271,19 +331,38 @@ export function geminiTruncated(data: any): boolean {
 
 // ── OpenAI (tutor only) ─────────────────────────────────────────────────────
 
-export async function callOpenAIResponses(payload: Record<string, unknown>, label = 'tutor'): Promise<AiResult> {
+export async function callOpenAIResponses(
+  payload: Record<string, unknown>,
+  label = 'tutor',
+  deadline?: CallDeadline,
+): Promise<AiResult> {
   if (!OPENAI_API_KEY) {
     return {
       ok: false, data: null, status: 0, networkError: false, retryable: false,
       attempts: 0, durationMs: 0, errorBody: 'OPENAI_API_KEY is not configured',
     };
   }
-  return callWithRetry(label, () =>
+  return callWithRetry(label, (signal) =>
     fetch(OPENAI_RESPONSES_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
       body: JSON.stringify(payload),
-    }));
+      signal,
+    }), deadline);
+}
+
+/**
+ * Why a Responses API call stopped short, if it did.
+ *
+ * `status: 'incomplete'` with `incomplete_details.reason: 'max_output_tokens'`
+ * is the model running out of room — the text that came back is cut off, not
+ * finished. Callers that store long output check this rather than guessing
+ * from the length.
+ */
+export function openAIIncompleteReason(data: any): string | null {
+  if (data?.status !== 'incomplete') return null;
+  const reason = data?.incomplete_details?.reason;
+  return typeof reason === 'string' && reason ? reason : 'unknown';
 }
 
 /**
@@ -427,10 +506,17 @@ export async function callGroqTranscription(opts: {
   audio: Uint8Array;
   fileName: string;
   mimeType: string;
-  language: 'en' | 'es';
+  /**
+   * The language spoken, when it is known. Omitted, the provider detects it —
+   * which is what a lecture needs until its own language has been heard: the
+   * app's UI language says nothing about the language of the class.
+   */
+  language?: 'en' | 'es';
   /** Course name + tail of the previous segment. Whisper caps this at 224 tokens. */
   promptHint?: string;
   label?: string;
+  /** Overall budget, retries included. See CallDeadline. */
+  deadline?: CallDeadline;
 }): Promise<AiResult> {
   if (!GROQ_API_KEY) {
     return {
@@ -453,22 +539,31 @@ export async function callGroqTranscription(opts: {
     const form = new FormData();
     form.append('file', new Blob([buffer], { type: opts.mimeType }), opts.fileName);
     form.append('model', MODELS.transcription);
-    form.append('language', opts.language);
+    if (opts.language) form.append('language', opts.language);
     form.append('response_format', 'verbose_json');
     form.append('temperature', '0');
     if (opts.promptHint) form.append('prompt', opts.promptHint.slice(0, 800));
     return form;
   };
 
-  return callWithRetry(opts.label ?? 'transcription', () =>
+  return callWithRetry(opts.label ?? 'transcription', (signal) =>
     fetch(GROQ_TRANSCRIPTIONS_URL, {
       method: 'POST',
       // Content-Type is deliberately absent — fetch must set it itself so the
       // multipart boundary matches the body it generated.
       headers: { Authorization: `Bearer ${GROQ_API_KEY}` },
       body: buildForm(),
-    }));
+      signal,
+    }), opts.deadline, transcriptionGiveUp);
 }
+
+/**
+ * 147: a 429 for the DAY's quota is returned at once — the next attempts half
+ * a second later can only fail and count against the same quota. A per-minute
+ * 429 (three parts nudging at once) keeps the ordinary backoff, which clears
+ * it in seconds.
+ */
+const transcriptionGiveUp = (status: number, body: string) => status === 429 && isDailyQuotaError(body);
 
 /** The transcript text from a Groq response. */
 export function groqTranscriptText(data: any): string | null {

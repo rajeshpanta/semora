@@ -40,8 +40,27 @@ export function lectureDir(lectureId: string): string {
   return `${FileSystem.documentDirectory}lectures/${lectureId}/`;
 }
 
+/**
+ * ONE store per lecture for the life of the app.
+ *
+ * A store serializes its own writes, but two stores for the same lecture do
+ * not know about each other: the recorder saving a part and the upload queue
+ * marking another could each read generation N and write N+1, and one of the
+ * two changes was silently lost. Handing out the same instance closes that.
+ */
+const stores = new Map<string, JournalStore>();
+
 export function lectureJournalStore(ownerId: string, lectureId: string): JournalStore {
-  return createJournalStore(lectureJournalFs, lectureDir(lectureId), ownerId, lectureId);
+  const existing = stores.get(lectureId);
+  if (existing) return existing;
+  const store = createJournalStore(lectureJournalFs, lectureDir(lectureId), ownerId, lectureId);
+  stores.set(lectureId, store);
+  return store;
+}
+
+/** Forget a lecture's store once its folder is gone. */
+export function forgetLectureJournalStore(lectureId: string): void {
+  stores.delete(lectureId);
 }
 
 /** Filenames sitting in a lecture's directory. Empty when there is no directory. */

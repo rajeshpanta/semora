@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { canRecordLectures } from '@/lib/lectureSessionRuntime';
 import { ActivityIndicator, Animated, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text, TouchableOpacity } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -219,9 +220,10 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
     go(pendingPath, courseId ? { courseId } : undefined);
   };
 
-  // Recording is native-only (see lib/lectureRecorder.ts), so the browser must
-  // not offer a row that can only apologise.
-  const baseRows = Platform.OS === 'web'
+  // Recording is offered only where it works (lib/lectureSessionRuntime.ts):
+  // not in a browser, and not on Android until Semora's own recorder is in the
+  // build — expo-audio stops recording on a locked Android phone.
+  const baseRows = !canRecordLectures()
     ? ROOT_ACTIONS.filter((a) => a.title !== 'Record lecture')
     : ROOT_ACTIONS;
 

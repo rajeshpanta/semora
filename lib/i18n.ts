@@ -358,6 +358,12 @@ function spanishPattern(input: string): string | null {
   // list — the generic rule produced "BIO 210 · · entrega in 34 days": a doubled
   // separator AND an untranslated tail, because the date phrase is a second
   // English fragment it never looks at.
+  // Lecture action items → tasks: "<type> · due <date>" and the no-date form.
+  // Before the generic "· due" rules below, which would leave the type in English.
+  match = input.match(/^(Assignment|Quiz|Exam|Project|Reading|Other) · due (.+)$/);
+    if (match) return `${translate(match[1], 'es')} · para el ${match[2]}`;
+  match = input.match(/^(.+) · No date found — you'll pick one$/);
+    if (match) return `${translate(match[1], 'es')} · No se encontró fecha: tú eliges una`;
   match = input.match(/^(.+?) · due in (\d+) days?$/i);
   if (match) return `${match[1]} · entrega en ${match[2]} ${match[2] === '1' ? 'día' : 'días'}`;
   match = input.match(/^(.+?) · due (today|tomorrow)$/i);
@@ -751,6 +757,83 @@ function spanishPattern(input: string): string | null {
   match = input.match(/^(.+) · (\d+) due$/);
     if (match) return `${translate(match[1], 'es')} · ${match[2]} para entregar`;
 
+  // Record Lecture (2026-09-16): the limit, the microphone and times are
+  // interpolated, so none of these can be exact catalogue keys.
+  match = input.match(/^It reached the (\d+)-minute limit, so Semora saved it for you\.$/);
+    if (match) return `Llegó al límite de ${match[1]} minutos, así que Semora la guardó por ti.`;
+  match = input.match(/^This recording reaches its (\d+)-minute limit soon\. It will save automatically\.$/);
+    if (match) return `Esta grabación llegará pronto a su límite de ${match[1]} minutos. Se guardará automáticamente.`;
+  match = input.match(/^Up to (\d+) minutes per recording$/);
+    if (match) return `Hasta ${match[1]} minutos por grabación`;
+  match = input.match(/^Microphone: (.+)$/);
+    if (match) return `Micrófono: ${match[1]}`;
+  match = input.match(/^Recording stopped at (.+) while Semora was in the background\. Everything before that is saved\.$/);
+    if (match) return `La grabación se detuvo a las ${match[1]} mientras Semora estaba en segundo plano. Todo lo anterior está guardado.`;
+  match = input.match(/^The microphone stopped at (.+) — a call or another app may be using it\. Recording picks up again as soon as it can\.$/);
+    if (match) return `El micrófono se detuvo a las ${match[1]}: puede que una llamada u otra app lo esté usando. La grabación sigue en cuanto sea posible.`;
+  match = input.match(/^Recording with (.+)\. For a lecture, disconnect headphones so the phone's own microphone picks up the room\.$/);
+    if (match) return `Grabando con ${match[1]}. Para una clase, desconecta los auriculares para que el micrófono del teléfono capte el aula.`;
+  match = input.match(/^Class: (.+)\. Change it\.$/);
+    if (match) return `Clase: ${match[1]}. Cambiarla.`;
+  match = input.match(/^Class: (.+)$/);
+    if (match) return `Clase: ${match[1]}`;
+  match = input.match(/^Notes for (.+)$/);
+    if (match) return `Apuntes de ${match[1]}`;
+  match = input.match(/^(.+), (\d+:\d{2}(?::\d{2})?)\. Return to the recording$/);
+    if (match) return `${translate(match[1], 'es')}, ${match[2]}. Volver a la grabación`;
+  match = input.match(/^Semora closed while recording your lecture from (.+)\. (\d+) minutes were saved and are being turned into notes\.$/);
+    if (match) return `Semora se cerró mientras grababa tu clase de las ${match[1]}. Se guardaron ${match[2]} minutos y se están convirtiendo en apuntes.`;
+  match = input.match(/^Semora closed while recording a lecture\. (\d+) minutes were saved and are being turned into notes\.$/);
+    if (match) return `Semora se cerró mientras grababa una clase. Se guardaron ${match[1]} minutos y se están convirtiendo en apuntes.`;
+  match = input.match(/^(\d+) of (\d+) parts uploaded$/);
+    if (match) return `${match[1]} de ${match[2]} partes subidas`;
+  match = input.match(/^Saved on this phone (\d+:\d{2}(?::\d{2})?)$/);
+    if (match) return `Guardado en este teléfono ${match[1]}`;
+  match = input.match(/^Saving (\d+:\d{2}(?::\d{2})?) on this phone…$/);
+    if (match) return `Guardando ${match[1]} en este teléfono…`;
+  match = input.match(/^(\d+) marked$/);
+    if (match) return `${match[1]} marcados`;
+  match = input.match(/^Paused for (\d+:\d{2}(?::\d{2})?)$/);
+    if (match) return `En pausa desde hace ${match[1]}`;
+  match = input.match(/^Paused (\d+) min — Semora saves this on its own after (\d+) hours$/);
+    if (match) return `En pausa ${match[1]} min: Semora la guarda sola después de ${match[2]} horas`;
+  match = input.match(/^Marked at (\d+:\d{2}(?::\d{2})?)$/);
+    if (match) return `Marcado a los ${match[1]}`;
+  // The recorder clock read aloud (spokenDuration below): VoiceOver gets
+  // "12 minutes 30 seconds", not "12:30" read as a time of day.
+  match = input.match(/^(?:(\d+) hours? )?(?:(\d+) minutes? )?(\d+) seconds?$/);
+    if (match) {
+      const parts: string[] = [];
+      if (match[1]) parts.push(`${match[1]} ${match[1] === '1' ? 'hora' : 'horas'}`);
+      if (match[2]) parts.push(`${match[2]} ${match[2] === '1' ? 'minuto' : 'minutos'}`);
+      parts.push(`${match[3]} ${match[3] === '1' ? 'segundo' : 'segundos'}`);
+      return parts.join(' ');
+    }
+  match = input.match(/^Marked (\d+:\d{2}(?::\d{2})?)$/);
+    if (match) return `Marcado ${match[1]}`;
+  match = input.match(/^Marked moments: (.+)$/);
+    if (match) return `Momentos marcados: ${match[1]}`;
+  match = input.match(/^(\d+:\d{2}(?::\d{2})?) recorded · (\d+) marked\. Your notes are written right after\.$/);
+    if (match) return `${match[1]} grabados · ${match[2]} marcados. Tus apuntes se redactan justo después.`;
+  match = input.match(/^(\d+) so far$/);
+    if (match) return `${match[1]} hasta ahora`;
+  match = input.match(/^(\d+) parts waiting$/);
+    if (match) return match[1] === '1' ? '1 parte en espera' : `${match[1]} partes en espera`;
+  match = input.match(/^(\d+:\d{2}(?::\d{2})?) recorded$/);
+    if (match) return `${match[1]} grabados`;
+  match = input.match(/^★ (\d+) marked$/);
+    if (match) return `★ ${match[1]} marcados`;
+  match = input.match(/^(\d+) of (\d+)$/);
+    if (match) return `${match[1]} de ${match[2]}`;
+  match = input.match(/^Missing here — (\d+) parts never arrived$/);
+    if (match) return `Aquí faltan ${match[1]} partes que nunca llegaron`;
+  match = input.match(/^Starred moment at (.+)$/);
+    if (match) return `Momento destacado en ${match[1]}`;
+  match = input.match(/^Marked (\d+)$/);
+    if (match) return `Marcados: ${match[1]}`;
+  match = input.match(/^Add to tasks: ([\s\S]+)$/);
+    if (match) return `Añadir a tareas: ${match[1]}`;
+
   // Paywall + free-tier wall. The price and the course cap are interpolated at
   // render time, so no exact key can ever match these — they have to be
   // patterns or they stay English on the one screen where we ask for money.
@@ -784,6 +867,24 @@ export function languageName(preference: AppLanguagePreference, locale = getAppL
   if (preference === 'system') return translate('Use device language', locale);
   if (preference === 'es') return 'Español';
   return translate('English', locale);
+}
+
+/**
+ * A duration in words for a screen reader: "1 hour 2 minutes 5 seconds",
+ * "12 minutes 30 seconds", "0 seconds". The recorder's "12:30" clock is read by
+ * VoiceOver as a time of day; this is what its accessibilityLabel says
+ * instead. Spanish comes from the matching pattern in spanishPattern.
+ */
+export function spokenDuration(totalSeconds: number, locale: AppLocale = getAppLocale()): string {
+  const s = Math.max(0, Math.floor(Number.isFinite(totalSeconds) ? totalSeconds : 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const parts: string[] = [];
+  if (h > 0) parts.push(`${h} ${h === 1 ? 'hour' : 'hours'}`);
+  if (m > 0 || h > 0) parts.push(`${m} ${m === 1 ? 'minute' : 'minutes'}`);
+  parts.push(`${sec} ${sec === 1 ? 'second' : 'seconds'}`);
+  return translate(parts.join(' '), locale);
 }
 
 export function localeTag(locale: AppLocale = getAppLocale()): string {

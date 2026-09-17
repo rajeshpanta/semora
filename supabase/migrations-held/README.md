@@ -37,6 +37,21 @@ The app is already correct without it. `app/settings/notifications.tsx:83`
 treats the preference as `false` while the column does not exist, so the
 Notifications screen renders fine and nothing errors.
 
+### `141_do_not_call_half_a_lecture_ready.sql` (+ its test)
+
+Rewrote `notify_lecture_notes_ready()` so a lecture missing parts is not
+announced as complete.
+
+- **Why it is held — do NOT apply it:** it is **superseded by 143**
+  (`143_a_finished_lecture_says_what_it_has.sql`), which rebuilds the same
+  function from the live definition with the same missing-parts wording in both
+  of its loops, plus the heartbeat rules 141 does not know about. Applying 141
+  after 143 would put back an older version of the function.
+- **Parked 2026-09-16** (Record Lecture plan step 0.2) rather than deleted, so
+  its reasoning stays next to the code, and so its number is never reused.
+- **What would have to be true to apply it:** nothing — it stays here as
+  history.
+
 ## To apply one
 
 ```bash

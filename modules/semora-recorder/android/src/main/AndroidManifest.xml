@@ -1,0 +1,16 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.RECORD_AUDIO" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+  <application>
+    <!-- Holds the microphone for a whole lecture. Started only from the visible
+         app (Android 12+ forbids starting a microphone foreground service from
+         the background), and kept running until Stop. -->
+    <service
+      android:name="expo.modules.semorarecorder.LectureRecordingService"
+      android:exported="false"
+      android:foregroundServiceType="microphone" />
+  </application>
+</manifest>

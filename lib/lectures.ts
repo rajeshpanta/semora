@@ -1,31 +1,24 @@
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { AppState, Platform } from 'react-native';
+import type { TimelinePart } from '@/lib/lectureTimeline';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as FileSystem from 'expo-file-system/legacy';
+import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
 import { getAppLocale } from '@/lib/i18n';
-import { readFileAsBase64 } from '@/lib/readFileBase64';
-import { parseUploadJson, requestWithUploadProgress } from '@/lib/httpUpload';
 import { track } from '@/lib/analytics';
-import {
-  classifyLectureFailure,
-  segmentSeqFromFilename,
-  type LectureStage,
-} from '@/lib/lectureFailure';
+import { classifyLectureFailure } from '@/lib/lectureFailure';
 import { trackLectureFailure } from '@/lib/lectureDiagnosticsStore';
+import { readJournal } from '@/lib/lectureJournal';
+import { forgetLectureJournalStore, lectureDir, lectureJournalFs, lectureJournalStore } from '@/lib/lectureJournalFs';
+import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
 import {
-  eligibleParts,
-  nextAttemptDelayMs,
-  patchPart,
-  readJournal,
-  reconcileWithFiles,
-  upsertPart,
-  withStopIntent,
-} from '@/lib/lectureJournal';
-import {
-  lectureDir,
-  lectureDirFilenames,
-  lectureJournalFs,
-  lectureJournalStore,
-} from '@/lib/lectureJournalFs';
+  cancelLectureUploads,
+  getLectureLocalProgress,
+  subscribeUploadQueue,
+  waitForUploadQueueIdle,
+  type LectureLocalProgress,
+} from '@/lib/lectureUploadQueue';
 
 // ── Lecture recordings — client data layer ──────────────────────────────────
 // Owns its own query keys rather than extending lib/queries.ts, matching
@@ -92,6 +85,15 @@ export interface LectureRecording {
   parts_missing_since?: string | null;
   parts_unrecoverable_at?: string | null;
   notes_stale?: boolean | null;
+  /** Migrations 142-143. Optional for the same reason: older cached rows. */
+  source?: 'recording' | 'document' | null;
+  language?: 'en' | 'es' | 'mixed' | null;
+  last_heartbeat_at?: string | null;
+  capture_state?: 'recording' | 'paused' | 'stopped' | null;
+  notes_truncated?: boolean | null;
+  quiz_stale?: boolean | null;
+  /** Migration 145: "Mark important" taps, seconds of captured audio. */
+  important_marks?: number[] | null;
   created_at: string;
   updated_at: string;
 }
@@ -144,6 +146,7 @@ export const lectureKeys = {
   // handed the other its cache and a component got an array where it expected
   // counts, or the reverse.
   segmentProgress: (id: string | null | undefined) => ['lectureSegmentProgress', id ?? null] as const,
+  timeline: (id: string | null | undefined) => ['lectureTimeline', id ?? null] as const,
 };
 
 /** Statuses where the server is still working and the client should keep looking. */
@@ -154,21 +157,78 @@ export function isLectureInFlight(status: LectureStatus): boolean {
 }
 
 /**
- * True when a recording says it is working but nothing is.
+ * True when a recording says it is working but nothing will ever finish it.
  *
- * `updated_at` moves on every segment and status change, so a row untouched
- * for this long has no invocation behind it. Kept here rather than only on the
- * detail screen because the poller needs the same answer — an in-flight status
- * that will never change is exactly the case that polled forever.
+ * Until 2026-09-16 this said "stalled" after 15 quiet minutes, while the server
+ * keeps a recording open for hours and keeps folding in parts that arrive late
+ * — 3 of 18 lectures in one week showed "This recording didn't finish… your
+ * free lecture wasn't used" and a Delete button on lectures that DID finish and
+ * WERE charged. It now uses the server's own rules (migrations 138/143):
+ *
+ *   the phone reported Stop           → stalled after 1 hour with no progress
+ *   the phone reports it is recording → stalled after 2.5 hours of silence
+ *   an older app (no report)          → stalled after 3.5 hours of silence
+ *
+ * and never while this phone still holds parts of it waiting to upload.
  */
-export const LECTURE_STALLED_MS = 15 * 60 * 1000;
-
-export function isLectureStalled(lecture: {
-  status: LectureStatus;
-  updated_at: string;
-}): boolean {
+export function isLectureStalled(
+  lecture: {
+    status: LectureStatus;
+    updated_at: string;
+    last_heartbeat_at?: string | null;
+    capture_state?: string | null;
+  },
+  local?: LectureLocalProgress | null,
+): boolean {
   if (lecture.status !== 'uploading' && lecture.status !== 'transcribing') return false;
-  return Date.now() - new Date(lecture.updated_at).getTime() > LECTURE_STALLED_MS;
+  if (local && local.waiting > 0) return false;
+  const quietMs = Date.now() - new Date(lecture.updated_at).getTime();
+  const hour = 60 * 60 * 1000;
+  if (effectiveCaptureState(lecture, local) === 'stopped') return quietMs > hour;
+  if (lecture.last_heartbeat_at) {
+    return Date.now() - new Date(lecture.last_heartbeat_at).getTime() > 2.5 * hour && quietMs > 2.5 * hour;
+  }
+  return quietMs > 3.5 * hour;
+}
+
+/**
+ * Stop was pressed on THIS phone. The journal says so the moment it happens;
+ * the server learns it from a heartbeat and the Stop count, both of which can
+ * be stuck on bad wifi for a while. A screen that trusted only the server
+ * told the student the lecture was "still being recorded" after they had
+ * stopped it.
+ */
+export function isLectureStoppedHere(local: LectureLocalProgress | null | undefined): boolean {
+  return Boolean(local?.stopped);
+}
+
+/** The server's capture_state, overridden by a Stop this phone has already made. */
+export function effectiveCaptureState(
+  lecture: { capture_state?: string | null },
+  local?: LectureLocalProgress | null,
+): 'recording' | 'paused' | 'stopped' | null {
+  if (isLectureStoppedHere(local)) return 'stopped';
+  const s = lecture.capture_state;
+  return s === 'recording' || s === 'paused' || s === 'stopped' ? s : null;
+}
+
+/**
+ * Whether the app is on screen, as React state. Polling hooks below return
+ * no interval while it is not: TanStack Query's focusManager has no
+ * `document` in React Native and reports "focused" forever, so a lecture
+ * screen left open on a locked phone polled every 4 seconds for a whole class.
+ * 'unknown' (before the first AppState event) counts as on screen.
+ */
+function subscribeAppState(onChange: () => void) {
+  const sub = AppState.addEventListener('change', onChange);
+  return () => sub.remove();
+}
+function appIsActiveNow(): boolean {
+  const s = AppState.currentState;
+  return s !== 'background' && s !== 'inactive';
+}
+export function useAppIsActive(): boolean {
+  return useSyncExternalStore(subscribeAppState, appIsActiveNow, () => true);
 }
 
 async function getSession() {
@@ -197,47 +257,152 @@ export async function currentUserId(): Promise<string | null> {
  * Error so callers can branch — the paywall on FREE_LECTURE_USED, a retry
  * affordance on PROVIDER_BUSY — without string matching.
  */
-async function callLectureFn<T>(fn: string, payload: Record<string, unknown>): Promise<T> {
+/**
+ * Call a lecture Edge Function, with an optional time limit.
+ *
+ * The limit exists for calls nothing should wait on: a transcription nudge that
+ * hung for 23 minutes while the app was suspended used to hold up every part
+ * behind it. `x-semora-app-version` lets the server tell an app that records
+ * reliably from one that should be updated (older apps send none).
+ */
+export async function callLectureFunction<T>(
+  fn: string,
+  payload: Record<string, unknown>,
+  timeoutMs?: number,
+): Promise<T> {
   const session = await getSession();
   const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
   if (!supabaseUrl) throw new Error('Supabase URL not configured');
 
-  const response = await fetch(`${supabaseUrl}/functions/v1/${fn}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify({ ...payload, locale: getAppLocale() }),
-  });
+  const controller = timeoutMs ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/${fn}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+        'x-semora-app-version': String(Constants.expoConfig?.version ?? ''),
+        'x-semora-platform': Platform.OS,
+      },
+      body: JSON.stringify({ ...payload, locale: getAppLocale() }),
+      signal: controller?.signal,
+    });
 
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: response.statusText }));
-    const e = new Error(err?.error || `Server error: ${response.status}`) as Error & {
-      code?: string;
-      status?: number;
-    };
-    e.code = err?.code;
-    e.status = response.status;
-    throw e;
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: response.statusText }));
+      const e = new Error(err?.error || `Server error: ${response.status}`) as Error & {
+        code?: string;
+        status?: number;
+        lectureId?: string;
+      };
+      e.code = err?.code;
+      e.status = response.status;
+      // A refusal that names the lecture in the way (TOO_MANY_IN_FLIGHT).
+      if (typeof err?.lectureId === 'string') e.lectureId = err.lectureId;
+      throw e;
+    }
+    return (await response.json()) as T;
+  } finally {
+    if (timer) clearTimeout(timer);
   }
-  return response.json() as Promise<T>;
+}
+
+function callLectureFn<T>(fn: string, payload: Record<string, unknown>): Promise<T> {
+  return callLectureFunction<T>(fn, payload);
+}
+
+/**
+ * Tell the server this phone is still recording (every minute), paused, or
+ * stopped — with, at Stop, how long the session ran and how much audio it
+ * captured. Best effort: a heartbeat that fails changes nothing on the phone.
+ */
+export async function sendLectureHeartbeat(input: {
+  lectureId: string;
+  state: 'recording' | 'paused' | 'stopped';
+  wallSeconds?: number | null;
+  capturedSeconds?: number | null;
+}): Promise<void> {
+  try {
+    await supabase.rpc('lecture_heartbeat', {
+      p_lecture_id: input.lectureId,
+      p_state: input.state,
+      p_wall_seconds: input.wallSeconds == null ? null : Math.round(input.wallSeconds),
+      p_captured_seconds: input.capturedSeconds == null ? null : Math.round(input.capturedSeconds),
+      p_app_build: String(Constants.expoConfig?.version ?? '').slice(0, 32) || null,
+    });
+  } catch {
+    // A heartbeat is a hint to the server, never a reason to disturb a recording.
+  }
+}
+
+/**
+ * Send the lecture's "Mark important" moments (145). true when the server has
+ * them — or can never take them (a lecture that is gone, a server without the
+ * feature), so the phone stops retrying. false means try again later.
+ */
+export async function sendLectureImportantMarks(lectureId: string, marks: number[]): Promise<boolean> {
+  try {
+    const { data, error } = await supabase.rpc('lecture_add_important_marks', {
+      p_lecture_id: lectureId,
+      p_seconds: marks.map((m) => Math.max(0, Math.floor(m))),
+    });
+    // null = not this session's lecture (signed out, another account) or gone:
+    // not delivered. The queue retries as the owner, and forgets a deleted one.
+    if (!error) return Array.isArray(data);
+    return error.code === 'PGRST202' || error.code === '42883';
+  } catch {
+    return false;
+  }
 }
 
 export type LectureError = Error & { code?: string; status?: number };
 
 // ── Queries ─────────────────────────────────────────────────────────────────
 
+const LECTURE_LIST_COLUMNS = [
+  'id', 'user_id', 'course_id', 'title', 'duration_seconds', 'segment_count', 'status', 'error_code',
+  'notes_md', 'quiz', 'deck_id', 'quiz_generating', 'notes_started_at', 'quiz_started_at', 'audio_deleted_at',
+  'parts_missing', 'parts_missing_since', 'parts_unrecoverable_at', 'notes_stale', 'source', 'language',
+  'last_heartbeat_at', 'capture_state', 'notes_truncated', 'quiz_stale', 'important_marks', 'created_at', 'updated_at',
+].join(', ');
+
+/**
+ * Lecture ids whose TRANSCRIPT contains every word of the query (4.10). Runs
+ * on the server, debounced by the caller, so the phone never holds every
+ * transcript in memory. Empty query, or fewer than 3 characters, searches
+ * nothing.
+ */
+export function useLectureTranscriptSearch(query: string, enabled: boolean) {
+  const words = query.trim().split(/\s+/).filter((w) => w.length >= 2);
+  const key = words.join(' ').toLowerCase();
+  return useQuery({
+    queryKey: ['lectureTranscriptSearch', key],
+    enabled: enabled && key.length >= 3,
+    staleTime: 60_000,
+    queryFn: async (): Promise<string[]> => {
+      let q = supabase.from('lecture_recordings').select('id');
+      for (const w of words) q = q.ilike('transcript', `%${w.replace(/[%_\\]/g, '\\$&')}%`);
+      const { data, error } = await q.limit(200);
+      if (error) return [];
+      return (data ?? []).map((r) => r.id as string);
+    },
+  });
+}
+
 export function useLectures(enabled = true) {
   return useQuery({
     queryKey: lectureKeys.all,
     queryFn: async () => {
+      // Everything but the transcript: a term of 3-hour lectures is tens of
+      // megabytes of transcript, and the list never shows one. Search reaches
+      // transcripts through useLectureTranscriptSearch.
       const { data, error } = await supabase
         .from('lecture_recordings')
-        .select('*, courses(name, color)')
+        .select(`${LECTURE_LIST_COLUMNS}, courses(name, color)` as '*')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data ?? []) as LectureWithCourse[];
+      return (data ?? []) as unknown as LectureWithCourse[];
     },
     // Defaults to on, so the Notes screen is unaffected. The command palette
     // passes its own visibility — it is mounted by the desktop shell on every
@@ -247,11 +412,41 @@ export function useLectures(enabled = true) {
   });
 }
 
+/**
+ * What the detail screen polls for: the lecture's STATE. Never the
+ * transcript, notes or quiz — a 3-hour lecture's row is ~150 KB, and polling
+ * it every 4 seconds while the notes were written re-downloaded it 15 times
+ * a minute. Those columns are fetched again only when this projection shows
+ * the row changed (updated_at or status).
+ */
+const LECTURE_POLL_COLUMNS = [
+  'id', 'status', 'error_code', 'capture_state', 'notes_started_at', 'quiz_generating', 'quiz_started_at',
+  'parts_missing', 'notes_stale', 'notes_truncated', 'duration_seconds', 'segment_count', 'updated_at', 'important_marks',
+].join(', ');
+
 export function useLecture(id: string | null | undefined) {
+  const qc = useQueryClient();
+  const appActive = useAppIsActive();
   return useQuery({
     queryKey: lectureKeys.detail(id),
     enabled: !!id,
     queryFn: async () => {
+      const previous = qc.getQueryData<LectureWithCourse | null>(lectureKeys.detail(id));
+      if (previous) {
+        // A refetch: ask for the light projection first, and take the whole
+        // row again only when it says something changed.
+        const { data: light, error: lightErr } = await supabase
+          .from('lecture_recordings')
+          .select(LECTURE_POLL_COLUMNS)
+          .eq('id', id!)
+          .maybeSingle();
+        if (lightErr) throw lightErr;
+        if (!light) return null;
+        const changed = light as unknown as Partial<LectureRecording>;
+        if (changed.updated_at === previous.updated_at && changed.status === previous.status) {
+          return { ...previous, ...changed } as LectureWithCourse;
+        }
+      }
       const { data, error } = await supabase
         .from('lecture_recordings')
         .select('*, courses(name, color)')
@@ -263,17 +458,20 @@ export function useLecture(id: string | null | undefined) {
     // Poll while the server is still working. Realtime also carries these
     // updates, but transcription progress is the one thing a user actively
     // waits on, so it does not hang off a socket staying healthy on campus
-    // wifi. Polling stops the moment the lecture reaches a terminal state.
+    // wifi. Polling stops the moment the lecture reaches a terminal state —
+    // and whenever the app is off screen (the interval restarts on return).
     refetchInterval: (query) => {
+      if (!appActive) return false;
       const lecture = query.state.data as LectureWithCourse | null | undefined;
       if (!lecture) return false;
-      if (lecture.quiz_generating) return 3000;
-      // "Terminal state" has to include stalled, not just finished. A recording
-      // whose segments never arrived sits in 'transcribing' indefinitely, and
-      // this polled it every 4 seconds for as long as the screen stayed open —
-      // one was found stuck for over an hour. Nothing is coming, so stop
-      // asking; the screen shows the stalled card instead of a spinner.
-      if (isLectureStalled(lecture)) return false;
+      // Only while the quiz claim is fresh: the server resets a dead one after
+      // 5 minutes (143), and polling every 3 seconds forever helped nobody.
+      if (lecture.quiz_generating && lecture.quiz_started_at &&
+        Date.now() - new Date(lecture.quiz_started_at).getTime() < 6 * 60 * 1000) return 3000;
+      // A recording that looks stalled is still asked about, slowly: late
+      // parts are folded in for days, and a screen that stopped looking would
+      // never show the notes that arrive.
+      if (isLectureStalled(lecture, getLectureLocalProgress(lecture.id))) return 60_000;
       return isLectureInFlight(lecture.status) ? 4000 : false;
     },
   });
@@ -317,6 +515,9 @@ export interface StartLectureResult {
   lectureId: string;
   maxSeconds: number;
   reservedSeconds: number;
+  otherLiveRecording?: boolean;
+  /** Remote switch (LECTURE_BACKGROUND_UPLOADS). Absent from older servers = allowed. */
+  backgroundUploads?: boolean;
 }
 
 /**
@@ -352,172 +553,21 @@ export async function cancelLecture(lectureId: string, reservedSeconds?: number)
   }
 }
 
-/** base64 → bytes. Mirrors lib/tutor.ts decode(). */
-function decode(base64: string): Uint8Array {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-  return bytes;
-}
-
 /**
- * Upload one captured chunk and ask the server to transcribe it.
+ * Tell the server capture is complete and it should assemble the transcript.
  *
- * Row first, then bytes, then transcribe. The row exists as `pending` before
- * the upload starts so that an app killed mid-upload leaves a record the resume
- * path can find — the local audio file is still on disk, and a segment nobody
- * knows about is a segment nobody retries.
+ * Separate from finishLecture (a plain row update) because finalization has to
+ * happen server-side under the service role. Safe to call more than once, and
+ * never waited on for long: the server finishes the lecture on its own when the
+ * last part is transcribed.
  */
-/**
- * Run one stage of the upload and stamp whatever it throws with where it was.
- *
- * Every `lecture_segment_upload_failed` event in the seven days to 2026-09-14
- * carried an empty code, so four students lost audio for reasons nobody could
- * name. The stage rides on the error so the handler that reports it knows which
- * boundary broke. See lib/lectureFailure.ts.
- */
-/**
- * What the server said about a part, once the bytes were sent.
- *
- * `acknowledged` is the ONLY thing that licenses deleting the local copy. A
- * successful PUT is not enough: it says the bytes left this phone, not that
- * anything on the other side has a record of them.
- */
-export interface UploadReceipt {
-  acknowledged: boolean;
-  segmentId: string;
-}
-
-async function atStage<T>(stage: LectureStage, run: () => Promise<T>): Promise<T> {
+export async function finalizeLecture(lectureId: string): Promise<void> {
   try {
-    return await run();
-  } catch (err) {
-    if (err && typeof err === 'object' && (err as { stage?: unknown }).stage === undefined) {
-      (err as { stage?: LectureStage }).stage = stage;
-    }
-    throw err;
+    await callLectureFunction('lecture-transcribe', { action: 'finalize', lectureId }, 30_000);
+  } catch {
+    // The upload queue and the lecture screen both nudge again; a failed nudge
+    // must never stop the student leaving the recorder.
   }
-}
-
-export async function uploadSegment(input: {
-  lectureId: string;
-  seq: number;
-  fileUri: string;
-  seconds: number;
-  hasGap?: boolean;
-  onProgress?: (percent: number) => void;
-}): Promise<UploadReceipt> {
-  const session = await atStage('session', getSession);
-  const userId = session.user.id;
-  const storagePath = `${userId}/${input.lectureId}/seg_${String(input.seq).padStart(3, '0')}.m4a`;
-
-  // Upsert so a retry of the same seq reuses its row instead of tripping the
-  // (lecture_id, seq) unique constraint.
-  const { data: row, error: rowErr } = await supabase
-    .from('lecture_segments')
-    .upsert(
-      {
-        lecture_id: input.lectureId,
-        user_id: userId,
-        seq: input.seq,
-        seconds: Math.max(0, Math.round(input.seconds)),
-        storage_path: storagePath,
-        status: 'pending',
-        has_gap: input.hasGap ?? false,
-      },
-      { onConflict: 'lecture_id,seq' },
-    )
-    .select('id')
-    .single();
-  if (rowErr || !row) {
-    const err = (rowErr ?? new Error('Could not save the recording segment.')) as LectureError & { stage?: LectureStage };
-    err.stage = 'register';
-    throw err;
-  }
-
-  const base64 = await atStage('local_commit', () => readFileAsBase64(input.fileUri));
-  const bytes = decode(base64);
-  const rawBytes = bytes.buffer.slice(
-    bytes.byteOffset,
-    bytes.byteOffset + bytes.byteLength,
-  ) as ArrayBuffer;
-
-  const bucket = supabase.storage.from('lectures');
-  const { data: signed, error: signedErr } = await bucket.createSignedUploadUrl(storagePath, {
-    upsert: true,
-  });
-  if (signedErr || !signed) {
-    const err = (signedErr ?? new Error('Could not prepare the upload.')) as LectureError & { stage?: LectureStage };
-    err.stage = 'sign_url';
-    throw err;
-  }
-
-  const uploadResponse = await atStage('transfer', () => requestWithUploadProgress({
-    url: signed.signedUrl,
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'audio/m4a',
-      'cache-control': 'max-age=3600',
-      'x-upsert': 'true',
-    },
-    body: rawBytes,
-    onProgress: input.onProgress,
-  }));
-  if (!uploadResponse.ok) {
-    const uploadError = parseUploadJson<{ message?: string; error?: string }>(uploadResponse);
-    const err = new Error(
-      uploadError?.message || uploadError?.error || 'That part of the recording could not be uploaded.',
-    ) as LectureError & { stage?: LectureStage };
-    err.stage = 'transfer';
-    err.status = uploadResponse.status;
-    throw err;
-  }
-
-  // The bytes are in the bucket. If this update fails the part is still safe:
-  // the every-minute arrival job (migration 139) finds an object no row claims
-  // and hands it to lecture-transcribe. So a failure here is logged, not thrown,
-  // because throwing would make the recorder report a loss that did not happen.
-  //
-  // It is NOT acknowledged, though, and that distinction decides whether the
-  // local file may be deleted. A 200 from the PUT says the bytes left; the row
-  // saying 'uploaded' is the server saying it knows about them. Only the second
-  // one is a receipt, and until there is one the phone keeps its copy.
-  const { error: ackErr } = await supabase
-    .from('lecture_segments')
-    .update({ status: 'uploaded' })
-    .eq('id', row.id);
-  if (ackErr) {
-    trackLectureFailure('lecture_segment_ack_failed', 'lecture_record',
-      classifyLectureFailure(ackErr, 'acknowledge'), input.seq, 1);
-  }
-  const receipt: UploadReceipt = { acknowledged: !ackErr, segmentId: row.id };
-
-  track('lecture_segment_uploaded', {
-    screen: 'lecture_record',
-    seq: input.seq,
-    seconds: Math.round(input.seconds),
-  });
-
-  // Transcribe now. A failure here is NOT fatal — the audio is safely uploaded
-  // and the segment stays reclaimable, so the resume path can pick it up.
-  //
-  // Deliberately swallowed since 2026-09-14. It used to throw, which the
-  // recorder's handler counted as "bytes failed to upload" and which kept the
-  // local file forever: a provider timeout on part 3 looked identical to losing
-  // part 3. Uploading and transcribing are separate facts now, and the arrival
-  // job will ask again if this nudge never lands.
-  try {
-    await atStage('transcribe_dispatch', () => callLectureFn('lecture-transcribe', {
-      action: 'segment',
-      lectureId: input.lectureId,
-      segmentId: row.id,
-    }));
-  } catch (err) {
-    trackLectureFailure('lecture_segment_dispatch_failed', 'lecture_record',
-      classifyLectureFailure(err, 'transcribe_dispatch'), input.seq, 1);
-  }
-
-  return receipt;
 }
 
 /**
@@ -528,255 +578,33 @@ export async function uploadSegment(input: {
  * from "the lecture is finished", and would assemble a truncated transcript
  * partway through the class.
  */
-/**
- * Tell the server capture is complete and it should assemble the transcript.
- *
- * Separate from finishLecture (a plain row update) because finalization has to
- * happen server-side under the service role. Safe to call more than once.
- */
-export async function finalizeLecture(lectureId: string): Promise<void> {
-  try {
-    await callLectureFn('lecture-transcribe', { action: 'finalize', lectureId });
-  } catch {
-    // The lecture detail screen retries this on open; a failed nudge must never
-    // stop the user leaving the recorder.
-  }
-}
-
 export async function finishLecture(input: {
   lectureId: string;
   segmentCount: number;
   durationSeconds: number;
 }): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('lecture_recordings')
     .update({
       segment_count: input.segmentCount,
       duration_seconds: Math.round(input.durationSeconds),
       status: 'uploading',
     })
-    .eq('id', input.lectureId);
+    .eq('id', input.lectureId)
+    .select('id');
   if (error) throw error;
+  // Signed out, or signed in as someone else: row security matches nothing and
+  // PostgREST reports success. That is NOT a delivered count — throwing leaves
+  // the journal's stopDeclared false, so the queue sends it as the owner later.
+  if (!data || data.length === 0) {
+    throw Object.assign(new Error('The lecture could not be updated from this session.'), { code: 'NOT_DECLARED' });
+  }
 }
 
-/**
- * Where a segment's audio lives on the device until the server has it.
- *
- * Deterministic from (lectureId, seq) on purpose: it means a segment whose
- * upload failed can be found again later without a manifest to lose. The record
- * screen tells the user "you can finish the upload from the lecture screen" —
- * this is what makes that true rather than a hopeful sentence.
- */
-export function localSegmentUri(lectureId: string, seq: number): string {
-  return `${FileSystem.documentDirectory}lectures/${lectureId}/seg_${String(seq).padStart(3, '0')}.m4a`;
-}
-
-/** Delete every local audio file still held for a lecture. */
+/** Delete every local audio file still held for a lecture, and its journal. */
 export async function deleteLocalLectureAudio(lectureId: string): Promise<void> {
-  await FileSystem.deleteAsync(`${FileSystem.documentDirectory}lectures/${lectureId}/`, {
-    idempotent: true,
-  }).catch(() => {});
-}
-
-/**
- * Re-upload segments whose bytes never made it, then transcribe them.
- *
- * Without this a single dropped connection strands a lecture: its row sits at
- * `pending`, the server refuses to assemble a transcript while any segment is
- * unfinished, and nothing on the device would ever try again.
- */
-export async function retryPendingUploads(lectureId: string): Promise<number> {
-  // Driven by the JOURNAL and the FILES, not by server rows.
-  //
-  // This used to ask the server for segments with status 'pending' and retry
-  // those. On 2026-09-14 a student lost four parts of an eight-part lecture and
-  // not one of them was 'pending': two had no row at all, because uploadSegment
-  // reads the session before it writes the row and a locked phone makes that
-  // throw, and two had been marked 'failed'. The audio for all four was sitting
-  // on the phone the whole time and this function matched none of it.
-  //
-  // The journal records a part the moment its bytes are on disk, before
-  // anything is attempted, and the directory scan catches anything whose
-  // journal entry never got written. Between them they see every part the
-  // phone has, whatever the server thinks.
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return 0;
-
-  const store = lectureJournalStore(session.user.id, lectureId);
-  const filenames = await lectureDirFilenames(lectureId);
-  if (filenames.length === 0) return 0;
-
-  const journal = await store.update((current) => reconcileWithFiles(current, filenames));
-  const eligible = eligibleParts(journal, Date.now());
-  if (eligible.length === 0) return 0;
-
-  // One query, to learn which parts the server has already finished. Anything
-  // done or in flight is left alone: re-uploading would race a transcription
-  // for the same bytes.
-  const { data: rows } = await supabase
-    .from('lecture_segments')
-    .select('seq, seconds, has_gap, status')
-    .eq('lecture_id', lectureId);
-  const bySeq = new Map<number, { seconds: number | null; has_gap: boolean | null; status: string }>();
-  for (const r of (rows ?? []) as { seq: number; seconds: number | null; has_gap: boolean | null; status: string }[]) {
-    bySeq.set(r.seq, r);
-  }
-
-  let uploaded = 0;
-  for (const part of eligible) {
-    const uri = localSegmentUri(lectureId, part.seq);
-    const row = bySeq.get(part.seq);
-    if (row && (row.status === 'done' || row.status === 'transcribing')) {
-      // Already handled. The local copy is redundant; dropping it is what
-      // stops a finished lecture keeping 22MB on the phone forever.
-      await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
-      await store.update((j) => patchPart(j, part.seq, {
-        state: row.status === 'done' ? 'transcribed' : 'server_received',
-        lastAcknowledgment: row.status,
-      }));
-      continue;
-    }
-    try {
-      const receipt = await uploadSegment({
-        lectureId,
-        seq: part.seq,
-        fileUri: uri,
-        seconds: part.duration || row?.seconds || 0,
-        hasGap: part.hasGap || row?.has_gap || false,
-      });
-      // Only a receipt licenses the delete. Without one the bytes are in the
-      // bucket but nothing on the server points at them yet; the arrival job
-      // will claim them within the minute, and the next pass sees the row and
-      // cleans up then.
-      if (receipt.acknowledged) {
-        await FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => {});
-      }
-      await store.update((j) => patchPart(j, part.seq, {
-        state: receipt.acknowledged ? 'server_received' : 'awaiting_ack',
-        serverSegmentId: receipt.segmentId,
-        lastAcknowledgment: receipt.acknowledged ? 'uploaded' : null,
-        nextAttemptAt: null,
-        lastFailureStage: null,
-      }));
-      uploaded += 1;
-    } catch (err) {
-      const failure = classifyLectureFailure(err, (err as { stage?: LectureStage })?.stage ?? 'transfer');
-      const attempt = part.attemptCount + 1;
-      trackLectureFailure('lecture_segment_retry_failed', 'recovery', failure, part.seq, attempt);
-      await store.update((j) => patchPart(j, part.seq, {
-        attemptCount: attempt,
-        lastFailureStage: failure.stage,
-        // A part whose bytes are gone will never succeed, so it is set aside
-        // rather than spun on. It stays in the journal, because "this part is
-        // unrecoverable" is worth knowing.
-        state: failure.retry === 'permanent' ? 'quarantined' : j.parts.find((p) => p.seq === part.seq)?.state ?? 'saved_locally',
-        nextAttemptAt: failure.retry === 'permanent' ? null : Date.now() + nextAttemptDelayMs(attempt),
-      }));
-      // A dead part is this part's problem, not the queue's: skip it and give
-      // the others their turn. Anything else means the network or the account
-      // is the blocker, so stop and come back later.
-      if (failure.retry === 'permanent') continue;
-      break;
-    }
-  }
-  return uploaded;
-}
-
-/**
- * Record a part in the journal the moment its bytes are on disk.
- *
- * Called before any upload is attempted, which is the entire point: the two
- * parts lost on 2026-09-14 that left no server row were lost because nothing
- * was written anywhere until the network and the session had both cooperated.
- */
-export async function journalPartSaved(input: {
-  ownerId: string;
-  lectureId: string;
-  seq: number;
-  seconds: number;
-  hasGap: boolean;
-  byteLength: number | null;
-}): Promise<void> {
-  const store = lectureJournalStore(input.ownerId, input.lectureId);
-  await store.update((journal) => upsertPart(journal, {
-    seq: input.seq,
-    relativeFilePath: `seg_${String(input.seq).padStart(3, '0')}.m4a`,
-    duration: Math.max(0, Math.round(input.seconds)),
-    hasGap: input.hasGap,
-    byteLength: input.byteLength,
-    contentIdentity: null,
-    state: 'saved_locally',
-    attemptCount: 0,
-    nextAttemptAt: null,
-    serverSegmentId: null,
-    lastAcknowledgment: null,
-    lastFailureStage: null,
-  }));
-}
-
-/** Record Stop locally, so the count survives a phone that cannot reach the server. */
-export async function journalStopIntent(input: {
-  ownerId: string;
-  lectureId: string;
-  expectedParts: number | null;
-  durationSeconds: number;
-}): Promise<void> {
-  const store = lectureJournalStore(input.ownerId, input.lectureId);
-  await store.update((journal) => withStopIntent(journal, input.expectedParts, input.durationSeconds));
-}
-
-/** Sequence numbers of every part still held locally for a lecture, in order. */
-export async function localSegmentSeqs(lectureId: string): Promise<number[]> {
-  const dir = `${FileSystem.documentDirectory}lectures/${lectureId}/`;
-  const names = await FileSystem.readDirectoryAsync(dir).catch(() => [] as string[]);
-  return names
-    .map(segmentSeqFromFilename)
-    .filter((seq): seq is number => seq !== null)
-    .sort((a, b) => a - b);
-}
-
-/**
- * Every lecture with audio still on this phone.
- *
- * `lectures/null/` is skipped deliberately. Those files come from the Stop race
- * fixed in lib/lectureLifecycle.ts, where a rotation still running persisted
- * against a lecture id that Stop had already cleared. There is no reliable way
- * to tell whose they are, and guessing from a timestamp would file one
- * student's lecture under another's.
- */
-export async function listLocalLectureIds(): Promise<string[]> {
-  const root = `${FileSystem.documentDirectory}lectures/`;
-  const names = await FileSystem.readDirectoryAsync(root).catch(() => [] as string[]);
-  return names.filter((name) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(name));
-}
-
-/** Retry every segment the server has not finished, in order. */
-export async function retryPendingSegments(lectureId: string): Promise<number> {
-  const { data: segments } = await supabase
-    .from('lecture_segments')
-    .select('id, seq, status, storage_path')
-    .eq('lecture_id', lectureId)
-    .in('status', ['uploaded', 'transcribing'])
-    .order('seq', { ascending: true });
-
-  let retried = 0;
-  for (const segment of segments ?? []) {
-    if (!segment.storage_path) continue;
-    try {
-      await callLectureFn('lecture-transcribe', {
-        action: 'segment',
-        lectureId,
-        segmentId: segment.id,
-      });
-      retried += 1;
-    } catch {
-      // Stop on the first failure: segments are transcribed in order so later
-      // ones can use the previous transcript's tail for continuity, and
-      // hammering a provider that just rate-limited us helps nobody.
-      break;
-    }
-  }
-  return retried;
+  await FileSystem.deleteAsync(lectureDir(lectureId), { idempotent: true }).catch(() => {});
+  forgetLectureJournalStore(lectureId);
 }
 
 /**
@@ -786,8 +614,10 @@ export async function retryPendingSegments(lectureId: string): Promise<number> {
  * regenerating, which matters because this is driven by a status the UI may
  * observe more than once.
  */
-export async function generateLectureNotes(lectureId: string): Promise<void> {
-  await callLectureFn('lecture-study-kit', { lectureId, mode: 'notes' });
+export async function generateLectureNotes(
+  lectureId: string,
+): Promise<{ ok?: boolean; inProgress?: boolean; continue?: boolean; notesMd?: string } | null> {
+  return callLectureFn('lecture-study-kit', { lectureId, mode: 'notes' });
 }
 
 // ── Mutations ───────────────────────────────────────────────────────────────
@@ -828,7 +658,12 @@ export function useRetryLectureNotes(lectureId: string | null | undefined) {
   return useMutation({
     mutationFn: async () => {
       if (!lectureId) throw new Error('No lecture');
-      await generateLectureNotes(lectureId);
+      // A long lecture's notes arrive in sections; keep going while asked to.
+      for (let step = 0; step < 8; step++) {
+        const result = await generateLectureNotes(lectureId);
+        qc.invalidateQueries({ queryKey: lectureKeys.detail(lectureId) });
+        if (!result?.continue) break;
+      }
     },
     onSuccess: () => {
       track('lecture_notes_generated', { screen: 'lecture_detail', retry: true });
@@ -845,19 +680,52 @@ export function useRetryLectureNotes(lectureId: string | null | undefined) {
  * in the bucket permanently — audio of a third party that we told the student
  * we would delete.
  */
-export async function purgeLectureAudio(lectureId: string): Promise<void> {
-  // The tombstone goes down FIRST, before a single network call.
-  //
-  // Everything below can fail or be interrupted, and the recovery worker runs
-  // on its own schedule. Without this, a delete that died halfway left a queue
-  // that would happily put the audio back, and the student would find a lecture
-  // they deleted sitting there again with fresh notes.
+export async function purgeLectureAudio(lectureId: string, ownerId?: string | null): Promise<{ serverDone: boolean }> {
+  // The tombstone goes down FIRST, before a single network call, and the queue
+  // is told to leave this lecture alone and allowed to finish anything it was
+  // already sending — a part that lands AFTER the delete would put audio back
+  // into the bucket with nothing pointing at it.
   await markLectureDiscarded(lectureId);
 
-  const { data: segments } = await supabase
+  // The server's copy is remembered on this phone until it is confirmed gone:
+  // a discard made offline used to leave the row and any uploaded parts
+  // alive, and the server finished them into notes the student had thrown
+  // away. Remembered NOW, as the recording session's owner when it says who
+  // that is (a signed-out phone in the locked-keychain window cannot), and
+  // before the queue gets a chance to remove the folder the journal — the
+  // last place the owner could be read from — lives in.
+  const owner = ownerId
+    ?? (await currentUserId().catch(() => null))
+    ?? (await readJournal(lectureJournalFs, lectureDir(lectureId)).catch(() => null))?.journal.ownerId
+    ?? null;
+  if (owner) addPendingDiscard(lectureId, owner);
+
+  cancelLectureUploads(lectureId);
+  // Bounded: a background upload can wait for a network that is not there. The
+  // tombstone and the cancel above already keep the queue off this lecture, and
+  // a part that lands later is removed by the retention job's orphan sweep.
+  await Promise.race([waitForUploadQueueIdle(), new Promise((r) => setTimeout(r, 8_000))]);
+
+  const serverDone = await discardLectureOnServer(lectureId).catch(() => false);
+  if (serverDone) removePendingDiscard(lectureId);
+
+  await deleteLocalLectureAudio(lectureId);
+  return { serverDone };
+}
+
+/**
+ * Remove a lecture from the server: its audio, then its row (which cascades
+ * the parts, releases its capacity reservation and drops the notes mirror).
+ * true when nothing of it is left there; false means try again later.
+ */
+export async function discardLectureOnServer(lectureId: string): Promise<boolean> {
+  const userId = await currentUserId().catch(() => null);
+  if (!userId) return false;
+  const { data: segments, error: segErr } = await supabase
     .from('lecture_segments')
     .select('storage_path')
     .eq('lecture_id', lectureId);
+  if (segErr) return false;
   const paths = (segments ?? [])
     .map((s) => s.storage_path)
     .filter((p): p is string => Boolean(p));
@@ -871,16 +739,60 @@ export async function purgeLectureAudio(lectureId: string): Promise<void> {
         classifyLectureFailure(error, 'reconcile'), -1, 1);
     }
   }
-  await deleteLocalLectureAudio(lectureId);
+  const { error } = await supabase.from('lecture_recordings').delete().eq('id', lectureId);
+  // No error = deleted, or nothing of ours to delete. (Signed out is caught
+  // above; another account's row is invisible and stays pending for its owner.)
+  return !error;
+}
+
+const PENDING_DISCARDS_KEY = 'semora_lecture_pending_discards';
+interface PendingDiscard { lectureId: string; ownerId: string; since: number }
+
+function readPendingDiscards(): PendingDiscard[] {
+  try {
+    const raw = getDeviceItem(PENDING_DISCARDS_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list.filter((d) => d && typeof d.lectureId === 'string' && typeof d.ownerId === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function writePendingDiscards(list: PendingDiscard[]) {
+  try {
+    setDeviceItem(PENDING_DISCARDS_KEY, JSON.stringify(list));
+  } catch {
+    // best effort; the row is retried from the next successful launch's replay
+  }
+}
+
+export function addPendingDiscard(lectureId: string, ownerId: string) {
+  const list = readPendingDiscards().filter((d) => d.lectureId !== lectureId);
+  writePendingDiscards([...list, { lectureId, ownerId, since: Date.now() }]);
+}
+
+export function removePendingDiscard(lectureId: string) {
+  writePendingDiscards(readPendingDiscards().filter((d) => d.lectureId !== lectureId));
+}
+
+/** Lectures this phone deleted while offline: finish deleting them as their owner. */
+export async function replayPendingDiscards(userId: string | null): Promise<void> {
+  if (!userId) return;
+  for (const d of readPendingDiscards()) {
+    if (d.ownerId !== userId) continue;
+    if (await discardLectureOnServer(d.lectureId).catch(() => false)) {
+      removePendingDiscard(d.lectureId);
+      track('lecture_discard_replayed', { screen: 'upload_queue', ageHours: Math.round((Date.now() - d.since) / 3_600_000) });
+    }
+  }
 }
 
 /**
  * Stop the queue touching this lecture, permanently.
  *
- * `eligibleParts` returns nothing once `discardIntent` is set, so this is the
- * whole of the stop. It deliberately does not CREATE a journal: no journal
- * means nothing is queued, and inventing one to say "discarded" would leave a
- * file behind for a lecture that has none.
+ * The journal's discardIntent survives an app restart; the queue never uploads
+ * a discarded lecture again. It deliberately does not CREATE a journal: no
+ * journal means nothing is queued.
  */
 export async function markLectureDiscarded(lectureId: string): Promise<void> {
   try {
@@ -894,22 +806,32 @@ export async function markLectureDiscarded(lectureId: string): Promise<void> {
   }
 }
 
+/**
+ * Delete a lecture. Resolves `{ serverDone }`: false means the phone's copy
+ * is gone and the server's is remembered for the next time it is online — a
+ * success from the student's side, not an error. (It used to throw, so the
+ * screen showed "Couldn't delete" over audio that was already deleted.)
+ */
 export function useDeleteLecture() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (lectureId: string) => {
+    mutationFn: async (lectureId: string): Promise<{ serverDone: boolean }> => {
       // Normally there is nothing left in the bucket — the server deletes the
       // audio the moment the transcript is written — but a lecture deleted
       // mid-transcription still has segments in storage and on the device.
-      await purgeLectureAudio(lectureId);
-
-      const { error } = await supabase.from('lecture_recordings').delete().eq('id', lectureId);
-      if (error) throw error;
+      return purgeLectureAudio(lectureId);
     },
-    onSuccess: () => {
-      track('lecture_deleted', { screen: 'lecture_detail' });
-      qc.invalidateQueries({ queryKey: lectureKeys.all });
-      qc.invalidateQueries({ queryKey: ['freeActionUsed'] });
+    onSuccess: ({ serverDone }, lectureId) => {
+      track('lecture_deleted', { screen: 'lecture_detail', serverDone });
+      // Off the list now, whatever the network said: on this phone it is gone,
+      // and the server's copy follows when it can be reached.
+      qc.setQueryData(lectureKeys.all, (prev: LectureWithCourse[] | undefined) =>
+        prev ? prev.filter((l) => l.id !== lectureId) : prev,
+      );
+      if (serverDone) {
+        qc.invalidateQueries({ queryKey: lectureKeys.all });
+        qc.invalidateQueries({ queryKey: ['freeActionUsed'] });
+      }
     },
   });
 }
@@ -950,6 +872,49 @@ export function useAttachLectureCourse(lectureId: string | null | undefined) {
       const { error } = await supabase
         .from('lecture_recordings')
         .update({ course_id: courseId })
+        .eq('id', lectureId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: lectureKeys.detail(lectureId) });
+      qc.invalidateQueries({ queryKey: lectureKeys.all });
+    },
+  });
+}
+
+/**
+ * The parts' sentence timings, for the timestamped transcript (145). Fetched
+ * only when the transcript is opened. A server without timings, or a lecture
+ * from before them, returns parts with no timings and the screen shows the
+ * plain transcript.
+ */
+export function useLectureTimeline(lectureId: string | null | undefined, enabled: boolean) {
+  return useQuery({
+    queryKey: lectureKeys.timeline(lectureId),
+    enabled: Boolean(lectureId) && enabled,
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<TimelinePart[]> => {
+      const { data, error } = await supabase
+        .from('lecture_segments')
+        .select('seq, seconds, status, timings')
+        .eq('lecture_id', lectureId!)
+        .order('seq', { ascending: true });
+      if (error) return [];
+      return (data ?? []) as TimelinePart[];
+    },
+  });
+}
+
+export function useRenameLecture(lectureId: string | null | undefined) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (title: string) => {
+      if (!lectureId) throw new Error('No lecture');
+      const clean = title.replace(/\s+/g, ' ').trim().slice(0, 120);
+      if (!clean) throw new Error('Give the lecture a name.');
+      const { error } = await supabase
+        .from('lecture_recordings')
+        .update({ title: clean })
         .eq('id', lectureId);
       if (error) throw error;
     },
@@ -1049,74 +1014,75 @@ function stripExtension(filename: string): string {
 
 
 /**
- * How much of a recording has actually reached the server.
+ * What this phone still holds for a lecture, live.
  *
- * The detail screen's busy state was a bare spinner reading "Working on your
- * lecture", which is the same thing whether nine of ten parts are up or none
- * are. A student packing up after class needs the difference: one means walk
- * away, the other means stay on the wifi another minute.
+ * Read from the upload queue (lib/lectureUploadQueue.ts), which is driven by
+ * the on-device journal — the only record of a part that never reached the
+ * server. Null when the phone holds nothing for it.
+ */
+export function useLectureLocalProgress(lectureId: string | null | undefined): LectureLocalProgress | null {
+  const [value, setValue] = useState<LectureLocalProgress | null>(() => getLectureLocalProgress(lectureId));
+  useEffect(() => {
+    setValue(getLectureLocalProgress(lectureId));
+    return subscribeUploadQueue(() => setValue(getLectureLocalProgress(lectureId)));
+  }, [lectureId]);
+  return value;
+}
+
+/**
+ * How much of a recording has reached the server, and how much is still on
+ * this phone.
  *
- * Counts rows rather than trusting lecture_recordings.segment_count, which is
- * what the CLIENT said to expect — and is exactly the field that reads 0 on a
- * recording whose finishing call never happened.
+ * Three separate facts, because they used to be one and it lied: a part that
+ * never reached the server has no row, so counting rows alone let a lecture
+ * missing half its audio read as "All parts uploaded".
  */
 export interface LectureProgress {
-  /** Parts the phone knows exist, server rows and local files together. */
+  /** Parts known anywhere: server rows plus parts only this phone has. */
   total: number;
   uploaded: number;
   transcribed: number;
   /** Still on this phone, whatever the server has heard about. */
   waitingLocally: number;
-  /**
-   * What the phone declared at Stop, or null when it never got to say.
-   *
-   * Null is not zero. A lecture whose app died mid-class has an unknown
-   * expectation, and the screen must say so rather than call the parts that
-   * happen to have arrived the whole recording.
-   */
+  /** Parts that stopped retrying and need the student. */
+  needsAttention: number;
+  /** Waiting only because this phone is signed out or signed in as someone else. */
+  waitingForSignIn: number;
+  /** What the phone declared at Stop, or null when it never got to say. */
   expected: number | null;
 }
 
 export function useLectureSegmentProgress(lectureId: string | null, enabled: boolean) {
-  return useQuery({
+  const local = useLectureLocalProgress(lectureId);
+  const appActive = useAppIsActive();
+  const query = useQuery({
     queryKey: lectureKeys.segmentProgress(lectureId),
     enabled: Boolean(lectureId) && enabled,
-    // Matches the detail screen's own poll; this is the same wait.
-    refetchInterval: enabled ? 4000 : false,
-    queryFn: async (): Promise<LectureProgress> => {
-      const id = lectureId as string;
+    // Matches the detail screen's own poll; this is the same wait — and, like
+    // it, nothing is polled while the app is off screen.
+    refetchInterval: enabled && appActive ? 4000 : false,
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('lecture_segments')
         .select('seq, status')
-        .eq('lecture_id', id);
+        .eq('lecture_id', lectureId as string);
       if (error) throw error;
-      const rows = (data ?? []) as { seq: number; status: string }[];
-
-      // Counting server rows alone is what let a lecture missing half its
-      // audio render as finished: the four parts that never uploaded had no
-      // row, so as far as this was concerned they did not exist. The phone's
-      // own record is the other half of the answer.
-      const journal = await readJournal(lectureJournalFs, lectureDir(id)).catch(() => null);
-      const localOnly = new Set<number>();
-      if (journal) {
-        for (const part of journal.journal.parts) {
-          if (part.state === 'server_received' || part.state === 'transcribed') continue;
-          if (rows.some((r) => r.seq === part.seq && r.status !== 'pending')) continue;
-          localOnly.add(part.seq);
-        }
-      }
-
-      return {
-        total: rows.length + [...localOnly].filter((seq) => !rows.some((r) => r.seq === seq)).length,
-        // 'pending' is the only status that means the bytes are still on the
-        // phone; everything else is server-side progress.
-        uploaded: rows.filter((r) => r.status !== 'pending').length,
-        transcribed: rows.filter((r) => r.status === 'done').length,
-        waitingLocally: localOnly.size,
-        expected: journal?.journal.finalExpectedParts ?? null,
-      };
+      return (data ?? []) as { seq: number; status: string }[];
     },
   });
+
+  const rows = query.data ?? [];
+  // A part counts once whether the server, the phone, or both know it.
+  const data: LectureProgress | undefined = query.data || local ? {
+    total: Math.max(rows.length, local?.total ?? 0),
+    uploaded: rows.filter((r) => r.status !== 'pending').length,
+    transcribed: rows.filter((r) => r.status === 'done').length,
+    waitingLocally: local?.waiting ?? 0,
+    needsAttention: local?.needsAttention ?? 0,
+    waitingForSignIn: local?.waitingForSignIn ?? 0,
+    expected: local?.expected ?? null,
+  } : undefined;
+  return { ...query, data };
 }
 
 // ── Cross-activity outcome (migration 134) ──────────────────────────

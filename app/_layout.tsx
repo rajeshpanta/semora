@@ -21,7 +21,7 @@ import { createContext,
   useContext,
   useEffect,
   useRef,
-  useState } from 'react';
+  useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator,
   AppState,
   Platform,
@@ -51,7 +51,7 @@ import { loadLastServerRead, trackServerReads } from '@/lib/dataFreshness';
 import { isServerPush, resolvePushRoute } from '@/lib/pushRouting';
 import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateAfterPurchase, setupPurchaseListeners } from '@/lib/purchases';
 import {
-  COMPLETE_TASK_ACTION, SNOOZE_TASK_ACTION, cancelAllRemindersOnSignOut,
+  COMPLETE_TASK_ACTION, SNOOZE_TASK_ACTION, cancelAllRemindersOnSignOut, RECORD_CLASS_ACTION, CLASS_REMINDER_KEY,
   cancelTaskReminders, ensureAndroidChannels, registerTaskNotificationActions, rescheduleAllTaskReminders,
   hasTimezoneChanged, rescheduleClassReminders,
   snoozeNotification, startWebDueSoonReminders,
@@ -80,6 +80,9 @@ import {
 } from '@/lib/collaboration';
 import { LmsSyncBridge } from '@/components/LmsSyncBridge';
 import { recoverUnfinishedLectures } from '@/lib/lectureRecovery';
+import { getLectureSession } from '@/lib/lectureSessionRuntime';
+import { LectureRecordingBar } from '@/components/LectureRecordingBar';
+import { LectureInterruptedNotice } from '@/components/LectureInterruptedNotice';
 import { ProUpsellHost } from '@/components/ProUpsellHost';
 import { CollaborationSyncBridge } from '@/components/CollaborationSyncBridge';
 import { RealtimeSyncBridge } from '@/components/RealtimeSyncBridge';
@@ -846,11 +849,27 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const inPasswordReset = useAppStore((s) => s.inPasswordReset);
   const hasOnboarded = useAppStore((s) => s.hasOnboarded);
+  const lectureSession = getLectureSession();
+  const recordingPhase = useSyncExternalStore(
+    lectureSession.subscribe,
+    () => lectureSession.getState().phase,
+    () => lectureSession.getState().phase,
+  );
 
   useScreenViewTracking(segments as string[]);
 
   useEffect(() => {
     if (loading) return;
+
+    // A lecture is being recorded. Losing the session mid-class (a locked
+    // phone that cannot read its keychain did exactly this) used to replace
+    // the whole screen stack with the sign-in screen, which closed the
+    // recorder and stopped the microphone. The recording does not need a
+    // session — its parts are saved on the phone and upload once the student
+    // is signed in again — so the redirect waits until the recording ends.
+    if (!session && recordingPhase !== 'idle') {
+      return;
+    }
 
     // Browser OAuth returns to `/callback?code=...` and handleDeepLink
     // exchanges that code for a session. Until it does, `session` is still
@@ -968,7 +987,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         router.replace('/(tabs)');
       }
     }
-  }, [session, loading, segments, inPasswordReset, hasOnboarded]);
+  }, [session, loading, segments, inPasswordReset, hasOnboarded, recordingPhase]);
 
   const colors = useColors();
 
@@ -1055,7 +1074,23 @@ function NotificationActionBridge() {
         });
 
         if (route.mode === 'push') globalRouter.push(route.path as any);
-        else globalRouter.replace(route.path as any);
+        // A push this build cannot route replaces the whole stack with the
+        // tabs — which, mid-lecture, closed the recorder. While a recording is
+        // live the tap simply opens the app where it is.
+        else if (!getLectureSession().isActive()) globalRouter.replace(route.path as any);
+        return;
+      }
+
+      // 4.7: "Record this class" on a class reminder. Opens the recorder with the
+      // class preselected; the student still taps Start (a recording is never
+      // started for them). A live recording is left alone.
+      const classData = response.notification.request.content.data ?? {};
+      if (typeof classData[CLASS_REMINDER_KEY] === 'string' && action === RECORD_CLASS_ACTION) {
+        track('class_reminder_record_tapped', { screen: 'notification' });
+        if (!getLectureSession().isActive()) {
+          const courseId = typeof classData.courseId === 'string' ? classData.courseId : undefined;
+          globalRouter.push({ pathname: '/lecture/record', params: courseId ? { courseId } : {} } as any);
+        }
         return;
       }
 
@@ -1390,6 +1425,10 @@ function RootLayoutNav() {
               </Stack>
               </NavigationFrame>
             </AuthGate>
+            {/* While a lecture is recording and the recorder screen is not on
+                top, a bar that says so and leads back to it. */}
+            <LectureRecordingBar />
+            <LectureInterruptedNotice />
             {/* Applies a downloaded OTA in the session it arrives rather than
                 the one after. Ships inert: it does nothing until the
                 auto_update_reload flag is switched on. See lib/appUpdate.ts. */}
@@ -1439,8 +1478,9 @@ function LectureRecoveryRuntime() {
     if (!userId || ranForRef.current === userId) return;
     ranForRef.current = userId;
     // Deliberately not awaited and never surfaced: this sits behind whatever
-    // the student opened the app to do.
-    void recoverUnfinishedLectures();
+    // the student opened the app to do. Also the "signed in again" trigger:
+    // parts saved while signed out upload now.
+    void recoverUnfinishedLectures('sign_in');
   }, [userId]);
 
   // Once per launch is not enough.
@@ -1456,7 +1496,7 @@ function LectureRecoveryRuntime() {
     if (!userId || Platform.OS === 'web') return;
 
     const appState = AppState.addEventListener('change', (next) => {
-      if (next === 'active') void recoverUnfinishedLectures();
+      if (next === 'active') void recoverUnfinishedLectures('foreground');
     });
 
     let wasOnline = isDeviceOnline();
@@ -1464,7 +1504,7 @@ function LectureRecoveryRuntime() {
       const online = isDeviceOnline();
       // The edge, not the state: a listener that fires on every snapshot would
       // ask on each one while the connection is fine.
-      if (online && !wasOnline) void recoverUnfinishedLectures();
+      if (online && !wasOnline) void recoverUnfinishedLectures('network');
       wasOnline = online;
     });
 

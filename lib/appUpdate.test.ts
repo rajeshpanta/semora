@@ -144,3 +144,19 @@ Deno.test('a negative or absurd stored count cannot re-enable looping', () => {
   assertEquals(parseReloadGuard('{"from":"A","tries":-5}')!.tries, 0);
   assertEquals(reloadBlocked(parseReloadGuard('{"from":"A","tries":1e9}'), 'A'), true);
 });
+
+Deno.test('a lecture recording in flight blocks the reload on any route and at any moment', () => {
+  const decision = decideUpdate({
+    isUpdatePending: true,
+    enabled: true,
+    moment: 'resumed',
+    pathname: '/lecture/abc',
+    alreadyAppliedThisSession: false,
+    lectureWorkInFlight: true,
+  });
+  assertEquals(decision, { apply: false, reason: 'recording-in-flight' });
+  assertEquals(decideUpdate({
+    isUpdatePending: true, enabled: true, moment: 'cold-start', pathname: '/(tabs)',
+    alreadyAppliedThisSession: false, lectureWorkInFlight: false,
+  }).apply, true);
+});

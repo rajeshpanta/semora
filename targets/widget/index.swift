@@ -569,5 +569,6 @@ struct SemoraWidgetBundle: WidgetBundle {
   var body: some Widget {
     SemoraTodayWidget()
     SemoraDueThisWeekWidget()
+    LectureRecordingLiveActivity()
   }
 }

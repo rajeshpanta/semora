@@ -170,6 +170,32 @@ Deno.test('audio no snapshot mentions is recovered from the directory', () => {
   assertEquals(recovered.contentIdentity, null);
 });
 
+Deno.test('for the lecture being recorded, unknown files are left to the recorder; vanished ones are still noticed', () => {
+  const journal = upsertPart(upsertPart(emptyJournal('u1', 'L1'), part(0)), part(1));
+  // seg_002 was just renamed into place and the recorder has not journaled it yet
+  const reconciled = reconcileWithFiles(journal, ['seg_000.m4a', 'seg_002.m4a'], 5_000, { addUnknownFiles: false });
+  assertEquals(reconciled.parts.map((p) => p.seq), [0, 1]);
+  assertEquals(reconciled.parts[1].state, 'quarantined');
+});
+
+Deno.test('a later write never moves a part backwards', () => {
+  // The queue found the file first and already delivered it…
+  let journal = upsertPart(emptyJournal('u1', 'L1'), part(3, { state: 'server_received', serverSegmentId: 'row-3', attemptCount: 2, duration: 0, firstSeenAt: 100 }));
+  // …then the recorder files it as freshly saved, with the real length.
+  journal = upsertPart(journal, part(3, { state: 'saved_locally', duration: 118, hasGap: true, byteLength: 4096 }));
+  const p = journal.parts[0];
+  assertEquals(p.state, 'server_received');
+  assertEquals(p.serverSegmentId, 'row-3');
+  assertEquals(p.attemptCount, 2);
+  assertEquals(p.duration, 118);
+  assertEquals(p.hasGap, true);
+  assertEquals(p.byteLength, 4096);
+  assertEquals(p.firstSeenAt, 100);
+  // Forwards is still fine.
+  journal = upsertPart(journal, part(3, { state: 'transcribed' }));
+  assertEquals(journal.parts[0].state, 'transcribed');
+});
+
 Deno.test('a part whose file has gone is quarantined, not forgotten', () => {
   const journal = upsertPart(upsertPart(emptyJournal('u1', 'L1'), part(0)), part(1));
   const reconciled = reconcileWithFiles(journal, ['seg_000.m4a']);

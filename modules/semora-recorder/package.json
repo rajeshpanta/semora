@@ -1,0 +1,8 @@
+{
+  "name": "semora-recorder",
+  "version": "1.0.0",
+  "description": "Semora's lecture recorder: one continuous microphone session, chunked to disk, with Live Activity controls.",
+  "main": "index.ts",
+  "private": true,
+  "platforms": ["ios", "android"]
+}

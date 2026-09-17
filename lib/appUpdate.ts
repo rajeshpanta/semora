@@ -68,7 +68,8 @@ export interface UpdateDecision {
     | 'kill-switch-off'
     | 'protected-route'
     | 'unsafe-moment'
-    | 'already-applied';
+    | 'already-applied'
+    | 'recording-in-flight';
 }
 
 /**
@@ -86,8 +87,18 @@ export function decideUpdate(input: {
   moment: UpdateMoment;
   pathname?: string | null;
   alreadyAppliedThisSession: boolean;
+  /**
+   * A lecture is being recorded, committed, or its audio is being sent.
+   *
+   * The route rule above protects only the recorder screen, and the recording
+   * no longer lives there: a student who opened a notification mid-lecture was
+   * on another screen when the next foreground reloaded the app and ended the
+   * recording. This asks the recording itself.
+   */
+  lectureWorkInFlight?: boolean;
 }): UpdateDecision {
   if (input.alreadyAppliedThisSession) return { apply: false, reason: 'already-applied' };
+  if (input.lectureWorkInFlight) return { apply: false, reason: 'recording-in-flight' };
   if (!input.enabled) return { apply: false, reason: 'kill-switch-off' };
   if (!input.isUpdatePending) return { apply: false, reason: 'no-update-pending' };
   if (input.moment === 'mid-session') return { apply: false, reason: 'unsafe-moment' };

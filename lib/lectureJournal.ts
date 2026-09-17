@@ -74,6 +74,15 @@ export interface JournalPart {
   serverSegmentId: string | null;
   lastAcknowledgment: string | null;
   lastFailureStage: LectureStage | null;
+  /**
+   * When the queue first knew about this part (epoch ms). The 7-day give-up is
+   * counted from here, never from the file's age: a part found late has only
+   * just started being delivered. Optional because journals written before it
+   * existed do not carry it; a missing value is filled in on the next pass.
+   */
+  firstSeenAt?: number | null;
+  /** The server gave up on this part for good (147); a manual retry does not resend it. */
+  writtenOff?: boolean;
 }
 
 export interface LectureJournal {
@@ -92,6 +101,21 @@ export interface LectureJournal {
   stopIntent: boolean;
   discardIntent: boolean;
   parts: JournalPart[];
+  /** When capture started (epoch ms). Optional: absent in older journals. */
+  startedAtMs?: number | null;
+  /**
+   * Whether the server has been told the Stop count. false = still to send
+   * (the phone was offline at Stop); undefined = a journal from before this
+   * existed, where the old recorder sent it itself.
+   */
+  stopDeclared?: boolean;
+  /**
+   * "Mark important" taps, in seconds of captured audio (145). Kept here
+   * because a classroom is often offline: the queue sends them when it can.
+   * marksSynced false = the server does not have the latest list yet.
+   */
+  importantMarks?: number[];
+  marksSynced?: boolean;
 }
 
 export interface JournalFs {
@@ -230,8 +254,19 @@ export async function writeJournal(
  * about them that is known, and everything else is left unknown rather than
  * invented. A part whose file has vanished is NOT deleted from the journal —
  * that is a fact worth keeping, and quarantining it says so.
+ *
+ * `addUnknownFiles: false` keeps the vanished-file half only. For the lecture
+ * being recorded RIGHT NOW the recorder itself journals each part a moment
+ * after renaming its file into place, and a scan that lands in that window
+ * would register the part as a 0-second unknown first.
  */
-export function reconcileWithFiles(journal: LectureJournal, filenames: string[]): LectureJournal {
+export function reconcileWithFiles(
+  journal: LectureJournal,
+  filenames: string[],
+  now: number | null = null,
+  options: { addUnknownFiles?: boolean } = {},
+): LectureJournal {
+  const addUnknownFiles = options.addUnknownFiles ?? true;
   const onDisk = new Map<number, string>();
   for (const name of filenames) {
     const seq = segmentSeqFromFilename(name);
@@ -239,7 +274,9 @@ export function reconcileWithFiles(journal: LectureJournal, filenames: string[])
   }
 
   const parts = journal.parts.map((part) => {
-    if (onDisk.has(part.seq)) return part;
+    if (onDisk.has(part.seq)) {
+      return part.firstSeenAt == null && now !== null ? { ...part, firstSeenAt: now } : part;
+    }
     // Already handed over: the file is meant to be gone.
     if (part.state === 'server_received' || part.state === 'transcribed') return part;
     return { ...part, state: 'quarantined' as PartState, lastFailureStage: 'local_commit' as LectureStage };
@@ -247,7 +284,7 @@ export function reconcileWithFiles(journal: LectureJournal, filenames: string[])
 
   const known = new Set(parts.map((p) => p.seq));
   for (const [seq, name] of [...onDisk].sort((a, b) => a[0] - b[0])) {
-    if (known.has(seq)) continue;
+    if (known.has(seq) || !addUnknownFiles) continue;
     parts.push({
       seq,
       relativeFilePath: name,
@@ -261,6 +298,7 @@ export function reconcileWithFiles(journal: LectureJournal, filenames: string[])
       serverSegmentId: null,
       lastAcknowledgment: null,
       lastFailureStage: null,
+      firstSeenAt: now,
     });
   }
 
@@ -307,8 +345,44 @@ export function withInterruptedCapture(journal: LectureJournal): LectureJournal 
   return { ...journal, captureState: 'interrupted', activeCaptureUri: null };
 }
 
+/** How far along a part is; a later write never moves one backwards. */
+const PART_STATE_RANK: Record<PartState, number> = {
+  saved_locally: 0,
+  queued: 1,
+  transferring: 2,
+  awaiting_ack: 3,
+  server_received: 4,
+  transcribed: 5,
+  // Quarantined is a verdict, not progress: an entry written over it may
+  // restore it to saved_locally (the manual retry does exactly that).
+  quarantined: 0,
+};
+
+/**
+ * Add or refresh a part.
+ *
+ * The recorder writes each part as saved_locally the moment its file is
+ * closed. If the queue had ALREADY moved that part on (the directory scan
+ * found the file first and uploaded it), the recorder's later write keeps the
+ * queue's progress — state, server id, attempts — and only refreshes what the
+ * recorder knows better: how long the part is and whether it has a gap.
+ */
 export function upsertPart(journal: LectureJournal, part: JournalPart): LectureJournal {
-  const parts = journal.parts.filter((p) => p.seq !== part.seq).concat(part);
+  const existing = journal.parts.find((p) => p.seq === part.seq);
+  let merged: JournalPart = part.firstSeenAt == null && existing?.firstSeenAt != null
+    ? { ...part, firstSeenAt: existing.firstSeenAt }
+    : part;
+  if (existing && PART_STATE_RANK[existing.state] > PART_STATE_RANK[part.state]) {
+    merged = {
+      ...existing,
+      duration: part.duration || existing.duration,
+      hasGap: part.hasGap || existing.hasGap,
+      byteLength: part.byteLength ?? existing.byteLength,
+      contentIdentity: part.contentIdentity ?? existing.contentIdentity,
+      firstSeenAt: merged.firstSeenAt ?? existing.firstSeenAt,
+    };
+  }
+  const parts = journal.parts.filter((p) => p.seq !== part.seq).concat(merged);
   parts.sort((a, b) => a.seq - b.seq);
   return { ...journal, parts };
 }

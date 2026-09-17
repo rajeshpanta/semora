@@ -1,9 +1,13 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import {
-  AiTask, callGroqTranscription, groqAudioSeconds, groqTranscriptText,
+  AiTask, callGroqTranscription, groqAudioSeconds,
   isProviderConfigured, logAiCall, modelFor, providerFor,
 } from '../_shared/ai.ts';
+import {
+  appBuildFrom, buildPromptHint, clientTooOld, decideLectureLanguage, isDailyQuotaError, keptTranscript,
+  requestLanguage, shouldReprobeLanguage, storeNameFor, termsFromNotes, transcriptTimings, type LectureLanguage,
+} from '../_shared/lectureTranscript.ts';
 import { withRequestLogging, errorFields } from '../_shared/log.ts';
 
 // ── Lecture recording pipeline ──────────────────────────────────────────────
@@ -47,11 +51,87 @@ const GLOBAL_DAILY_AUDIO_SECONDS = (() => {
   return Number.isFinite(raw) && raw > 0 ? raw : 25_000;
 })();
 
-/** Longest single recording, in seconds. Mirrors MAX_RECORDING_SECONDS on the client. */
-const MAX_LECTURE_SECONDS = 90 * 60;
+/**
+ * Longest single recording, in seconds. The app reads this from `start`'s
+ * response, so raising it needs no app release.
+ *
+ * Defaults to 90 minutes. LECTURE_MAX_SECONDS raises it (up to 4 hours) — do
+ * that together with LECTURE_DAILY_AUDIO_SECONDS and a paid provider tier,
+ * because every recording reserves this much of the shared daily pool when it
+ * starts. Old app versions keep their own 90-minute cap regardless.
+ */
+const MAX_LECTURE_SECONDS = (() => {
+  const raw = parseInt(Deno.env.get('LECTURE_MAX_SECONDS') ?? '', 10);
+  return Number.isFinite(raw) ? Math.min(Math.max(raw, 90 * 60), 4 * 60 * 60) : 90 * 60;
+})();
 
-/** A claim older than this is assumed dead and may be taken over. */
-const STALE_CLAIM_MS = 10 * 60 * 1000;
+/**
+ * A claim older than this is assumed dead and may be taken over.
+ *
+ * 5 minutes, not the 10 it was (142): an edge invocation cannot outlive 150
+ * seconds, and every provider call now runs inside TRANSCRIBE_DEADLINE_MS, so a
+ * claim this old has nobody behind it. Mirrors lecture_take_over_arrived_audio.
+ */
+const STALE_CLAIM_MS = 5 * 60 * 1000;
+
+/** The whole transcription call, retries included, must end inside the isolate's 150s. */
+const TRANSCRIBE_DEADLINE_MS = 100_000;
+
+/**
+ * When a provider failure stops being "try again later".
+ *
+ * A 5xx, a timeout or a network error says nothing about the audio, so the part
+ * stays reclaimable and the arrival job retries it (142). Only a part that has
+ * failed this many times across this long is given up on — a genuine outage
+ * lasts hours, not days, and giving up sooner is how audio used to be deleted
+ * during one.
+ */
+const PROVIDER_GIVE_UP_FAILURES = 6;
+const PROVIDER_GIVE_UP_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * Oldest app allowed to start a recording.
+ *
+ * LECTURE_MIN_VERSION (e.g. "1.15") is compared with the version apps from 1.15
+ * send in x-semora-app-version; LECTURE_MIN_BUILD with the build number older
+ * apps carry in their iOS user agent. Both unset means every app may record —
+ * the default, and the only safe one until a version that records reliably is
+ * live in the App Store. An app that cannot be identified is always allowed.
+ */
+const MIN_RECORDING_VERSION = Deno.env.get('LECTURE_MIN_VERSION')?.trim() || null;
+const MIN_RECORDING_BUILD = (() => {
+  const raw = parseInt(Deno.env.get('LECTURE_MIN_BUILD') ?? '', 10);
+  return Number.isFinite(raw) && raw > 0 ? raw : null;
+})();
+
+/**
+ * Remote kill switches (plan Phase 5). Each new behaviour can be turned off by
+ * setting its secret to "off" — no app release, no redeploy of code:
+ *   LECTURE_SILENCE_FILTER=off     keep every segment Whisper returns (pre-142)
+ *   LECTURE_AUTO_LANGUAGE=off      transcribe in the student's app language (pre-142)
+ *   LECTURE_COURSE_VOCABULARY=off  prompt with the title and previous tail only (pre-145)
+ *   LECTURE_BACKGROUND_UPLOADS=off the app uploads only while it is open
+ * (LECTURE_SECTIONED_NOTES and LECTURE_NOTES live in lecture-study-kit.)
+ *
+ * And two that stop the feature itself (147, audit): for a provider outage, a
+ * billing incident, or a bad build. Both read the same way; unset means on.
+ *   LECTURE_RECORDING=off  `start` answers the localized NOT_CONFIGURED 503 —
+ *                          the message every shipped app already shows — before
+ *                          anything is reserved and before the mic opens.
+ *                          Lectures already under way keep uploading and
+ *                          transcribing; only new ones are refused.
+ *   LECTURE_RECOVERY=off   the arrival job's `recover` calls answer
+ *                          {ok, status:'paused'} without spending or refunding
+ *                          an attempt, so nothing is written off while the
+ *                          provider is down. Parts stay where they are.
+ */
+const switchOn = (name: string) => (Deno.env.get(name) ?? '').trim().toLowerCase() !== 'off';
+const SILENCE_FILTER = switchOn('LECTURE_SILENCE_FILTER');
+const AUTO_LANGUAGE = switchOn('LECTURE_AUTO_LANGUAGE');
+const COURSE_VOCABULARY = switchOn('LECTURE_COURSE_VOCABULARY');
+const BACKGROUND_UPLOADS = switchOn('LECTURE_BACKGROUND_UPLOADS');
+const RECORDING_ON = switchOn('LECTURE_RECORDING');
+const RECOVERY_ON = switchOn('LECTURE_RECOVERY');
 
 /**
  * A segment that has not reached a terminal state in this long is written off.
@@ -90,15 +170,23 @@ const STALE_RESERVATION_MINUTES = 180;
  */
 const MAX_RECOVERY_ATTEMPTS = 3;
 
-/** Segment audio never exceeds ~1.2 MB; this is a sanity ceiling, not a budget. */
-const MAX_SEGMENT_BYTES = 12 * 1024 * 1024;
+/**
+ * Sanity ceiling on one part's audio.
+ *
+ * A normal part is ~1.2 MB (5 minutes at 32 kbps). 24 MiB (142, was 12) because
+ * an app that cannot change parts while the phone is locked records the whole
+ * locked stretch as one part — up to 90 minutes, ~21.6 MB — and refusing it
+ * would throw away exactly the audio that fix exists to keep. Stays under the
+ * provider's 25 MB free-tier file limit.
+ */
+const MAX_SEGMENT_BYTES = 24_000_000;
 
 /** Tail of the previous segment fed to the model to repair the boundary word. */
 const PROMPT_TAIL_CHARS = 400;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-semora-app-version',
 };
 
 function jsonResponse(body: unknown, status: number) {
@@ -138,6 +226,12 @@ const MSG = {
     en: 'Lecture transcription is busy right now. Your recording is saved — try again in a few minutes.',
     es: 'La transcripción de clases está saturada. Tu grabación está guardada; inténtalo en unos minutos.',
   },
+  // 147: a spent DAILY quota is not "a few minutes". The arrival job retries
+  // the part on its own once the quota resets, so the student need do nothing.
+  quotaDay: {
+    en: "Today's transcription capacity is used up — your recording is saved and will be transcribed automatically.",
+    es: 'La capacidad de transcripción de hoy se agotó. Tu grabación está guardada y se transcribirá automáticamente.',
+  },
   noAudio: {
     en: 'That part of the recording is missing its audio and cannot be transcribed.',
     es: 'A esa parte de la grabación le falta el audio y no se puede transcribir.',
@@ -147,16 +241,33 @@ const MSG = {
     es: 'Ya tienes una clase procesándose. Espera a que termine antes de empezar otra.',
   },
   tooLong: {
-    en: 'This recording has reached its 90-minute limit.',
-    es: 'Esta grabación alcanzó su límite de 90 minutos.',
+    en: `This recording has reached its ${MAX_LECTURE_SECONDS / 60}-minute limit.`,
+    es: `Esta grabación alcanzó su límite de ${MAX_LECTURE_SECONDS / 60} minutos.`,
   },
   notFound: {
     en: 'Lecture not found',
     es: 'No se encontró esta clase.',
   },
+  // Shown by every app version: they all display the server's message when a
+  // recording cannot start. 'App Store' is replaced by the store the app came
+  // from (updateRequiredMessage) — Android users have no App Store to go to.
+  updateRequired: {
+    en: 'Please update Semora from the App Store to record lectures. The new version keeps recording while your phone is locked.',
+    es: 'Actualiza Semora desde la App Store para grabar clases. La nueva versión sigue grabando con el teléfono bloqueado.',
+  },
 } as const;
 
 const t = (key: keyof typeof MSG, locale: Locale) => MSG[key][locale];
+
+/** 147: the update prompt names the Play Store when the user agent says Android. */
+const updateRequiredMessage = (locale: Locale, userAgent: string | null, platform: string | null) =>
+  t('updateRequired', locale).replace('App Store', storeNameFor(userAgent, platform));
+
+/** Mirrors lecture_transcript_words (138): the words, without gap markers or layout. */
+const GAP_MARKERS = /\[(Part of this recording could not be transcribed|Falta una parte de la grabación|Recording resumed after an interruption|La grabación se reanudó tras una interrupción)\.\]/g;
+function transcriptWords(text: string): string {
+  return text.replace(GAP_MARKERS, ' ').replace(/\s+/g, ' ').trim();
+}
 
 serve(withRequestLogging('lecture-transcribe', async (req, log) => {
   if (req.method === 'OPTIONS') {
@@ -262,7 +373,13 @@ serve(withRequestLogging('lecture-transcribe', async (req, log) => {
     }
     const isPro = proResult === true;
 
-    if (action === 'start') return await handleStart(adminClient, userId, body, locale, isPro, log);
+    if (action === 'start') {
+      return await handleStart(adminClient, userId, body, locale, isPro, log, {
+        versionHeader: req.headers.get('x-semora-app-version'),
+        userAgent: req.headers.get('user-agent'),
+        platform: req.headers.get('x-semora-platform'),
+      });
+    }
     if (action === 'segment') return await handleSegment(adminClient, userId, body, locale, isPro, log);
     if (action === 'finalize') return await handleFinalize(adminClient, userId, body, locale, log);
     if (action === 'cancel') return await handleCancel(adminClient, userId, body, locale, log);
@@ -346,9 +463,34 @@ async function handleStart(
   locale: Locale,
   isPro: boolean,
   log: any,
+  client: { versionHeader: string | null; userAgent: string | null; platform: string | null },
 ): Promise<Response> {
   const rawTitle = typeof body.title === 'string' ? body.title.trim().slice(0, 120) : '';
   const courseId = typeof body.courseId === 'string' && body.courseId ? body.courseId : null;
+
+  // 147: recording switched off (LECTURE_RECORDING=off). The same answer as a
+  // missing provider key, which every shipped app words as "not available
+  // right now" — before any reservation, before the microphone.
+  if (!RECORDING_ON) {
+    log.warn('recording_switched_off');
+    return jsonResponse({ error: t('notConfigured', locale), code: 'NOT_CONFIGURED' }, 503);
+  }
+
+  // An app too old to record reliably is asked to update BEFORE anything is
+  // reserved. Every shipped version shows this message as-is. Unidentifiable
+  // clients are always let through: a wrong guess here blocks a student from
+  // recording a class, which is worse than an older recorder.
+  const build = appBuildFrom(client.versionHeader, client.userAgent);
+  const tooOld = clientTooOld({
+    versionHeader: client.versionHeader,
+    userAgent: client.userAgent,
+    minVersion: MIN_RECORDING_VERSION,
+    minBuild: MIN_RECORDING_BUILD,
+  });
+  if (tooOld === true) {
+    log.info('recording_app_too_old', { build, version: client.versionHeader });
+    return jsonResponse({ error: updateRequiredMessage(locale, client.userAgent, client.platform), code: 'UPDATE_REQUIRED' }, 426);
+  }
 
   if (!isPro) {
     const spent = await freeActionSpent(admin, userId);
@@ -359,6 +501,23 @@ async function handleStart(
     if (spent) {
       log.info('free_action_exhausted');
       return jsonResponse({ error: t('freeUsed', locale), code: 'FREE_LECTURE_USED' }, 402);
+    }
+    // The one free lecture is reserved the moment it STARTS, not when its
+    // first part is charged (audit): a second lecture started while the first
+    // was still on the phone used to be authorised, then refused part by part
+    // once the first charged — and sat "Uploading" forever with its audio.
+    const { data: freeInFlight } = await admin
+      .from('lecture_recordings')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('source', 'recording')
+      .in('status', ['recording', 'uploading', 'transcribing'])
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if ((freeInFlight ?? []).length > 0) {
+      log.info('free_lecture_in_flight');
+      // The lecture's id travels with the refusal so the app can open it.
+      return jsonResponse({ error: t('tooManyInFlight', locale), code: 'TOO_MANY_IN_FLIGHT', lectureId: freeInFlight![0].id }, 409);
     }
   }
 
@@ -406,7 +565,15 @@ async function handleStart(
   }
   if ((inFlight ?? 0) >= MAX_CONCURRENT_LECTURES) {
     log.warn('too_many_in_flight', { in_flight: inFlight });
-    return jsonResponse({ error: t('tooManyInFlight', locale), code: 'TOO_MANY_IN_FLIGHT' }, 409);
+    const { data: newest } = await admin
+      .from('lecture_recordings')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('source', 'recording')
+      .in('status', ['recording', 'uploading', 'transcribing'])
+      .order('created_at', { ascending: false })
+      .limit(1);
+    return jsonResponse({ error: t('tooManyInFlight', locale), code: 'TOO_MANY_IN_FLIGHT', lectureId: newest?.[0]?.id ?? null }, 409);
   }
 
   // Create the row first, then reserve against it. The reservation is stamped
@@ -419,6 +586,10 @@ async function handleStart(
       course_id: courseId,
       title: rawTitle || (locale === 'es' ? 'Clase' : 'Lecture'),
       status: 'recording',
+      // 142: a Pro lecture may finish if Pro lapses mid-lecture. Server-owned;
+      // no client can write it.
+      authorized_pro_at: isPro ? new Date().toISOString() : null,
+      app_build: client.versionHeader?.slice(0, 32) ?? (build !== null ? String(build) : null),
     })
     .select('id')
     .single();
@@ -445,9 +616,28 @@ async function handleStart(
     return jsonResponse({ error: t('atCapacity', locale), code: 'AT_CAPACITY' }, 503);
   }
 
-  log.info('lecture_started', { lecture_id: lecture.id, has_course: Boolean(courseId), is_pro: isPro });
+  // Another phone on this account recording right now? Two devices recording
+  // the same class charge twice and split the audio; the app warns about it
+  // rather than refusing (a student may genuinely be recording two sections).
+  const liveSince = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+  const { count: otherLive } = await admin
+    .from('lecture_recordings')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .neq('id', lecture.id)
+    .in('capture_state', ['recording', 'paused'])
+    .gt('last_heartbeat_at', liveSince)
+    .in('status', ['recording', 'uploading', 'transcribing']);
+
+  log.info('lecture_started', { lecture_id: lecture.id, has_course: Boolean(courseId), is_pro: isPro, build });
   return jsonResponse(
-    { lectureId: lecture.id, maxSeconds: MAX_LECTURE_SECONDS, reservedSeconds: MAX_LECTURE_SECONDS },
+    {
+      lectureId: lecture.id,
+      maxSeconds: MAX_LECTURE_SECONDS,
+      reservedSeconds: MAX_LECTURE_SECONDS,
+      otherLiveRecording: (otherLive ?? 0) > 0,
+      backgroundUploads: BACKGROUND_UPLOADS,
+    },
     200,
   );
 }
@@ -573,7 +763,7 @@ async function handleSegment(
 
   const { data: lecture, error: lectureErr } = await admin
     .from('lecture_recordings')
-    .select('id, user_id, course_id, title, segment_count, status')
+    .select('id, user_id, course_id, title, segment_count, status, authorized_pro_at, language')
     .eq('id', lectureId)
     .eq('user_id', userId)
     .maybeSingle();
@@ -582,6 +772,12 @@ async function handleSegment(
     return jsonResponse({ error: t('transient', locale) }, 503);
   }
   if (!lecture) return jsonResponse({ error: 'Lecture not found' }, 404);
+
+  // 142: a lecture authorized while the student was Pro finishes even if Pro
+  // lapses mid-lecture. The stamp is written only by `start`, only after the
+  // server itself confirmed Pro, and no client can write it — so this is not a
+  // way around the free allowance, and an unstamped lecture gets no exemption.
+  const authorizedAsPro = Boolean(lecture.authorized_pro_at);
 
   // Re-check the free allowance here too, not just at start: `start` may have
   // run days ago, or a second lecture may have completed since. Excluding this
@@ -603,13 +799,17 @@ async function handleSegment(
   // added is the case that must not pass — a free user who starts a second
   // lecture before the first charges, kills the app mid-upload, and collects a
   // second free transcription twenty minutes later.
-  if (!isPro) {
+  if (!isPro && !authorizedAsPro) {
     const used = await chargedLectureCount(admin, userId, lectureId);
     if (used === null) {
       log.error('usage_count_failed');
       return jsonResponse({ error: t('transient', locale) }, 503);
     }
     if (used >= FREE_LECTURE_ALLOWANCE) {
+      // Audit: refusing part after part left a lecture "Uploading" forever with
+      // its audio kept. The lecture fails once, and its parts are handed to
+      // retention (attempts spent, so nothing dispatches them again).
+      await failLectureForAllowance(admin, lectureId, 'FREE_LECTURE_USED', log);
       return jsonResponse({ error: t('freeUsed', locale), code: 'FREE_LECTURE_USED' }, 402);
     }
   }
@@ -640,7 +840,7 @@ async function handleSegment(
     .eq('lecture_id', lectureId)
     .eq('user_id', userId)
     .or(claimable)
-    .select('id, seq, storage_path, seconds')
+    .select('id, seq, storage_path, seconds, provider_failures, first_provider_failure_at')
     .maybeSingle();
 
   if (claimErr) {
@@ -682,8 +882,11 @@ async function handleSegment(
   const alreadyTranscribed = (doneSegments ?? [])
     .reduce((sum: number, s: any) => sum + (s.seconds || 0), 0);
   if (alreadyTranscribed >= MAX_LECTURE_SECONDS) {
-    await admin.from('lecture_segments').update({ status: 'failed' }).eq('id', segmentId);
+    // Beyond the limit: this part and any later ones are given to retention
+    // and the lecture is finished from what was transcribed.
+    await admin.from('lecture_segments').update({ status: 'failed', recovery_attempts: 3 }).eq('id', segmentId);
     log.warn('lecture_length_cap_hit', { lecture_id: lectureId, seconds: alreadyTranscribed });
+    await maybeFinalize(admin, userId, lecture, locale, log).catch(() => {});
     return jsonResponse({ error: t('tooLong', locale), code: 'LECTURE_TOO_LONG' }, 413);
   }
 
@@ -735,20 +938,39 @@ async function handleSegment(
     .eq('id', lectureId)
     .in('status', ['recording', 'uploading', 'transcribing']);
 
-  // Previous segment's tail keeps terminology stable across the boundary.
-  let promptHint = typeof lecture.title === 'string' ? lecture.title.slice(0, 120) : '';
+  // Previous text's tail keeps terminology stable across the boundary.
+  //
+  // 142: the nearest EARLIER part that has text, not strictly seq - 1. When the
+  // part before this one is missing, silent or still in flight, the hint used to
+  // be dropped entirely, and the part after every gap lost its terminology.
+  let tail = '';
   if (claimed.seq > 0) {
     const { data: prev } = await admin
       .from('lecture_segments')
       .select('transcript')
       .eq('lecture_id', lectureId)
-      .eq('seq', claimed.seq - 1)
+      .eq('status', 'done')
+      .lt('seq', claimed.seq)
+      .neq('transcript', '')
+      .order('seq', { ascending: false })
+      .limit(1)
       .maybeSingle();
-    const tail = typeof prev?.transcript === 'string'
+    tail = typeof prev?.transcript === 'string'
       ? prev.transcript.slice(-PROMPT_TAIL_CHARS)
       : '';
-    if (tail) promptHint = `${promptHint}\n${tail}`.trim();
   }
+  // 145: and the course's own vocabulary. Best effort — a lookup that fails
+  // costs accuracy, never the part.
+  const vocabulary = COURSE_VOCABULARY
+    ? await courseVocabulary(admin, userId, lecture.course_id ?? null, lectureId).catch(() => null)
+    : null;
+  const promptHint = buildPromptHint({
+    title: typeof lecture.title === 'string' ? lecture.title : null,
+    courseName: vocabulary?.courseName,
+    instructor: vocabulary?.instructor,
+    terms: vocabulary?.terms,
+    tail,
+  });
 
   const { data: file, error: dlErr } = await admin.storage
     .from('lectures')
@@ -766,45 +988,172 @@ async function handleSegment(
     return jsonResponse({ error: t('noAudio', locale), code: 'SEGMENT_NO_AUDIO' }, 422);
   }
 
-  const result = await callGroqTranscription({
+  // The lecture's own language once it is known; until then the provider
+  // detects it (142). The app's UI language is NOT the language of the class.
+  const lectureLanguage = lecture.language as LectureLanguage | 'mixed' | null;
+  const lockedLanguage = requestLanguage(lectureLanguage);
+  // 147: the lock is not permanent. Every fourth part is sent without it, so a
+  // class that changes language is heard doing so; two such parts in another
+  // language make the lecture 'mixed' (decideLectureLanguage). Not with the
+  // auto-language switch off, where every part is forced to the app language.
+  const reprobing = AUTO_LANGUAGE && Boolean(lockedLanguage) && shouldReprobeLanguage(claimed.seq);
+  // With LECTURE_AUTO_LANGUAGE=off, the student's app language, as before 142.
+  const forcedRequestLanguage = reprobing ? undefined : (lockedLanguage ?? (AUTO_LANGUAGE ? undefined : locale));
+  const deadline = { deadlineMs: TRANSCRIBE_DEADLINE_MS, attemptTimeoutMs: 90_000 };
+  let result = await callGroqTranscription({
     audio: bytes,
     fileName: `seg_${String(claimed.seq).padStart(3, '0')}.m4a`,
     mimeType: 'audio/m4a',
-    language: locale,
+    language: forcedRequestLanguage,
     promptHint,
     label: 'lecture-segment',
+    deadline,
   });
+  let kept = result.ok ? keptTranscript(result.data, { filter: SILENCE_FILTER }) : null;
+
+  // Detection that lands on neither English nor Spanish, on a part with real
+  // speech, is far more often a misheard quiet start than a class in Welsh.
+  // One retry in the student's own language, inside the same time budget.
+  // …but not for a class in a language Semora does not write notes in: after
+  // two parts heard as something else, the retry stops (audit: a French class
+  // paid for every part twice, forever).
+  const heardOther = result.ok && kept && !forcedRequestLanguage && lectureLanguage !== 'mixed' &&
+    kept.language === null && (kept.speechSeconds ?? 0) >= 5;
+  const otherCount = heardOther
+    ? ((await admin.from('lecture_segments').select('id', { count: 'exact', head: true })
+        .eq('lecture_id', lectureId).eq('detected_language', 'other')).count ?? 0)
+    : 0;
+  if (heardOther && otherCount >= 2) {
+    log.info('segment_language_other_kept', { segment_id: segmentId, detected: kept!.rawLanguage });
+  }
+  if (heardOther && otherCount < 2) {
+    const retry = await callGroqTranscription({
+      audio: bytes,
+      fileName: `seg_${String(claimed.seq).padStart(3, '0')}.m4a`,
+      mimeType: 'audio/m4a',
+      // 147: a re-probed part of a locked lecture retries in the lecture's language.
+      language: lockedLanguage ?? locale,
+      promptHint,
+      label: 'lecture-segment-language-retry',
+      deadline: { deadlineMs: Math.max(5_000, TRANSCRIBE_DEADLINE_MS - result.durationMs), attemptTimeoutMs: 90_000 },
+    });
+    // Usage: the call that is being replaced is counted here; whichever result
+    // is kept is counted once, below. A failed retry is counted as a failure.
+    await admin.rpc('lecture_count_transcription', {
+      p_seconds: retry.ok ? Math.round(groqAudioSeconds(result.data) ?? 0) : 0, p_failed: !retry.ok,
+    }).then(undefined, () => {});
+    if (retry.ok) {
+      log.info('segment_language_retried', { segment_id: segmentId, detected: kept?.rawLanguage ?? null, retried_as: locale });
+      result = retry;
+      kept = { ...keptTranscript(retry.data, { filter: SILENCE_FILTER }), language: null };
+    }
+  }
+
+  // 147: a re-probe heard the OTHER supported language. The disagreement counts
+  // toward 'mixed' (below), but until a second one confirms it, this part's
+  // TEXT is taken in the lecture's language — a quiet start misheard as the
+  // other language used to be written as nonsense.
+  if (
+    reprobing && result.ok && kept && lockedLanguage && kept.language &&
+    kept.language !== lockedLanguage && lectureLanguage !== 'mixed'
+  ) {
+    const heardAs = kept.language;
+    const rerun = await callGroqTranscription({
+      audio: bytes,
+      fileName: `seg_${String(claimed.seq).padStart(3, '0')}.m4a`,
+      mimeType: 'audio/m4a',
+      language: lockedLanguage,
+      promptHint,
+      label: 'lecture-segment-locked-rerun',
+      deadline: { deadlineMs: Math.max(5_000, TRANSCRIBE_DEADLINE_MS - result.durationMs), attemptTimeoutMs: 90_000 },
+    });
+    await admin.rpc('lecture_count_transcription', {
+      p_seconds: rerun.ok ? Math.round(groqAudioSeconds(result.data) ?? 0) : 0, p_failed: !rerun.ok,
+    }).then(undefined, () => {});
+    if (rerun.ok) {
+      log.info('segment_language_reprobe_disagreed', { segment_id: segmentId, heard: heardAs, kept_as: lockedLanguage });
+      result = rerun;
+      kept = { ...keptTranscript(rerun.data, { filter: SILENCE_FILTER }), language: heardAs };
+    }
+  }
 
   const model = modelFor(AiTask.transcription);
   const provider = providerFor(AiTask.transcription);
 
-  if (!result.ok) {
+  if (!result.ok || !kept) {
     const rateLimited = result.status === 429;
     await logAiCall(admin, userId, {
       task: AiTask.transcription,
       provider,
       model,
       status: rateLimited ? 'rate_limited' : 'failed',
-      errorCode: String(result.status),
+      errorCode: result.timedOut ? 'timeout' : String(result.status),
       // Groq's own words about the refusal, kept past the ~24h log retention.
       errorDetail: result.errorBody,
       durationMs: result.durationMs,
       attempts: result.attempts,
     });
+    await admin.rpc('lecture_count_transcription', { p_seconds: 0, p_failed: true })
+      .then(undefined, () => {});
 
     if (rateLimited) {
       // Leave the segment reclaimable so the client can retry later without
       // losing the audio, and do NOT charge the user's free lecture.
+      // first_provider_failure_at marks it as waiting on the provider, so the
+      // 30-minute write-off leaves it alone (review finding). provider_failures
+      // is NOT raised: a quota wait is not a failure. The sweep counts the part
+      // as in flight for PROVIDER_GIVE_UP_MS from that stamp (147); after that
+      // the lecture is finished from its done parts and this part keeps being
+      // retried by the arrival job, folding in when it succeeds.
       await admin.from('lecture_segments')
-        .update({ status: 'uploaded', claimed_at: null }).eq('id', segmentId);
+        .update({
+          status: 'uploaded', claimed_at: null,
+          first_provider_failure_at: claimed.first_provider_failure_at ?? new Date().toISOString(),
+        }).eq('id', segmentId);
+      // 147: a spent DAILY quota is worded as what it is — the provider says so
+      // in its refusal, or today's own ledger is at the cap — so the student
+      // is not told to try again in a few minutes for the rest of the day.
+      const dailyQuota = isDailyQuotaError(result.errorBody) || await dayCapacitySpent(admin);
+      if (dailyQuota) {
+        log.warn('provider_daily_quota_spent', { segment_id: segmentId });
+        return jsonResponse({ error: t('quotaDay', locale), code: 'PROVIDER_QUOTA_DAY' }, 429);
+      }
       log.warn('provider_rate_limited', { segment_id: segmentId });
       return jsonResponse({ error: t('quotaHit', locale), code: 'PROVIDER_BUSY' }, 429);
     }
 
-    // ONE bad segment must not cost the student the other 89 minutes. Mark just
-    // this chunk failed and let the finalizer assemble everything that did work,
-    // with a visible marker where the hole is. Only a lecture where NOTHING
-    // transcribed is a failed lecture — and maybeFinalize decides that.
+    // 142: A 5xx, a timeout or a lost connection says nothing about the audio.
+    // It used to mark the part failed on the spot; the arrival job then spent
+    // all three recovery attempts on the same outage and retention deleted the
+    // only copy. The part stays reclaimable, and only a failure that has lasted
+    // PROVIDER_GIVE_UP_MS across PROVIDER_GIVE_UP_FAILURES tries is final.
+    if (result.retryable) {
+      const failures = (claimed.provider_failures ?? 0) + 1;
+      const firstAt = claimed.first_provider_failure_at ?? new Date().toISOString();
+      const givingUp = failures >= PROVIDER_GIVE_UP_FAILURES &&
+        Date.now() - new Date(firstAt).getTime() >= PROVIDER_GIVE_UP_MS;
+      await admin.from('lecture_segments')
+        .update({
+          status: givingUp ? 'failed' : 'uploaded',
+          claimed_at: null,
+          provider_failures: failures,
+          first_provider_failure_at: firstAt,
+        })
+        .eq('id', segmentId);
+      if (!givingUp) {
+        log.warn('provider_unavailable_part_kept', {
+          segment_id: segmentId, status: result.status, timed_out: Boolean(result.timedOut), failures,
+        });
+        return jsonResponse({ error: t('quotaHit', locale), code: 'PROVIDER_BUSY' }, 503);
+      }
+      log.error('provider_unavailable_part_given_up', { segment_id: segmentId, failures });
+      return await maybeFinalize(admin, userId, lecture, locale, log);
+    }
+
+    // A refusal about this file itself (a 4xx other than 429). ONE bad segment
+    // must not cost the student the other 89 minutes: mark just this chunk
+    // failed and let the finalizer assemble everything that did work, with a
+    // visible marker where the hole is.
     await admin.from('lecture_segments').update({ status: 'failed' }).eq('id', segmentId);
     log.error('segment_transcription_failed', { segment_id: segmentId, status: result.status });
     return await maybeFinalize(admin, userId, lecture, locale, log);
@@ -813,7 +1162,10 @@ async function handleSegment(
   // An empty transcript is a VALID outcome, not a failure — five minutes of a
   // professor writing silently on a whiteboard genuinely contains no speech.
   // Storing '' keeps the segment 'done' so the lecture can finalize.
-  const text = groqTranscriptText(result.data) ?? '';
+  //
+  // 142: the text is what survives keptTranscript — silence and repetition
+  // loops removed — not the raw text, which invents words for empty rooms.
+  const text = kept.text;
   const providerSeconds = groqAudioSeconds(result.data);
 
   await logAiCall(admin, userId, {
@@ -824,6 +1176,23 @@ async function handleSegment(
     durationMs: result.durationMs,
     attempts: result.attempts,
   });
+  await admin.rpc('lecture_count_transcription', {
+    p_seconds: Math.round(providerSeconds ?? claimed.seconds ?? 0), p_failed: false,
+  }).then(undefined, () => {});
+
+  // Only a part with a real minute of speech, transcribed WITHOUT a forced
+  // language, says anything about the language: a forced request reports the
+  // language it was forced to, which would make a wrong lock permanent.
+  const forcedLanguage = Boolean(forcedRequestLanguage);
+  const timings = transcriptTimings(result.data, { filter: SILENCE_FILTER });
+  const detected = !forcedLanguage && kept.language && (kept.speechSeconds ?? 0) >= 60
+    ? kept.language
+    : (heardOther && (kept.speechSeconds ?? 0) >= 60 ? 'other' : null);
+  if (reprobing) {
+    log.info('segment_language_reprobed', {
+      segment_id: segmentId, seq: claimed.seq, locked: lockedLanguage, heard: detected,
+    });
+  }
 
   const { error: writeErr } = await admin
     .from('lecture_segments')
@@ -831,11 +1200,31 @@ async function handleSegment(
       transcript: text,
       status: 'done',
       seconds: providerSeconds !== null ? Math.round(providerSeconds) : claimed.seconds,
+      speech_seconds: kept.speechSeconds,
+      dropped_segments: kept.dropped,
+      detected_language: detected,
+      timings: timings.length ? timings : null,
     })
     .eq('id', segmentId);
   if (writeErr) {
     log.error('segment_write_failed', errorFields(writeErr));
     return jsonResponse({ error: t('transient', locale) }, 503);
+  }
+
+  if (detected && detected !== 'other' && lectureLanguage !== 'mixed') {
+    const { data: heard } = await admin
+      .from('lecture_segments')
+      .select('detected_language')
+      .eq('lecture_id', lectureId)
+      .in('detected_language', ['en', 'es']);
+    const next = decideLectureLanguage(
+      lectureLanguage,
+      ((heard ?? []) as { detected_language: LectureLanguage }[]).map((h) => h.detected_language),
+    );
+    if (next !== lectureLanguage) {
+      await admin.from('lecture_recordings').update({ language: next }).eq('id', lectureId);
+      log.info('lecture_language_set', { lecture_id: lectureId, language: next });
+    }
   }
 
   // CHARGE THE LECTURE HERE — at the first segment we actually paid a provider
@@ -848,15 +1237,16 @@ async function handleSegment(
   // consumed by the call that costs money.
   //
   // The partial unique index on (user_id, lecture_id) makes this safe to
-  // attempt on every segment: the first wins, the rest collide and are ignored,
-  // so one lecture is charged exactly once.
-  const { error: chargeErr } = await admin.from('lecture_usage_log').insert({
-    user_id: userId,
-    lecture_id: lectureId,
-    audio_seconds: Math.round(providerSeconds ?? claimed.seconds ?? 0),
-    status: 'success',
+  // attempt on every segment: the first wins and the rest are no-ops, so one
+  // lecture is charged exactly once. 142: through lecture_charge_usage, which
+  // also re-charges a lecture that was refunded for holding no speech the
+  // moment speech arrives — a refund must never become a free lecture.
+  const { error: chargeErr } = await admin.rpc('lecture_charge_usage', {
+    p_user_id: userId,
+    p_lecture_id: lectureId,
+    p_seconds: Math.round(providerSeconds ?? claimed.seconds ?? 0),
   });
-  if (chargeErr && (chargeErr as any).code !== '23505') {
+  if (chargeErr) {
     log.warn('usage_charge_failed', errorFields(chargeErr));
   }
 
@@ -865,6 +1255,8 @@ async function handleSegment(
     seq: claimed.seq,
     chars: text.length,
     audio_seconds: providerSeconds,
+    speech_seconds: kept.speechSeconds,
+    dropped_segments: kept.dropped,
   });
 
   return await maybeFinalize(admin, userId, lecture, locale, log);
@@ -901,6 +1293,15 @@ async function handleRecover(
   const segmentId = typeof body.segmentId === 'string' ? body.segmentId : null;
   if (!segmentId) return jsonResponse({ error: 'segmentId is required' }, 400);
 
+  // 147: recovery switched off (LECTURE_RECOVERY=off). Nothing is spent,
+  // nothing is refunded, nothing is written off: the part waits where it is
+  // until the switch is cleared. (The arrival job's dispatched_at stamp still
+  // spaces its calls ten minutes apart.)
+  if (!RECOVERY_ON) {
+    log.info('recovery_switched_off', { segment_id: segmentId });
+    return jsonResponse({ ok: true, status: 'paused' }, 200);
+  }
+
   const { data: segment, error: segErr } = await admin
     .from('lecture_segments')
     .select('id, lecture_id, user_id, seq, status, recovery_attempts, claimed_at')
@@ -913,6 +1314,18 @@ async function handleRecover(
   if (!segment) return jsonResponse({ error: 'Segment not found' }, 404);
 
   log.setUser(segment.user_id);
+
+  // 142: the scheduler sends no locale, so this used to be 'en' for everyone —
+  // and 'en' was then forced on the provider, turning a Spanish lecture's
+  // recovered part into nonsense. The owner's saved language decides the
+  // fallback now (the lecture's own detected language still wins inside
+  // handleSegment).
+  const { data: ownerProfile } = await admin
+    .from('profiles')
+    .select('preferred_language')
+    .eq('id', segment.user_id)
+    .maybeSingle();
+  if (ownerProfile?.preferred_language === 'es') locale = 'es';
 
   // Already finished — by the client coming back, or by an earlier tick. Not an
   // error; the scheduler asking twice is normal and must be cheap.
@@ -1160,7 +1573,7 @@ async function maybeFinalize(
 
   const { data: segments, error } = await admin
     .from('lecture_segments')
-    .select('id, seq, status, transcript, seconds, storage_path, has_gap, created_at, recovery_attempts')
+    .select('id, seq, status, transcript, seconds, storage_path, has_gap, created_at, recovery_attempts, provider_failures, first_provider_failure_at')
     .eq('lecture_id', lecture.id)
     .eq('user_id', userId)
     .order('seq', { ascending: true });
@@ -1185,8 +1598,18 @@ async function maybeFinalize(
   // left alone and the recovery pass will claim a `failed` segment whose object
   // still exists, then fold the text back into the transcript.
   const staleCutoff = Date.now() - STALE_SEGMENT_MS;
+  // Not a part waiting out a provider outage (142): its audio is here and the
+  // arrival job retries it until PROVIDER_GIVE_UP; writing it off would finish
+  // the lecture as missing audio the provider was about to transcribe.
+  // Exempt for as long as a provider outage is given (PROVIDER_GIVE_UP_MS);
+  // after that it is written off like any other stuck part, so a quota that
+  // never recovers cannot hold a lecture open forever.
+  const waitingOnProvider = (s: any) =>
+    s.status === 'uploaded' && Boolean(s.first_provider_failure_at) &&
+    Date.now() - new Date(s.first_provider_failure_at).getTime() < PROVIDER_GIVE_UP_MS;
   const stale = all.filter((s: any) =>
     s.status !== 'done' && s.status !== 'failed' &&
+    !waitingOnProvider(s) &&
     new Date(s.created_at).getTime() < staleCutoff);
   if (stale.length > 0) {
     await admin.from('lecture_segments')
@@ -1223,33 +1646,29 @@ async function maybeFinalize(
     }, 200);
   }
 
-  // Every segment has reached a terminal state. Assemble what we have; a failed
-  // segment leaves a marked hole rather than silently vanishing.
-  const parts: string[] = [];
-  // Tracked separately from `parts`, because the markers below are text too. A
-  // lecture whose every segment failed would otherwise assemble into a
-  // "transcript" consisting solely of "[could not be transcribed]" — which
-  // would read as success, burn the free lecture, and send the notes model a
-  // page of apologies to summarize.
-  let hasRealText = false;
-  for (const s of all) {
-    if (s.status === 'failed') {
-      parts.push(locale === 'es'
-        ? '[Falta una parte de la grabación.]'
-        : '[Part of this recording could not be transcribed.]');
-      continue;
-    }
-    if (s.has_gap) {
-      parts.push(locale === 'es'
-        ? '[La grabación se reanudó tras una interrupción.]'
-        : '[Recording resumed after an interruption.]');
-    }
-    if (s.transcript && s.transcript.trim()) {
-      parts.push(s.transcript.trim());
-      hasRealText = true;
-    }
+  // Every segment has reached a terminal state. Assemble what we have.
+  //
+  // 142: through lecture_assemble_transcript, the ONE assembler. This file used
+  // to keep its own copy, which marked failed parts but not parts that never
+  // got a row at all — so a lecture missing its middle twenty minutes read as
+  // continuous. The SQL assembler walks every expected part and marks each run
+  // of missing ones, in the lecture's language.
+  const { data: assembled, error: assembleErr } = await admin
+    .rpc('lecture_assemble_transcript', { p_lecture_id: lecture.id })
+    .maybeSingle();
+  if (assembleErr || !assembled) {
+    log.error('assemble_failed', errorFields(assembleErr));
+    return jsonResponse({ error: t('transient', locale) }, 503);
   }
-  const transcript = parts.filter(Boolean).join('\n\n').trim();
+  const transcript = typeof assembled.transcript === 'string' ? assembled.transcript.trim() : '';
+  // The markers are text too. A lecture whose every part failed would otherwise
+  // read as success, burn the free lecture, and send the notes model a page of
+  // apologies — so "real text" is counted separately by the assembler.
+  // Also counted here from every finished part, whatever its number: the
+  // assembler only walks the expected range, and a refund decided from that
+  // alone could refund a lecture whose text the student can read.
+  const hasRealText = (assembled.text_parts ?? 0) > 0 ||
+    done.some((s: any) => typeof s.transcript === 'string' && s.transcript.trim() !== '');
   const audioSeconds = all.reduce((sum: number, s: any) => sum + (s.seconds || 0), 0);
   const anyFailed = all.some((s: any) => s.status === 'failed');
 
@@ -1262,11 +1681,12 @@ async function maybeFinalize(
       .eq('id', lecture.id)
       .neq('status', 'ready');
     // Nothing of value was delivered, so the free lecture must not be burned.
-    // Any 'success' row written by an earlier segment is removed here: a
-    // lecture that produced no usable text was not a lecture the student got.
-    await admin.from('lecture_usage_log')
-      .delete().eq('lecture_id', lecture.id).eq('user_id', userId)
-      .then(undefined, () => {});
+    // 142: REFUNDED, not deleted. The row stays as a record, free_action_used()
+    // ignores it, and lecture_charge_usage charges it again if a late part
+    // turns out to hold speech.
+    await admin.rpc('lecture_refund_usage', {
+      p_user_id: userId, p_lecture_id: lecture.id, p_code: errorCode,
+    }).then(undefined, () => {});
     await admin.from('lecture_usage_log').insert({
       user_id: userId, lecture_id: null, audio_seconds: audioSeconds,
       status: 'failed', error_code: errorCode,
@@ -1288,15 +1708,28 @@ async function maybeFinalize(
     return jsonResponse({ ok: true, status: 'failed', code: errorCode }, 200);
   }
 
+  // 143: a transcript too short to write notes from is shown as it is, not left
+  // 'transcribed' where the notes job (200-character minimum) never picks it up
+  // and the app spins "Writing notes" forever. The charge stands: the student
+  // did get a transcript.
+  const tooShortForNotes = transcriptWords(transcript).length < 200;
+
+  // The charge normally lands with the first transcribed part; an isolate
+  // killed between that write and the charge would have delivered a free
+  // lecture. Idempotent, so this is a no-op on every lecture already charged.
+  await admin.rpc('lecture_charge_usage', {
+    p_user_id: userId, p_lecture_id: lecture.id, p_seconds: Math.round(audioSeconds),
+  }).then(undefined, () => {});
+
   // Terminal write, guarded so a concurrent finalizer cannot regress a lecture
   // that has already moved on to notes generation.
   const { data: finalized, error: finalErr } = await admin
     .from('lecture_recordings')
     .update({
       transcript,
-      status: 'transcribed',
+      status: tooShortForNotes ? 'ready' : 'transcribed',
       duration_seconds: audioSeconds,
-      error_code: null,
+      error_code: tooShortForNotes ? 'TOO_SHORT_FOR_NOTES' : null,
     })
     .eq('id', lecture.id)
     .in('status', ['recording', 'uploading', 'transcribing', 'failed'])
@@ -1346,4 +1779,73 @@ async function maybeFinalize(
   });
 
   return jsonResponse({ ok: true, status: 'transcribed', segmentsDone: done.length }, 200);
+}
+
+/**
+ * The words this course uses (4.1): its name and instructor, the topics the
+ * student has practised, and the key terms of the last few lectures' notes.
+ */
+async function courseVocabulary(
+  admin: any,
+  userId: string,
+  courseId: string | null,
+  lectureId: string,
+): Promise<{ courseName: string | null; instructor: string | null; terms: string[] } | null> {
+  if (!courseId) return null;
+  const [course, topics, lectures] = await Promise.all([
+    admin.from('courses').select('name, instructor').eq('id', courseId).eq('user_id', userId).maybeSingle(),
+    admin.from('course_topic_mastery').select('topic')
+      .eq('user_id', userId).eq('course_id', courseId)
+      .order('updated_at', { ascending: false }).limit(15),
+    admin.from('lecture_recordings').select('notes_md')
+      .eq('user_id', userId).eq('course_id', courseId).neq('id', lectureId)
+      .not('notes_md', 'is', null)
+      .order('created_at', { ascending: false }).limit(3),
+  ]);
+  if (!course.data) return null;
+  const terms = [
+    ...((lectures.data ?? []) as { notes_md: string }[]).flatMap((l) => termsFromNotes(l.notes_md, 15)),
+    ...((topics.data ?? []) as { topic: string }[]).map((t) => t.topic),
+  ];
+  return {
+    courseName: typeof course.data.name === 'string' ? course.data.name : null,
+    instructor: typeof course.data.instructor === 'string' ? course.data.instructor : null,
+    terms,
+  };
+}
+
+/**
+ * Has today's shared transcription capacity (the org-wide provider quota this
+ * function mirrors in GLOBAL_DAILY_AUDIO_SECONDS) been used up, by our own
+ * ledger? Read only when the provider has already refused a part, to word the
+ * refusal. A failed read is "no": the provider's own words decide then.
+ */
+async function dayCapacitySpent(admin: any): Promise<boolean> {
+  const dayStart = new Date();
+  dayStart.setUTCHours(0, 0, 0, 0);
+  const { data, error } = await admin
+    .from('lecture_transcription_usage')
+    .select('audio_seconds')
+    .gte('hour', dayStart.toISOString());
+  if (error || !Array.isArray(data)) return false;
+  const used = data.reduce((sum: number, row: any) => sum + (row.audio_seconds || 0), 0);
+  return used >= GLOBAL_DAILY_AUDIO_SECONDS;
+}
+
+/**
+ * A lecture whose parts the free allowance (or the length limit) refuses is
+ * finished as failed, once, with its audio handed to retention. Nothing is
+ * refunded: nothing was charged.
+ */
+async function failLectureForAllowance(admin: any, lectureId: string, code: string, log: any): Promise<void> {
+  await admin.from('lecture_segments')
+    .update({ status: 'failed', recovery_attempts: 3, claimed_at: null })
+    .eq('lecture_id', lectureId)
+    .neq('status', 'done');
+  await admin.from('lecture_recordings')
+    .update({ status: 'failed', error_code: code })
+    .eq('id', lectureId)
+    .in('status', ['recording', 'uploading', 'transcribing']);
+  await admin.rpc('release_lecture_reservation', { p_lecture_id: lectureId }).then(undefined, () => {});
+  log.warn('lecture_refused_by_allowance', { lecture_id: lectureId, code });
 }

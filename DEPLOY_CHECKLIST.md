@@ -53,7 +53,9 @@ supabase functions deploy redeem-referral
 supabase functions deploy send-push --no-verify-jwt      # MUST use the flag (shared-secret auth, not JWT)
 supabase functions deploy lms-sync --no-verify-jwt       # MUST use the flag — see the note below
 supabase functions deploy google-cal-sync                # only needed when you enable Google Cal (see §5)
-supabase functions deploy lecture-transcribe             # 065 — lecture recording pipeline
+supabase functions deploy lecture-transcribe --no-verify-jwt # 065; MUST use the flag — since 139 the
+                                                             # arrival job posts `recover` with only the
+                                                             # cron secret (see the study-kit note below)
 supabase functions deploy lecture-study-kit --no-verify-jwt  # MUST use the flag — see the note below
 supabase functions deploy lecture-retention --no-verify-jwt   # 117 — MUST use the flag (shared-secret auth, not JWT)
 supabase functions deploy generate-flashcards            # 065 — per-note context cap fix
@@ -62,6 +64,24 @@ supabase functions deploy generate-flashcards            # 065 — per-note cont
 ```
 
 ### lecture-study-kit and `--no-verify-jwt`: same trap, second door
+
+**lecture-transcribe too.** Since 139 the every-minute `semora-lecture-arrivals`
+job (`lecture_take_over_arrived_audio`) posts `{action:'recover'}` to
+lecture-transcribe with only `x-semora-lecture-cron-secret`. Without the flag
+the gateway answers 401 before the function runs, every stranded part keeps its
+`dispatched_at` stamp and is re-dispatched every ten minutes into the same
+wall, and the only signal is `alert_lecture_segments_stranded`. The function
+authenticates both doors itself (`read_lecture_cron_secret()` for the
+scheduler, `auth.getUser()` for students; the secret can only ever name a
+segment, never a user). Post-deploy smoke test:
+
+```bash
+curl -s -X POST "$SUPABASE_URL/functions/v1/lecture-transcribe" \
+  -H 'Content-Type: application/json' -H 'x-semora-lecture-cron-secret: wrong' \
+  -d '{"action":"recover","segmentId":"x"}'
+# want the FUNCTION's own {"error":"Unauthorized scheduler"} (401);
+# a gateway 401 mentioning a missing Authorization header means the flag was missed.
+```
 
 Since 109 the ten-minute `semora-finish-lecture-notes` job posts to this
 function to write notes for lectures the app abandoned. Like the Canvas job, it
@@ -193,3 +213,120 @@ share button shows an "update to share" message.
 `scripts/eval-syllabi/` replays golden syllabi through `parse-syllabus` and scores field
 accuracy. Use a dedicated Pro test account (free accounts hit the 2-scan cap). Collect ~20 real
 syllabi as `fixtures/real-*` before quoting any accuracy number publicly.
+
+---
+
+# Record Lecture completion (branch `lecture-recording-complete`, 2026-09-16)
+
+**Status 2026-09-17:** migrations 140, 142–147 applied; lecture-transcribe v28 + lecture-study-kit v23 deployed; OTA group dc613091 published to production (runtime e88b9845…); 1.15 (59) archived for App Store Connect.
+
+Plan: `docs/audits/record-lecture-report-and-plan-2026-09-16.md`. Every step
+below needs the owner's explicit yes, one step at a time.
+
+## R1. Migrations — in this order
+```
+140_…                                   # already in the folder; must go first
+142_a_part_is_never_lost_to_a_busy_provider.sql
+143_a_finished_lecture_says_what_it_has.sql
+144_lecture_health_is_watched.sql       # adds the hourly semora-lecture-health cron
+145_a_lecture_remembers_its_moments.sql # timings + Mark important (additive, nullable)
+```
+- `141` is parked in `supabase/migrations-held/` and must NOT be applied (143 supersedes it).
+- Before `db push`: `supabase migration list --linked` must show exactly 140, 142–145 pending.
+- Tests (throwaway Postgres only): `supabase/tests/lecture/harness.sql` then 142/143/144/145 `.test.sql`.
+  Every migration was also run twice to prove it is idempotent.
+- **147 (2026-09-16, after 140–146 went live):** `147_the_server_side_of_the_audit.sql` — part
+  numbers to 999, declared counts only grow, transcribed audio deleted while a lecture is live,
+  the arrival job's circuit breaker, the 12-hour quota-hold bound and the 30-minute NO_AUDIO rule
+  in the sweep, ordered alert fingerprints, and `semora-finish-lecture-notes` every 2 minutes.
+  Test: `supabase/tests/lecture/147.test.sql` after 140, 142–147 (run 147 twice — idempotent).
+  Check after applying: `select schedule from cron.job where jobname = 'semora-finish-lecture-notes';`
+  → `*/2 * * * *`.
+- After applying, sanity checks (read-only):
+  ```sql
+  select has_function_privilege('anon', 'public.sweep_stalled_lectures(integer)', 'execute');   -- false
+  select jobname, schedule from cron.job where jobname = 'semora-lecture-health';               -- '17 * * * *'
+  ```
+- A document note must still be creatable from the app (142 names its NOT NULL columns in the insert guard).
+
+- 142 adds an INSERT trigger limiting part numbers to 0–999 (existing rows untouched and still updatable).
+
+## R2. Edge functions — after the migrations
+```
+supabase functions deploy lecture-transcribe --no-verify-jwt   # the arrival job's `recover` carries
+                                                               # only the cron secret (see §2 note)
+supabase functions deploy lecture-study-kit --no-verify-jwt
+```
+(`lecture-retention` has no code change: its new rules live in 142's SQL. No redeploy.)
+Order matters: `lecture-transcribe` calls `lecture_charge_usage`, `lecture_count_transcription`
+and `lecture_assemble_transcript`, and writes `timings`; `lecture-study-kit` reads
+`lecture_note_sections` and `important_marks`. Deploying either before the migrations breaks recording.
+
+Behaviour changes to expect after deploy:
+- Transcripts over 30,000 characters (about 45+ minutes) are written section by section: 2–4 model
+  calls plus an overview instead of one, over 2–3 back-to-back runs. A rewrite of an existing
+  lecture in that range switches to the sectioned layout and marks its quiz as out of date.
+- A rate-limited part waits up to 12 hours for the provider. Past that the lecture is finished from
+  the parts it has (parts missing, partial notes now) and the part keeps being retried by the
+  arrival job; a late success is folded in. A spent DAILY provider quota is worded as such to the
+  student (`PROVIDER_QUOTA_DAY`), and a 429 on transcription is no longer retried inside one call.
+- The arrival job dispatches one probe part per minute while the provider is failing half of recent
+  requests. Every 4th part of a language-locked lecture is sent without the lock; two parts heard in
+  another language make it `mixed`. Quizzes follow the notes' language. A recording still named
+  "<Course> · Tue, Sep 16" / "Lecture" is renamed after its notes' headline.
+
+## R3. Secrets (all optional; unset = the safe default)
+```
+# Longest recording, seconds (default 5400 = 90 min; max 14400). Raise to 10800 only
+# together with the paid Groq tier (D1) and a higher LECTURE_DAILY_AUDIO_SECONDS,
+# because every start reserves this much of the shared daily pool.
+supabase secrets set LECTURE_MAX_SECONDS=10800
+supabase secrets set LECTURE_DAILY_AUDIO_SECONDS=...
+
+# Update gate (D3). Set ONLY after 1.15 is live in the App Store and Play.
+supabase secrets set LECTURE_MIN_VERSION=1.15
+supabase secrets set LECTURE_MIN_BUILD=<first 1.15 iOS build number>
+
+# Kill switches (plan Phase 5). "off" restores the old behaviour, no app release.
+supabase secrets set LECTURE_SILENCE_FILTER=off
+supabase secrets set LECTURE_AUTO_LANGUAGE=off
+supabase secrets set LECTURE_COURSE_VOCABULARY=off
+supabase secrets set LECTURE_BACKGROUND_UPLOADS=off
+supabase secrets set LECTURE_SECTIONED_NOTES=off
+
+# Feature kill switches (147, audit). For a provider outage, a billing incident or a bad build.
+# Unset (or anything but "off") = on. Secrets take effect on the next cold start of the function.
+supabase secrets set LECTURE_RECORDING=off   # `start` answers the localized "not available right now"
+                                             # 503 (NOT_CONFIGURED) before any reservation or mic;
+                                             # lectures already under way keep uploading/transcribing
+supabase secrets set LECTURE_RECOVERY=off    # the arrival job's `recover` calls answer
+                                             # {ok:true,status:'paused'}: no attempt spent or refunded,
+                                             # nothing written off, parts wait where they are
+supabase secrets set LECTURE_NOTES=off       # lecture-study-kit `notes` (app and scheduler) answers
+                                             # the transient 503 without claiming the lecture or
+                                             # calling the model; quizzes unaffected
+# After lifting LECTURE_NOTES=off: the scheduler stamps notes_auto_attempts BEFORE each request it
+# sends, so lectures that waited through a long switch-off may be at 3 and no longer asked for:
+#   update lecture_recordings set notes_auto_attempts = 0
+#   where status = 'transcribed' and notes_md is null and notes_auto_attempts >= 3;
+```
+When `LECTURE_MAX_SECONDS` is raised, also pass the new limit (minutes) to the sweep's cron
+command: `perform public.sweep_stalled_lectures(180);`, and the health check's hourly/daily
+caps if the Groq tier changed: `select public.lecture_health_check(<hour cap>, <day cap>);`.
+
+## R4. App
+- **OTA fingerprint trap (found 2026-09-16):** `eas fingerprint:compare <live runtime hash>` in the
+  publish tree must say MATCHES. The main tree's `node_modules/react-native-iap` had Android build
+  output and a vim swap file inside it, which changed the fingerprint; restoring the pristine
+  package (`npm pack react-native-iap@<locked version>` → rsync into the publish tree's
+  node_modules) restored the live hash `e88b9845…`.
+- **OTA to 1.13/1.14 (JS only):** must be published from a tree WITHOUT `modules/semora-recorder`,
+  the `targets/widget/LectureRecordingActivity.swift` change and the `NSSupportsLiveActivities`
+  app.json key — those change the runtime fingerprint. Checkpoint patch
+  `03-phase2-ota-candidate` is that tree; verify `npx expo-updates fingerprint` matches the live
+  runtime before publishing. Without the native module the app uses the expo-audio engine.
+- **1.15 build (App Store + Play):** includes the native recorder, the Live Activity, and the
+  Android foreground service. `--clean` prebuild. Android Record stays hidden unless the build
+  contains the native module.
+- Physical-device matrix: plan Phase 3.8 (locked 3 h, calls, Siri, AirPods, kill mid-chunk,
+  offline, Live Activity Stop/Pause/Mark, Android 12/14/15 screen-off).
