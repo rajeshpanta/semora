@@ -25,6 +25,53 @@ class LectureRecordingService : Service() {
     const val ACTION_MARK = "expo.modules.semorarecorder.MARK"
     private const val CHANNEL_ID = "lecture-recording"
     const val NOTIFICATION_ID = 7_401
+    /** Plain, dismissable notices (not the ongoing one): their own channel so they can alert. */
+    private const val ALERT_CHANNEL_ID = "lecture-recording-alerts"
+    const val CLOSED_NOTIFICATION_ID = 7_402
+
+    /**
+     * "Recording stopped because Semora was closed": the ongoing notification
+     * goes away with the service, and without this the student learns only
+     * when they next open the app. Tapping it opens Semora.
+     */
+    fun notifyClosed(context: Context) {
+      try {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val strings = LectureRecorderHost.strings
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && manager.getNotificationChannel(ALERT_CHANNEL_ID) == null) {
+          manager.createNotificationChannel(
+            NotificationChannel(
+              ALERT_CHANNEL_ID,
+              strings["alertChannel"] ?: "Lecture recording alerts",
+              NotificationManager.IMPORTANCE_DEFAULT,
+            ),
+          )
+        }
+        val immutable = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+        val open = context.packageManager.getLaunchIntentForPackage(context.packageName)?.let {
+          it.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+          PendingIntent.getActivity(context, 4, it, PendingIntent.FLAG_UPDATE_CURRENT or immutable)
+        }
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          Notification.Builder(context, ALERT_CHANNEL_ID)
+        } else {
+          @Suppress("DEPRECATION")
+          Notification.Builder(context)
+        }
+        val text = strings["closedByTask"] ?: "Recording stopped because Semora was closed"
+        builder
+          .setSmallIcon(R.drawable.semora_recorder_mic)
+          .setContentTitle(LectureRecorderHost.title.ifBlank { text })
+          .setContentText(text)
+          .setStyle(Notification.BigTextStyle().bigText(text))
+          .setAutoCancel(true)
+          .setContentIntent(open)
+        // Without POST_NOTIFICATIONS (Android 13+) this is refused: caught.
+        manager.notify(CLOSED_NOTIFICATION_ID, builder.build())
+      } catch (_: Throwable) {
+        // A notice only; the recording is already being saved.
+      }
+    }
 
     /** Redraw the ongoing notification after a pause or microphone change. */
     fun refresh(context: Context) {
@@ -156,6 +203,14 @@ class LectureRecordingService : Service() {
    * process is not reclaimed with a half-written file.
    */
   override fun onTaskRemoved(rootIntent: Intent?) {
+    if (LectureRecorderHost.isActive()) {
+      // Say so while anyone may still be listening, and tell the student:
+      // capture ends here, and a silent end left a frozen "Recording" clock.
+      try {
+        LectureRecorderHost.events?.onFailure("capture_prepare", "TASK_REMOVED", null)
+      } catch (_: Throwable) {}
+      notifyClosed(applicationContext)
+    }
     Thread({
       LectureRecorderHost.stopCapture()
       android.os.Handler(android.os.Looper.getMainLooper()).post { stopSelfNow() }

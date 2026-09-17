@@ -28,6 +28,8 @@ import {
   MAX_PART_ATTEMPTS,
   mayDeleteLocalCopy,
   nextAttemptDelayMs,
+  shouldRestoreWrittenOffPart,
+  unsavedCaptureWasLost,
   type ServerPartStatus,
 } from '@/lib/lectureQueueRules';
 import { partFilename, partStoragePath } from '@/lib/lectureCaptureRules';
@@ -115,7 +117,14 @@ const listeners = new Set<Listener>();
 /** Lectures whose deletion is in progress: never touched again this launch. */
 const cancelled = new Set<string>();
 
-/** A recording the app was killed in the middle of, found on a later launch. */
+/**
+ * A recording the app was killed in the middle of, found on a later launch.
+ *
+ * `parts === 0 && savedSeconds === 0` means NOTHING was saved: the capture ran
+ * longer than one part and the app was closed before any part was written
+ * (1.13/1.14, phone locked). That lecture has been abandoned — its row is gone —
+ * and the notice is the only thing left to tell the student.
+ */
 export interface InterruptedRecordingNotice {
   lectureId: string;
   startedAtMs: number | null;
@@ -354,7 +363,19 @@ async function processLecture(lectureId: string, userId: string | null): Promise
       // first part (or Stop came within a second). Declaring a 0-part Stop
       // left a server ghost that was never swept and, on a free account,
       // blocked the next recording. Abandon it instead — the row goes, the
-      // reservation comes back — and there is nothing to tell the student.
+      // reservation comes back. A kill inside the first part has nothing to
+      // tell the student. One that ran PAST a part and still saved nothing
+      // lost a real lecture (1.13/1.14: killed while the phone was locked, the
+      // part never closed), and the student is told before the row goes.
+      const lastActivityMs = await lastCaptureActivityMs(lectureId, journal.startedAtMs ?? null).catch(() => null);
+      if (unsavedCaptureWasLost(journal.startedAtMs, lastActivityMs)) {
+        const startedAtMs = journal.startedAtMs ?? null;
+        notices.push({ lectureId, startedAtMs, savedSeconds: 0, parts: 0 });
+        track('lecture_capture_lost_unsaved', {
+          screen: 'upload_queue',
+          minutes: startedAtMs && lastActivityMs ? Math.round((lastActivityMs - startedAtMs) / 60_000) : null,
+        });
+      }
       const { addPendingDiscard, cancelLecture, discardLectureOnServer, removePendingDiscard } = await import('@/lib/lectures');
       await store.update((j) => ({ ...j, discardIntent: true, captureState: 'discarded' })).catch(() => {});
       // Remembered first, so an offline launch finishes it next time it is online.
@@ -441,11 +462,27 @@ async function processLecture(lectureId: string, userId: string | null): Promise
   }
 
   const toUpload: JournalPart[] = [];
-  for (const part of [...journal.parts].sort((a, b) => a.seq - b.seq)) {
+  for (let part of [...journal.parts].sort((a, b) => a.seq - b.seq)) {
     if (cancelled.has(lectureId)) return false;
     const row = bySeq.get(part.seq);
+    // Undo an earlier queue's write-off (it wrote a part off as soon as its
+    // lecture was 'ready', with the server's recoveries unspent): the part
+    // goes back to the queue with fresh attempts. uploadPart checks the file.
+    if (shouldRestoreWrittenOffPart({ part, server: row ? { status: row.status, recoveryAttempts: row.recovery_attempts ?? null } : null })) {
+      const seq = part.seq;
+      journal = await store.update((j) => patchPart(j, seq, { state: 'saved_locally', writtenOff: false, attemptCount: 0, nextAttemptAt: null, lastFailureStage: null }));
+      const restored = journal.parts.find((p) => p.seq === seq);
+      if (!restored) continue;
+      part = restored;
+      track('lecture_part_write_off_restored', { screen: 'upload_queue', seq, serverAttempts: row?.recovery_attempts ?? null, lectureStatus });
+    }
+    // Written off for good: nothing will ever send it, so its audio does not
+    // stay on the phone (and the folder can be removed once it is gone).
+    if (part.state === 'quarantined' && part.writtenOff) {
+      await FileSystem.deleteAsync(`${dirUri}${partFilename(part.seq)}`, { idempotent: true }).catch(() => {});
+    }
     let objectExists: boolean | null = null;
-    if (row?.status === 'uploaded') {
+    if (row?.status === 'uploaded' || row?.status === 'failed') {
       const { data } = await supabase.storage.from('lectures').exists(partStoragePath(ownerId, lectureId, part.seq))
         .catch(() => ({ data: null }));
       objectExists = typeof data === 'boolean' ? data : null;
@@ -476,9 +513,10 @@ async function processLecture(lectureId: string, userId: string | null): Promise
       journal = await store.update((j) => patchPart(j, part.seq, { state: 'quarantined', lastFailureStage: 'local_commit' }));
       track('lecture_part_expired', { screen: 'upload_queue', seq: part.seq });
     } else if (decision.action === 'written_off') {
-      // 'register', not 'local_commit': the file is still here and a manual
-      // retry (retryLectureUploads) may send it again; the student sees
-      // "needs attention" instead of a silent week-long re-upload loop.
+      // Only reached once the server spent its own three recoveries on the
+      // part (SERVER_WRITE_OFF_ATTEMPTS). Its file was deleted above
+      // (mayDeleteLocalCopy) and a manual retry never resends it; the stage
+      // becomes 'local_commit' when the next pass sees the file gone.
       if (part.state !== 'quarantined') {
         journal = await store.update((j) => patchPart(j, part.seq, { state: 'quarantined', lastFailureStage: 'register', nextAttemptAt: null, writtenOff: true }));
         track('lecture_part_written_off', { screen: 'upload_queue', seq: part.seq, serverAttempts: row?.recovery_attempts ?? null, lectureStatus });
@@ -753,4 +791,32 @@ export function setBackgroundUploadsAllowed(allowed: boolean | undefined): void 
   if (typeof allowed !== 'boolean') return;
   backgroundUploads = allowed;
   AsyncStorage.setItem(BACKGROUND_UPLOADS_KEY, allowed ? 'on' : 'off').catch(() => {});
+}
+
+/**
+ * The last moment a recorder was seen writing audio for a capture that saved
+ * no part: the newest unfinished file — the native recorder's
+ * `.seg_NNN.partial.m4a` in the lecture folder, or expo-audio's
+ * `Caches/ExpoAudio/recording-*.m4a` modified after Start. Null when nothing
+ * says (then nobody is told anything).
+ */
+async function lastCaptureActivityMs(lectureId: string, startedAtMs: number | null): Promise<number | null> {
+  if (!startedAtMs) return null;
+  let newest: number | null = null;
+  const consider = async (uri: string) => {
+    const info = await FileSystem.getInfoAsync(uri).catch(() => null) as { exists: boolean; modificationTime?: number } | null;
+    const ms = info?.exists && info.modificationTime ? info.modificationTime * 1000 : null;
+    if (ms !== null && ms >= startedAtMs - 5_000 && (newest === null || ms > newest)) newest = ms;
+  };
+  const dir = lectureDir(lectureId);
+  const inFolder = await FileSystem.readDirectoryAsync(dir).catch(() => [] as string[]);
+  for (const name of inFolder) {
+    if (name.endsWith('.partial.m4a')) await consider(`${dir}${name}`);
+  }
+  const expoDir = `${FileSystem.cacheDirectory}ExpoAudio/`;
+  const expoFiles = await FileSystem.readDirectoryAsync(expoDir).catch(() => [] as string[]);
+  for (const name of expoFiles) {
+    if (name.startsWith('recording-')) await consider(`${expoDir}${name}`);
+  }
+  return newest;
 }

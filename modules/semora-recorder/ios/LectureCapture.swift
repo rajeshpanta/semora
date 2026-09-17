@@ -67,6 +67,13 @@ final class LectureCapture {
   private static let stoppedNotificationId = "semora-lecture-capture-stopped"
 
   var onEvent: ((Event) -> Void)?
+  /// Called on the capture queue about every `heartbeatSeconds` while the
+  /// capture is open (running, paused or stopped), with the figures of the
+  /// moment. It runs from the capture's own timer, so it keeps going on a
+  /// locked phone where JavaScript is suspended: the module refreshes the
+  /// Live Activity from it, so a live recording never goes stale.
+  var onHeartbeat: ((Status) -> Void)?
+  static let heartbeatSeconds: TimeInterval = 30
 
   private let options: Options
   private let queue = DispatchQueue(label: "com.semora.recorder.capture")
@@ -94,6 +101,8 @@ final class LectureCapture {
   private var writeFailureReported = false
 
   private var stallTimer: DispatchSourceTimer?
+  /// Queue only. When the heartbeat last fired.
+  private var lastHeartbeatAt = Date()
   private var observers: [NSObjectProtocol] = []
   private var engineObserver: NSObjectProtocol?
 
@@ -208,18 +217,21 @@ final class LectureCapture {
   }
 
   func status() -> Status {
-    queue.sync {
-      Status(
-        capturing: running && !ended && !paused && stalledSince == nil,
-        paused: paused,
-        closedSeconds: Double(closedFrames) / LectureCapture.sampleRate,
-        liveChunkSeconds: Double(chunkFrames) / LectureCapture.sampleRate,
-        levelDb: levelDb,
-        inputName: inputName,
-        builtInMic: builtInMic,
-        nextSeq: seq
-      )
-    }
+    queue.sync { currentStatus() }
+  }
+
+  /// Queue only (status() would deadlock there).
+  private func currentStatus() -> Status {
+    Status(
+      capturing: running && !ended && !paused && stalledSince == nil,
+      paused: paused,
+      closedSeconds: Double(closedFrames) / LectureCapture.sampleRate,
+      liveChunkSeconds: Double(chunkFrames) / LectureCapture.sampleRate,
+      levelDb: levelDb,
+      inputName: inputName,
+      builtInMic: builtInMic,
+      nextSeq: seq
+    )
   }
 
   // MARK: - Session and engine
@@ -471,6 +483,10 @@ final class LectureCapture {
       guard let self, self.running, !self.ended else { return }
       if self.stalledSince == nil, Date().timeIntervalSince(self.lastBufferAt) > LectureCapture.stallSeconds {
         self.markStopped()
+      }
+      if Date().timeIntervalSince(self.lastHeartbeatAt) >= LectureCapture.heartbeatSeconds {
+        self.lastHeartbeatAt = Date()
+        self.onHeartbeat?(self.currentStatus())
       }
     }
     timer.resume()

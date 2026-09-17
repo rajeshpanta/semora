@@ -45,6 +45,15 @@ export const TOO_QUIET_NOTICE = {
   title: 'Semora can barely hear the room — move the phone closer',
   body: 'The first minute was almost silent. Take the phone out of the bag or bring it nearer the speaker.',
 } as const;
+/**
+ * Android: the microphone stopped and stayed stopped with the phone locked.
+ * The same words the iOS recorder posts natively (nativeEngine passes them as
+ * pausedTitle / pausedBody), so they are already translated in es.ts.
+ */
+export const MIC_PAUSED_NOTICE = {
+  title: 'Recording paused',
+  body: 'Open Semora to continue recording your lecture.',
+} as const;
 export const HEADPHONES_NOTICE = {
   title: 'Recording through your headphones — disconnect them to record the room',
   body: 'Your headphones’ microphone is what Semora hears right now.',
@@ -74,6 +83,8 @@ export interface SessionState {
   error: string | null;
   finishedLectureId: string | null;
   autoSaved: AutoSaveReason | null;
+  /** The finished recording's limit, kept past the reset for its auto-save notice. */
+  finishedMaxSeconds: number | null;
   inputName: string | null;
   usingBuiltInMic: boolean;
   lowStorage: boolean;
@@ -117,6 +128,7 @@ export const INITIAL_SESSION_STATE: SessionState = {
   error: null,
   finishedLectureId: null,
   autoSaved: null,
+  finishedMaxSeconds: null,
   inputName: null,
   usingBuiltInMic: false,
   lowStorage: false,
@@ -191,6 +203,12 @@ export interface SessionDeps {
     setActiveLecture(lectureId: string | null): void;
   };
   track(event: string, props?: Record<string, unknown>): void;
+  /**
+   * The phone's OS (the runtime sets it from Platform.OS). Only Android may
+   * restart a stopped native microphone from the background: its recorder runs
+   * in a foreground service, while iOS refuses a background start.
+   */
+  platform?: 'ios' | 'android' | 'web';
 }
 
 /** Heartbeat to the server while recording or paused. */
@@ -201,8 +219,10 @@ export const RESOURCE_CHECK_MS = 5 * 60_000;
 export const ASK_AFTER_SILENCE_MS = 15 * 60_000;
 /** The server has this long to answer Start before the student is told to try again. */
 export const START_TIMEOUT_MS = 15_000;
-/** How often a stopped native microphone is restarted while the app is on screen. */
+/** How often a stopped native microphone is restarted (on screen; on Android, always). */
 export const RESTART_SPACING_MS = 10_000;
+/** Android: a microphone stopped this long with the app off screen is posted, once per stop. */
+export const MIC_PAUSED_NOTIFY_AFTER_MS = 30_000;
 /** A pause this long is a forgotten recording: saved, not left open. */
 export const MAX_PAUSE_MS = 3 * 60 * 60_000;
 /**
@@ -241,6 +261,15 @@ export class LectureSession {
   private pausedMs = 0;
   private headphonesNotified = false;
   private lastNativeRestartAt = 0;
+  /** A Continue is starting a new native capture: its not-yet-active status is expected. */
+  private continuing = false;
+  /** MIC_PAUSED_NOTICE was posted for the current stop. Cleared when the microphone is back. */
+  private micPausedNotified = false;
+  /**
+   * Closed seconds of native captures that ended without Stop and were
+   * started again by Continue. A new native capture counts from zero.
+   */
+  private carriedClosedSeconds = 0;
   private levelSamples: number[] = [];
   /** Journal writes for closed parts, in order; awaited before Stop commits. */
   private writes: Promise<void> = Promise.resolve();
@@ -394,6 +423,8 @@ export class LectureSession {
     this.recordingSpanStartedAt = startedAt;
     this.pausedMs = 0;
     this.lastNativeRestartAt = 0;
+    this.micPausedNotified = false;
+    this.carriedClosedSeconds = 0;
     this.levelSamples = [];
     this.highestClosedSeq = -1;
     this.headphonesNotified = false;
@@ -454,6 +485,7 @@ export class LectureSession {
         return;
       case 'micResumed': {
         const lostSeconds = this.state.micStoppedAt ? Math.round((event.at - this.state.micStoppedAt) / 1000) : null;
+        this.micPausedNotified = false;
         this.patch({ micStoppedAt: null, needsDecision: false });
         d.track('lecture_capture_resumed', { lostSeconds, appActive: d.appIsActive() });
         return;
@@ -532,7 +564,7 @@ export class LectureSession {
     let at = this.state.elapsed;
     try {
       const status = this.engine.status();
-      at = capturedSeconds(status.closedSeconds, status.livePartSeconds);
+      at = capturedSeconds(status.closedSeconds + this.carriedClosedSeconds, status.livePartSeconds);
     } catch {
       // the last tick's figure is close enough
     }
@@ -592,10 +624,17 @@ export class LectureSession {
         // The native recorder restarts itself after an interruption, but an
         // interruption iOS never ends (a call that was answered), or a capture
         // thread that died, leaves it stopped for good. With the app on screen
-        // that is allowed to be retried, every RESTART_SPACING_MS.
+        // that is allowed to be retried, every RESTART_SPACING_MS — and on
+        // Android with the phone locked too: its recorder lives in a foreground
+        // service that may restart the microphone, and a locked Android phone
+        // otherwise recorded nothing for the rest of the lecture.
+        // Off screen on Android the recorder already reopens the microphone on
+        // its own schedule with a growing backoff; the app only nudges it
+        // every minute, so a long call does not become a retry every 10 s.
+        const spacing = appActive ? RESTART_SPACING_MS : 60_000;
         if (
-          engine.kind === 'native' && appActive && !this.state.needsDecision &&
-          this.state.micStoppedAt !== null && now - this.lastNativeRestartAt >= RESTART_SPACING_MS
+          engine.kind === 'native' && (appActive || d.platform === 'android') && !this.state.needsDecision &&
+          this.state.micStoppedAt !== null && now - this.lastNativeRestartAt >= spacing
         ) {
           this.lastNativeRestartAt = now;
           await engine.restartCapture().catch(() => {});
@@ -606,7 +645,16 @@ export class LectureSession {
       if (this.engine !== engine || this.state.phase !== phase) return;
 
       const status = engine.status();
-      const captured = capturedSeconds(status.closedSeconds, status.livePartSeconds);
+      // The native capture is gone (Android: Semora was swiped away). Nothing
+      // will restart it on its own and restartCapture has nothing to restart:
+      // the clock would freeze on "Recording". Say the microphone stopped and
+      // ask; Continue starts a new capture.
+      if (phase === 'recording' && engine.kind === 'native' && status.active === false && !this.state.needsDecision && !this.continuing) {
+        this.patch({ micStoppedAt: this.state.micStoppedAt ?? now, needsDecision: true, hadGap: true });
+        d.track('lecture_capture_ended', { appActive });
+      }
+      const closedSeconds = status.closedSeconds + this.carriedClosedSeconds;
+      const captured = capturedSeconds(closedSeconds, status.livePartSeconds);
       const levelDb = status.levelDb;
       if (phase === 'recording' && levelDb !== null && captured <= TOO_QUIET_WINDOW_SECONDS) {
         this.levelSamples.push(levelDb);
@@ -620,7 +668,7 @@ export class LectureSession {
       this.patch({
         elapsed: captured,
         level: phase === 'recording' ? normalizeMeter(levelDb) : 0,
-        savedSeconds: status.closedSeconds,
+        savedSeconds: closedSeconds,
         warnedNearLimit: this.state.warnedNearLimit || nearNow,
         tooQuiet: quiet,
       });
@@ -632,11 +680,25 @@ export class LectureSession {
       if (!appActive) {
         if (nearNow) d.notify(CAP_WARNING_NOTICE.title, CAP_WARNING_NOTICE.body);
         if (quietNow) d.notify(TOO_QUIET_NOTICE.title, TOO_QUIET_NOTICE.body);
+        // Android: a microphone that stays stopped on a locked phone. (The iOS
+        // recorder posts the same words itself.) Once per stop.
+        const stoppedAt = this.state.micStoppedAt;
+        // Not when the capture itself is gone: the recorder already said
+        // "Recording stopped because Semora was closed", and "paused" would
+        // contradict it.
+        if (
+          d.platform === 'android' && phase === 'recording' && !this.micPausedNotified &&
+          status.active !== false &&
+          stoppedAt !== null && now - stoppedAt > MIC_PAUSED_NOTIFY_AFTER_MS
+        ) {
+          this.micPausedNotified = true;
+          d.notify(MIC_PAUSED_NOTICE.title, MIC_PAUSED_NOTICE.body);
+        }
       }
 
       engine.updateActivity?.({
         elapsedSeconds: captured,
-        savedSeconds: status.closedSeconds,
+        savedSeconds: closedSeconds,
         paused: phase === 'paused',
         micStopped: this.state.micStoppedAt !== null,
       });
@@ -723,12 +785,38 @@ export class LectureSession {
   /** "Continue recording" after coming back to a stopped microphone. */
   continueRecording(): Promise<void> {
     return this.serialize(async () => {
-      if (this.state.phase !== 'recording' || !this.engine) return;
+      const engine = this.engine;
+      const { lectureId } = this.state;
+      if (this.state.phase !== 'recording' || !engine || !lectureId) return;
       this.patch({ needsDecision: false });
+      const d = this.deps;
+      this.continuing = true;
       try {
-        await this.engine.restartCapture();
+        const status = safeStatus(engine);
+        if (engine.kind === 'native' && status?.active === false) {
+          // The capture ended without Stop: nothing to restart, so a new one
+          // is started, numbered after every part that exists, and the time
+          // already closed is carried (a new capture counts from zero).
+          const firstSeq = Math.max(status.nextSeq, this.highestClosedSeq + 1);
+          await engine.start({
+            lectureId,
+            lectureDirUri: d.lectureDirUri(lectureId),
+            firstSeq,
+            partSeconds: PART_SECONDS,
+            title: this.state.title ?? '',
+          });
+          this.carriedClosedSeconds += Math.max(0, status.closedSeconds);
+          this.micPausedNotified = false;
+          this.lastNativeRestartAt = d.now();
+          this.patch({ micStoppedAt: null, needsDecision: false, error: null });
+          d.track('lecture_capture_started_again', { firstSeq });
+        } else {
+          await engine.restartCapture();
+        }
       } catch {
         this.patch({ error: 'resumeFailed' });
+      } finally {
+        this.continuing = false;
       }
     });
   }
@@ -745,6 +833,8 @@ export class LectureSession {
       const stoppedAt = d.now();
       this.closeRecordingSpan(stoppedAt);
       const wallSeconds = Math.round(this.wallRecordingMs(stoppedAt) / 1000);
+      // Taken before anything resets the state: the notice quotes THIS limit.
+      const maxSeconds = this.state.maxSeconds;
       const appActiveAtStop = d.appIsActive();
       this.patch({ phase: 'finishing', savingLocally: true, level: 0 });
       this.stopTimers();
@@ -762,7 +852,10 @@ export class LectureSession {
       const expectedParts = Math.max(
         stopped?.nextSeq ?? 0, before?.nextSeq ?? 0, after?.nextSeq ?? 0, this.highestClosedSeq + 1,
       );
-      const duration = Math.floor(Math.max(
+      // Seconds of native captures that ended and were started again are not
+      // in any of these figures.
+      const carried = this.carriedClosedSeconds;
+      const duration = Math.floor(carried + Math.max(
         stopped?.closedSeconds ?? 0, after?.closedSeconds ?? 0,
         (before?.closedSeconds ?? 0) + (before?.livePartSeconds ?? 0),
       ));
@@ -783,7 +876,7 @@ export class LectureSession {
 
       // A recording that saved itself on a locked phone used to end in
       // silence: the notice on the recorder screen reaches nobody there.
-      const saved = reason === 'user' ? null : autoSaveAlert(reason, Math.round(this.state.maxSeconds / 60));
+      const saved = reason === 'user' ? null : autoSaveAlert(reason, Math.round(maxSeconds / 60));
       if (saved && !appActiveAtStop) d.notify(saved.title, saved.body);
 
       // Best effort here; the queue sends it again inside its Stop declaration
@@ -822,6 +915,7 @@ export class LectureSession {
         ...INITIAL_SESSION_STATE,
         finishedLectureId: lectureId,
         autoSaved: reason === 'user' ? null : reason,
+        finishedMaxSeconds: maxSeconds,
       });
       this.ownerId = null;
       return { ok: true, lectureId };
@@ -865,7 +959,7 @@ export class LectureSession {
   /** The screen has navigated to the finished lecture. */
   acknowledgeFinished() {
     if (this.state.phase === 'idle' && (this.state.finishedLectureId || this.state.autoSaved)) {
-      this.patch({ finishedLectureId: null, autoSaved: null });
+      this.patch({ finishedLectureId: null, autoSaved: null, finishedMaxSeconds: null });
     }
   }
 
@@ -874,11 +968,12 @@ export class LectureSession {
    * recorder screen if it watched the recording, else the app-wide bar. Two
    * screens used to both act on it.
    */
-  takeFinishedNotice(): { lectureId: string; autoSaved: AutoSaveReason | null } | null {
-    const { phase, finishedLectureId, autoSaved } = this.state;
+  takeFinishedNotice(): { lectureId: string; autoSaved: AutoSaveReason | null; maxSeconds: number } | null {
+    const { phase, finishedLectureId, autoSaved, finishedMaxSeconds } = this.state;
     if (phase !== 'idle' || !finishedLectureId) return null;
-    this.patch({ finishedLectureId: null, autoSaved: null });
-    return { lectureId: finishedLectureId, autoSaved };
+    this.patch({ finishedLectureId: null, autoSaved: null, finishedMaxSeconds: null });
+    // The limit the recording ran under, not the default the reset put back.
+    return { lectureId: finishedLectureId, autoSaved, maxSeconds: finishedMaxSeconds ?? DEFAULT_MAX_RECORDING_SECONDS };
   }
 
   dismissError() {

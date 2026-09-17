@@ -16,6 +16,7 @@ import { useUploadCourseNote, type CourseNoteUploadProgress } from '@/lib/tutor'
 import { useCreateDocumentNote } from '@/lib/lectures';
 import { useCourses, useFreeActionUsed, useSemesters } from '@/lib/queries';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
+import { useI18n } from '@/lib/i18n';
 
 // Study material from a file.
 //
@@ -56,6 +57,7 @@ export default function NewNotesFromDocument() {
   const params = useLocalSearchParams<{ courseId?: string }>();
   const router = useRouter();
   const colors = useColors();
+  const { t } = useI18n();
   const showProUpsell = useProUpsell();
   // A class is REQUIRED: course_notes.course_id is NOT NULL, so an upload
   // without one fails at the insert. This screen is reached both from a course
@@ -168,7 +170,7 @@ export default function NewNotesFromDocument() {
     switch (p.stage) {
       case 'validating': return 'Checking the file…';
       case 'preparing': return 'Preparing…';
-      case 'uploading': return `Uploading${typeof p.percent === 'number' ? ` ${Math.round(p.percent)}%` : '…'}`;
+      case 'uploading': return typeof p.percent === 'number' ? `Uploading ${Math.round(p.percent)}%` : 'Uploading…';
       case 'saving': return 'Saving…';
       case 'reading': return 'Reading the text…';
       case 'ready': return 'Ready';
@@ -310,7 +312,9 @@ export default function NewNotesFromDocument() {
                   onPress={() => choose(o.key)}
                   activeOpacity={0.85}
                   accessibilityRole="button"
-                  accessibilityLabel={o.pro && !isPro ? `${o.title}. ${o.sub}. Pro feature` : `${o.title}. ${o.sub}`}
+                  // Each piece translated on its own; the joined sentence is
+                  // not a catalogue key.
+                  accessibilityLabel={o.pro && !isPro ? `${t(o.title)}. ${t(o.sub)}. ${t('Pro feature')}` : `${t(o.title)}. ${t(o.sub)}`}
                   style={[
                     styles.outcomeCard,
                     { backgroundColor: colors.card, borderColor: colors.line },

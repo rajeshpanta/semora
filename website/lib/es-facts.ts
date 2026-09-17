@@ -126,7 +126,7 @@ export const FEATURES_ES: SpanishFeatureFact[] = [
     tier: 'free',
     freeNote:
       'Gratis para probar. El plan gratuito incluye una acción de IA para toda la vida de la cuenta: gástala en una clase. Pro no tiene límite.',
-    description: 'Graba la clase desde el teléfono y Semora la transcribe, y a partir de esa misma transcripción escribe apuntes ordenados, un cuestionario de opción múltiple con explicaciones y un mazo de tarjetas. La captura se guarda en tramos de cinco minutos, así que un teléfono que se apaga te cuesta los últimos minutos y no la clase entera. El audio se borra en cuanto la transcripción queda guardada.',
+    description: 'Graba una clase desde el teléfono, incluso con el dispositivo bloqueado o mientras usas otra aplicación. Semora guarda tramos completos de dos minutos sin reiniciar el micrófono, reintenta las subidas pendientes y convierte la clase en una transcripción, apuntes ordenados, un cuestionario de práctica y tarjetas. El audio se borra en cuanto la transcripción queda guardada.',
   },
   {
     slug: 'apple-watch',

@@ -53,11 +53,19 @@ export function buildTimeline(parts: TimelinePart[], marks: number[] | null | un
   };
 
   let offset = 0;
-  let expectedSeq = ordered[0]?.seq ?? 0;
+  // From 0, not from the first row: parts missing before the first one that
+  // arrived took their time too.
+  let expectedSeq = 0;
   let missingRun = 0;
+  const assumedPartSeconds = largestPartSeconds(ordered);
   for (const part of ordered) {
     // Parts with no row at all (never arrived), then this one if it failed.
-    missingRun += Math.max(0, part.seq - expectedSeq);
+    // A part with no row has no length on record: it is taken to be as long as
+    // the longest part that has one, or everything after it would be stamped
+    // (and marked) that much too early.
+    const missing = Math.max(0, part.seq - expectedSeq);
+    missingRun += missing;
+    offset += missing * assumedPartSeconds;
     if (part.status === 'failed') missingRun += 1;
     if (missingRun > 0 && part.status !== 'failed') {
       flush();
@@ -86,6 +94,16 @@ export function buildTimeline(parts: TimelinePart[], marks: number[] | null | un
   flush();
   if (missingRun > 0) blocks.push({ kind: 'gap', start: offset, parts: missingRun });
   return { hasTimings: true, blocks };
+}
+
+/** The longest recorded part length: the stand-in for a part with no row. */
+export function largestPartSeconds(parts: { seconds: number | null }[]): number {
+  let largest = 0;
+  for (const p of parts) {
+    const s = Number(p.seconds);
+    if (Number.isFinite(s) && s > largest) largest = s;
+  }
+  return largest;
 }
 
 /** 75 → "1:15"; 3725 → "1:02:05". */

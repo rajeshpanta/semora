@@ -783,6 +783,8 @@ function spanishPattern(input: string): string | null {
     if (match) return `${translate(match[1], 'es')}, ${match[2]}. Volver a la grabación`;
   match = input.match(/^Semora closed while recording your lecture from (.+)\. (\d+) minutes were saved and are being turned into notes\.$/);
     if (match) return `Semora se cerró mientras grababa tu clase de las ${match[1]}. Se guardaron ${match[2]} minutos y se están convirtiendo en apuntes.`;
+  match = input.match(/^Your recording from (.+) couldn't be saved because Semora was closed while the phone was locked\.$/);
+    if (match) return `No se pudo guardar tu grabación de las ${match[1]} porque Semora se cerró mientras el teléfono estaba bloqueado.`;
   match = input.match(/^Semora closed while recording a lecture\. (\d+) minutes were saved and are being turned into notes\.$/);
     if (match) return `Semora se cerró mientras grababa una clase. Se guardaron ${match[1]} minutos y se están convirtiendo en apuntes.`;
   match = input.match(/^(\d+) of (\d+) parts uploaded$/);

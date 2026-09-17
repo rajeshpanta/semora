@@ -1140,8 +1140,12 @@ export default function LectureDetailScreen() {
             <FontAwesome name="exclamation-circle" size={20} color={colors.coral} />
             <Text style={[styles.stateTitle, { color: colors.ink }]}>This recording is taking longer than usual</Text>
             <Text style={[styles.stateText, { color: colors.ink2 }]}>
+              {/* The allowance sentence is for free accounts only: a Pro
+                  student has no free action to lose. */}
               {(segmentProgress?.uploaded ?? 0) === 0
-                ? "None of the audio has reached us yet. If it was recorded on another phone, open Semora on that phone to upload it. Your free lecture hasn't been used."
+                ? (isPro
+                  ? 'None of the audio has reached us yet. If it was recorded on another phone, open Semora on that phone to upload it.'
+                  : "None of the audio has reached us yet. If it was recorded on another phone, open Semora on that phone to upload it. Your free action hasn't been used.")
                 : 'Some of the audio arrived and the rest hasn’t yet. If it is on another phone, open Semora there. Semora keeps checking for it.'}
             </Text>
             {/* One filled primary. The outlined "Delete this recording" that
@@ -1170,8 +1174,12 @@ export default function LectureDetailScreen() {
             </Text>
             <Text style={[styles.stateText, { color: colors.ink2 }]}>
               {lecture.error_code === 'NO_SPEECH'
-                ? "There was no audible speech in this recording, so there's nothing to transcribe. Your free lecture wasn't used."
-                : 'Something went wrong processing this recording. Your free lecture was not used — please try recording again.'}
+                ? (isPro
+                  ? "There was no audible speech in this recording, so there's nothing to transcribe."
+                  : "There was no audible speech in this recording, so there's nothing to transcribe. Your free action wasn't used.")
+                : isPro
+                  ? 'Something went wrong processing this recording. Please try recording again.'
+                  : 'Something went wrong processing this recording. Your free action was not used — please try recording again.'}
             </Text>
             {/* The one action a failed lecture has. No upload retry here:
                 segment progress is not polled for 'failed', so there is

@@ -161,6 +161,10 @@ class SemoraRecorderModule : Module() {
       val capture = LectureRecorderHost.capture
       val final = LectureRecorderHost.finalFigures
       mapOf(
+        // A capture is open in this process. False after Stop, after the app
+        // was swiped away (onTaskRemoved stops it), or when none was started:
+        // the JS tick tells a live recording from one that is gone by this.
+        "active" to (capture != null),
         "capturing" to (capture?.capturing ?: false),
         "paused" to (capture?.paused ?: false),
         "closedSeconds" to (capture?.closedSeconds ?: final?.closedSeconds ?: 0.0),

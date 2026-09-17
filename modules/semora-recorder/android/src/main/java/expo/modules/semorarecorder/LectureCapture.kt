@@ -50,6 +50,20 @@ class LectureCapture(
     const val SAMPLE_RATE = 16_000
     const val BIT_RATE = 32_000
     private const val STALL_MS = 5_000L
+
+    /**
+     * Consecutive failed reads (each followed by a 500 ms wait, so about 3 s)
+     * before the microphone is reopened without waiting for the app. A read
+     * error such as ERROR_DEAD_OBJECT never clears on its own, and on a locked
+     * phone nobody taps Continue.
+     */
+    const val RESTART_AFTER_NEGATIVE_READS = 6
+
+    /** Wait before automatic reopen attempt [attempt] (1-based): 1 s, 2 s, 4 s … capped at 60 s. */
+    fun autoRestartDelayMs(attempt: Int): Long {
+      val step = (attempt - 1).coerceIn(0, 6)
+      return minOf(60_000L, 1_000L shl step)
+    }
   }
 
   @Volatile private var running = false
@@ -65,6 +79,10 @@ class LectureCapture(
   @Volatile private var stalledSince: Long? = null
   @Volatile private var chunkHasGap = false
   @Volatile private var restartRequested = false
+  /** The pending restart was requested by the capture thread itself, not the app. */
+  @Volatile private var autoRestartPending = false
+  /** The capture thread is reopening a failing microphone on its own backoff. */
+  @Volatile private var autoRecovering = false
   // Capture thread only. A chunk that would not finalize or rename is lost,
   // but the microphone is fine and the next chunk usually lands: reported
   // once, capture continues, and the next closed part carries the gap. Cleared
@@ -202,11 +220,16 @@ class LectureCapture(
     if (ended) return
     val current = thread
     if (current != null && current.isAlive) {
+      // During the recorder's own recovery (a call holding the microphone),
+      // a request from the app is one more attempt within that recovery: it
+      // neither resets the backoff nor reports the same failure again.
+      autoRestartPending = autoRecovering
       restartRequested = true
       return
     }
     // The capture thread died (see loop's catch): a restart has to start a
     // new one, or "Continue recording" would do nothing.
+    autoRestartPending = false
     restartRequested = true
     running = true
     thread = Thread({ loop() }, "semora-lecture-capture").also { it.start() }
@@ -240,27 +263,65 @@ class LectureCapture(
     var failureReported = false
     var silenced = false
     var silenceCheckedAt = 0L
+    // Automatic recovery from a microphone that fails every read: reopen it
+    // after RESTART_AFTER_NEGATIVE_READS, backing off between attempts, until
+    // real audio flows again (which resets all of this).
+    var negativeReads = 0
+    var autoRestartAttempts = 0
+    var nextAutoRestartAt = 0L
+    var autoStartFailureReported = false
+    fun requestAutoRestart(now: Long) {
+      autoRestartAttempts += 1
+      nextAutoRestartAt = now + autoRestartDelayMs(autoRestartAttempts)
+      negativeReads = 0
+      autoRecovering = true
+      autoRestartPending = true
+      restartRequested = true
+    }
     try {
       while (!ended) {
         if (restartRequested) {
+          val auto = autoRestartPending
+          autoRestartPending = false
           restartRequested = false
+          // The app asked (Continue recording): its attempt starts a fresh
+          // backoff, and its failure is always reported.
+          if (!auto) {
+            autoRestartAttempts = 0
+            nextAutoRestartAt = 0L
+          }
           closeChunk()
           chunkHasGap = true
           try { record?.stop() } catch (_: Throwable) {}
-          record?.release()
+          try { record?.release() } catch (_: Throwable) {}
           record = null
+          negativeReads = 0
           try {
             record = openRecord()
             failureReported = false
           } catch (t: Throwable) {
             markStopped(lastAudioAt)
-            listener.onFailure("capture_prepare", "CAPTURE_START_FAILED", t.message)
+            if (!auto || !autoStartFailureReported) {
+              if (auto) autoStartFailureReported = true
+              listener.onFailure("capture_prepare", "CAPTURE_START_FAILED", t.message)
+            }
+            // The next automatic attempt waits out the backoff (see below).
+            if (autoRestartAttempts == 0) {
+              autoRestartAttempts = 1
+              nextAutoRestartAt = System.currentTimeMillis() + autoRestartDelayMs(1)
+            }
             Thread.sleep(1_000)
             continue
           }
         }
         val r = record
         if (r == null) {
+          // A reopen failed: try again once the backoff allows.
+          val now = System.currentTimeMillis()
+          if (autoRestartAttempts > 0 && now >= nextAutoRestartAt) {
+            requestAutoRestart(now)
+            continue
+          }
           Thread.sleep(200)
           continue
         }
@@ -272,9 +333,15 @@ class LectureCapture(
             failureReported = true
             listener.onFailure("capture_prepare", "AUDIORECORD_ERROR_$read", null)
           }
+          negativeReads += 1
+          if (negativeReads >= RESTART_AFTER_NEGATIVE_READS && now >= nextAutoRestartAt) {
+            requestAutoRestart(now)
+            continue
+          }
           Thread.sleep(500)
           continue
         }
+        negativeReads = 0
         if (read == 0) {
           if (now - lastAudioAt > STALL_MS) markStopped(lastAudioAt)
           Thread.sleep(50)
@@ -293,6 +360,10 @@ class LectureCapture(
         } else {
           lastAudioAt = now
           failureReported = false
+          autoRestartAttempts = 0
+          nextAutoRestartAt = 0L
+          autoStartFailureReported = false
+          autoRecovering = false
           stalledSince?.let {
             stalledSince = null
             listener.onResumed(now.toDouble())

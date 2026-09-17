@@ -100,6 +100,15 @@ public class SemoraRecorderModule: Module {
         pausedBody: strings["pausedBody"] ?? "Open Semora to continue recording your lecture."
       ))
       capture.onEvent = { [weak self] event in self?.forward(event) }
+      // M4: the Live Activity is refreshed from native code, not only from the
+      // JS tick, so a locked-phone recording never reaches its stale date
+      // while the process is alive. Activity updates run on main.
+      capture.onHeartbeat = { status in
+        if #available(iOS 16.1, *) {
+          let saved = Int(status.closedSeconds)
+          DispatchQueue.main.async { LectureActivityController.shared.refresh(savedSeconds: saved) }
+        }
+      }
       do {
         try capture.start()
       } catch {
@@ -119,7 +128,8 @@ public class SemoraRecorderModule: Module {
           pauseLabel: strings["pause"] ?? "Pause",
           resumeLabel: strings["resume"] ?? "Resume",
           savedLabel: strings["saved"] ?? "saved",
-          markLabel: strings["mark"] ?? "Mark"
+          markLabel: strings["mark"] ?? "Mark",
+          closedLabel: strings["closed"] ?? "Semora closed. Open to check your recording"
         ))
       }
     }.runOnQueue(.main)
@@ -162,14 +172,20 @@ public class SemoraRecorderModule: Module {
       // Runs on the JS thread. The pointer is read under the lock; status()
       // itself only waits on the capture queue, never on main.
       let current = self.state()
+      // `active`: a capture is open in this process. False after Stop, after a
+      // failed start, or when nothing was ever started — the JS side uses it
+      // to tell "recording" from a capture that is gone.
+      let active = current.capture != nil
       guard let status = current.capture?.status() ?? current.finalStatus else {
         return [
+          "active": false,
           "capturing": false, "paused": false, "closedSeconds": 0, "liveChunkSeconds": 0,
           "levelDb": nil, "inputName": nil, "builtInMic": false, "nextSeq": 0,
           "batteryLevel": battery, "charging": charging,
         ]
       }
       return [
+        "active": active,
         "capturing": status.capturing,
         "paused": status.paused,
         "closedSeconds": status.closedSeconds,

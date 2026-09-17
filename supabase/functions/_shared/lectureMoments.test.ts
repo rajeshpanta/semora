@@ -15,6 +15,21 @@ Deno.test('a mark finds what was said just before it, across part boundaries', (
   assertEquals(markedExcerpts(parts, [125]), ['Mitosis has four phases. Part two starts.']);
 });
 
+Deno.test('a part with no row keeps its place: marks after it find the right passage', () => {
+  // seq 1 never arrived (no row). Part 2 starts at 240, not 120.
+  const gappy = [
+    { seq: 0, seconds: 120, timings: [[0, 20, 'Welcome.']] as [number, number, string][] },
+    { seq: 2, seconds: 60, timings: [[0, 10, 'After the gap.']] as [number, number, string][] },
+  ];
+  assertEquals(markedExcerpts(gappy, [245]), ['After the gap.']);
+  // At 180 the student was in the missing part: nothing, not part 2's words.
+  assertEquals(markedExcerpts(gappy, [180]), []);
+  // Parts missing before the first row count too.
+  const lateStart = [{ seq: 2, seconds: 120, timings: [[0, 10, 'Third part.']] as [number, number, string][] }];
+  assertEquals(markedExcerpts(lateStart, [5]), []);
+  assertEquals(markedExcerpts(lateStart, [245]), ['Third part.']);
+});
+
 Deno.test('no marks, no timings, or marks on silence give nothing', () => {
   assertEquals(markedExcerpts(parts, null), []);
   assertEquals(markedExcerpts([{ seq: 0, seconds: 120, timings: null }], [10]), []);

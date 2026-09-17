@@ -32,6 +32,8 @@ interface NativeStatus {
   inputName: string | null;
   builtInMic: boolean;
   nextSeq: number;
+  /** A capture exists (builds that report it; absent on older ones). */
+  active?: boolean;
   batteryLevel: number | null;
   charging: boolean;
 }
@@ -130,6 +132,9 @@ class NativeCaptureEngine implements CaptureEngine {
         channel: tr('Lecture recording'),
         pausedTitle: tr('Recording paused'),
         pausedBody: tr('Open Semora to continue recording your lecture.'),
+        closed: tr('Semora closed. Open to check your recording'),
+        closedByTask: tr('Recording stopped because Semora was closed'),
+        alertChannel: tr('Lecture recording alerts'),
       },
     });
     try {
@@ -162,6 +167,8 @@ class NativeCaptureEngine implements CaptureEngine {
       inputName: s.inputName,
       builtInMic: s.builtInMic,
       nextSeq: s.nextSeq,
+      // Older native builds do not report it: unknown, never "ended".
+      ...(typeof s.active === 'boolean' ? { active: s.active } : {}),
     };
   }
 

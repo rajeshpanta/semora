@@ -64,9 +64,14 @@ public struct LectureRecordingAttributes: ActivityAttributes {
   public var resumeLabel: String
   public var savedLabel: String
   public var markLabel: String
+  /// Shown once the activity is stale: no update for `staleAfter` seconds
+  /// means the app is gone ("Semora closed. Open to check your recording").
+  /// Optional so an activity encoded without it still decodes.
+  public var closedLabel: String?
 
   public init(title: String, recordingLabel: String, pausedLabel: String, stoppedLabel: String,
-              stopLabel: String, pauseLabel: String, resumeLabel: String, savedLabel: String, markLabel: String) {
+              stopLabel: String, pauseLabel: String, resumeLabel: String, savedLabel: String, markLabel: String,
+              closedLabel: String? = nil) {
     self.title = title
     self.recordingLabel = recordingLabel
     self.pausedLabel = pausedLabel
@@ -76,6 +81,7 @@ public struct LectureRecordingAttributes: ActivityAttributes {
     self.resumeLabel = resumeLabel
     self.savedLabel = savedLabel
     self.markLabel = markLabel
+    self.closedLabel = closedLabel
   }
 }
 
@@ -85,6 +91,18 @@ final class LectureActivityController {
   private var activity: Activity<LectureRecordingAttributes>?
   private var lastState: LectureRecordingAttributes.ContentState?
   private var lastSentAt = Date.distantPast
+
+  /// Every request and update carries a stale date this far out. A healthy
+  /// recording refreshes the activity at least every `heartbeatSeconds` from
+  /// native code (see refresh), so only a dead process lets it pass — and the
+  /// widget then stops the running clock and says Semora closed, instead of
+  /// "Recording" counting up over nothing until the app next starts.
+  static let staleAfter: TimeInterval = 90
+  static let heartbeatSeconds: TimeInterval = 30
+
+  private static func staleDate() -> Date {
+    Date().addingTimeInterval(staleAfter)
+  }
 
   /// Activities left by a process that died mid-lecture (a kill, a force-quit,
   /// an update) keep counting on the lock screen and their buttons reach
@@ -109,7 +127,7 @@ final class LectureActivityController {
       elapsedSeconds: 0, savedSeconds: 0, paused: false, micStopped: false, measuredAt: Date())
     do {
       if #available(iOS 16.2, *) {
-        activity = try Activity.request(attributes: attributes, content: .init(state: state, staleDate: nil), pushType: nil)
+        activity = try Activity.request(attributes: attributes, content: .init(state: state, staleDate: LectureActivityController.staleDate()), pushType: nil)
       } else {
         activity = try Activity.request(attributes: attributes, contentState: state, pushType: nil)
       }
@@ -124,7 +142,12 @@ final class LectureActivityController {
   /// the JS tick that normally drives this is not running on a locked phone.
   func setMicStopped(_ stopped: Bool) {
     guard let last = lastState, last.micStopped != stopped else { return }
-    update(elapsedSeconds: last.elapsedSeconds, savedSeconds: last.savedSeconds, paused: last.paused, micStopped: stopped)
+    // The clock was counting forward on its own since the last update: freeze
+    // it where it had got to, not where it was then.
+    let elapsed = !last.paused && !last.micStopped
+      ? last.elapsedSeconds + max(0, Int(Date().timeIntervalSince(last.measuredAt)))
+      : last.elapsedSeconds
+    update(elapsedSeconds: elapsed, savedSeconds: last.savedSeconds, paused: last.paused, micStopped: stopped)
   }
 
   /// Throttled: the view counts time forward itself, so an update is only
@@ -134,12 +157,35 @@ final class LectureActivityController {
     let state = LectureRecordingAttributes.ContentState(
       elapsedSeconds: elapsedSeconds, savedSeconds: savedSeconds, paused: paused, micStopped: micStopped, measuredAt: Date())
     let changed = lastState?.paused != paused || lastState?.micStopped != micStopped
-    guard changed || Date().timeIntervalSince(lastSentAt) >= 30 else { return }
+    guard changed || Date().timeIntervalSince(lastSentAt) >= LectureActivityController.heartbeatSeconds else { return }
+    send(state, to: activity)
+  }
+
+  /// The native heartbeat (main thread), from the capture's own timer: keeps a
+  /// locked-phone recording fresh while JavaScript is suspended and the JS
+  /// tick that calls update() is not running. Carries the last paused /
+  /// stopped flags forward, advances the clock only while it is running, and
+  /// takes the saved figure from the recorder.
+  func refresh(savedSeconds: Int) {
+    guard let activity, let last = lastState else { return }
+    guard Date().timeIntervalSince(lastSentAt) >= LectureActivityController.heartbeatSeconds - 5 else { return }
+    let now = Date()
+    let running = !last.paused && !last.micStopped
+    let elapsed = running
+      ? last.elapsedSeconds + max(0, Int(now.timeIntervalSince(last.measuredAt)))
+      : last.elapsedSeconds
+    let state = LectureRecordingAttributes.ContentState(
+      elapsedSeconds: elapsed, savedSeconds: max(last.savedSeconds, savedSeconds),
+      paused: last.paused, micStopped: last.micStopped, measuredAt: now)
+    send(state, to: activity)
+  }
+
+  private func send(_ state: LectureRecordingAttributes.ContentState, to activity: Activity<LectureRecordingAttributes>) {
     lastState = state
     lastSentAt = Date()
     Task {
       if #available(iOS 16.2, *) {
-        await activity.update(.init(state: state, staleDate: nil))
+        await activity.update(.init(state: state, staleDate: LectureActivityController.staleDate()))
       } else {
         await activity.update(using: state)
       }

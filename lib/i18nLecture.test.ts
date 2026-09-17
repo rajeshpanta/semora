@@ -17,6 +17,10 @@ const FILES = [
   'app/lecture/record.tsx',
   'app/lecture/[id].tsx',
   'app/lecture/index.tsx',
+  // The upload chooser and the quiz: their subtitles, stage labels and the
+  // quiz's last button shipped in English because nothing scanned them.
+  'app/lecture/new.tsx',
+  'app/lecture/quiz.tsx',
   'components/LectureRecordingBar.tsx',
   'components/LectureInterruptedNotice.tsx',
   // The consent gate: its three legal bullets shipped in English to Spanish
@@ -118,4 +122,33 @@ Deno.test('the recorder clock is read aloud as a duration, in both languages', (
   assertEquals(spokenDuration(61, 'es'), '1 minuto 1 segundo');
   assertEquals(spokenDuration(3661, 'es'), '1 hora 1 minuto 1 segundo');
   assertEquals(spokenDuration(7325, 'es'), '2 horas 2 minutos 5 segundos');
+});
+
+Deno.test('a kill that saved nothing says so, with and without the start time', () => {
+  assertEquals(
+    translate("Your recording from 10:42 AM couldn't be saved because Semora was closed while the phone was locked.", 'es'),
+    'No se pudo guardar tu grabación de las 10:42 AM porque Semora se cerró mientras el teléfono estaba bloqueado.',
+  );
+  assertEquals(
+    translate("Your recording couldn't be saved because Semora was closed while the phone was locked.", 'es'),
+    'No se pudo guardar tu grabación porque Semora se cerró mientras el teléfono estaba bloqueado.',
+  );
+});
+
+Deno.test('a finished lecture missing parts is not called pending in Spanish', () => {
+  assertEquals(translate('Missing parts', 'es'), 'Faltan partes');
+  assert(translate('Missing parts', 'es') !== translate('Incomplete', 'es'));
+});
+
+Deno.test('labels built from translated pieces survive the component translating them again', () => {
+  // record.tsx and LectureRecordingBar.tsx join t() pieces with a spoken
+  // duration; LocalizedReactNative then runs translate over the whole label.
+  // A Spanish label must come back unchanged, not half-rewritten.
+  const left = `${translate('Time left', 'es')}: ${spokenDuration(750, 'es')}`;
+  assertEquals(left, 'Tiempo restante: 12 minutos 30 segundos');
+  assertEquals(translate(left, 'es'), left);
+  const bar = `${translate('Recording paused', 'es')}, ${spokenDuration(61, 'es')}. ${translate('Return to the recording', 'es')}`;
+  assertEquals(translate(bar, 'es'), bar);
+  assert(!bar.includes('Return'), bar);
+  assertEquals(translate('Time left: 12 minutes 30 seconds', 'en'), 'Time left: 12 minutes 30 seconds');
 });

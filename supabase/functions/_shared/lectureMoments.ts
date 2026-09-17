@@ -23,8 +23,20 @@ export function markedExcerpts(parts: TimedPart[], marks: number[] | null | unde
   if (!marks?.length || !parts.length) return [];
   const ordered = [...parts].sort((a, b) => a.seq - b.seq);
   const pieces: { start: number; end: number; text: string }[] = [];
+  // A part with no row (it never arrived) has no length on record: it is taken
+  // to be as long as the longest part that has one, including parts missing
+  // before the first row. Laying the next part straight after the last one
+  // moved every later mark onto the wrong passage.
+  let largest = 0;
+  for (const p of ordered) {
+    const s = Number(p.seconds);
+    if (Number.isFinite(s) && s > largest) largest = s;
+  }
   let offset = 0;
+  let expectedSeq = 0;
   for (const part of ordered) {
+    offset += Math.max(0, part.seq - expectedSeq) * largest;
+    expectedSeq = Math.max(expectedSeq, part.seq + 1);
     for (const t of part.timings ?? []) {
       if (!Array.isArray(t) || typeof t[2] !== 'string') continue;
       pieces.push({ start: offset + Number(t[0] || 0), end: offset + Number(t[1] || 0), text: t[2] });

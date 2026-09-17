@@ -279,7 +279,7 @@ export const FEATURES: FeatureFact[] = [
     freeNote:
       'Free to try. The free plan includes one AI action for the life of the account — spend it on a lecture. Pro is unlimited.',
     description:
-      "Record a lecture from your phone and Semora transcribes it, then writes structured notes, a multiple-choice practice quiz with explanations, and a flashcard deck from the same transcript. Capture is chunked into five-minute segments, so a phone that dies or an app the system kills costs you the last few minutes rather than the whole class. The audio itself is deleted as soon as the transcript is written. Free accounts get one AI action for the lifetime of the account and a lecture is one way to spend it; Pro is where you record more than one.",
+      "Record a lecture from your phone, even while it is locked or you use another app. Semora saves complete two-minute chunks without restarting the microphone, retries pending uploads, and turns the class into a transcript, structured notes, a practice quiz and flashcards. The audio itself is deleted as soon as the transcript is written. Free accounts get one AI action for the lifetime of the account and a lecture is one way to spend it; Pro is where you record more than one.",
   },
   {
     slug: 'apple-watch',

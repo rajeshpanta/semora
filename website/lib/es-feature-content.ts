@@ -132,10 +132,11 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
         ],
       },
       {
-        heading: 'Una grabación que sobrevive a que se apague el teléfono',
+        heading: 'La grabación continúa aunque bloquees el iPhone',
         paragraphs: [
-          'El audio se captura en tramos de cinco minutos y no como un archivo largo, por una razón concreta: un .m4a que se corta antes de cerrarse no queda incompleto, queda ilegible. Una grabadora de archivo único que se topa con un apagado por batería en el minuto 70 no te devuelve 70 minutos: no te devuelve nada.',
-          'Con tramos, una pérdida irrecuperable se vuelve soportable: en el peor caso pierdes los últimos minutos, y todo lo anterior ya se subió. Además cada subida pesa alrededor de 1,2 MB, que es lo que hace que esto funcione con el wifi del campus y no solo con buena conexión.',
+          'La versión 1.15 activa el micrófono una sola vez, mientras Semora está en pantalla, y mantiene esa sesión nativa hasta que detienes la grabación. Bloquear el iPhone o cambiar a otra aplicación no detiene ni reinicia el micrófono, por lo que la clase sigue grabándose sin mantener Semora en primer plano.',
+          'Mientras continúa la captura, Semora cierra un archivo de audio local completo cada dos minutos sin interrumpir el micrófono. Cada archivo terminado entra en la cola de subida, mientras que el archivo que aún se está escribiendo permanece separado hasta que se cierra correctamente. Las subidas pendientes se reintentan, así que una conexión débil no te obliga a mantener abierta la pantalla de carga.',
+          'Si la aplicación se cierra de forma inesperada o el teléfono se queda sin batería, los tramos terminados siguen siendo recuperables; solo puede perderse el tramo abierto, normalmente no más de unos dos minutos. Semora detecta llamadas y otras interrupciones del micrófono, marca el hueco en la cronología y reanuda la captura cuando iOS devuelve el micrófono. Si no puede continuar, te avisa en lugar de dejar avanzar el contador en silencio.',
           'La captura está ajustada para una voz en un salón grande: mono, 32 kbps, muestreo en el rango del habla. Una clase de 90 minutos ocupa unos 22 MB; esa misma clase con los ajustes que trae una grabadora por defecto ocuparía 86 MB.',
         ],
       },
@@ -156,7 +157,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Los límites, sin rodeos',
         paragraphs: [
-          'Una grabación llega hasta 90 minutos y se te avisa antes del tope en lugar de cortarte en seco. Grabar requiere la app del teléfono, iPhone o iPad, porque necesita micrófono y una sesión de audio en primer plano; la app web puede leer todo lo que produjo una grabación, pero no puede capturarla.',
+          'Una grabación llega hasta 90 minutos y se te avisa antes del tope en lugar de cortarte en seco. Grabar requiere la app de iPhone o iPad porque la captura fiable usa el grabador nativo y solo comienza cuando pulsas Grabar de forma explícita. Una vez iniciada, continúa con el dispositivo bloqueado o mientras usas otra aplicación. La app web puede leer todo lo que produjo una grabación, pero no puede capturarla.',
           'Semora revisa el espacio libre antes de empezar, porque un dispositivo que se llena a mitad de la clase es el único fallo sin arreglo posible: la clase no ocurre dos veces. También te avisa si la batería está baja y no estás conectado a la corriente.',
           'En el plan gratuito, una clase gasta la única acción de IA de por vida de la cuenta, la misma que gastaría un escaneo de programa. Grabar más de una clase es parte de Pro.',
         ],
@@ -169,7 +170,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       },
       {
         question: '¿Qué pasa si se apaga mi teléfono a mitad de la clase?',
-        answer: 'Pierdes el tramo en curso, como máximo los últimos cinco minutos, y conservas todo lo anterior. El audio se escribe en piezas de cinco minutos que se suben conforme se completan, precisamente para que un apagón o un cierre del sistema no te cueste la clase entera. Una grabadora de archivo único, en esa misma situación, suele dejar un archivo que ni siquiera abre.',
+        answer: 'Los tramos terminados de dos minutos siguen siendo recuperables y las subidas pendientes se reintentan cuando Semora puede volver a ejecutarse. El único audio en riesgo es el tramo que estaba abierto cuando se apagó el teléfono o se cerró la aplicación, normalmente no más de unos dos minutos. Semora utiliza archivos finalizados por separado para que una escritura interrumpida no te cueste el resto de la clase.',
       },
       {
         question: '¿Necesito permiso para grabar mis clases?',
@@ -177,7 +178,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       },
       {
         question: '¿Puedo grabar desde la app web?',
-        answer: 'No. Grabar necesita micrófono y una sesión de audio en primer plano, así que funciona solo en la app de iPhone y iPad. Todo lo que produce una grabación (transcripción, apuntes, cuestionario y tarjetas) son datos de la cuenta, así que se leen sin problema desde el navegador con la misma sesión.',
+        answer: 'No. La captura fiable con la pantalla bloqueada y en segundo plano utiliza el grabador nativo de Semora, por lo que solo funciona en la app de iPhone y iPad. Todo lo que produce una grabación (transcripción, apuntes, cuestionario y tarjetas) son datos de la cuenta, así que se leen sin problema desde el navegador con la misma sesión.',
       },
       {
         question: '¿La grabación de clases es gratis?',

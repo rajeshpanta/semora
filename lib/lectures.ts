@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { AppState, Platform } from 'react-native';
 import type { TimelinePart } from '@/lib/lectureTimeline';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as FileSystem from 'expo-file-system/legacy';
 import Constants from 'expo-constants';
 import { supabase } from '@/lib/supabase';
@@ -380,6 +380,10 @@ export function useLectureTranscriptSearch(query: string, enabled: boolean) {
     queryKey: ['lectureTranscriptSearch', key],
     enabled: enabled && key.length >= 3,
     staleTime: 60_000,
+    // Keep the last hits while the next query runs: without them the list
+    // flashed "No lectures match" between keystrokes before transcript hits
+    // arrived. The screen shows a spinner while isFetching instead.
+    placeholderData: keepPreviousData,
     queryFn: async (): Promise<string[]> => {
       let q = supabase.from('lecture_recordings').select('id');
       for (const w of words) q = q.ilike('transcript', `%${w.replace(/[%_\\]/g, '\\$&')}%`);

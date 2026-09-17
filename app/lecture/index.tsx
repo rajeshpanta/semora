@@ -5,6 +5,7 @@ import { Text, TextInput, TouchableOpacity } from '@/components/LocalizedReactNa
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useI18n } from '@/lib/i18n';
@@ -16,6 +17,7 @@ import {
   useLectureTranscriptSearch,
   type LectureWithCourse,
   isLectureStalled,
+  useAppIsActive,
 } from '@/lib/lectures';
 import { canRecordLectures } from '@/lib/lectureSessionRuntime';
 import { getLectureLocalProgress, subscribeUploadQueue } from '@/lib/lectureUploadQueue';
@@ -48,7 +50,9 @@ function statusLabel(lecture: LectureWithCourse, seen: Set<string> | null): RowS
   if (local && local.waitingForSignIn > 0) return { text: 'Sign in to upload', tone: 'waiting', icon: 'user' };
   if (local && local.waiting > 0) return { text: 'Saved on phone', tone: 'waiting', icon: 'mobile' };
   const notesReady = (): RowStatus | null => {
-    if ((lecture.parts_missing ?? 0) > 0) return { text: 'Incomplete', tone: 'warn', icon: 'exclamation-triangle' };
+    // "Missing parts", not "Incomplete": the shared 'Incomplete' key reads
+    // "Pendiente" in Spanish, and this lecture is final, not pending.
+    if ((lecture.parts_missing ?? 0) > 0) return { text: 'Missing parts', tone: 'warn', icon: 'exclamation-triangle' };
     if (lecture.notes_md && seen && !seen.has(lecture.id)) return { text: 'Notes ready', tone: 'ok', icon: 'check' };
     return null;
   };
@@ -201,6 +205,7 @@ function SearchBox({ value, onChange }: { value: string; onChange: (v: string) =
 
 export default function LecturesScreen() {
   const colors = useColors();
+  const { t } = useI18n();
   const router = useRouter();
   const { contentMaxWidth } = useResponsive();
   // Optional course scope: /lecture?courseId=<id> narrows the list to one
@@ -225,7 +230,7 @@ export default function LecturesScreen() {
   // to find where one idea was explained had no search box at all.
   const searchable = scoped.length >= 2;
   const folded = useMemo(() => new Map(scoped.map((l) => [l.id, foldLecture(l)])), [scoped]);
-  const { data: transcriptHits } = useLectureTranscriptSearch(settledQuery, searchable);
+  const { data: transcriptHits, isFetching: searchingTranscripts } = useLectureTranscriptSearch(settledQuery, searchable);
   const lectures = useMemo(() => {
     const words = searchWords(settledQuery);
     if (!searchable || !words.length) return scoped;
@@ -286,12 +291,18 @@ export default function LecturesScreen() {
   const anyInFlight = allLectures.some(
     (l) => isLectureInFlight(l.status) && !isLectureStalled(l, getLectureLocalProgress(l.id)),
   );
-  // Keep the list honest while something is still working, slowly.
+  // Keep the list honest while something is still working, slowly — and only
+  // while this list is the screen on top and the app is on screen. The
+  // recorder sits on top of it for a whole class, often on a locked phone, and
+  // each refetch downloads every lecture's notes. Realtime invalidation covers
+  // the time away.
+  const isFocused = useIsFocused();
+  const appActive = useAppIsActive();
   useEffect(() => {
-    if (!anyInFlight) return;
+    if (!anyInFlight || !isFocused || !appActive) return;
     const timer = setInterval(() => { void refetch(); }, 15_000);
     return () => clearInterval(timer);
-  }, [anyInFlight, refetch]);
+  }, [anyInFlight, isFocused, appActive, refetch]);
 
   // Record · Upload first, above the search box: the list grows every week,
   // and the button used to sit after its last row.
@@ -343,7 +354,13 @@ export default function LecturesScreen() {
           A lecture is still processing. You can leave — it finishes on its own.
         </Text>
       )}
-      {lectures.length === 0 && scoped.length > 0 ? (
+      {lectures.length === 0 && scoped.length > 0 && searchingTranscripts ? (
+        // Transcript hits are still on their way: "No lectures match" here
+        // flashed before the lectures that do match arrived.
+        <View style={styles.searching}>
+          <ActivityIndicator color={colors.brand} accessibilityLabel={t('Searching transcripts')} />
+        </View>
+      ) : lectures.length === 0 && scoped.length > 0 ? (
         <Text style={[styles.hint, { color: colors.ink2, textAlign: 'center', marginTop: 24 }]}>
           No lectures match your search.
         </Text>
@@ -454,6 +471,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   loading: { paddingTop: 60, alignItems: 'center' },
+  searching: { paddingTop: 24, alignItems: 'center' },
   hint: { fontSize: 12.5, lineHeight: 18, marginBottom: 10 },
   search: {
     flexDirection: 'row', alignItems: 'center', gap: 9,

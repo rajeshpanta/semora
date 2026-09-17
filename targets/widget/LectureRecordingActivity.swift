@@ -46,6 +46,9 @@ public struct LectureRecordingAttributes: ActivityAttributes {
   public var resumeLabel: String
   public var savedLabel: String
   public var markLabel: String
+  /// Shown when the activity is stale (the app stopped refreshing it).
+  /// Optional so an activity encoded without it still decodes.
+  public var closedLabel: String?
 }
 
 public struct StopLectureRecordingIntent: LiveActivityIntent {
@@ -85,10 +88,18 @@ private func clock(_ seconds: Int) -> String {
   Duration.seconds(seconds).formatted(.time(pattern: seconds >= 3600 ? .hourMinuteSecond : .minuteSecond))
 }
 
+/// Stale: the app has not refreshed the activity for its stale interval (90 s;
+/// a live recording refreshes it every 30 s from native code), so Semora was
+/// closed or killed. The clock stops, the words say so, and only Stop stays.
+private func closedLabel(_ context: ActivityViewContext<LectureRecordingAttributes>) -> String {
+  context.attributes.closedLabel ?? "Semora closed. Open to check your recording"
+}
+
 private struct ElapsedText: View {
   let state: LectureRecordingAttributes.ContentState
+  var isStale: Bool = false
   var body: some View {
-    if state.paused || state.micStopped {
+    if isStale || state.paused || state.micStopped {
       Text(Duration.seconds(state.elapsedSeconds), format: .time(pattern: state.elapsedSeconds >= 3600 ? .hourMinuteSecond : .minuteSecond))
         .monospacedDigit()
     } else {
@@ -100,6 +111,10 @@ private struct ElapsedText: View {
 }
 
 private func statusLabel(_ context: ActivityViewContext<LectureRecordingAttributes>) -> String {
+  // Stale while the microphone was stopped: the app is most likely alive and
+  // suspended by an interruption (a call), not closed — say what is known.
+  if context.isStale && context.state.micStopped { return context.attributes.stoppedLabel }
+  if context.isStale { return closedLabel(context) }
   if context.state.micStopped { return context.attributes.stoppedLabel }
   if context.state.paused { return context.attributes.pausedLabel }
   return context.attributes.recordingLabel
@@ -112,8 +127,16 @@ private func clockAccessibilityLabel(_ context: ActivityViewContext<LectureRecor
   "\(statusLabel(context)), \(clock(context.state.elapsedSeconds))"
 }
 
-private func tint(_ state: LectureRecordingAttributes.ContentState) -> Color {
-  state.micStopped ? amber : (state.paused ? .gray : coral)
+private func tint(_ context: ActivityViewContext<LectureRecordingAttributes>) -> Color {
+  if context.isStale { return amber }
+  return context.state.micStopped ? amber : (context.state.paused ? .gray : coral)
+}
+
+private func stateSymbol(_ context: ActivityViewContext<LectureRecordingAttributes>, filledPause: Bool) -> String {
+  if context.state.micStopped { return "mic.slash.fill" }
+  if context.isStale { return "exclamationmark.triangle.fill" }
+  if filledPause && context.state.paused { return "pause.fill" }
+  return "mic.fill"
 }
 
 /// "40:00 saved" — how much audio is safely on the phone, which is the figure
@@ -221,20 +244,25 @@ struct LectureRecordingLiveActivity: Widget {
       // Lock screen
       VStack(alignment: .leading, spacing: 10) {
         HStack(spacing: 8) {
-          Image(systemName: context.state.micStopped ? "mic.slash.fill" : (context.state.paused ? "pause.fill" : "mic.fill"))
-            .foregroundStyle(tint(context.state))
+          Image(systemName: stateSymbol(context, filledPause: true))
+            .foregroundStyle(tint(context))
             .accessibilityHidden(true)
           Text(statusLabel(context)).font(.headline).foregroundStyle(.primary)
+            .lineLimit(2)
+            .minimumScaleFactor(0.8)
           Spacer()
-          ElapsedText(state: context.state)
+          ElapsedText(state: context.state, isStale: context.isStale)
             .font(.title2.weight(.semibold))
             .accessibilityLabel(clockAccessibilityLabel(context))
         }
         Text(context.attributes.title).font(.subheadline).lineLimit(1).foregroundStyle(.secondary)
         SavedText(context: context)
         HStack(spacing: 10) {
-          PauseControl(context: context, compact: false)
-          MarkControl(context: context, compact: false)
+          // Stale: the app is gone, so Pause and Mark would reach nothing.
+          if !context.isStale {
+            PauseControl(context: context, compact: false)
+            MarkControl(context: context, compact: false)
+          }
           Button(intent: StopLectureRecordingIntent()) {
             Label(context.attributes.stopLabel, systemImage: "stop.fill").frame(maxWidth: .infinity)
           }
@@ -250,12 +278,14 @@ struct LectureRecordingLiveActivity: Widget {
     } dynamicIsland: { context in
       DynamicIsland {
         DynamicIslandExpandedRegion(.leading) {
-          Label(statusLabel(context), systemImage: context.state.micStopped ? "mic.slash.fill" : "mic.fill")
-            .foregroundStyle(tint(context.state))
+          Label(statusLabel(context), systemImage: stateSymbol(context, filledPause: false))
+            .foregroundStyle(tint(context))
             .font(.caption.weight(.semibold))
+            .lineLimit(2)
+            .minimumScaleFactor(0.8)
         }
         DynamicIslandExpandedRegion(.trailing) {
-          ElapsedText(state: context.state)
+          ElapsedText(state: context.state, isStale: context.isStale)
             .font(.title3.weight(.semibold))
             .accessibilityLabel(clockAccessibilityLabel(context))
         }
@@ -264,8 +294,10 @@ struct LectureRecordingLiveActivity: Widget {
         }
         DynamicIslandExpandedRegion(.bottom) {
           HStack(spacing: 10) {
-            PauseControl(context: context, compact: true)
-            MarkControl(context: context, compact: true)
+            if !context.isStale {
+              PauseControl(context: context, compact: true)
+              MarkControl(context: context, compact: true)
+            }
             Button(intent: StopLectureRecordingIntent()) {
               Label(context.attributes.stopLabel, systemImage: "stop.fill").frame(maxWidth: .infinity)
             }
@@ -274,17 +306,17 @@ struct LectureRecordingLiveActivity: Widget {
           }
         }
       } compactLeading: {
-        Image(systemName: context.state.micStopped ? "mic.slash.fill" : "mic.fill")
-          .foregroundStyle(tint(context.state))
+        Image(systemName: stateSymbol(context, filledPause: false))
+          .foregroundStyle(tint(context))
           .accessibilityLabel(statusLabel(context))
       } compactTrailing: {
-        ElapsedText(state: context.state)
+        ElapsedText(state: context.state, isStale: context.isStale)
           .frame(maxWidth: 56)
           .font(.caption.weight(.semibold))
           .accessibilityLabel(clockAccessibilityLabel(context))
       } minimal: {
-        Image(systemName: context.state.micStopped ? "mic.slash.fill" : "mic.fill")
-          .foregroundStyle(tint(context.state))
+        Image(systemName: stateSymbol(context, filledPause: false))
+          .foregroundStyle(tint(context))
           .accessibilityLabel(clockAccessibilityLabel(context))
       }
     }

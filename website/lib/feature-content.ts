@@ -107,7 +107,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
   "lecture-recording": {
     "metaTitle": "Lecture Recording \u2014 Notes, Quiz and Flashcards",
     "metaDescription":
-      "Record a lecture on your phone. Semora transcribes it and writes structured notes, a practice quiz and a flashcard deck from the same transcript.",
+      "Record a lecture even while your iPhone is locked. Semora creates a transcript, structured notes, a practice quiz and flashcards from the class.",
     "h1": "Record the lecture. Get the notes, the quiz and the cards.",
     "lede":
       "Semora records a class from your phone, transcribes it, and turns that transcript into written notes, a multiple-choice practice quiz with explanations, and a flashcard deck \u2014 all from one recording, without you retyping anything.",
@@ -129,10 +129,11 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
         ]
       },
       {
-        "heading": "Recording that survives your phone dying",
+        "heading": "Recording that keeps going while your iPhone is locked",
         "paragraphs": [
-          "Audio is captured in five-minute segments rather than as one long file, and the reason is specific. An .m4a killed before its writer finalises has no moov atom \u2014 the file is not shortened, it is unplayable. A single-file recorder that meets a low-battery shutdown or an aggressive iOS memory reclaim at minute 70 does not hand back 70 minutes. It hands back nothing.",
-          "Segmenting turns an unrecoverable loss into a survivable one: the worst case is the last few minutes, and every earlier segment has already uploaded. It also keeps each upload around 1.2 MB, which is what makes this work on campus wifi rather than only on a good connection.",
+          "Version 1.15 starts the microphone once, while Semora is on screen, and keeps that native capture session running until you stop. Locking your iPhone or switching to another app does not stop and restart the microphone, so the recording continues without needing Semora in the foreground.",
+          "While capture continues, Semora closes a complete local audio file every two minutes without interrupting the microphone. Each finished file can enter the upload queue immediately, while the file still being written stays private to the recorder until it has been finalised. Pending uploads retry, so a weak campus connection does not require you to keep the upload screen open.",
+          "If the app is terminated or the phone loses power, completed chunks remain recoverable; only the open chunk can be lost, normally no more than about two minutes. Phone calls and other microphone interruptions are detected, recorded as gaps in the timeline, and recovered automatically when iOS returns the microphone. If capture cannot resume, Semora tells you instead of silently advancing the timer.",
           "The capture settings are tuned for one voice in a large room \u2014 mono, 32 kbps, speech-range sampling. A 90-minute lecture is roughly 22 MB. The same lecture at the audio presets a recorder ships with by default would be 86 MB."
         ]
       },
@@ -160,7 +161,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       {
         "heading": "The limits, plainly",
         "paragraphs": [
-          "One recording runs up to 90 minutes, and you are warned before the cap rather than cut off at it. Recording requires the phone app \u2014 iPhone or iPad \u2014 because it needs a microphone and a foreground audio session; the web app can read everything a recording produced, but it cannot capture one.",
+          "One recording runs up to 90 minutes, and you are warned before the cap rather than cut off at it. Recording requires the iPhone or iPad app because the reliable capture path is native and starts only after you explicitly press Record. Once started, it continues with the device locked or while you use another app. The web app can read everything a recording produced, but it cannot capture one.",
           "Semora checks for free space before it starts, because a device that fills up mid-lecture is the one failure with no recovery: the class does not happen twice. It also warns you if the battery is low and you are not plugged in.",
           "On the free tier a lecture spends the account's single lifetime AI action, the same one a syllabus scan would spend. Recording more than one class is a Pro feature."
         ]
@@ -173,7 +174,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       },
       {
         "question": "What happens if my phone dies halfway through the lecture?",
-        "answer": "You lose the segment that was in progress, at most the last five minutes, and keep everything before it. Audio is written in five-minute pieces and uploaded as they complete, precisely so that a shutdown, a crash, or iOS reclaiming memory does not cost you the whole class. A single-file recorder in the same situation typically produces a file that will not open at all."
+        "answer": "Completed two-minute chunks remain recoverable and pending uploads retry when Semora can run again. The only audio at risk is the chunk still open when the phone loses power or the app is terminated, normally no more than about two minutes. Semora uses separate finalised files so one interrupted write does not cost you the rest of the class."
       },
       {
         "question": "Do I need permission to record my lectures?",
@@ -181,7 +182,7 @@ export const FEATURE_CONTENT: Partial<Record<FeatureSlug, FeatureLongForm>> =
       },
       {
         "question": "Can I record on the web app?",
-        "answer": "No. Recording needs a microphone and a foreground audio session, so it runs in the iPhone and iPad app only. Everything a recording produces \u2014 the transcript, notes, quiz and cards \u2014 is account data, so it is all readable in the browser afterwards on the same account."
+        "answer": "No. Reliable locked-screen and background capture uses Semora's native recorder, so recording runs in the iPhone and iPad app only. Everything a recording produces \u2014 the transcript, notes, quiz and cards \u2014 is account data, so it is all readable in the browser afterwards on the same account."
       },
       {
         "question": "Is lecture recording free?",
