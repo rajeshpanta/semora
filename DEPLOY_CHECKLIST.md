@@ -218,7 +218,7 @@ syllabi as `fixtures/real-*` before quoting any accuracy number publicly.
 
 # Record Lecture completion (branch `lecture-recording-complete`, 2026-09-16)
 
-**Status 2026-09-17:** migrations 140, 142–147 applied; lecture-transcribe v28 + lecture-study-kit v23 deployed; OTA group dc613091 published to production (runtime e88b9845…); 1.15 (59) archived for App Store Connect.
+**Status 2026-09-17:** migrations 140, 142–148 applied; lecture-transcribe v29 + lecture-study-kit v24 deployed; OTA groups dc613091 then bc594ff1 published to production (runtime e88b9845…); 1.15 build **60** uploaded to App Store Connect (submit 60, not 59).
 
 Plan: `docs/audits/record-lecture-report-and-plan-2026-09-16.md`. Every step
 below needs the owner's explicit yes, one step at a time.
