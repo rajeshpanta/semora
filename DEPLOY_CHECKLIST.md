@@ -218,7 +218,22 @@ syllabi as `fixtures/real-*` before quoting any accuracy number publicly.
 
 # Record Lecture completion (branch `lecture-recording-complete`, 2026-09-16)
 
-**Status 2026-09-17:** migrations 140, 142–148 applied; lecture-transcribe v29 + lecture-study-kit v24 deployed; OTA groups dc613091 then bc594ff1 published to production (runtime e88b9845…); 1.15 build **60** uploaded to App Store Connect (submit 60, not 59).
+**Status 2026-09-17: COMPLETE (owner sign-off).**
+- Server: migrations 140, 142–148 applied; lecture-transcribe v29 and lecture-study-kit v24 deployed.
+- App code: the final code (`c30a0d1`) is live over the air on every iOS runtime —
+  `56f713eb` → 1.13/1.14 (`e88b9845…`), `caee0fd9` → 1.15 build 59 (`bdc3c682…`),
+  `e06dd657` → 1.15 build 60 (`7491078…`).
+- 1.15 is in App Review with build **59**, and the owner chose to let it ship. Build 60's native
+  fixes (the lock screen no longer shows a running clock after the app dies, `getStatus.active`,
+  Android auto-recovery) ship as **1.15.1**. That needs a fresh build: build 60 belongs to the
+  1.15 train and cannot be attached to 1.15.1. Changing only the version keeps runtime `7491078…`.
+- Proven in production: two ~56-minute lectures recorded with the phone locked, nothing missing,
+  notes not cut off.
+- Built and unit-tested but not run on a physical device (they need Pro on a test account): the
+  lock-screen Pause/Mark/Stop buttons, a phone call mid-lecture, and stopping while offline.
+- Groq stays on the free tier (owner decision); revisit only if the logs show the daily quota hit.
+- Left after release: `LECTURE_MIN_VERSION`/`LECTURE_MIN_BUILD` once 1.15 is live (R3), and an
+  Android build containing the native recorder (Record stays hidden on Android until then).
 
 Plan: `docs/audits/record-lecture-report-and-plan-2026-09-16.md`. Every step
 below needs the owner's explicit yes, one step at a time.

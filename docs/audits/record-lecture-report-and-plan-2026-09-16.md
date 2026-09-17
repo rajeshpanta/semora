@@ -1,5 +1,7 @@
 # Record Lecture — verified report, market research, and completion plan
 
+> **Status 2026-09-17: COMPLETE.** The plan below is implemented, deployed and signed off by the owner. What shipped, the release state and what remains are recorded under "Record Lecture completion" in `DEPLOY_CHECKLIST.md`.
+
 Prepared 2026-09-16. Supersedes `lecture-recording-audit-2026-09-16.md` (first pass) and the unexecuted plan in `lecture-audio-fix-plan-2026-09-14.md`. The plan in Part 3 was revised after an independent adversarial review.
 
 Everything here was read-only. Nothing was changed, deployed, committed or sent anywhere.
