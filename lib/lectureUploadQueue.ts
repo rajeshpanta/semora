@@ -813,10 +813,27 @@ async function lastCaptureActivityMs(lectureId: string, startedAtMs: number | nu
   for (const name of inFolder) {
     if (name.endsWith('.partial.m4a')) await consider(`${dir}${name}`);
   }
+  // expo-audio's cache files carry no lecture id. While another lecture is
+  // recording, its live file is the newest thing there and would make a
+  // 20-second kill look like a lost hour: say nothing rather than guess.
+  if (activeLectureId !== null && activeLectureId !== lectureId) return newest;
+  // And only files from before the NEXT lecture this phone started, which
+  // would otherwise be credited to this one.
+  let ceilingMs = Number.POSITIVE_INFINITY;
+  for (const other of await listLocalLectureIds()) {
+    if (other === lectureId) continue;
+    const found = await readJournal(lectureJournalFs, lectureDir(other)).catch(() => null);
+    const otherStart = found?.journal.startedAtMs ?? null;
+    if (typeof otherStart === 'number' && otherStart > startedAtMs && otherStart < ceilingMs) ceilingMs = otherStart;
+  }
   const expoDir = `${FileSystem.cacheDirectory}ExpoAudio/`;
   const expoFiles = await FileSystem.readDirectoryAsync(expoDir).catch(() => [] as string[]);
   for (const name of expoFiles) {
-    if (name.startsWith('recording-')) await consider(`${expoDir}${name}`);
+    if (!name.startsWith('recording-')) continue;
+    const uri = `${expoDir}${name}`;
+    const info = await FileSystem.getInfoAsync(uri).catch(() => null) as { exists: boolean; modificationTime?: number } | null;
+    const ms = info?.exists && info.modificationTime ? info.modificationTime * 1000 : null;
+    if (ms !== null && ms < ceilingMs) await consider(uri);
   }
   return newest;
 }

@@ -230,13 +230,14 @@ export default function LecturesScreen() {
   // to find where one idea was explained had no search box at all.
   const searchable = scoped.length >= 2;
   const folded = useMemo(() => new Map(scoped.map((l) => [l.id, foldLecture(l)])), [scoped]);
-  const { data: transcriptHits, isFetching: searchingTranscripts } = useLectureTranscriptSearch(settledQuery, searchable);
+  const { data: transcriptHits, isFetching: searchingTranscripts, isPlaceholderData: staleHits } = useLectureTranscriptSearch(settledQuery, searchable);
   const lectures = useMemo(() => {
     const words = searchWords(settledQuery);
     if (!searchable || !words.length) return scoped;
-    const hits = new Set(transcriptHits ?? []);
+    // Hits kept on screen from the previous query are not this query's matches.
+    const hits = new Set(staleHits ? [] : transcriptHits ?? []);
     return scoped.filter((l) => hits.has(l.id) || foldedMatches(folded.get(l.id) ?? '', words));
-  }, [scoped, searchable, settledQuery, transcriptHits, folded]);
+  }, [scoped, searchable, settledQuery, transcriptHits, staleHits, folded]);
   // "Notes ready" on rows whose notes landed since the list was last left.
   // The record of what this phone has shown lives on the phone; it is read
   // once, and written on blur so the pill stays for the whole visit and is

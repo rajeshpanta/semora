@@ -697,3 +697,28 @@ Deno.test('a failed start on Continue reports it and leaves the question for the
   await s.tick();
   assertEquals(s.getState().needsDecision, true);
 });
+
+Deno.test('Continue on a native capture that ended: saved time is carried before the new capture starts', async () => {
+  const { deps, engine } = makeDeps({ platform: 'ios' });
+  engine.kind = 'native';
+  const s = new LectureSession(deps);
+  await startIt(s);
+  engine.closed = 240;
+  let active = true;
+  const baseStatus = engine.status.bind(engine);
+  engine.status = () => ({ ...baseStatus(), active });
+  active = false;
+  await s.tick(); // capture gone → asks
+  assertEquals(s.getState().needsDecision, true);
+  let seenDuringStart = -1;
+  engine.start = async () => {
+    engine.calls.push('start');
+    engine.closed = 0; // the native side discards the old figures first
+    await s.tick();
+    seenDuringStart = s.getState().elapsed;
+    active = true;
+  };
+  await s.continueRecording();
+  assertEquals(seenDuringStart, 240, 'the clock never dips to 0 while the new capture starts');
+  assertEquals(s.getState().needsDecision, false);
+});

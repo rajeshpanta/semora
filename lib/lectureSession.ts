@@ -798,14 +798,27 @@ export class LectureSession {
           // is started, numbered after every part that exists, and the time
           // already closed is carried (a new capture counts from zero).
           const firstSeq = Math.max(status.nextSeq, this.highestClosedSeq + 1);
-          await engine.start({
-            lectureId,
-            lectureDirUri: d.lectureDirUri(lectureId),
-            firstSeq,
-            partSeconds: PART_SECONDS,
-            title: this.state.title ?? '',
-          });
-          this.carriedClosedSeconds += Math.max(0, status.closedSeconds);
+          // Carried BEFORE the start: starting discards the old capture's
+          // figures, and a tick or a Mark in that moment read a clock of 0.
+          const carry = Math.max(0, status.closedSeconds);
+          this.carriedClosedSeconds += carry;
+          try {
+            await engine.start({
+              lectureId,
+              lectureDirUri: d.lectureDirUri(lectureId),
+              firstSeq,
+              partSeconds: PART_SECONDS,
+              title: this.state.title ?? '',
+            });
+          } catch (error) {
+            // Given back only if the old figures survived the failed start;
+            // if they were discarded, the carry is the only record of them.
+            const after = safeStatus(engine);
+            if (carry > 0 && after && after.active === false && after.closedSeconds >= carry) {
+              this.carriedClosedSeconds -= carry;
+            }
+            throw error;
+          }
           this.micPausedNotified = false;
           this.lastNativeRestartAt = d.now();
           this.patch({ micStoppedAt: null, needsDecision: false, error: null });
