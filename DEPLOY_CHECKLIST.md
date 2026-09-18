@@ -216,6 +216,32 @@ syllabi as `fixtures/real-*` before quoting any accuracy number publicly.
 
 ---
 
+# Subscription lapse watch (migration 149, 2026-09-18)
+
+`semora-subscription-lapse-check` runs hourly at :23 and calls
+`public.subscription_lapse_check()`. It records, in `public.subscription_lapses`,
+any entitlement that was a REAL purchase (an Apple transaction id or a Stripe
+`sub_` id) whose `expires_at` passed in the last 7 days while the account holds
+no Pro from anywhere else — and raises one `subscription_lapsed` ops alert per
+pass, delivered by `lecture_deliver_ops_alerts()` (whose filter 149 widened from
+`kind like 'lecture%'`). It messages no students.
+
+**When an alert arrives:** open App Store Connect → Subscriptions, and Stripe,
+and look for a cancellation or a billing failure on that day. A subscription
+that simply validated late stamps `recovered_at` on its own at the next pass.
+
+**What it cannot see:** someone who turns off auto-renew but is still paid up.
+Only App Store Server Notifications shows that, and that endpoint does not
+exist yet. Blind spot, written down rather than assumed away.
+
+Checks:
+```sql
+select jobname, schedule from cron.job where jobname = 'semora-subscription-lapse-check';  -- '23 * * * *'
+select count(*) from public.subscription_lapses where recovered_at is null;                 -- lost subscriptions
+select has_table_privilege('authenticated', 'public.subscription_lapses', 'select');        -- false
+```
+Test: `supabase/tests/lecture/149.test.sql` (after 140, 142-149; run 149 twice — idempotent).
+
 # Record Lecture completion (branch `lecture-recording-complete`, 2026-09-16)
 
 **Status 2026-09-17: COMPLETE (owner sign-off).**
