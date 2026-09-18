@@ -28,6 +28,7 @@ import { getProducts, purchaseProduct, restorePurchases, validateAfterPurchase, 
 import { getServerEntitlement } from '@/lib/entitlementServer';
 import { rescheduleAllTaskReminders } from '@/lib/notifications';
 import { track } from '@/lib/analytics';
+import { noteMoneyMoment } from '@/lib/ratingQuiet';
 import { claimPendingCheckout } from '@/lib/webCheckoutReturn';
 import { supabase } from '@/lib/supabase';
 import { reportError, errorCodeOf, contactSupport } from '@/lib/errorReport';
@@ -52,8 +53,6 @@ const FEATURES = [
   { icon: 'line-chart' as const, title: 'Grade scale & forecasting' },
   { icon: 'bell' as const, title: 'Custom reminders & calendar sync' },
 ];
-
-const APP_STORE_URL = 'https://apps.apple.com/us/app/semora-ai-syllabus-scanner/id6762589321';
 
 /**
  * Everything we can learn about why a purchase failed.
@@ -109,6 +108,9 @@ export default function PaywallScreen() {
 
   useEffect(() => {
     track('paywall_viewed', { screen: 'paywall', context: params.context ?? 'direct' });
+    // No rating ask for the next ten minutes (lib/ratingQuiet): asking for
+    // stars in the same sitting as asking for money is how 1-stars are earned.
+    noteMoneyMoment('paywall');
   }, []);
 
   // ── Return trip from Stripe Checkout (web only) ─────────────────────────

@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { track } from '@/lib/analytics';
+import { noteMoneyMoment } from '@/lib/ratingQuiet';
 import { PRO_CANVAS_EDU_SOURCE } from '@/lib/proCanvasEducation';
 import { canvasOfferDestination } from '@/lib/canvasFunnel';
 
@@ -43,6 +44,12 @@ export function ProCanvasEducationSheet({
 
   useEffect(() => {
     if (!visible) return;
+    // A full-screen Pro pitch is a money moment AND a modal. Both matter to the
+    // rating ask: iOS quietly declines to draw its review sheet while a modal
+    // is up, and the app used to spend its one lifetime request anyway — nine
+    // requests landed in the same tick as this sheet. lib/ratingQuiet keeps the
+    // Today tab from asking for ten minutes after this appears.
+    noteMoneyMoment('pro_sheet');
     track('pro_canvas_edu_shown', {
       screen: 'today',
       occurrence,

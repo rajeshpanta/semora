@@ -58,6 +58,7 @@ import {
 } from '@/lib/notifications';
 import { registerForPushNotificationsAsync } from '@/lib/push';
 import { track, installErrorTracking, noteAppForegrounded } from '@/lib/analytics';
+import { reportReviewReturn } from '@/lib/reviewOutcomeRuntime';
 import Constants from 'expo-constants';
 import { recordAuthEvent, recordPhase, setAuthTelemetrySink } from '@/lib/authTelemetry';
 import { clearLocalSyncState } from '@/lib/calendarSync';
@@ -213,6 +214,21 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   // reschedule all incomplete tasks (throttled) so every signed-in device
   // picks up whatever was added/edited elsewhere. Permission-gated +
   // concurrency-guarded internally; no-op on web.
+  // A student we sent to the App Store's review composer comes back here, and
+  // how long they were gone is the only evidence available that they rated:
+  // Apple reports nothing, so a four-second round trip (the composer never
+  // opened, or opened on the wrong storefront) and a minute away look identical
+  // without it. Reported on mount too, because leaving Semora for the store
+  // often means iOS reclaims it and the return is a cold launch.
+  useEffect(() => {
+    reportReviewReturn();
+    if (Platform.OS === 'web') return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') reportReviewReturn();
+    });
+    return () => sub.remove();
+  }, []);
+
   useEffect(() => {
     if (Platform.OS === 'web') return;
     let lastSyncAt = 0;

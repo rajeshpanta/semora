@@ -12,12 +12,23 @@ export const SUPPORT_EMAIL = 'semora365@gmail.com';
 // composer. `?action=write-review` is what turns a "Rate Semora" tap into a
 // star picker instead of a product page the user then has to scroll.
 //
+// NO STOREFRONT IN THE PATH, and that is the whole point of the id-only form.
+// This used to read `/us/app/semora-ai-syllabus-scanner/id...`, which pins the
+// link to the United States store: the App Store app opens a country path in
+// that country's storefront, and an account that does not belong to it gets
+// "the item you've requested is not available in the U.S. store" instead of a
+// star picker. Semora has rating-bearing students in Canada and India today and
+// sells worldwide, so every one of them was being sent to a dead end by the
+// button whose only job is to collect a rating. `apps.apple.com/app/id<id>`
+// resolves to the viewer's own storefront, on device and in a browser.
+//
 // This is deliberately NOT StoreReview.requestReview(). That API is for
 // unprompted moments — Apple rate-limits it to roughly three prompts a year and
 // silently does nothing once you are over, which makes it the wrong thing
 // behind a button someone deliberately pressed. It also has no web
 // implementation at all, so on app.semoraai.com it could only ever apologise.
-export const APP_STORE_URL = 'https://apps.apple.com/us/app/semora-ai-syllabus-scanner/id6762589321';
+export const APP_STORE_ID = '6762589321';
+export const APP_STORE_URL = `https://apps.apple.com/app/id${APP_STORE_ID}`;
 export const APP_STORE_REVIEW_URL = `${APP_STORE_URL}?action=write-review`;
 
 // Android's equivalents. `showAllReviews=true` is Play's nearest thing to

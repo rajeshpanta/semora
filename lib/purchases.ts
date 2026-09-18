@@ -19,6 +19,7 @@ import {
 } from 'react-native-iap';
 import { supabase } from '@/lib/supabase';
 import { track } from '@/lib/analytics';
+import { noteMoneyMoment } from '@/lib/ratingQuiet';
 import { EMPTY_ENTITLEMENT, getServerEntitlement, type ProEntitlement } from '@/lib/entitlementServer';
 
 // The server half of entitlement lives in lib/entitlementServer.ts so the web
@@ -75,6 +76,8 @@ function trackPurchaseSuccess(purchase: Purchase): void {
     // row reads the same before and after the trial was removed
     // (September 2026). Semora Pro has no free trial on any platform.
     track('purchase_success', { plan, context, trial: false });
+    // Four native review prompts fired 0.2-2.4s after a purchase; not again.
+    noteMoneyMoment('purchase');
   } catch {
     // analytics must never affect the purchase flow
   }

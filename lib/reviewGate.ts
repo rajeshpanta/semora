@@ -30,7 +30,10 @@
  *             three prompts per user per year and silently does nothing past
  *             that, so it is spent carefully.
  *   'card'    A dismissible card that opens the App Store review composer.
- *             Not rate-limited, because the student taps it. This is the
+ *             It carries no Apple quota, because the student taps it — but it
+ *             now has one of its own: MAX_CARD_DAYS separate days, after which
+ *             it stops on its own. It used to return every launch until the X
+ *             was pressed (one student saw it 32 times), and the card is the
  *             safety net for the native prompt iOS declined to show — an
  *             outcome the app cannot detect, since requestReview() reports
  *             nothing either way.
@@ -47,6 +50,10 @@
  *  a deliberate act repeated three times, and it is a threshold real users
  *  actually cross. */
 export const REVIEW_TASK_MILESTONE = 3;
+
+import { MAX_CARD_DAYS } from './reviewOutcome';
+
+export { MAX_CARD_DAYS };
 
 export type ReviewAsk = 'none' | 'native' | 'card';
 export type ReviewTrigger = 'aha' | 'task_milestone';
@@ -68,9 +75,17 @@ export interface ReviewGateState {
   tasksCompletedCount: number;
   /** Device-local yyyy-MM-dd, from the same clock the other two days came from. */
   today: string;
-  /** The post-scan paywall appeared in THIS session. Asking for a rating in
-   *  the same sitting as asking for money reads as a transaction. */
-  paywallShownThisSession: boolean;
+  /** Money came up in the last ten minutes — a paywall, a Pro sheet, a
+   *  purchase. Asking for a rating in the same sitting as asking for money
+   *  reads as a transaction, and it is also the state where iOS declines to
+   *  draw the native sheet at all (a modal is up) while the app spends its one
+   *  lifetime request. Sourced from lib/ratingQuiet, because the flag this
+   *  replaced was computed from a device-lifetime value and was therefore
+   *  false on every device that had ever seen the paywall. */
+  moneyJustDiscussed: boolean;
+  /** Separate days the card has already appeared on this device. Past
+   *  MAX_CARD_DAYS it stops asking rather than waiting to be dismissed. */
+  cardDaysShown: number;
 }
 
 export interface ReviewDecision {
@@ -82,7 +97,7 @@ const NONE: ReviewDecision = { ask: 'none' };
 
 export function decideReviewAsk(s: ReviewGateState): ReviewDecision {
   if (s.platformIsWeb) return NONE;
-  if (s.paywallShownThisSession) return NONE;
+  if (s.moneyJustDiscussed) return NONE;
 
   // A null import day means the device imported before this field shipped.
   // Those devices are backfilled to the day the new code first runs (see
@@ -102,8 +117,11 @@ export function decideReviewAsk(s: ReviewGateState): ReviewDecision {
   }
 
   // The native ask is spent. The card is the follow-up, a day later at the
-  // earliest, once, and only for someone who reached the earned moment at all.
+  // earliest, and only for someone who reached the earned moment at all.
   if (s.ratingCardDismissed) return NONE;
+  // Ignoring it is an answer too. Without this the card came back every launch
+  // until the X was pressed, which is a nag with a star rating attached.
+  if (s.cardDaysShown >= MAX_CARD_DAYS) return NONE;
   if (!s.hasImportedSyllabus && s.tasksCompletedCount < REVIEW_TASK_MILESTONE) return NONE;
   if (s.reviewPromptedDay === null) return NONE;
   if (s.today <= s.reviewPromptedDay) return NONE;
