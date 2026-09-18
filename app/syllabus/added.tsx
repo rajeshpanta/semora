@@ -8,9 +8,13 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
+import { useQuery } from '@tanstack/react-query';
 import { useAppStore } from '@/store/appStore';
 import { useCourses, useSemesters } from '@/lib/queries';
 import { track } from '@/lib/analytics';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
+import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 
 /**
  * What happens immediately after a syllabus import succeeds.
@@ -36,11 +40,29 @@ export default function SyllabusAddedScreen() {
   const router = useRouter();
   const colors = useColors();
   const { contentMaxWidth } = useResponsive();
-  const params = useLocalSearchParams<{ courseId?: string; courseName?: string; count?: string }>();
+  const params = useLocalSearchParams<{ courseId?: string; courseName?: string; count?: string; offerPro?: string }>();
 
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const { data: courses = [], isLoading: coursesLoading } = useCourses(selectedSemesterId);
   const { data: semesters = [] } = useSemesters();
+
+  // The post-scan Pro offer, handed over by app/syllabus/review.tsx instead of
+  // being taken there. It fires on the way OUT of this screen (see goHome), so
+  // a student who leaves without adding another class still hears the offer,
+  // and one who keeps going is not interrupted mid-momentum.
+  const offerPro = params.offerPro === '1';
+  const isPro = useAppStore((s) => s.isPro);
+  const setAhaPaywallShown = useAppStore((s) => s.setAhaPaywallShown);
+
+  // Canvas belongs on this screen more than anywhere else in the app: the
+  // question above the buttons is "what else are you taking?", and for a free
+  // student Canvas is the ONLY answer that is not capped — they get one course
+  // they add themselves, and unlimited ones through a connection. Until today
+  // this screen did not contain the word Canvas.
+  const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
+  const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
+  const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
+  const showCanvas = canvasOffer !== 'healthy';
 
   const savedCount = Number(params.count) || 0;
   const courseCount = courses.length;
@@ -88,7 +110,34 @@ export default function SyllabusAddedScreen() {
 
   const goHome = () => {
     track('next_class_declined', { screen: 'syllabus_added', course_count: courseCount });
+    // "Done for now" is where the Pro offer lives now. The student has seen
+    // their semester, been told Canvas is free, and chosen to stop — which is
+    // the first honest moment to name a price. The flag burns HERE, when the
+    // paywall is actually shown, rather than on the way past it.
+    if (offerPro) {
+      setAhaPaywallShown(true);
+      router.replace({
+        pathname: '/paywall',
+        params: { context: 'postScan', count: String(savedCount), courseId: params.courseId },
+      } as any);
+      return;
+    }
     router.replace('/(tabs)' as any);
+  };
+
+  const goCanvas = () => {
+    trackCanvasOfferTapped({ screen: 'syllabus_added', offer: canvasOffer, free: canvasFree, source: 'syllabus_added' });
+    const to = canvasOfferDestination(canvasOffer, 'syllabus_added');
+    // A locked offer would send a free student to the upgrade sheet; this
+    // screen has no sheet, and the paywall is already what "Done for now"
+    // leads to, so the row is only rendered when Canvas is genuinely
+    // available to them (see showCanvas).
+    if (to.kind === 'upsell') {
+      setAhaPaywallShown(true);
+      router.replace({ pathname: '/paywall', params: { context: 'canvas' } } as any);
+      return;
+    }
+    router.push({ pathname: to.pathname, params: to.params } as any);
   };
 
   return (
@@ -163,6 +212,38 @@ export default function SyllabusAddedScreen() {
           <Text style={styles.primaryText}>Add another class</Text>
         </TouchableOpacity>
 
+        {/* The free route to the same place, named on the screen that asks the
+            question. A free account is capped at one course it adds itself but
+            not at Canvas courses, so for most students standing here this row
+            is the only way to answer "what else are you taking?" without
+            paying — and it brings every class at once rather than one syllabus
+            at a time. */}
+        {showCanvas && (
+          <>
+            <CanvasOfferImpression screen="syllabus_added" offer={canvasOffer} free={canvasFree} source="syllabus_added" />
+            <TouchableOpacity
+              style={[styles.canvasRow, { backgroundColor: colors.teal50, borderColor: colors.teal }]}
+              onPress={goCanvas}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel={canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Bring every class in from Canvas, free'}
+            >
+              <View style={[styles.canvasIcon, { backgroundColor: colors.teal + '22' }]}>
+                <FontAwesome name={canvasOffer === 'needs_attention' ? 'refresh' : 'university'} size={15} color={colors.teal} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.canvasTitle, { color: colors.ink }]}>
+                  {canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Bring every class in at once'}
+                </Text>
+                <Text style={[styles.canvasSub, { color: colors.ink3 }]}>
+                  Connect Canvas and your whole timetable lands here — free, however many classes you take.
+                </Text>
+              </View>
+              <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
+            </TouchableOpacity>
+          </>
+        )}
+
         <TouchableOpacity style={[styles.secondary, { borderColor: colors.line }]} onPress={goCourse}>
           <Text style={[styles.secondaryText, { color: colors.ink }]}>
             {params.courseName ? `View ${params.courseName}` : 'View course'}
@@ -202,6 +283,15 @@ const styles = StyleSheet.create({
     paddingVertical: 18, paddingHorizontal: 18,
     marginTop: 26, alignItems: 'center',
   },
+  canvasRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    width: '100%', borderWidth: 1, borderRadius: 14,
+    paddingVertical: 13, paddingHorizontal: 14, marginTop: 10,
+  },
+  canvasIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  canvasTitle: { fontSize: 14.5, fontWeight: '700' },
+  canvasSub: { fontSize: 12.5, marginTop: 2, lineHeight: 17 },
+
   progressCount: { fontFamily: FONTS.display, fontSize: 21 },
   progressLabel: { fontSize: 13.5, marginTop: 2 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7, justifyContent: 'center', marginTop: 14 },

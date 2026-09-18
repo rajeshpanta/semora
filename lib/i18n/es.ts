@@ -108,6 +108,18 @@ export const ES: Record<string, string> = {
   'What else are you taking?': '¿Qué más estás cursando?',
   'Semora can only watch the classes it knows about. Add the rest and every deadline lands in one week view.': 'Semora solo puede vigilar las clases que conoce. Agrega el resto y todas las entregas caerán en una sola vista semanal.',
   'Add another class': 'Agregar otra clase',
+  // app/syllabus/added.tsx — the Canvas row, added 2026-09-18. For a free
+  // account Canvas is the only uncapped way to answer "what else are you
+  // taking?", and this screen never named it.
+  'Bring every class in at once': 'Trae todas tus clases de una vez',
+  'Connect Canvas and your whole timetable lands here — free, however many classes you take.':
+    'Conecta Canvas y todo tu horario aparece aquí: gratis, sin importar cuántas clases tengas.',
+  'Bring every class in from Canvas, free': 'Trae todas tus clases desde Canvas, gratis',
+  // app/(tabs)/scan.tsx — the cost of the tap, said before it.
+  'Your free AI action is still unused. Scanning a syllabus spends it — connecting Canvas brings every class across for free and leaves it unspent.':
+    'Tu acción de IA gratuita sigue sin usarse. Escanear un programa la gasta; conectar Canvas trae todas tus clases gratis y la deja intacta.',
+  'Your free AI action is still unused. Scanning a syllabus spends it.':
+    'Tu acción de IA gratuita sigue sin usarse. Escanear un programa la gasta.',
   'Done for now': 'Listo por ahora',
   'Semora can remind you before anything in this class is due.': 'Semora puede avisarte antes de cualquier entrega de esta clase.',
   'Reload data from the server': 'Recargar los datos del servidor',
