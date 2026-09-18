@@ -216,6 +216,39 @@ syllabi as `fixtures/real-*` before quoting any accuracy number publicly.
 
 ---
 
+# Empty-scan refunds (migration 150, 2026-09-18)
+
+`semora-refund-empty-scans` runs hourly at :37 and calls
+`public.refund_empty_scans(200)`. It returns the one free AI action to a free
+account whose scans produced NOTHING — no `parse_runs` row with
+`items_accepted > 0` anywhere on the account — and which has never been
+refunded before. It releases BOTH gates: the ledger row becomes
+`scan_usage_log.status = 'refunded'` (with `refunded_at`), and every upload of
+theirs that produced nothing has `counts_toward_free_action` cleared, which is
+what `enforce_free_scan_limit()` actually counts. A scan under 15 minutes old
+is never refunded — the parse may still be running. Nothing is deleted.
+
+**The cap is the database's**: `scan_usage_log_one_refund_per_user`, a unique
+partial index on `(user_id) where status = 'refunded'`. One refund per account
+for life, so a blank page cannot become unlimited free extraction.
+
+First run (2026-09-18) refunded **87 accounts** — every free student whose scan
+had ever produced nothing, going back to 2026-05-18. Verified afterwards:
+87 rows / 87 people, 0 still blocked by `free_action_used()`, 0 refunded whose
+parse had produced items, 0 uploads wrongly released, second pass refunded 0.
+
+Checks:
+```sql
+select status, count(*) from public.scan_usage_log group by 1;                 -- refunded appears here
+select count(*) from public.scan_usage_log s where s.status = 'refunded'
+  and public.free_action_used(s.user_id);                                       -- must be 0
+select jobname, schedule from cron.job where jobname = 'semora-refund-empty-scans';  -- '37 * * * *'
+```
+Test: `supabase/tests/lecture/150.test.sql` (after 140, 142-150; run 150 twice — idempotent).
+
+Open question this does NOT answer: why 62 scans extracted nothing and 16 were
+logged as successful with no parse behind them at all. Worth its own look.
+
 # Subscription lapse watch (migration 149, 2026-09-18)
 
 `semora-subscription-lapse-check` runs hourly at :23 and calls
