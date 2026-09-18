@@ -2,8 +2,8 @@
   "//": "The native runtime fingerprint this project expects. Updated deliberately, by scripts/check-native-fingerprint.sh --update, whenever a native change is intended. If this file and the generated values disagree, something changed the native surface without anyone deciding to.",
   "//targetSources": "A hash of every targets/*.swift and targets/*/*.lproj/*.strings file. @expo/fingerprint cannot see apple-targets sources, so the Watch app, its complication and the widget would otherwise be able to change without moving the runtime.",
   "platform": "ios",
-  "fingerprint": "e88b984571db9c0ff2cf0b48850881cd84bc0e09",
-  "targetSources": "2a33fb6faf8ebc2b717cb6e8f1b0aa9b21407f169fc40ba2573445a4b9e0cdfa",
-  "recordedForVersion": "1.13",
-  "recordedForBuild": "57"
+  "fingerprint": "7491078882380c20f349986ca0e812678399b818",
+  "targetSources": "ffae773336138ffedddea31e23875cdf5f3ab2aa81393831b40837a6119198f7",
+  "recordedForVersion": "1.15.1",
+  "recordedForBuild": "61"
 }
