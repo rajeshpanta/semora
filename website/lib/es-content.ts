@@ -232,7 +232,7 @@ const CORE_PAGES: SpanishPageConfig[] = [
         heading: 'Qué añade Pro',
         paragraphs: [
           'Pro quita los tres topes y añade la capa de automatización y estudio construida sobre los mismos datos.',
-          'La parte de organización: cursos y semestres ilimitados, sin tope de escaneos ni de grabaciones de clase, importación desde Canvas, Blackboard y Moodle donde tu institución lo permita, sincronización con el calendario del dispositivo con exportación .ics, y recordatorios con antelación de uno y tres días.',
+          'La parte de organización: cursos y semestres ilimitados, sin tope de escaneos ni de grabaciones de clase, importación desde Canvas y Blackboard donde tu institución lo permita y desde Moodle con el enlace de exportación de su calendario, sincronización con el calendario del dispositivo con exportación .ics, y recordatorios con antelación de uno y tres días.',
           'La parte de planificación: el Plan inteligente, que reparte sesiones de estudio con día, hora y duración en un horizonte de catorce días alrededor de tus clases; y la vista de carga académica, que señala las semanas cargadas y densas en exámenes con semanas de antelación.',
           'La parte de estudio y calificación: Tarjetas de estudio generadas a partir del programa y tus apuntes con repaso espaciado, el temporizador de enfoque, el Tutor con IA anclado a tu material real, la escala de calificación editable con calculadoras de hipótesis, las alertas de riesgo académico, las tendencias de progreso con exportación CSV y vista de impresión, y alojar tus propios Espacios de curso.',
         ],
@@ -1204,7 +1204,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Cuándo no es la herramienta adecuada',
         paragraphs: [
-          'Si todas tus materias se gestionan por completo en la plataforma académica y tus profesores publican allí cada tarea con su fecha, la importación puede bastarte: Canvas, Blackboard y Moodle son gratis y sin límite de clases, y dependen de la política de tu institución y escanear sería resolver un problema que no tienes.',
+          'Si todas tus materias se gestionan por completo en la plataforma académica y tus profesores publican allí cada tarea con su fecha, la importación puede bastarte: Canvas, Blackboard y Moodle son gratis y sin límite de clases, solo Blackboard depende de la política de tu institución, y escanear sería resolver un problema que no tienes.',
           'Si buscas un gestor general de tareas para trabajo, recados y estudios en un mismo sitio, una app construida alrededor de cursos, semestres y ponderaciones te va a parecer estrecha. Esa estrechez es exactamente lo que hace posible el cálculo de la nota, y es un intercambio real.',
           'Y esto no sirve para entregar. Subir los trabajos y escribir a los profesores sigue ocurriendo en la plataforma de tu universidad; esta es la capa que te dice qué viene y cuánto vale.',
         ],
@@ -1240,7 +1240,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Importar desde Blackboard, y cuándo no hacerlo',
         paragraphs: [
-          'La importación desde plataformas académicas es gratis en todos los planes y cubre Blackboard, Canvas y Moodle. La configuración varía bastante según la institución: las instalaciones de Blackboard difieren en versión, en ajustes y en qué integraciones permite cada centro.',
+          'La importación desde plataformas académicas es gratis en todos los planes y cubre Blackboard, Canvas y Moodle. La configuración de Blackboard varía bastante según la institución: sus instalaciones difieren en versión, en ajustes y en qué integraciones permite cada centro.',
           'Antes de conectar nada, confirma la política de tu institución sobre el acceso de terceros. Algunas lo permiten, otras lo restringen y otras lo prohíben directamente en sus normas de uso. Si no está permitido, no lo conectes, y no habrás perdido nada, porque la vía gratuita de abajo cubre el mismo trabajo.',
           'Se dice claramente en lugar de enterrarlo porque es la posición honesta: la disponibilidad del conector no está del todo en manos de la app, y una herramienta que solo funciona si tu universidad coopera no es algo con lo que debas jugártela.',
         ],
@@ -1375,7 +1375,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Cuándo un escáner no es la respuesta',
         paragraphs: [
-          'Si todas tus materias se gestionan por completo en el campus virtual y tus profesores publican allí cada tarea con su fecha, la importación desde la plataforma puede bastarte y el escaneo sobra. Esa importación de Blackboard y Moodle es gratis y depende de que tu institución permita el uso de un token de acceso.',
+          'Si todas tus materias se gestionan por completo en el campus virtual y tus profesores publican allí cada tarea con su fecha, la importación desde la plataforma puede bastarte y el escaneo sobra. Esa importación es gratis: en Moodle copias tú el enlace de exportación de tu calendario, y Blackboard depende de que tu institución permita el uso de un token de acceso.',
           'Si tu programa no lleva fechas —hay asignaturas que solo anuncian las entregas en clase— el escáner no puede inventarlas. Extraerá el curso, el horario y la escala, y las entregas las irás añadiendo tú a mano, que es algo que la app admite igual de bien.',
           'Y si lo que buscas es generar material de estudio a partir de una lectura concreta, ese es otro trabajo. Sostener un semestre y fabricar tarjetas de un capítulo son problemas distintos, y conviene resolver primero el que más te cueste.',
         ],
@@ -1539,7 +1539,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
       {
         heading: 'Qué cuesta y para quién no vale la pena',
         paragraphs: [
-          'La importación desde Canvas, Blackboard y Moodle es gratis en todos los planes. Canvas llega por el enlace del calendario, del que Semora lee hasta 1.000 elementos; Blackboard y Moodle sincronizan hasta 50 cursos por vez con el token de tu institución.',
+          'La importación desde Canvas, Blackboard y Moodle es gratis en todos los planes. Canvas llega por el enlace del calendario, del que Semora lee hasta 1.000 elementos; Moodle llega por el enlace de exportación de su calendario, que copias tú desde tu propio Moodle; Blackboard sincroniza hasta 50 cursos por vez con el token de tu institución.',
           'El plan Gratis cubre buena parte de ese mismo trabajo desde el lado del programa: una acción de IA para toda la vida de la cuenta, clases ilimitadas sincronizadas gratis desde Canvas, Blackboard o Moodle, más un curso que añades a mano dentro de un semestre, seguimiento completo de tareas y fechas, calificaciones con medias ponderadas y recordatorios el mismo día.',
           'No vale la pena si tu profesor no publica en Canvas y lo mantiene todo en el programa: ahí escanear es mejor, y el primero es gratis. Tampoco si lo que buscas es entregar trabajos o escribir a tu profesor, porque eso sigue ocurriendo en Canvas. Y si tu institución desactiva el enlace del calendario, la respuesta correcta es escanear el programa de la materia.',
         ],
@@ -1548,7 +1548,7 @@ const KEYWORD_PAGES: SpanishPageConfig[] = [
     faq: [
       { question: '¿La conexión funciona en todas las universidades?', answer: 'No. Conectar Canvas es un solo paso: copia el enlace privado del calendario que Canvas ya te da y pégalo. No hay ningún token que generar ni nada que tu universidad tenga que aprobar. Aun así, si no está permitido, usa el escáner de programas o pega la lista de tareas de Canvas.' },
       { question: '¿Funciona si Canvas cambia una fecha?', answer: 'La siguiente sincronización puede actualizar la tarea y reajustar los recordatorios vinculados.' },
-      { question: '¿También admite Blackboard y Moodle?', answer: 'Sí. Las opciones exactas dependen de lo que permita cada institución.' },
+      { question: '¿También admite Blackboard y Moodle?', answer: 'Sí. Moodle se conecta con el enlace de exportación de tu calendario, que copias desde tu propio Moodle; en Blackboard, las opciones exactas dependen de lo que permita cada institución.' },
     ],
   }),
 ];
@@ -1607,7 +1607,7 @@ const FEATURE_DETAILS: Record<string, FeatureDetail> = {
     why: 'Las plataformas académicas mantienen cada curso por separado. Semora reúne todas las fechas en un solo lugar y conserva el historial de sincronización.',
     steps: ['Para Canvas, copia el enlace privado de Calendar Feed que Canvas ya te da y pégalo; no hay ningún token que generar.', 'Relaciona cada curso de tu plataforma con el curso correspondiente en Semora.', 'Elige entre sincronización manual y automática.', 'Consulta la última actualización y cualquier error.'],
     result: 'Las tareas, entregas y calificaciones seleccionadas se mantienen sincronizadas sin crear duplicados.',
-    faq: [{ question: '¿Dónde se guarda la credencial?', answer: 'Canvas se conecta con el enlace privado de su calendario, no con un token. Esa credencial permanece en el dispositivo de forma predeterminada; si activas la sincronización automática, se guarda cifrada en Supabase Vault hasta que la desactives o desconectes la plataforma. Blackboard y Moodle sí usan un token que emite tu institución.' }],
+    faq: [{ question: '¿Dónde se guarda la credencial?', answer: 'Canvas se conecta con el enlace privado de su calendario, no con un token. Esa credencial permanece en el dispositivo de forma predeterminada; si activas la sincronización automática, se guarda cifrada en Supabase Vault hasta que la desactives o desconectes la plataforma. Moodle también se conecta con un enlace de calendario, el de exportación que copias desde tu propio Moodle; Blackboard sí usa un token que emite tu institución.' }],
   },
 };
 
@@ -2064,7 +2064,7 @@ export const SPANISH_HOME_SUMMARY: PageLongForm = {
       ],
       bullets: [
         'Crear cursos a mano está plenamente admitido y se comporta igual en todo lo demás',
-        'La importación desde Canvas, Blackboard y Moodle es opcional y gratis, y depende de la política de tu institución',
+        'La importación desde Canvas, Blackboard y Moodle es opcional y gratis; solo Blackboard depende de la política de tu institución',
         'Un reescaneo añade entregas nuevas sin sobrescribir un horario que ya arreglaste',
 
       ],

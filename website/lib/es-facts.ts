@@ -14,8 +14,10 @@ export const FREE_FEATURES_ES = [
   // en todos los planes. El "sin límite" es exacto: las clases del LMS nunca
   // se cuentan para el tope de cursos, ni en Gratis ni en Pro.
   'Todas tus clases, gratis: Canvas, Blackboard y Moodle se sincronizan en el plan Gratis, sin límite de cuántas, y se actualizan si el profesor mueve una fecha',
-  // Lo de "un solo paso" vale SOLO para Canvas. Blackboard y Moodle también
-  // son gratis, pero usan un token que emite la universidad.
+  // Lo de "un solo paso" vale SOLO para Canvas. Moodle también es gratis y
+  // tampoco lleva token: se conecta pegando el enlace del calendario que tú
+  // mismo exportas desde tu Moodle. Blackboard sí usa un token que emite la
+  // universidad.
   'Canvas se conecta en un paso: pega el enlace que Canvas ya te da. Sin token y sin permiso de informática',
   'Tu primera acción con IA, gratis: un escaneo, una grabación o un documento en apuntes; tú eliges',
   // Igual que en semora-facts.ts: el límite y la exención van en la misma
@@ -255,7 +257,7 @@ export const SHOWCASE_ES = [
     // de funciones en español. La versión inglesa siempre dijo 'free'.
     tier: 'free' as const,
     title: 'Importa tus clases desde Canvas, Blackboard o Moodle',
-    body: 'La sincronización con Canvas es gratis ahora mismo, en todas las cuentas y sin límite de clases: es una oferta por tiempo limitado, y quien lo conecte mientras dure no pierde nunca la importación gratuita de Canvas. Usa el calendario privado que Canvas ya te da, así que no hay ningún token que generar ni nada que aprobar en informática. Una vez conectado se revisa solo cada pocas horas —cada hora si estás en mitad del semestre y usando la app—: si tu profesor mueve una fecha, en Semora aparece cambiada sin que nadie haga nada, y si borra una tarea, esta desaparece de tu lista en vez de seguir dándote la lata. Un límite honesto: el calendario trae fechas, no notas, así que las calificaciones las sigues poniendo tú. La importación de Blackboard y Moodle también es gratis, usa un token que emite tu universidad y depende de cada centro.',
+    body: 'La sincronización con Canvas es gratis ahora mismo, en todas las cuentas y sin límite de clases: es una oferta por tiempo limitado, y quien lo conecte mientras dure no pierde nunca la importación gratuita de Canvas. Usa el calendario privado que Canvas ya te da, así que no hay ningún token que generar ni nada que aprobar en informática. Una vez conectado se revisa solo cada pocas horas —cada hora si estás en mitad del semestre y usando la app—: si tu profesor mueve una fecha, en Semora aparece cambiada sin que nadie haga nada, y si borra una tarea, esta desaparece de tu lista en vez de seguir dándote la lata. Un límite honesto: el calendario trae fechas, no notas, así que las calificaciones las sigues poniendo tú. La importación de Moodle también es gratis y tampoco lleva token: en tu propio Moodle entras a Calendario, Exportar calendario, Obtener URL del calendario, copias ese enlace y lo pegas aquí; el único paso extra frente a Canvas es salir al navegador esa vez. La de Blackboard también es gratis, pero usa un token que emite tu universidad y depende de cada centro.',
     bullets: [
       'Sin token de acceso y sin permiso de tu universidad',
       'Las tareas con fecha se importan solas y se mantienen al día',

@@ -152,9 +152,10 @@ export const FREE_FEATURES = [
   // fills the feed. What IS automatic is everything after, which is the half
   // of the product the bullet has to earn.
   'Every class you take, free: Canvas, Blackboard and Moodle all sync on the free plan, with no cap on how many — and they stay right when an instructor moves a deadline',
-  // The one-step claim is true of CANVAS ONLY. Blackboard and Moodle are free
-  // too, but they use a school-issued token, so this must not be folded into
-  // the bullet above.
+  // The one-step claim is true of CANVAS ONLY. Blackboard is free too, but it
+  // uses a school-issued token. Moodle is free and needs no token either, but
+  // its calendar link is fetched from Moodle in a browser, so it is one trip
+  // out of the app. Neither folds into the bullet above.
   'Canvas connects in one step: paste the link Canvas already gives you. No token, nothing for IT to approve',
   'Your first AI action, free: a syllabus scan, a lecture recording, or a document turned into notes — you choose',
   // Exact, and the exemption travels WITH the limit in the same breath — the
@@ -259,7 +260,7 @@ export const FEATURES: FeatureFact[] = [
     // free user who installs on the promise here hits a 402 at the first tap.
     tier: 'free',
     description:
-      "Canvas sync is free right now, on every account, with no limit on how many classes come across — this is a limited-time offer, and an account that connects while it runs never loses free Canvas import. One thing worth knowing before next term: a free account covers one semester, so setting up a new one is where Pro comes in. The classes you already connected keep syncing either way. It uses the private calendar feed Canvas already gives you, so there is no access token to generate and nothing for your IT department to approve. Once connected it re-checks Canvas every few hours on its own — hourly if you are mid-semester and using the app: a deadline your instructor moves is right in Semora without anyone doing anything, and an assignment they delete disappears from your list instead of nagging you. One honest limit — the calendar feed carries dates, not marks, so your grades are still yours to enter. Blackboard and Moodle import is free on every plan, uses a school-issued token, and varies by school.",
+      "Canvas sync is free right now, on every account, with no limit on how many classes come across — this is a limited-time offer, and an account that connects while it runs never loses free Canvas import. One thing worth knowing before next term: a free account covers one semester, so setting up a new one is where Pro comes in. The classes you already connected keep syncing either way. It uses the private calendar feed Canvas already gives you, so there is no access token to generate and nothing for your IT department to approve. Once connected it re-checks Canvas every few hours on its own — hourly if you are mid-semester and using the app: a deadline your instructor moves is right in Semora without anyone doing anything, and an assignment they delete disappears from your list instead of nagging you. One honest limit — the calendar feed carries dates, not marks, so your grades are still yours to enter. Moodle import is free on every plan and connects the same way, with one extra step: open Moodle in your browser, copy the calendar export link it already gives you, and paste it in — no token, nothing for IT to approve, and the same honest limit of dates rather than marks. Blackboard import is free on every plan too, uses a school-issued token, and varies by school.",
   },
   {
     slug: 'grade-tracking',

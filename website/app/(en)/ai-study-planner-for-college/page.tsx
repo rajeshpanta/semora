@@ -40,7 +40,7 @@ const FAQ = [
   {
     question: 'Does Semora sync with Canvas or other tools?',
     answer:
-      "Canvas, Blackboard, and Moodle import are free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. If the connector is unavailable or not permitted, scan the syllabus or paste the assignment list instead. Semora also supports Course Spaces and syncs across iPhone, iPad, and web on one account.",
+      "Canvas, Blackboard, and Moodle import are free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Moodle connects the same way, with one extra step: open Moodle in your browser, copy the calendar export link it already gives you, and paste that in. Blackboard uses a school-issued token and varies by school; if that connector is unavailable or not permitted, scan the syllabus or paste the assignment list instead. Semora also supports Course Spaces and syncs across iPhone, iPad, and web on one account.",
   },
 ];
 

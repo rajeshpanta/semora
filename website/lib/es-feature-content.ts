@@ -1199,7 +1199,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Comprobar la disponibilidad e importar asignaturas',
         paragraphs: [
-          'Conectar Canvas es gratis para todo el mundo. Abre la pantalla de conexiones, elige Canvas y pega el enlace privado de tu calendario: no hace falta ningún token ni permiso de tu universidad. Blackboard y Moodle también son gratis, aunque sí usan un token que emite tu universidad.',
+          'Conectar Canvas es gratis para todo el mundo. Abre la pantalla de conexiones, elige Canvas y pega el enlace privado de tu calendario: no hace falta ningún token ni permiso de tu universidad. Moodle también es gratis y va igual, con el enlace del calendario que exportas desde tu propio Moodle. Blackboard también es gratis, aunque sí usa un token que emite tu universidad.',
           'Puede que te pida la dirección de Canvas de tu universidad, que suele ser una URL específica de la institución. Semora exige una dirección HTTPS válida y avisa antes de intentar una conexión con una dirección incorrecta.',
           'Cuando se acepte el enlace, elige las asignaturas y el semestre de Semora donde deben entrar. Si prefieres no conectar Canvas, usa el escáner del programa o pega la lista de tareas.',
         ],
@@ -1273,16 +1273,16 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         heading: 'Blackboard y Moodle, con honestidad',
         paragraphs: [
-          'Semora lista Canvas, Blackboard y Moodle. Conectar Canvas es un solo paso: copia el enlace privado del calendario que Canvas ya te da y pégalo. No hay ningún token que generar ni nada que tu universidad tenga que aprobar. Blackboard y Moodle sí siguen usando un token que emite tu universidad, así que su configuración depende de cada centro.',
+          'Semora lista Canvas, Blackboard y Moodle. Conectar Canvas es un solo paso: copia el enlace privado del calendario que Canvas ya te da y pégalo. No hay ningún token que generar ni nada que tu universidad tenga que aprobar. Moodle se conecta igual, con un paso más: entra en tu Moodle, abre Calendario → Exportar calendario → Obtener URL del calendario, copia ese enlace y pégalo en Semora. Ahí tampoco hay token ni nada que aprobar. Blackboard sí sigue usando un token que emite tu universidad, así que su configuración depende de cada centro.',
           'Cuando Blackboard está disponible, Semora puede leer la lista de asignaturas y columnas del boletín para obtener títulos, fechas y puntos. Según la configuración de la universidad, los detalles de notas o entregas pueden ser más limitados que en Canvas.',
-          'Cuando Moodle está disponible, Semora puede leer asignaturas matriculadas y actividades de tareas. Los cuestionarios configurados como actividades aparte pueden quedar fuera, y las escalas no numéricas se ignoran en lugar de tratarlas como puntos negativos.',
+          'Con Moodle, el enlace del calendario trae fechas, no notas: no llegan calificaciones ni el estado de entrega, y una tarea sin fecha de entrega no aparece porque Moodle no crea ningún evento para ella. Lo único más incómodo que en Canvas es que tienes que salir de la app una vez, a tu navegador, para copiar el enlace.',
           'Para Canvas, la pantalla de conexión pide el enlace privado del calendario que Canvas ya te da: sin token y sin que tu universidad apruebe nada. Si prefieres no conectarlo, escanea el programa o pega una lista de tareas.',
         ],
       },
       {
         heading: 'Qué cuesta, para quién es y dónde se pone incómodo',
         paragraphs: [
-          'Conectar Canvas es gratis por tiempo limitado, sin Pro y sin límite de clases, y quien lo conecte ahora no pierde nunca esa importación gratuita. El plan Gratis cubre un semestre, así que empezar el siguiente es donde entra Pro; lo ya conectado sigue sincronizándose. Blackboard y Moodle también son gratis: usan un token que emite tu universidad, y algunos centros lo desactivan o lo prohíben. Pro cuesta 4,99 $ al mes o 29,99 $ al año, unos 2,50 $ al mes en el plan anual, y se aplica a toda la cuenta lo compres en la web o en la app de iOS.',
+          'Conectar Canvas es gratis por tiempo limitado, sin Pro y sin límite de clases, y quien lo conecte ahora no pierde nunca esa importación gratuita. El plan Gratis cubre un semestre, así que empezar el siguiente es donde entra Pro; lo ya conectado sigue sincronizándose. Moodle también es gratis y se conecta con el enlace del calendario que exportas desde tu propio Moodle, sin token y sin que tu universidad apruebe nada. Blackboard también es gratis: usa un token que emite tu universidad, y algunos centros lo desactivan o lo prohíben. Pro cuesta 4,99 $ al mes o 29,99 $ al año, unos 2,50 $ al mes en el plan anual, y se aplica a toda la cuenta lo compres en la web o en la app de iOS.',
           'Sigues teniendo el seguimiento completo de entregas y tareas, las calificaciones con promedios ponderados, los recordatorios el mismo día, unirte al espacio de un compañero y una acción con IA gratuita para toda la vida de la cuenta.',
           'La sincronización con Canvas no es para todo el mundo. Si tu profesor no publica nunca tareas en Canvas y lo deja todo en el programa, escanear el programa es el mejor camino, y la acción con IA gratuita de la cuenta sirve justo para eso.',
         ],
@@ -1290,7 +1290,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
           'Las tareas sin fecha de entrega en Canvas se saltan. Semora marca la conexión como «parcial» y te dice cuántas.',
           'Si ya creaste una asignatura escaneando su programa, importar esa misma clase desde Canvas crea una segunda.',
           'Semora no trae los nombres de los profesores de la lista de asignaturas de Canvas, así que llegan sin ese dato.',
-          'Semora lee como máximo 1.000 elementos de un enlace del calendario, así que un historial muy largo puede llegar recortado; cuando la respuesta parece incompleta, Semora conserva lo ya importado en lugar de borrar nada. Blackboard y Moodle, que sincronizan curso por curso con un token, cubren hasta 50 asignaturas por sincronización.',
+          'Semora lee como máximo 1.000 elementos de un enlace del calendario, así que un historial muy largo puede llegar recortado; cuando la respuesta parece incompleta, Semora conserva lo ya importado en lugar de borrar nada. Blackboard, que sincroniza curso por curso con un token, cubre hasta 50 asignaturas por sincronización.',
           'No hay un interruptor por asignatura después de importar. Para cambiar cuáles se sincronizan, desconecta y vuelve a conectar.',
           'El enlace del calendario de Canvas no caduca. Si lo restableces en Canvas, la conexión muestra «se requieren credenciales» y la acción de volver a conectar acepta el enlace nuevo.',
         ],
@@ -1325,7 +1325,7 @@ export const ES_FEATURE_CONTENT: Record<string, EsFeatureLongForm> = {
       {
         question: '¿Funciona con Blackboard y Moodle?',
         answer:
-          'Sí, y las dos son gratis en todos los planes, igual que Canvas. Lo que cambia es la configuración: Blackboard y Moodle usan un token que emite tu institución, así que la disponibilidad depende de tu universidad, y una sincronización cubre hasta 50 cursos a la vez con una paginación acotada en las tareas de cada uno.',
+          'Sí, y las dos son gratis en todos los planes, igual que Canvas. Lo que cambia es la configuración: Moodle va con el enlace del calendario que tú mismo copias desde tu Moodle (Calendario → Exportar calendario → Obtener URL del calendario), sin token y sin que tu universidad apruebe nada, y trae fechas, no notas. Blackboard usa un token que emite tu institución, así que su disponibilidad depende de tu universidad, y una sincronización cubre hasta 50 cursos a la vez con una paginación acotada en las tareas de cada uno.',
       },
     ],
   },
