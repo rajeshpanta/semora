@@ -40,15 +40,6 @@ yarn-error.*
 /ios
 /android
 
-# Gradle output from the local Android module, which is NOT under /android.
-# It has to be ignored by name: everything under modules/ is autolinked native
-# surface, so @expo/fingerprint hashes it — and it hashes it for iOS too. Left
-# untracked-but-visible, running an Android build once moved the iOS runtime
-# fingerprint on this machine and nowhere else, which is the exact shape of
-# "the OTA reached nobody and nothing reported an error".
-modules/*/android/build/
-modules/*/android/.gradle/
-
 # supabase cli cache
 supabase/.temp/
 

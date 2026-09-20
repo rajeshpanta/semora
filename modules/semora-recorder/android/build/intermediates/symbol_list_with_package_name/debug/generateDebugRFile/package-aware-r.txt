@@ -1,0 +1,2 @@
+expo.modules.semorarecorder
+drawable semora_recorder_mic

@@ -1634,3 +1634,41 @@ the lane-button descriptions), the export horizon now shown always rather than
 only when it is under 60 days, and task type now read from the Moodle activity
 module — a language-independent fact — instead of an English-only keyword regex
 sitting downstream of a twelve-language name table.
+
+---
+
+## 14. The .gitignore rule that has to wait for a build
+
+Commit `2ac439c` added two lines to `.gitignore`:
+
+```
+modules/*/android/build/
+modules/*/android/.gradle/
+```
+
+They are correct and they should exist. They were reverted in `b420821`'s
+successor so the Moodle release could go out over the air, and here is why that
+was the right trade:
+
+`.gitignore` is itself a hashed source in @expo/fingerprint. Those two lines are
+the ONLY thing in the entire 10,786-line Moodle change that moves the iOS
+runtime fingerprint — measured reversibly in the real project tree, and
+confirmed by `eas fingerprint:compare`, which named `.gitignore` outright.
+Without them the release fingerprints to `7491078882380c20f349986ca0e812678399b818`,
+which is exactly the runtime 1.15.1 (61) devices run, so the whole Moodle client
+reaches students over the air instead of waiting for App Store review.
+
+**Re-add them in the same commit as the next native build**, when the
+fingerprint is moving anyway and `scripts/check-native-fingerprint.sh --update`
+is being run regardless. Until then the hazard they guard against is live: run
+an Android build locally and `modules/semora-recorder/android/build/` reappears
+untracked, silently moving the iOS fingerprint and breaking the next OTA with no
+error anywhere.
+
+The related trap is worse and is NOT fixed by those lines:
+`node_modules/react-native-iap` holds ~3.2 GB of Gradle and CMake output from an
+earlier Android build, and the live 1.15.1 runtime was fingerprinted WITH it in
+place. So an OTA publish tree must copy that package verbatim from a tree that
+already reproduces the live hash — installing the pristine npm package makes the
+fingerprint worse, not better. Always run `eas fingerprint:compare <live hash>`
+before publishing; it names the culprit directory in one line.

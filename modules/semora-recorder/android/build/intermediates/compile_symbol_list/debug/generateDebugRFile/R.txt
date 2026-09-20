@@ -1,0 +1,1 @@
+int drawable semora_recorder_mic 0x0
