@@ -49,7 +49,7 @@ import StudySuggestionsCard from '@/components/StudySuggestionsCard';
 import DecisionStrip from '@/components/DecisionStrip';
 import CoursesGlance from '@/components/CoursesGlance';
 import GradesWaitingCard from '@/components/GradesWaitingCard';
-import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, proCanvasEducationQuery } from '@/lib/lms';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, lmsRepairLabel, proCanvasEducationQuery } from '@/lib/lms';
 import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 import { ProCanvasEducationSheet } from '@/components/ProCanvasEducationSheet';
@@ -1372,7 +1372,7 @@ export default function TodayScreen() {
                     activeOpacity={0.85}
                     accessibilityRole="button"
                     accessibilityLabel={
-                      canvasOffer === 'needs_attention' ? 'Finish Canvas setup'
+                      canvasOffer === 'needs_attention' ? lmsRepairLabel(canvasConnection)
                       : canvasFree ? 'Sync Canvas free, limited time offer'
                       : 'Sync Canvas, Pro feature'
                     }
@@ -1380,7 +1380,7 @@ export default function TodayScreen() {
                     <FontAwesome name="university" size={13} color={colors.teal} />
                     <Text style={[styles.emptyCanvasText, { color: colors.ink2 }]}>
                       {canvasOffer === 'needs_attention'
-                        ? 'Finish Canvas setup — your classes import themselves'
+                        ? `${lmsRepairLabel(canvasConnection)} — your classes import themselves`
                         : canvasFree
                           ? 'Sync Canvas free — every class imports itself'
                           : 'Or sync Canvas — every class imports itself'}

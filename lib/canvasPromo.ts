@@ -85,6 +85,13 @@ export function lmsFailureCode(message: string, code?: string | null): string {
   if (/different moodle than the one you chose/.test(text)) return 'moodle_feed_url_other_host';
   if (/not a moodle calendar export link/.test(text)) return 'moodle_feed_url_wrong_page';
   if (/moodle calendar links must use/.test(text)) return 'moodle_feed_url_bad_host';
+  // The two dead ends a student cannot fix, matched on text as well as code.
+  // The code path above normally carries them, but these two are the ones the
+  // connect screen ROUTES on — it offers the syllabus scanner when it sees
+  // them — and a route that silently stops working if a code goes missing is
+  // worse than a duplicated regex.
+  if (/turned off calendar export/.test(text)) return 'moodle_export_disabled';
+  if (/network is blocking semora/.test(text)) return 'moodle_feed_blocked';
   if (/cancel/.test(text)) return 'cancelled';
   // The five normalizeCanvasCalendarFeedUrl refusals, kept apart because they
   // call for different help: an empty box is a different problem from a link
@@ -158,6 +165,33 @@ export function canvasFreeFor(
   return (connections ?? []).some((c) => c.free_promo_claimed_at != null);
 }
 
+/**
+ * The platform names, and the single place they are written down.
+ *
+ * lib/lms.ts re-exports this as LMS_PROVIDER_LABELS rather than keeping a
+ * second copy: this file is pure so it can be tested under Deno, and lms.ts
+ * imports from it, so the table has to live on this side of that arrow.
+ */
+export const LMS_LABELS: Record<string, string> = {
+  canvas: 'Canvas',
+  blackboard: 'Blackboard',
+  moodle: 'Moodle',
+  google_classroom: 'Google Classroom',
+};
+
+/**
+ * "Finish Moodle setup", for a student who connected Moodle.
+ *
+ * Every repair prompt in the app used to say "Finish Canvas setup" outright,
+ * which was true of every connection in production until Moodle — and is a
+ * nonsense instruction to a student whose school does not use Canvas. Falls
+ * back to Canvas when there is no connection to name, which is the case where
+ * the prompt is an invitation rather than a repair.
+ */
+export function lmsRepairLabel(connection: { provider?: string | null } | null | undefined): string {
+  return `Finish ${LMS_LABELS[connection?.provider ?? ''] ?? 'Canvas'} setup`;
+}
+
 export function canvasOfferFor<T extends CanvasConnectionFacts>(
   connections: T[] | undefined,
   isPro?: boolean,
@@ -168,7 +202,26 @@ export function canvasOfferFor<T extends CanvasConnectionFacts>(
   // worse than showing it a moment late.
   if (!connections) return { offer: 'healthy', connection: null, free: false };
 
-  const canvas = connections.find((c) => c.provider === 'canvas') ?? null;
+  // Canvas first, then ANY connected platform.
+  //
+  // This used to be Canvas and nothing else, and the `if (!canvas) return
+  // 'none'` below meant a student who had just connected Moodle was told
+  // "Connect Canvas" on the dashboard, the scan screen, the courses tab, the
+  // + menu, the web sidebar and the post-scan screen — six surfaces, all
+  // insisting they had not done the thing they had just done.
+  //
+  // The half that mattered more was invisible: `needs_attention` is the only
+  // prompt anywhere in the app that catches a feed that has stopped
+  // delivering, and it sits after that early return, so it could never fire
+  // for a Moodle row. A Moodle authtoken is sha1 over the password hash, so a
+  // routine university password change kills the feed silently and for ever —
+  // and the one place that would have said so was unreachable by construction.
+  //
+  // Canvas keeps strict priority, so nothing about a Canvas account changes:
+  // the fallback is only reached when there is no Canvas connection at all.
+  const canvas = connections.find((c) => c.provider === 'canvas')
+    ?? connections[0]
+    ?? null;
 
   // Pro, the offer is live, or this account claimed it while it was. See
   // canvasFreeFor — lms_access_allowed answers the same question server-side.

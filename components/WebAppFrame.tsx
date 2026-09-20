@@ -18,7 +18,7 @@ import { usePathname, useRouter } from 'expo-router';
 import type { Session } from '@supabase/supabase-js';
 import { useColors } from '@/lib/theme';
 import { useQuery } from '@tanstack/react-query';
-import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, lmsRepairLabel, LMS_LABELS } from '@/lib/lms';
 import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 import CommandPalette from '@/components/CommandPalette';
@@ -53,24 +53,39 @@ const SUPPORT_PATH = '__support__';
 const GET_APP_PATH = '__get_app__';
 
 const CANVAS_ITEM: NavigationItem = { label: 'Connect Canvas', icon: 'university', path: '/settings/lms' };
-const CANVAS_FIX_ITEM: NavigationItem = { label: 'Finish Canvas setup', icon: 'refresh', path: '/settings/lms' };
+/**
+ * Named for the platform that actually needs attention.
+ *
+ * The two rows below are the only ones a student sees AFTER they have
+ * connected something, so they are the two that cannot be hardcoded to Canvas:
+ * telling a Moodle student to "Finish Canvas setup" is an instruction they
+ * cannot follow, on the one prompt that exists to rescue a dead feed.
+ */
+function lmsFixItem(connection: { provider?: string | null } | null): NavigationItem {
+  return { label: lmsRepairLabel(connection), icon: 'refresh', path: '/settings/lms' };
+}
+function lmsNewCoursesItem(connection: { provider?: string | null } | null): NavigationItem {
+  const label = LMS_LABELS[connection?.provider ?? ''] ?? 'Canvas';
+  return { label: `New ${label} courses`, icon: 'plus-circle', path: '/settings/lms/new-courses' };
+}
 // A connection that is syncing fine AND sitting on courses it has not imported.
 // This is what a term change looks like: Canvas starts listing next semester's
 // classes, none of them are linked, and their deadlines go nowhere. It gets a
 // row of its own rather than hiding behind "healthy", because the whole point
 // is that the student never has to work out on their own that Canvas needs
 // attention again.
-const CANVAS_NEW_ITEM: NavigationItem = { label: 'New Canvas courses', icon: 'plus-circle', path: '/settings/lms/new-courses' };
 // Free accounts go straight to the paywall. lms-sync refuses them server-side,
 // so routing to Settings first only adds a step before the same answer.
 // The path is a sentinel, not a destination: SidebarItem's press handler
 // intercepts it and opens the upgrade sheet in place. A free student should
 // meet the price where they met the offer, not on another screen.
 const CANVAS_UPSELL_PATH = '__canvas_upsell__';
-/** Every Canvas sidebar row, named once so none can be added without attribution. */
+/** Every LMS sidebar row, named once so none can be added without attribution. */
 const CANVAS_ITEM_LABELS = new Set([
-  'Connect Canvas', 'Finish Canvas setup', 'New Canvas courses',
-  'Connect Canvas · Pro', 'Connect Canvas · Free',
+  'Connect Canvas', 'Connect Canvas · Pro', 'Connect Canvas · Free',
+  // Every platform's form of the two provider-named rows, so a Moodle student
+  // tapping "Finish Moodle setup" is still attributed to the LMS lane.
+  ...Object.values(LMS_LABELS).flatMap((l) => [`Finish ${l} setup`, `New ${l} courses`]),
 ]);
 function isCanvasItem(item: { label: string }) {
   return CANVAS_ITEM_LABELS.has(item.label);
@@ -267,12 +282,13 @@ function DesktopSidebar({ session }: { session: Session }) {
   const [canvasUpsellOpen, setCanvasUpsellOpen] = useState(false);
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
   const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
-  const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
+  const { offer: canvasOffer, free: canvasFree, connection: canvasConnection } =
+    canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
   const primaryItems = (() => {
     if (canvasOffer === 'healthy') return PRIMARY_ITEMS;
     const item =
-      canvasOffer === 'needs_attention' ? CANVAS_FIX_ITEM
-      : canvasOffer === 'new_courses' ? CANVAS_NEW_ITEM
+      canvasOffer === 'needs_attention' ? lmsFixItem(canvasConnection)
+      : canvasOffer === 'new_courses' ? lmsNewCoursesItem(canvasConnection)
       : canvasOffer === 'locked' ? CANVAS_PRO_ITEM
       : canvasFree ? CANVAS_FREE_ITEM
       : CANVAS_ITEM;

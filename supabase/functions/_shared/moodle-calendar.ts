@@ -249,6 +249,13 @@ export function decodeMoodleEntities(value: string): string {
 interface StrippedName {
   base: string;
   kind: MoodleEventKind | null;
+  /**
+   * The Moodle activity module the matched pattern belongs to — `quiz`,
+   * `assign`, `lesson`, `forum` and so on. This is the one piece of type
+   * information in a Moodle feed that is not in a human language, and it is
+   * therefore the only one that is as true in Catalan as in English.
+   */
+  comp: string | null;
 }
 
 /**
@@ -265,9 +272,51 @@ export function stripMoodleEventName(summary: string): StrippedName {
     if (suffix && !summary.endsWith(suffix)) continue;
     const base = summary.slice(prefix.length, suffix ? summary.length - suffix.length : undefined).trim();
     if (!base) continue;
-    return { base, kind: pattern.kind };
+    return { base, kind: pattern.kind, comp: pattern.comp };
   }
-  return { base: summary.trim(), kind: null };
+  return { base: summary.trim(), kind: null, comp: null };
+}
+
+/**
+ * What kind of work this is, in a way that survives translation.
+ *
+ * The shared `classify()` reads English keywords out of the title, which is
+ * the right first pass — a teacher who writes "Midterm" means it, and no
+ * module type overrules that. But it sits directly downstream of a 296-pattern
+ * table built from twelve language packs, so a Spanish school's quiz was
+ * recognised as a quiz EVENT and then filed as a generic assignment, which is
+ * the boast and the defect in the same feature.
+ *
+ * Two things are added here and neither touches Canvas:
+ *
+ *   the module    `comp` comes off the matched pattern and is a Moodle
+ *                 identifier, not a word. A `quiz` activity is a quiz in every
+ *                 language, and `lesson`/`scorm`/`choice`/`forum` are not
+ *                 assignments in any of them.
+ *   Spanish       the one other language Semora ships its own interface in,
+ *                 so a Spanish-speaking student is the one who would otherwise
+ *                 notice every exam mislabelled.
+ */
+const SPANISH_EXAM = /\b(examen|examenes|ex[aá]menes|parcial|parciales|final(?:es)?)\b/i;
+const SPANISH_QUIZ = /\b(cuestionario|prueba|test)\b/i;
+
+function moodleType(
+  title: string,
+  comp: string | null,
+  uid: string,
+): CanvasCalendarAssignment['type'] {
+  const byTitle = classify(title, uid);
+  // A named exam beats everything, including the module it lives in: a quiz
+  // activity called "Midterm" is a midterm.
+  if (byTitle === 'exam') return 'exam';
+  if (SPANISH_EXAM.test(title)) return 'exam';
+  if (comp === 'quiz') return 'quiz';
+  if (byTitle !== 'assignment') return byTitle;
+  if (SPANISH_QUIZ.test(title)) return 'quiz';
+  // Activities that are not work handed in. Left as 'other' so they sort and
+  // colour apart from a real deadline.
+  if (comp === 'choice' || comp === 'forum' || comp === 'feedback') return 'other';
+  return byTitle;
 }
 
 function isSiteEventCategory(category: string): boolean {
@@ -462,7 +511,7 @@ export function parseMoodleCalendarFeed(
 
     const title = (stripped.base || event.summary).slice(0, 240);
     const type: CanvasCalendarAssignment['type'] =
-      stripped.kind === 'expect' ? 'other' : classify(title, event.uid);
+      stripped.kind === 'expect' ? 'other' : moodleType(title, stripped.comp, event.uid);
 
     const key = `${event.category}:${event.uid}`;
     if (!courses.has(event.category)) {

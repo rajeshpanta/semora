@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { router } from 'expo-router';
 import { ActivityIndicator, AppState, Linking, Platform, StyleSheet, View } from 'react-native';
 import { Text, TextInput, TouchableOpacity } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -430,7 +431,7 @@ export function MoodleGuidedPaste({
           <View style={styles.noteRow}>
             <FontAwesome name="info-circle" size={12} color={colors.ink3} />
             <Text style={[styles.note, { color: colors.ink2, flex: 1 }]}>
-              If the page just says “no export”, your school turned this off — tap Scan a syllabus instead.
+              If the page just says “no export”, your school turned this off. Semora will offer to read your syllabus instead.
             </Text>
           </View>
           {lane === 'phone' && (
@@ -552,6 +553,26 @@ export function MoodleGuidedPaste({
               <Text style={[styles.link, { color: colors.brand }]}>Show me the laptop steps</Text>
             </TouchableOpacity>
           )}
+          {/* The route out that always works.
+              A student can be stuck here for a reason they cannot fix — their
+              school turned calendar export off, or its firewall refuses
+              Semora's server — and until now the only thing offered at that
+              point was a support page, which cannot help them either. The
+              syllabus scanner is Semora's own core feature and needs nothing
+              from Moodle at all. */}
+          <TouchableOpacity
+            onPress={() => {
+              track('lms_setup_scan_offered', {
+                screen: 'lms_connect', provider: 'moodle', source,
+                attempts: progress.attempts, funnel_step: 'help', reason: 'escalation',
+              });
+              router.push('/scan' as never);
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Scan a syllabus instead"
+          >
+            <Text style={[styles.link, { color: colors.brand }]}>Scan a syllabus instead</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => {
               track('lms_setup_help_opened', { screen: 'lms_connect', provider: 'moodle', source, attempts: progress.attempts, funnel_step: 'help' });

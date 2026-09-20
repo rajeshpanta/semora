@@ -2,7 +2,13 @@
 
 Version 2, written 2026-09-19. Replaces the plan of the same morning.
 
-This is a plan. Nothing in it has been built. Every technical claim was verified
+**STATUS, and read this before the plan below.** This was a plan when it was
+written and it is now partly built. As of 2026-09-19 evening: migrations 151,
+152, 153 and 154 are APPLIED to production, `lms-sync` is DEPLOYED, and the
+whole client is COMMITTED (`2ac439c` on `main`) but is in no shipped build, so
+no student can reach it. Section 13 at the end carries the per-step build log,
+which is the authoritative record — the phase text below describes what was
+intended, not what exists. Every technical claim was verified
 against Moodle's own source on branch `MOODLE_405_STABLE` (with spot checks on
 3.9, 4.1, 4.4, 5.0 and 5.2) and against the Semora repository at commit
 `8cea350`, then independently attacked by three skeptics per claim. Where a
@@ -1581,11 +1587,50 @@ by the step it died on.
 | `check-product-facts` | clean |
 | native files touched | 0 |
 | live tokens in fixtures | 0 |
-| funnel SQL against production | 9 of 10 (tenth needs 151) |
+| funnel SQL against production | all 12 blocks (151 applied; two blocks added) |
 
-### Still true
+### The client HAS rendered (2026-09-19 evening)
 
-The client has still never rendered. Everything in Phase 4 type-checks and is
-tested where it is pure logic, but no screen has been drawn on a simulator, a
-device or the web build. That remains the one gate no amount of server work
-can close.
+Superseding the line that stood here: every Moodle screen has now been drawn
+and read. The simulator bundled the whole tree with no error, and the web build
+rendered, screenshot by screenshot, step A, the lane chooser, both lanes, the
+valid-link verdict, three rejection verdicts, the two-failure escalation card
+and the full connect screen. The rename field was confirmed in the rendered DOM
+as `<input maxLength=120 aria-label="Course name: …">`.
+
+### What the competitive pass found (2026-09-19 evening)
+
+37 agents, 61 products, 14 deep-dived with an adversarial skeptic each, judged
+on three lenses. **Semora placed #2, #2 and #3 — not first on any of them.**
+
+The honest summary: Semora is the best-designed third-party connect and by a
+distance the best parser, and it loses to the official Moodle app on richness
+(grades, submission status, feedback, files, undated courses — none of which
+can cross an iCal feed) and to a plain Apple Calendar subscription on cost and
+trust (free forever, nothing on anyone's server). Both of those are structural.
+
+Three defects it found were not, and all three are fixed:
+
+1. **`canvasOfferFor` was hard-scoped to `provider === 'canvas'`.** A Moodle
+   student was told "Connect Canvas" on six screens after connecting, and —
+   far worse — `needs_attention`, the only prompt in the app that catches a
+   feed that has stopped delivering, could never fire for a Moodle row. A
+   Moodle authtoken is sha1 over the password hash, so a routine university
+   password change kills the feed silently; the one thing that would have said
+   so was unreachable by construction. Canvas keeps strict priority, so nothing
+   about a Canvas account changed.
+2. **The 'no export' dead end named a control that was not on the screen** and
+   `moodle_export_disabled` had no client handling at all. The failure dialog
+   now offers the syllabus scanner, and so does the escalation card.
+3. **A typo became a site.** `moodleWwwrootFromPage` prefixed `https://` to any
+   typed word, so a fat-fingered school name became the expected host and the
+   student's CORRECT calendar link was then refused as "a different Moodle" —
+   the one wrong turn where doing everything right afterwards still failed. A
+   hostname now needs a dot, and an unconfirmed guess is never used to reject a
+   link.
+
+Also closed in the same pass: the four untranslated Spanish strings (two were
+the lane-button descriptions), the export horizon now shown always rather than
+only when it is under 60 days, and task type now read from the Moodle activity
+module — a language-independent fact — instead of an English-only keyword regex
+sitting downstream of a twelve-language name table.

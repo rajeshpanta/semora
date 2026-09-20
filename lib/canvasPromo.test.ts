@@ -24,6 +24,7 @@ import {
   canvasPromoPlacementFor,
   canvasSourceOf,
   lmsFailureCode,
+  lmsRepairLabel,
 } from './canvasPromo';
 
 const healthyCanvas: CanvasConnectionFacts = {
@@ -194,4 +195,45 @@ Deno.test('a message quoting a live feed URL cannot leak through the code', () =
     assert(!code.includes('SECRETTOKEN123'), 'the feed token reached analytics');
     assert(!code.includes('instructure'), 'the school hostname reached analytics');
   }
+});
+
+Deno.test('the two Moodle dead ends are classified from their text alone', () => {
+  // The connect screen offers the syllabus scanner on exactly these two codes,
+  // so they have to survive a server that forgot to send `code`.
+  assertEquals(
+    lmsFailureCode('Your school has turned off calendar export in Moodle, so Semora cannot read it. Ask your Moodle support team, or add classes by scanning a syllabus.'),
+    'moodle_export_disabled',
+  );
+  assertEquals(
+    lmsFailureCode("Your school's network is blocking Semora's server. Scan a syllabus, or ask your Moodle support team."),
+    'moodle_feed_blocked',
+  );
+  // And the server's own code still wins over any text.
+  assertEquals(lmsFailureCode('anything at all', 'moodle_export_disabled'), 'moodle_export_disabled');
+});
+
+Deno.test('a Moodle-only account is offered repair, not "Connect Canvas"', () => {
+  // canvasOfferFor was hard-scoped to provider === 'canvas', so a student who
+  // had connected Moodle kept being told to connect Canvas on six screens —
+  // and needs_attention, the ONLY prompt that catches a dead feed, could never
+  // fire for them.
+  const moodle = {
+    id: 'm1', provider: 'moodle', connection_method: 'calendar_feed',
+    last_sync_status: 'success', background_sync_enabled: true,
+    last_successful_sync_at: new Date().toISOString(),
+    pending_courses_count: 0, free_promo_claimed_at: null,
+  } as never;
+  assertEquals(canvasOfferFor([moodle], false, true).offer, 'healthy');
+
+  const stalledMoodle = { ...(moodle as object), background_sync_enabled: false } as never;
+  const stalled = canvasOfferFor([stalledMoodle], false, true);
+  assertEquals(stalled.offer, 'needs_attention');
+  assertEquals(lmsRepairLabel(stalled.connection), 'Finish Moodle setup');
+
+  // Canvas keeps strict priority, and keeps its own wording.
+  const canvas = { ...(moodle as object), id: 'c1', provider: 'canvas' } as never;
+  const both = canvasOfferFor([stalledMoodle, canvas], false, true);
+  assertEquals(both.connection?.provider, 'canvas');
+  assertEquals(lmsRepairLabel(both.connection), 'Finish Canvas setup');
+  assertEquals(lmsRepairLabel(null), 'Finish Canvas setup');
 });

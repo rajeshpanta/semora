@@ -32,9 +32,12 @@ export {
   lmsFailureCode,
   canvasFreeFor,
   canvasOfferFor,
+  LMS_LABELS,
+  lmsRepairLabel,
   canvasPromoPlacementFor,
 } from '@/lib/canvasPromo';
 export type { CanvasOffer, CanvasConnectionFacts } from '@/lib/canvasPromo';
+import { LMS_LABELS } from '@/lib/canvasPromo';
 import { PRO_CANVAS_EDU_FLAG_KEY } from '@/lib/proCanvasEducation';
 
 export interface DiscoveredLmsCourse {
@@ -117,12 +120,9 @@ export interface LmsSyncRun {
 }
 
 const COLORS = ['#4F46E5', '#0F766E', '#C2410C', '#9333EA', '#0369A1', '#BE123C'];
-export const LMS_PROVIDER_LABELS: Record<LmsProvider, string> = {
-  canvas: 'Canvas',
-  blackboard: 'Blackboard',
-  moodle: 'Moodle',
-  google_classroom: 'Google Classroom',
-};
+// One table, defined in canvasPromo.ts because that file is pure and this one
+// imports from it. Re-exported here under the name the screens already use.
+export const LMS_PROVIDER_LABELS = LMS_LABELS as Record<LmsProvider, string>;
 
 /** Canvas exposes webcal://, while Edge fetch supports HTTPS. Keep the feed
  * secret out of logs and reject anything except Canvas's user feed path. */

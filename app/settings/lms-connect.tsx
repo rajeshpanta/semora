@@ -275,9 +275,19 @@ export default function LmsConnectScreen() {
   );
   // The same job for Moodle, plus the one thing Canvas cannot get wrong: a
   // link from a different Moodle than the school they chose.
+  // The expected site is only an expectation when the check CONFIRMED it.
+  //
+  // describeMoodleFeedInput refuses a link from anywhere other than the site
+  // passed here, which is right when Semora knows the school and wrong when it
+  // merely guessed one: an unconfirmed guess would reject the student's real
+  // calendar link as 'a different Moodle'. When the probe could not confirm,
+  // trust the link instead — it is the stronger evidence of the two, since it
+  // came out of the student's own logged-in Moodle.
   const moodleVerdict = useMemo(
-    () => (isMoodleFeed ? describeMoodleFeedInput(token, moodleProgress.wwwroot) : null),
-    [isMoodleFeed, token, moodleProgress.wwwroot],
+    () => (isMoodleFeed
+      ? describeMoodleFeedInput(token, moodleProgress.precheck?.isMoodle ? moodleProgress.wwwroot : null)
+      : null),
+    [isMoodleFeed, token, moodleProgress.wwwroot, moodleProgress.precheck?.isMoodle],
   );
   /** Whichever road is live, in one shape, so the guards below read once. */
   const feedLooksRight = isMoodleFeed
@@ -501,7 +511,29 @@ export default function LmsConnectScreen() {
       if (/pro feature/i.test(message)) {
         openPaywall();
       } else if (!/cancel/i.test(message)) {
-        Alert.alert('Couldn’t connect', message);
+        // Two failures a student cannot fix, and the only two where the
+        // server's own message already tells them to scan a syllabus: their
+        // school turned Moodle's calendar export off, or its network refuses
+        // Semora's server. Until now the message named that route and the
+        // dialog offered only OK, so the one instruction the student could
+        // act on was the one thing the screen would not do for them.
+        const code = lmsFailureCode(message, (error as { code?: string })?.code);
+        const deadEnd = code === 'moodle_export_disabled' || code === 'moodle_feed_blocked';
+        if (deadEnd) {
+          track('lms_setup_scan_offered', {
+            screen: 'lms_connect', provider, source, funnel_step: 'discovered', reason: code,
+          });
+        }
+        Alert.alert(
+          'Couldn’t connect',
+          message,
+          deadEnd
+            ? [
+                { text: 'Scan a syllabus', onPress: () => router.push('/scan' as never) },
+                { text: 'Not now', style: 'cancel' as const },
+              ]
+            : undefined,
+        );
       }
     } finally {
       setWorking(false);
@@ -1020,9 +1052,22 @@ export default function LmsConnectScreen() {
                   Only classes with dated work in Moodle appear here. A class with nothing scheduled, or one your teacher hasn’t released yet, shows up when its first deadline is posted.
                 </Text>
               )}
-              {isMoodleFeed && horizonDays !== null && horizonDays < 60 && (
+              {/* Always, not only when it is short.
+                  Each school's administrator sets how far ahead Moodle's
+                  export reaches, and the number decides whether the back half
+                  of the semester exists. It was said only when it fell under
+                  60 days, so a student whose school shares a year was told
+                  nothing and a student whose school shares 90 days could not
+                  tell "no finals scheduled yet" from "outside the window".
+                  Semora is the only importer that asks for the full custom
+                  range instead of Moodle's 60-day preset, so this is the one
+                  number it has a better answer to than anyone — and it was
+                  keeping it quiet. */}
+              {isMoodleFeed && horizonDays !== null && (
                 <Text style={[styles.subtitle, { color: colors.ink2 }]}>
-                  {`Your Moodle shares ${horizonDays} days ahead.`}
+                  {horizonDays < 60
+                    ? `Your Moodle shares ${horizonDays} days ahead. Work due after that arrives as your school's window moves forward.`
+                    : `Your Moodle shares ${horizonDays} days ahead, so this covers the rest of the term.`}
                 </Text>
               )}
               <Text style={[styles.label, { color: colors.ink2 }]}>Connection name</Text>

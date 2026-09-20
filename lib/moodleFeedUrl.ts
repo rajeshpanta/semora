@@ -108,6 +108,15 @@ function toUrl(candidate: string): URL | null {
 export function moodleWwwrootFromPage(value: unknown): string | null {
   const url = toUrl(extractMoodleFeedCandidate(value));
   if (!url || url.protocol !== 'https:' || PRIVATE_HOST.test(url.hostname)) return null;
+  // A real Moodle is on a public name, and a public name has a dot in it.
+  //
+  // Without this, toUrl's https:// prefix turns ANY typed word into a site:
+  // a student who fat-fingers their school becomes anchored to
+  // https://stateuniversty, and the CORRECT calendar link they paste two
+  // screens later is then refused against it as 'a different Moodle' — the
+  // one wrong turn in the flow where doing everything right afterwards still
+  // fails, and it blames the student's good link for the earlier typo.
+  if (!url.hostname.includes('.')) return null;
   const parts = url.pathname.split('/').filter(Boolean);
   const stop = ['my', 'course', 'calendar', 'mod', 'user', 'login', 'grade', 'message', 'admin', 'lib', 'blocks', 'report'];
   const kept: string[] = [];

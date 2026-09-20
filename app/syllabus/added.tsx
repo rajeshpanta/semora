@@ -12,7 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAppStore } from '@/store/appStore';
 import { useCourses, useSemesters } from '@/lib/queries';
 import { track } from '@/lib/analytics';
-import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, lmsRepairLabel } from '@/lib/lms';
 import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 
@@ -61,7 +61,7 @@ export default function SyllabusAddedScreen() {
   // this screen did not contain the word Canvas.
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
   const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
-  const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
+  const { offer: canvasOffer, free: canvasFree, connection: canvasConnection } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
   const showCanvas = canvasOffer !== 'healthy';
 
   const savedCount = Number(params.count) || 0;
@@ -226,14 +226,14 @@ export default function SyllabusAddedScreen() {
               onPress={goCanvas}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel={canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Bring every class in from Canvas, free'}
+              accessibilityLabel={canvasOffer === 'needs_attention' ? lmsRepairLabel(canvasConnection) : 'Bring every class in from Canvas, free'}
             >
               <View style={[styles.canvasIcon, { backgroundColor: colors.teal + '22' }]}>
                 <FontAwesome name={canvasOffer === 'needs_attention' ? 'refresh' : 'university'} size={15} color={colors.teal} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.canvasTitle, { color: colors.ink }]}>
-                  {canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Bring every class in at once'}
+                  {canvasOffer === 'needs_attention' ? lmsRepairLabel(canvasConnection) : 'Bring every class in at once'}
                 </Text>
                 <Text style={[styles.canvasSub, { color: colors.ink3 }]}>
                   Connect Canvas and your whole timetable lands here — free, however many classes you take.

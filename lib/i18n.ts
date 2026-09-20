@@ -57,6 +57,10 @@ function spanishPattern(input: string): string | null {
   if (match) return `Parece correcto: ${match[1]}`;
   match = input.match(/^That link is from (.+?) — open its calendar export instead$/);
   if (match) return `Ese enlace es de ${match[1]}: abre su exportación del calendario`;
+  match = input.match(/^Your Moodle shares (\d+) days ahead\. Work due after that arrives as your school[’']s window moves forward\.$/);
+  if (match) return `Tu Moodle comparte ${match[1]} días hacia adelante. Lo que venza después llegará conforme avance la ventana de tu universidad.`;
+  match = input.match(/^Your Moodle shares (\d+) days ahead, so this covers the rest of the term\.$/);
+  if (match) return `Tu Moodle comparte ${match[1]} días hacia adelante, así que esto cubre el resto del cuatrimestre.`;
   match = input.match(/^Your Moodle shares (\d+) days ahead\.$/);
   if (match) return `Tu Moodle comparte ${match[1]} días hacia adelante.`;
   // Before the generic rule below, which would otherwise leave "courses" in

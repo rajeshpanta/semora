@@ -25,7 +25,7 @@ import { calculateCourseGrade, calculateSemesterGpaWithScale, DEFAULT_GPA_SCALE 
 import { useColors } from '@/lib/theme';
 import CourseCard, { formatMeetings, type CourseCardData } from '@/components/CourseCard';
 import AppHeader from '@/components/AppHeader';
-import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, lmsRepairLabel } from '@/lib/lms';
 import { canvasOfferDestination, trackCanvasOfferShown, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { useResponsive } from '@/lib/responsive';
@@ -79,7 +79,7 @@ export default function CoursesScreen() {
   const [canvasUpsell, setCanvasUpsell] = useState(false);
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
   const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
-  const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
+  const { offer: canvasOffer, free: canvasFree, connection: canvasConnection } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
   const { data: tasks = [] } = useTasks(selectedSemesterId ? { semesterId: selectedSemesterId } : { semesterId: null });
   const { data: gradeCategories = [] } = useSemesterGradeCategories(selectedSemesterId);
   const { data: gpaScale = DEFAULT_GPA_SCALE } = useGpaScale();
@@ -116,7 +116,7 @@ export default function CoursesScreen() {
         ? []
         : [{
             text:
-              canvasOffer === 'needs_attention' ? 'Finish Canvas setup'
+              canvasOffer === 'needs_attention' ? lmsRepairLabel(canvasConnection)
               // Adding a course is exactly when someone would want to know
               // Canvas already has classes waiting to be imported.
               : canvasOffer === 'new_courses' ? 'Import new Canvas courses'

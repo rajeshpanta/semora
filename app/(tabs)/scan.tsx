@@ -37,7 +37,7 @@ import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useFreeActionUsed, freeActionUsedQueryOptions } from '@/lib/queries';
 import { FREE_COURSE_LIMIT, FREE_COURSE_PHRASE } from '@/lib/syllabus';
-import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, lmsRepairLabel } from '@/lib/lms';
 import { canvasOfferDestination, trackCanvasOfferShown, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 import { MAX_SCAN_PAGES, MAX_SCAN_RAW_BYTES, scanTooLargeMessage, type SyllabusPage } from '@/lib/ai-extraction';
@@ -177,7 +177,7 @@ export default function ScanScreen() {
   const { data: freeActionUsed = false, isLoading: freeActionLoading } = useFreeActionUsed();
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
   const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
-  const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
+  const { offer: canvasOffer, free: canvasFree, connection: canvasConnection } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
   // Same rule the paywall's promotional card uses: only while the offer is
   // genuinely live, and never to someone whose Canvas is already healthy.
   const canvasEscape = canvasFree && canvasOffer !== 'healthy';
@@ -893,7 +893,7 @@ export default function ScanScreen() {
               // locked offer while the badge next to it read PRO — so a student
               // using VoiceOver was the only one not told the price, and found
               // out at the paywall instead.
-              canvasOffer === 'needs_attention' ? 'Finish Canvas setup'
+              canvasOffer === 'needs_attention' ? lmsRepairLabel(canvasConnection)
               : canvasFree ? 'Connect Canvas free, limited time offer'
               : canvasOffer === 'locked' ? 'Connect Canvas, Pro feature'
               : 'Connect Canvas'
@@ -919,7 +919,7 @@ export default function ScanScreen() {
             <View style={{ flex: 1 }}>
               <View style={styles.canvasTitleRow}>
                 <Text style={[styles.canvasTitle, { color: colors.ink }]}>
-                  {canvasOffer === 'needs_attention' ? 'Finish Canvas setup' : 'Connect Canvas instead'}
+                  {canvasOffer === 'needs_attention' ? lmsRepairLabel(canvasConnection) : 'Connect Canvas instead'}
                 </Text>
                 {/* The loudest place in the app to say this. A student on the
                     scan screen is about to spend their one lifetime free AI

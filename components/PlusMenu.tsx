@@ -12,7 +12,7 @@ import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { useCourses } from '@/lib/queries';
 import { useQuery } from '@tanstack/react-query';
-import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery } from '@/lib/lms';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, lmsRepairLabel, LMS_LABELS } from '@/lib/lms';
 import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
@@ -243,7 +243,13 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
   const isPro = useAppStore((st) => st.isPro);
   const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
-  const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
+  const { offer: canvasOffer, free: canvasFree, connection: canvasConnection } =
+    canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
+  // The two rows below that a student only sees AFTER connecting have to name
+  // the platform they actually connected; the invitation rows keep saying
+  // Canvas, which is the flagship and is the right word for someone who has
+  // connected nothing.
+  const lmsLabel = LMS_LABELS[canvasConnection?.provider ?? ''] ?? 'Canvas';
   const [canvasUpsell, setCanvasUpsell] = useState(false);
   // The "+" menu produced NO analytics of any kind — not an impression, not a
   // tap. It was the one Canvas surface that was completely dark, so a zero from
@@ -265,7 +271,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
         ? {
             icon: 'refresh',
             tint: 'amber',
-            title: 'Finish Canvas setup',
+            title: lmsRepairLabel(canvasConnection),
             sub: 'Connected, but not syncing on its own yet',
             route: { pathname: '/settings/lms' },
             isCanvas: true,
@@ -278,8 +284,8 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
         ? {
             icon: 'plus-circle',
             tint: 'teal',
-            title: 'New Canvas courses',
-            sub: 'Canvas has classes Semora has not imported yet',
+            title: `New ${lmsLabel} courses`,
+            sub: `${lmsLabel} has classes Semora has not imported yet`,
             route: { pathname: '/settings/lms/new-courses' },
             isCanvas: true,
           }

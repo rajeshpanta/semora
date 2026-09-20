@@ -112,17 +112,17 @@ Deno.test('a body is classified by its text, never by its status or content type
 // ── names ──────────────────────────────────────────────────────────────────
 
 Deno.test('event names are stripped in English and Spanish, longest pattern first', () => {
-  assertEquals(stripMoodleEventName('Problem Set 3 is due'), { base: 'Problem Set 3', kind: 'due' });
+  assertEquals(stripMoodleEventName('Problem Set 3 is due'), { base: 'Problem Set 3', kind: 'due', comp: 'assign' });
   // 'is due to be graded' must beat 'is due'.
   assertEquals(stripMoodleEventName('Problem Set 3 is due to be graded').kind, 'grading');
   assertEquals(stripMoodleEventName('Midterm Quiz opens').kind, 'open');
-  assertEquals(stripMoodleEventName('Midterm Quiz closes'), { base: 'Midterm Quiz', kind: 'due' });
+  assertEquals(stripMoodleEventName('Midterm Quiz closes'), { base: 'Midterm Quiz', kind: 'due', comp: 'quiz' });
   assertEquals(stripMoodleEventName('Weekly reflection should be completed').kind, 'expect');
-  assertEquals(stripMoodleEventName('Reading Journal is due (extension)'), { base: 'Reading Journal', kind: 'extend' });
+  assertEquals(stripMoodleEventName('Reading Journal is due (extension)'), { base: 'Reading Journal', kind: 'extend', comp: 'assign' });
   // Spanish puts the placeholder LAST: a suffix-only parser fails here.
-  assertEquals(stripMoodleEventName('Vencimiento de Ensayo Final'), { base: 'Ensayo Final', kind: 'due' });
+  assertEquals(stripMoodleEventName('Vencimiento de Ensayo Final'), { base: 'Ensayo Final', kind: 'due', comp: 'assign' });
   // Nothing recognisable is left alone rather than mangled.
-  assertEquals(stripMoodleEventName('Unit 2 Quiz'), { base: 'Unit 2 Quiz', kind: null });
+  assertEquals(stripMoodleEventName('Unit 2 Quiz'), { base: 'Unit 2 Quiz', kind: null, comp: null });
 });
 
 // ── the real captures ──────────────────────────────────────────────────────
@@ -387,4 +387,48 @@ Deno.test('no exported message leaks a token or a user id', async () => {
   for (const message of messages) {
     assert(!/authtoken|userid=/i.test(message), message);
   }
+});
+
+Deno.test('a type survives translation, because the module is not a word', () => {
+  // The defect this closes: 'Cuestionario 3' was recognised as a quiz EVENT by
+  // the 12-language pattern table and then filed as a generic assignment by an
+  // English-only keyword regex sitting directly downstream of it.
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Moodle Pty Ltd//NONSGML Moodle Version 2026042000//EN',
+    ...[
+      ['701', 'Se cierra Cuestionario 3', 'FISICA101'],   // es quiz: 'Se cierra {$a}'
+      ['702', 'Vencimiento de Examen parcial', 'FISICA101'],
+      ['703', 'Unit 2 Quiz closes', 'PHYS101'],
+      ['704', 'Midterm Quiz closes', 'PHYS101'],
+      ['705', 'Problem Set 3 is due', 'PHYS101'],
+    ].flatMap(([id, summary, cat]) => [
+      'BEGIN:VEVENT',
+      `UID:${id}@moodle.school.edu`,
+      `SUMMARY:${summary}`,
+      `CATEGORIES:${cat}`,
+      'DTSTART:20261110T235900Z',
+      'DTEND:20261110T235900Z',
+      'END:VEVENT',
+    ]),
+    'END:VCALENDAR',
+  ].join('\r\n');
+
+  const parsed = parseMoodleCalendarFeed(ics, ics, {
+    wwwroot: 'https://moodle.school.edu',
+    today: new Date('2026-11-01T00:00:00Z'),
+  });
+  const typeOf = (title: string) =>
+    parsed.assignments.find((a) => a.title === title)?.type;
+
+  // Spanish quiz module -> quiz, from `comp`, with no Spanish keyword involved.
+  assertEquals(typeOf('Cuestionario 3'), 'quiz');
+  // Spanish exam in an ASSIGNMENT module -> exam, from the Spanish keywords.
+  assertEquals(typeOf('Examen parcial'), 'exam');
+  // English keeps behaving exactly as it did.
+  assertEquals(typeOf('Unit 2 Quiz'), 'quiz');
+  // A named midterm beats the module it lives in.
+  assertEquals(typeOf('Midterm Quiz'), 'exam');
+  assertEquals(typeOf('Problem Set 3'), 'assignment');
 });

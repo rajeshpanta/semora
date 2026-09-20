@@ -2864,8 +2864,28 @@ export const ES: Record<string, string> = {
   'Tap Copy URL.': 'Toca Copiar URL.',
   'Come back to Semora.': 'Vuelve a Semora.',
   'Leave the options as they are \u2014 Semora sets the date range itself.': 'Deja las opciones como est\u00e1n: Semora ajusta el rango de fechas por su cuenta.',
-  'If the page just says \u201cno export\u201d, your school turned this off \u2014 tap Scan a syllabus instead.':
-    'Si la p\u00e1gina solo dice \u201cno export\u201d, tu universidad lo desactiv\u00f3: toca Escanear un programa.',
+  // Reworded with the screen: the old line named a 'Scan a syllabus' control
+  // that was not on this screen. The scanner is now offered in the escalation
+  // card and in the failure dialog, where the student can actually reach it.
+  'If the page just says \u201cno export\u201d, your school turned this off. Semora will offer to read your syllabus instead.':
+    'Si la p\u00e1gina solo dice \u201cno export\u201d, tu universidad lo desactiv\u00f3. Semora te ofrecer\u00e1 leer tu programa en su lugar.',
+  // The four strings below had no Spanish entry at all, and translate() returns
+  // its input unchanged on a miss (lib/i18n.ts). Two of them are the
+  // descriptions under the lane buttons \u2014 the only explanation of the choice
+  // the screen is asking a Spanish-speaking student to make \u2014 so half of this
+  // flow was in English for them. Moodle's install base skews far more
+  // international than Canvas's, which is the whole reason the 12-language
+  // event-name table exists.
+  'Semora opens Moodle, you copy one link and come back.':
+    'Semora abre Moodle, copias un enlace y vuelves.',
+  'Get the link there, then paste it here or on app.semoraai.com.':
+    'Consigue el enlace all\u00ed y p\u00e9galo aqu\u00ed o en app.semoraai.com.',
+  'Paste it here, or on app.semoraai.com.':
+    'P\u00e9galo aqu\u00ed o en app.semoraai.com.',
+  'Getting the link on a laptop is easier, and you can paste it here afterwards.':
+    'Conseguir el enlace en una laptop es m\u00e1s f\u00e1cil, y luego puedes pegarlo aqu\u00ed.',
+  // 'Scan a syllabus' and 'Not now' already have entries (878, 2073).
+  'Scan a syllabus instead': 'Mejor escanea un programa',
   'If you tapped Export and a calendar file opened, go back and tap Get calendar URL instead.':
     'Si tocaste Exportar y se abri\u00f3 un archivo de calendario, vuelve y toca Obtener URL del calendario.',
   'If your school\u2019s sign-in refuses to open here, use the laptop steps.':
