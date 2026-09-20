@@ -1,9 +1,15 @@
 import { enAlternates } from '@/lib/hreflang';
 import { OG_DEFAULTS } from '@/lib/og';
 export const metadata = {
-  title: 'Does Canvas Remind You Before Deadlines?',
+  // Retitled 2026-09-18. Search Console, 28 days to 2026-09-16: 778 impressions
+  // at position 8.7 and FOUR clicks, a 0.5% click rate. A page sitting eighth
+  // should be earning twelve to fifteen. Nothing was wrong with the ranking;
+  // the old title asked the searcher's own question back at them and promised
+  // no answer, which loses to a result that states one. This leads with the
+  // answer and names the gap, and keeps the head term the page ranks for.
+  title: 'Canvas Deadline Reminders: What You Actually Get',
   description:
-    "Canvas tells you when a due date is set or changed, but has no 'remind me 3 days before' option. How to check your notification settings — and what to add.",
+    "Yes, but only when a date is set or changed. Canvas has no 'remind me 3 days before' option. How to check your settings, and how to add advance warnings.",
   alternates: enAlternates('/blog/canvas-deadline-reminders'),
   openGraph: { url: '/blog/canvas-deadline-reminders', ...OG_DEFAULTS, type: 'article', publishedTime: '2026-07-23' },
 }

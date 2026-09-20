@@ -36,9 +36,11 @@ export const BLOG_POSTS: BlogPostMeta[] = [
   },
   {
     slug: 'canvas-deadline-reminders',
-    title: 'Does Canvas Remind You Before Deadlines?',
+    // Kept identical to the page's own metadata (see its page.mdx): two copies
+    // of one title is already a trap, two DIFFERENT copies is a worse one.
+    title: 'Canvas Deadline Reminders: What You Actually Get',
     description:
-      "Canvas tells you when a due date is set or changed, but has no 'remind me 3 days before' option. How to check your notification settings — and what to add.",
+      "Yes, but only when a date is set or changed. Canvas has no 'remind me 3 days before' option. How to check your settings, and how to add advance warnings.",
     date: '2026-07-23',
     modified: '2026-09-10',
     image: '/illustrations/bell-reminder.svg',
