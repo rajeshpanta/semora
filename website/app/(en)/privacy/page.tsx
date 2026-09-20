@@ -173,12 +173,22 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Learning platforms (optional):</strong> Canvas, Blackboard, Moodle, and Google
-          Classroom provide the course and assignment data you choose to sync. By default, their
-          access tokens or authorization credentials stay on your device and are used only while you
-          sync in Semora. If you explicitly turn on <em>Automatic sync</em>, we store that credential
-          encrypted in Supabase Vault so Semora can check for selected course, assignment,
-          submission, and grade updates while the app is closed. It is never exposed in your Semora
-          account, and we delete it when you turn off Automatic sync or disconnect the platform.
+          Classroom provide the course and assignment data you choose to sync. Automatic sync is on
+          from the moment you connect one, so the credential you provide is stored encrypted in
+          Supabase Vault at that point rather than only if you later switch something on. That is
+          what lets Semora notice a deadline your instructor moved while the app is closed; a
+          connection whose credential never reached the Vault would import once and then go quiet.
+          It is never exposed in your Semora account, never written to a log, and never sent to
+          analytics, and we delete it when you turn off Automatic sync or disconnect the platform.
+        </li>
+        <li>
+          <strong>What that credential is, for Canvas and Moodle:</strong> a private calendar link
+          rather than a password — you never type your Canvas or Moodle password into Semora. Two
+          things are worth knowing about it. Anyone holding the link can read your course calendar,
+          which is why we store it the way we do. And on Moodle the link is derived from your
+          account, so disconnecting in Semora deletes our copy but does not invalidate the link
+          itself; changing your Moodle password is what retires it. Canvas lets you reset your
+          calendar feed from Canvas&apos;s own settings at any time.
         </li>
       </ul>
 
