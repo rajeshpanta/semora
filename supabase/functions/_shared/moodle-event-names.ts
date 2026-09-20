@@ -11,7 +11,7 @@
  * 'Vencimiento de {$a}', so each entry carries a prefix AND a suffix and the
  * parser strips both ends.
  *
- * Languages covered: en, es, pt_br, fr, de, it, ca, gl, eu, nl, pl, tr.
+ * Languages covered: en, es, fr, de, it, nl, pt, ca, gl, eu, ga, cy, sv, da, no, nn, fi, is, pl, cs, sk, hu, ro, bg, hr, sl, sr_lt, mk, sq, el, lt, lv, et, uk, ru, pt_br, tr.
  * A school whose language is missing still works; the raw event name becomes
  * the task title and the parser reports it so the language can be added.
  */
@@ -35,6 +35,30 @@ export interface MoodleEventPattern {
 /** Sorted longest-first, so 'is due to be graded' matches before 'is due'. */
 export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
   {
+    "lang": "sl",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "Pričakovana zaključenost za '",
+    "suffix": "' dejavnost '{$a->instancename}'"
+  },
+  {
+    "lang": "pt",
+    "comp": "assign",
+    "key": "calendarextension",
+    "kind": "extend",
+    "prefix": "Já terminou o prazo de '",
+    "suffix": "' (prolongar prazo)"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "assign",
+    "key": "calendarextension",
+    "kind": "extend",
+    "prefix": "Ističe krajnji rok za predaju ",
+    "suffix": " (produženje)"
+  },
+  {
     "lang": "pt_br",
     "comp": "assign",
     "key": "calendargradingdue",
@@ -43,12 +67,60 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " está com avaliação marcada para esta data"
   },
   {
+    "lang": "cy",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "Dyddiad dechrau cyflwyno gwaith ar gyfer ",
+    "suffix": ""
+  },
+  {
+    "lang": "el",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "Το γεγονός ",
+    "suffix": " οφείλεται (έχει καθυστερήσει)"
+  },
+  {
+    "lang": "ro",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se deschide pentru trimitere răspunsuri"
+  },
+  {
+    "lang": "ro",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "Termenul limită pentru evaluare este de ",
+    "suffix": ""
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "Ističe krajnji rok za slanje poruka na ",
+    "suffix": ""
+  },
+  {
     "lang": "tr",
     "comp": "workshop",
     "key": "assessmentendevent",
     "kind": "due",
     "prefix": "",
     "suffix": " (değerlendirme için son teslim tarihi)"
+  },
+  {
+    "lang": "cy",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "Diwedd y gwaith a gyflwynwyd ar gyfer ",
+    "suffix": ""
   },
   {
     "lang": "pl",
@@ -67,12 +139,52 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " (rozpoczyna się faza recenzowania)"
   },
   {
+    "lang": "sl",
+    "comp": "assign",
+    "key": "calendarextension",
+    "kind": "extend",
+    "prefix": "",
+    "suffix": " poteče rok za oddajo (podaljšanje)"
+  },
+  {
+    "lang": "pt",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "Termina o prazo de avaliação de '",
+    "suffix": "'"
+  },
+  {
+    "lang": "ro",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "Termenul limită pentru trimiteri ",
+    "suffix": ""
+  },
+  {
+    "lang": "et",
+    "comp": "assign",
+    "key": "calendarextension",
+    "kind": "extend",
+    "prefix": "",
+    "suffix": " tähtaeg on saabumas (pikendatud)"
+  },
+  {
     "lang": "es",
     "comp": "workshop",
     "key": "assessmentendevent",
     "kind": "due",
     "prefix": "",
     "suffix": " fecha límite para la evaluación"
+  },
+  {
+    "lang": "pt",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "Data limite das submissões de '",
+    "suffix": "'"
   },
   {
     "lang": "eu",
@@ -83,12 +195,20 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": "(r)en entregatze-data (luzapena)"
   },
   {
-    "lang": "pt_br",
-    "comp": "assign",
-    "key": "calendardue",
+    "lang": "no",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "Forventet fullføringsdato for '",
+    "suffix": "'"
+  },
+  {
+    "lang": "sk",
+    "comp": "workshop",
+    "key": "submissionendevent",
     "kind": "due",
     "prefix": "",
-    "suffix": " está marcado(a) para esta data"
+    "suffix": " (uzávierka odovzdávania zadaní)"
   },
   {
     "lang": "fr",
@@ -115,12 +235,36 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " ostateczny termin recenzowania"
   },
   {
+    "lang": "ru",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " (открывается для подачи работ)"
+  },
+  {
+    "lang": "ru",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " (Окончание срока подачи работ)"
+  },
+  {
     "lang": "pt_br",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " está marcado(a) para esta data"
+  },
+  {
+    "lang": "pt",
     "comp": "workshop",
     "key": "assessmentendevent",
     "kind": "due",
-    "prefix": "",
-    "suffix": " - prazo limite para avaliação"
+    "prefix": "Data limite da avaliação de '",
+    "suffix": "'"
   },
   {
     "lang": "gl",
@@ -139,6 +283,38 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " ebaluazioetarako amaiera-data"
   },
   {
+    "lang": "sk",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " má byť hotové do tohto dátumu"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "Ističe krajnji rok za predaju ",
+    "suffix": ""
+  },
+  {
+    "lang": "pt_br",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - prazo limite para avaliação"
+  },
+  {
+    "lang": "nl",
+    "comp": "assign",
+    "key": "calendarextension",
+    "kind": "extend",
+    "prefix": "",
+    "suffix": " moet klaar zijn (verlenging)"
+  },
+  {
     "lang": "ca",
     "comp": "workshop",
     "key": "assessmentendevent",
@@ -155,12 +331,12 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " bidalketetarako amaiera-data"
   },
   {
-    "lang": "nl",
+    "lang": "da",
     "comp": "assign",
     "key": "calendarextension",
     "kind": "extend",
     "prefix": "",
-    "suffix": " moet klaar zijn (verlenging)"
+    "suffix": " skal afleveres (forlængelse)"
   },
   {
     "lang": "pl",
@@ -179,12 +355,76 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " otwiera się przesyłanie prac"
   },
   {
-    "lang": "pt_br",
-    "comp": "assign",
-    "key": "calendarextension",
-    "kind": "extend",
+    "lang": "et",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
     "prefix": "",
-    "suffix": " está vencido (prorrogação)"
+    "suffix": " (avatakse tööde esitamiseks)"
+  },
+  {
+    "lang": "et",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " (avatakse hinnanguandmiseks)"
+  },
+  {
+    "lang": "ru",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " (открывается для оценивания)"
+  },
+  {
+    "lang": "fi",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " on palautettava viimeistään"
+  },
+  {
+    "lang": "cs",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " má být hotov do tohoto data"
+  },
+  {
+    "lang": "ro",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " ar trebui să fie completată"
+  },
+  {
+    "lang": "bg",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " срок за предаване на работи"
+  },
+  {
+    "lang": "et",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " (esitatavate tööde tähtaeg)"
+  },
+  {
+    "lang": "et",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "SCORM-i tegevus „",
+    "suffix": "“ suletakse"
   },
   {
     "lang": "it",
@@ -201,6 +441,46 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "kind": "open",
     "prefix": "",
     "suffix": " gaat open voor beoordeling"
+  },
+  {
+    "lang": "cy",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "Dechrau asesiadau ar gyfer ",
+    "suffix": ""
+  },
+  {
+    "lang": "sk",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " začiatok odovzdávania prác"
+  },
+  {
+    "lang": "ro",
+    "comp": "assign",
+    "key": "calendarextension",
+    "kind": "extend",
+    "prefix": "",
+    "suffix": " trebuie predat (extension)"
+  },
+  {
+    "lang": "et",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "SCORM-i tegevus „",
+    "suffix": "“ avatakse"
+  },
+  {
+    "lang": "pt_br",
+    "comp": "assign",
+    "key": "calendarextension",
+    "kind": "extend",
+    "prefix": "",
+    "suffix": " está vencido (prorrogação)"
   },
   {
     "lang": "tr",
@@ -251,6 +531,14 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " aperto per le valutazioni"
   },
   {
+    "lang": "nl",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " deadline voor beoordeling"
+  },
+  {
     "lang": "gl",
     "comp": "assign",
     "key": "calendargradingdue",
@@ -283,12 +571,36 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " hasiko da ebaluazio-fasea"
   },
   {
-    "lang": "nl",
+    "lang": "cy",
     "comp": "workshop",
     "key": "assessmentendevent",
     "kind": "due",
+    "prefix": "Diwedd Asesiadau ar gyfer ",
+    "suffix": ""
+  },
+  {
+    "lang": "no",
+    "comp": "assign",
+    "key": "calendarextension",
+    "kind": "extend",
     "prefix": "",
-    "suffix": " deadline voor beoordeling"
+    "suffix": " forfaller (utvidet frist)"
+  },
+  {
+    "lang": "fi",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " on arvioitava viimeistään"
+  },
+  {
+    "lang": "fi",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " (vertaisarviointi aukeaa)"
   },
   {
     "lang": "pl",
@@ -297,6 +609,78 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "kind": "grading",
     "prefix": "",
     "suffix": " - termin wystawienia ocen"
+  },
+  {
+    "lang": "ro",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se deschide spre evaluare"
+  },
+  {
+    "lang": "bg",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " (краен срок за оценяване)"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " otvara se za predaju rada"
+  },
+  {
+    "lang": "mk",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "Краен рок за оценување на ",
+    "suffix": ""
+  },
+  {
+    "lang": "el",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " οφείλεται για βαθμολόγηση"
+  },
+  {
+    "lang": "lt",
+    "comp": "assign",
+    "key": "calendarextension",
+    "kind": "extend",
+    "prefix": "",
+    "suffix": " yra terminas (pratęsimas)"
+  },
+  {
+    "lang": "lv",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " tiek atvērts iesniegumiem"
+  },
+  {
+    "lang": "et",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " (hinnanguandmise tähtaeg)"
+  },
+  {
+    "lang": "uk",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " відкривається для подання"
   },
   {
     "lang": "tr",
@@ -323,20 +707,28 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " fecha límite para envíos"
   },
   {
-    "lang": "pt_br",
-    "comp": "workshop",
-    "key": "submissionendevent",
-    "kind": "due",
-    "prefix": "",
-    "suffix": " - prazo limite de envios"
-  },
-  {
     "lang": "de",
     "comp": "workshop",
     "key": "assessmentstartevent",
     "kind": "open",
     "prefix": "",
     "suffix": " Beginn der Beurteilungen"
+  },
+  {
+    "lang": "nl",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " moet nog voltooid worden"
+  },
+  {
+    "lang": "pt",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "Abrem as submissões de '",
+    "suffix": "'"
   },
   {
     "lang": "ca",
@@ -355,20 +747,60 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " debería estar completada"
   },
   {
-    "lang": "nl",
-    "comp": "completion",
-    "key": "completionexpectedfor",
-    "kind": "expect",
-    "prefix": "",
-    "suffix": " moet nog voltooid worden"
-  },
-  {
     "lang": "pl",
     "comp": "completion",
     "key": "completionexpectedfor",
     "kind": "expect",
     "prefix": "",
     "suffix": " powinno zostać ukończone"
+  },
+  {
+    "lang": "sk",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " má byť hotové hodnotenie"
+  },
+  {
+    "lang": "sq",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " duhet të jetë përfunduar"
+  },
+  {
+    "lang": "el",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " προθεσμία για αξιολόγηση"
+  },
+  {
+    "lang": "uk",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "Кінцевий термін подання: ",
+    "suffix": ""
+  },
+  {
+    "lang": "uk",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " відкривається для оцінки"
+  },
+  {
+    "lang": "pt_br",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - prazo limite de envios"
   },
   {
     "lang": "en",
@@ -387,20 +819,20 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " se abre para evaluación"
   },
   {
-    "lang": "pt_br",
-    "comp": "workshop",
-    "key": "assessmentstartevent",
-    "kind": "open",
-    "prefix": "",
-    "suffix": " - início para avaliação"
-  },
-  {
     "lang": "fr",
     "comp": "workshop",
     "key": "assessmentendevent",
     "kind": "due",
     "prefix": "",
     "suffix": " délai pour l’évaluation"
+  },
+  {
+    "lang": "nl",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " gaat open voor insturen"
   },
   {
     "lang": "ca",
@@ -427,12 +859,100 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": ""
   },
   {
-    "lang": "nl",
+    "lang": "sv",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " sluttid för inlämningar"
+  },
+  {
+    "lang": "no",
     "comp": "workshop",
     "key": "submissionstartevent",
     "kind": "open",
     "prefix": "",
-    "suffix": " gaat open voor insturen"
+    "suffix": " åpnes for innleveringer"
+  },
+  {
+    "lang": "fi",
+    "comp": "assign",
+    "key": "calendarextension",
+    "kind": "extend",
+    "prefix": "",
+    "suffix": " on myöhässä (jatkoaika)"
+  },
+  {
+    "lang": "fi",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " (palautusten määräaika)"
+  },
+  {
+    "lang": "is",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " (lokafrestur fyrir mat)"
+  },
+  {
+    "lang": "cs",
+    "comp": "assign",
+    "key": "calendarextension",
+    "kind": "extend",
+    "prefix": "",
+    "suffix": " má termín (prodloužení)"
+  },
+  {
+    "lang": "hu",
+    "comp": "assign",
+    "key": "calendarextension",
+    "kind": "extend",
+    "prefix": "",
+    "suffix": " esedékes (hosszabbítás)"
+  },
+  {
+    "lang": "bg",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " (отворена за оценяване)"
+  },
+  {
+    "lang": "hr",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Rok za bazu podataka je ",
+    "suffix": ""
+  },
+  {
+    "lang": "sl",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se odpre za vrednotenje"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " treba da bude završen/a"
+  },
+  {
+    "lang": "pt_br",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " - início para avaliação"
   },
   {
     "lang": "es",
@@ -456,22 +976,6 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "key": "completionexpectedfor",
     "kind": "expect",
     "prefix": "Abschluss erwartet für ",
-    "suffix": ""
-  },
-  {
-    "lang": "ca",
-    "comp": "workshop",
-    "key": "assessmentstartevent",
-    "kind": "open",
-    "prefix": "",
-    "suffix": " obre per a l'avaluació"
-  },
-  {
-    "lang": "gl",
-    "comp": "feedback",
-    "key": "calendarstart",
-    "kind": "open",
-    "prefix": "Ábrense os comentarios ",
     "suffix": ""
   },
   {
@@ -499,6 +1003,94 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " deadline voor insturen"
   },
   {
+    "lang": "ca",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " obre per a l'avaluació"
+  },
+  {
+    "lang": "gl",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "Ábrense os comentarios ",
+    "suffix": ""
+  },
+  {
+    "lang": "sv",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " öppnar för inlämningar"
+  },
+  {
+    "lang": "da",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åbner for afleveringer"
+  },
+  {
+    "lang": "da",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "\"",
+    "suffix": "\" forventes gennemført"
+  },
+  {
+    "lang": "fi",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " (arviointiaika loppuu)"
+  },
+  {
+    "lang": "hr",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " početak predaje radova"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " rok za predaju procene"
+  },
+  {
+    "lang": "mk",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "Почеток на пратките за ",
+    "suffix": ""
+  },
+  {
+    "lang": "mk",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "Почеток на испитите за ",
+    "suffix": ""
+  },
+  {
+    "lang": "uk",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " кінцевий термін оцінки"
+  },
+  {
     "lang": "tr",
     "comp": "workshop",
     "key": "submissionstartevent",
@@ -523,6 +1115,14 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " ouverture des remises"
   },
   {
+    "lang": "pt",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "Abre a avaliação de '",
+    "suffix": "'"
+  },
+  {
     "lang": "ca",
     "comp": "choice",
     "key": "calendarstart",
@@ -539,20 +1139,108 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": "(r)en kalifikazio-data"
   },
   {
+    "lang": "sv",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " sluttid för bedömning"
+  },
+  {
+    "lang": "cs",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " lhůta pro odevzdávání"
+  },
+  {
+    "lang": "cs",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " by mělo být dokončeno"
+  },
+  {
+    "lang": "sk",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " by malo byť dokončené"
+  },
+  {
+    "lang": "hu",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " megnyílik értékelésre"
+  },
+  {
+    "lang": "hr",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " rok za predaju radova"
+  },
+  {
+    "lang": "sl",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " (odprto za prispevke)"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " treba da bude ocenjen"
+  },
+  {
+    "lang": "el",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " έναρξη για αξιολόγηση"
+  },
+  {
+    "lang": "el",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " πρέπει να ολοκληρωθεί"
+  },
+  {
+    "lang": "ru",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " - должно быть оценено"
+  },
+  {
+    "lang": "ru",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " должно быть выполнено"
+  },
+  {
     "lang": "en",
     "comp": "workshop",
     "key": "assessmentstartevent",
     "kind": "open",
     "prefix": "",
     "suffix": " opens for assessment"
-  },
-  {
-    "lang": "pt_br",
-    "comp": "completion",
-    "key": "completionexpectedfor",
-    "kind": "expect",
-    "prefix": "",
-    "suffix": " deve estar concluído"
   },
   {
     "lang": "it",
@@ -571,6 +1259,22 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " - Personalzizzazione"
   },
   {
+    "lang": "pt",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "Termina o prazo de '",
+    "suffix": "'"
+  },
+  {
+    "lang": "pt",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " deve estar concluída"
+  },
+  {
     "lang": "ca",
     "comp": "choice",
     "key": "calendarend",
@@ -585,6 +1289,174 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "kind": "due",
     "prefix": "",
     "suffix": "(r)en entregatze-data"
+  },
+  {
+    "lang": "sv",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " öppnar för bedömning"
+  },
+  {
+    "lang": "no",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " frist for vurdering."
+  },
+  {
+    "lang": "fi",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " (palautusaika alkaa)"
+  },
+  {
+    "lang": "fi",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " pitäisi olla tehtynä"
+  },
+  {
+    "lang": "cs",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " zahájení odevzdávání"
+  },
+  {
+    "lang": "sk",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " zahájenie hodnotenia"
+  },
+  {
+    "lang": "sk",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " uzávierka hodnotenia"
+  },
+  {
+    "lang": "hu",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " értékelés határideje"
+  },
+  {
+    "lang": "ro",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " urmează să fie notat"
+  },
+  {
+    "lang": "bg",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " Трябва да се изпълни"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " otvara se za procenu"
+  },
+  {
+    "lang": "lt",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " atidaromi pateikimai"
+  },
+  {
+    "lang": "lv",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " atvērts novērtēšanai"
+  },
+  {
+    "lang": "lv",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " novērtēšanas termiņš"
+  },
+  {
+    "lang": "et",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " – sätete ülekirjutus"
+  },
+  {
+    "lang": "et",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Tagasiside ",
+    "suffix": " suletakse"
+  },
+  {
+    "lang": "et",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " peab olema lõpetatud"
+  },
+  {
+    "lang": "uk",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "Час оцінення ",
+    "suffix": " спливає"
+  },
+  {
+    "lang": "uk",
+    "comp": "assign",
+    "key": "calendarextension",
+    "kind": "extend",
+    "prefix": "",
+    "suffix": " настав (продовження)"
+  },
+  {
+    "lang": "ru",
+    "comp": "assign",
+    "key": "calendarextension",
+    "kind": "extend",
+    "prefix": "",
+    "suffix": " истекает (продление)"
+  },
+  {
+    "lang": "pt_br",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " deve estar concluído"
   },
   {
     "lang": "en",
@@ -659,6 +1531,182 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " comezo das entregas"
   },
   {
+    "lang": "da",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åbner for vurdering"
+  },
+  {
+    "lang": "no",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åpnes for vurdering"
+  },
+  {
+    "lang": "cs",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " má už být ohodnocen"
+  },
+  {
+    "lang": "cs",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " lhůta pro hodnocení"
+  },
+  {
+    "lang": "hu",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " értékelése esedékes"
+  },
+  {
+    "lang": "ro",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "Obiectul ",
+    "suffix": " se închide"
+  },
+  {
+    "lang": "ro",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "Obiectul ",
+    "suffix": " se închide"
+  },
+  {
+    "lang": "ro",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Obiectul ",
+    "suffix": " se închide"
+  },
+  {
+    "lang": "ro",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Obiectul ",
+    "suffix": " se închide"
+  },
+  {
+    "lang": "ro",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Obiectul ",
+    "suffix": " se închide"
+  },
+  {
+    "lang": "ro",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Obiectul ",
+    "suffix": " se închide"
+  },
+  {
+    "lang": "bg",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " отваря за предаване"
+  },
+  {
+    "lang": "hr",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "Rok za ocjenjivanje ",
+    "suffix": ""
+  },
+  {
+    "lang": "hr",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " treba biti dovršeno"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " rok za predaju rada"
+  },
+  {
+    "lang": "mk",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "Крај на пратките за ",
+    "suffix": ""
+  },
+  {
+    "lang": "el",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " έναρξη για υποβολές"
+  },
+  {
+    "lang": "lt",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " turi būti įvertinta"
+  },
+  {
+    "lang": "lv",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "Izvēle ",
+    "suffix": " tiks atvērta"
+  },
+  {
+    "lang": "et",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " on tähtaeg saabumas"
+  },
+  {
+    "lang": "et",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "Tagasiside ",
+    "suffix": " avatakse"
+  },
+  {
+    "lang": "et",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Andmebaas ",
+    "suffix": " suletakse"
+  },
+  {
     "lang": "en",
     "comp": "assign",
     "key": "calendarextension",
@@ -667,12 +1715,12 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " is due (extension)"
   },
   {
-    "lang": "pt_br",
-    "comp": "workshop",
-    "key": "submissionstartevent",
-    "kind": "open",
-    "prefix": "",
-    "suffix": " - início de envios"
+    "lang": "pt",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "Termina o prazo de ",
+    "suffix": ""
   },
   {
     "lang": "ca",
@@ -739,6 +1787,166 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": "(r)en itxiera-data:"
   },
   {
+    "lang": "da",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Opret undtagelse"
+  },
+  {
+    "lang": "da",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " vurderingsdeadline"
+  },
+  {
+    "lang": "is",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " (opnað fyrir skil)"
+  },
+  {
+    "lang": "cs",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " zahájení hodnocení"
+  },
+  {
+    "lang": "hu",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " megnyílik leadásra"
+  },
+  {
+    "lang": "hr",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Izmijeni pravilo"
+  },
+  {
+    "lang": "hr",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " - počinje procjena"
+  },
+  {
+    "lang": "sl",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "Rok za ocenjevanje ",
+    "suffix": ""
+  },
+  {
+    "lang": "sl",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " (rok ovrednotenja)"
+  },
+  {
+    "lang": "mk",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " треба да се заврши"
+  },
+  {
+    "lang": "el",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " προθεσμία υποβολών"
+  },
+  {
+    "lang": "lt",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " turi būti pateikta"
+  },
+  {
+    "lang": "lt",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " pateikimų terminas"
+  },
+  {
+    "lang": "lt",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " vertinimo terminas"
+  },
+  {
+    "lang": "lv",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " iesniegumu termiņš"
+  },
+  {
+    "lang": "lv",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Izvēle ",
+    "suffix": " tiks slēgta"
+  },
+  {
+    "lang": "et",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Küsitlus ",
+    "suffix": " suletakse"
+  },
+  {
+    "lang": "et",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "Andmebaas ",
+    "suffix": " avatakse"
+  },
+  {
+    "lang": "ru",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " (конец оценивания)"
+  },
+  {
+    "lang": "pt_br",
+    "comp": "workshop",
+    "key": "submissionstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " - início de envios"
+  },
+  {
     "lang": "es",
     "comp": "assign",
     "key": "calendargradingdue",
@@ -803,6 +2011,78 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": "(r)en hasiera-data"
   },
   {
+    "lang": "no",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " innleveringsfrist"
+  },
+  {
+    "lang": "is",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " (opnar fyrir mat)"
+  },
+  {
+    "lang": "mk",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "Крај на испити за ",
+    "suffix": ""
+  },
+  {
+    "lang": "lv",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " jābūt izpildītiem"
+  },
+  {
+    "lang": "et",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "Küsitlus ",
+    "suffix": " avatakse"
+  },
+  {
+    "lang": "ru",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Переопределение"
+  },
+  {
+    "lang": "ru",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Переопределение"
+  },
+  {
+    "lang": "ru",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - срок выполнения"
+  },
+  {
+    "lang": "ru",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "Опрос открывается ",
+    "suffix": ""
+  },
+  {
     "lang": "fr",
     "comp": "assign",
     "key": "calendargradingdue",
@@ -827,6 +2107,14 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " fine valutazioni"
   },
   {
+    "lang": "nl",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Overschrijving"
+  },
+  {
     "lang": "gl",
     "comp": "workshop",
     "key": "submissionendevent",
@@ -835,12 +2123,12 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " fin das entregas"
   },
   {
-    "lang": "nl",
-    "comp": "assign",
-    "key": "overrideusereventname",
-    "kind": "override",
+    "lang": "da",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
     "prefix": "",
-    "suffix": " - Overschrijving"
+    "suffix": " afleveringsfrist"
   },
   {
     "lang": "pl",
@@ -857,6 +2145,22 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "kind": "due",
     "prefix": "Termin wykonania ",
     "suffix": ""
+  },
+  {
+    "lang": "hu",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " leadási határidő"
+  },
+  {
+    "lang": "lt",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " turi būti baigta"
   },
   {
     "lang": "fr",
@@ -891,28 +2195,76 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " moet klaar zijn"
   },
   {
+    "lang": "sv",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " ska betygsättas"
+  },
+  {
+    "lang": "sv",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Åsidosättande"
+  },
+  {
+    "lang": "fi",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - poikkeuspääsy"
+  },
+  {
+    "lang": "hr",
+    "comp": "workshop",
+    "key": "assessmentendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " rok za procjenu"
+  },
+  {
+    "lang": "hr",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "anketa ",
+    "suffix": " završava"
+  },
+  {
+    "lang": "lt",
+    "comp": "workshop",
+    "key": "assessmentstartevent",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " galima vertinti"
+  },
+  {
+    "lang": "lv",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " gaida vērtēšanu"
+  },
+  {
+    "lang": "uk",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Перевизначено"
+  },
+  {
     "lang": "es",
     "comp": "assign",
     "key": "calendardue",
     "kind": "due",
     "prefix": "Vencimiento de ",
     "suffix": ""
-  },
-  {
-    "lang": "pt_br",
-    "comp": "assign",
-    "key": "overrideusereventname",
-    "kind": "override",
-    "prefix": "",
-    "suffix": " - Sobreposição"
-  },
-  {
-    "lang": "pt_br",
-    "comp": "quiz",
-    "key": "overrideusereventname",
-    "kind": "override",
-    "prefix": "",
-    "suffix": " - Sobreposição"
   },
   {
     "lang": "gl",
@@ -931,12 +2283,132 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " osatu behar da"
   },
   {
+    "lang": "da",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " skal afleveres"
+  },
+  {
+    "lang": "da",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " er forestående"
+  },
+  {
+    "lang": "is",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " (skilafrestur)"
+  },
+  {
     "lang": "pl",
     "comp": "quiz",
     "key": "overridegroupeventname",
     "kind": "override",
     "prefix": "",
     "suffix": " - {$a->group}\n"
+  },
+  {
+    "lang": "cs",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " -  Přenastavit"
+  },
+  {
+    "lang": "cs",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - přenastavení"
+  },
+  {
+    "lang": "ro",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Suprascriere"
+  },
+  {
+    "lang": "hr",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "Krajnji rok za ",
+    "suffix": ""
+  },
+  {
+    "lang": "hr",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "anketa ",
+    "suffix": " počinje"
+  },
+  {
+    "lang": "lv",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "'",
+    "suffix": "' tiek atvērta"
+  },
+  {
+    "lang": "uk",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " розпочинається"
+  },
+  {
+    "lang": "uk",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " розпочинається"
+  },
+  {
+    "lang": "uk",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " розпочинається"
+  },
+  {
+    "lang": "uk",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " слід заповнити"
+  },
+  {
+    "lang": "pt_br",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Sobreposição"
+  },
+  {
+    "lang": "pt_br",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Sobreposição"
   },
   {
     "lang": "tr",
@@ -996,22 +2468,6 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
   },
   {
     "lang": "es",
-    "comp": "quiz",
-    "key": "overridegroupeventname",
-    "kind": "override",
-    "prefix": "",
-    "suffix": " - {$a->group}"
-  },
-  {
-    "lang": "pt_br",
-    "comp": "assign",
-    "key": "overridegroupeventname",
-    "kind": "override",
-    "prefix": "",
-    "suffix": " - {$a->group}"
-  },
-  {
-    "lang": "pt_br",
     "comp": "quiz",
     "key": "overridegroupeventname",
     "kind": "override",
@@ -1081,6 +2537,46 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "kind": "expect",
     "prefix": "",
     "suffix": " da completare"
+  },
+  {
+    "lang": "nl",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "nl",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Overschrijf"
+  },
+  {
+    "lang": "nl",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "pt",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "pt",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
   },
   {
     "lang": "ca",
@@ -1155,7 +2651,15 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " - {$a->group}"
   },
   {
-    "lang": "nl",
+    "lang": "cy",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "sv",
     "comp": "assign",
     "key": "overridegroupeventname",
     "kind": "override",
@@ -1163,15 +2667,87 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " - {$a->group}"
   },
   {
-    "lang": "nl",
+    "lang": "sv",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "sv",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " har förfallit"
+  },
+  {
+    "lang": "sv",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " ska slutföras"
+  },
+  {
+    "lang": "da",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " skal vurderes"
+  },
+  {
+    "lang": "da",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "da",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "no",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "no",
     "comp": "quiz",
     "key": "overrideusereventname",
     "kind": "override",
     "prefix": "",
-    "suffix": " - Overschrijf"
+    "suffix": " - Overstyring"
   },
   {
-    "lang": "nl",
+    "lang": "no",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "fi",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "fi",
     "comp": "quiz",
     "key": "overridegroupeventname",
     "kind": "override",
@@ -1181,6 +2757,334 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
   {
     "lang": "pl",
     "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "cs",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "cs",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "sk",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "sk",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - prestavenie"
+  },
+  {
+    "lang": "sk",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "hu",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "hu",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "ro",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "ro",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "bg",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "bg",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "hr",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "hr",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "sl",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Preglasitev"
+  },
+  {
+    "lang": "sl",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "sl",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "sl",
+    "comp": "workshop",
+    "key": "submissionendevent",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " Rok za oddajo"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "mk",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "el",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "el",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "lt",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "lt",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " – {$a->group}"
+  },
+  {
+    "lang": "lv",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Pāramainīts"
+  },
+  {
+    "lang": "lv",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "lv",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " tiek aizvērts"
+  },
+  {
+    "lang": "lv",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "'",
+    "suffix": "' tiek slēgta"
+  },
+  {
+    "lang": "et",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " on hindamisel"
+  },
+  {
+    "lang": "et",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " – kirjuta üle"
+  },
+  {
+    "lang": "et",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " – {$a->group}"
+  },
+  {
+    "lang": "et",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " – {$a->group}"
+  },
+  {
+    "lang": "uk",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "Строк ",
+    "suffix": " спливає"
+  },
+  {
+    "lang": "uk",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "uk",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "ru",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "ru",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "ru",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "«",
+    "suffix": "» открывается"
+  },
+  {
+    "lang": "ru",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "«",
+    "suffix": "» закрывается"
+  },
+  {
+    "lang": "pt_br",
+    "comp": "assign",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - {$a->group}"
+  },
+  {
+    "lang": "pt_br",
+    "comp": "quiz",
     "key": "overridegroupeventname",
     "kind": "override",
     "prefix": "",
@@ -1251,6 +3155,14 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": ""
   },
   {
+    "lang": "da",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Undtagelse"
+  },
+  {
     "lang": "pl",
     "comp": "assign",
     "key": "overrideusereventname",
@@ -1265,6 +3177,118 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "kind": "override",
     "prefix": "",
     "suffix": " - nadpisanie"
+  },
+  {
+    "lang": "hu",
+    "comp": "completion",
+    "key": "completionexpectedfor",
+    "kind": "expect",
+    "prefix": "",
+    "suffix": " teljesítendő"
+  },
+  {
+    "lang": "ro",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " este scadent"
+  },
+  {
+    "lang": "ro",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Suprascrie"
+  },
+  {
+    "lang": "ro",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " este scadent"
+  },
+  {
+    "lang": "bg",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "\"",
+    "suffix": "\" се затваря"
+  },
+  {
+    "lang": "mk",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "Краен рок за ",
+    "suffix": ""
+  },
+  {
+    "lang": "mk",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "Краен рок за ",
+    "suffix": ""
+  },
+  {
+    "lang": "lv",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " tiek atvērta"
+  },
+  {
+    "lang": "lv",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " tiek atvērts"
+  },
+  {
+    "lang": "uk",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " завершується"
+  },
+  {
+    "lang": "uk",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " завершується"
+  },
+  {
+    "lang": "uk",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " завершується"
+  },
+  {
+    "lang": "uk",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " завершується"
+  },
+  {
+    "lang": "ru",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - срок сдачи"
   },
   {
     "lang": "tr",
@@ -1307,6 +3331,14 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " ist fällig."
   },
   {
+    "lang": "nl",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " zal sluiten"
+  },
+  {
     "lang": "ca",
     "comp": "quiz",
     "key": "quizeventcloses",
@@ -1323,12 +3355,28 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " es tanca el"
   },
   {
-    "lang": "nl",
-    "comp": "choice",
-    "key": "calendarend",
-    "kind": "due",
+    "lang": "sv",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
     "prefix": "",
-    "suffix": " zal sluiten"
+    "suffix": " - Åsidosätt"
+  },
+  {
+    "lang": "no",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " må vurderes"
+  },
+  {
+    "lang": "is",
+    "comp": "quiz",
+    "key": "overridegroupeventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": "–{$a->group}"
   },
   {
     "lang": "pl",
@@ -1379,6 +3427,206 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " otwiera się"
   },
   {
+    "lang": "sk",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Prestaviť"
+  },
+  {
+    "lang": "hu",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - felülírás"
+  },
+  {
+    "lang": "ro",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se deschide"
+  },
+  {
+    "lang": "ro",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se deschide"
+  },
+  {
+    "lang": "ro",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se deschide"
+  },
+  {
+    "lang": "ro",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se deschide"
+  },
+  {
+    "lang": "ro",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se deschide"
+  },
+  {
+    "lang": "ro",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se deschide"
+  },
+  {
+    "lang": "bg",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - предаване"
+  },
+  {
+    "lang": "bg",
+    "comp": "assign",
+    "key": "calendargradingdue",
+    "kind": "grading",
+    "prefix": "",
+    "suffix": " - оценяване"
+  },
+  {
+    "lang": "bg",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Уточнение"
+  },
+  {
+    "lang": "mk",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Прецертај"
+  },
+  {
+    "lang": "el",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Παράκαμψη"
+  },
+  {
+    "lang": "el",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Παράκαμψη"
+  },
+  {
+    "lang": "lv",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - pārmainīt"
+  },
+  {
+    "lang": "lv",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " tiek slēgta"
+  },
+  {
+    "lang": "ru",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " открывается"
+  },
+  {
+    "lang": "ru",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " закрывается"
+  },
+  {
+    "lang": "ru",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " открывается"
+  },
+  {
+    "lang": "ru",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " закрывается"
+  },
+  {
+    "lang": "ru",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " закрывается"
+  },
+  {
+    "lang": "ru",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " открывается"
+  },
+  {
+    "lang": "ru",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " закрывается"
+  },
+  {
+    "lang": "ru",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " открывается"
+  },
+  {
+    "lang": "ru",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " закрывается"
+  },
+  {
     "lang": "en",
     "comp": "assign",
     "key": "overrideusereventname",
@@ -1393,54 +3641,6 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "kind": "override",
     "prefix": "",
     "suffix": " - Override"
-  },
-  {
-    "lang": "pt_br",
-    "comp": "quiz",
-    "key": "quizeventcloses",
-    "kind": "due",
-    "prefix": "Término de ",
-    "suffix": ""
-  },
-  {
-    "lang": "pt_br",
-    "comp": "lesson",
-    "key": "lessoneventcloses",
-    "kind": "due",
-    "prefix": "Término de ",
-    "suffix": ""
-  },
-  {
-    "lang": "pt_br",
-    "comp": "choice",
-    "key": "calendarend",
-    "kind": "due",
-    "prefix": "Término de ",
-    "suffix": ""
-  },
-  {
-    "lang": "pt_br",
-    "comp": "feedback",
-    "key": "calendarend",
-    "kind": "due",
-    "prefix": "Término de ",
-    "suffix": ""
-  },
-  {
-    "lang": "pt_br",
-    "comp": "data",
-    "key": "calendarend",
-    "kind": "due",
-    "prefix": "Término de ",
-    "suffix": ""
-  },
-  {
-    "lang": "pt_br",
-    "comp": "scorm",
-    "key": "calendarend",
-    "kind": "due",
-    "prefix": "Término de ",
-    "suffix": ""
   },
   {
     "lang": "fr",
@@ -1499,6 +3699,14 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " - Änderung"
   },
   {
+    "lang": "nl",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " zal openen"
+  },
+  {
     "lang": "ca",
     "comp": "assign",
     "key": "overrideusereventname",
@@ -1515,12 +3723,44 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " - Excepció"
   },
   {
-    "lang": "nl",
-    "comp": "choice",
-    "key": "calendarstart",
-    "kind": "open",
+    "lang": "cy",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
     "prefix": "",
-    "suffix": " zal openen"
+    "suffix": " - Diystyru"
+  },
+  {
+    "lang": "no",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " må leveres"
+  },
+  {
+    "lang": "no",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Overstyr"
+  },
+  {
+    "lang": "no",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " er forfalt"
+  },
+  {
+    "lang": "fi",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Poikkeus"
   },
   {
     "lang": "pl",
@@ -1569,6 +3809,310 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "kind": "due",
     "prefix": "",
     "suffix": " zamyka się"
+  },
+  {
+    "lang": "cs",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " - otevřeno"
+  },
+  {
+    "lang": "cs",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - uzavřeno"
+  },
+  {
+    "lang": "cs",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " - otevřeno"
+  },
+  {
+    "lang": "cs",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - uzavřeno"
+  },
+  {
+    "lang": "cs",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " - otevřeno"
+  },
+  {
+    "lang": "cs",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - uzavřeno"
+  },
+  {
+    "lang": "cs",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " - otevřeno"
+  },
+  {
+    "lang": "cs",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - uzavřeno"
+  },
+  {
+    "lang": "cs",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " - otevřeno"
+  },
+  {
+    "lang": "cs",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - uzavřeno"
+  },
+  {
+    "lang": "cs",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " - otevřeno"
+  },
+  {
+    "lang": "cs",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - uzavřeno"
+  },
+  {
+    "lang": "sk",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " sa uzavrie"
+  },
+  {
+    "lang": "sk",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " - otvorené"
+  },
+  {
+    "lang": "sk",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " - otvorené"
+  },
+  {
+    "lang": "sk",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " - otvorené"
+  },
+  {
+    "lang": "sk",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - uzavrené"
+  },
+  {
+    "lang": "hr",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " se zatvara"
+  },
+  {
+    "lang": "hr",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Zatvara se ",
+    "suffix": ""
+  },
+  {
+    "lang": "sl",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Preglasi"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " se zatvara"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " se zatvara"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " se zatvara"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " se zatvara"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " se zatvara"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " se zatvara"
+  },
+  {
+    "lang": "lt",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - keitimas"
+  },
+  {
+    "lang": "lt",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " – keitimas"
+  },
+  {
+    "lang": "lv",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " ir gaidāma"
+  },
+  {
+    "lang": "lv",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " ir gaidāms"
+  },
+  {
+    "lang": "et",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " on tähtaeg"
+  },
+  {
+    "lang": "uk",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Замінити"
+  },
+  {
+    "lang": "pt_br",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "Término de ",
+    "suffix": ""
+  },
+  {
+    "lang": "pt_br",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "Término de ",
+    "suffix": ""
+  },
+  {
+    "lang": "pt_br",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Término de ",
+    "suffix": ""
+  },
+  {
+    "lang": "pt_br",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Término de ",
+    "suffix": ""
+  },
+  {
+    "lang": "pt_br",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Término de ",
+    "suffix": ""
+  },
+  {
+    "lang": "pt_br",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Término de ",
+    "suffix": ""
   },
   {
     "lang": "tr",
@@ -1595,6 +4139,342 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " pendiente"
   },
   {
+    "lang": "pt",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Exceção"
+  },
+  {
+    "lang": "pt",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Exceção"
+  },
+  {
+    "lang": "ca",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " s'obre el"
+  },
+  {
+    "lang": "ca",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " s'obre el"
+  },
+  {
+    "lang": "sv",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " förfaller"
+  },
+  {
+    "lang": "fi",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " sulkeutuu"
+  },
+  {
+    "lang": "fi",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " sulkeutuu"
+  },
+  {
+    "lang": "fi",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " sulkeutuu"
+  },
+  {
+    "lang": "fi",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " sulkeutuu"
+  },
+  {
+    "lang": "fi",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " sulkeutuu"
+  },
+  {
+    "lang": "fi",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " sulkeutuu"
+  },
+  {
+    "lang": "fi",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " sulkeutuu"
+  },
+  {
+    "lang": "cs",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " má termín"
+  },
+  {
+    "lang": "sk",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " sa otvorí"
+  },
+  {
+    "lang": "sk",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " má termín"
+  },
+  {
+    "lang": "sk",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " zatvorená"
+  },
+  {
+    "lang": "sk",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - zavrené"
+  },
+  {
+    "lang": "sk",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - zavreté"
+  },
+  {
+    "lang": "sk",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " - zatvára"
+  },
+  {
+    "lang": "hu",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " megnyílik"
+  },
+  {
+    "lang": "hu",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " megnyílik"
+  },
+  {
+    "lang": "hu",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " megnyílik"
+  },
+  {
+    "lang": "hu",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " megnyílik"
+  },
+  {
+    "lang": "hu",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " megnyílik"
+  },
+  {
+    "lang": "hu",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " megnyílik"
+  },
+  {
+    "lang": "hr",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Izmjene"
+  },
+  {
+    "lang": "hr",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se otvara"
+  },
+  {
+    "lang": "hr",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se otvara"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se otvara"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se otvara"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se otvara"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se otvara"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se otvara"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se otvara"
+  },
+  {
+    "lang": "el",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " οφείλεται"
+  },
+  {
+    "lang": "lt",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " atidaroma"
+  },
+  {
+    "lang": "lt",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " uždaromas"
+  },
+  {
+    "lang": "lt",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " atidaroma"
+  },
+  {
+    "lang": "lt",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " atidaroma"
+  },
+  {
+    "lang": "lt",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " atidaryta"
+  },
+  {
+    "lang": "lt",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " atidaroma"
+  },
+  {
+    "lang": "lt",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " atidaroma"
+  },
+  {
     "lang": "pt_br",
     "comp": "quiz",
     "key": "quizeventopens",
@@ -1641,22 +4521,6 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "kind": "open",
     "prefix": "Início de ",
     "suffix": ""
-  },
-  {
-    "lang": "ca",
-    "comp": "quiz",
-    "key": "quizeventopens",
-    "kind": "open",
-    "prefix": "",
-    "suffix": " s'obre el"
-  },
-  {
-    "lang": "ca",
-    "comp": "lesson",
-    "key": "lessoneventopens",
-    "kind": "open",
-    "prefix": "",
-    "suffix": " s'obre el"
   },
   {
     "lang": "tr",
@@ -1707,14 +4571,6 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " kapanacak"
   },
   {
-    "lang": "pt_br",
-    "comp": "forum",
-    "key": "calendardue",
-    "kind": "due",
-    "prefix": "",
-    "suffix": " é devido"
-  },
-  {
     "lang": "fr",
     "comp": "forum",
     "key": "calendardue",
@@ -1729,6 +4585,22 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "kind": "due",
     "prefix": "'",
     "suffix": "' endet."
+  },
+  {
+    "lang": "pt",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "Inicia '",
+    "suffix": "'"
+  },
+  {
+    "lang": "pt",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "Inicia '",
+    "suffix": "'"
   },
   {
     "lang": "ca",
@@ -1753,6 +4625,238 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "kind": "override",
     "prefix": "",
     "suffix": " - Anular"
+  },
+  {
+    "lang": "is",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " – Frávik"
+  },
+  {
+    "lang": "sk",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " otvorená"
+  },
+  {
+    "lang": "sk",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " - otvára"
+  },
+  {
+    "lang": "hu",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " esedékes"
+  },
+  {
+    "lang": "hu",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " esedékes"
+  },
+  {
+    "lang": "bg",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Замяна"
+  },
+  {
+    "lang": "sl",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se odpre"
+  },
+  {
+    "lang": "sl",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " se zapre"
+  },
+  {
+    "lang": "sl",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se odpre"
+  },
+  {
+    "lang": "sl",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " se zapre"
+  },
+  {
+    "lang": "sl",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se odpre"
+  },
+  {
+    "lang": "sl",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " se zapre"
+  },
+  {
+    "lang": "sl",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se odpre"
+  },
+  {
+    "lang": "sl",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " se zapre"
+  },
+  {
+    "lang": "sl",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se odpre"
+  },
+  {
+    "lang": "sl",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " se zapre"
+  },
+  {
+    "lang": "sl",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " se odpre"
+  },
+  {
+    "lang": "sl",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " se zapre"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "assign",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Izmena"
+  },
+  {
+    "lang": "sr_lt",
+    "comp": "quiz",
+    "key": "overrideusereventname",
+    "kind": "override",
+    "prefix": "",
+    "suffix": " - Izmena"
+  },
+  {
+    "lang": "lt",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " uždaroma"
+  },
+  {
+    "lang": "lt",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " uždaroma"
+  },
+  {
+    "lang": "lt",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " uždaroma"
+  },
+  {
+    "lang": "lt",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " uždaroma"
+  },
+  {
+    "lang": "lt",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " uždaroma"
+  },
+  {
+    "lang": "uk",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " доступно"
+  },
+  {
+    "lang": "uk",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " доступно"
+  },
+  {
+    "lang": "uk",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " відкрито"
+  },
+  {
+    "lang": "pt_br",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " é devido"
   },
   {
     "lang": "tr",
@@ -1907,6 +5011,366 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " beginnt"
   },
   {
+    "lang": "pt",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "Fecha '",
+    "suffix": "'"
+  },
+  {
+    "lang": "pt",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "Fecha '",
+    "suffix": "'"
+  },
+  {
+    "lang": "pt",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Fecha '",
+    "suffix": "'"
+  },
+  {
+    "lang": "pt",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Fecha '",
+    "suffix": "'"
+  },
+  {
+    "lang": "pt",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Fecha '",
+    "suffix": "'"
+  },
+  {
+    "lang": "pt",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "Fecha '",
+    "suffix": "'"
+  },
+  {
+    "lang": "sv",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " stänger"
+  },
+  {
+    "lang": "sv",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " stänger"
+  },
+  {
+    "lang": "sv",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " stänger"
+  },
+  {
+    "lang": "sv",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " stänger"
+  },
+  {
+    "lang": "sv",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " stänger"
+  },
+  {
+    "lang": "sv",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " stänger"
+  },
+  {
+    "lang": "no",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " stenger"
+  },
+  {
+    "lang": "no",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " stenger"
+  },
+  {
+    "lang": "no",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " stenger"
+  },
+  {
+    "lang": "no",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " stenger"
+  },
+  {
+    "lang": "no",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " stenger"
+  },
+  {
+    "lang": "no",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " stenges"
+  },
+  {
+    "lang": "fi",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " avautuu"
+  },
+  {
+    "lang": "fi",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " avautuu"
+  },
+  {
+    "lang": "fi",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " avautuu"
+  },
+  {
+    "lang": "fi",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " avautuu"
+  },
+  {
+    "lang": "fi",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " avautuu"
+  },
+  {
+    "lang": "fi",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " avautuu"
+  },
+  {
+    "lang": "hu",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " lezárul"
+  },
+  {
+    "lang": "hu",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " lezárul"
+  },
+  {
+    "lang": "hu",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " lezárul"
+  },
+  {
+    "lang": "hu",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " lezárul"
+  },
+  {
+    "lang": "hu",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " lezárul"
+  },
+  {
+    "lang": "hu",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " lezárul"
+  },
+  {
+    "lang": "hr",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " zatvara"
+  },
+  {
+    "lang": "hr",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "Počinje ",
+    "suffix": ""
+  },
+  {
+    "lang": "el",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " αρχίζει"
+  },
+  {
+    "lang": "el",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " ανοίγει"
+  },
+  {
+    "lang": "el",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " κλείνει"
+  },
+  {
+    "lang": "el",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " ανοίγει"
+  },
+  {
+    "lang": "el",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " κλείνει"
+  },
+  {
+    "lang": "el",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " ανοίγει"
+  },
+  {
+    "lang": "el",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " κλείνει"
+  },
+  {
+    "lang": "lt",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " atlikta"
+  },
+  {
+    "lang": "lv",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " atveras"
+  },
+  {
+    "lang": "lv",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " slēdzas"
+  },
+  {
+    "lang": "uk",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " закрито"
+  },
+  {
+    "lang": "uk",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " закрито"
+  },
+  {
+    "lang": "uk",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " закрито"
+  },
+  {
     "lang": "en",
     "comp": "assign",
     "key": "calendardue",
@@ -2051,6 +5515,38 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " chiude"
   },
   {
+    "lang": "pt",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "Abre '",
+    "suffix": "'"
+  },
+  {
+    "lang": "pt",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "Abre '",
+    "suffix": "'"
+  },
+  {
+    "lang": "pt",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "Abre '",
+    "suffix": "'"
+  },
+  {
+    "lang": "pt",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "Abre '",
+    "suffix": "'"
+  },
+  {
     "lang": "ca",
     "comp": "feedback",
     "key": "calendarstart",
@@ -2115,6 +5611,190 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " pechan"
   },
   {
+    "lang": "sv",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " öppnar"
+  },
+  {
+    "lang": "sv",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " öppnar"
+  },
+  {
+    "lang": "sv",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " öppnar"
+  },
+  {
+    "lang": "sv",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " öppnar"
+  },
+  {
+    "lang": "sv",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " öppnar"
+  },
+  {
+    "lang": "sv",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " öppnar"
+  },
+  {
+    "lang": "da",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " lukker"
+  },
+  {
+    "lang": "da",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " lukker"
+  },
+  {
+    "lang": "da",
+    "comp": "choice",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " lukker"
+  },
+  {
+    "lang": "da",
+    "comp": "feedback",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " lukker"
+  },
+  {
+    "lang": "da",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " lukker"
+  },
+  {
+    "lang": "da",
+    "comp": "scorm",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " lukker"
+  },
+  {
+    "lang": "hr",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "Rok za ",
+    "suffix": ""
+  },
+  {
+    "lang": "hr",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " otvara"
+  },
+  {
+    "lang": "sl",
+    "comp": "assign",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "Rok za ",
+    "suffix": ""
+  },
+  {
+    "lang": "sl",
+    "comp": "forum",
+    "key": "calendardue",
+    "kind": "due",
+    "prefix": "Rok za ",
+    "suffix": ""
+  },
+  {
+    "lang": "mk",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " closes"
+  },
+  {
+    "lang": "el",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "Ξεκινά ",
+    "suffix": ""
+  },
+  {
+    "lang": "el",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " έναρξη"
+  },
+  {
+    "lang": "et",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " avaneb"
+  },
+  {
+    "lang": "et",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " sulgub"
+  },
+  {
+    "lang": "et",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " avaneb"
+  },
+  {
+    "lang": "et",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " sulgub"
+  },
+  {
     "lang": "en",
     "comp": "quiz",
     "key": "quizeventopens",
@@ -2211,38 +5891,6 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " endet"
   },
   {
-    "lang": "gl",
-    "comp": "lesson",
-    "key": "lessoneventopens",
-    "kind": "open",
-    "prefix": "",
-    "suffix": " abren"
-  },
-  {
-    "lang": "gl",
-    "comp": "choice",
-    "key": "calendarstart",
-    "kind": "open",
-    "prefix": "",
-    "suffix": " abren"
-  },
-  {
-    "lang": "gl",
-    "comp": "data",
-    "key": "calendarstart",
-    "kind": "open",
-    "prefix": "",
-    "suffix": " abren"
-  },
-  {
-    "lang": "gl",
-    "comp": "scorm",
-    "key": "calendarstart",
-    "kind": "open",
-    "prefix": "",
-    "suffix": " abren"
-  },
-  {
     "lang": "nl",
     "comp": "quiz",
     "key": "quizeventopens",
@@ -2323,6 +5971,166 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "suffix": " sluit"
   },
   {
+    "lang": "gl",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " abren"
+  },
+  {
+    "lang": "gl",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " abren"
+  },
+  {
+    "lang": "gl",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " abren"
+  },
+  {
+    "lang": "gl",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " abren"
+  },
+  {
+    "lang": "da",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åbner"
+  },
+  {
+    "lang": "da",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åbner"
+  },
+  {
+    "lang": "da",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åbner"
+  },
+  {
+    "lang": "da",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åbner"
+  },
+  {
+    "lang": "da",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åbner"
+  },
+  {
+    "lang": "da",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åbner"
+  },
+  {
+    "lang": "no",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åpner"
+  },
+  {
+    "lang": "no",
+    "comp": "lesson",
+    "key": "lessoneventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åpner"
+  },
+  {
+    "lang": "no",
+    "comp": "choice",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åpner"
+  },
+  {
+    "lang": "no",
+    "comp": "feedback",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åpner"
+  },
+  {
+    "lang": "no",
+    "comp": "data",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åpner"
+  },
+  {
+    "lang": "no",
+    "comp": "scorm",
+    "key": "calendarstart",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " åpnes"
+  },
+  {
+    "lang": "nn",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " opnar"
+  },
+  {
+    "lang": "mk",
+    "comp": "quiz",
+    "key": "quizeventopens",
+    "kind": "open",
+    "prefix": "",
+    "suffix": " opens"
+  },
+  {
+    "lang": "el",
+    "comp": "quiz",
+    "key": "quizeventcloses",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " λήγει"
+  },
+  {
+    "lang": "el",
+    "comp": "lesson",
+    "key": "lessoneventcloses",
+    "kind": "due",
+    "prefix": "Λήγει ",
+    "suffix": ""
+  },
+  {
     "lang": "es",
     "comp": "lesson",
     "key": "lessoneventopens",
@@ -2401,6 +6209,14 @@ export const MOODLE_EVENT_PATTERNS: readonly MoodleEventPattern[] = [
     "kind": "open",
     "prefix": "",
     "suffix": " apre"
+  },
+  {
+    "lang": "el",
+    "comp": "data",
+    "key": "calendarend",
+    "kind": "due",
+    "prefix": "",
+    "suffix": " λήξη"
   }
 ];
 
@@ -2427,13 +6243,6 @@ export const MOODLE_LABELS: Readonly<Record<string, Readonly<Record<string, stri
     "managesubscriptions": "Importar o exportar calendarios",
     "exportbutton": "Exportar"
   },
-  "pt_br": {
-    "siteevents": "Eventos de site",
-    "generateurlbutton": "Obter URL do calendário",
-    "exportcalendar": "Exportar calendário",
-    "managesubscriptions": "Gerenciar assinaturas",
-    "exportbutton": "Exportar"
-  },
   "fr": {
     "siteevents": "Événements de site",
     "generateurlbutton": "URL du calendrier",
@@ -2454,6 +6263,20 @@ export const MOODLE_LABELS: Readonly<Record<string, Readonly<Record<string, stri
     "exportcalendar": "Esporta calendario",
     "managesubscriptions": "Importa o esporta calendari",
     "exportbutton": "Esportazione"
+  },
+  "nl": {
+    "siteevents": "Site-gebeurtenissen",
+    "generateurlbutton": "Haal URL kalender",
+    "exportcalendar": "Exporteer kalender",
+    "managesubscriptions": "Importeer of exporteer kalenders",
+    "exportbutton": "Exporteer"
+  },
+  "pt": {
+    "siteevents": "Eventos do site",
+    "generateurlbutton": "Obter URL do calendário",
+    "exportcalendar": "Exportar calendário",
+    "managesubscriptions": "Importar/exportar calendários",
+    "exportbutton": "Exportar"
   },
   "ca": {
     "siteevents": "Esdeveniments del lloc",
@@ -2476,12 +6299,53 @@ export const MOODLE_LABELS: Readonly<Record<string, Readonly<Record<string, stri
     "managesubscriptions": "Inportatu edo esportatu egutegiak",
     "exportbutton": "Esportatu"
   },
-  "nl": {
-    "siteevents": "Site-gebeurtenissen",
-    "generateurlbutton": "Haal URL kalender",
-    "exportcalendar": "Exporteer kalender",
-    "managesubscriptions": "Importeer of exporteer kalenders",
-    "exportbutton": "Exporteer"
+  "ga": {
+    "generateurlbutton": "Faigh URL an fhéilire",
+    "exportcalendar": "Easpórtáil an féilire",
+    "exportbutton": "Iompórtáil"
+  },
+  "cy": {
+    "siteevents": "Digwyddiadau'r safle",
+    "generateurlbutton": "Cael URL calendr",
+    "exportcalendar": "Allgludo calendr",
+    "managesubscriptions": "Rheoli tanysgrifiadau",
+    "exportbutton": "Allgludo"
+  },
+  "sv": {
+    "siteevents": "Webbplatshändelser",
+    "generateurlbutton": "Hämta URL till kalender",
+    "exportcalendar": "Exportera kalender",
+    "managesubscriptions": "Importera/exportera kalendrar",
+    "exportbutton": "Exportera"
+  },
+  "da": {
+    "siteevents": "Site-begivenheder",
+    "generateurlbutton": "Vis URL til kalender",
+    "exportcalendar": "Eksporter kalender",
+    "managesubscriptions": "Importer eller eksporter kalendere",
+    "exportbutton": "Eksporter"
+  },
+  "no": {
+    "siteevents": "Portalhendelser",
+    "generateurlbutton": "Vis kalender-URL",
+    "exportcalendar": "Eksporter kalender",
+    "managesubscriptions": "Importer eller eksporter kalendere",
+    "exportbutton": "Eksport"
+  },
+  "nn": {
+    "siteevents": "Portalhendingar"
+  },
+  "fi": {
+    "siteevents": "Sivuston tapahtumat",
+    "generateurlbutton": "Näytä kalenterin verkko-osoite",
+    "exportcalendar": "Vie kalenterin tiedot",
+    "managesubscriptions": "Tuo tai vie kalentereita",
+    "exportbutton": "Vie"
+  },
+  "is": {
+    "generateurlbutton": "Birta vefslóð dagatals",
+    "exportcalendar": "Flytja út dagatal",
+    "exportbutton": "Flytja út"
   },
   "pl": {
     "siteevents": "Wydarzenia strony",
@@ -2489,6 +6353,125 @@ export const MOODLE_LABELS: Readonly<Record<string, Readonly<Record<string, stri
     "exportcalendar": "Eksportuj kalendarz",
     "managesubscriptions": "Importuj lub eksportuj kalendarze",
     "exportbutton": "Eksport"
+  },
+  "cs": {
+    "siteevents": "Události serveru",
+    "generateurlbutton": "Získat URL kalendáře",
+    "exportcalendar": "Exportovat kalendář",
+    "managesubscriptions": "Import nebo export kalendářů",
+    "exportbutton": "Export"
+  },
+  "sk": {
+    "siteevents": "Udalosti portálu",
+    "generateurlbutton": "Získať URL kalendára",
+    "exportcalendar": "Exportovať kalendár",
+    "managesubscriptions": "Import alebo export kalendárov",
+    "exportbutton": "Exportovať"
+  },
+  "hu": {
+    "siteevents": "Portálesemények",
+    "generateurlbutton": "A naptárhivatkozás lekérése",
+    "exportcalendar": "Naptár exportálása",
+    "managesubscriptions": "Naptárak importálása vagy exportálása",
+    "exportbutton": "Exportálás"
+  },
+  "ro": {
+    "siteevents": "Evenimentele site-ului",
+    "generateurlbutton": "Obține link-ul calendarului",
+    "exportcalendar": "Exportă calendar",
+    "managesubscriptions": "Importă sau exportă calendare",
+    "exportbutton": "Exportă"
+  },
+  "bg": {
+    "siteevents": "Събития на сайта",
+    "generateurlbutton": "Взимане на  URL адрес на календара",
+    "exportcalendar": "Експортиране на календар",
+    "managesubscriptions": "Изнасяне или внасяне на календари",
+    "exportbutton": "Експортиране"
+  },
+  "hr": {
+    "siteevents": "Događaji na razini sjedišta",
+    "generateurlbutton": "Prikaži URL kalendara",
+    "exportcalendar": "Izvoženje kalendara",
+    "managesubscriptions": "Uvezite ili izvezite kalendare",
+    "exportbutton": "Izvoz"
+  },
+  "sl": {
+    "siteevents": "Dogodki v spletnem mestu",
+    "generateurlbutton": "Pridobi URL koledarja",
+    "exportcalendar": "Izvozi koledar",
+    "managesubscriptions": "Uvozi ali izvozi koledarje",
+    "exportbutton": "Izvozi"
+  },
+  "sr_lt": {
+    "siteevents": "Prikaži događaje na nivou sajta",
+    "generateurlbutton": "Prikaži URL kalendara",
+    "exportcalendar": "Izvezi kalendar",
+    "managesubscriptions": "Uvoz ili izvoz kalendara",
+    "exportbutton": "Izvezi"
+  },
+  "mk": {
+    "siteevents": "Настани на сајт",
+    "generateurlbutton": "Преземи календарски URL-линк",
+    "exportcalendar": "Извези календар",
+    "managesubscriptions": "Претплати",
+    "exportbutton": "Извези"
+  },
+  "sq": {
+    "siteevents": "Ngjarjet e sajtit",
+    "generateurlbutton": "Merr URL-në e kalendarit",
+    "exportcalendar": "Eksporto kalendarin",
+    "managesubscriptions": "Importo ose eksporto kalendarë",
+    "exportbutton": "Eksporto"
+  },
+  "el": {
+    "siteevents": "Γεγονότα ιστοτόπου",
+    "generateurlbutton": "Διεύθυνση URL ημερολογίου",
+    "exportcalendar": "Εξαγωγή ημερολογίου",
+    "managesubscriptions": "Εισαγωγή ή εξαγωγή ημερολογίων",
+    "exportbutton": "Εξαγωγή"
+  },
+  "lt": {
+    "siteevents": "Svetainės įvykiai",
+    "generateurlbutton": "Gauti kalendoriaus URL",
+    "exportcalendar": "Eksportuoti kalendorių",
+    "managesubscriptions": "Importuoti arba eksportuoti kalendorius",
+    "exportbutton": "Eksportuoti"
+  },
+  "lv": {
+    "siteevents": "Vietnes notikumi",
+    "generateurlbutton": "Iegūt kalendāra URL",
+    "exportcalendar": "Eksportēt kalendāru",
+    "managesubscriptions": "Importēt vai eksportēt kalendārus",
+    "exportbutton": "Eksportēt"
+  },
+  "et": {
+    "siteevents": "Õpikeskkonna sündmused",
+    "generateurlbutton": "Too kalendri URL",
+    "exportcalendar": "Ekspordi kalender",
+    "managesubscriptions": "Impordi või ekspordi kalendreid",
+    "exportbutton": "Ekspordi"
+  },
+  "uk": {
+    "siteevents": "Події сайту",
+    "generateurlbutton": "Отримати URL календаря",
+    "exportcalendar": "Експортувати календар",
+    "managesubscriptions": "Імпорт або експорт календарів",
+    "exportbutton": "Експорт"
+  },
+  "ru": {
+    "siteevents": "События сайта",
+    "generateurlbutton": "Получить адрес календаря",
+    "exportcalendar": "Экспортировать события",
+    "managesubscriptions": "Импорт или экспорт календарей",
+    "exportbutton": "Экспорт"
+  },
+  "pt_br": {
+    "siteevents": "Eventos de site",
+    "generateurlbutton": "Obter URL do calendário",
+    "exportcalendar": "Exportar calendário",
+    "managesubscriptions": "Gerenciar assinaturas",
+    "exportbutton": "Exportar"
   },
   "tr": {
     "siteevents": "Site olayları",
@@ -2501,16 +6484,39 @@ export const MOODLE_LABELS: Readonly<Record<string, Readonly<Record<string, stri
 
 /** Every localisation of the site-events pseudo-course shortname. */
 export const MOODLE_SITE_EVENT_NAMES: readonly string[] = [
+  "Digwyddiadau'r safle",
+  "Događaji na razini sjedišta",
+  "Dogodki v spletnem mestu",
   "Esdeveniments del lloc",
+  "Evenimentele site-ului",
   "Eventi del sito",
   "Eventos Globales",
   "Eventos de site",
+  "Eventos do site",
   "Eventos do sitio",
   "Guneko ekitaldiak",
+  "Ngjarjet e sajtit",
+  "Portalhendelser",
+  "Portalhendingar",
+  "Portálesemények",
+  "Prikaži događaje na nivou sajta",
   "Site events",
   "Site olayları",
+  "Site-begivenheder",
   "Site-gebeurtenissen",
+  "Sivuston tapahtumat",
+  "Svetainės įvykiai",
+  "Udalosti portálu",
+  "Události serveru",
+  "Vietnes notikumi",
+  "Webbplatshändelser",
   "Website-Termine",
   "Wydarzenia strony",
-  "Événements de site"
+  "Événements de site",
+  "Õpikeskkonna sündmused",
+  "Γεγονότα ιστοτόπου",
+  "Настани на сајт",
+  "Події сайту",
+  "События сайта",
+  "Събития на сайта"
 ];

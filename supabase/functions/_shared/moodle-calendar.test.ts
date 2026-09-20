@@ -432,3 +432,56 @@ Deno.test('a type survives translation, because the module is not a word', () =>
   assertEquals(typeOf('Midterm Quiz'), 'exam');
   assertEquals(typeOf('Problem Set 3'), 'assignment');
 });
+
+Deno.test('Europe: the languages Moodle is actually used in, stripped by their real strings', () => {
+  // Moodle's install base is heaviest in Europe, and the first version of this
+  // table covered Germany, France, Italy, Spain and the Netherlands while
+  // missing Portugal, every Nordic country, Greece, and all of Central and
+  // Eastern Europe — which is where Moodle's share is highest of all.
+  //
+  // Every string below is the REAL mod/assign `calendardue` value from that
+  // language's own pack, not an invention: an invented string proves nothing
+  // except that the test author guessed.
+  const real: Array<[string, string]> = [
+    ['sv', 'Projekt 7 förfaller'],
+    ['da', 'Projekt 7 skal afleveres'],
+    ['fi', 'Projekt 7 on palautettava viimeistään'],
+    ['pt', "Termina o prazo de 'Projekt 7'"],
+    ['cs', 'Projekt 7 má být hotov do tohoto data'],
+    ['el', 'Projekt 7 οφείλεται'],
+    ['pl', 'Projekt 7 (termin oddania)'],
+    ['uk', 'Строк Projekt 7 спливає'],
+  ];
+  for (const [lang, decorated] of real) {
+    const stripped = stripMoodleEventName(decorated);
+    assertEquals(stripped.base, 'Projekt 7', `${lang}: ${decorated} -> ${stripped.base}`);
+    assertEquals(stripped.kind, 'due', `${lang} kind`);
+  }
+});
+
+Deno.test('a language with no pack at all still delivers every deadline', () => {
+  // The guarantee that makes the table an improvement rather than a dependency:
+  // an unknown language costs a student the decoration on a title, never a
+  // deadline, a date or a course. Latin, Greek and Cyrillic alike.
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0',
+    'PRODID:-//Moodle Pty Ltd//NONSGML Moodle Version 2026042000//EN',
+    ...[
+      ['801', 'Þetta verkefni er á gjalddaga', 'ÍSL101'],
+      ['802', 'Заавар 5 дуусах хугацаа', 'МОН200'],
+    ].flatMap(([id, summary, cat]) => [
+      'BEGIN:VEVENT', `UID:${id}@moodle.uni.eu`, `SUMMARY:${summary}`,
+      `CATEGORIES:${cat}`, 'DTSTART:20261201T235900Z', 'DTEND:20261201T235900Z', 'END:VEVENT',
+    ]),
+    'END:VCALENDAR',
+  ].join('\r\n');
+  const parsed = parseMoodleCalendarFeed(ics, ics, {
+    wwwroot: 'https://moodle.uni.eu', today: new Date('2026-11-01T00:00:00Z'),
+  });
+  assertEquals(parsed.assignments.length, 2);
+  assertEquals(parsed.courses.length, 2);
+  for (const a of parsed.assignments) assertEquals(a.due_date, '2026-12-01');
+  // The course key survives non-Latin script intact, which matters because it
+  // is the key every later sync matches on.
+  assertEquals(parsed.courses.map((c) => c.id).sort(), ['МОН200', 'ÍSL101'].sort());
+});

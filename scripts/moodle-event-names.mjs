@@ -44,13 +44,37 @@ const OUT = 'supabase/functions/_shared/moodle-event-names.ts';
 /**
  * The languages the table covers.
  *
- * English and Spanish because Semora ships in both. The rest are the languages
- * most likely to be a Moodle teacher's own at a university that also has
- * English- or Spanish-speaking students; a school whose language is missing
- * still works, it just keeps the raw event name as the task title until the
- * language is added here (the parser reports `unmatched_suffix` so we find out).
+ * English and Spanish because Semora ships in both. Everything else is Europe,
+ * because that is where Moodle's install base actually is — a fact that made
+ * the original twelve-language list look a lot better than it was: it covered
+ * Germany, France, Italy, Spain and the Netherlands and missed Portugal, every
+ * Nordic country, Greece, and the whole of Central and Eastern Europe, which is
+ * where Moodle's share is highest of all.
+ *
+ * A school whose language is missing STILL WORKS — verified, not assumed: every
+ * deadline imports with the right date and the right course, in Greek and
+ * Cyrillic as readily as in Latin script. The only cost is cosmetic, the task
+ * keeps its decoration ("Inlämningsuppgift 3 ska lämnas in" rather than
+ * "Inlämningsuppgift 3"). So adding a language is an improvement, never a fix
+ * for a breakage, and a pack that fails to download is skipped rather than
+ * fatal.
  */
-const LANGS = ['en', 'es', 'pt_br', 'fr', 'de', 'it', 'ca', 'gl', 'eu', 'nl', 'pl', 'tr'];
+const LANGS = [
+  // Semora's own two, first.
+  'en', 'es',
+  // Western Europe.
+  'fr', 'de', 'it', 'nl', 'pt', 'ca', 'gl', 'eu', 'ga', 'cy',
+  // The Nordics. Moodle's Norwegian pack is 'no'; 'nn' is Nynorsk.
+  'sv', 'da', 'no', 'nn', 'fi', 'is',
+  // Central and Eastern Europe, where Moodle's share is highest of all.
+  'pl', 'cs', 'sk', 'hu', 'ro', 'bg', 'hr', 'sl', 'sr_lt', 'mk', 'sq', 'el',
+  // The Baltics.
+  'lt', 'lv', 'et',
+  // And the two largest remaining European languages.
+  'uk', 'ru',
+  // Outside Europe but already relied on: Brazil, and Turkey which straddles.
+  'pt_br', 'tr',
+];
 
 /**
  * Which string in which component names which kind of calendar event.
