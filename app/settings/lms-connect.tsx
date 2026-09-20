@@ -1012,7 +1012,18 @@ export default function LmsConnectScreen() {
                   chosen is what made this screen and the next look identical:
                   the student picks phone or laptop and the bottom half of the
                   page has not changed. */}
-              {(!isCalendarFeed || feedLaneChosen) && (
+              {/* Canvas's laptop lane has no field to submit.
+                  Widening this from Canvas's original
+                  `setupProgress.setupLane === 'phone'` to a provider-agnostic
+                  "a lane was chosen" put a permanently dead "Check my link"
+                  button under the Canvas laptop instructions: every TextInput
+                  in CanvasGuidedPaste lives inside a `lane === 'phone'` block,
+                  so the token can never be filled and the button can never
+                  enable. Moodle's laptop lane DOES render the field — the
+                  student pastes what they fetched on the laptop — so the two
+                  providers genuinely differ here and the condition has to say
+                  so rather than average them. */}
+              {(!isCalendarFeed || (isMoodleFeed ? feedLaneChosen : setupProgress.setupLane === 'phone')) && (
               <TouchableOpacity
                 onPress={discover}
                 disabled={working || (isCalendarFeed && !feedHasSomething)}

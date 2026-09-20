@@ -82,19 +82,19 @@ function spanishPattern(input: string): string | null {
   if (match) return `${match[1]} está mostrando materias que Semora no ha importado. No se ha añadido nada a tus semestres: elige cuáles son tuyas y dónde van.`;
   match = input.match(/^Need another semester\? Pro removes the one-semester limit — your (Canvas|Moodle|Blackboard|Google Classroom) connection stays exactly as it is\.$/);
   if (match) return `¿Necesitas otro semestre? Pro quita el límite de un semestre y tu conexión con ${match[1]} se queda tal cual.`;
-  match = input.match(/^(Canvas|Moodle|Blackboard|Google Classroom) is listing (?:a course|courses) Semora has not imported\. Review and choose a semester\.$/);
+  // Singular and plural are separate returns. Written as one alternation at
+  // first, which rendered the English "a course" as the Spanish "materias" —
+  // the card was in English for Spanish students before this pattern existed,
+  // so it was still an improvement, and still wrong.
+  match = input.match(/^(Canvas|Moodle|Blackboard|Google Classroom) is listing (a course|courses) Semora has not imported\. Review and choose a semester\.$/);
   if (match) {
-    return `${match[1]} está mostrando materias que Semora no ha importado. Revísalas y elige un semestre.`;
+    const what = match[2] === 'a course' ? 'una materia' : 'materias';
+    return `${match[1]} está mostrando ${what} que Semora no ha importado. Revísala${match[2] === 'a course' ? '' : 's'} y elige un semestre.`;
   }
   match = input.match(/^(Canvas|Moodle) checks every few hours$/);
   if (match) return `${match[1]} revisa cada pocas horas`;
   match = input.match(/^Prefilled from the dates in this (Canvas|Moodle) coursework\.$/);
   if (match) return `Precargado con las fechas de este trabajo de ${match[1]}.`;
-  match = input.match(/^(\d+) (?:course|courses) and (\d+) deadlines imported\. Semora will keep checking (Canvas|Moodle) every few hours\.$/);
-  if (match) {
-    const courses = match[1] === '1' ? '1 asignatura' : `${match[1]} asignaturas`;
-    return `${courses} y ${match[2]} entregas importadas. Semora seguirá revisando ${match[3]} cada pocas horas.`;
-  }
   match = input.match(/^Open (.+)$/);
   if (match && /\./.test(match[1]) && !/\s/.test(match[1])) return `Abrir ${match[1]}`;
 
@@ -589,8 +589,13 @@ function spanishPattern(input: string): string | null {
     if (match) return `${match[1] === '1' ? 'Se actualizó 1 tarea' : `Se actualizaron ${match[1]} tareas`}${match[2] ? ` · ${match[2]} ${match[2] === '1' ? 'requiere' : 'requieren'} atención` : ''}.`;
   match = input.match(/^(\d+) (course|courses) and (\d+) assignments imported\.$/i);
     if (match) return `Se importaron ${match[1]} ${match[1] === '1' ? 'curso' : 'cursos'} y ${match[3]} ${match[3] === '1' ? 'tarea' : 'tareas'}.`;
-  match = input.match(/^(\d+) (course|courses) and (\d+) deadlines imported\. Semora will keep checking Canvas every few hours\.$/i);
-    if (match) return `Se importaron ${match[1]} ${match[1] === '1' ? 'curso' : 'cursos'} y ${match[3]} ${match[3] === '1' ? 'entrega' : 'entregas'}. Semora seguirá revisando Canvas cada pocas horas.`;
+  // Widened to name the platform rather than duplicated for Moodle. A second
+  // copy was written above this one and shadowed it, which silently swapped
+  // 'cursos' for 'asignaturas' in the Spanish a Canvas student has been seeing
+  // — the rest of this catalogue says 'curso', so the drift would have been
+  // invisible and permanent. One pattern, both platforms, same words.
+  match = input.match(/^(\d+) (course|courses) and (\d+) deadlines imported\. Semora will keep checking (Canvas|Moodle|Blackboard|Google Classroom) every few hours\.$/i);
+    if (match) return `Se importaron ${match[1]} ${match[1] === '1' ? 'curso' : 'cursos'} y ${match[3]} ${match[3] === '1' ? 'entrega' : 'entregas'}. Semora seguirá revisando ${match[4]} cada pocas horas.`;
   // Today's held-back-courses banner. Interpolated, so it can never match a
   // catalogue key — the count and both agreements are resolved here instead.
   match = input.match(/^(\d+) new Canvas (?:course|courses) found — (?:its|their) deadlines are not in Semora yet$/i);

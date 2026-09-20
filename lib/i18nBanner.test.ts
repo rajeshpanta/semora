@@ -102,6 +102,17 @@ Deno.test('Moodle setup lines with a value in them are translated', () => {
     ['Your Moodle shares 30 days ahead.', 'Tu Moodle comparte 30 días hacia adelante.'],
     ['Your enrolment in Physics 101 has ended in Moodle.', 'Tu matrícula en Physics 101 terminó en Moodle.'],
     ['Your enrolment in 3 courses has ended in Moodle.', 'Tu matrícula en 3 asignaturas terminó en Moodle.'],
+    // The import toast: Canvas's Spanish must be exactly what it always was,
+    // and Moodle must get the same words rather than a second dialect.
+    ['3 courses and 42 deadlines imported. Semora will keep checking Canvas every few hours.',
+     'Se importaron 3 cursos y 42 entregas. Semora seguirá revisando Canvas cada pocas horas.'],
+    ['1 course and 5 deadlines imported. Semora will keep checking Moodle every few hours.',
+     'Se importaron 1 curso y 5 entregas. Semora seguirá revisando Moodle cada pocas horas.'],
+    // One card, two numbers, two sentences. The plural form used to answer for both.
+    ['Canvas is listing a course Semora has not imported. Review and choose a semester.',
+     'Canvas está mostrando una materia que Semora no ha importado. Revísala y elige un semestre.'],
+    ['Moodle is listing courses Semora has not imported. Review and choose a semester.',
+     'Moodle está mostrando materias que Semora no ha importado. Revísalas y elige un semestre.'],
     ['Moodle checks every few hours', 'Moodle revisa cada pocas horas'],
     ['Canvas checks every few hours', 'Canvas revisa cada pocas horas'],
     ['Open moodle.school.edu', 'Abrir moodle.school.edu'],
@@ -111,11 +122,11 @@ Deno.test('Moodle setup lines with a value in them are translated', () => {
     ],
     [
       '5 courses and 62 deadlines imported. Semora will keep checking Moodle every few hours.',
-      '5 asignaturas y 62 entregas importadas. Semora seguirá revisando Moodle cada pocas horas.',
+      'Se importaron 5 cursos y 62 entregas. Semora seguirá revisando Moodle cada pocas horas.',
     ],
     [
       '1 course and 3 deadlines imported. Semora will keep checking Canvas every few hours.',
-      '1 asignatura y 3 entregas importadas. Semora seguirá revisando Canvas cada pocas horas.',
+      'Se importaron 1 curso y 3 entregas. Semora seguirá revisando Canvas cada pocas horas.',
     ],
   ];
   for (const [english, spanish] of cases) assertEquals(translate(english, 'es'), spanish);
