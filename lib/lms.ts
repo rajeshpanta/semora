@@ -146,15 +146,55 @@ async function invokeLms<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke('lms-sync', { body });
   if (error) {
     let message = error.message || 'The LMS could not be reached.';
+    let code: string | undefined;
+    let status: number | undefined;
     try {
       const response = (error as any).context as Response | undefined;
+      status = response?.status;
       const payload = response ? await response.clone().json() : null;
       if (typeof payload?.error === 'string') message = payload.error;
+      // MOODLE_PLAN.md Phase 4.3. The server stamps a bounded code on every
+      // failure; carrying it here is what lets the screen classify without
+      // matching on prose. A Moodle message containing the word "connection"
+      // must never be filed as a network error.
+      if (typeof payload?.code === 'string') code = payload.code;
     } catch {}
-    throw new Error(message);
+    const failure = new Error(message) as LmsError;
+    if (code) failure.code = code;
+    if (status) failure.status = status;
+    throw failure;
   }
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) {
+    const failure = new Error(data.error) as LmsError;
+    if (typeof data?.code === 'string') failure.code = data.code;
+    throw failure;
+  }
   return data as T;
+}
+
+/** An LMS failure carrying the server's bounded classification. */
+export type LmsError = Error & { code?: string; status?: number };
+
+/**
+ * Ask whether an address is a Moodle, before sending the student to a browser.
+ *
+ * ADVISORY. A university firewall can refuse this while serving the calendar
+ * export perfectly, so a negative answer means "we could not confirm", never
+ * "you cannot continue". The caller must not block on it.
+ */
+export async function probeLmsSite(input: { provider: 'moodle'; site: string }): Promise<{
+  isMoodle: boolean;
+  via?: 'public_config' | 'exception' | 'markup';
+  wwwroot?: string;
+  siteName?: string;
+  ws?: boolean;
+  mobile?: boolean;
+  typeoflogin?: number;
+  sso?: boolean;
+  maintenance?: boolean;
+  reason?: 'not_moodle' | 'unreachable' | 'blocked';
+}> {
+  return invokeLms({ action: 'probe', provider: input.provider, site: input.site });
 }
 
 export async function requestGoogleClassroomCredential(): Promise<LmsCredential> {
@@ -168,14 +208,36 @@ export async function discoverLmsCourses(input: {
   baseUrl?: string | null;
   credential: LmsCredential;
 }): Promise<DiscoveredLmsCourse[]> {
-  const data = await invokeLms<{ courses: DiscoveredLmsCourse[] }>({
+  return (await discoverLmsCoursesDetailed(input)).courses;
+}
+
+/**
+ * The same discovery, plus what the feed could tell us about its own reach.
+ *
+ * `horizonDays` exists for Moodle: a school's administrator can narrow the
+ * calendar export to as little as 30 days, and the review screen has to say so
+ * rather than let a student conclude half their semester is missing.
+ */
+export async function discoverLmsCoursesDetailed(input: {
+  provider: LmsProvider;
+  connectionMethod?: LmsConnectionMethod;
+  baseUrl?: string | null;
+  credential: LmsCredential;
+}): Promise<{ courses: DiscoveredLmsCourse[]; horizonDays: number | null }> {
+  const data = await invokeLms<{
+    courses: DiscoveredLmsCourse[];
+    horizon_days?: number;
+  }>({
     action: 'discover',
     provider: input.provider,
     connection_method: input.connectionMethod ?? 'legacy_token',
     base_url: input.baseUrl ?? null,
     access_token: input.credential.accessToken,
   });
-  return Array.isArray(data.courses) ? data.courses : [];
+  return {
+    courses: Array.isArray(data.courses) ? data.courses : [],
+    horizonDays: Number.isFinite(data.horizon_days) ? Number(data.horizon_days) : null,
+  };
 }
 
 export async function listLmsConnections(): Promise<
@@ -248,7 +310,16 @@ export async function connectLms(input: {
    */
   linkTo?: Record<string, string>;
 }): Promise<{ connectionId: string; processed: number; skipped: number }> {
-  if (!input.courses.length) throw new Error('Select at least one course to import.');
+  // MOODLE_PLAN.md Phase 4.5. A Moodle feed is allowed to arrive with nothing
+  // in it. Early in a term, before any instructor has set a date, Moodle's
+  // calendar is genuinely empty — and refusing the connection there means the
+  // student has to remember to come back and do the whole thing again. Saving
+  // the link instead means courses appear on their own, the first time a date
+  // is posted. Every other provider still needs a choice.
+  const allowsEmpty = input.provider === 'moodle' && input.connectionMethod === 'calendar_feed';
+  if (!input.courses.length && !allowsEmpty) {
+    throw new Error('Select at least one course to import.');
+  }
 
   // A profile timezone is a precondition for correct Canvas due dates, not a
   // preference. lms-sync converts every `due_at` into local wall-clock time

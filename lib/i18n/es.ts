@@ -2806,4 +2806,117 @@ export const ES: Record<string, string> = {
   'Semora closed. Open to check your recording': 'Semora se cerró. Ábrela para revisar tu grabación',
   'Recording stopped because Semora was closed': 'La grabación se detuvo porque Semora se cerró',
   'Lecture recording alerts': 'Avisos de grabación de clases',
+
+  // ── Moodle calendar link setup (MOODLE_PLAN.md Phase 4.10) ──────────────
+  // Every string the Moodle road can show. The Moodle UI labels quoted in the
+  // setup card come from the 4.5 es language pack (generateurlbutton /
+  // copyurl), not from memory — see scripts/moodle-event-names.mjs.
+  //
+  // Server + validator refusals. These are byte-identical to the strings in
+  // lib/moodleFeedUrl.ts and supabase/functions/_shared/moodle-calendar.ts, so
+  // a student never meets the same problem worded two ways.
+  'Paste your Moodle calendar link.': 'Pega el enlace de tu calendario de Moodle.',
+  'The Moodle calendar link is too long.': 'El enlace del calendario de Moodle es demasiado largo.',
+  'Paste the complete calendar URL copied from Moodle.': 'Pega la URL completa del calendario copiada de Moodle.',
+  'Moodle calendar links must use secure HTTPS.': 'Los enlaces del calendario de Moodle deben usar HTTPS seguro.',
+  'Moodle calendar links must use your school\u2019s Moodle web address.': 'Los enlaces del calendario de Moodle deben usar la direcci\u00f3n web de Moodle de tu universidad.',
+  'That is the Moodle sign-in page, not the calendar link.': 'Esa es la p\u00e1gina de inicio de sesi\u00f3n de Moodle, no el enlace del calendario.',
+  'That is the Export page \u2014 tap Get calendar URL, then Copy URL.': 'Esa es la p\u00e1gina de exportar: toca Obtener URL del calendario y luego Copiar URL.',
+  'That is a downloaded file, not the link.': 'Eso es un archivo descargado, no el enlace.',
+  'That link is from a different Moodle than the one you chose.': 'Ese enlace es de un Moodle distinto al que elegiste.',
+  'This is not a Moodle calendar export link. In Moodle open Calendar \u2192 Import or export calendars \u2192 Export calendar \u2192 Get calendar URL, then copy the URL shown.':
+    'Este no es un enlace de exportaci\u00f3n del calendario de Moodle. En Moodle abre Calendario \u2192 Importar o exportar calendarios \u2192 Exportar calendario \u2192 Obtener URL del calendario, y copia la URL que aparece.',
+  'This Moodle calendar link no longer works. Moodle usually stops it after a password change. Copy a fresh link from Moodle and reconnect.':
+    'Este enlace del calendario de Moodle ya no funciona. Moodle suele desactivarlo al cambiar la contrase\u00f1a. Copia un enlace nuevo desde Moodle y vuelve a conectar.',
+  'Your school has turned off calendar export in Moodle, so Semora cannot read it. Ask your Moodle support team, or add classes by scanning a syllabus.':
+    'Tu universidad desactiv\u00f3 la exportaci\u00f3n del calendario en Moodle, as\u00ed que Semora no puede leerlo. Pregunta al equipo de soporte de Moodle o agrega tus clases escaneando un programa.',
+  'Your school\u2019s network is blocking Semora\u2019s server. Scan a syllabus, or ask your Moodle support team.':
+    'La red de tu universidad est\u00e1 bloqueando el servidor de Semora. Escanea un programa o pregunta al equipo de soporte de Moodle.',
+  'Moodle did not return a calendar. Try again in a few minutes.': 'Moodle no devolvi\u00f3 un calendario. Int\u00e9ntalo de nuevo en unos minutos.',
+  'Moodle sent Semora to a different web address. Sign in to Moodle, open the calendar export page there, and copy the link it shows.':
+    'Moodle envi\u00f3 a Semora a otra direcci\u00f3n web. Inicia sesi\u00f3n en Moodle, abre all\u00ed la p\u00e1gina de exportaci\u00f3n del calendario y copia el enlace que aparece.',
+  'Moodle setup is paused for a moment. Try again later.': 'La configuraci\u00f3n de Moodle est\u00e1 en pausa un momento. Int\u00e9ntalo m\u00e1s tarde.',
+  'This Moodle calendar is too large to import safely.': 'Este calendario de Moodle es demasiado grande para importarlo de forma segura.',
+  'Too many checks for now. Try again in a little while.': 'Demasiadas comprobaciones por ahora. Int\u00e9ntalo de nuevo en un rato.',
+  'Enter your school\u2019s Moodle address.': 'Escribe la direcci\u00f3n de Moodle de tu universidad.',
+  // The short hints under the field, shown while they are still looking at it.
+  'Paste the whole link.': 'Pega el enlace completo.',
+  'Sign in first, then tap Get calendar URL.': 'Inicia sesi\u00f3n primero y luego toca Obtener URL del calendario.',
+  'Tap Get calendar URL, then Copy URL.': 'Toca Obtener URL del calendario y luego Copiar URL.',
+  'That downloaded a file. Tap Get calendar URL instead.': 'Eso descarg\u00f3 un archivo. Mejor toca Obtener URL del calendario.',
+  'That is a Moodle page, not the calendar link.': 'Esa es una p\u00e1gina de Moodle, no el enlace del calendario.',
+  'That is a different Moodle.': 'Ese es otro Moodle.',
+  'The link must start with https.': 'El enlace debe empezar con https.',
+  'Use your school\u2019s Moodle address.': 'Usa la direcci\u00f3n de Moodle de tu universidad.',
+  'That is too long to be the link.': 'Eso es demasiado largo para ser el enlace.',
+  // Setup screens.
+  'Where is your Moodle?': '\u00bfD\u00f3nde est\u00e1 tu Moodle?',
+  'Your school\u2019s Moodle address': 'La direcci\u00f3n del Moodle de tu universidad',
+  'moodle.yourschool.edu \u2014 or paste any link from it': 'moodle.tuuniversidad.edu \u2014 o pega cualquier enlace de all\u00ed',
+  'If you are not sure, search \u201cmoodle\u201d and your school\u2019s name.': 'Si no est\u00e1s seguro, busca \u201cmoodle\u201d y el nombre de tu universidad.',
+  'Find my Moodle': 'Buscar mi Moodle',
+  'Not your school? Change': '\u00bfNo es tu universidad? Cambiar',
+  'Couldn\u2019t confirm this address \u2014 continue anyway': 'No pudimos confirmar esta direcci\u00f3n: contin\u00faa de todos modos',
+  'Checking that address\u2026': 'Revisando esa direcci\u00f3n\u2026',
+  'Open your Moodle calendar': 'Abre tu calendario de Moodle',
+  'Sign in if Moodle asks.': 'Inicia sesi\u00f3n si Moodle lo pide.',
+  'Tap Get calendar URL.': 'Toca Obtener URL del calendario.',
+  'Tap Copy URL.': 'Toca Copiar URL.',
+  'Come back to Semora.': 'Vuelve a Semora.',
+  'Leave the options as they are \u2014 Semora sets the date range itself.': 'Deja las opciones como est\u00e1n: Semora ajusta el rango de fechas por su cuenta.',
+  'If the page just says \u201cno export\u201d, your school turned this off \u2014 tap Scan a syllabus instead.':
+    'Si la p\u00e1gina solo dice \u201cno export\u201d, tu universidad lo desactiv\u00f3: toca Escanear un programa.',
+  'If you tapped Export and a calendar file opened, go back and tap Get calendar URL instead.':
+    'Si tocaste Exportar y se abri\u00f3 un archivo de calendario, vuelve y toca Obtener URL del calendario.',
+  'If your school\u2019s sign-in refuses to open here, use the laptop steps.':
+    'Si el inicio de sesi\u00f3n de tu universidad no se abre aqu\u00ed, usa los pasos en la laptop.',
+  'Back already? Paste your link': '\u00bfYa volviste? Pega tu enlace',
+  'Your Moodle calendar link': 'Tu enlace del calendario de Moodle',
+  'Nothing Moodle-shaped on the clipboard yet': 'A\u00fan no hay nada de Moodle en el portapapeles',
+  'Link looks right \u2014 checking Moodle\u2026': 'El enlace parece correcto: revisando Moodle\u2026',
+  'Open it again': 'Abrirlo de nuevo',
+  'Older Moodle?': '\u00bfMoodle antiguo?',
+  'If your Export page shows the link as text with no Copy button, select it and copy it by hand.':
+    'Si tu p\u00e1gina de exportar muestra el enlace como texto sin bot\u00f3n Copiar, selecci\u00f3nalo y c\u00f3pialo a mano.',
+  'My school gave me a web-service token': 'Mi universidad me dio un token de servicios web',
+  'Only for schools whose Moodle team issued you a web-service token. Most students should use the calendar link instead.':
+    'Solo para universidades cuyo equipo de Moodle te haya emitido un token de servicios web. La mayor\u00eda de los estudiantes deben usar el enlace del calendario.',
+  'Lock in free Moodle sync': 'Asegura la sincronizaci\u00f3n gratis de Moodle',
+  'Moodle sync is free while this offer runs. Connect before it ends and it stays free on this account.':
+    'La sincronizaci\u00f3n con Moodle es gratis mientras dure esta oferta. Con\u00e9ctala antes de que termine y seguir\u00e1 siendo gratis en esta cuenta.',
+  'Moodle keeps your calendar link behind your login, so there is one quick trip to make. Semora does the rest.':
+    'Moodle guarda el enlace de tu calendario detr\u00e1s de tu inicio de sesi\u00f3n, as\u00ed que hay que hacer un viaje r\u00e1pido. Semora hace el resto.',
+  'Nothing dated yet': 'A\u00fan no hay nada con fecha',
+  'Your Moodle calendar has no due dates right now. Semora saved your link and checks every few hours; courses appear as soon as an instructor adds a date \u2014 or as soon as your teacher makes the course visible.':
+    'Tu calendario de Moodle no tiene fechas de entrega por ahora. Semora guard\u00f3 tu enlace y lo revisa cada pocas horas; las asignaturas aparecer\u00e1n en cuanto un profesor a\u00f1ada una fecha, o en cuanto haga visible el curso.',
+  'Save and keep checking': 'Guardar y seguir revisando',
+  'Moodle saved': 'Moodle guardado',
+  'Semora will keep checking your Moodle every few hours and will tell you when a course has a date.':
+    'Semora seguir\u00e1 revisando tu Moodle cada pocas horas y te avisar\u00e1 cuando una asignatura tenga fecha.',
+  'Deadlines, quizzes and exams from your Moodle calendar \u2014 no admin needed':
+    'Entregas, cuestionarios y ex\u00e1menes de tu calendario de Moodle, sin pedir permiso a nadie',
+  'Only classes with dated work in Moodle appear here. A class with nothing scheduled, or one your teacher hasn\u2019t released yet, shows up when its first deadline is posted.':
+    'Aqu\u00ed solo aparecen las clases con trabajo fechado en Moodle. Una clase sin nada programado, o que tu profesor a\u00fan no haya publicado, aparecer\u00e1 cuando se publique su primera entrega.',
+  'Tap a name to change it': 'Toca un nombre para cambiarlo',
+  'Moodle connected': 'Moodle conectado',
+  'Connect Moodle free and start syncing': 'Conecta Moodle gratis y empieza a sincronizar',
+  'Connect Moodle and start syncing': 'Conecta Moodle y empieza a sincronizar',
+  'Your Moodle calendar link stopped working \u2014 usually after a Moodle password change. Reconnect with a fresh link.':
+    'Tu enlace del calendario de Moodle dej\u00f3 de funcionar; suele pasar tras cambiar la contrase\u00f1a de Moodle. Vuelve a conectar con un enlace nuevo.',
+  'Your school has turned off Moodle calendar links.': 'Tu universidad desactiv\u00f3 los enlaces de calendario de Moodle.',
+  'Your enrolment in this course has ended in Moodle.': 'Tu matr\u00edcula en este curso termin\u00f3 en Moodle.',
+  // 'Scan a syllabus' is already defined above; not repeated here.
+  // Canvas-shared strings the Moodle component reuses. None of these existed
+  // in this file before, so they were reaching Spanish students in English.
+  'Which school?': '\u00bfQu\u00e9 universidad?',
+  'Paste from clipboard': 'Pegar desde el portapapeles',
+  'Nice. This takes about a minute.': 'Bien. Esto toma m\u00e1s o menos un minuto.',
+  'Check my link': 'Revisar mi enlace',
+  'Do it here on my phone': 'Hacerlo aqu\u00ed en mi tel\u00e9fono',
+  'I have a laptop nearby': 'Tengo una laptop cerca',
+  'How would you like to do it?': '\u00bfC\u00f3mo prefieres hacerlo?',
+  'Not working?': '\u00bfNo funciona?',
+  'Show me the laptop steps': 'Mu\u00e9strame los pasos en la laptop',
+  'Ask Semora for help': 'Pedir ayuda a Semora',
+  'See my deadlines': 'Ver mis entregas',
 };

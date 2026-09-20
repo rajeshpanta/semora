@@ -66,7 +66,11 @@ function syncTimeLabel(value: string | null) {
 const PROVIDERS: Array<{ id: LmsProvider; icon: string; detail: string }> = [
   { id: 'canvas', icon: 'refresh', detail: 'Assignments, exams and due dates' },
   { id: 'blackboard', icon: 'black-tie', detail: 'Courses and gradebook assignments' },
-  { id: 'moodle', icon: 'graduation-cap', detail: 'Enrolled courses and assignments' },
+  // No longer 'Enrolled courses and assignments', which said nothing about
+  // the one thing that decided whether anyone finished: the old road needed a
+  // token only a school administrator can issue, and zero students ever got
+  // one. The calendar link needs nobody. MOODLE_PLAN.md Phase 4.7.
+  { id: 'moodle', icon: 'graduation-cap', detail: 'Deadlines, quizzes and exams from your Moodle calendar — no admin needed' },
 ];
 
 export default function LmsSettingsScreen() {
@@ -118,8 +122,11 @@ export default function LmsSettingsScreen() {
   // padlock, and a tap goes to the connect screen — which does its own gating
   // properly and waits for the same answer before bouncing anyone.
   const priceKnown = isPro || !promoPending;
+  // Any calendar-feed connection, not just Canvas. Left keyed on 'canvas',
+  // a Moodle link that stopped working would never light the "needs
+  // attention" badge and the student would find out from a missing deadline.
   const canvasFeedConnection = query.data?.find(
-    (connection) => connection.provider === 'canvas' && connection.connection_method === 'calendar_feed',
+    (connection) => connection.connection_method === 'calendar_feed',
   );
   const canvasFeedNeedsAttention = !!canvasFeedConnection && (
     !canvasFeedConnection.background_sync_enabled ||
@@ -244,7 +251,9 @@ export default function LmsSettingsScreen() {
             <View style={[styles.connectedBadge, { backgroundColor: canvasFeedNeedsAttention ? `${colors.coral}12` : colors.brand50 }]}>
               <FontAwesome name={canvasFeedNeedsAttention ? 'exclamation-triangle' : 'check-circle'} size={14} color={canvasFeedNeedsAttention ? colors.coral : colors.brand} />
               <Text style={[styles.connectedBadgeText, { color: canvasFeedNeedsAttention ? colors.coral : colors.brand }]}>
-                {canvasFeedNeedsAttention ? 'Canvas sync needs attention. Reconnect below' : 'Canvas is connected — manage it below'}
+                {canvasFeedNeedsAttention
+                  ? `${LMS_PROVIDER_LABELS[canvasFeedConnection.provider]} sync needs attention. Reconnect below`
+                  : `${LMS_PROVIDER_LABELS[canvasFeedConnection.provider]} is connected — manage it below`}
               </Text>
             </View>
           )}
@@ -276,7 +285,7 @@ export default function LmsSettingsScreen() {
                       <Text style={[styles.syncMeta, { color: colors.ink2 }]}>
                         {syncTimeLabel(connection.last_successful_sync_at ?? connection.last_synced_at)}
                         {connection.connection_method === 'calendar_feed'
-                          ? connection.background_sync_enabled ? ' · Canvas checks every few hours' : ' · Reconnect required'
+                          ? connection.background_sync_enabled ? ` · ${LMS_PROVIDER_LABELS[connection.provider]} checks every few hours` : ' · Reconnect required'
                           : connection.background_sync_enabled ? ' · Automatic sync on' : ' · Device sync only'}
                       </Text>
                     </View>
@@ -303,7 +312,7 @@ export default function LmsSettingsScreen() {
                           Action required · {pendingCount} new {pendingCount === 1 ? 'course' : 'courses'}
                         </Text>
                         <Text style={[styles.pendingBody, { color: colors.ink2 }]}>
-                          Canvas is listing {pendingCount === 1 ? 'a course' : 'courses'} Semora has not imported. Review and choose a semester.
+                          {translate(`${LMS_PROVIDER_LABELS[connection.provider]} is listing ${pendingCount === 1 ? 'a course' : 'courses'} Semora has not imported. Review and choose a semester.`)}
                         </Text>
                       </View>
                       <FontAwesome name="chevron-right" size={11} color={colors.ink3} />
@@ -391,9 +400,19 @@ export default function LmsSettingsScreen() {
             // Connecting a platform normally needs Pro; free users get the
             // locked teaser → paywall instead of opening the connect flow.
             // While the offer is live nobody is locked out — see lmsAllowed.
-            onPress={() => (lmsAllowed
-              ? router.push({ pathname: '/settings/lms-connect', params: { provider: provider.id, source } } as any)
-              : openPaywall())}
+            onPress={() => {
+              // The FIRST step of the funnel, and it was invisible: until now
+              // the earliest Moodle signal was lms_connect_opened, so a student
+              // who tapped the row and bounced straight back looked identical
+              // to one who never opened this screen at all.
+              track('lms_provider_tapped', {
+                screen: 'settings_lms', provider: provider.id, source,
+                allowed: lmsAllowed, funnel_step: 'chose_provider',
+              });
+              return lmsAllowed
+                ? router.push({ pathname: '/settings/lms-connect', params: { provider: provider.id, source } } as any)
+                : openPaywall();
+            }}
             style={[styles.providerRow, { backgroundColor: colors.card, borderColor: colors.line }]}
             activeOpacity={0.75}
             accessibilityRole="button"

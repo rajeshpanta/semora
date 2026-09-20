@@ -65,9 +65,26 @@ export function canvasSourceOf(raw: string | string[] | undefined): string {
  * These codes answer the only question the experiment asks — where the flow
  * loses people — and carry nothing that could authenticate as anyone.
  */
-export function lmsFailureCode(message: string): string {
+export function lmsFailureCode(message: string, code?: string | null): string {
+  // MOODLE_PLAN.md Phase 5.3. The server's bounded code wins over every regex
+  // below. Those patterns were written for Canvas's own wording and they
+  // misread Moodle's: "Moodle did not return a calendar. Try again in a few
+  // minutes." contains no Canvas marker and falls through to the generic
+  // network test, which would file a school's firewall as bad wifi.
+  if (code) return code;
   const text = (message ?? '').toLowerCase();
   if (/pro feature/.test(text)) return 'pro_required';
+  // The Moodle refusals, matched on their own exact wording (they are
+  // byte-identical between lib/moodleFeedUrl.ts and the edge function).
+  if (/paste your moodle calendar link/.test(text)) return 'moodle_feed_url_empty';
+  if (/moodle calendar link is too long/.test(text)) return 'moodle_feed_url_too_long';
+  if (/complete calendar url copied from moodle/.test(text)) return 'moodle_feed_url_unparseable';
+  if (/moodle sign-in page/.test(text)) return 'moodle_feed_url_login_page';
+  if (/that is the export page/.test(text)) return 'moodle_feed_url_export_page';
+  if (/downloaded file, not the link/.test(text)) return 'moodle_feed_export_file';
+  if (/different moodle than the one you chose/.test(text)) return 'moodle_feed_url_other_host';
+  if (/not a moodle calendar export link/.test(text)) return 'moodle_feed_url_wrong_page';
+  if (/moodle calendar links must use/.test(text)) return 'moodle_feed_url_bad_host';
   if (/cancel/.test(text)) return 'cancelled';
   // The five normalizeCanvasCalendarFeedUrl refusals, kept apart because they
   // call for different help: an empty box is a different problem from a link

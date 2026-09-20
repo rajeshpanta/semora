@@ -1,0 +1,48 @@
+BEGIN:VCALENDAR
+METHOD:PUBLISH
+PRODID:-//Moodle Pty Ltd//NONSGML Moodle Version 2026042000//EN
+VERSION:2.0
+BEGIN:VEVENT
+UID:449@school.moodledemo.net
+SUMMARY:(Mobile assignment) View from your window is due
+DESCRIPTION:We all live and work in many different and varied locations.\n\
+	nTake a photo with your smartphone or tablet device of the view from your w
+	indow.\n\nUpload it here from your mobile and add a few words to explain it
+	.\n
+	
+CLASS:PUBLIC
+LAST-MODIFIED:20250901T112023Z
+DTSTAMP:20260920T002229Z
+DTSTART:20261222T230000Z
+DTEND:20261222T230000Z
+CATEGORIES:Celebrating Cultures
+END:VEVENT
+BEGIN:VEVENT
+UID:597@school.moodledemo.net
+SUMMARY:(Mobile assignment) View from your window is due (extension)
+DESCRIPTION:We all live and work in many different and varied locations.\n\
+	nTake a photo with your smartphone or tablet device of the view from your w
+	indow.\n\nUpload it here from your mobile and add a few words to explain it
+	.\n
+	
+CLASS:PUBLIC
+LAST-MODIFIED:20260920T002131Z
+DTSTAMP:20260920T002229Z
+DTSTART:20270115T225900Z
+DTEND:20270115T225900Z
+CATEGORIES:Celebrating Cultures
+END:VEVENT
+BEGIN:VEVENT
+UID:598@school.moodledemo.net
+SUMMARY:What do you already know? - Override (Due date)
+DESCRIPTION:Initial assignment to test what you understand already by the t
+	erm Cross cultural Communication.\n
+	
+CLASS:PUBLIC
+LAST-MODIFIED:20260920T002227Z
+DTSTAMP:20260920T002229Z
+DTSTART:20270810T225900Z
+DTEND:20270810T225900Z
+CATEGORIES:Cross-cultural Communication
+END:VEVENT
+END:VCALENDAR

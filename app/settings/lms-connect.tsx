@@ -27,7 +27,7 @@ import {
   canvasSourceOf,
   canvasFreePromoQuery,
   connectLms,
-  discoverLmsCourses,
+  discoverLmsCoursesDetailed,
   DiscoveredLmsCourse,
   LMS_PROVIDER_LABELS,
   normalizeCanvasCalendarFeedUrl,
@@ -41,6 +41,19 @@ import {
 } from '@/lib/lms';
 import { track } from '@/lib/analytics';
 import { CanvasGuidedPaste } from '@/components/CanvasGuidedPaste';
+import { MoodleGuidedPaste } from '@/components/MoodleGuidedPaste';
+import {
+  describeMoodleFeedInput,
+  moodleCalendarOrigin,
+  normalizeMoodleCalendarFeedUrl,
+} from '@/lib/moodleFeedUrl';
+import {
+  EMPTY_LMS_PROGRESS,
+  lmsSetupStorageKey,
+  parseLmsSetupProgress,
+  serializeLmsSetupProgress,
+  type LmsSetupProgress,
+} from '@/lib/lmsSetupProgress';
 import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
 import {
   canvasSetupStorageKey,
@@ -102,7 +115,16 @@ export default function LmsConnectScreen() {
     ? params.provider
     : 'canvas') as LmsProvider;
   const reconnecting = !!params.connectionId;
+  /**
+   * Which road a Moodle student is on. The calendar link is the default for
+   * everyone; the web-service token stays behind one small link for the rare
+   * school whose Moodle team issues one. MOODLE_PLAN.md §4.
+   */
+  const [moodleLane, setMoodleLane] = useState<'feed' | 'token'>('feed');
   const isCanvasCalendar = provider === 'canvas';
+  const isMoodleFeed = provider === 'moodle' && moodleLane === 'feed';
+  /** Either provider's calendar-feed road: everything below keys on this. */
+  const isCalendarFeed = isCanvasCalendar || isMoodleFeed;
   const { data: semesters = [], refetch: refetchSemesters } = useSemesters();
   const isPro = useAppStore((state) => state.isPro);
   const selectedSemesterId = useAppStore((state) => state.selectedSemesterId);
@@ -173,6 +195,33 @@ export default function LmsConnectScreen() {
     if (setupKey) setDeviceItem(setupKey, serializeCanvasSetupProgress(next));
   }, [setupKey]);
 
+  // Moodle keeps its own progress under its own key. Sharing one key with
+  // Canvas meant a student who poked at Canvas last week opened the Moodle
+  // screen and met a Canvas school, a Canvas lane and a Canvas attempt count —
+  // and because the heading hides itself once a lane is chosen, that presents
+  // as a blank screen with no way forward. See lib/lmsSetupProgress.ts.
+  const moodleKey = session?.user?.id ? lmsSetupStorageKey('moodle', session.user.id) : null;
+  const [moodleProgress, setMoodleProgress] = useState<LmsSetupProgress>(EMPTY_LMS_PROGRESS);
+  useEffect(() => {
+    if (!moodleKey) return;
+    const stored = parseLmsSetupProgress(getDeviceItem(moodleKey));
+    // Reconnecting: the school is already known from the connection's own
+    // base_url, so do not make a student whose link expired identify their
+    // university a second time. Stored progress still wins when it is fresher.
+    if (!stored.wwwroot && reconnecting && params.baseUrl) {
+      const root = params.baseUrl.replace(/\/+$/, '');
+      let host: string | null = null;
+      try { host = new URL(root).hostname; } catch { host = null; }
+      setMoodleProgress({ ...stored, wwwroot: root, host, setupLane: stored.setupLane ?? 'phone' });
+      return;
+    }
+    setMoodleProgress(stored);
+  }, [moodleKey, reconnecting, params.baseUrl]);
+  const saveMoodleProgress = useCallback((next: LmsSetupProgress) => {
+    setMoodleProgress(next);
+    if (moodleKey) setDeviceItem(moodleKey, serializeLmsSetupProgress(next));
+  }, [moodleKey]);
+
   // Existing courses in the semester the import is going into — the only place
   // a duplicate can appear. Scoped to that semester on purpose: last term's
   // "PHYS 212" is not the class being imported now, and offering it would be
@@ -204,9 +253,15 @@ export default function LmsConnectScreen() {
     if (isCanvasCalendar) {
       try { return canvasCalendarOrigin(token); } catch { return ''; }
     }
+    if (isMoodleFeed) {
+      // The site the student identified is authoritative; the link is only a
+      // fallback for a reconnect where progress was never written.
+      if (moodleProgress.wwwroot) return moodleProgress.wwwroot;
+      try { return moodleCalendarOrigin(token); } catch { return ''; }
+    }
     return baseUrl.trim().replace(/\/+$/, '');
-  }, [baseUrl, isCanvasCalendar, token]);
-  const connectionMethod = isCanvasCalendar ? 'calendar_feed' as const : 'legacy_token' as const;
+  }, [baseUrl, isCanvasCalendar, isMoodleFeed, moodleProgress.wwwroot, token]);
+  const connectionMethod = isCalendarFeed ? 'calendar_feed' as const : 'legacy_token' as const;
 
   // Say what is wrong WHILE they are looking at the field, not after Connect.
   // The box is a masked credential field, so a student rejected on submit is
@@ -218,6 +273,37 @@ export default function LmsConnectScreen() {
     () => (isCanvasCalendar ? describeCanvasFeedInput(token) : null),
     [isCanvasCalendar, token],
   );
+  // The same job for Moodle, plus the one thing Canvas cannot get wrong: a
+  // link from a different Moodle than the school they chose.
+  const moodleVerdict = useMemo(
+    () => (isMoodleFeed ? describeMoodleFeedInput(token, moodleProgress.wwwroot) : null),
+    [isMoodleFeed, token, moodleProgress.wwwroot],
+  );
+  /** Whichever road is live, in one shape, so the guards below read once. */
+  const feedLooksRight = isMoodleFeed
+    ? moodleVerdict?.state === 'ok'
+    : feedVerdict?.state === 'ok';
+  /**
+   * Has this provider's student picked a lane yet?
+   *
+   * The heading, subtitle and free-offer card all hide once they have, because
+   * by then the page should be instructing rather than pitching. Reading the
+   * CURRENT provider's progress is what stops a stale Canvas lane from blanking
+   * the Moodle screen.
+   */
+  const feedLaneChosen = isMoodleFeed ? !!moodleProgress.setupLane : !!setupProgress.setupLane;
+  /**
+   * Is there anything in the field worth submitting?
+   *
+   * The empty submit is an affordance error, not a user error: it was the most
+   * common recorded failure of this screen, and every one was someone tapping
+   * the only button on the page before they had anything to send.
+   */
+  /** How far ahead the feed reached, when the provider could say. */
+  const [horizonDays, setHorizonDays] = useState<number | null>(null);
+  const feedHasSomething = isMoodleFeed
+    ? !!moodleVerdict && moodleVerdict.state !== 'empty'
+    : !!feedVerdict && feedVerdict.state !== 'empty';
 
   // ── The Canvas connect funnel starts here ────────────────────────────────
   //
@@ -270,12 +356,14 @@ export default function LmsConnectScreen() {
   }, [gateResolved, lmsAllowed, provider, connectionMethod, source, reconnecting]);
 
   const manualCredential = (): LmsCredential => ({
-    accessToken: isCanvasCalendar ? normalizeCanvasCalendarFeedUrl(token) : token.trim(),
+    accessToken: isCanvasCalendar
+      ? normalizeCanvasCalendarFeedUrl(token)
+      : isMoodleFeed ? normalizeMoodleCalendarFeedUrl(token) : token.trim(),
   });
 
   const obtainCredential = async () => {
     if (provider === 'google_classroom') return requestGoogleClassroomCredential();
-    if (isCanvasCalendar) return manualCredential();
+    if (isCalendarFeed) return manualCredential();
     if (!normalizedBase) throw new Error('Enter your school LMS URL.');
     try {
       const parsed = new URL(normalizedBase);
@@ -313,12 +401,18 @@ export default function LmsConnectScreen() {
     setWorking(true);
     try {
       const nextCredential = await obtainCredential();
-      const found = await discoverLmsCourses({
+      const discovery = await discoverLmsCoursesDetailed({
         provider,
         connectionMethod,
         baseUrl: normalizedBase || null,
         credential: nextCredential,
       });
+      const found = discovery.courses;
+      // Only Moodle reports this, and only the review screen reads it: a
+      // school's administrator can narrow the calendar export to as little as
+      // 30 days, and a student needs to be told that rather than conclude half
+      // their semester is missing.
+      setHorizonDays(discovery.horizonDays);
       // The feed was reachable and readable. `courses` is the number offered,
       // which is what separates "Canvas said no" from "Canvas said nothing" —
       // a feed that opens and returns zero dated courses is a real and
@@ -349,6 +443,23 @@ export default function LmsConnectScreen() {
       setCourses(found);
       setSelected(new Set(found.map((course) => course.id)));
       if (!found.length) {
+        // A Moodle feed with nothing in it is not a failure. Early in a term,
+        // before any instructor has set a date, Moodle's calendar is genuinely
+        // empty — and refusing the connection there means the student has to
+        // remember to come back and do the whole thing again. Saving the link
+        // instead means the courses appear on their own, the first time a date
+        // is posted. MOODLE_PLAN.md Phase 4.5.
+        if (isMoodleFeed && !reconnecting) {
+          Alert.alert(
+            'Nothing dated yet',
+            'Your Moodle calendar has no due dates right now. Semora saved your link and checks every few hours; courses appear as soon as an instructor adds a date — or as soon as your teacher makes the course visible.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Save and keep checking', onPress: () => { void saveEmptyMoodle(nextCredential); } },
+            ],
+          );
+          return;
+        }
         Alert.alert(
           isCanvasCalendar ? 'No dated Canvas work found' : 'No active courses found',
           isCanvasCalendar
@@ -372,11 +483,14 @@ export default function LmsConnectScreen() {
         method: connectionMethod,
         source,
         reconnecting,
-        reason: lmsFailureCode(message),
+        reason: lmsFailureCode(message, (error as { code?: string })?.code),
       });
       // Escalation is keyed on this. Counted here rather than in the component
       // so it survives the screen being torn down while the student is away in
       // a browser — which is exactly when a second attempt happens.
+      if (isMoodleFeed) {
+        saveMoodleProgress({ ...moodleProgress, attempts: moodleProgress.attempts + 1 });
+      }
       if (isCanvasCalendar) {
         saveProgress({ ...setupProgress, attempts: setupProgress.attempts + 1 });
       }
@@ -408,21 +522,74 @@ export default function LmsConnectScreen() {
   const autoAdvancedFor = useRef<string | null>(null);
   const [autoAdvancing, setAutoAdvancing] = useState(false);
   useEffect(() => {
-    if (!isCanvasCalendar) return;
-    if (!feedVerdict || feedVerdict.state !== 'ok') return;
+    if (!isCalendarFeed) return;
+    const ready = isMoodleFeed ? moodleVerdict : feedVerdict;
+    if (!ready || ready.state !== 'ok') return;
     if (working || courses.length > 0) return;
-    if (autoAdvancedFor.current === feedVerdict.url) return;
-    autoAdvancedFor.current = feedVerdict.url;
+    if (autoAdvancedFor.current === ready.url) return;
+    autoAdvancedFor.current = ready.url;
     setAutoAdvancing(true);
     // A beat, so a student watching the field sees "looks right" register
     // before the screen starts working. Instant would read as a glitch.
     const timer = setTimeout(() => {
-      track('canvas_setup_auto_advanced', { screen: 'lms_connect', source, lane: reconnecting ? 'repair' : 'connect' });
+      // Canvas keeps its own event name so every existing query still counts
+      // the same thing; Moodle is separable by `provider`.
+      track('canvas_setup_auto_advanced', { screen: 'lms_connect', provider, source, lane: reconnecting ? 'repair' : 'connect' });
       void discover().finally(() => setAutoAdvancing(false));
     }, 450);
     return () => { clearTimeout(timer); setAutoAdvancing(false); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCanvasCalendar, feedVerdict, working, courses.length]);
+  }, [isCalendarFeed, isMoodleFeed, feedVerdict, moodleVerdict, working, courses.length]);
+
+  /**
+   * Save a Moodle link that currently points at an empty calendar.
+   *
+   * The connection is created with no courses; the background sync then
+   * discovers them the moment an instructor dates something, and they surface
+   * as "New courses" exactly as a new term does on Canvas.
+   */
+  const saveEmptyMoodle = async (nextCredential: LmsCredential) => {
+    if (!session || working) return;
+    const target = semesterId || semesters[0]?.id || '';
+    if (!target) {
+      Alert.alert('Semester needed', 'Create or select a semester before importing LMS courses.');
+      return;
+    }
+    setWorking(true);
+    try {
+      await connectLms({
+        userId: session.user.id,
+        semesterId: target,
+        provider,
+        connectionMethod,
+        displayName: displayName.trim() || LMS_PROVIDER_LABELS[provider],
+        baseUrl: normalizedBase || null,
+        credential: nextCredential,
+        courses: [],
+        declined: [],
+      });
+      track('lms_connect_completed', {
+        lane: 'connect', funnel_step: 'completed', screen: 'lms_connect',
+        provider, method: connectionMethod, source, courses: 0,
+      });
+      if (moodleKey) setDeviceItem(moodleKey, serializeLmsSetupProgress(EMPTY_LMS_PROGRESS));
+      Alert.alert(
+        'Moodle saved',
+        'Semora will keep checking your Moodle every few hours and will tell you when a course has a date.',
+        [{ text: 'OK', onPress: () => router.back() }],
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The learning platform could not be connected.';
+      track('lms_connect_failed', {
+        lane: 'connect', funnel_step: 'completed', screen: 'lms_connect',
+        provider, method: connectionMethod, source,
+        reason: lmsFailureCode(message, (error as { code?: string })?.code),
+      });
+      Alert.alert('Couldn’t connect', message);
+    } finally {
+      setWorking(false);
+    }
+  };
 
   const save = async () => {
     if (!credential || !session || working) return;
@@ -539,8 +706,10 @@ export default function LmsConnectScreen() {
         deadlines: result.processed,
       });
       Alert.alert(
-        isCanvasCalendar ? 'Canvas connected' : 'Connected',
-        `${chosen.length} ${chosen.length === 1 ? 'course' : 'courses'} and ${result.processed} deadlines imported.${isCanvasCalendar ? ' Semora will keep checking Canvas every few hours.' : ''}`,
+        isCanvasCalendar ? 'Canvas connected' : isMoodleFeed ? 'Moodle connected' : 'Connected',
+        isCalendarFeed
+          ? `${chosen.length} ${chosen.length === 1 ? 'course' : 'courses'} and ${result.processed} deadlines imported. Semora will keep checking ${isMoodleFeed ? 'Moodle' : 'Canvas'} every few hours.`
+          : `${chosen.length} ${chosen.length === 1 ? 'course' : 'courses'} and ${result.processed} deadlines imported.`,
         // Deliberately NOT a paywall. This is the moment the promotion promised
         // something and delivered it; charging straight into an upsell here is
         // how a kept promise starts to feel like a setup. Pro is offered again
@@ -630,7 +799,10 @@ export default function LmsConnectScreen() {
               {isCanvasCalendar && <Text style={[styles.eyebrow, { color: colors.brand }]}>
                   {setupProgress.setupLane ? 'CANVAS SETUP · STEP 2 OF 2' : 'CANVAS SETUP · STEP 1 OF 2'}
                 </Text>}
-              {!setupProgress.setupLane && (
+              {isMoodleFeed && <Text style={[styles.eyebrow, { color: colors.brand }]}>
+                  {moodleProgress.setupLane ? 'MOODLE SETUP · STEP 2 OF 2' : 'MOODLE SETUP · STEP 1 OF 2'}
+                </Text>}
+              {!feedLaneChosen && (
               <Text style={[styles.title, { color: colors.ink }]}>
                 {provider === 'google_classroom'
                   ? 'Sign in to Google Classroom'
@@ -642,6 +814,8 @@ export default function LmsConnectScreen() {
                     // every action word is silent about it — that gap is what
                     // makes a promo feel like it had a catch.
                     ? (lmsFree ? 'Nice. This takes about a minute.' : 'Connect Canvas to Semora')
+                    : isMoodleFeed
+                    ? (lmsFree ? 'Nice. This takes about a minute.' : 'Connect Moodle to Semora')
                     : `Connect your ${LMS_PROVIDER_LABELS[provider]} account`}
               </Text>
               )}
@@ -649,10 +823,12 @@ export default function LmsConnectScreen() {
                   instructing. This line answers "why do I have to go to Canvas",
                   which is settled the moment they pick one — leaving it above the
                   steps is what made the laptop screen read as repetition. */}
-              {!setupProgress.setupLane && (
+              {!feedLaneChosen && (
                 <Text style={[styles.subtitle, { color: colors.ink2 }]}>
                   {isCanvasCalendar
                     ? 'Canvas keeps your calendar link behind your login, so there is one quick trip to make. Semora does the rest.'
+                    : isMoodleFeed
+                    ? 'Moodle keeps your calendar link behind your login, so there is one quick trip to make. Semora does the rest.'
                     : 'Semora makes read-only requests to import classes, deadlines, points, and available submission status. It never changes your LMS.'}
                 </Text>
               )}
@@ -667,13 +843,17 @@ export default function LmsConnectScreen() {
                   time" while quietly meaning "we may switch yours off too" is
                   the version of this that would deserve the App Store review
                   it would get. */}
-              {lmsFree && !reconnecting && !setupProgress.setupLane && (
+              {lmsFree && !reconnecting && !feedLaneChosen && (
                 <View style={[styles.freeOffer, { backgroundColor: colors.teal50, borderColor: colors.teal }]}>
                   <FontAwesome name="gift" size={15} color={colors.teal} />
                   <View style={{ flex: 1 }}>
-                    <Text style={[styles.freeOfferTitle, { color: colors.ink }]}>Lock in free Canvas sync</Text>
+                    <Text style={[styles.freeOfferTitle, { color: colors.ink }]}>
+                      {isMoodleFeed ? 'Lock in free Moodle sync' : 'Lock in free Canvas sync'}
+                    </Text>
                     <Text style={[styles.freeOfferText, { color: colors.ink2 }]}>
-                      Canvas sync is free while this offer runs. Connect before it ends and it stays free on this account.
+                      {isMoodleFeed
+                        ? 'Moodle sync is free while this offer runs. Connect before it ends and it stays free on this account.'
+                        : 'Canvas sync is free while this offer runs. Connect before it ends and it stays free on this account.'}
                     </Text>
                   </View>
                 </View>
@@ -712,7 +892,39 @@ export default function LmsConnectScreen() {
                 </>
               )}
 
-              {provider !== 'google_classroom' && !isCanvasCalendar && (
+              {isMoodleFeed && (
+                <>
+                  {/* The Moodle twin of the block above. Same shapes because
+                      they work; different content because Moodle is
+                      self-hosted (no directory to search), its export page has
+                      a second button that downloads a file instead of showing
+                      a link, and its sign-in happens inside the sheet. */}
+                  <MoodleGuidedPaste
+                    token={token}
+                    onTokenChange={setToken}
+                    verdict={moodleVerdict}
+                    progress={moodleProgress}
+                    onProgressChange={saveMoodleProgress}
+                    working={working}
+                    autoAdvancing={autoAdvancing}
+                    source={source}
+                  />
+                  {/* The second door, deliberately small. Zero schools have
+                      ever issued a student one of these, but the code that
+                      reads them is live and a school that does issue one
+                      should not be turned away. */}
+                  <TouchableOpacity
+                    style={styles.tokenLaneLink}
+                    onPress={() => setMoodleLane('token')}
+                    accessibilityRole="button"
+                    accessibilityLabel="My school gave me a web-service token"
+                  >
+                    <Text style={[styles.link, { color: colors.ink2 }]}>My school gave me a web-service token</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {provider !== 'google_classroom' && !isCalendarFeed && (
                 <>
                   <Text style={[styles.label, { color: colors.ink2 }]}>School LMS URL</Text>
                   <TextInput
@@ -768,21 +980,21 @@ export default function LmsConnectScreen() {
                   chosen is what made this screen and the next look identical:
                   the student picks phone or laptop and the bottom half of the
                   page has not changed. */}
-              {(!isCanvasCalendar || setupProgress.setupLane === 'phone') && (
+              {(!isCalendarFeed || feedLaneChosen) && (
               <TouchableOpacity
                 onPress={discover}
-                disabled={working || (isCanvasCalendar && (!feedVerdict || feedVerdict.state === 'empty'))}
+                disabled={working || (isCalendarFeed && !feedHasSomething)}
                 style={[
                   styles.primary,
-                  { backgroundColor: working || (isCanvasCalendar && (!feedVerdict || feedVerdict.state === 'empty'))
+                  { backgroundColor: working || (isCalendarFeed && !feedHasSomething)
                       ? colors.line
                       : colors.brand },
                 ]}
               >
                 {working ? <ActivityIndicator color="#fff" /> : (
                   <>
-                    <FontAwesome name={provider === 'google_classroom' ? 'google' : isCanvasCalendar ? 'calendar' : 'search'} size={14} color="#fff" />
-                    <Text style={styles.primaryText}>{reconnecting ? 'Reconnect and sync' : provider === 'google_classroom' ? 'Continue with Google' : isCanvasCalendar ? (lmsFree ? 'Check my link' : 'Check link and choose courses') : 'Find my courses'}</Text>
+                    <FontAwesome name={provider === 'google_classroom' ? 'google' : isCalendarFeed ? 'calendar' : 'search'} size={14} color="#fff" />
+                    <Text style={styles.primaryText}>{reconnecting ? 'Reconnect and sync' : provider === 'google_classroom' ? 'Continue with Google' : isCalendarFeed ? (lmsFree ? 'Check my link' : 'Check link and choose courses') : 'Find my courses'}</Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -791,12 +1003,28 @@ export default function LmsConnectScreen() {
           ) : (
             <>
               {isCanvasCalendar && <Text style={[styles.eyebrow, { color: colors.brand }]}>CANVAS SETUP · STEP 2 OF 2</Text>}
-              <Text style={[styles.title, { color: colors.ink }]}>{isCanvasCalendar ? 'Choose courses to sync' : 'Choose courses'}</Text>
+              {isMoodleFeed && <Text style={[styles.eyebrow, { color: colors.brand }]}>MOODLE SETUP · STEP 2 OF 2</Text>}
+              <Text style={[styles.title, { color: colors.ink }]}>{isCalendarFeed ? 'Choose courses to sync' : 'Choose courses'}</Text>
               <Text style={[styles.subtitle, { color: colors.ink2 }]}>
-                {isCanvasCalendar
+                {isCalendarFeed
                   ? 'Select the courses you want in Semora and choose the semester where they belong. Semora creates each course and imports its current deadlines.'
                   : 'Semora creates a local course for each selection and keeps its assignments refreshed.'}
               </Text>
+              {/* The honest line. A calendar feed contains events, so courses
+                  are inferred from them — a class with nothing scheduled, or
+                  one the teacher has not released, is simply not in the feed.
+                  Said here, where the student is looking at the list and can
+                  notice one missing. */}
+              {isMoodleFeed && (
+                <Text style={[styles.subtitle, { color: colors.ink2 }]}>
+                  Only classes with dated work in Moodle appear here. A class with nothing scheduled, or one your teacher hasn’t released yet, shows up when its first deadline is posted.
+                </Text>
+              )}
+              {isMoodleFeed && horizonDays !== null && horizonDays < 60 && (
+                <Text style={[styles.subtitle, { color: colors.ink2 }]}>
+                  {`Your Moodle shares ${horizonDays} days ahead.`}
+                </Text>
+              )}
               <Text style={[styles.label, { color: colors.ink2 }]}>Connection name</Text>
               <TextInput
                 value={displayName}
@@ -818,6 +1046,12 @@ export default function LmsConnectScreen() {
                 semesterId={semesterId}
                 onSemesterChange={setSemesterId}
                 onSemesterCreated={() => { refetchSemesters(); }}
+                onRename={isMoodleFeed ? (courseId, name) => {
+                  // Local display name only. external_course_id stays the
+                  // Moodle shortname, because that is the key every future
+                  // sync matches on — renaming that would orphan the course.
+                  setCourses((list) => list.map((c) => (c.id === courseId ? { ...c, name } : c)));
+                } : undefined}
                 footer={isCanvasCalendar ? (
                   <View style={[styles.afterConnect, { backgroundColor: colors.brand50 }]}>
                     <FontAwesome name="check-circle" size={14} color={colors.brand} />
@@ -827,7 +1061,11 @@ export default function LmsConnectScreen() {
               />
 
               <TouchableOpacity onPress={save} disabled={working} style={[styles.primary, { backgroundColor: colors.brand }]}>
-                {working ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{isCanvasCalendar ? (lmsFree ? 'Connect Canvas free and start syncing' : 'Connect Canvas and start syncing') : 'Import and sync'}</Text>}
+                {working ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>{
+                  isCanvasCalendar ? (lmsFree ? 'Connect Canvas free and start syncing' : 'Connect Canvas and start syncing')
+                  : isMoodleFeed ? (lmsFree ? 'Connect Moodle free and start syncing' : 'Connect Moodle and start syncing')
+                  : 'Import and sync'
+                }</Text>}
               </TouchableOpacity>
             </>
           )}
@@ -876,6 +1114,7 @@ const styles = StyleSheet.create({
   chip: { minHeight: 38, borderRadius: 12, borderWidth: 1, paddingHorizontal: 13, alignItems: 'center', justifyContent: 'center' },
   chipText: { fontSize: 12, fontWeight: '700' },
   link: { fontSize: 12, fontWeight: '800' },
+  tokenLaneLink: { paddingVertical: 10, alignItems: 'center' },
   selectHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, marginBottom: 7 },
   course: { minHeight: 61, borderRadius: 14, borderWidth: 1.2, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 8 },
   checkbox: { width: 23, height: 23, borderRadius: 7, borderWidth: 1.3, alignItems: 'center', justifyContent: 'center' },

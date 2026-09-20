@@ -47,6 +47,53 @@ function spanishPattern(input: string): string | null {
   match = input.match(/^Today · (\d+) items?$/i);
   if (match) return `Hoy · ${match[1]} ${match[1] === '1' ? 'elemento' : 'elementos'}`;
 
+  // Moodle setup — every one of these carries a host, a name or a count, so
+  // none of them can live in the phrase map. MOODLE_PLAN.md Phase 4.10.
+  match = input.match(/^MOODLE SETUP · STEP (\d) OF 2$/);
+  if (match) return `CONFIGURACIÓN DE MOODLE · PASO ${match[1]} DE 2`;
+  match = input.match(/^Found: (.+)$/);
+  if (match) return `Encontrado: ${match[1]}`;
+  match = input.match(/^Looks right — (.+)$/);
+  if (match) return `Parece correcto: ${match[1]}`;
+  match = input.match(/^That link is from (.+?) — open its calendar export instead$/);
+  if (match) return `Ese enlace es de ${match[1]}: abre su exportación del calendario`;
+  match = input.match(/^Your Moodle shares (\d+) days ahead\.$/);
+  if (match) return `Tu Moodle comparte ${match[1]} días hacia adelante.`;
+  // Before the generic rule below, which would otherwise leave "courses" in
+  // English inside a Spanish sentence.
+  match = input.match(/^Your enrolment in (\d+) courses has ended in Moodle\.$/);
+  if (match) return `Tu matrícula en ${match[1]} asignaturas terminó en Moodle.`;
+  match = input.match(/^Your enrolment in (.+) has ended in Moodle\.$/);
+  if (match) return `Tu matrícula en ${match[1]} terminó en Moodle.`;
+  // The new-courses lane, which used to say "Canvas" to every student on
+  // every platform. The exact Canvas sentences are still in the phrase map and
+  // are matched before these, so Canvas wording is unchanged.
+  match = input.match(/^New (Canvas|Moodle|Blackboard|Google Classroom) courses$/);
+  if (match) return `Nuevas materias de ${match[1]}`;
+  match = input.match(/^new (Canvas|Moodle|Blackboard|Google Classroom) (course|courses)$/);
+  if (match) return `${match[2] === 'course' ? 'materia nueva' : 'materias nuevas'} de ${match[1]}`;
+  match = input.match(/^Semora checks (Canvas|Moodle|Blackboard|Google Classroom) every few hours\. When next semester[’']s courses appear, they will show up here\.$/);
+  if (match) return `Semora revisa ${match[1]} cada pocas horas. Cuando aparezcan las materias del próximo semestre, saldrán aquí.`;
+  match = input.match(/^(Canvas|Moodle|Blackboard|Google Classroom) is now listing courses Semora has not imported\. Nothing has been added to your semesters — choose what belongs and where it goes\.$/);
+  if (match) return `${match[1]} está mostrando materias que Semora no ha importado. No se ha añadido nada a tus semestres: elige cuáles son tuyas y dónde van.`;
+  match = input.match(/^Need another semester\? Pro removes the one-semester limit — your (Canvas|Moodle|Blackboard|Google Classroom) connection stays exactly as it is\.$/);
+  if (match) return `¿Necesitas otro semestre? Pro quita el límite de un semestre y tu conexión con ${match[1]} se queda tal cual.`;
+  match = input.match(/^(Canvas|Moodle|Blackboard|Google Classroom) is listing (?:a course|courses) Semora has not imported\. Review and choose a semester\.$/);
+  if (match) {
+    return `${match[1]} está mostrando materias que Semora no ha importado. Revísalas y elige un semestre.`;
+  }
+  match = input.match(/^(Canvas|Moodle) checks every few hours$/);
+  if (match) return `${match[1]} revisa cada pocas horas`;
+  match = input.match(/^Prefilled from the dates in this (Canvas|Moodle) coursework\.$/);
+  if (match) return `Precargado con las fechas de este trabajo de ${match[1]}.`;
+  match = input.match(/^(\d+) (?:course|courses) and (\d+) deadlines imported\. Semora will keep checking (Canvas|Moodle) every few hours\.$/);
+  if (match) {
+    const courses = match[1] === '1' ? '1 asignatura' : `${match[1]} asignaturas`;
+    return `${courses} y ${match[2]} entregas importadas. Semora seguirá revisando ${match[3]} cada pocas horas.`;
+  }
+  match = input.match(/^Open (.+)$/);
+  if (match && /\./.test(match[1]) && !/\s/.test(match[1])) return `Abrir ${match[1]}`;
+
   // Incomplete lecture notes — the count is interpolated, so this sentence
   // never appears in the phrase map. Added 2026-09-14 with the line itself: a
   // student whose lecture lost half its audio was told nothing at all, and

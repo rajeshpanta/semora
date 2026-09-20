@@ -1,0 +1,33 @@
+BEGIN:VCALENDAR
+METHOD:PUBLISH
+PRODID:-//Moodle Pty Ltd//NONSGML Moodle Version 2026042000//EN
+VERSION:2.0
+BEGIN:VEVENT
+UID:449@school.moodledemo.net
+SUMMARY:(Mobile assignment) View from your window is due
+DESCRIPTION:We all live and work in many different and varied locations.\n\
+	nTake a photo with your smartphone or tablet device of the view from your w
+	indow.\n\nUpload it here from your mobile and add a few words to explain it
+	.\n
+	
+CLASS:PUBLIC
+LAST-MODIFIED:20250901T112023Z
+DTSTAMP:20260920T002230Z
+DTSTART:20261222T230000Z
+DTEND:20261222T230000Z
+CATEGORIES:Celebrating Cultures
+END:VEVENT
+BEGIN:VEVENT
+UID:587@school.moodledemo.net
+SUMMARY:What do you already know? is due
+DESCRIPTION:Initial assignment to test what you understand already by the t
+	erm Cross cultural Communication.\n
+	
+CLASS:PUBLIC
+LAST-MODIFIED:20250717T094605Z
+DTSTAMP:20260920T002230Z
+DTSTART:20270722T230000Z
+DTEND:20270722T230000Z
+CATEGORIES:Cross-cultural Communication
+END:VEVENT
+END:VCALENDAR

@@ -4,12 +4,39 @@ import {
   normalizeCanvasCalendarFeedUrl,
   parseCanvasCalendarFeed,
 } from '../_shared/canvas-calendar.ts';
+import {
+  fetchMoodleCalendar,
+  moodleCalendarOrigin,
+  redactMoodleFeedUrl,
+  type MoodleFeedError,
+} from '../_shared/moodle-calendar.ts';
+import { probeMoodleSite } from '../_shared/moodle-site.ts';
 import { withRequestLogging, errorFields, type EdgeLogger } from '../_shared/log.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const MAX_BODY_BYTES = 64 * 1024;
+/**
+ * The Moodle feed road, switchable without a redeploy.
+ *
+ * A bad first week should be a config flip, not a release. Set this secret to
+ * 'false' and the site check and discovery stop accepting new Moodle feed
+ * connections; every connection that already exists keeps syncing, because
+ * turning off a student's deadlines to fix a setup bug helps nobody.
+ */
+const MOODLE_FEED_ENABLED = (Deno.env.get('MOODLE_FEED_ENABLED') ?? 'true').toLowerCase() !== 'false';
+/**
+ * Whether a Moodle feed may DELETE a student's untouched tasks.
+ *
+ * Off by default and deliberately so. MOODLE_PLAN.md Phase 3 may only be
+ * turned on after Phase 2 has soaked for a week AND the owner has said yes to
+ * automated removals for Moodle (§6, decision 3) — this is deletion of
+ * students' rows on the strength of a parser, and the evidence that the parser
+ * is right does not exist until real feeds have been watched. Until then a
+ * Moodle sync only ever adds and updates.
+ */
+const MOODLE_REMOVALS_ENABLED = (Deno.env.get('MOODLE_REMOVALS_ENABLED') ?? 'false').toLowerCase() === 'true';
 const MAX_PAGES = 12;
 
 const corsHeaders = {
@@ -80,6 +107,9 @@ type SyncConnection = {
   links: Array<{
     id: string;
     external_course_id: string;
+    // The name the provider gave the course when it was linked. Read only to
+    // tell a student WHICH course stopped appearing in their Moodle.
+    external_name: string | null;
     local_course_id: string;
     sync_enabled: boolean;
   }>;
@@ -471,7 +501,14 @@ async function moodleCall(base: string, token: string, fn: string, values: URLSe
     },
     new URL(base).origin,
   );
-  if (data?.exception) throw new Error(cleanText(data.message, 300) ?? 'Moodle request failed.');
+  if (data?.exception) {
+    // The errorcode is the stable, machine-readable part. `debuginfo` echoes
+    // the request parameters — which on this road include a token — so it is
+    // deliberately never attached, logged or surfaced.
+    const failure = new Error(cleanText(data.message, 300) ?? 'Moodle request failed.') as Error & { moodleErrorCode?: string };
+    if (typeof data.errorcode === 'string') failure.moodleErrorCode = data.errorcode.slice(0, 64);
+    throw failure;
+  }
   return data;
 }
 
@@ -497,17 +534,25 @@ async function moodleAssignments(
   base: string,
   token: string,
   courseIds: string[],
+  /** Filled with how many assignments Moodle listed with no due date. */
+  counters?: { undated: number },
 ): Promise<LmsAssignment[]> {
   const params = new URLSearchParams();
   courseIds.slice(0, 50).forEach((id, index) => params.set(`courseids[${index}]`, id));
   const data = await moodleCall(base, token, 'mod_assign_get_assignments', params);
   const output: LmsAssignment[] = [];
+  // Counted, not silently dropped. Moodle creates no calendar event for an
+  // assignment with no due date, and apply_lms_assignment_sync_service skips a
+  // dateless item — which used to leave this lane reporting 'partial' for ever
+  // with nothing a student could act on. The count lands in
+  // lms_sync_runs.summary (migration 151) instead.
+  let undated = 0;
   for (const course of Array.isArray(data?.courses) ? data.courses : []) {
     for (const row of Array.isArray(course?.assignments) ? course.assignments : []) {
       if (row?.id == null || !row?.name) continue;
-      const due = typeof row.duedate === 'number' && row.duedate > 0
-        ? splitDue(new Date(row.duedate * 1000).toISOString())
-        : { due_date: null, due_time: null };
+      const dated = typeof row.duedate === 'number' && row.duedate > 0;
+      if (!dated) { undated += 1; continue; }
+      const due = splitDue(new Date(row.duedate * 1000).toISOString());
       // Moodle uses negative grade values for non-numeric scales. They are not
       // point totals and must not flow into GPA math as "-1 possible points".
       const possiblePoints = numberOrNull(row.grade);
@@ -518,10 +563,7 @@ async function moodleAssignments(
         description: cleanText(row.intro),
         type: classify(String(row.name)),
         ...due,
-        due_at:
-          typeof row.duedate === 'number' && row.duedate > 0
-            ? new Date(row.duedate * 1000).toISOString()
-            : null,
+        due_at: new Date(row.duedate * 1000).toISOString(),
         points_possible: possiblePoints != null && possiblePoints > 0 ? possiblePoints : null,
         external_updated_at:
           typeof row.timemodified === 'number' ? new Date(row.timemodified * 1000).toISOString() : null,
@@ -529,6 +571,7 @@ async function moodleAssignments(
       });
     }
   }
+  if (counters) counters.undated = undated;
   return output;
 }
 
@@ -720,6 +763,24 @@ function errorCode(error: unknown): 'credentials_required' | 'provider_error' {
   // An explicitly-classified throttle is never a credential problem, however
   // the provider happened to spell its status code.
   if ((error as any)?.code === 'provider_throttled' || THROTTLE_HINT.test(message)) return 'provider_error';
+
+  // MOODLE_PLAN.md Phase 2.7. Moodle's own errorcode, read BEFORE the message
+  // regex below — 'enablewsdescription' is a site misconfiguration whose text
+  // contains the word "token", and the regex would file it as a dead
+  // credential and purge the student's Vault row over an admin's setting.
+  const moodleCode = String((error as any)?.moodleErrorCode ?? '');
+  if (moodleCode) {
+    if (moodleCode === 'invalidtoken' || moodleCode === 'invalidlogin') return 'credentials_required';
+    if (moodleCode === 'enablewsdescription' || moodleCode === 'servicenotavailable') return 'provider_error';
+    if (moodleCode === 'accessexception' || moodleCode === 'nopermissions') return 'provider_error';
+  }
+
+  // A firewall challenge on the Moodle feed road is NOT an expired link.
+  // Moodle answers a bad token with HTTP 200 and a plain body, so any 4xx here
+  // came from infrastructure and must keep the credential.
+  if ((error as any)?.code === 'moodle_feed_blocked' || (error as any)?.code === 'moodle_feed_unreadable') {
+    return 'provider_error';
+  }
   return status === 401 || status === 403 || /reconnect|permission|unauthor|token/i.test(message)
     ? 'credentials_required'
     : 'provider_error';
@@ -938,10 +999,60 @@ async function loadConnection(
 async function fetchAssignmentsForConnection(
   connection: SyncConnection,
   token: string,
-): Promise<{ assignments: LmsAssignment[]; removalSafe: boolean; discovered: LmsCourse[] }> {
+): Promise<{
+  assignments: LmsAssignment[];
+  removalSafe: boolean;
+  discovered: LmsCourse[];
+  /** Moodle feeds only: how far ahead the feed reached, for Phase 3's window. */
+  horizonDays?: number;
+  complete?: boolean;
+  recentupcomingOk?: boolean;
+  /** Course keys seen only under preset_what=all, reported so a pseudo-course cannot leak in unnoticed. */
+  unmatchedCategories?: string[];
+  /** Token lanes only: assignments the provider listed with no due date. */
+  undated?: number;
+  /**
+   * Moodle feeds only: everything the feed carried, before the selected-course
+   * filter. A course that was renamed is BY DEFINITION not selected any more —
+   * its key changed — so the rename can only be seen from here.
+   */
+  allAssignments?: LmsAssignment[];
+}> {
   const links = connection.links.filter((link) => link.sync_enabled);
-  if (!links.length) throw new Error('This LMS connection has no enabled courses.');
+  const isMoodleFeed = connection.provider === 'moodle' && connection.connection_method === 'calendar_feed';
+  // A Moodle connection can legitimately have no courses yet: a student who
+  // connected early in term, before any instructor set a date, is saved with
+  // zero links and syncs precisely so those courses can be discovered.
+  if (!links.length && !isMoodleFeed) throw new Error('This LMS connection has no enabled courses.');
   const courseIds = links.map((link) => link.external_course_id);
+  if (isMoodleFeed) {
+    const feed = await fetchMoodleCalendar(token);
+    const selected = new Set(courseIds);
+    return {
+      discovered: feed.courses,
+      assignments: feed.assignments.filter((assignment) => selected.has(assignment.external_course_id)),
+      // Canvas decides removal is safe from a rule tuned to Canvas's own feed
+      // (non-empty and under its 1,000-item cap). Moodle has no cap, and a
+      // short response is a legitimate answer from a school that narrowed its
+      // export window rather than a broken one. Getting that backwards deletes
+      // a student's real deadlines.
+      //
+      // So three things must ALL hold, and the switch must be on:
+      //   * both `custom` fetches succeeded, so this is the whole picture
+      //   * something came back, so an outage is not read as an empty term
+      //   * the feed reached at least 30 days, so a school that narrowed its
+      //     export to a fortnight cannot make the rest of term look deleted
+      removalSafe: MOODLE_REMOVALS_ENABLED
+        && feed.complete
+        && feed.assignments.length > 0
+        && feed.horizon_days >= 30,
+      horizonDays: feed.horizon_days,
+      complete: feed.complete,
+      recentupcomingOk: feed.recentupcomingOk,
+      unmatchedCategories: feed.unmatched_categories,
+      allAssignments: feed.assignments,
+    };
+  }
   if (connection.provider === 'canvas' && connection.connection_method === 'calendar_feed') {
     const feed = await fetchCanvasCalendar(token);
     const selected = new Set(courseIds);
@@ -960,10 +1071,11 @@ async function fetchAssignmentsForConnection(
     };
   }
   const base = safeBaseUrl(connection.base_url, connection.provider);
+  const counters = { undated: 0 };
   let assignments: LmsAssignment[];
   if (connection.provider === 'canvas') assignments = await canvasAssignments(base, token, courseIds);
   else if (connection.provider === 'blackboard') assignments = await blackboardAssignments(base, token, courseIds);
-  else if (connection.provider === 'moodle') assignments = await moodleAssignments(base, token, courseIds);
+  else if (connection.provider === 'moodle') assignments = await moodleAssignments(base, token, courseIds, counters);
   else assignments = await googleAssignments(token, courseIds);
 
   // One extra listing call per sync so a token connection can notice a new
@@ -985,7 +1097,12 @@ async function fetchAssignmentsForConnection(
   // Current provider pagination is bounded; no result is trusted as a complete
   // deletion feed. Imported work is therefore preserved when an API response is
   // truncated or restricted by a school.
-  return { assignments: assignments.slice(0, 5000), removalSafe: false, discovered };
+  return {
+    assignments: assignments.slice(0, 5000),
+    removalSafe: false,
+    discovered,
+    undated: counters.undated,
+  };
 }
 
 function timeZoneParts(value: string, timeZone: string): { due_date: string; due_time: string } | null {
@@ -1063,7 +1180,75 @@ async function performConnectionSync(
   }).eq('id', connection.id);
 
   try {
-    const { assignments, removalSafe, discovered } = await fetchAssignmentsForConnection(connection, token);
+    const fetched = await fetchAssignmentsForConnection(connection, token);
+    const {
+      removalSafe, discovered,
+      horizonDays, recentupcomingOk, unmatchedCategories, undated, allAssignments,
+    } = fetched;
+    let assignments = fetched.assignments;
+
+    // ── A rename is not a new course (migration 154) ────────────────────────
+    // A Moodle feed keys its courses by SHORTNAME, which an administrator can
+    // edit at any time. When that happens every deadline changes course key at
+    // once, and without this the student is offered their own class back as a
+    // "new course" and importing it duplicates the whole term. The event ids
+    // survive a rename, so they are the anchor; the RPC refuses on any
+    // ambiguity and falls back to the ordinary new-course review.
+    //
+    // Runs BEFORE new-term detection below, which reads connection.links.
+    if (connection.provider === 'moodle' && connection.connection_method === 'calendar_feed' && allAssignments) {
+      try {
+        const names = new Map(discovered.map((course) => [course.id, course.name]));
+        const byCourse = new Map<string, string[]>();
+        for (const item of allAssignments) {
+          const key = item.external_course_id;
+          if (!key) continue;
+          const ids = byCourse.get(key);
+          if (ids) ids.push(item.external_id);
+          else byCourse.set(key, [item.external_id]);
+        }
+        const { data: rekey, error: rekeyError } = await admin.rpc('rekey_lms_renamed_courses', {
+          p_connection_id: connection.id,
+          p_courses: [...byCourse.entries()].map(([key, ids]) => ({
+            external_course_id: key,
+            external_name: names.get(key) ?? key,
+            external_ids: ids,
+          })),
+        });
+        if (rekeyError) log.error('course_rekey_failed', errorFields(rekeyError));
+        const renames: Array<{ from: string; to: string }> = Array.isArray((rekey as any)?.renames)
+          ? (rekey as any).renames
+          : [];
+        if (renames.length) {
+          // The connection in memory still holds the old keys, and everything
+          // below it — the pending-course comparison, the selected-course
+          // filter, the removal sweep — reads them.
+          for (const rename of renames) {
+            const link = connection.links.find((entry) => entry.external_course_id === rename.from);
+            if (link) link.external_course_id = rename.to;
+            log.info('lms_course_rekeyed', {
+              connection_id: connection.id, provider: connection.provider,
+              from: rename.from, to: rename.to,
+            });
+          }
+          const selected = new Set(
+            connection.links.filter((link) => link.sync_enabled).map((link) => link.external_course_id),
+          );
+          assignments = allAssignments.filter((item) => selected.has(item.external_course_id));
+        }
+      } catch (error) {
+        // A rename Semora failed to follow costs a duplicate course. A sync
+        // that dies trying costs the whole import.
+        log.error('course_rekey_threw', errorFields(error));
+      }
+    }
+    // A pseudo-course or a language Semora has not met yet would otherwise
+    // arrive silently as a class. Logged so the launch watch can find it.
+    if (unmatchedCategories?.length) {
+      log.info('lms_unmatched_categories', {
+        connection_id: connection.id, provider: connection.provider, count: unmatchedCategories.length,
+      });
+    }
 
     // ── New-term detection ──────────────────────────────────────────────
     // Courses the provider is listing that this connection has never linked.
@@ -1103,7 +1288,12 @@ async function performConnectionSync(
       log.error('pending_courses_record_threw', errorFields(error));
     }
     let timeZone = 'UTC';
-    if (connection.provider === 'canvas' && connection.connection_method === 'calendar_feed') {
+    // MOODLE_PLAN.md Phase 2.5: read for EVERY connection, not only Canvas
+    // feeds. An iCal feed carries floating times that have to be resolved
+    // against the student's own timezone or a 23:59 deadline lands on the
+    // wrong day; Moodle feeds need exactly the same treatment, and the token
+    // lanes were quietly using UTC all along.
+    {
       const { data: profile } = await admin
         .from('profiles')
         .select('timezone')
@@ -1121,6 +1311,32 @@ async function performConnectionSync(
         : [],
     });
     if (applyError) throw applyError;
+    // MOODLE_PLAN.md Phase 3.3. The Moodle window is only what the feed
+    // actually showed: four days back (inside Moodle's five-day look-back
+    // under every preset, one day in for the UTC-versus-local edge) and
+    // forward to whichever is greater of the 60-day floor and the horizon the
+    // feed reached. Nothing outside that window is ever considered missing.
+    if (connection.provider === 'moodle' && connection.connection_method === 'calendar_feed' && removalSafe) {
+      const windowEnd = Math.min(360, Math.max(recentupcomingOk ? 59 : 0, horizonDays ?? 0));
+      const startsAt = new Date(); startsAt.setUTCDate(startsAt.getUTCDate() - 4);
+      const endsAt = new Date(); endsAt.setUTCDate(endsAt.getUTCDate() + windowEnd);
+      const { error: removalError } = await admin.rpc('mark_lms_calendar_feed_removed', {
+        p_user_id: connection.user_id,
+        p_connection_id: connection.id,
+        // Every id the feed carried, not only the selected courses: the RPC
+        // scopes to the connection, and a task whose course was unlinked is
+        // still a task the feed vouched for.
+        p_received_ids: assignments.map((assignment) => assignment.external_id),
+        p_window_start: startsAt.toISOString().slice(0, 10),
+        p_window_end: endsAt.toISOString().slice(0, 10),
+        // So a refusal can tell a term ending apart from a broken feed
+        // (migration 152, Phase 3.4). Every key the feed carried, linked or
+        // not — a course the student never imported is still a course that is
+        // demonstrably still there.
+        p_present_course_ids: discovered.map((course) => course.id),
+      });
+      if (removalError) throw removalError;
+    }
     if (connection.provider === 'canvas' && connection.connection_method === 'calendar_feed' && removalSafe) {
       const { error: removalError } = await admin.rpc('mark_canvas_calendar_feed_removed', {
         p_user_id: connection.user_id,
@@ -1129,12 +1345,87 @@ async function performConnectionSync(
       });
       if (removalError) throw removalError;
     }
+    // ── When a course stops appearing at all (Phase 3.4) ───────────────────
+    // A linked course that contributed nothing to this feed, while Semora
+    // still holds future work for it, means the events themselves are gone
+    // from Moodle: the enrolment ended, the course was hidden, or the term
+    // closed. The sync succeeded and there is nothing to fix, so this is a
+    // note rather than an error — but saying nothing leaves a student staring
+    // at a connection that reports perfect health while a course quietly
+    // stops updating.
+    //
+    // Gated on proof that the feed reached at least sixty days, by either of
+    // the two routes that can establish it:
+    //
+    //   recentupcomingOk   the hard-coded −5/+60 `recentupcoming` preset was
+    //                      part of this fetch, so the window is guaranteed
+    //   horizon_days ≥ 60  the feed itself carried an event that far out,
+    //                      which proves the export reaches at least that far
+    //
+    // The second is the common case at a healthy school and was missing at
+    // first, which would have made this notice unreachable for exactly the
+    // schools whose export is configured correctly. Without either proof a
+    // school with a narrowed export window would be told its students had been
+    // unenrolled.
+    const feedCoveredTheWindow = recentupcomingOk === true || (horizonDays ?? 0) >= 60;
+    let notice: string | null = null;
+    if (connection.provider === 'moodle' && connection.connection_method === 'calendar_feed' && feedCoveredTheWindow) {
+      try {
+        const present = new Set(discovered.map((course) => course.id));
+        const vanished = connection.links.filter(
+          (link) => link.sync_enabled && !present.has(link.external_course_id),
+        );
+        if (vanished.length) {
+          const from = new Date();
+          const to = new Date(); to.setUTCDate(to.getUTCDate() + 59);
+          const { data: stranded } = await admin
+            .from('tasks')
+            .select('lms_external_course_id')
+            .eq('lms_connection_id', connection.id)
+            .is('lms_removed_at', null)
+            .in('lms_external_course_id', vanished.map((link) => link.external_course_id))
+            .gte('due_date', from.toISOString().slice(0, 10))
+            .lte('due_date', to.toISOString().slice(0, 10))
+            .limit(500);
+          const stillHoldingWork = new Set(
+            (stranded ?? []).map((row: { lms_external_course_id: string | null }) => row.lms_external_course_id),
+          );
+          const ended = vanished.filter((link) => stillHoldingWork.has(link.external_course_id));
+          if (ended.length) {
+            // One name when there is one, a count when there are several:
+            // both forms are translated (lib/i18n.ts), a list of names joined
+            // by an English "and" would not be.
+            const subject = ended.length === 1
+              ? cleanText(ended[0].external_name, 80) ?? 'this course'
+              : `${ended.length} courses`;
+            notice = `Your enrolment in ${subject} has ended in Moodle.`;
+            log.info('lms_enrolment_ended', {
+              connection_id: connection.id, provider: connection.provider, count: ended.length,
+            });
+          }
+        }
+      } catch (error) {
+        log.error('enrolment_ended_check_threw', errorFields(error));
+      }
+    }
+
     const processed = Number((applied as any)?.processed ?? 0);
     const skipped = Number((applied as any)?.skipped ?? 0);
     const status = skipped > 0 ? 'partial' : 'success';
     const finishedAt = new Date().toISOString();
+    // What a status alone cannot say (migration 151). `undated` is the Moodle
+    // token lane's count of assignments the school never dated; `horizon_days`
+    // is how far ahead a feed actually reached, which Phase 3 needs before it
+    // may remove anything.
+    const summary: Record<string, unknown> = {};
+    if (undated) summary.undated = undated;
+    if (horizonDays !== undefined) summary.horizon_days = horizonDays;
+    if (unmatchedCategories?.length) summary.unmatched_categories = unmatchedCategories.slice(0, 20);
     await Promise.all([
-      admin.from('lms_sync_runs').update({ status, processed, skipped, finished_at: finishedAt }).eq('id', runId),
+      admin.from('lms_sync_runs').update({
+        status, processed, skipped, finished_at: finishedAt,
+        ...(Object.keys(summary).length ? { summary } : {}),
+      }).eq('id', runId),
       admin.from('lms_connections').update({
         // A SUCCESSFUL sync used to record nothing about itself. The failure
         // branch below writes last_sync_status, but this one only touched the
@@ -1153,7 +1444,9 @@ async function performConnectionSync(
         //     maximum interval, permanently. That is the damaging one — the
         //     recovery path existed but could never be reached.
         last_sync_status: status,
-        last_error: null,
+        // Null on every ordinary success; the screen renders this in its quiet
+        // colour whenever the status beside it is not an error state.
+        last_error: notice,
         last_synced_at: finishedAt,
         last_successful_sync_at: finishedAt,
         consecutive_sync_failures: 0,
@@ -1356,11 +1649,50 @@ serve(withRequestLogging('lms-sync', async (req, log) => {
     const provider = body?.provider as Provider;
     const token = typeof body?.access_token === 'string' ? body.access_token.trim() : '';
 
+    // MOODLE_PLAN.md Phase 2.4. Answers "is this address a Moodle, and what is
+    // it called?" with no credential of any kind, so the student sees their
+    // school's name before being sent to a browser. ADVISORY: the client may
+    // not block on the answer, because a university firewall can refuse this
+    // while happily serving the calendar export.
+    if (action === 'probe') {
+      if (provider !== 'moodle') return json({ error: 'Unsupported LMS provider', code: 'unsupported_provider' }, 400);
+      if (!MOODLE_FEED_ENABLED) {
+        return json({ error: 'Moodle setup is paused for a moment. Try again later.', code: 'provider_disabled' }, 503);
+      }
+      const site = typeof body?.site === 'string' ? body.site.trim().slice(0, 2048) : '';
+      if (!site) return json({ error: 'Enter your school’s Moodle address.', code: 'probe_site_missing' }, 400);
+      let host = '';
+      try { host = new URL(/^https?:\/\//i.test(site) ? site : `https://${site}`).hostname; } catch { host = ''; }
+      const { error: probeError } = await admin.rpc('note_lms_probe', { p_user_id: user.id, p_host: host });
+      if (probeError) {
+        // P0001 from note_lms_probe. Bounded code, never the database message.
+        return json({ error: 'Too many checks for now. Try again in a little while.', code: 'probe_rate_limited' }, 429);
+      }
+      const probe = await probeMoodleSite(site);
+      log.info('lms_site_probe', { provider, host, is_moodle: probe.isMoodle, via: probe.via ?? null, reason: probe.reason ?? null });
+      return json(probe);
+    }
+
     if (action === 'discover') {
       if (!validProvider(provider)) return json({ error: 'Unsupported LMS provider' }, 400);
       if (!token || token.length > 8192) return json({ error: 'A valid LMS access token is required' }, 400);
+      const isMoodleFeed = provider === 'moodle' && body?.connection_method === 'calendar_feed';
+      if (isMoodleFeed && !MOODLE_FEED_ENABLED) {
+        return json({ error: 'Moodle setup is paused for a moment. Try again later.', code: 'provider_disabled' }, 503);
+      }
       const base = safeBaseUrl(body?.base_url, provider);
       let courses: LmsCourse[];
+      if (isMoodleFeed) {
+        const feed = await fetchMoodleCalendar(token);
+        // The review screen states a narrowed window, so the student is told
+        // their school limits how far ahead Semora can see rather than
+        // concluding a semester is missing.
+        return json({
+          courses: feed.courses.slice(0, 500),
+          horizon_days: feed.horizon_days,
+          unmatched_categories: feed.unmatched_categories,
+        });
+      }
       if (provider === 'canvas' && body?.connection_method === 'calendar_feed') {
         const feed = await fetchCanvasCalendar(token);
         courses = feed.courses;
@@ -1403,11 +1735,17 @@ serve(withRequestLogging('lms-sync', async (req, log) => {
     return json({ error: 'Invalid action' }, 400);
   } catch (error) {
     const status = Number((error as any)?.status);
-    const message = cleanText((error as Error)?.message, 500) ?? 'LMS synchronization failed.';
+    // MOODLE_PLAN.md Phase 2.9. A thrown message can carry the pasted link,
+    // which on the Moodle road is a bearer credential. Every message that
+    // leaves this function, and every message that reaches a log, goes through
+    // the redactor first.
+    const message = redactMoodleFeedUrl(cleanText((error as Error)?.message, 500) ?? 'LMS synchronization failed.');
     const code = (error as any)?.code ?? (status === 401 || status === 403 ? 'credentials_required' : undefined);
     if (status === 401 || status === 403) return json({ error: message, code }, 401);
     if (status === 402) return json({ error: message, code: 'PRO_REQUIRED' }, 402);
-    if (status === 503) return json({ error: message }, 503);
+    // Phase 2.8: `code` on EVERY failure, including 503, so the client
+    // classifies on a bounded value instead of matching on prose.
+    if (status === 503) return json({ error: message, code: code ?? 'provider_throttled' }, 503);
     log.error('request_failed', errorFields(message));
     return json({ error: message, code }, status >= 400 && status < 500 ? status : 400);
   }

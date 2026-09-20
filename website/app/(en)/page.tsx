@@ -55,8 +55,11 @@ const HERO_CHIPS = [
 // touching the CSS.
 //
 // Naming Canvas rather than "your LMS" is deliberate: a Canvas student can do
-// this tonight alone, while Blackboard and Moodle need a token their IT
-// department issues. The free claim is enforced server-side — LMS-sourced
+// this tonight alone, while Blackboard still needs a token their IT department
+// issues. Moodle is moving to the same calendar-feed route as Canvas — the
+// sentence above says only that all three are free, which is true either way,
+// because a page cannot describe a connect flow before the flow is in a
+// shipped build. The free claim is enforced server-side — LMS-sourced
 // courses skip the four-course cap (090) — and it stops short of claiming
 // unlimited semesters, because enforce_free_semester_limit exempts only is_pro.
 const STEPS = [
@@ -184,7 +187,7 @@ const HOME_FAQ = [
   {
     question: 'Do I need Canvas for this to work?',
     answer:
-      'No. Semora works from your syllabus alone. Canvas, Blackboard and Moodle connections are optional and free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Blackboard and Moodle are free on every plan too; they use a token your school issues, so availability comes down to your institution.',
+      'No. Semora works from your syllabus alone. Canvas, Blackboard and Moodle connections are optional and free on every plan. Connecting Canvas takes one step: copy the private Calendar Feed link Canvas already gives you and paste it in. There is no access token to generate and nothing for your school to approve. Blackboard and Moodle are free on every plan too.',
   },
   {
     question: 'Does it work on iPad?',

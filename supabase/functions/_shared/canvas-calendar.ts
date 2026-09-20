@@ -39,9 +39,9 @@ export interface ParsedCanvasCalendar {
   assignments: CanvasCalendarAssignment[];
 }
 
-type IcsProperty = { params: Record<string, string>; value: string };
+export type IcsProperty = { params: Record<string, string>; value: string };
 
-function blockedHost(hostname: string): boolean {
+export function blockedHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
   return host === 'localhost' ||
     host.endsWith('.localhost') ||
@@ -96,7 +96,7 @@ export function canvasCalendarOrigin(raw: unknown): string {
   return new URL(normalizeCanvasCalendarFeedUrl(raw)).origin;
 }
 
-function unfoldIcs(value: string): string[] {
+export function unfoldIcs(value: string): string[] {
   return value
     .replace(/\r\n/g, '\n')
     .replace(/\r/g, '\n')
@@ -104,7 +104,7 @@ function unfoldIcs(value: string): string[] {
     .split('\n');
 }
 
-function decodeIcsText(value: string): string {
+export function decodeIcsText(value: string): string {
   return value
     .replace(/\\[nN]/g, '\n')
     .replace(/\\,/g, ',')
@@ -113,7 +113,7 @@ function decodeIcsText(value: string): string {
     .trim();
 }
 
-function propertyFromLine(line: string): { name: string; property: IcsProperty } | null {
+export function propertyFromLine(line: string): { name: string; property: IcsProperty } | null {
   const colon = line.indexOf(':');
   if (colon <= 0) return null;
   const left = line.slice(0, colon).split(';');
@@ -127,11 +127,11 @@ function propertyFromLine(line: string): { name: string; property: IcsProperty }
   return { name, property: { params, value: line.slice(colon + 1) } };
 }
 
-function first(properties: Map<string, IcsProperty[]>, name: string): IcsProperty | null {
+export function first(properties: Map<string, IcsProperty[]>, name: string): IcsProperty | null {
   return properties.get(name)?.[0] ?? null;
 }
 
-function dateParts(property: IcsProperty): {
+export function dateParts(property: IcsProperty): {
   due_date: string | null;
   due_time: string | null;
   due_at: string | null;
@@ -181,7 +181,7 @@ function dateParts(property: IcsProperty): {
   };
 }
 
-function classify(title: string, uid: string): CanvasCalendarAssignment['type'] {
+export function classify(title: string, uid: string): CanvasCalendarAssignment['type'] {
   const lower = title.toLowerCase();
   if (/\b(midterm|exam|test)\b/.test(lower) || /\bfinal\b(?!\s+(draft|paper|essay|project|report))/.test(lower)) return 'exam';
   if (/\bquiz\b/.test(lower)) return 'quiz';
@@ -224,7 +224,7 @@ const DESCRIPTION_LIMIT = 10_000;
  * a generous brief, and raising it would mean carrying course-pack-sized text
  * into every sync payload for the handful of assignments that hit it.
  */
-function truncateDescription(raw: string): string | null {
+export function truncateDescription(raw: string, providerLabel = 'Canvas'): string | null {
   const text = raw.trim();
   if (!text) return null;
   if (text.length <= DESCRIPTION_LIMIT) return text;
@@ -248,7 +248,7 @@ function truncateDescription(raw: string): string | null {
     .sort((a, b) => b.at - a.at)[0];
 
   const cut = best ? head.slice(0, best.at + best.keep) : head;
-  return `${cut.trimEnd()}\n\n[Shortened — open in Canvas for the full description.]`;
+  return `${cut.trimEnd()}\n\n[Shortened — open in ${providerLabel} for the full description.]`;
 }
 
 export function parseCanvasCalendarFeed(ics: string): ParsedCanvasCalendar {

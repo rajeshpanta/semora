@@ -55,6 +55,7 @@ export function CanvasCourseReview({
   semesterId,
   onSemesterChange,
   onSemesterCreated,
+  onRename,
   footer,
 }: {
   courses: DiscoveredLmsCourse[];
@@ -66,6 +67,17 @@ export function CanvasCourseReview({
   onSemesterChange: (id: string) => void;
   /** Called after an inline create so the caller can refetch its semester list. */
   onSemesterCreated?: (semester: Semester) => void;
+  /**
+   * Rename a course before it is imported.
+   *
+   * Only Moodle passes this. A Canvas feed carries a readable course code, but
+   * Moodle's only course identity is its SHORTNAME, which at most schools is
+   * something like `PHYS101_F26` or `24-25_SEM1_BIO`. Without this the
+   * student's timetable is a wall of registry codes for the whole term. The
+   * rename changes only the LOCAL name; external_course_id stays the shortname,
+   * because that is the key every future sync matches on.
+   */
+  onRename?: (courseId: string, name: string) => void;
   footer: React.ReactNode;
 }) {
   const colors = useColors();
@@ -289,7 +301,17 @@ export function CanvasCourseReview({
               {isSelected && <FontAwesome name="check" size={11} color="#fff" />}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[styles.courseName, { color: colors.ink }]}>{course.name}</Text>
+              {onRename ? (
+                <TextInput
+                  value={course.name}
+                  onChangeText={(value) => onRename(course.id, value)}
+                  style={[styles.courseName, styles.courseNameInput, { color: colors.ink, borderColor: colors.line }]}
+                  accessibilityLabel={`Course name: ${course.name}`}
+                  maxLength={120}
+                />
+              ) : (
+                <Text style={[styles.courseName, { color: colors.ink }]}>{course.name}</Text>
+              )}
               {!!detail && <Text style={[styles.courseMeta, { color: colors.ink3 }]}>{detail}</Text>}
               {/* Said plainly rather than by hiding the row. A course the
                   student knows belongs here can still be ticked; one that
@@ -398,6 +420,9 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   courseName: { fontSize: 14.5, fontWeight: '600' },
+  // Barely a field until it is touched: a visible input here would read as one
+  // more thing to fill in, when the shortname is usually fine.
+  courseNameInput: { borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 2, paddingHorizontal: 0 },
   courseMeta: { fontSize: 12, marginTop: 3 },
   courseWarn: { fontSize: 11.5, marginTop: 4, fontStyle: 'italic' },
 });

@@ -17,6 +17,7 @@ import {
   courseFactsOf,
   countImportedDeadlines,
   linkPendingCourses,
+  LMS_PROVIDER_LABELS,
   lmsConnectionsQuery,
   pendingAsDiscovered,
   pendingLmsCoursesQuery,
@@ -82,6 +83,14 @@ export default function NewCanvasCourses() {
     () => (pending ?? []).filter((row) => row.connection_id === connectionId),
     [pending, connectionId],
   );
+  // Which platform this screen is actually about. Every sentence below used to
+  // say "Canvas" outright, which was true of every connection in production
+  // until Moodle — and a Moodle student arriving here from a "Moodle has
+  // classes waiting" push would have been told, four times on one screen, to
+  // look at a platform their school does not use.
+  const providerLabel = LMS_PROVIDER_LABELS[
+    connections?.find((entry) => entry.id === connectionId)?.provider ?? 'canvas'
+  ];
   const courses = useMemo(() => rows.map(pendingAsDiscovered), [rows]);
   const facts = useMemo(() => courses.map(courseFactsOf), [courses]);
   const suggestion = useMemo(() => suggestNewSemester(facts), [facts]);
@@ -245,7 +254,7 @@ export default function NewCanvasCourses() {
   if (isPending) {
     return (
       <SafeAreaView style={[styles.screen, { backgroundColor: colors.paper }]}>
-        <Stack.Screen options={{ title: t('New Canvas courses') }} />
+        <Stack.Screen options={{ title: t(`New ${providerLabel} courses`) }} />
         <ActivityIndicator style={{ marginTop: 40 }} color={colors.brand} />
       </SafeAreaView>
     );
@@ -254,12 +263,12 @@ export default function NewCanvasCourses() {
   if (!rows.length) {
     return (
       <SafeAreaView style={[styles.screen, { backgroundColor: colors.paper }]}>
-        <Stack.Screen options={{ title: t('New Canvas courses') }} />
+        <Stack.Screen options={{ title: t(`New ${providerLabel} courses`) }} />
         <View style={styles.empty}>
           <FontAwesome name="check-circle" size={26} color={colors.brand} />
           <Text style={[styles.emptyTitle, { color: colors.ink }]}>{t('Nothing new right now')}</Text>
           <Text style={[styles.emptyBody, { color: colors.ink3 }]}>
-            {t('Semora checks Canvas every few hours. When next semester’s courses appear, they will show up here.')}
+            {t(`Semora checks ${providerLabel} every few hours. When next semester’s courses appear, they will show up here.`)}
           </Text>
         </View>
       </SafeAreaView>
@@ -268,7 +277,7 @@ export default function NewCanvasCourses() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: t('New Canvas courses') }} />
+      <Stack.Screen options={{ title: t(`New ${providerLabel} courses`) }} />
       {/* The review below contains a text field — the inline "create semester"
           name — so this screen needs the same keyboard handling the connect
           screen has. Without it the field can sit under the keyboard on iOS,
@@ -279,11 +288,11 @@ export default function NewCanvasCourses() {
         keyboardShouldPersistTaps="handled"
       >
         <Text style={[styles.title, { color: colors.ink }]}>
-          {rows.length} {rows.length === 1 ? t('new Canvas course') : t('new Canvas courses')}
+          {rows.length} {t(`new ${providerLabel} ${rows.length === 1 ? 'course' : 'courses'}`)}
           {suggestion ? ` ${t('for')} ${suggestion.name}` : ''}
         </Text>
         <Text style={[styles.subtitle, { color: colors.ink3 }]}>
-          {t('Canvas is now listing courses Semora has not imported. Nothing has been added to your semesters — choose what belongs and where it goes.')}
+          {t(`${providerLabel} is now listing courses Semora has not imported. Nothing has been added to your semesters — choose what belongs and where it goes.`)}
         </Text>
 
         <CanvasCourseReview
@@ -314,7 +323,7 @@ export default function NewCanvasCourses() {
                 >
                   <FontAwesome name="unlock-alt" size={13} color={colors.brand} />
                   <Text style={[styles.upsellText, { color: colors.ink2 }]}>
-                    {t('Need another semester? Pro removes the one-semester limit — your Canvas connection stays exactly as it is.')}
+                    {t(`Need another semester? Pro removes the one-semester limit — your ${providerLabel} connection stays exactly as it is.`)}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -352,8 +361,14 @@ export default function NewCanvasCourses() {
       </KeyboardAvoidingView>
       {/* The same limits the connect screen states. A student importing a
           second term is making the same decision again and deserves the same
-          facts — stated in one component so the two cannot drift apart. */}
-      <View style={styles.limitsWrap}><CanvasFeedLimits compact /></View>
+          facts — stated in one component so the two cannot drift apart.
+          Canvas only: every line of it is a fact about a CANVAS feed ("every
+          item links back to Canvas", "your grades stay in Canvas"), and a
+          Moodle feed carries no item link at all. The connect screen states
+          Moodle's own limits, and shows this component under the same test. */}
+      {providerLabel === 'Canvas' && (
+        <View style={styles.limitsWrap}><CanvasFeedLimits compact /></View>
+      )}
 
       <CourseLinkChoiceSheet
         visible={linkChoices.length > 0}

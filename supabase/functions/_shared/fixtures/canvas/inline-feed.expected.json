@@ -1,0 +1,46 @@
+{
+  "courses": [
+    {
+      "id": "77",
+      "name": "BIO 200",
+      "code": "BIO 200",
+      "item_count": 1,
+      "first_due": "2026-08-20",
+      "last_due": "2026-08-20"
+    },
+    {
+      "id": "42",
+      "name": "ENG 101",
+      "code": "ENG 101",
+      "item_count": 1,
+      "first_due": "2026-08-16",
+      "last_due": "2026-08-16"
+    }
+  ],
+  "assignments": [
+    {
+      "external_id": "event-assignment-9",
+      "external_course_id": "42",
+      "title": "Essay, final draft",
+      "description": "Read chapters 1\nthrough 3",
+      "type": "assignment",
+      "due_date": "2026-08-16",
+      "due_time": "06:59:00",
+      "due_at": "2026-08-16T06:59:00.000Z",
+      "external_updated_at": "2026-08-10T12:00:00.000Z",
+      "url": "https://school.instructure.com/calendar?include_contexts=course_42&month=08&year=2026#assignment_9"
+    },
+    {
+      "external_id": "event-calendar-event-4",
+      "external_course_id": "77",
+      "title": "Lab day",
+      "description": null,
+      "type": "other",
+      "due_date": "2026-08-20",
+      "due_time": null,
+      "due_at": null,
+      "external_updated_at": null,
+      "url": "https://school.instructure.com/calendar?include_contexts=course_77#calendar_event_4"
+    }
+  ]
+}
