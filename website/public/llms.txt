@@ -12,7 +12,7 @@ Semora runs on iPhone, iPad, and the web on one account, and the three stay in s
 - CANVAS SYNC IS FREE, with no limit on how many classes come across — connect Canvas and every class you are enrolled in arrives on its own, and keeps arriving when an instructor moves a deadline. No Pro, no token, no IT approval. This is a limited-time offer; an account that connects while it runs keeps free Canvas sync for good
 - MOODLE SYNC IS FREE TOO, on every plan and with no token: in your own Moodle, open Calendar → Import or export calendars → Export calendar → Get calendar URL → Copy URL, and paste that link into Semora. Nothing for IT to enable — the link is personal to you, behind your own Moodle login, and your Moodle password is never typed into Semora. One step Canvas does not ask for: you leave the app for your browser once to fetch the link. Like Canvas, the feed carries dates, not marks — no grades, no submission status, and an assignment with no due date set makes no calendar event, so it does not come across
 - BLACKBOARD SYNC IS FREE TOO, on every plan — but unlike Canvas and Moodle it needs a web-service token your school's administrator has to enable and issue, so whether it works at all depends on your institution rather than on you
-- One course you add BY HAND per semester, and one semester (classes that come from Canvas do not count towards this; Pro removes both caps)
+- One course you add BY HAND per semester, and one semester (classes that come from Canvas, Moodle or Blackboard do not count towards this; Pro removes both caps)
 - Grade tracking with weighted averages, and semester GPA
 - Same-day reminders
 - Course Spaces: join a shared course a classmate invites you to (hosting your own is Pro)
