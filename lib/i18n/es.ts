@@ -1442,6 +1442,32 @@ export const ES: Record<string, string> = {
   'Automatic Canvas Calendar Feed sync is on. Semora checks for dated assignment and event changes every few hours.': 'La sincronización automática del feed de Canvas está activada. Semora busca cambios en tareas y eventos con fecha cada pocas horas.',
   ' · Canvas checks every few hours': ' · Canvas se revisa cada pocas horas',
   ' · Reconnect required': ' · Debes volver a conectar',
+  // Every one of these is on the Moodle path and was rendering in English.
+  // Found by translating each user-facing string in that flow and keeping the
+  // ones that came back unchanged — a missing translation is not an error, so
+  // nothing else would have caught them.
+  'Hide the link': 'Ocultar el enlace',
+  // The hero on the LMS settings screen, shown to every student whichever
+  // platform they use — so a Moodle student read it in English too.
+  'Connecting takes about a minute, once. Every assignment, exam and due date from your courses arrives in Semora and stays right on its own. You choose which courses come across.':
+    'Conectar lleva alrededor de un minuto, una sola vez. Cada tarea, examen y fecha de entrega de tus asignaturas llega a Semora y se mantiene al día sola. Tú eliges qué asignaturas entran.',
+  'When a due date moves, you already know.': 'Cuando una fecha de entrega cambia, ya lo sabes.',
+  // Canvas-only, and missing for the same reason.
+  'After connecting, Semora keeps watching this feed — including for next semester\u2019s courses. You will not have to reconnect Canvas.':
+    'Después de conectar, Semora sigue revisando este calendario, incluidas las asignaturas del próximo semestre. No tendrás que volver a conectar Canvas.',
+  'Show the link': 'Mostrar el enlace',
+  'Which one does your school use?': '¿Cuál usa tu universidad?',
+  'All three are free, with no limit on the number of classes.':
+    'Las tres son gratis, sin límite de asignaturas.',
+  'Uses the calendar link your school already gives you':
+    'Usa el enlace del calendario que tu universidad ya te da',
+  'Rechecks automatically every few hours': 'Se revisa solo cada pocas horas',
+  'Different semester?': '¿Otro semestre?',
+  'Import anyway': 'Importar de todas formas',
+  'The import failed.': 'La importación falló.',
+  // The Moodle form was translated and the Canvas one never was, which is the
+  // reverse of what anyone would guess.
+  'Lock in free Canvas sync': 'Asegura la sincronización gratis de Canvas',
   'Recent attempts make it clear what changed and what needs attention.': 'Los intentos recientes muestran qué cambió y qué requiere atención.',
   'Reconnected': 'Conexión restablecida',
   'Remind me before due date': 'Recordarme antes de la entrega',
