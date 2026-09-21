@@ -21,6 +21,7 @@ import {
 import { useAppStore } from '@/store/appStore';
 import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
+import { localeTag } from '@/lib/i18n';
 
 // The upgrade moment, as a sheet rather than a screen.
 //
@@ -196,6 +197,9 @@ export function ProUpsellSheet({
   // the web values. Never show a price the payment sheet will not honour.
   const [monthlyPrice, setMonthlyPrice] = useState('$4.99');
   const [annualPrice, setAnnualPrice] = useState('$29.99');
+  // Derived from the storefront, never assumed. See the PlanCard below.
+  const [perWeek, setPerWeek] = useState('$0.58');
+  const [savePercent, setSavePercent] = useState(50);
   const [starting, setStarting] = useState(false);
 
   useEffect(() => {
@@ -204,6 +208,33 @@ export function ProUpsellSheet({
     getProducts().then((p) => {
       if (p?.monthly?.displayPrice) setMonthlyPrice(p.monthly.displayPrice);
       if (p?.annual?.displayPrice) setAnnualPrice(p.annual.displayPrice);
+      // The two figures that used to be literals.
+      //
+      // A student in Germany was shown "5,99 €" and "34,99 €" from the live
+      // storefront with "$0.58/week" and "Save 50%" printed between them: a
+      // dollar sign on a euro page, and a saving that is only 50% at Apple's US
+      // price points. Apple's tiers do not convert at one rate, so in Denmark
+      // and Norway the real saving is a different number entirely.
+      //
+      // StoreKit gives a numeric `price` and a `currency` alongside the display
+      // string, so both are arithmetic now rather than guesses.
+      const annualAmount = typeof p?.annual?.price === 'number' ? p.annual.price : null;
+      const monthlyAmount = typeof p?.monthly?.price === 'number' ? p.monthly.price : null;
+      const currency = typeof p?.annual?.currency === 'string' ? p.annual.currency : null;
+      if (annualAmount && currency) {
+        try {
+          setPerWeek(new Intl.NumberFormat(localeTag(), {
+            style: 'currency', currency, maximumFractionDigits: 2,
+          }).format(annualAmount / 52));
+        } catch {
+          // An unknown currency code is not worth a crash beside a buy button.
+        }
+      }
+      if (annualAmount && monthlyAmount && monthlyAmount > 0) {
+        const saved = Math.round((1 - annualAmount / (monthlyAmount * 12)) * 100);
+        // Only ever claimed when it is real and worth saying.
+        setSavePercent(saved >= 5 && saved < 100 ? saved : 0);
+      }
     }).catch(() => {});
   }, [visible, reason]);
 
@@ -351,18 +382,21 @@ export function ProUpsellSheet({
               onPress={() => setPlan('annual')}
               name="Yearly"
               badge="MOST POPULAR"
-              // 29.99/52 ≈ 0.58. The saving is against 12 × 4.99 = 59.88,
-              // which is 50% — not a rounder number invented to look better.
+              // Both figures are now the storefront's own arithmetic: the
+              // weekly price is the annual divided by 52 and formatted in the
+              // student's currency, and the saving is measured against twelve
+              // monthly payments. The $0.58 / 50% defaults below are what USD
+              // works out to, and are only reached when StoreKit has not
+              // answered yet — which is also the only case the web build has.
               //
-              // These two are the only price claims in the app that never ask
-              // Apple. Every other figure here is the live storefront price with
-              // a fallback, so these are the ones that go silently wrong the
-              // moment a price moves — right beside the buy button.
-              // check-product-facts.mjs now fails on both if they drift; deriving
-              // them from the storefront the way app/paywall.tsx does is the fix.
-              headline="$0.58"
+              // They used to be literals, and the comment that stood here said
+              // so, noting they would "go silently wrong the moment a price
+              // moves". They went wrong sooner than that: they were wrong for
+              // every student outside the United States from the day the app
+              // shipped in a second currency.
+              headline={perWeek}
               headlineUnit="/week"
-              save="Save 50%"
+              save={savePercent > 0 ? `Save ${savePercent}%` : undefined}
               strike={`${monthlyPrice}/mo`}
               footnote={`Billed ${annualPrice}/year`}
               colors={colors}

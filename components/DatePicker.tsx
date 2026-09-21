@@ -12,6 +12,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors, useResolvedScheme } from '@/lib/theme';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { localeTag, timeFormatOptions } from '@/lib/i18n';
 
 interface DatePickerProps {
   value: Date | null;
@@ -96,7 +97,9 @@ export function DatePicker({ value, onChange, onClear, mode = 'date', placeholde
   const displayText = value
     ? mode === 'date'
       ? format(value, 'MMM d, yyyy')
-      : format(value, 'h:mm a')
+      // Same reason as customReminderLabel: the hour cycle belongs to the
+      // device, not to a literal in our source.
+      : value.toLocaleTimeString(localeTag(), timeFormatOptions())
     : placeholder || (mode === 'date' ? 'Select date' : 'Select time');
 
   return (

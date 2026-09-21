@@ -1,4 +1,4 @@
-import { getLocales } from 'expo-localization';
+import { getCalendars, getLocales } from 'expo-localization';
 import { ES } from '@/lib/i18n/es';
 import { useAppStore, type AppLanguagePreference } from '@/store/appStore';
 
@@ -945,8 +945,85 @@ export function spokenDuration(totalSeconds: number, locale: AppLocale = getAppL
   return translate(parts.join(' '), locale);
 }
 
+/**
+ * The device's REGION, which is not the same question as its language.
+ *
+ * Semora's interface is English or Spanish, and that is a choice the student
+ * makes. How a time is written is not: 23:59 versus 11:59 PM, and 20.9.2026
+ * versus 9/20/2026, are properties of WHERE someone is, not of which of our two
+ * languages they read. Hardcoding en-US made every European student read their
+ * own deadlines in a format nobody there writes.
+ *
+ * Read once and remembered: getLocales() crosses the native bridge, and this is
+ * called inside render paths.
+ */
+let cachedRegion: string | null | undefined;
+function deviceRegion(): string | null {
+  if (cachedRegion !== undefined) return cachedRegion;
+  try {
+    const raw = getLocales()[0]?.regionCode ?? null;
+    cachedRegion = raw && /^[A-Za-z]{2}$/.test(raw) ? raw.toUpperCase() : null;
+  } catch {
+    cachedRegion = null;
+  }
+  return cachedRegion;
+}
+
+/**
+ * A BCP 47 tag for Intl: our language, their region.
+ *
+ * `en-DE` is a real and useful tag — English words, German conventions — and it
+ * is exactly what an English-reading student in Germany should get. Falls back
+ * to the old value when the platform will not say where it is, so nothing gets
+ * worse if the bridge is unavailable.
+ */
 export function localeTag(locale: AppLocale = getAppLocale()): string {
-  return locale === 'es' ? 'es-US' : 'en-US';
+  const region = deviceRegion();
+  if (!region) return locale === 'es' ? 'es-US' : 'en-US';
+  return `${locale}-${region}`;
+}
+
+/**
+ * The clock the student's own phone uses.
+ *
+ * The region tag alone is NOT enough, and this is the trap: Intl derives the
+ * hour cycle from the LANGUAGE, so `en-FR` and `en-PL` both hand back 11:59 PM
+ * even though nobody in France or Poland writes that. Asking the device is the
+ * only reliable answer, and it also respects a US student who has turned on
+ * 24-hour time — which the region would have got wrong in the other direction.
+ */
+let cachedHour12: boolean | undefined;
+function deviceHour12(): boolean | undefined {
+  if (cachedHour12 !== undefined) return cachedHour12;
+  try {
+    // getCalendars(), not getLocales(): expo puts the clock setting on the
+    // Calendar object, because it is a calendar/formatting preference rather
+    // than a property of the language.
+    const uses24 = getCalendars()[0]?.uses24hourClock;
+    cachedHour12 = typeof uses24 === 'boolean' ? !uses24 : undefined;
+  } catch {
+    cachedHour12 = undefined;
+  }
+  return cachedHour12;
+}
+
+/**
+ * Options for a time of day, in the shape the student's phone writes them.
+ *
+ * Use this instead of a date-fns literal like 'h:mm a', which pins the clock to
+ * 12 hours for everyone on earth.
+ */
+export function timeFormatOptions(): Intl.DateTimeFormatOptions {
+  const hour12 = deviceHour12();
+  return hour12 === undefined
+    ? { hour: 'numeric', minute: '2-digit' }
+    : { hour: 'numeric', minute: '2-digit', hour12 };
+}
+
+/** Test seam: forget the cached device answers. */
+export function resetDeviceRegionCache(): void {
+  cachedRegion = undefined;
+  cachedHour12 = undefined;
 }
 
 export function useI18n() {

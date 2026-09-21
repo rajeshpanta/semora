@@ -1,4 +1,5 @@
 import type { RecurrenceFrequency, TaskPriority } from '@/types/database';
+import { localeTag, timeFormatOptions } from '@/lib/i18n';
 import { format, subMinutes } from 'date-fns';
 
 export const PRIORITY_OPTIONS: { value: TaskPriority; label: string; icon: string }[] = [
@@ -66,7 +67,10 @@ export function formatReminderOffset(offset: number) {
 export function customReminderLabel(offset: number, dueDate: DateLike, dueTime?: DateLike) {
   const due = effectiveDueDate(dueDate, dueTime);
   if (!due) return formatReminderOffset(offset);
-  return format(subMinutes(due, offset), 'MMM d, h:mm a');
+  // Not `format(…, 'MMM d, h:mm a')`. A literal pattern pins the clock to 12
+  // hours, and most of Europe writes 23:59. Intl asks the device instead.
+  const at = subMinutes(due, offset);
+  return `${format(at, 'MMM d')}, ${at.toLocaleTimeString(localeTag(), timeFormatOptions())}`;
 }
 
 export function recurrenceLabel(value: RecurrenceFrequency | null | undefined) {

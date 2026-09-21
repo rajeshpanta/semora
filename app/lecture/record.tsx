@@ -17,7 +17,7 @@ import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore } from '@/store/appStore';
 import { useCourses } from '@/lib/queries';
-import { spokenDuration, useI18n } from '@/lib/i18n';
+import { spokenDuration, useI18n, timeFormatOptions } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
 import { useLectureRecorder } from '@/lib/lectureRecorder';
 import { formatLectureDuration, useFreeActionUsed, useLectureLocalProgress } from '@/lib/lectures';
@@ -448,7 +448,7 @@ export default function RecordLectureScreen() {
 
   const remaining = Math.max(0, recorder.maxSeconds - recorder.elapsed);
   const stoppedAtLabel = recorder.micStoppedAt
-    ? new Date(recorder.micStoppedAt).toLocaleTimeString(localeTag, { hour: 'numeric', minute: '2-digit' })
+    ? new Date(recorder.micStoppedAt).toLocaleTimeString(localeTag, timeFormatOptions())
     : null;
 
   const statusLabel =

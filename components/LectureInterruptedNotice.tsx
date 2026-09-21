@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { Alert } from '@/components/LocalizedReactNative';
 import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
-import { useI18n } from '@/lib/i18n';
+import { useI18n, timeFormatOptions } from '@/lib/i18n';
 import { subscribeUploadQueue, takeInterruptedRecordingNotices } from '@/lib/lectureUploadQueue';
 
 /**
@@ -24,7 +24,7 @@ export function LectureInterruptedNotice() {
         if (getDeviceItem(key)) continue;
         setDeviceItem(key, '1');
         const when = notice.startedAtMs
-          ? new Date(notice.startedAtMs).toLocaleTimeString(localeTag, { hour: 'numeric', minute: '2-digit' })
+          ? new Date(notice.startedAtMs).toLocaleTimeString(localeTag, timeFormatOptions())
           : null;
         // Nothing reached this phone's disk before the kill (1.13/1.14 on the
         // expo engine, locked phone): there is no lecture to open, so no View.
