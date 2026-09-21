@@ -12,15 +12,27 @@ import { useSession } from '@/app/_layout';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore, type AppLanguagePreference } from '@/store/appStore';
-import { getAppLocale, translate, useI18n } from '@/lib/i18n';
+import { getAppLocale, translate, useI18n, resolveLocale } from '@/lib/i18n';
 import { supabase } from '@/lib/supabase';
 import { registerForPushNotificationsAsync } from '@/lib/push';
 import { registerTaskNotificationActions, rescheduleAllTaskReminders } from '@/lib/notifications';
 import { COLORS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 
-const OPTIONS: { value: 'en' | 'es'; label: string; description: string }[] = [
-  { value: 'en', label: 'English', description: 'Use Semora in English' },
-  { value: 'es', label: 'Español', description: 'Usa Semora en español' },
+/**
+ * "Use device language" has to be on this screen, not just in the store.
+ *
+ * The app already DEFAULTS to following the phone, and that is the right
+ * default. But the screen only offered English and Español, so the first tap a
+ * student ever made here was a one-way door: nothing could put them back on
+ * the device setting, on any device, ever. Someone who taps to peek at their
+ * options should not lose a behaviour by looking.
+ *
+ * It sits first because it is the default and the recommendation.
+ */
+const OPTIONS: { value: AppLanguagePreference; label: string; description: string; mark: string }[] = [
+  { value: 'system', label: 'Use device language', description: 'Follow your phone, and switch when it does', mark: '⌘' },
+  { value: 'en', label: 'English', description: 'Use Semora in English', mark: 'EN' },
+  { value: 'es', label: 'Español', description: 'Usa Semora en español', mark: 'ES' },
 ];
 
 export default function LanguageSettings() {
@@ -32,7 +44,7 @@ export default function LanguageSettings() {
   const setPreference = useAppStore((state) => state.setLanguagePreference);
   const [saving, setSaving] = useState<AppLanguagePreference | null>(null);
 
-  const choose = async (value: 'en' | 'es') => {
+  const choose = async (value: AppLanguagePreference) => {
     if (saving || preference === value) return;
     const previous = preference;
     setPreference(value);
@@ -40,8 +52,13 @@ export default function LanguageSettings() {
     try {
       if (session?.user.id) {
         const [profileResult, authResult] = await Promise.all([
-          supabase.from('profiles').update({ preferred_language: value }).eq('id', session.user.id),
-          supabase.auth.updateUser({ data: { preferred_language: value } }),
+          // The account column drives the language of PUSH notifications, which
+          // are composed on a server that cannot see this phone's settings — and
+          // its check constraint only allows 'en' or 'es'. So "follow the device"
+          // is stored locally and RESOLVED before it is sent, which also keeps a
+          // push in the same language as the screen that prompted it.
+          supabase.from('profiles').update({ preferred_language: resolveLocale(value) }).eq('id', session.user.id),
+          supabase.auth.updateUser({ data: { preferred_language: resolveLocale(value) } }),
         ]);
         if (profileResult.error) throw profileResult.error;
         if (authResult.error) throw authResult.error;
@@ -72,7 +89,10 @@ export default function LanguageSettings() {
         </Text>
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           {OPTIONS.map((option, index) => {
-            const selected = preference === option.value || (preference === 'system' && locale === option.value);
+            // Only one row is ticked, and on the default it is this one — not
+            // the language it happens to resolve to, which would read as though
+            // the student had chosen it.
+            const selected = preference === option.value;
             return (
               <TouchableOpacity
                 key={option.value}
@@ -86,7 +106,7 @@ export default function LanguageSettings() {
                 ]}
               >
                 <View style={[styles.languageMark, { backgroundColor: colors.brand50 }]}>
-                  <Text style={[styles.languageCode, { color: colors.brand }]}>{option.value.toUpperCase()}</Text>
+                  <Text style={[styles.languageCode, { color: colors.brand }]}>{option.mark}</Text>
                 </View>
                 <View style={styles.copy}>
                   <Text style={[styles.label, { color: colors.ink }]}>{option.label}</Text>

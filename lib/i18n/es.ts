@@ -1485,6 +1485,10 @@ export const ES: Record<string, string> = {
   'That is a Canvas page, not the Calendar Feed link.':
     'Esa es una página de Canvas, no el enlace del Feed de calendario.',
 
+  // Restoring the third option on the language screen. Its label was already
+  // in this catalogue (line ~516) from when the screen last had it, which is
+  // its own small piece of evidence that removing it was not deliberate.
+  'Follow your phone, and switch when it does': 'Sigue a tu teléfono y cambia cuando él cambie',
   'Hide the link': 'Ocultar el enlace',
   // The hero on the LMS settings screen, shown to every student whichever
   // platform they use — so a Moodle student read it in English too.

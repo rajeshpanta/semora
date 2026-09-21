@@ -17,12 +17,30 @@ function lookupKey(value: string) {
 
 const ES_BY_LOWER = new Map(Object.entries(ES).map(([english, spanish]) => [lookupKey(english), spanish]));
 
+/**
+ * The best of the STUDENT'S preferred languages that Semora actually speaks.
+ *
+ * getLocales() is an ordered list, not a single value — iOS and Android both
+ * hand over the whole Settings preference order, and on web it is
+ * navigator.languages. Reading only [0] meant a phone set to French first and
+ * Spanish second got English, which is the worst of the three for that student
+ * and is common in exactly the markets Moodle lives in: Catalan then Spanish in
+ * Barcelona, Dutch then French in Belgium, Basque then Spanish in Bilbao.
+ *
+ * Walking the list is what every platform's own resolver does. The first
+ * supported language wins; if none of them is one of ours, English.
+ */
 function systemLocale(): AppLocale {
   try {
-    return getLocales()[0]?.languageCode?.toLowerCase() === 'es' ? 'es' : 'en';
+    for (const entry of getLocales() ?? []) {
+      const code = entry?.languageCode?.toLowerCase();
+      if (code === 'es') return 'es';
+      if (code === 'en') return 'en';
+    }
   } catch {
-    return 'en';
+    // The bridge is unavailable; English is the base language.
   }
+  return 'en';
 }
 
 export function resolveLocale(preference: AppLanguagePreference): AppLocale {
