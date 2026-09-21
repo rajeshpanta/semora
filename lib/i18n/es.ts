@@ -1446,6 +1446,45 @@ export const ES: Record<string, string> = {
   // Found by translating each user-facing string in that flow and keeping the
   // ones that came back unchanged — a missing translation is not an error, so
   // nothing else would have caught them.
+  // ── The Canvas guided paste ─────────────────────────────────────────────
+  // Measured at 24 of 46 strings translated while Moodle sat at 57 of 57, so
+  // the flow most students actually use was the one reading half in English.
+  // "Feed de calendario" matches the wording Canvas itself uses in Spanish and
+  // the instructions already in this catalogue.
+  'Your college or university': 'Tu universidad',
+  'Could not reach the school directory just now.':
+    'No se pudo acceder al directorio de universidades en este momento.',
+  'No match. Your school may use its own Canvas address.':
+    'Sin resultados. Puede que tu universidad use su propia dirección de Canvas.',
+  'Sign in to your college Canvas account on the page Semora opens.':
+    'Inicia sesión en el Canvas de tu universidad en la página que abre Semora.',
+  'In the menu down the left side, tap Calendar.':
+    'En el menú de la izquierda, toca Calendario.',
+  'Scroll to the very bottom of the panel on the right.':
+    'Baja del todo en el panel de la derecha.',
+  'Tap Calendar Feed. A box opens with a long link starting webcal://':
+    'Toca Feed de calendario. Se abre un cuadro con un enlace largo que empieza por webcal://',
+  'Press and hold that link, then tap Copy.':
+    'Mantén pulsado ese enlace y toca Copiar.',
+  'Come back to Semora. The link drops into the box below by itself.':
+    'Vuelve a Semora. El enlace se pega solo en el cuadro de abajo.',
+  'On your laptop, open': 'En tu laptop, abre',
+  'Open Settings, then Canvas or LMS Sync, and choose Canvas.':
+    'Abre Ajustes, luego Canvas o Sincronización LMS, y elige Canvas.',
+  'Actually, let me try on my phone': 'Mejor lo intento en el móvil',
+  'I know my Canvas web address': 'Sé la dirección de mi Canvas',
+  'Use this address': 'Usar esta dirección',
+  'Search for my school instead': 'Mejor buscar mi universidad',
+  'Calendar Feed': 'Feed de calendario',
+  'Open my Canvas calendar': 'Abrir mi calendario de Canvas',
+  'Different school': 'Otra universidad',
+  'Where to find your link': 'Dónde encontrar tu enlace',
+  'Nothing that looks like a Canvas link is on your clipboard yet. Copy it in Canvas first.':
+    'Todavía no hay nada que parezca un enlace de Canvas en el portapapeles. Cópialo primero en Canvas.',
+  'Link looks right — checking Canvas…': 'El enlace parece correcto: comprobando Canvas…',
+  'That is a Canvas page, not the Calendar Feed link.':
+    'Esa es una página de Canvas, no el enlace del Feed de calendario.',
+
   'Hide the link': 'Ocultar el enlace',
   // The hero on the LMS settings screen, shown to every student whichever
   // platform they use — so a Moodle student read it in English too.

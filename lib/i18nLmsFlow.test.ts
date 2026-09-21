@@ -36,6 +36,31 @@ const MUST_TRANSLATE = [
   // The hero every student sees, and the free-sync cards for both platforms.
   'When a due date moves, you already know.',
   'Lock in free Moodle sync', 'Lock in free Canvas sync',
+  // The Canvas guided paste, every step of it. This flow was at 24 of 46 while
+  // Moodle was at 57 of 57 — the road most students take was the half-English
+  // one, which is the opposite of what anyone assumed.
+  'Your college or university',
+  'Could not reach the school directory just now.',
+  'No match. Your school may use its own Canvas address.',
+  'Sign in to your college Canvas account on the page Semora opens.',
+  'In the menu down the left side, tap Calendar.',
+  'Scroll to the very bottom of the panel on the right.',
+  'Tap Calendar Feed. A box opens with a long link starting webcal://',
+  'Press and hold that link, then tap Copy.',
+  'Come back to Semora. The link drops into the box below by itself.',
+  'On your laptop, open',
+  'Open Settings, then Canvas or LMS Sync, and choose Canvas.',
+  'Actually, let me try on my phone',
+  'I know my Canvas web address',
+  'Use this address',
+  'Search for my school instead',
+  'Calendar Feed',
+  'Open my Canvas calendar',
+  'Different school',
+  'Where to find your link',
+  'Nothing that looks like a Canvas link is on your clipboard yet. Copy it in Canvas first.',
+  'Link looks right — checking Canvas…',
+  'That is a Canvas page, not the Calendar Feed link.',
 ];
 
 Deno.test('every string on the connect path reaches Spanish', () => {
