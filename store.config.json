@@ -18,8 +18,8 @@
           "grabadora",
           "transcribir",
           "tarjetas",
-          "quiz",
-          "calendario"
+          "calendario",
+          "moodle"
         ],
         "releaseNotes": "Pequeñas correcciones sobre la versión 1.15:\n\n• La pantalla de bloqueo ya no muestra una clase grabándose después de que Semora se haya cerrado: ahora indica que la grabación se detuvo, para que sepas que debes volver a abrir la aplicación.\n• Valorar Semora desde la aplicación ahora abre la App Store de tu país en lugar de la de Estados Unidos.\n• Menos interrupciones: Semora ya no pide una valoración justo después de mostrarte una pantalla de suscripción.",
         "marketingUrl": "https://semoraai.com/es",
@@ -42,8 +42,7 @@
           "recorder",
           "transcript",
           "flashcards",
-          "quiz",
-          "notes"
+          "moodle"
         ],
         "releaseNotes": "Small fixes on top of 1.15:\n\n• The Lock Screen no longer shows a lecture still recording after Semora has closed — it now says the recording stopped, so you know to reopen the app.\n• Rating Semora from inside the app now opens your own country's App Store instead of the U.S. one.\n• Fewer interruptions: Semora no longer asks for a rating right after showing you a subscription screen.",
         "marketingUrl": "https://semoraai.com",
@@ -52,6 +51,30 @@
         "subtitle": "Homework, Exam & Grade Tracker",
         "privacyPolicyUrl": "https://semoraai.com/privacy",
         "promoText": "New: connect Moodle in about a minute. Copy the calendar link your own Moodle already gives you — no token, nothing for your school to approve. Free on every plan."
+      },
+      "fr-FR": {
+        "title": "Semora : Agenda étudiant IA",
+        "subtitle": "Devoirs, examens et notes",
+        "keywords": [
+          "canvas",
+          "moodle",
+          "planificateur",
+          "universite",
+          "fac",
+          "revision",
+          "rappel",
+          "echeance",
+          "cours",
+          "scanner",
+          "syllabus",
+          "emploi"
+        ],
+        "promoText": "Nouveau : connectez Moodle en une minute. Copiez le lien du calendrier que votre Moodle vous donne déjà — sans jeton, sans autorisation de votre établissement.",
+        "description": "Semora est un agenda étudiant IA : scanner de syllabus, suivi des devoirs Canvas et Moodle, enregistreur de cours et prise de notes, pour les étudiants du supérieur.\n\nPhotographiez un syllabus ou importez un PDF, connectez Canvas, Blackboard ou Moodle, enregistrez vos cours, obtenez transcriptions et fiches de révision, suivez devoirs, examens et notes, et rassemblez toutes vos échéances au même endroit.\n\nVous vérifiez tout avant l'enregistrement.\n\nTransformez votre syllabus en semestre organisé.\n\nPrenez votre syllabus en photo, importez un PDF ou collez le texte. Semora y repère les devoirs, examens, contrôles, projets, lectures, dates de rendu, horaires de cours, permanences et coefficients.\n\nVous vérifiez tout avant l'enregistrement.\n\nVOTRE SEMESTRE, EN CLAIR\n\nOuvrez Semora et sachez quoi faire ensuite.\n\n« À suivre » affiche votre prochain travail. Les devoirs en retard sont signalés, et vous voyez ce qui est dû aujourd'hui, cette semaine et plus tard sans dérouler une longue liste.\n\nSaisissez une note et Semora recalcule aussitôt votre moyenne pondérée, à partir des seuls travaux réellement corrigés.\n\nVotre calendrier universitaire range échéances, cours et permanences par matière.\n\nCONNECTEZ VOS COURS\n\nConnectez Canvas, Blackboard ou Moodle pour importer automatiquement vos matières et vos devoirs.\n\nMoodle se connecte en une minute, sans jeton et sans autorisation de votre établissement : dans votre Moodle, ouvrez Calendrier, puis Exporter le calendrier, copiez le lien et collez-le dans Semora.\n\nLes trois sont inclus dans le plan gratuit, sans limite de matières.\n\nRejoignez un Espace de cours partagé par vos camarades pour garder les échéances synchronisées. Les membres Pro peuvent créer et héberger un Espace de cours.\n\nRÉVISEZ, NE FAITES PAS QUE PLANIFIER\n\nSemora Pro comprend :\n\n• Smart Plan, construit sur vos vraies échéances\n• Tuteur IA, fondé sur votre syllabus et vos supports de cours\n• Enregistrement des cours et fiches de révision IA\n• Cartes mémoire avec répétition espacée\n• Quiz d'entraînement\n• Prévision de notes et barèmes personnalisés\n• Alertes de risque universitaire\n• Planification de la charge de travail\n• Suivi de progression\n• Minuteur de concentration\n• Rappels personnalisables\n• Synchronisation du calendrier\n• Matières et semestres illimités\n• Hébergement d'Espaces de cours\n\nSUR TOUS VOS APPAREILS\n\nVotre semestre reste synchronisé entre iPhone, iPad, Apple Watch et le web, avec un seul compte.\n\nAjoutez le widget « À suivre » à votre écran d'accueil pour voir votre prochaine échéance sans ouvrir Semora.\n\nLE PLAN GRATUIT N'EXPIRE PAS\n\nLe plan gratuit comprend :\n\n• Matières illimitées synchronisées depuis Canvas, Blackboard ou Moodle\n• Une matière ajoutée à la main, dans un semestre\n• Une action IA à vie : un scan de syllabus, un enregistrement de cours ou un document transformé en fiches\n• Suivi des devoirs et des échéances\n• Suivi des notes pondérées\n• Calendrier universitaire\n• Rappels le jour même\n• Participation aux Espaces de cours partagés\n\nPassez à Semora Pro pour des matières et semestres illimités, plus d'actions IA et les outils de révision avancés.\n\nScannez votre syllabus. Organisez votre semestre. Sachez quoi faire ensuite.\n\nSEMORA PRO\n\n• Mensuel : 5,99 €/mois\n• Annuel : 34,99 €/an\n\nSemora Pro est un abonnement à renouvellement automatique. Le paiement est débité de votre compte Apple et se renouvelle automatiquement sauf si le renouvellement est désactivé au moins 24 heures avant la fin de la période en cours. Vous pouvez gérer ou résilier votre abonnement dans les réglages d'abonnement de votre compte Apple.\n\nPolitique de confidentialité :\nhttps://semoraai.com/privacy\n\nConditions d'utilisation (CLUF) :\nhttps://www.apple.com/legal/internet-services/itunes/dev/stdeula/\n\nUne question ou un commentaire ?\nsemora365@gmail.com",
+        "releaseNotes": "Corrections et améliorations.",
+        "marketingUrl": "https://semoraai.com",
+        "supportUrl": "https://semoraai.com/support",
+        "privacyPolicyUrl": "https://semoraai.com/privacy"
       }
     },
     "categories": [
