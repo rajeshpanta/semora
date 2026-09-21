@@ -7,6 +7,12 @@
  */
 export const ES: Record<string, string> = {
   // ── AI tutor: threads, starters, photo attach, sharing (1.8) ───────────
+  // The English was reworded from "Pick a course above" to "Choose a course
+  // from the context bar" and the key went stale, so the Tutor's empty state
+  // rendered in English for every Spanish student. Both forms are kept: the
+  // old one may still be on a screen that has not been rebuilt.
+  'Ask across every course — your deadlines are already here. Choose a course from the context bar to add its syllabus and notes.':
+    'Pregunta sobre todos tus cursos: tus entregas ya están aquí. Elige un curso en la barra de contexto para añadir su programa y tus apuntes.',
   'Ask across every course — your deadlines are already here. Pick a course above to add its syllabus and notes.': 'Pregunta sobre todos tus cursos: tus entregas ya están aquí. Elige un curso arriba para añadir su programa y tus apuntes.',
   'Answers are grounded in this course’s syllabus, deadlines, grades, and any notes you attach above.': 'Las respuestas se basan en el programa, las entregas y las notas de este curso, y en los apuntes que añadas arriba.',
   'What should I work on tonight?': '¿En qué debería trabajar esta noche?',
@@ -1379,6 +1385,10 @@ export const ES: Record<string, string> = {
   'CANVAS SETUP · STEP 1 OF 2': 'CONFIGURAR CANVAS · PASO 1 DE 2',
   'CANVAS SETUP · STEP 2 OF 2': 'CONFIGURAR CANVAS · PASO 2 DE 2',
   'Connect Canvas to Semora': 'Conecta Canvas con Semora',
+  // The Moodle twin was never added, so a Spanish-speaking Moodle student
+  // read an English headline on the one screen that asks them to do something.
+  'Connect Moodle to Semora': 'Conecta Moodle con Semora',
+  'Connect Blackboard to Semora': 'Conecta Blackboard con Semora',
   'Set this up once. Semora will keep your dated Canvas assignments and events updated when an instructor changes a deadline.': 'Configúralo una sola vez. Semora mantendrá actualizadas tus tareas y eventos de Canvas con fecha cuando un profesor cambie una entrega.',
   'First, open Canvas in a web browser': 'Primero, abre Canvas en un navegador web',
   'Use your school’s Canvas website—the place where you normally see courses and assignments. The Canvas Student app does not show this private feed link.': 'Usa el sitio web de Canvas de tu institución, donde normalmente ves tus cursos y tareas. La app Canvas Student no muestra este enlace privado.',
@@ -1407,7 +1417,10 @@ export const ES: Record<string, string> = {
   'Preview Canvas courses': 'Vista previa de cursos de Canvas',
   'Hide Calendar Feed URL': 'Ocultar URL del feed de calendario',
   'Show Calendar Feed URL': 'Mostrar URL del feed de calendario',
-  'Create a semester before connecting so imported courses have a home.': 'Crea un semestre antes de conectar Canvas para guardar los cursos importados.',
+  // The English was made provider-neutral ("before connecting") when Moodle
+  // shipped; the Spanish still named Canvas, so a Moodle student was told to
+  // connect a platform their school may not use.
+  'Create a semester before connecting so imported courses have a home.': 'Crea un semestre antes de conectar para guardar los cursos importados.',
   'Create semester →': 'Crear semestre →',
   'Create a semester before connecting Canvas so Semora knows where to add your courses.': 'Crea un semestre antes de conectar Canvas para que Semora sepa dónde agregar tus cursos.',
   'Choose the Canvas courses to add. Semora will keep their dated assignments and events refreshed automatically.': 'Elige los cursos de Canvas que quieres agregar. Semora mantendrá actualizadas automáticamente sus tareas y eventos con fecha.',
