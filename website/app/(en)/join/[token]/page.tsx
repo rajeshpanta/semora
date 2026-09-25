@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ShareLanding, isPlausibleShareValue } from '@/components/ShareLanding';
+import { ShareLanding, isPlausibleShareValue, shareItunes } from '@/components/ShareLanding';
 import { OG_IMAGE } from '@/lib/og';
 import { SITE_NAME } from '@/lib/semora-facts';
 
@@ -12,7 +12,7 @@ import { SITE_NAME } from '@/lib/semora-facts';
  *
  * `follow` stays on so the links out to the marketing pages still count.
  */
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: `A classmate shared their course with you`,
   description: `Open the shared course in ${SITE_NAME}, every deadline, exam, and grading weight from their syllabus, copied into your own semester.`,
   robots: { index: false, follow: true },
@@ -22,6 +22,17 @@ export const metadata: Metadata = {
     ...OG_IMAGE,
   },
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}): Promise<Metadata> {
+  const { token } = await params;
+  if (!isPlausibleShareValue(token)) return baseMetadata;
+  // Page-level `itunes` replaces the layout's, so appId is repeated inside.
+  return { ...baseMetadata, itunes: shareItunes('join', token) };
+}
 
 export default async function JoinSharePage({
   params,

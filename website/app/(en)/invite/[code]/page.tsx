@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ShareLanding, isPlausibleShareValue } from '@/components/ShareLanding';
+import { ShareLanding, isPlausibleShareValue, shareItunes } from '@/components/ShareLanding';
 import { OG_IMAGE } from '@/lib/og';
 import { SITE_NAME } from '@/lib/semora-facts';
 
@@ -9,7 +9,7 @@ import { SITE_NAME } from '@/lib/semora-facts';
  * unbounded in count — see the note in app/join/[token]/page.tsx for why
  * `index: false` is not optional on these routes.
  */
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   // Absolute: the root layout's `%s | Semora` template would otherwise render
   // this as "You've been invited to Semora | Semora".
   title: { absolute: `You've been invited to ${SITE_NAME}` },
@@ -21,6 +21,17 @@ export const metadata: Metadata = {
     ...OG_IMAGE,
   },
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ code: string }>;
+}): Promise<Metadata> {
+  const { code } = await params;
+  if (!isPlausibleShareValue(code)) return baseMetadata;
+  // Page-level `itunes` replaces the layout's, so appId is repeated inside.
+  return { ...baseMetadata, itunes: shareItunes('invite', code) };
+}
 
 export default async function InvitePage({
   params,

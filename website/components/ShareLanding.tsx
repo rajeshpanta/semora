@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import styles from './ShareLanding.module.css';
-import { downloadPath, APP_URL, SITE_NAME } from '@/lib/semora-facts';
+import { downloadPath, APP_URL, APP_STORE_ID, SITE_NAME } from '@/lib/semora-facts';
 
 /**
  * The public landing page behind every link a Semora user shares.
@@ -51,10 +51,27 @@ const COPY: Record<
   },
 };
 
+/** semora://invite?code=... — handled by every app version ever shipped. */
+export function shareDeepLink(kind: ShareKind, value: string): string {
+  const copy = COPY[kind];
+  return `semora://${copy.appPath}?${copy.deepLinkParam}=${encodeURIComponent(value)}`;
+}
+
+/**
+ * Smart App Banner for a share page. The layout's banner has no app-argument
+ * because a generic page has nothing to hand over; a share page does. Safari
+ * passes it to the app when the student taps OPEN, which lands them on the
+ * invite/course instead of the Today tab. The custom scheme, not the https
+ * URL, so it works on binaries that predate Universal Links too.
+ */
+export function shareItunes(kind: ShareKind, value: string) {
+  return { appId: APP_STORE_ID, appArgument: shareDeepLink(kind, value) };
+}
+
 export function ShareLanding({ kind, value }: { kind: ShareKind; value: string }) {
   const copy = COPY[kind];
   const encoded = encodeURIComponent(value);
-  const deepLink = `semora://${copy.appPath}?${copy.deepLinkParam}=${encoded}`;
+  const deepLink = shareDeepLink(kind, value);
   const webLink = `${APP_URL}/${copy.appPath}?${copy.deepLinkParam}=${encoded}`;
 
   return (

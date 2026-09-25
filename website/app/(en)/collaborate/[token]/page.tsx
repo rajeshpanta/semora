@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { ShareLanding, isPlausibleShareValue } from '@/components/ShareLanding';
+import { ShareLanding, isPlausibleShareValue, shareItunes } from '@/components/ShareLanding';
 import { OG_IMAGE } from '@/lib/og';
 import { SITE_NAME } from '@/lib/semora-facts';
 
@@ -9,7 +9,7 @@ import { SITE_NAME } from '@/lib/semora-facts';
  * token and unbounded in count — see the note in app/join/[token]/page.tsx for
  * why `index: false` is not optional on these routes.
  */
-export const metadata: Metadata = {
+const baseMetadata: Metadata = {
   title: `Join your classmates in a course space`,
   description: `A ${SITE_NAME} course space keeps one shared set of deadlines and group assignments in sync for everyone in the class.`,
   robots: { index: false, follow: true },
@@ -19,6 +19,17 @@ export const metadata: Metadata = {
     ...OG_IMAGE,
   },
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ token: string }>;
+}): Promise<Metadata> {
+  const { token } = await params;
+  if (!isPlausibleShareValue(token)) return baseMetadata;
+  // Page-level `itunes` replaces the layout's, so appId is repeated inside.
+  return { ...baseMetadata, itunes: shareItunes('collaborate', token) };
+}
 
 export default async function CollaboratePage({
   params,
