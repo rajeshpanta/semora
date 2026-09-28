@@ -18,3 +18,12 @@
 "Your next deadlines at a glance." = "Your next deadlines at a glance.";
 "Due This Week" = "Due This Week";
 "Everything due in the next 7 days, plus your streak." = "Everything due in the next 7 days, plus your streak.";
+
+/* The Lock Screen when there is no payload to take words from: nothing written
+   yet, or the empty payload lib/widgetBridge.ts clearTodayWidget() writes at
+   sign-out, which carries no `strings`. Same reason as the gallery above —
+   there is no phone vocabulary at that moment — so these resolve here. Every
+   other Lock Screen label travels from the phone (lib/surfaceStrings.ts). */
+
+"Open Semora" = "Open Semora";
+"Open Semora to see what's due" = "Open Semora to see what's due";

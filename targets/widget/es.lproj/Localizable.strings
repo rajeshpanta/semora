@@ -4,3 +4,8 @@
 "Your next deadlines at a glance." = "Tus próximas entregas, de un vistazo.";
 "Due This Week" = "Vence esta semana";
 "Everything due in the next 7 days, plus your streak." = "Todo lo que vence en los próximos 7 días, y tu racha.";
+
+/* Pantalla de bloqueo sin datos del teléfono. Ver en.lproj. */
+
+"Open Semora" = "Abre Semora";
+"Open Semora to see what's due" = "Abre Semora para ver lo que vence";
