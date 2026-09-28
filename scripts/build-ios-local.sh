@@ -44,6 +44,17 @@ TEAM_ID="7T9897GFKH"
 # "profile doesn't include the App Groups capability". Removing the key is what
 # fixes it. Only reintroduce one if it has Admin or App Manager access.
 AUTH=(-allowProvisioningUpdates)
+# ...which is what ASC_KEY_ID is for: with no Apple ID in Xcode, an App Manager
+# key (5T4AFQ7J26) signs in instead. It fetches the profiles, adds a capability
+# app.json newly asks for to the App ID, and the local Apple Distribution
+# identity signs. Used for 1.15.2 (62), when Xcode had no account.
+#   ASC_KEY_ID=5T4AFQ7J26 ASC_ISSUER_ID=<uuid> scripts/build-ios-local.sh
+if [[ -n "${ASC_KEY_ID:-}" ]]; then
+  ASC_KEY_PATH="${ASC_KEY_PATH:-$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8}"
+  [[ -f "$ASC_KEY_PATH" ]] || { echo "ASC_KEY_ID set but $ASC_KEY_PATH does not exist" >&2; exit 1; }
+  [[ -n "${ASC_ISSUER_ID:-}" ]] || { echo "ASC_KEY_ID needs ASC_ISSUER_ID" >&2; exit 1; }
+  AUTH+=(-authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+fi
 
 mkdir -p "$OUT"
 cd "$ROOT"
