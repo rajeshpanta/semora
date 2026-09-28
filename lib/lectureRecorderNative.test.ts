@@ -124,3 +124,59 @@ Deno.test('Android automatic microphone reopen backs off and is capped', async (
   // Each failed read waits 500 ms: reopen within a few seconds, not on the first blip.
   assert(n >= 3 && n * 500 <= 5_000, `negative reads before reopen: ${n}`);
 });
+
+// ── iOS: a microphone that an interruption took (2026-09-24) ──────────────
+//
+// On 09-23 a call, alarm or other app took the microphone 29 minutes into a
+// lecture on 1.15.1. The single restart attempt, made the instant the
+// interruption ended with Semora in the background, was refused; one ordinary
+// notice went unseen and 33 minutes were lost.
+
+const IOS_CAPTURE = '../modules/semora-recorder/ios/LectureCapture.swift';
+
+Deno.test('iOS retries the microphone on a schedule, inside a background task, and a new interruption or Stop cancels it', async () => {
+  const swift = await read(IOS_CAPTURE);
+  const offsets = swift.match(/recoveryOffsets: \[TimeInterval\] = \[([^\]]+)\]/)?.[1].split(',').map((n) => Number(n.trim()));
+  assert(offsets && offsets.length >= 4, 'more than one attempt');
+  assertEquals(offsets[0], 0, 'the first attempt is immediate');
+  assert(offsets.every((n, i) => i === 0 || n > offsets[i - 1]), 'offsets rise');
+  assert(offsets[offsets.length - 1] <= 25, 'the schedule fits in one ~30 s background task');
+  assert(swift.includes('beginBackgroundTask(withName: "semora.lecture.recover")'), 'no background task: iOS suspends the app between attempts');
+  assert(/func stop\(\) \{\s*recoveryGeneration \+= 1/.test(swift), 'Stop must cancel pending attempts');
+  assert(/case \.began:[\s\S]{0,300}recoveryGeneration \+= 1/.test(swift), 'a new interruption must cancel pending attempts');
+  assert(swift.includes('if recovering && reason == "ENGINE_CONFIGURATION_CHANGED" { return }'),
+    'a configuration change caused by a retry must not restart the schedule');
+});
+
+Deno.test('iOS keeps telling the student while the microphone stays stopped, and clears every notice when it comes back', async () => {
+  const swift = await read(IOS_CAPTURE);
+  const ids = [...swift.matchAll(/"(semora-lecture-capture-stopped(?:-\d)?)"/g)].map((m) => m[1]);
+  assertEquals(new Set(ids).size, 3, 'the first notice and two reminders');
+  const clear = swift.slice(swift.indexOf('private func clearStoppedNotification()'), swift.indexOf('private func notifyCaptureStopped('));
+  assert(clear.includes('LectureCapture.reminderIds'), 'a recovery must clear the reminders too');
+  assert(swift.includes('LectureActivityController.shared.alertMicStopped('), 'the Live Activity alert is not raised');
+  const activity = await read(MODULE_ACTIVITY);
+  assert(/@available\(iOS 16\.2, \*\)\s*func alertMicStopped/.test(activity), 'alerting updates need the 16.2 guard');
+});
+
+Deno.test('iOS reports what the OS said, through the existing failure message', async () => {
+  const swift = await read(IOS_CAPTURE);
+  assert(/code: "RESTART_FAILED_\\\(reason\)", message: message\)/.test(swift), 'the restart failure must carry the report');
+  assert(swift.includes('static func report('), 'report() missing');
+  assert(swift.includes('static func fourCC('), 'fourCC() missing');
+  // Deliberately NOT set until tested on a device: the header says "other
+  // alerts" are silenced too, and a student's alarm must never be.
+  assert(!swift.includes('setPrefersNoInterruptionsFromSystemAlerts'), 'untested: may silence the student\'s alarms');
+});
+
+Deno.test('iOS tells the student even when the background time runs out, and never leaves reminders for a later recording', async () => {
+  const swift = await read(IOS_CAPTURE);
+  const start = swift.slice(swift.indexOf('func start() throws {'), swift.indexOf('func pause()'));
+  assert(start.indexOf('clearStoppedNotification()') >= 0 && start.indexOf('clearStoppedNotification()') < start.indexOf('configureSession()'),
+    'start() must clear reminders a killed capture left behind');
+  assert(/if index == 0 \{[\s\S]{0,600}queue\.async \{ self\.markStopped\(\) \}\s*notifyCaptureStopped\(after: offsets\[offsets\.count - 1\] \+ 5\)/.test(swift),
+    'the first refused try must mark capture stopped and book the notice with the system');
+  const expired = swift.slice(swift.indexOf('private func backgroundTaskExpired'), swift.indexOf('private func endBackgroundTask'));
+  assert(expired.includes('lastRecoveryFacts'), 'a schedule cut short must still report what iOS said');
+  assert(/if state\.stalled \|\| index > 0 \{ chunkHasGap = true \}/.test(swift), 'a clean configuration-change restart must not mark a gap');
+});

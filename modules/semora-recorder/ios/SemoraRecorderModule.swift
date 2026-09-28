@@ -63,6 +63,9 @@ public class SemoraRecorderModule: Module {
     OnCreate {
       SemoraRecorderModule.current = self
       SemoraRecorderModule.installControlObservers()
+      // No capture outlives its process: any "Recording paused" reminders
+      // still booked belong to one that died.
+      LectureCapture.clearStoppedNotices()
       if #available(iOS 16.1, *) {
         LectureActivityController.shared.endStale()
       }

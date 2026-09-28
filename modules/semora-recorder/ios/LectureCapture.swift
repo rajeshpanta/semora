@@ -65,6 +65,17 @@ final class LectureCapture {
   /// for nothing. A stall that outlives this is one recovery did not fix.
   static let stoppedNoticeDelay: TimeInterval = 30
   private static let stoppedNotificationId = "semora-lecture-capture-stopped"
+  /// Reminders after the first "Recording paused" notice, while capture stays
+  /// stopped. One notice is easy to miss in a bag or under a Focus: on
+  /// 2026-09-23 a missed one cost a student 33 minutes of a lecture.
+  private static let reminderIds = ["semora-lecture-capture-stopped-2", "semora-lecture-capture-stopped-3"]
+  static let reminderOffsets: [TimeInterval] = [3 * 60, 10 * 60]
+  /// After an interruption ends (or the engine is reconfigured), the
+  /// microphone is asked back at these offsets, in seconds. iOS can refuse the
+  /// first try while the call, Siri or the other app is still handing the
+  /// microphone back; the later tries catch that. The whole schedule fits in
+  /// one background task (about 30 seconds).
+  static let recoveryOffsets: [TimeInterval] = [0, 0.5, 1.5, 3, 6, 12, 20]
 
   var onEvent: ((Event) -> Void)?
   /// Called on the capture queue about every `heartbeatSeconds` while the
@@ -106,6 +117,24 @@ final class LectureCapture {
   private var observers: [NSObjectProtocol] = []
   private var engineObserver: NSObjectProtocol?
 
+  // Main thread only.
+  /// Keeps the process running through a short interruption and through the
+  /// restart attempts. With the microphone interrupted, background audio no
+  /// longer keeps Semora alive and iOS suspends it within seconds.
+  private var backgroundTask: UIBackgroundTaskIdentifier = .invalid
+  /// Bumped by every new interruption, recovery and Stop: a scheduled attempt
+  /// from an older one does nothing.
+  private var recoveryGeneration = 0
+  private var recovering = false
+  private var interruptedAt: Date?
+  /// The last interruption as iOS described it, for the failure report.
+  private var lastInterruption: [String: Any] = [:]
+  /// The session / engine call in progress, for the failure report.
+  private var step = ""
+  /// What iOS said on the latest refused attempt of the current schedule, so
+  /// a schedule cut short by the background time limit still reports it.
+  private var lastRecoveryFacts: [String: Any] = [:]
+
   init(options: Options) {
     self.options = options
     self.seq = options.firstSeq
@@ -114,6 +143,10 @@ final class LectureCapture {
   // MARK: - Lifecycle (main thread)
 
   func start() throws {
+    // A capture killed while stopped (force-quit, or iOS reclaiming a
+    // suspended app) leaves its timed reminders with the system. Up to ten
+    // minutes later they would say "Recording paused" over this healthy one.
+    clearStoppedNotification()
     try FileManager.default.createDirectory(at: options.directory, withIntermediateDirectories: true)
     do {
       try configureSession()
@@ -190,6 +223,9 @@ final class LectureCapture {
   }
 
   func stop() {
+    recoveryGeneration += 1
+    recovering = false
+    endBackgroundTask()
     stopStallTimer()
     removeObservers()
     clearStoppedNotification()
@@ -241,7 +277,9 @@ final class LectureCapture {
     // Mixable: other apps' audio does not interrupt the lecture. No
     // Bluetooth-HFP option: a headset microphone at the student's ear records
     // the student, not the lecturer — the phone's own microphone is used.
+    step = "category"
     try session.setCategory(.playAndRecord, mode: .default, options: [.mixWithOthers, .defaultToSpeaker])
+    step = "activate"
     try session.setActive(true)
     pinBuiltInMic()
   }
@@ -266,6 +304,7 @@ final class LectureCapture {
   private func startEngine() throws {
     let input = engine.inputNode
     let format = input.outputFormat(forBus: 0)
+    step = "input_format"
     guard format.sampleRate > 0, format.channelCount > 0 else {
       throw NSError(domain: "SemoraRecorder", code: 1, userInfo: [NSLocalizedDescriptionKey: "No microphone input is available."])
     }
@@ -280,6 +319,7 @@ final class LectureCapture {
       self.queue.async { self.consume(copy) }
     }
     engine.prepare()
+    step = "engine_start"
     try engine.start()
     observeEngineConfiguration()
   }
@@ -352,7 +392,7 @@ final class LectureCapture {
       // stopped" and offers Continue, which rebuilds the converter.
       if !convertFailureReported {
         convertFailureReported = true
-        emit(.failure(stage: "capture_finalize", code: "CONVERT_FAILED", message: error?.localizedDescription))
+        emit(.failure(stage: "capture_finalize", code: "CONVERT_FAILED", message: LectureCapture.report(error.map { LectureCapture.describe($0) } ?? [:], error?.localizedDescription)))
         markStopped()
       }
       return
@@ -376,7 +416,7 @@ final class LectureCapture {
       // buffer (a dozen a second) while the screen said "Recording".
       if !writeFailureReported {
         writeFailureReported = true
-        emit(.failure(stage: "local_commit", code: "WRITE_FAILED", message: error.localizedDescription))
+        emit(.failure(stage: "local_commit", code: "WRITE_FAILED", message: LectureCapture.report(LectureCapture.describe(error), error.localizedDescription)))
       }
       closeChunk()
       markStopped()
@@ -431,7 +471,7 @@ final class LectureCapture {
       // The part stays a .partial the upload queue ignores: its audio is lost
       // to the lecture, so the next part carries the gap.
       chunkHasGap = true
-      emit(.failure(stage: "local_commit", code: "RENAME_FAILED", message: error.localizedDescription))
+      emit(.failure(stage: "local_commit", code: "RENAME_FAILED", message: LectureCapture.report(LectureCapture.describe(error), error.localizedDescription)))
       return
     }
     let bytes = (try? FileManager.default.attributesOfItem(atPath: target.path)[.size] as? NSNumber)?.int64Value ?? 0
@@ -550,10 +590,22 @@ final class LectureCapture {
   private func handleInterruption(_ note: Notification) {
     guard let raw = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
           let type = AVAudioSession.InterruptionType(rawValue: raw) else { return }
+    var info = LectureCapture.interruptionInfo(note)
     switch type {
     case .began:
+      interruptedAt = Date()
+      // A new interruption abandons any restart still being tried.
+      recoveryGeneration += 1
+      recovering = false
+      lastInterruption = info
+      // A short interruption (Siri, a declined call, another app's microphone
+      // for a moment) then ends in a running process. iOS takes the task back
+      // after about 30 s, so a real call still suspends Semora as before.
+      beginBackgroundTask()
       queue.async { self.markStopped() }
     case .ended:
+      if let at = interruptedAt { info["interruptedMs"] = Int(Date().timeIntervalSince(at) * 1000) }
+      lastInterruption.merge(info) { _, new in new }
       recoverEngine(reason: "INTERRUPTION_ENDED")
     @unknown default:
       break
@@ -566,45 +618,262 @@ final class LectureCapture {
     recoverEngine(reason: "MEDIA_SERVICES_RESET")
   }
 
+  /// Main thread. Brings the microphone back, retrying on
+  /// `recoveryOffsets`. iOS may refuse a restart while Semora is in the
+  /// background ("!rec", cannotStartRecording: a mixable recording started
+  /// from the background); the foreground always may. A restart that every
+  /// try refused is reported once, with what iOS said, and the student told.
   private func recoverEngine(reason: String) {
     let alive = queue.sync { running && !ended }
     guard alive else { return }
+    // Tearing the engine down and starting it again, as every retry does, can
+    // itself post a configuration change. Restarting the schedule on that
+    // would push it past the background time and drop what the interruption
+    // said; the attempt already in progress covers it.
+    if recovering && reason == "ENGINE_CONFIGURATION_CHANGED" { return }
+    recoveryGeneration += 1
+    recovering = true
+    lastRecoveryFacts = [:]
+    beginBackgroundTask(renew: true)
+    attemptRecovery(reason: reason, index: 0, generation: recoveryGeneration, startedAt: Date(), first: nil)
+  }
+
+  private func attemptRecovery(reason: String, index: Int, generation: Int, startedAt: Date, first: [String: Any]?) {
+    guard generation == recoveryGeneration else { return }
+    let state = queue.sync { (alive: running && !ended, stalled: stalledSince != nil) }
+    guard state.alive else { finishRecovery(); return }
+    // Buffers are flowing again (a restart from the app, or the engine came
+    // back by itself): nothing left to do.
+    if index > 0, !state.stalled, engine.isRunning { finishRecovery(); return }
     do {
       try configureSession()
-      if !engine.isRunning {
+      if index > 0 || !engine.isRunning {
+        // A retry starts from a clean engine: a refused start can leave the
+        // tap installed on an engine that never ran.
+        engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
         try startEngine()
+        queue.sync {
+          lastBufferAt = Date()
+          // A clean restart after a configuration change loses nothing worth
+          // marking (as before); after a stall or a refused try, audio is gone.
+          if state.stalled || index > 0 { chunkHasGap = true }
+        }
       }
+      // Success is confirmed by the first buffer: consume() emits .resumed
+      // and clears the notices.
+      finishRecovery()
     } catch {
-      queue.async {
-        self.markStopped()
-        self.emit(.failure(stage: "capture_prepare", code: "RESTART_FAILED_\(reason)", message: error.localizedDescription))
+      var described = LectureCapture.describe(error)
+      described["step"] = step
+      let firstError = first ?? described
+      let offsets = LectureCapture.recoveryOffsets
+      let next = index + 1
+      lastRecoveryFacts = described
+      lastRecoveryFacts["recovery"] = reason
+      lastRecoveryFacts["attempts"] = next
+      if let cc = firstError["fourCC"] { lastRecoveryFacts["firstFourCC"] = cc }
+      if let code = firstError["nsCode"] { lastRecoveryFacts["firstCode"] = code }
+      if let s = firstError["step"] { lastRecoveryFacts["firstStep"] = s }
+      if index == 0 {
+        // As before: a refused restart means capture is stopped (a no-op if an
+        // interruption already said so). And the student is told even if iOS
+        // suspends Semora or ends its background time before the last try:
+        // the notice is booked with the system to land just after it, and the
+        // first buffer of a restart that wins cancels it (consume()).
+        queue.async { self.markStopped() }
+        notifyCaptureStopped(after: offsets[offsets.count - 1] + 5)
       }
-      notifyCaptureStopped()
+      if next < offsets.count {
+        let wait = max(0.1, offsets[next] - Date().timeIntervalSince(startedAt))
+        DispatchQueue.main.asyncAfter(deadline: .now() + wait) { [weak self] in
+          self?.attemptRecovery(reason: reason, index: next, generation: generation, startedAt: startedAt, first: firstError)
+        }
+        return
+      }
+      reportRecoveryFailed(reason: reason, error: error, described: described, first: firstError, attempts: next)
+      finishRecovery()
     }
   }
 
-  /// Both the delivered notice and one still waiting on its timer.
+  private func reportRecoveryFailed(reason: String, error: Error?, described: [String: Any], first: [String: Any], attempts: Int) {
+    var details = context()
+    if reason == "INTERRUPTION_ENDED" { details.merge(lastInterruption) { _, new in new } }
+    details.merge(described) { _, new in new }
+    details["attempts"] = attempts
+    if let cc = first["fourCC"] { details["firstFourCC"] = cc }
+    if let code = first["nsCode"] { details["firstCode"] = code }
+    if let s = first["step"] { details["firstStep"] = s }
+    let message = LectureCapture.report(details, error?.localizedDescription)
+    queue.async {
+      self.markStopped()
+      self.emit(.failure(stage: "capture_prepare", code: "RESTART_FAILED_\(reason)", message: message))
+    }
+    // Nothing is coming back on its own: say so now, and again later.
+    notifyCaptureStopped()
+    if #available(iOS 16.2, *) {
+      LectureActivityController.shared.alertMicStopped(title: options.pausedTitle, body: options.pausedBody)
+    }
+  }
+
+  private func finishRecovery() {
+    recovering = false
+    endBackgroundTask()
+  }
+
+  /// `renew`: start a fresh task and only then end the current one, so the
+  /// restart attempts after a long interruption do not inherit a task that is
+  /// about to expire. iOS caps the total background time either way.
+  private func beginBackgroundTask(renew: Bool = false) {
+    if backgroundTask != .invalid && !renew { return }
+    let previous = backgroundTask
+    var id: UIBackgroundTaskIdentifier = .invalid
+    id = UIApplication.shared.beginBackgroundTask(withName: "semora.lecture.recover") { [weak self] in
+      self?.backgroundTaskExpired(id)
+    }
+    backgroundTask = id
+    if previous != .invalid { UIApplication.shared.endBackgroundTask(previous) }
+  }
+
+  /// Main thread (UIKit calls expiration handlers there). Must return fast.
+  private func backgroundTaskExpired(_ id: UIBackgroundTaskIdentifier) {
+    if id == backgroundTask, recovering {
+      // Out of background time mid-recovery: the attempts still scheduled
+      // would only run whenever the app next wakes. The timed notices are
+      // already with the system.
+      recoveryGeneration += 1
+      recovering = false
+      var facts = context()
+      // The interruption's own facts only describe a schedule it started.
+      if lastRecoveryFacts["recovery"] as? String == "INTERRUPTION_ENDED" {
+        facts.merge(lastInterruption) { _, new in new }
+      }
+      facts.merge(lastRecoveryFacts) { _, new in new }
+      let message = LectureCapture.report(facts, nil)
+      queue.async {
+        self.emit(.failure(stage: "capture_prepare", code: "RESTART_EXPIRED", message: message))
+      }
+    }
+    UIApplication.shared.endBackgroundTask(id)
+    if id == backgroundTask { backgroundTask = .invalid }
+  }
+
+  private func endBackgroundTask() {
+    guard backgroundTask != .invalid else { return }
+    UIApplication.shared.endBackgroundTask(backgroundTask)
+    backgroundTask = .invalid
+  }
+
+  /// Main thread. Where the app stood when something failed.
+  private func context() -> [String: Any] {
+    let app = UIApplication.shared
+    let state: String
+    switch app.applicationState {
+    case .active: state = "active"
+    case .inactive: state = "inactive"
+    default: state = "background"
+    }
+    var out: [String: Any] = [
+      "appState": state,
+      // False within ~10 s of locking a phone that has a passcode.
+      "protectedData": app.isProtectedDataAvailable,
+      "otherAudio": AVAudioSession.sharedInstance().isOtherAudioPlaying,
+    ]
+    if app.applicationState == .background {
+      out["bgRemainingS"] = Int(min(app.backgroundTimeRemaining, 9_999))
+    }
+    return out
+  }
+
+  /// A failure message that carries what iOS said: the facts first, as
+  /// sorted `key=value` pairs the analytics can match on, then iOS's own
+  /// sentence. It travels through the existing failure event, so no bridge
+  /// or JavaScript change is needed to see it.
+  ///   "[appState=background attempts=7 fourCC=!rec nsCode=561145187 step=engine_start] The operation couldn’t be completed. (…)"
+  static func report(_ facts: [String: Any], _ description: String?) -> String {
+    let pairs = facts.keys.sorted().map { "\($0)=\(facts[$0]!)" }.joined(separator: " ")
+    let text = description ?? ""
+    if pairs.isEmpty { return text }
+    return text.isEmpty ? "[\(pairs)]" : "[\(pairs)] \(text)"
+  }
+
+  /// What iOS said, in fields the analytics can group by.
+  static func describe(_ error: Error) -> [String: Any] {
+    let ns = error as NSError
+    var out: [String: Any] = ["domain": ns.domain, "nsCode": ns.code]
+    if let cc = fourCC(ns.code) { out["fourCC"] = cc }
+    if let under = ns.userInfo[NSUnderlyingErrorKey] as? NSError {
+      out["underDomain"] = under.domain
+      out["underCode"] = under.code
+    }
+    return out
+  }
+
+  /// 561145187 → "!rec". AVAudioSession codes are four printable characters.
+  static func fourCC(_ code: Int) -> String? {
+    guard code > 0, code <= Int(UInt32.max) else { return nil }
+    let bytes = [24, 16, 8, 0].map { UInt8(truncatingIfNeeded: code >> $0) }
+    guard bytes.allSatisfy({ $0 >= 0x20 && $0 < 0x7F }) else { return nil }
+    return String(decoding: bytes, as: UTF8.self)
+  }
+
+  static func interruptionInfo(_ note: Notification) -> [String: Any] {
+    let info = note.userInfo ?? [:]
+    var out: [String: Any] = [:]
+    // 0 another session took over, 2 built-in mic muted (iPad cover),
+    // 4 route disconnected (iOS 17+).
+    if let reason = info[AVAudioSessionInterruptionReasonKey] as? UInt { out["reason"] = Int(reason) }
+    // Read by name: the constant is deprecated since iOS 14.5.
+    if let suspended = info["AVAudioSessionInterruptionWasSuspendedKey"] as? Bool { out["wasSuspended"] = suspended }
+    if let raw = info[AVAudioSessionInterruptionOptionKey] as? UInt {
+      out["shouldResume"] = AVAudioSession.InterruptionOptions(rawValue: raw).contains(.shouldResume)
+    }
+    return out
+  }
+
+  /// Both the delivered notices and those still waiting on their timers.
   private func clearStoppedNotification() {
+    LectureCapture.clearStoppedNotices()
+  }
+
+  /// Also called when the module is created: a capture killed while stopped
+  /// (force-quit, or iOS reclaiming the suspended app) leaves its timed
+  /// reminders with the system, and a new process has no capture to clear
+  /// them. They would say "Open Semora to continue" about a lecture the app
+  /// has already told the student was saved.
+  static func clearStoppedNotices() {
     let center = UNUserNotificationCenter.current()
-    center.removePendingNotificationRequests(withIdentifiers: [LectureCapture.stoppedNotificationId])
-    center.removeDeliveredNotifications(withIdentifiers: [LectureCapture.stoppedNotificationId])
+    let ids = [LectureCapture.stoppedNotificationId] + LectureCapture.reminderIds
+    center.removePendingNotificationRequests(withIdentifiers: ids)
+    center.removeDeliveredNotifications(withIdentifiers: ids)
   }
 
   /// Main thread. `after` nil posts now (a restart that failed: nothing is
   /// coming back on its own); a delay posts only if capture is still stopped
-  /// then — a request with this identifier replaces any pending one, and a
-  /// recovery removes it.
+  /// then — a request with the same identifier replaces a pending one, and a
+  /// recovery removes them all. Reminders follow at `reminderOffsets`.
   private func notifyCaptureStopped(after delay: TimeInterval? = nil) {
     guard UIApplication.shared.applicationState != .active else { return }
     guard queue.sync(execute: { stalledSince != nil && running && !ended }) else { return }
+    postStoppedNotice(id: LectureCapture.stoppedNotificationId, after: delay)
+    for (id, offset) in zip(LectureCapture.reminderIds, LectureCapture.reminderOffsets) {
+      postStoppedNotice(id: id, after: (delay ?? 0) + offset)
+    }
+  }
+
+  private func postStoppedNotice(id: String, after delay: TimeInterval?) {
     let content = UNMutableNotificationContent()
     content.title = options.pausedTitle
     content.body = options.pausedBody
     content.sound = .default
+    content.threadIdentifier = "semora-lecture-capture"
+    // Breaks through a Focus / Do Not Disturb when the app has the Time
+    // Sensitive entitlement; without it iOS shows it as an ordinary alert.
+    content.interruptionLevel = .timeSensitive
+    content.relevanceScore = 1
     let trigger: UNNotificationTrigger? = delay.map {
       UNTimeIntervalNotificationTrigger(timeInterval: max(1, $0), repeats: false)
     }
-    let request = UNNotificationRequest(identifier: LectureCapture.stoppedNotificationId, content: content, trigger: trigger)
-    UNUserNotificationCenter.current().add(request)
+    UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
   }
 }

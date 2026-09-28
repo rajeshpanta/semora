@@ -4,6 +4,7 @@ import { AudioModule, setAudioModeAsync, type RecordingInput } from 'expo-audio'
 // to turn the cross-platform options into this platform's.
 import { createRecordingOptions } from 'expo-audio/build/utils/options';
 import { LECTURE_RECORDING_OPTIONS } from '@/lib/lectureRecordingOptions';
+import { failureText } from '@/lib/lectureFailure';
 import {
   builtInMicrophone,
   DEAD_MIC_AFTER_MS,
@@ -210,7 +211,7 @@ export class ExpoCaptureEngine implements CaptureEngine {
       recorder.record();
     } catch (error) {
       this.capturing = false;
-      this.emit({ type: 'failure', stage: 'capture_prepare', code: 'START_THREW', message: String(error).slice(0, 120) });
+      this.emit({ type: 'failure', stage: 'capture_prepare', code: 'START_THREW', message: failureText(error) });
       throw error;
     }
     const until = Date.now() + START_VERIFY_MS;
@@ -270,7 +271,7 @@ export class ExpoCaptureEngine implements CaptureEngine {
       }
       await FileSystem.moveAsync({ from: cacheUri, to: target });
     } catch (error) {
-      this.emit({ type: 'failure', stage: 'local_commit', code: 'MOVE_FAILED', message: String(error).slice(0, 120) });
+      this.emit({ type: 'failure', stage: 'local_commit', code: 'MOVE_FAILED', message: failureText(error) });
       return false;
     }
     this.seq = seq + 1;
