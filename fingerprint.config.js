@@ -35,4 +35,13 @@ module.exports = {
     'PackageJsonAndroidAndIosScriptsIfNotContainRun',
     'ExpoConfigVersions',
   ],
+  // Editor leftovers never ship, but @expo/fingerprint hashes every file in an
+  // autolinked package. One vim swap file
+  // (node_modules/react-native-iap/lib/module/utils/.debug.js.swp) was the whole
+  // difference between the clean native state da773ae3 and the live 1.15.1
+  // runtime 7491078 — it was not Gradle output, which the defaults already skip
+  // (**/android/build, **/android/.cxx, **/android/.gradle). These are APPENDED
+  // to the defaults. Measured 2026-09-25: adding them moved neither runtime.
+  // vim swap names .swa-.swp, vim's 4913 write probe, emacs lock and backup files.
+  ignorePaths: ['**/*.sw[a-p]', '**/4913', '**/.#*', '**/*~'],
 };
