@@ -397,6 +397,25 @@ Deno.test('a recovered microphone says how it came back', async () => {
   assertEquals(s.getState().micStoppedAt, null);
 });
 
+Deno.test('a capture failure is logged with the OS reason, stripped of anything personal', async () => {
+  const props: Record<string, unknown>[] = [];
+  const { deps, engine } = makeDeps({
+    track: (e: string, p?: Record<string, unknown>) => { if (e === 'lecture_capture_failed') props.push(p ?? {}); },
+  } as any);
+  const s = new LectureSession(deps);
+  await startIt(s);
+  engine.emit({
+    type: 'failure', stage: 'capture_prepare', code: 'RESTART_FAILED_INTERRUPTION_ENDED',
+    message: 'The operation couldn\u2019t be completed. (OSStatus error 561145187.) /private/var/mobile/Containers/Data/x.m4a',
+  });
+  engine.emit({ type: 'failure', stage: 'capture_prepare', code: 'NO_MESSAGE' });
+  assertEquals(props.length, 2);
+  assertEquals(props[0].code, 'RESTART_FAILED_INTERRUPTION_ENDED');
+  assert(String(props[0].message).includes('561145187'), String(props[0].message));
+  assert(!String(props[0].message).includes('/private/var'), String(props[0].message));
+  assertEquals(props[1].message, null);
+});
+
 Deno.test('wall time comes from the phase changes, so a sleeping runtime still reports the hours it ran', async () => {
   const { deps, log, engine, advance } = makeDeps();
   const s = new LectureSession(deps);

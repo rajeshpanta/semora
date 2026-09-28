@@ -19,7 +19,12 @@ export const QUERY_CACHE_KEY = 'semora.query-cache.v1';
  * quietly undo that. Lectures are small and load fast online; there is no
  * offline story worth this.
  */
-const NEVER_PERSIST_PREFIXES = ['lecture'];
+//
+// The in-session update switch (components/AppUpdateGate.tsx) is here too, for
+// a different reason: it is a kill switch. Restored from disk, a week-old
+// "on" arms a launch before the server has been asked, so turning it off
+// would not take effect until each phone happened to refetch.
+const NEVER_PERSIST_PREFIXES = ['lecture', 'appupdateflag'];
 
 export function shouldPersistQuery(query: Query): boolean {
   // Compose with the library default — do NOT replace it. The default is

@@ -430,5 +430,43 @@ Deno.test('iOS: a failed recovery carries its step, OS error and background time
 
 Deno.test('iOS: the stopped notice reaches a phone in Focus', async () => {
   const swift = await swiftSource();
-  assert(funcBody(swift, 'notifyCaptureStopped').includes('interruptionLevel = .timeSensitive'));
+  assert(funcBody(swift, 'postStoppedNotice').includes('interruptionLevel = .timeSensitive'));
+  // Every stopped notice is posted through that one function.
+  assertEquals(count(swift, 'UNNotificationRequest('), 1, 'one place builds the request');
+  assert(funcBody(swift, 'postStoppedNotice').includes('UNNotificationRequest('));
+});
+
+// ── Telling the student (merged from the 2026-09-24 recorder work) ─────────
+// Its retry schedule is replaced by the recovery above (a phone showed every
+// one of its retries refused); what it added to TELLING the student is kept.
+
+Deno.test('iOS keeps telling the student while the microphone stays stopped, and clears every notice when it comes back', async () => {
+  const swift = await read(IOS_CAPTURE);
+  const ids = [...swift.matchAll(/"(semora-lecture-capture-stopped(?:-\d)?)"/g)].map((m) => m[1]);
+  assertEquals(new Set(ids).size, 3, 'the first notice and two reminders');
+  const offsets = swift.match(/reminderOffsets: \[TimeInterval\] = \[([^\]]+)\]/)?.[1].split(',').map((n) => Number(eval(n.trim())));
+  assert(offsets && offsets.length === 2 && offsets[0] >= 60 && offsets[1] > offsets[0], `reminders later, spaced: ${offsets}`);
+  // One place clears, and it clears all three; every path that means "audio is
+  // back" or "the student is looking" goes through it.
+  const clear = code(funcBody(swift, 'clearStoppedNotices'));
+  assert(clear.includes('LectureCapture.reminderIds') && clear.includes('removePendingNotificationRequests') && clear.includes('removeDeliveredNotifications'));
+  assert(code(funcBody(swift, 'clearStoppedNotification')).includes('LectureCapture.clearStoppedNotices()'));
+  // Posting books the reminders with the system (a suspended app still delivers them).
+  const notify = code(funcBody(swift, 'notifyCaptureStopped'));
+  assertOrder(notify, ['stalledSince != nil', 'postStoppedNotice(id: LectureCapture.stoppedNotificationId', 'LectureCapture.reminderIds, LectureCapture.reminderOffsets'], 'notifyCaptureStopped');
+  assert(code(funcBody(swift, 'postStoppedNotice')).includes('content.interruptionLevel = .timeSensitive'), 'every notice is time-sensitive');
+});
+
+Deno.test('iOS lights the lock screen when the recovery gives up, and never leaves reminders for a later recording', async () => {
+  const swift = await read(IOS_CAPTURE);
+  const giveUp = code(funcBody(swift, 'giveUp'));
+  assertOrder(giveUp, ['notifyCaptureStopped()', 'if #available(iOS 16.2, *)', 'LectureActivityController.shared.alertMicStopped('], 'giveUp tells the student both ways');
+  const activity = await read(MODULE_ACTIVITY);
+  assert(/@available\(iOS 16\.2, \*\)\s*func alertMicStopped/.test(activity), 'alerting updates need the 16.2 guard');
+  // A new capture, and a new process, start with no stale "Recording paused".
+  const start = code(funcBody(swift, 'start'));
+  assert(start.indexOf('clearStoppedNotification()') >= 0 && start.indexOf('clearStoppedNotification()') < start.indexOf('configureSession()'),
+    'start() clears reminders a killed capture left behind, before anything else');
+  const module = code(await read(IOS_MODULE));
+  assert(/OnCreate \{[^}]*LectureCapture\.clearStoppedNotices\(\)/.test(module), 'the module clears them when it is created');
 });

@@ -69,6 +69,11 @@ final class LectureCapture {
   /// for nothing. A stall that outlives this is one recovery did not fix.
   static let stoppedNoticeDelay: TimeInterval = 30
   private static let stoppedNotificationId = "semora-lecture-capture-stopped"
+  /// Reminders after the first "Recording paused" notice, while capture stays
+  /// stopped. One notice is easy to miss in a bag or under a Focus: on
+  /// 2026-09-23 a missed one cost a student 33 minutes of a lecture.
+  private static let reminderIds = ["semora-lecture-capture-stopped-2", "semora-lecture-capture-stopped-3"]
+  static let reminderOffsets: [TimeInterval] = [3 * 60, 10 * 60]
 
   // ── Bringing the microphone back after an interruption ────────────────────
   //
@@ -315,6 +320,10 @@ final class LectureCapture {
   // MARK: - Lifecycle (main thread)
 
   func start() throws {
+    // A capture killed while stopped (force-quit, or iOS reclaiming a
+    // suspended app) leaves its timed reminders with the system. Up to ten
+    // minutes later they would say "Recording paused" over this healthy one.
+    clearStoppedNotification()
     try FileManager.default.createDirectory(at: options.directory, withIntermediateDirectories: true)
     do {
       try configureSession()
@@ -1162,8 +1171,13 @@ final class LectureCapture {
       self.emit(.failure(stage: "capture_prepare", code: "RESTART_FAILED_\(current.trigger.rawValue)",
                          message: message, detail: detail))
     }
-    // Now: nothing is coming back on its own.
+    // Now: nothing is coming back on its own. The lock screen lights up too:
+    // the Live Activity alerts (sound, expanded Dynamic Island) on top of
+    // "Microphone stopped".
     notifyCaptureStopped()
+    if #available(iOS 16.2, *) {
+      LectureActivityController.shared.alertMicStopped(title: options.pausedTitle, body: options.pausedBody)
+    }
     // Kept a few seconds so the event and the notice leave the phone. Not
     // after expiry: that time is gone, and the expiry handler ends the task.
     if !expired { lingerThenRelease() }
@@ -1305,32 +1319,50 @@ final class LectureCapture {
     UIApplication.shared.endBackgroundTask(id)
   }
 
-  /// Both the delivered notice and one still waiting on its timer.
+  /// Both the delivered notices and those still waiting on their timers.
   private func clearStoppedNotification() {
+    LectureCapture.clearStoppedNotices()
+  }
+
+  /// Also called when the module is created: a capture killed while stopped
+  /// (force-quit, or iOS reclaiming the suspended app) leaves its timed
+  /// reminders with the system, and a new process has no capture to clear
+  /// them. They would say "Open Semora to continue" about a lecture the app
+  /// has already told the student was saved.
+  static func clearStoppedNotices() {
     let center = UNUserNotificationCenter.current()
-    center.removePendingNotificationRequests(withIdentifiers: [LectureCapture.stoppedNotificationId])
-    center.removeDeliveredNotifications(withIdentifiers: [LectureCapture.stoppedNotificationId])
+    let ids = [LectureCapture.stoppedNotificationId] + LectureCapture.reminderIds
+    center.removePendingNotificationRequests(withIdentifiers: ids)
+    center.removeDeliveredNotifications(withIdentifiers: ids)
   }
 
   /// Main thread. `after` nil posts now (a restart that failed: nothing is
   /// coming back on its own); a delay posts only if capture is still stopped
-  /// then — a request with this identifier replaces any pending one, and a
-  /// recovery removes it.
+  /// then — a request with the same identifier replaces a pending one, and a
+  /// recovery removes them all. Reminders follow at `reminderOffsets`.
   private func notifyCaptureStopped(after delay: TimeInterval? = nil) {
     guard UIApplication.shared.applicationState != .active else { return }
     guard queue.sync(execute: { stalledSince != nil && running && !ended }) else { return }
+    postStoppedNotice(id: LectureCapture.stoppedNotificationId, after: delay)
+    for (id, offset) in zip(LectureCapture.reminderIds, LectureCapture.reminderOffsets) {
+      postStoppedNotice(id: id, after: (delay ?? 0) + offset)
+    }
+  }
+
+  private func postStoppedNotice(id: String, after delay: TimeInterval?) {
     let content = UNMutableNotificationContent()
     content.title = options.pausedTitle
     content.body = options.pausedBody
     content.sound = .default
+    content.threadIdentifier = "semora-lecture-capture"
     // A student in class is often in a Focus, which holds back ordinary
     // notices until it ends — after the lecture. The app has the
     // time-sensitive entitlement (app.json).
     content.interruptionLevel = .timeSensitive
+    content.relevanceScore = 1
     let trigger: UNNotificationTrigger? = delay.map {
       UNTimeIntervalNotificationTrigger(timeInterval: max(1, $0), repeats: false)
     }
-    let request = UNNotificationRequest(identifier: LectureCapture.stoppedNotificationId, content: content, trigger: trigger)
-    UNUserNotificationCenter.current().add(request)
+    UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: content, trigger: trigger))
   }
 }
