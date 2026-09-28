@@ -341,6 +341,62 @@ Deno.test('a part the recorder could not finish is reported as lost audio', asyn
   assertEquals(s.getState().hadGap, true);
 });
 
+Deno.test('a failed restart reports which call iOS refused, from the text 1.15.1 sends and from new-build detail', async () => {
+  const tracked: { event: string; props: Record<string, unknown> }[] = [];
+  const { deps, engine } = makeDeps({ track: (event, props) => { tracked.push({ event, props: props ?? {} }); } });
+  const s = new LectureSession(deps);
+  await startIt(s);
+  // What the live 1.15.1 recorder sends today: only the message has the error in it.
+  engine.emit({
+    type: 'failure', stage: 'capture_prepare', code: 'RESTART_FAILED_INTERRUPTION_ENDED',
+    message: 'The operation couldn’t be completed. (com.apple.coreaudio.avfaudio error 561145187.)',
+  });
+  // What the fixed recorder sends: step and error as data; unknown keys never reach analytics.
+  engine.emit({
+    type: 'failure', stage: 'capture_prepare', code: 'RESTART_FAILED_INTERRUPTION_ENDED',
+    detail: {
+      step: 'set_active', errDomain: 'NSOSStatusErrorDomain', errCode: 561017449, errFourCC: '!pri', attempts: 6, final: true,
+      bgRemainingAtBegan: 29, bgRemaining: 4, restarts: 1, path: '/var/x',
+    } as never,
+  });
+  const failed = tracked.filter((t) => t.event === 'lecture_capture_failed').map((t) => t.props);
+  assertEquals(failed[0].code, 'RESTART_FAILED_INTERRUPTION_ENDED');
+  assertEquals(failed[0].stage, 'capture_prepare');
+  assertEquals(failed[0].errCode, 561145187);
+  assertEquals(failed[0].errFourCC, '!rec');
+  assertEquals(failed[0].errDomain, 'com.apple.coreaudio.avfaudio');
+  assertEquals(failed[1].step, 'set_active');
+  assertEquals(failed[1].errFourCC, '!pri');
+  assertEquals(failed[1].attempts, 6);
+  // Background time at .began and at give-up: whether iOS granted it at all.
+  assertEquals(failed[1].bgRemainingAtBegan, 29);
+  assertEquals(failed[1].bgRemaining, 4);
+  assertEquals(failed[1].restarts, 1);
+  assertEquals('path' in failed[1], false);
+  // A restart failure is not lost audio: the parts before it are closed on disk.
+  assertEquals(s.getState().partLost, false);
+});
+
+Deno.test('a recovered microphone says how it came back', async () => {
+  const tracked: { event: string; props: Record<string, unknown> }[] = [];
+  const { deps, engine, advance } = makeDeps({ track: (event, props) => { tracked.push({ event, props: props ?? {} }); } });
+  const s = new LectureSession(deps);
+  await startIt(s);
+  engine.emit({ type: 'micStopped', at: deps.now() });
+  advance(7_000);
+  engine.emit({
+    type: 'micResumed', at: deps.now(),
+    info: { trigger: 'INTERRUPTION_ENDED', attempts: 2, firstErrCode: 561017449, firstErrFourCC: '!pri', lostSeconds: 999 },
+  });
+  const resumed = tracked.find((t) => t.event === 'lecture_capture_resumed')!.props;
+  assertEquals(resumed.trigger, 'INTERRUPTION_ENDED');
+  assertEquals(resumed.attempts, 2);
+  assertEquals(resumed.firstErrFourCC, '!pri');
+  // The session's own figure, never one the recorder sent.
+  assertEquals(resumed.lostSeconds, 7);
+  assertEquals(s.getState().micStoppedAt, null);
+});
+
 Deno.test('wall time comes from the phase changes, so a sleeping runtime still reports the hours it ran', async () => {
   const { deps, log, engine, advance } = makeDeps();
   const s = new LectureSession(deps);

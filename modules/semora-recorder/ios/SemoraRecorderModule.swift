@@ -259,15 +259,21 @@ public class SemoraRecorderModule: Module {
       if #available(iOS 16.1, *) {
         DispatchQueue.main.async { LectureActivityController.shared.setMicStopped(true) }
       }
-    case let .resumed(atMs):
-      sendEvent("onCaptureResumed", ["at": atMs])
+    case let .resumed(atMs, info):
+      var payload: [String: Any] = ["at": atMs]
+      if !info.isEmpty { payload["info"] = info }
+      sendEvent("onCaptureResumed", payload)
       if #available(iOS 16.1, *) {
         DispatchQueue.main.async { LectureActivityController.shared.setMicStopped(false) }
       }
     case let .input(name, builtIn):
       sendEvent("onInputChanged", ["name": name as Any, "builtIn": builtIn])
-    case let .failure(stage, code, message):
-      sendEvent("onFailure", ["stage": stage, "code": code, "message": message as Any])
+    case let .failure(stage, code, message, detail):
+      // `detail` carries the step and the OS error (domain, code, four-char
+      // code); JS whitelists it before analytics (lib/lectureCaptureError.ts).
+      var payload: [String: Any] = ["stage": stage, "code": code, "message": message as Any]
+      if !detail.isEmpty { payload["detail"] = detail }
+      sendEvent("onFailure", payload)
     }
   }
 }

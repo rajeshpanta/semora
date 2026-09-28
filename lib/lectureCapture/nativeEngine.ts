@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import { requireOptionalNativeModule } from 'expo';
 import { translate } from '@/lib/i18n';
+import { sanitizeCaptureDiagnostics } from '@/lib/lectureCaptureError';
 import type {
   CaptureEngine,
   EngineEvent,
@@ -87,9 +88,15 @@ class NativeCaptureEngine implements CaptureEngine {
       part: { seq: Number(p.seq), uri: String(p.uri), seconds: Number(p.seconds) || 0, bytes: Number(p.bytes) || 0, hasGap: Boolean(p.hasGap) },
     }));
     on('onCaptureStopped', (p) => ({ type: 'micStopped', at: Number(p.at) || Date.now() }));
-    on('onCaptureResumed', (p) => ({ type: 'micResumed', at: Number(p.at) || Date.now() }));
+    on('onCaptureResumed', (p) => ({ type: 'micResumed', at: Number(p.at) || Date.now(), info: sanitizeCaptureDiagnostics(p.info) }));
     on('onInputChanged', (p) => ({ type: 'inputChanged', name: p.name ?? null, builtIn: Boolean(p.builtIn) }));
-    on('onFailure', (p) => ({ type: 'failure', stage: p.stage ?? 'capture_prepare', code: String(p.code ?? 'NATIVE_FAILURE'), message: p.message }));
+    on('onFailure', (p) => ({
+      type: 'failure',
+      stage: p.stage ?? 'capture_prepare',
+      code: String(p.code ?? 'NATIVE_FAILURE'),
+      message: p.message,
+      detail: sanitizeCaptureDiagnostics(p.detail),
+    }));
     on('onStopRequested', () => ({ type: 'stopRequested' }));
     on('onPauseToggleRequested', () => ({ type: 'pauseToggleRequested' }));
     on('onMarkRequested', () => ({ type: 'markRequested' }));
