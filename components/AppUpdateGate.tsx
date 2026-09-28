@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import { track } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
 import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
+import { markReloading, clearReloading } from '@/lib/reloadMarker';
 import {
   decideUpdate, AUTO_UPDATE_FLAG_KEY, FETCH_TIMEOUT_MS, COLD_START_GRACE_MS,
   TRACK_FLUSH_MS, RELOAD_GUARD_KEY, parseReloadGuard, serializeReloadGuard,
@@ -148,7 +149,13 @@ export function AppUpdateGate() {
       // delivery is worth a fraction of a second, never a stalled launch.
       track('ota_applied', { moment, screen: routeRef.current ?? 'unknown' });
       await new Promise((resolve) => setTimeout(resolve, TRACK_FLUSH_MS));
-      await Updates.reloadAsync();
+      // The launch URL comes back after the reload: stamped so a share link
+      // that opened this session is not opened again (lib/shareLinks.ts).
+      markReloading();
+      await Updates.reloadAsync().catch((err: unknown) => {
+        clearReloading();
+        throw err;
+      });
     } catch {
       // Never let an update attempt break a launch. Falling back to the
       // two-launch path is the whole point of it being a fallback.

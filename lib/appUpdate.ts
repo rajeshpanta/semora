@@ -51,6 +51,15 @@ export const NEVER_RELOAD_ROUTES = [
   '/onboarding',
   '/sign-in',
   '/settings/lms-connect',
+  // Where a share link lands (lib/shareLinks.ts): a reload there replays the
+  // link and app/+native-intent.tsx sends the replay to Today, so the invite
+  // the student just tapped would vanish under them. /redeem is reached from
+  // Me, not by a link: a student who leaves to copy a code from Messages and
+  // comes back must not lose what they were typing.
+  '/invite',
+  '/join',
+  '/collaborate',
+  '/redeem',
 ] as const;
 
 export function isProtectedRoute(pathname: string | null | undefined): boolean {

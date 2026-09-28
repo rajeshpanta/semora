@@ -54,3 +54,19 @@ export async function deleteItemAsync(key: string, _options?: Options): Promise<
   items.delete(key);
   accessibility.delete(key);
 }
+
+// Synchronous twins (SecureStore.getItem / setItem), used by lib/deviceStore.
+// Same semantics as the async pair above, including the locked-device refusal,
+// so a caller that goes through deviceStore is tested against the same keychain.
+export function getItem(key: string): string | null {
+  if (throwOnGet.has(key)) throw new Error('User interaction is not allowed.');
+  if (locked && accessibility.get(key) !== AFTER_FIRST_UNLOCK && items.has(key)) {
+    throw new Error('User interaction is not allowed.');
+  }
+  return items.has(key) ? (items.get(key) as string) : null;
+}
+
+export function setItem(key: string, value: string, options?: Options): void {
+  if (!items.has(key)) accessibility.set(key, options?.keychainAccessible ?? WHEN_UNLOCKED);
+  items.set(key, value);
+}

@@ -298,6 +298,17 @@ export default function MeScreen() {
               ? 'No friends yet — share your link to get started'
               : `${referralCount} friend${referralCount !== 1 ? 's' : ''} joined`}
           </Text>
+
+          {/* The receiving side. A friend who installed from the App Store lost
+              the link on the way, so this is where the code comes back in. */}
+          <TouchableOpacity
+            onPress={() => router.push('/redeem' as any)}
+            hitSlop={8}
+            accessibilityRole="button"
+            style={styles.haveCode}
+          >
+            <Text style={[styles.haveCodeText, { color: colors.brand }]}>Have an invite code?</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Stats */}
@@ -427,6 +438,8 @@ const styles = StyleSheet.create({
   inviteBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, height: 44, borderRadius: 12, backgroundColor: COLORS.brand },
   inviteBtnText: { fontSize: 14, fontWeight: '700', color: '#fff' },
   inviteCount: { fontSize: 12.5, color: COLORS.ink3, textAlign: 'center', marginTop: 10 },
+  haveCode: { alignSelf: 'center', marginTop: 10, paddingVertical: 4 },
+  haveCodeText: { fontSize: 13, fontWeight: '600', color: COLORS.brand },
   // Stats
   statsGrid: { flexDirection: 'row', gap: 8, marginBottom: 20 },
   statCard: { flex: 1, backgroundColor: COLORS.card, borderRadius: 18, padding: 12, alignItems: 'center', borderWidth: 0.5, borderColor: COLORS.line },

@@ -9,7 +9,7 @@
  * Referenced only from lib/deno.test.json. Metro never sees this file.
  */
 export const Platform = {
-  OS: 'ios' as const,
+  OS: 'ios' as 'ios' | 'android' | 'web',
   select: <T,>(specifics: { ios?: T; android?: T; web?: T; default?: T }): T | undefined =>
     specifics.ios ?? specifics.default,
 };

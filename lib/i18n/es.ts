@@ -1559,6 +1559,8 @@ export const ES: Record<string, string> = {
   'The widget reads only the schedule already on your device': 'El widget solo consulta el horario que ya está en tu dispositivo',
   'This account returned no courses Semora can import.': 'Esta cuenta no devolvió cursos que Semora pueda importar.',
   'This adds a private copy to your semester — every deadline, ready to track. You can edit or delete anything after.': 'Esto agrega una copia privada a tu semestre con todas las entregas listas para seguir. Después podrás editar o eliminar lo que quieras.',
+  // app/join.tsx, the sender opening their own share link (Universal Links make that open the app).
+  'This is your own share link. Classmates who open it get a private copy of this course — it is already in your semester.': 'Este es tu propio enlace para compartir. Tus compañeros que lo abran reciben una copia privada de este curso; tú ya lo tienes en tu semestre.',
   'This deck couldn\'t be loaded. It may have been deleted.': 'No se pudo cargar este mazo. Es posible que se haya eliminado.',
   'This flashcard will be permanently removed.': 'Esta tarjeta se eliminará de forma permanente.',
   'This invite link is incomplete.': 'Este enlace de invitación está incompleto.',
@@ -2383,6 +2385,16 @@ export const ES: Record<string, string> = {
   'LMS connection is required': 'Se necesita una conexión con la plataforma.',
   'Reconnect this LMS before enabling automatic sync.': 'Vuelve a conectar esta plataforma antes de activar la sincronización automática.',
   'Invalid action': 'Acción no válida.',
+  // app/redeem.tsx + the Me tab link to it: typing a code / pasting a link
+  // after installing from the App Store, which drops the shared URL.
+  'Have an invite code?': '¿Tienes un código de invitación?',
+  'Invite code': 'Código de invitación',
+  'Enter the code a friend gave you, or paste a Semora link a classmate sent you.':
+    'Escribe el código que te dio un amigo o pega un enlace de Semora que te envió un compañero.',
+  'Code or link': 'Código o enlace',
+  'Invite code or link': 'Código o enlace de invitación',
+  'That doesn\'t look like a Semora code or link. Check it and try again.':
+    'Eso no parece un código o enlace de Semora. Revísalo e inténtalo de nuevo.',
   // Returned by supabase/functions/redeem-referral
   'A referral code is required': 'Falta el código de invitación.',
   'Invalid referral code': 'Código de invitación no válido.',
