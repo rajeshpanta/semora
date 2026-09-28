@@ -444,25 +444,37 @@ Deno.test('iOS keeps telling the student while the microphone stays stopped, and
   const swift = await read(IOS_CAPTURE);
   const ids = [...swift.matchAll(/"(semora-lecture-capture-stopped(?:-\d)?)"/g)].map((m) => m[1]);
   assertEquals(new Set(ids).size, 3, 'the first notice and two reminders');
-  const offsets = swift.match(/reminderOffsets: \[TimeInterval\] = \[([^\]]+)\]/)?.[1].split(',').map((n) => Number(eval(n.trim())));
+  // "3 * 60" style products, read without evaluating source text.
+  const seconds = (expr: string) => expr.split('*').map((f) => Number(f.trim())).reduce((a, b) => a * b, 1);
+  const offsets = swift.match(/reminderOffsets: \[TimeInterval\] = \[([^\]]+)\]/)?.[1].split(',').map(seconds);
   assert(offsets && offsets.length === 2 && offsets[0] >= 60 && offsets[1] > offsets[0], `reminders later, spaced: ${offsets}`);
   // One place clears, and it clears all three; every path that means "audio is
   // back" or "the student is looking" goes through it.
   const clear = code(funcBody(swift, 'clearStoppedNotices'));
   assert(clear.includes('LectureCapture.reminderIds') && clear.includes('removePendingNotificationRequests') && clear.includes('removeDeliveredNotifications'));
   assert(code(funcBody(swift, 'clearStoppedNotification')).includes('LectureCapture.clearStoppedNotices()'));
+  // Audio back (the first buffer after a stop), the student looking (the app
+  // active), Stop, Continue and a new start all clear them.
+  for (const fn of ['consume', 'stop', 'restart', 'start']) {
+    assert(code(funcBody(swift, fn)).includes('clearStoppedNotification()'), `${fn} clears the notices`);
+  }
+  assert(/didBecomeActiveNotification[^}]*\{[^}]*clearStoppedNotification\(\)/.test(code(funcBody(swift, 'observe'))), 'coming on screen clears the notices');
   // Posting books the reminders with the system (a suspended app still delivers them).
   const notify = code(funcBody(swift, 'notifyCaptureStopped'));
-  assertOrder(notify, ['stalledSince != nil', 'postStoppedNotice(id: LectureCapture.stoppedNotificationId', 'LectureCapture.reminderIds, LectureCapture.reminderOffsets'], 'notifyCaptureStopped');
+  assertOrder(notify, ['stalledSince != nil', 'postStoppedNotice(id: LectureCapture.stoppedNotificationId', 'LectureCapture.reminderIds, LectureCapture.reminderOffsets', 'postStoppedNotice(id: id, after: (delay ?? 0) + offset)'], 'notifyCaptureStopped');
   assert(code(funcBody(swift, 'postStoppedNotice')).includes('content.interruptionLevel = .timeSensitive'), 'every notice is time-sensitive');
 });
 
 Deno.test('iOS lights the lock screen when the recovery gives up, and never leaves reminders for a later recording', async () => {
   const swift = await read(IOS_CAPTURE);
   const giveUp = code(funcBody(swift, 'giveUp'));
-  assertOrder(giveUp, ['notifyCaptureStopped()', 'if #available(iOS 16.2, *)', 'LectureActivityController.shared.alertMicStopped('], 'giveUp tells the student both ways');
+  assertOrder(giveUp, ['notifyCaptureStopped()', 'if #available(iOS 16.2, *), UIApplication.shared.applicationState != .active', 'LectureActivityController.shared.alertMicStopped('], 'giveUp tells the student both ways, off screen');
+  assertEquals(count(swift, 'alertMicStopped('), 1, 'the lock screen alerts only when a recovery gives up');
   const activity = await read(MODULE_ACTIVITY);
   assert(/@available\(iOS 16\.2, \*\)\s*func alertMicStopped/.test(activity), 'alerting updates need the 16.2 guard');
+  // The alert freezes the clock where it had got to, as setMicStopped does.
+  const alert = funcBody(activity, 'alertMicStopped');
+  assert(/last\.elapsedSeconds \+ max\(0, Int\(Date\(\)\.timeIntervalSince\(last\.measuredAt\)\)\)/.test(alert) && alert.includes('elapsedSeconds: elapsed'), 'the lock-screen clock never jumps back');
   // A new capture, and a new process, start with no stale "Recording paused".
   const start = code(funcBody(swift, 'start'));
   assert(start.indexOf('clearStoppedNotification()') >= 0 && start.indexOf('clearStoppedNotification()') < start.indexOf('configureSession()'),

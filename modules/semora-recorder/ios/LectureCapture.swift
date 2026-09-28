@@ -1175,7 +1175,9 @@ final class LectureCapture {
     // the Live Activity alerts (sound, expanded Dynamic Island) on top of
     // "Microphone stopped".
     notifyCaptureStopped()
-    if #available(iOS 16.2, *) {
+    // Like the notices, only off screen: on screen the recorder already says
+    // "Microphone stopped" and offers Continue.
+    if #available(iOS 16.2, *), UIApplication.shared.applicationState != .active {
       LectureActivityController.shared.alertMicStopped(title: options.pausedTitle, body: options.pausedBody)
     }
     // Kept a few seconds so the event and the notice leave the phone. Not
