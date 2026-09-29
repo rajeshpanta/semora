@@ -60,7 +60,13 @@ export interface MoodleSiteProbe {
  * never become a scanner. Five candidates, one round of requests, no recursion.
  */
 export function moodleProbeCandidates(input: string): string[] {
-  const trimmed = String(input ?? '').trim();
+  // An address copied from a browser bar or an old bookmark can still say
+  // http://. The student is naming a school, not asking for plain HTTP, so the
+  // scheme is upgraded: every request below is HTTPS whatever was typed, and
+  // refusing it outright left the first box silently doing nothing.
+  const raw = String(input ?? '').trim();
+  const upgraded = /^http:\/\//i.test(raw);
+  const trimmed = upgraded ? raw.replace(/^http:\/\//i, 'https://') : raw;
   if (!trimmed) return [];
   let url: URL;
   try {
@@ -69,6 +75,10 @@ export function moodleProbeCandidates(input: string): string[] {
     return [];
   }
   if (url.protocol !== 'https:' || blockedHost(url.hostname)) return [];
+  // ':80' was plain HTTP's port, written out. Kept through the upgrade it
+  // became 'https://school.edu:80' — HTTPS spoken to the HTTP port, which no
+  // school answers — so the scheme goes and its port goes with it.
+  if (upgraded && url.port === '80') url.port = '';
 
   const host = url.hostname;
   const out: string[] = [url.origin];

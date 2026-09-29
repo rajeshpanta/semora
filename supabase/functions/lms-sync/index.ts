@@ -12,6 +12,7 @@ import {
 } from '../_shared/moodle-calendar.ts';
 import { probeMoodleSite } from '../_shared/moodle-site.ts';
 import { withRequestLogging, errorFields, type EdgeLogger } from '../_shared/log.ts';
+import { errorCode, THROTTLE_HINT } from './errorCode.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
@@ -732,7 +733,7 @@ async function googleAssignments(token: string, courseIds: string[]): Promise<Lm
 // Canvas, over a condition that clears itself in minutes. So a 403 has to
 // prove it is an authorization failure before it is allowed to cost that, and
 // anything that looks like throttling degrades to a plain retryable error.
-const THROTTLE_HINT = /rate.?limit|throttl|too many requests/i;
+// THROTTLE_HINT and errorCode live in errorCode.ts, where they are tested.
 
 function isThrottleResponse(status: number, headers: Headers, body: string) {
   if (status === 429) return true;
@@ -755,35 +756,6 @@ function throttleError() {
 
 function validProvider(value: unknown): value is Provider {
   return ['canvas', 'blackboard', 'moodle', 'google_classroom'].includes(String(value));
-}
-
-function errorCode(error: unknown): 'credentials_required' | 'provider_error' {
-  const status = Number((error as any)?.status);
-  const message = String((error as Error)?.message ?? '');
-  // An explicitly-classified throttle is never a credential problem, however
-  // the provider happened to spell its status code.
-  if ((error as any)?.code === 'provider_throttled' || THROTTLE_HINT.test(message)) return 'provider_error';
-
-  // MOODLE_PLAN.md Phase 2.7. Moodle's own errorcode, read BEFORE the message
-  // regex below — 'enablewsdescription' is a site misconfiguration whose text
-  // contains the word "token", and the regex would file it as a dead
-  // credential and purge the student's Vault row over an admin's setting.
-  const moodleCode = String((error as any)?.moodleErrorCode ?? '');
-  if (moodleCode) {
-    if (moodleCode === 'invalidtoken' || moodleCode === 'invalidlogin') return 'credentials_required';
-    if (moodleCode === 'enablewsdescription' || moodleCode === 'servicenotavailable') return 'provider_error';
-    if (moodleCode === 'accessexception' || moodleCode === 'nopermissions') return 'provider_error';
-  }
-
-  // A firewall challenge on the Moodle feed road is NOT an expired link.
-  // Moodle answers a bad token with HTTP 200 and a plain body, so any 4xx here
-  // came from infrastructure and must keep the credential.
-  if ((error as any)?.code === 'moodle_feed_blocked' || (error as any)?.code === 'moodle_feed_unreadable') {
-    return 'provider_error';
-  }
-  return status === 401 || status === 403 || /reconnect|permission|unauthor|token/i.test(message)
-    ? 'credentials_required'
-    : 'provider_error';
 }
 
 /**
@@ -1459,7 +1431,10 @@ async function performConnectionSync(
     return { processed, skipped };
   } catch (error) {
     const code = errorCode(error);
-    const message = cleanText((error as Error)?.message, 500) ?? 'LMS synchronization failed.';
+    // Redacted like every message the request handler returns: this one is
+    // STORED, in two tables the settings screen reads back, and on the Moodle
+    // road a message that quotes its URL quotes a bearer credential.
+    const message = redactMoodleFeedUrl(cleanText((error as Error)?.message, 500) ?? 'LMS synchronization failed.');
     const failures = Number(connection.consecutive_sync_failures ?? 0) + 1;
     const credentialsRequired = code === 'credentials_required';
     await Promise.all([
@@ -1612,7 +1587,10 @@ serve(withRequestLogging('lms-sync', async (req, log) => {
               }).eq('id', connection.id);
             }
           }
-          log.error('background_connection_failed', { connection_id: connection.id, message: (error as Error)?.message ?? null });
+          log.error('background_connection_failed', {
+            connection_id: connection.id,
+            message: typeof (error as Error)?.message === 'string' ? redactMoodleFeedUrl((error as Error).message) : null,
+          });
         }
       };
 

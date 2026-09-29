@@ -30,6 +30,8 @@ and it must match nothing but zeros.
 | `subdir-install.ics` | synthetic | a UID whose host carries a path |
 | `pre33-quiz.ics` | synthetic | a pre-3.3 quiz: one event, no suffix, `DTSTART` ≠ `DTEND` |
 | `no-export.txt` | synthetic | the body when an admin turned calendar export off |
+| `quiz-group-override-courses.ics` / `quiz-group-override-all.ics` | synthetic | a quiz GROUP override, which Moodle writes as TWO events (`Quiz 3 - Section A opens` / `… closes`, from `mod/quiz/lib.php` `quiz_update_events` wrapping `overridegroupeventname` in `quizeventopens`/`quizeventcloses`); the opening is listed first, which is what filed the override's opening time as the due date |
+| `assign-override-personal-courses.ics` / `assign-override-personal-all.ics` | synthetic | an assignment USER override (`Essay 1 - Override (Due date)`, with `CATEGORIES` as the real 5.0 capture shows) beside the student's OWN calendar entry `Essay 1 - study group` — no `CATEGORIES`, dated later. Neither name has a pattern, so both read as "an override of Essay 1"; the one carrying the course is the deadline |
 
 The synthetic files exist because Phase 0.2 — a seeded Moodle under our own
 control — could not be done on this machine: **Docker and PHP are not

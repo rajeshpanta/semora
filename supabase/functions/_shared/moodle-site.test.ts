@@ -53,8 +53,37 @@ Deno.test('candidates cover what a student actually types', () => {
   assert(moodleProbeCandidates('school.edu').length <= 5);
 });
 
+Deno.test('an http:// address is asked about over HTTPS, never refused and never fetched as typed', () => {
+  // 'http://school.edu' used to return no candidates at all, so the first
+  // Moodle box did nothing and said nothing.
+  for (const typed of ['http://school.edu', 'HTTP://school.edu/', '  http://school.edu/moodle/my/  ']) {
+    const candidates = moodleProbeCandidates(typed);
+    assert(candidates.includes('https://school.edu'), `${typed} -> ${candidates}`);
+    assert(candidates.every((c) => c.startsWith('https://')), `${typed} -> ${candidates}`);
+  }
+  // A sub-directory survives the upgrade.
+  assert(moodleProbeCandidates('http://school.edu/moodle/course/view.php?id=2').includes('https://school.edu/moodle'));
+});
+
+Deno.test('an explicit :80 goes with the http:// it belonged to', () => {
+  // 'https://school.edu:80' is HTTPS on the plain-HTTP port: nothing answers.
+  for (const typed of ['http://school.edu:80', 'http://school.edu:80/', 'HTTP://school.edu:80/moodle/my/']) {
+    const candidates = moodleProbeCandidates(typed);
+    assert(candidates.includes('https://school.edu'), `${typed} -> ${candidates}`);
+    assert(!candidates.some((c) => c.includes(':80')), `${typed} -> ${candidates}`);
+  }
+  assert(moodleProbeCandidates('http://school.edu:80/moodle/my/').includes('https://school.edu/moodle'));
+  // Any other port is the school's own choice and is kept, and an address
+  // typed with https:// is taken exactly as written.
+  assert(moodleProbeCandidates('http://school.edu:8443').includes('https://school.edu:8443'));
+  assert(moodleProbeCandidates('https://school.edu:8443').includes('https://school.edu:8443'));
+});
+
 Deno.test('private, insecure and unparseable addresses are refused outright', () => {
-  assertEquals(moodleProbeCandidates('http://school.edu'), []);
+  // Any other scheme is still refused, and so is a private host behind http://.
+  assertEquals(moodleProbeCandidates('ftp://school.edu'), []);
+  assertEquals(moodleProbeCandidates('http://127.0.0.1'), []);
+  assertEquals(moodleProbeCandidates('http://10.1.2.3'), []);
   assertEquals(moodleProbeCandidates('https://127.0.0.1'), []);
   assertEquals(moodleProbeCandidates('https://10.1.2.3'), []);
   assertEquals(moodleProbeCandidates(''), []);
