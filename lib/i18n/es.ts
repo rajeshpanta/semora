@@ -108,6 +108,18 @@ export const ES: Record<string, string> = {
   'What else are you taking?': '¿Qué más estás cursando?',
   'Semora can only watch the classes it knows about. Add the rest and every deadline lands in one week view.': 'Semora solo puede vigilar las clases que conoce. Agrega el resto y todas las entregas caerán en una sola vista semanal.',
   'Add another class': 'Agregar otra clase',
+  // app/syllabus/added.tsx — the Canvas row, added 2026-09-18. For a free
+  // account Canvas is the only uncapped way to answer "what else are you
+  // taking?", and this screen never named it.
+  'Bring every class in at once': 'Trae todas tus clases de una vez',
+  'Connect Canvas and your whole timetable lands here — free, however many classes you take.':
+    'Conecta Canvas y todo tu horario aparece aquí: gratis, sin importar cuántas clases tengas.',
+  'Bring every class in from Canvas, free': 'Trae todas tus clases desde Canvas, gratis',
+  // app/(tabs)/scan.tsx — the cost of the tap, said before it.
+  'Your free AI action is still unused. Scanning a syllabus spends it — connecting Canvas brings every class across for free and leaves it unspent.':
+    'Tu acción de IA gratuita sigue sin usarse. Escanear un programa la gasta; conectar Canvas trae todas tus clases gratis y la deja intacta.',
+  'Your free AI action is still unused. Scanning a syllabus spends it.':
+    'Tu acción de IA gratuita sigue sin usarse. Escanear un programa la gasta.',
   'Done for now': 'Listo por ahora',
   'Semora can remind you before anything in this class is due.': 'Semora puede avisarte antes de cualquier entrega de esta clase.',
   'Reload data from the server': 'Recargar los datos del servidor',
@@ -2766,4 +2778,32 @@ export const ES: Record<string, string> = {
   'The first minute was almost silent. Take the phone out of the bag or bring it nearer the speaker.': 'El primer minuto fue casi silencio. Saca el teléfono de la mochila o acércalo a quien habla.',
   'Recording through your headphones — disconnect them to record the room': 'Grabando con el micrófono de tus auriculares: desconéctalos para grabar la sala',
   'Your headphones’ microphone is what Semora hears right now.': 'Ahora mismo Semora oye a través del micrófono de tus auriculares.',
+  // Record Lecture ship-check fixes (2026-09-16): the finished-but-missing-parts
+  // pill (the shared 'Incomplete' read "Pendiente"), the kill that saved
+  // nothing, the expo-engine start row, the upgrade-first Start button, Pro
+  // cards without the free-action sentence, the upload chooser and the quiz.
+  'Missing parts': 'Faltan partes',
+  "Your recording couldn't be saved": 'No se pudo guardar tu grabación',
+  "Your recording couldn't be saved because Semora was closed while the phone was locked.": 'No se pudo guardar tu grabación porque Semora se cerró mientras el teléfono estaba bloqueado.',
+  'Keep Semora open if you can — this version saves parts while the app is on screen': 'Mantén Semora abierta si puedes: esta versión guarda las partes mientras la app está en pantalla',
+  'Upgrade to record': 'Mejora tu plan para grabar',
+  'Time left': 'Tiempo restante',
+  'Searching transcripts': 'Buscando en las transcripciones',
+  'None of the audio has reached us yet. If it was recorded on another phone, open Semora on that phone to upload it.': 'Todavía no nos ha llegado nada del audio. Si se grabó en otro teléfono, abre Semora en ese teléfono para subirlo.',
+  "None of the audio has reached us yet. If it was recorded on another phone, open Semora on that phone to upload it. Your free action hasn't been used.": 'Todavía no nos ha llegado nada del audio. Si se grabó en otro teléfono, abre Semora en ese teléfono para subirlo. No se ha usado tu acción gratuita.',
+  "There was no audible speech in this recording, so there's nothing to transcribe.": 'No había voz audible en esta grabación, así que no hay nada que transcribir.',
+  "There was no audible speech in this recording, so there's nothing to transcribe. Your free action wasn't used.": 'No había voz audible en esta grabación, así que no hay nada que transcribir. No se usó tu acción gratuita.',
+  'Something went wrong processing this recording. Please try recording again.': 'Algo salió mal al procesar esta grabación. Intenta grabar de nuevo.',
+  'Something went wrong processing this recording. Your free action was not used — please try recording again.': 'Algo salió mal al procesar esta grabación. No se usó tu acción gratuita; intenta grabar de nuevo.',
+  'Organised summary with the key points': 'Resumen organizado con las ideas clave',
+  'Questions to test yourself, with answers': 'Preguntas para ponerte a prueba, con respuestas',
+  'A deck you can review anywhere': 'Un mazo que puedes repasar en cualquier sitio',
+  "Couldn't read that file": 'No se pudo leer ese archivo',
+  'Notes are made either way — a quiz and flashcards are built from them, and you can add the other two later from the notes screen.': 'Los apuntes se crean en cualquier caso: el cuestionario y las tarjetas se hacen a partir de ellos, y puedes añadir los otros dos más tarde desde la pantalla de apuntes.',
+  'Your free action makes the notes. Quizzes and flashcards are built from them and need Pro.': 'Tu acción gratuita crea los apuntes. Los cuestionarios y las tarjetas se hacen a partir de ellos y necesitan Pro.',
+  'See results': 'Ver resultados',
+  // Native recorder strings (lock screen / Android notification)
+  'Semora closed. Open to check your recording': 'Semora se cerró. Ábrela para revisar tu grabación',
+  'Recording stopped because Semora was closed': 'La grabación se detuvo porque Semora se cerró',
+  'Lecture recording alerts': 'Avisos de grabación de clases',
 };

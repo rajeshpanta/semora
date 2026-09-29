@@ -1,5 +1,5 @@
 import { assertEquals } from 'https://deno.land/std@0.168.0/testing/asserts.ts';
-import { buildTimeline, formatTimestamp } from '@/lib/lectureTimeline';
+import { buildTimeline, formatTimestamp, largestPartSeconds } from '@/lib/lectureTimeline';
 
 const t = (s: number, e: number, text: string) => [s, e, text] as [number, number, string];
 
@@ -23,9 +23,37 @@ Deno.test('a missing or failed part shows as a gap where it was', () => {
   ], null);
   assertEquals(blocks, [
     { kind: 'paragraph', start: 0, text: 'Before.', marked: false },
-    { kind: 'gap', start: 240, parts: 2 },
-    { kind: 'paragraph', start: 240, text: 'After.', marked: false },
+    { kind: 'gap', start: 360, parts: 2 },
+    { kind: 'paragraph', start: 360, text: 'After.', marked: false },
   ]);
+});
+
+Deno.test('a part with no row still takes its time: later stamps and marks do not shift early', () => {
+  // seq 1 never arrived; seq 2 starts after 0 and 1, at 240, not at 120.
+  const { blocks } = buildTimeline([
+    { seq: 0, seconds: 120, status: 'done', timings: [t(0, 10, 'Zero.')] },
+    { seq: 2, seconds: 45, status: 'done', timings: [t(5, 15, 'Two.')] },
+  ], [250]);
+  assertEquals(blocks, [
+    { kind: 'paragraph', start: 0, text: 'Zero.', marked: false },
+    { kind: 'gap', start: 240, parts: 1 },
+    { kind: 'paragraph', start: 245, text: 'Two.', marked: true },
+  ]);
+});
+
+Deno.test('parts missing before the first row are counted from seq 0', () => {
+  const { blocks } = buildTimeline([
+    { seq: 2, seconds: 120, status: 'done', timings: [t(0, 10, 'Late start.')] },
+  ], null);
+  assertEquals(blocks, [
+    { kind: 'gap', start: 240, parts: 2 },
+    { kind: 'paragraph', start: 240, text: 'Late start.', marked: false },
+  ]);
+});
+
+Deno.test('largestPartSeconds ignores unknown lengths', () => {
+  assertEquals(largestPartSeconds([{ seconds: null }, { seconds: 45 }, { seconds: 120 }]), 120);
+  assertEquals(largestPartSeconds([{ seconds: null }]), 0);
 });
 
 Deno.test('lectures from before timings: none, so the plain transcript is used', () => {

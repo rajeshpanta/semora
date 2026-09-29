@@ -53,6 +53,13 @@ export interface EngineStatus {
   builtInMic: boolean;
   /** Next sequence number the engine will use. */
   nextSeq: number;
+  /**
+   * A capture exists at all (native recorder builds that report it). false
+   * means the capture has ended without Stop — Android swiped Semora away —
+   * and restartCapture has nothing to restart: only start can bring it back.
+   * undefined where the engine cannot tell (expo, older native builds).
+   */
+  active?: boolean;
 }
 
 export interface EngineStartOptions {

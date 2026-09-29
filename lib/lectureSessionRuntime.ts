@@ -199,6 +199,7 @@ const deps: SessionDeps = {
     setActiveLecture: (lectureId) => setActiveRecordingLecture(lectureId),
   },
   track: (event, props) => track(event, { screen: 'lecture_record', ...(props ?? {}) }),
+  platform: Platform.OS === 'ios' || Platform.OS === 'android' ? Platform.OS : 'web',
 };
 
 let instance: LectureSession | null = null;

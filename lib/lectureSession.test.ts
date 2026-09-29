@@ -4,6 +4,8 @@ import {
   CAP_WARNING_NOTICE,
   HEADPHONES_NOTICE,
   LectureSession,
+  MIC_PAUSED_NOTICE,
+  MIC_PAUSED_NOTIFY_AFTER_MS,
   TOO_QUIET_NOTICE,
   type SessionDeps,
 } from '@/lib/lectureSession';
@@ -12,7 +14,10 @@ import type { CaptureEngine, EngineEvent, EngineStartOptions, EngineStatus } fro
 // ── fakes ──────────────────────────────────────────────────────────────────
 
 class FakeEngine implements CaptureEngine {
-  readonly kind = 'expo' as const;
+  kind: 'expo' | 'native' = 'expo';
+  /** undefined: the engine does not report it. */
+  active: boolean | undefined = undefined;
+  starts: EngineStartOptions[] = [];
   calls: string[] = [];
   listeners = new Set<(e: EngineEvent) => void>();
   seq = 0;
@@ -32,14 +37,14 @@ class FakeEngine implements CaptureEngine {
     this.live = 0;
     this.emit({ type: 'partClosed', part });
   }
-  async start(_o: EngineStartOptions) { this.calls.push('start'); if (this.failStart) throw Object.assign(new Error('mic'), { code: 'CAPTURE_START_FAILED' }); }
+  async start(o: EngineStartOptions) { this.calls.push('start'); this.starts.push(o); if (this.failStart) throw Object.assign(new Error('mic'), { code: 'CAPTURE_START_FAILED' }); }
   async pause() { this.calls.push('pause'); this.closePart(); this.paused = true; }
   async resume() { this.calls.push('resume'); this.paused = false; }
   async stop() { this.calls.push('stop'); this.closePart(); }
   async restartCapture() { this.calls.push('restart'); this.closePart(); }
   async tick(appActive: boolean) { this.lastTickActive = appActive; this.calls.push(`tick:${appActive}`); }
   status(): EngineStatus {
-    return { capturing: !this.paused, paused: this.paused, closedSeconds: this.closed, livePartSeconds: this.live, levelDb: -20, inputName: 'iPhone Microphone', builtInMic: true, nextSeq: this.seq };
+    return { capturing: !this.paused, paused: this.paused, closedSeconds: this.closed, livePartSeconds: this.live, levelDb: -20, inputName: 'iPhone Microphone', builtInMic: true, nextSeq: this.seq, ...(this.active === undefined ? {} : { active: this.active }) };
   }
   dispose() { this.calls.push('dispose'); }
 }
@@ -336,6 +341,25 @@ Deno.test('a part the recorder could not finish is reported as lost audio', asyn
   assertEquals(s.getState().hadGap, true);
 });
 
+Deno.test('a capture failure is logged with the OS reason, stripped of anything personal', async () => {
+  const props: Record<string, unknown>[] = [];
+  const { deps, engine } = makeDeps({
+    track: (e: string, p?: Record<string, unknown>) => { if (e === 'lecture_capture_failed') props.push(p ?? {}); },
+  } as any);
+  const s = new LectureSession(deps);
+  await startIt(s);
+  engine.emit({
+    type: 'failure', stage: 'capture_prepare', code: 'RESTART_FAILED_INTERRUPTION_ENDED',
+    message: 'The operation couldn\u2019t be completed. (OSStatus error 561145187.) /private/var/mobile/Containers/Data/x.m4a',
+  });
+  engine.emit({ type: 'failure', stage: 'capture_prepare', code: 'NO_MESSAGE' });
+  assertEquals(props.length, 2);
+  assertEquals(props[0].code, 'RESTART_FAILED_INTERRUPTION_ENDED');
+  assert(String(props[0].message).includes('561145187'), String(props[0].message));
+  assert(!String(props[0].message).includes('/private/var'), String(props[0].message));
+  assertEquals(props[1].message, null);
+});
+
 Deno.test('wall time comes from the phase changes, so a sleeping runtime still reports the hours it ran', async () => {
   const { deps, log, engine, advance } = makeDeps();
   const s = new LectureSession(deps);
@@ -503,4 +527,217 @@ Deno.test('an old native build that returns nothing and zeros its status still d
   engine.stop = async () => { engine.calls.push('stop'); engine.seq = 0; engine.closed = 0; };
   await s.stop();
   assert(log.some((l) => l.startsWith('finish:2:')), log.join(' '));
+});
+
+// ── the finished notice keeps its own limit ────────────────────────────────
+
+Deno.test('an auto-save after a longer native recording quotes its own limit, not the default', async () => {
+  const { deps, log, engine, setActive } = makeDeps({
+    server: { ...makeDeps().deps.server, start: async () => ({ lectureId: 'lec-1', maxSeconds: 7200 }) },
+  });
+  engine.kind = 'native';
+  const s = new LectureSession(deps);
+  await startIt(s);
+  assertEquals(s.getState().maxSeconds, 7200);
+  setActive(false);
+  engine.closed = 7200;
+  await s.tick();
+  assertEquals(s.getState().autoSaved, 'limit');
+  assertEquals(s.getState().maxSeconds, 5400, 'the reset puts the default back');
+  assert(log.includes('notify:Recording saved'));
+  assertEquals(s.takeFinishedNotice(), { lectureId: 'lec-1', autoSaved: 'limit', maxSeconds: 7200 });
+  assertEquals(s.takeFinishedNotice(), null, 'handed out once');
+  assertEquals(s.getState().finishedMaxSeconds, null);
+});
+
+Deno.test('a plain Stop hands out the limit too', async () => {
+  const { deps, engine } = makeDeps();
+  const s = new LectureSession(deps);
+  await startIt(s);
+  engine.live = 30;
+  await s.stop();
+  assertEquals(s.takeFinishedNotice(), { lectureId: 'lec-1', autoSaved: null, maxSeconds: 5400 });
+});
+
+// ── Android: a microphone that stays stopped on a locked phone ─────────────
+
+Deno.test('Android: a stopped native microphone is restarted with the phone locked, spaced out', async () => {
+  const { deps, engine, advance, setActive } = makeDeps({ platform: 'android' });
+  engine.kind = 'native';
+  const s = new LectureSession(deps);
+  await startIt(s);
+  setActive(false);
+  engine.emit({ type: 'micStopped', at: deps.now() });
+  await s.tick();
+  advance(2_000);
+  await s.tick();
+  assertEquals(engine.calls.filter((c) => c === 'restart').length, 1, 'once, then spaced out');
+  // Off screen the recorder runs its own backoff; the app nudges once a minute.
+  advance(10_000);
+  await s.tick();
+  assertEquals(engine.calls.filter((c) => c === 'restart').length, 1, 'not every 10 s while locked');
+  advance(50_000);
+  await s.tick();
+  assertEquals(engine.calls.filter((c) => c === 'restart').length, 2);
+});
+
+Deno.test('iOS: no restart while the phone is locked', async () => {
+  const { deps, engine, advance, setActive } = makeDeps({ platform: 'ios' });
+  engine.kind = 'native';
+  const s = new LectureSession(deps);
+  await startIt(s);
+  setActive(false);
+  engine.emit({ type: 'micStopped', at: deps.now() });
+  advance(20_000);
+  await s.tick();
+  assertEquals(engine.calls.filter((c) => c === 'restart').length, 0);
+  setActive(true);
+  await new Promise((r) => setTimeout(r, 0));
+  assertEquals(engine.calls.filter((c) => c === 'restart').length, 1, 'on screen it is');
+});
+
+Deno.test('Android: waiting for a decision, nothing is restarted even off screen', async () => {
+  const { deps, engine, advance, setActive } = makeDeps({ platform: 'android' });
+  engine.kind = 'native';
+  const s = new LectureSession(deps);
+  await startIt(s);
+  engine.emit({ type: 'micStopped', at: deps.now() });
+  advance(ASK_AFTER_SILENCE_MS + 1);
+  setActive(false);
+  setActive(true); // back after a long silence: asked
+  await new Promise((r) => setTimeout(r, 0));
+  assertEquals(s.getState().needsDecision, true);
+  setActive(false);
+  advance(60_000);
+  await s.tick();
+  assertEquals(engine.calls.filter((c) => c === 'restart').length, 0);
+});
+
+Deno.test('Android: a microphone stopped over 30 s on a locked phone is posted once per stop', async () => {
+  const { deps, log, engine, advance, setActive } = makeDeps({ platform: 'android' });
+  engine.kind = 'native';
+  const s = new LectureSession(deps);
+  await startIt(s);
+  setActive(false);
+  const paused = `notify:${MIC_PAUSED_NOTICE.title}`;
+  engine.emit({ type: 'micStopped', at: deps.now() });
+  advance(MIC_PAUSED_NOTIFY_AFTER_MS);
+  await s.tick();
+  assertEquals(log.filter((l) => l === paused).length, 0, 'not at exactly 30 s');
+  advance(1_000);
+  await s.tick();
+  advance(1_000);
+  await s.tick();
+  assertEquals(log.filter((l) => l === paused).length, 1, 'once');
+  engine.emit({ type: 'micResumed', at: deps.now() });
+  engine.emit({ type: 'micStopped', at: deps.now() });
+  advance(MIC_PAUSED_NOTIFY_AFTER_MS + 1);
+  await s.tick();
+  assertEquals(log.filter((l) => l === paused).length, 2, 'a new stop is posted again');
+});
+
+Deno.test('the paused notice is not posted on screen, nor by the iOS session (the recorder posts it)', async () => {
+  for (const [platform, active] of [['android', true], ['ios', false]] as const) {
+    const { deps, log, engine, advance, setActive } = makeDeps({ platform });
+    engine.kind = 'native';
+    const s = new LectureSession(deps);
+    await startIt(s);
+    setActive(active);
+    engine.emit({ type: 'micStopped', at: deps.now() });
+    advance(MIC_PAUSED_NOTIFY_AFTER_MS + 1);
+    await s.tick();
+    assertEquals(log.filter((l) => l === `notify:${MIC_PAUSED_NOTICE.title}`).length, 0, platform);
+  }
+});
+
+// ── a native capture that ended without Stop ───────────────────────────────
+
+Deno.test('a native capture that ended (swiped away) asks, and Continue starts a new one after the last part', async () => {
+  const { deps, log, engine, advance } = makeDeps({ platform: 'android' });
+  engine.kind = 'native';
+  engine.active = true;
+  const s = new LectureSession(deps);
+  await startIt(s);
+  engine.live = 120; await engine.restartCapture();
+  engine.live = 120; await engine.restartCapture();
+  engine.live = 0;
+  await s.tick();
+  assertEquals(s.getState().needsDecision, false);
+  // The capture is gone: the status keeps its final figures.
+  engine.active = false;
+  advance(1_000);
+  await s.tick();
+  assertEquals(s.getState().needsDecision, true);
+  assert(s.getState().micStoppedAt !== null);
+  assertEquals(s.getState().hadGap, true);
+  assert(log.includes('t:lecture_capture_ended'));
+  engine.calls = [];
+  await s.continueRecording();
+  assertEquals(engine.calls, ['start'], 'started, not restarted');
+  assertEquals(engine.starts[1], {
+    lectureId: 'lec-1', lectureDirUri: 'file:///docs/lectures/lec-1/', firstSeq: 2, partSeconds: engine.starts[0].partSeconds, title: 'Bio 101',
+  });
+  assertEquals(s.getState().micStoppedAt, null);
+  assertEquals(s.getState().needsDecision, false);
+  // A new capture counts from zero; the session carries what was closed.
+  engine.active = true;
+  engine.closed = 0; engine.live = 30;
+  await s.tick();
+  assertEquals(s.getState().elapsed, 270);
+  assertEquals(s.getState().savedSeconds, 240);
+  await s.stop();
+  assert(log.includes('finish:3:270'), log.join(' '));
+});
+
+Deno.test('Continue on a capture that still exists restarts it, and an unknown status never asks', async () => {
+  const { deps, engine } = makeDeps({ platform: 'android' });
+  engine.kind = 'native';
+  const s = new LectureSession(deps);
+  await startIt(s);
+  await s.tick();
+  assertEquals(s.getState().needsDecision, false, 'no active field: not treated as ended');
+  engine.active = true;
+  engine.calls = [];
+  await s.continueRecording();
+  assertEquals(engine.calls, ['restart']);
+});
+
+Deno.test('a failed start on Continue reports it and leaves the question for the next tick', async () => {
+  const { deps, engine } = makeDeps({ platform: 'android' });
+  engine.kind = 'native';
+  engine.active = true;
+  const s = new LectureSession(deps);
+  await startIt(s);
+  engine.active = false;
+  await s.tick();
+  engine.failStart = true;
+  await s.continueRecording();
+  assertEquals(s.getState().error, 'resumeFailed');
+  await s.tick();
+  assertEquals(s.getState().needsDecision, true);
+});
+
+Deno.test('Continue on a native capture that ended: saved time is carried before the new capture starts', async () => {
+  const { deps, engine } = makeDeps({ platform: 'ios' });
+  engine.kind = 'native';
+  const s = new LectureSession(deps);
+  await startIt(s);
+  engine.closed = 240;
+  let active = true;
+  const baseStatus = engine.status.bind(engine);
+  engine.status = () => ({ ...baseStatus(), active });
+  active = false;
+  await s.tick(); // capture gone → asks
+  assertEquals(s.getState().needsDecision, true);
+  let seenDuringStart = -1;
+  engine.start = async () => {
+    engine.calls.push('start');
+    engine.closed = 0; // the native side discards the old figures first
+    await s.tick();
+    seenDuringStart = s.getState().elapsed;
+    active = true;
+  };
+  await s.continueRecording();
+  assertEquals(seenDuringStart, 240, 'the clock never dips to 0 while the new capture starts');
+  assertEquals(s.getState().needsDecision, false);
 });

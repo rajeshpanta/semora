@@ -18,6 +18,8 @@
  * No react-native, no expo, no network: tested in lectureQueueRules.test.ts.
  */
 
+import { PART_SECONDS } from '@/lib/lectureCaptureRules';
+
 /** Upload attempts before a part asks the student for attention instead of retrying on its own. */
 export const MAX_PART_ATTEMPTS = 10;
 /**
@@ -64,6 +66,11 @@ export interface PartDecisionInput {
     attemptCount: number;
     nextAttemptAt: number | null;
     firstSeenAt?: number | null;
+    /**
+     * Why a quarantined part is quarantined. 'local_commit' means its file is
+     * already gone (or was deleted on expiry), so there is nothing left to expire.
+     */
+    lastFailureStage?: string | null;
   };
   /** null when the server could not be asked (offline): nothing is decided from silence. */
   server: {
@@ -86,7 +93,15 @@ export function decidePart(input: PartDecisionInput): PartDecision {
   if (!input.signedInUserId) return { action: 'skip', reason: 'no_session' };
   if (input.signedInUserId !== input.journalOwnerId) return { action: 'skip', reason: 'not_owner' };
   if (part.state === 'transcribed') return { action: 'transcribed' };
-  if (part.state === 'quarantined') return { action: 'skip', reason: 'quarantined' };
+  if (part.state === 'quarantined') {
+    // A quarantined part whose file may still be on the phone (a permanent
+    // upload refusal, a write-off) is held to the same 7-day promise as any
+    // other undeliverable audio. Once expired its stage is 'local_commit', so
+    // this does not fire again on the next pass.
+    const fs = part.firstSeenAt ?? null;
+    if (part.lastFailureStage !== 'local_commit' && fs !== null && now - fs > LOCAL_GIVE_UP_MS) return { action: 'expired' };
+    return { action: 'skip', reason: 'quarantined' };
+  }
 
   if (server === null) return { action: 'skip', reason: 'unknown_server' };
 
@@ -95,18 +110,25 @@ export function decidePart(input: PartDecisionInput): PartDecision {
   if (server.status === 'transcribing') return { action: 'received' };
   if (server.status === 'uploaded' && server.objectExists !== false) return { action: 'received' };
 
-  // A part the server refused deterministically (a provider 4xx on that file,
-  // a file too long, an allowance write-off) and gave up on, or whose lecture
-  // is already over: sending the bytes again only starts the same loop again.
-  // The student is told instead (needs attention), and may retry by hand.
-  if (server.status === 'failed') {
-    const serverGaveUp = (server.recoveryAttempts ?? 0) >= SERVER_WRITE_OFF_ATTEMPTS;
-    const lectureOver = server.lectureStatus === 'ready' || server.lectureStatus === 'failed';
-    if (serverGaveUp || lectureOver) return { action: 'written_off' };
-  }
-
+  // A 'failed' part is final only once the server has spent its own recovery
+  // attempts on it (migration 142): sending the bytes again only starts the
+  // same loop again. A lecture that is already 'ready' or 'failed' is NOT
+  // enough — the phone may hold the only copy of a part that never arrived,
+  // and the server folds late parts back in (foldInLateParts).
+  //   - bytes already on the server: the recovery pass claims a failed part
+  //     whose object exists, so the phone only waits;
+  //   - bytes not there: upload. The upsert moves failed back to pending
+  //     (allowed by the 145 client-columns trigger), and LOCAL_GIVE_UP_MS
+  //     below still ends it after 7 days.
+  // The 7-day promise holds whatever the server is still doing with a part
+  // it has not transcribed.
   const firstSeen = part.firstSeenAt ?? null;
   if (firstSeen !== null && now - firstSeen > LOCAL_GIVE_UP_MS) return { action: 'expired' };
+
+  if (server.status === 'failed') {
+    if ((server.recoveryAttempts ?? 0) >= SERVER_WRITE_OFF_ATTEMPTS) return { action: 'written_off' };
+    if (server.objectExists === true) return { action: 'received' };
+  }
 
   if (part.attemptCount >= MAX_PART_ATTEMPTS) return { action: 'needs_attention' };
   if (part.nextAttemptAt !== null && part.nextAttemptAt > now) return { action: 'skip', reason: 'backoff' };
@@ -116,15 +138,59 @@ export function decidePart(input: PartDecisionInput): PartDecision {
 }
 
 /**
+ * Should a part an earlier queue wrote off be given back to the queue?
+ *
+ * The queue that shipped before M1 wrote a part off as soon as its lecture was
+ * 'ready' or 'failed', although the server still had recoveries left and the
+ * phone held the only copy. Those parts are restored: attempts reset, back to
+ * saved_locally. A part whose file is already gone ('local_commit') has nothing
+ * to send, so it stays as it is. uploadPart still checks the file itself.
+ */
+export function shouldRestoreWrittenOffPart(input: {
+  part: { state: LocalPartState; writtenOff?: boolean; lastFailureStage?: string | null };
+  server: { status: ServerPartStatus; recoveryAttempts?: number | null } | null;
+}): boolean {
+  const { part, server } = input;
+  return part.state === 'quarantined' &&
+    part.writtenOff === true &&
+    part.lastFailureStage !== 'local_commit' &&
+    server !== null &&
+    server.status === 'failed' &&
+    (server.recoveryAttempts ?? 0) < SERVER_WRITE_OFF_ATTEMPTS;
+}
+
+/**
+ * A capture that died before saving any part: is it worth telling the student?
+ *
+ * Only when it ran longer than one part. A kill inside the first part was
+ * always abandoned silently (a Start and an immediate close); a capture that
+ * ran past a part boundary and still saved nothing is a lost lecture — on
+ * 1.13/1.14 an app kill with the phone locked — and silence would hide it.
+ * An unknown start time says nothing, so nothing is claimed.
+ */
+export function unsavedCaptureWasLost(
+  startedAtMs: number | null | undefined,
+  lastCaptureActivityMs: number | null | undefined,
+): boolean {
+  // Measured to the last moment the recorder was seen writing, NOT to when the
+  // queue next runs: a capture killed 20 seconds in and reopened an hour later
+  // lost nothing worth telling the student about. Unknown activity: silent.
+  return typeof startedAtMs === 'number' && startedAtMs > 0 &&
+    typeof lastCaptureActivityMs === 'number' && lastCaptureActivityMs - startedAtMs > PART_SECONDS * 1000;
+}
+
+/**
  * May the phone delete its copy of this part?
  *
  * Only once the server has TRANSCRIBED it. A row that says 'uploaded' proves
  * the bytes arrived; it does not prove they will be transcribed (a provider
- * outage, a write-off), and the phone's copy is what makes those recoverable.
+ * outage), and the phone's copy is what makes those recoverable.
  * An expired part is deleted too: the privacy promise outranks the retry.
+ * So is a written-off part: it is only written off once the server spent its
+ * own three recoveries on it, and a manual retry never resends it.
  */
 export function mayDeleteLocalCopy(decision: PartDecision): boolean {
-  return decision.action === 'transcribed' || decision.action === 'expired';
+  return decision.action === 'transcribed' || decision.action === 'expired' || decision.action === 'written_off';
 }
 
 /**

@@ -6,6 +6,7 @@ import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
   classifyLectureFailure,
   failureProperties,
+  failureText,
   segmentSeqFromFilename,
 } from './lectureFailure.ts';
 
@@ -80,4 +81,20 @@ Deno.test('segment filenames parse, and nothing else does', () => {
   assertEquals(segmentSeqFromFilename('seg_007.mp3'), null);
   assertEquals(segmentSeqFromFilename('.DS_Store'), null);
   assertEquals(segmentSeqFromFilename('seg_007.m4a.tmp'), null);
+});
+
+// The exact chain expo-audio produces when the audio session refuses (built by
+// AsyncFunctionDefinition + AudioRecordingException). Cut at 120 characters it
+// kept the wrapper and lost the OS code — the only part that says why.
+Deno.test('an expo-modules error keeps the OS reason, not the wrapper', () => {
+  const err = new Error("Calling the 'prepareToRecordAsync' function has failed\n→ Caused by: Audio recording error: Failed to configure audio session: The operation couldn’t be completed. (OSStatus error 561017449.)");
+  const text = failureText(err);
+  assertEquals(text.includes('561017449'), true, text);
+  assertEquals(text.startsWith('Audio recording error:'), true, text);
+});
+
+Deno.test('a plain error passes through, bounded', () => {
+  assertEquals(failureText(new Error('disk full')), 'Error: disk full');
+  assertEquals(failureText('x'.repeat(1000)).length, 300);
+  assertEquals(failureText(undefined), 'undefined');
 });

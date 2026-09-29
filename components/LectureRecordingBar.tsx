@@ -52,7 +52,10 @@ export function LectureRecordingBar() {
     const timer = setTimeout(() => {
       const notice = session.takeFinishedNotice();
       if (!notice) return;
-      const alert = autoSaveAlert(notice.autoSaved, Math.round(state.maxSeconds / 60));
+      // The ended recording's own limit: state.maxSeconds has already been
+      // reset to the default by the time this runs.
+      const noticeMaxSeconds = (notice as { maxSeconds?: number }).maxSeconds;
+      const alert = autoSaveAlert(notice.autoSaved, Math.round((noticeMaxSeconds ?? state.maxSeconds) / 60));
       const view = { text: 'View', onPress: () => router.push(`/lecture/${notice.lectureId}` as any) };
       if (alert) Alert.alert(alert.title, alert.body, [{ text: 'OK', style: 'cancel' }, view]);
       else if (notice.autoSaved === 'lock_screen_stop') {
@@ -137,7 +140,9 @@ export function LectureRecordingBar() {
           onPress={() => router.navigate('/lecture/record' as any)}
           activeOpacity={0.85}
           accessibilityRole="button"
-          accessibilityLabel={`${label}, ${spokenDuration(state.elapsed, locale)}. Return to the recording`}
+          // Each fixed phrase translated on its own: the spoken duration is
+          // already in words, so no single pattern could match the whole.
+          accessibilityLabel={`${t(label)}, ${spokenDuration(state.elapsed, locale)}. ${t('Return to the recording')}`}
         >
           {capturing ? (
             <Animated.View style={[styles.dot, { opacity: pulse }]} />

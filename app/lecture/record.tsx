@@ -10,7 +10,8 @@ import { APP_STORE_URL, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { autoSaveAlert } from '@/lib/lectureAutoSaveCopy';
 import { MAX_MARKS } from '@/lib/lectureCaptureRules';
 import { MAX_PAUSE_MS } from '@/lib/lectureSession';
-import { getLectureSession } from '@/lib/lectureSessionRuntime';
+import { canRecordLectures, getLectureSession } from '@/lib/lectureSessionRuntime';
+import { isNativeRecorderAvailable } from '@/lib/lectureCapture/nativeEngine';
 import { useColors } from '@/lib/theme';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { useResponsive } from '@/lib/responsive';
@@ -167,9 +168,13 @@ export default function RecordLectureScreen() {
     if (!notice) return;
     sawLiveRef.current = false;
     router.replace(`/lecture/${notice.lectureId}` as any);
-    const alert = autoSaveAlert(notice.autoSaved, maxMinutes);
+    // The limit of the recording that just ended, carried on the notice: the
+    // session has already reset its own maxSeconds to the default by now, so
+    // a 3-hour recording would otherwise be quoted as a 90-minute one.
+    const noticeMaxSeconds = (notice as { maxSeconds?: number }).maxSeconds;
+    const alert = autoSaveAlert(notice.autoSaved, Math.round((noticeMaxSeconds ?? recorder.maxSeconds) / 60));
     if (alert) Alert.alert(alert.title, alert.body);
-  }, [recorder.finishedLectureId, router, maxMinutes, navigation]);
+  }, [recorder.finishedLectureId, router, recorder.maxSeconds, navigation]);
 
   // Near the limit: one warning haptic, and an inline notice (below) rather
   // than a modal that takes the screen away from Stop and Mark and cannot show
@@ -380,12 +385,21 @@ export default function RecordLectureScreen() {
     // Guard BEFORE the first await: two quick taps would otherwise each create
     // a lecture holding its own reservation.
     if (startingRef.current) return;
+    // A free student whose one action is already spent goes straight to the
+    // upgrade, not through consent and the OS microphone prompt first. Only a
+    // KNOWN used allowance (true, not undefined while loading); the server's
+    // FREE_LECTURE_USED refusal in beginRecording stays the backstop.
+    if (!isPro && freeLectureUsed === true) {
+      track('paywall_open', { screen: 'lecture_record', context: 'lecture' });
+      setUpsellVisible(true);
+      return;
+    }
     if (await hasAcceptedLectureConsent()) {
       void beginRecording();
       return;
     }
     setConsentVisible(true);
-  }, [beginRecording]);
+  }, [beginRecording, isPro, freeLectureUsed]);
 
   const handleConsentAccepted = useCallback(async () => {
     await rememberLectureConsent();
@@ -467,6 +481,12 @@ export default function RecordLectureScreen() {
   const stopFilled = primary === 'pause';
   const stopDisabled = recorder.elapsed < MIN_STOP_SECONDS;
   const dockShown = isLive || isFinishing;
+  // The start button's own words say where a tap goes when the free action is
+  // already used, rather than "Start recording" opening a paywall.
+  const needsUpgradeToRecord = !isPro && freeLectureUsed === true;
+  // 1.13/1.14 without Semora's own recorder: parts are only saved while the app
+  // runs, and a kill with the phone locked loses them. Do not promise more.
+  const expoEngineRecords = canRecordLectures() && !isNativeRecorderAvailable();
 
   // Every live condition, most urgent first. Only the top one (or the chip the
   // student tapped) is shown as a sentence; the rest are chips, so a stopped
@@ -782,7 +802,7 @@ export default function RecordLectureScreen() {
                     fontWeight: recorder.warnedNearLimit ? '700' : '400',
                   },
                 ]}
-                accessibilityLabel={`${spokenDuration(remaining, locale)} left`}
+                accessibilityLabel={`${t('Time left')}: ${spokenDuration(remaining, locale)}`}
               >
                 {`${formatLectureDuration(remaining)} left`}
               </Text>
@@ -819,7 +839,11 @@ export default function RecordLectureScreen() {
               </View>
               <View style={styles.explainRow}>
                 <FontAwesome name="mobile" size={15} color={colors.brand} style={styles.explainIcon} />
-                <Text style={[styles.explainText, { color: colors.ink2 }]}>Saves every part on this phone as it goes</Text>
+                <Text style={[styles.explainText, { color: colors.ink2 }]}>
+                  {expoEngineRecords
+                    ? 'Keep Semora open if you can — this version saves parts while the app is on screen'
+                    : 'Saves every part on this phone as it goes'}
+                </Text>
               </View>
               <View style={styles.explainRow}>
                 <FontAwesome name="stop" size={13} color={colors.brand} style={styles.explainIcon} />
@@ -969,12 +993,12 @@ export default function RecordLectureScreen() {
               disabled={starting}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel="Start recording"
+              accessibilityLabel={needsUpgradeToRecord ? 'Upgrade to record' : 'Start recording'}
               accessibilityState={{ busy: starting }}
             >
-              <FontAwesome name="microphone" size={20} color="#fff" />
+              <FontAwesome name={needsUpgradeToRecord ? 'lock' : 'microphone'} size={20} color="#fff" />
               <Text style={styles.bigButtonText}>
-                {starting ? 'Starting…' : 'Start recording'}
+                {starting ? 'Starting…' : needsUpgradeToRecord ? 'Upgrade to record' : 'Start recording'}
               </Text>
             </TouchableOpacity>
           )}

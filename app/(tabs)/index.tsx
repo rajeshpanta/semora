@@ -40,6 +40,8 @@ import { updateWatchSnapshot } from '@/lib/watchBridge';
 import { getNotificationPermissionStatus, rescheduleAllTaskReminders, requestNotificationPermission } from '@/lib/notifications';
 import { track } from '@/lib/analytics';
 import { decideReviewAsk } from '@/lib/reviewGate';
+import { moneyJustDiscussed } from '@/lib/ratingQuiet';
+import { cardDaysShown, noteCardDay } from '@/lib/reviewOutcomeRuntime';
 import { localDayKey } from '@/store/appStore';
 import RatingNudgeCard from '@/components/RatingNudgeCard';
 import { computeStreak } from '@/lib/streaks';
@@ -115,7 +117,6 @@ export default function TodayScreen() {
   // New Today-tab features (streak chip) are Pro per the owner directive:
   // free users see a locked teaser routing to /paywall.
   const isPro = useAppStore((s) => s.isPro);
-  const ahaPaywallShown = useAppStore((s) => s.ahaPaywallShown);
   const setReviewRequested = useAppStore((s) => s.setReviewRequested);
   const setReviewPromptedDay = useAppStore((s) => s.setReviewPromptedDay);
   const setRatingCardDismissed = useAppStore((s) => s.setRatingCardDismissed);
@@ -539,9 +540,6 @@ export default function TodayScreen() {
   const reviewPromptInFlight = useRef(false);
   const [showRatingCard, setShowRatingCard] = useState(false);
 
-  // Snapshot at mount: if the paywall flag is false now, any later flip
-  // happened in THIS session, and a rating ask must not follow money.
-  const ahaPaywallShownAtMount = useRef(ahaPaywallShown);
 
   const requestNativeReview = useCallback(async (trigger: 'aha' | 'task_milestone') => {
     if (reviewPromptInFlight.current || useAppStore.getState().reviewRequested) return;
@@ -576,10 +574,22 @@ export default function TodayScreen() {
         ratingCardDismissed: s.ratingCardDismissed,
         tasksCompletedCount: s.tasksCompletedCount,
         today: localDayKey(),
-        paywallShownThisSession: s.ahaPaywallShown && !ahaPaywallShownAtMount.current,
+        // A live signal, not a lifetime flag: the expression this replaced
+        // (`ahaPaywallShown && !snapshotAtMount`) was false on every device
+        // that had ever seen the paywall, so the "never ask right after money"
+        // rule never once fired. See lib/ratingQuiet.
+        moneyJustDiscussed: moneyJustDiscussed(),
+        cardDaysShown: cardDaysShown(),
       });
 
-      if (decision.ask === 'card') { setShowRatingCard(true); return; }
+      if (decision.ask === 'card') {
+        // Counted here rather than in the card, so the cap advances even if the
+        // student never scrolls far enough to see it — being shown a card that
+        // was not looked at three days running is not a reason for a fourth.
+        noteCardDay(localDayKey());
+        setShowRatingCard(true);
+        return;
+      }
       if (decision.ask !== 'native') return;
 
       // Small delay so the tab settles before iOS's sheet slides up — cleared
