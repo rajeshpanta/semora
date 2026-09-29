@@ -29,6 +29,7 @@ import {
 } from '@/lib/lectureCaptureRules';
 import type { CaptureEngine, ClosedPart, EngineEvent } from '@/lib/lectureCapture/types';
 import { autoSaveAlert } from '@/lib/lectureAutoSaveCopy';
+import { redactSensitiveText } from '@/lib/redact';
 
 export type SessionPhase = 'idle' | 'starting' | 'recording' | 'paused' | 'finishing';
 export type AutoSaveReason = 'limit' | 'wall_clock' | 'storage' | 'lock_screen_stop';
@@ -503,7 +504,14 @@ export class LectureSession {
         return;
       }
       case 'failure':
-        d.track('lecture_capture_failed', { stage: event.stage, code: event.code });
+        // The message carries the OS's own reason (an AVAudioSession OSStatus
+        // such as 561145187 '!rec'). Without it a failed background restart on
+        // 2026-09-23 could not be told apart from any other.
+        d.track('lecture_capture_failed', {
+          stage: event.stage,
+          code: event.code,
+          message: event.message ? redactSensitiveText(event.message, { maxLength: 500 }) || null : null,
+        });
         // The recorder could not close or file a part: that audio is gone, and
         // saying so beats a transcript with a silent hole. capture_prepare
         // failures are start failures and are reported by start() itself.

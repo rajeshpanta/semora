@@ -3,9 +3,7 @@
     "name": "Semora",
     "slug": "semora",
     "version": "1.15.1",
-    "runtimeVersion": {
-      "policy": "fingerprint"
-    },
+    "runtimeVersion": "7491078882380c20f349986ca0e812678399b818",
     "updates": {
       "url": "https://u.expo.dev/063fbdf9-33e3-49b4-8b0b-ba9d6f18490b",
       "fallbackToCacheTimeout": 0,
