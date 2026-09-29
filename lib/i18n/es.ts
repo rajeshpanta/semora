@@ -1469,8 +1469,10 @@ export const ES: Record<string, string> = {
   'Come back to Semora. The link drops into the box below by itself.':
     'Vuelve a Semora. El enlace se pega solo en el cuadro de abajo.',
   'On your laptop, open': 'En tu laptop, abre',
+  // Said "Canvas o Sincronización LMS", a row that did not exist in Spanish.
+  // Now names the row by its own Spanish, as the Moodle form further down does.
   'Open Settings, then Canvas or LMS Sync, and choose Canvas.':
-    'Abre Ajustes, luego Canvas o Sincronización LMS, y elige Canvas.',
+    'Abre Ajustes, luego Sincronización de Canvas o LMS, y elige Canvas.',
   'Actually, let me try on my phone': 'Mejor lo intento en el móvil',
   'I know my Canvas web address': 'Sé la dirección de mi Canvas',
   'Use this address': 'Usar esta dirección',
@@ -3033,4 +3035,220 @@ export const ES: Record<string, string> = {
   'Show me the laptop steps': 'Mu\u00e9strame los pasos en la laptop',
   'Ask Semora for help': 'Pedir ayuda a Semora',
   'See my deadlines': 'Ver mis entregas',
+
+  // ── Canvas and Moodle, side by side (Moodle parity, 2026-09-28) ─────────
+  // Every prompt that said "Canvas" to everyone now names both platforms a
+  // student can connect alone, or their own once they have one. The prompts
+  // that interpolate the name are patterns in lib/i18n.ts (LMS_PROMPTS); the
+  // fixed sentences are here. "Canvas or Moodle" is "Canvas o Moodle"
+  // everywhere, and the settings row's Spanish name is repeated word for word
+  // in the laptop steps that tell a student to go and find it.
+  // The Settings row and the chooser's title: the owner's wording. It had no
+  // Spanish of its own.
+  'Canvas or LMS Sync': 'Sincronización de Canvas o LMS',
+  // The web rail's row, which names both platforms.
+  'Canvas & Moodle Sync': 'Sincronización de Canvas y Moodle',
+  'Canvas & Moodle · Pro': 'Canvas y Moodle · Pro',
+  'Canvas & Moodle · Free': 'Canvas y Moodle · Gratis',
+  // The chooser. The Canvas row's detail had no entry, and the generic
+  // "<x> due <y>" rule turned it into "Assignments, exams and · entrega dates".
+  'Assignments, exams and due dates': 'Tareas, exámenes y fechas de entrega',
+  'Needs an access token from your school’s IT team':
+    'Necesita un token de acceso del equipo de TI de tu universidad',
+  'Canvas and Moodle use the calendar link your school already gives you':
+    'Canvas y Moodle usan el enlace del calendario que tu universidad ya te da',
+  'Semora cannot change anything on Canvas, Blackboard or Moodle':
+    'Semora no puede cambiar nada en Canvas, Blackboard ni Moodle',
+  'No token? Scan a syllabus instead': '¿Sin token? Mejor escanea un programa',
+  'Your school uses': 'Tu universidad usa',
+  // Blackboard's catch, said on the platform switch itself, before the tap.
+  'needs school IT': 'requiere TI de tu universidad',
+  'Blackboard, needs school IT': 'Blackboard, requiere TI de tu universidad',
+  // The way out of the Canvas setup when the school search finds nothing.
+  'My school uses Moodle': 'Mi universidad usa Moodle',
+  // Canvas guided paste. The laptop card's title and description were not
+  // missing — they were mistranslated: the generic "Finish (.+)" rule turned
+  // them into "Completar on your laptop".
+  'Finish on your laptop': 'Termina en tu laptop',
+  'Finish on the bigger screen. Nothing to copy between devices.':
+    'Termina en la pantalla grande. No hay nada que copiar entre dispositivos.',
+  // "On your laptop, open <b>app.semoraai.com</b> and sign in." The bold
+  // address splits the sentence, so each half is its own key; the first half
+  // ('On your laptop, open') is already above.
+  'and sign in.': 'e inicia sesión.',
+  'Your classes appear here the next time you open Semora.':
+    'Tus clases aparecerán aquí la próxima vez que abras Semora.',
+  "Type your college name and pick it from the list. Semora then opens your school's own Canvas page for you, so you never need to know its web address.":
+    'Escribe el nombre de tu universidad y elígelo de la lista. Semora abre por ti la página de Canvas de tu universidad, así que no necesitas saber su dirección web.',
+  // "Semora will open {host}. Sign in if it asks, then find <b>Calendar
+  // Feed</b> in the calendar sidebar and copy the link." Split the same way.
+  'Semora will open': 'Semora abrirá',
+  '. Sign in if it asks, then find': '. Inicia sesión si te lo pide y luego busca',
+  'in the calendar sidebar and copy the link.': 'en la barra lateral del calendario y copia el enlace.',
+  // Steps 5 and 6, which now differ by device.
+  'Copy that link.': 'Copia ese enlace.',
+  'Come back to this tab and paste the link into the box below.':
+    'Vuelve a esta pestaña y pega el enlace en el cuadro de abajo.',
+  'Come back to Semora and tap Paste. The link goes into the box below.':
+    'Vuelve a Semora y toca Pegar. El enlace aparecerá en el cuadro de abajo.',
+  'This step trips people up. Nothing you have done so far is lost.':
+    'Este paso confunde a mucha gente. No has perdido nada de lo que hiciste hasta ahora.',
+  'This step trips people up, and it is usually easier on a computer. Nothing you have done so far is lost.':
+    'Este paso confunde a mucha gente, y suele ser más fácil en una computadora. No has perdido nada de lo que hiciste hasta ahora.',
+  // The connect screen's Canvas lines. The Moodle twin of each was already
+  // here; the Canvas one never was.
+  'Canvas keeps your calendar link behind your login, so there is one quick trip to make. Semora does the rest.':
+    'Canvas guarda el enlace de tu calendario detrás de tu inicio de sesión, así que hay que hacer un viaje rápido. Semora hace el resto.',
+  'Canvas sync is free while this offer runs. Connect before it ends and it stays free on this account.':
+    'La sincronización con Canvas es gratis mientras dure esta oferta. Conéctala antes de que termine y seguirá siendo gratis en esta cuenta.',
+  // The Moodle setup.
+  'That isn’t a web address yet. Type it like moodle.yourschool.edu, or paste any link from your Moodle.':
+    'Eso todavía no es una dirección web. Escríbela así: moodle.tuuniversidad.edu, o pega cualquier enlace de tu Moodle.',
+  'This doesn’t look like a Moodle site': 'Esto no parece un sitio de Moodle',
+  'That address answered, but not like Moodle. It may be your school’s main website — check the address, or continue if you’re sure it’s right.':
+    'Esa dirección respondió, pero no como Moodle. Puede ser el sitio principal de tu universidad: revisa la dirección o continúa si estás seguro de que es la correcta.',
+  'Change the address': 'Cambiar la dirección',
+  'Open Moodle': 'Abrir Moodle',
+  // The Moodle UI labels are the ones already used above (the 4.5 es
+  // language pack): Obtener URL del calendario, Copiar URL, Importar o
+  // exportar calendarios, Exportar calendario.
+  'Click Get calendar URL, then Copy URL.': 'Haz clic en Obtener URL del calendario y luego en Copiar URL.',
+  'Come back to this tab and paste it below.': 'Vuelve a esta pestaña y pégalo abajo.',
+  'Landed somewhere else?': '¿Terminaste en otra página?',
+  'Go to Calendar → Import or export calendars → Export calendar.':
+    'Ve a Calendario → Importar o exportar calendarios → Exportar calendario.',
+  'Get the link on your laptop': 'Consigue el enlace en tu laptop',
+  'On your laptop, open this address:': 'En tu laptop, abre esta dirección:',
+  'Then paste it into Semora on the web': 'Luego pégalo en Semora desde la web',
+  'Open app.semoraai.com in a new tab and sign in.': 'Abre app.semoraai.com en una pestaña nueva e inicia sesión.',
+  // Names the row by its own Spanish, as the Canvas step does.
+  'Open Settings, then Canvas or LMS Sync, and choose Moodle.':
+    'Abre Ajustes, luego Sincronización de Canvas o LMS, y elige Moodle.',
+  // The laptop card's last step, which it used to stop short of.
+  'Paste the link into the first box there.': 'Pega el enlace en el primer cuadro que aparece allí.',
+  'Paste my Moodle link': 'Pegar mi enlace de Moodle',
+  'Nothing to paste yet. Copy the link in Moodle first.': 'Aún no hay nada que pegar. Primero copia el enlace en Moodle.',
+  'Is your school on Canvas?': '¿Tu universidad usa Canvas?',
+  'That is a Canvas calendar link, not a Moodle one. Semora can connect Canvas with it instead.':
+    'Ese es un enlace del calendario de Canvas, no de Moodle. Semora puede conectar Canvas con él.',
+  // Says what the button will do, not that it is done.
+  'Your Moodle calendar has no due dates right now. Save your link and Semora will check it every few hours, and tell you when a course has a date.':
+    'Tu calendario de Moodle no tiene fechas de entrega por ahora. Guarda tu enlace y Semora lo revisará cada pocas horas, y te avisará cuando una asignatura tenga fecha.',
+  'Use my calendar link instead': 'Mejor usar mi enlace del calendario',
+  'If you change your Moodle password, Semora will ask you for a fresh link.':
+    'Si cambias tu contraseña de Moodle, Semora te pedirá un enlace nuevo.',
+  // The review step, which no longer names Canvas to a Moodle student.
+  'Prefilled from the dates in this coursework.': 'Rellenado con las fechas de estas materias.',
+  // A connection's own screen.
+  'Automatic Moodle calendar sync is on. Semora checks for dated assignment and event changes every few hours.':
+    'La sincronización automática del calendario de Moodle está activada. Semora busca cambios en tareas y eventos con fecha cada pocas horas.',
+  'Dismissed courses': 'Cursos descartados',
+  'Courses you told Semora were not yours. Nothing was deleted — restore one and it goes back on the list of courses waiting to be imported.':
+    'Cursos que le dijiste a Semora que no eran tuyos. No se eliminó nada: restaura uno y volverá a la lista de cursos por importar.',
+  'Could not restore': 'No se pudo restaurar',
+  'Hidden assignments': 'Tareas ocultas',
+  'Could not restore it': 'No se pudo restaurar',
+  'Assignments you have hidden from Semora. They are still in Canvas — hiding one here never changes anything there.':
+    'Tareas que ocultaste en Semora. Siguen en Canvas: ocultar una aquí nunca cambia nada allí.',
+  // The same sentence for an account on more than one platform, which cannot
+  // be told its hidden work is all in one of them. (One platform is a
+  // pattern in lib/i18n.ts.)
+  'Assignments you have hidden from Semora. They are still in your school’s learning platform — hiding one here never changes anything there.':
+    'Tareas que ocultaste en Semora. Siguen en la plataforma de tu universidad: ocultar una aquí nunca cambia nada allí.',
+  "Nothing is hidden. Anything you hide from an assignment's page shows up here.":
+    'No hay nada oculto. Todo lo que ocultes desde la página de una tarea aparecerá aquí.',
+  // components/CanvasFeedLimits.tsx, under the new-courses list. The two
+  // labels are bold nested Texts, so each is its own key.
+  'What Canvas sends, and what it does not': 'Lo que Canvas envía y lo que no',
+  'Comes through:': 'Llega:',
+  'assignments and calendar events that have a due date, with their title, date and — when Canvas includes one — the assignment description. Every item links back to Canvas.':
+    'las tareas y los eventos del calendario que tienen fecha de entrega, con su título, su fecha y, cuando Canvas la incluye, la descripción de la tarea. Cada elemento enlaza de vuelta a Canvas.',
+  'Does not:': 'No llega:',
+  'grades and scores, whether you submitted something, file attachments, and anything with no due date — an undated assignment is not in the feed at all, so Semora never sees it.':
+    'las calificaciones y puntuaciones, si entregaste algo, los archivos adjuntos y todo lo que no tenga fecha de entrega: una tarea sin fecha no está en el feed, así que Semora nunca la ve.',
+  'These are limits of the Calendar Feed itself, not of Semora. A very long description is shortened with a link to the full text in Canvas. Your grades stay in Canvas, and Semora never writes anything back to it.':
+    'Son límites del propio Feed de calendario, no de Semora. Una descripción muy larga se acorta con un enlace al texto completo en Canvas. Tus calificaciones se quedan en Canvas, y Semora nunca escribe nada en él.',
+  // Moodle's own version of the box, true of a Moodle calendar export: its
+  // items link to their day in the calendar, not to the item.
+  'What Moodle sends, and what it does not': 'Lo que Moodle envía y lo que no',
+  'assignments, quizzes and calendar events that have a date, with their title, date and — when Moodle includes one — the description. Every item links to its day in your Moodle calendar.':
+    'las tareas, los cuestionarios y los eventos del calendario que tienen fecha, con su título, su fecha y, cuando Moodle la incluye, la descripción. Cada elemento enlaza a su día en tu calendario de Moodle.',
+  'grades and scores, whether you submitted something, file attachments, and anything with no date — an activity with no due date is not in your Moodle calendar at all, so Semora never sees it.':
+    'las calificaciones y puntuaciones, si entregaste algo, los archivos adjuntos y todo lo que no tenga fecha: una actividad sin fecha de entrega no está en tu calendario de Moodle, así que Semora nunca la ve.',
+  'These are limits of Moodle’s calendar export itself, not of Semora, and your school decides how far ahead it reaches. Your grades stay in Moodle, and Semora never writes anything back to it.':
+    'Son límites de la propia exportación del calendario de Moodle, no de Semora, y tu universidad decide hasta qué fecha llega. Tus calificaciones se quedan en Moodle, y Semora nunca escribe nada en él.',
+  // The status word beside each connection (last_sync_status with "_" as a
+  // space). 'never', 'success' and 'error' already have entries.
+  'syncing': 'Sincronizando',
+  'partial': 'Parcial',
+  'credentials required': 'Requiere reconexión',
+  // Refusals the connect and sync paths can show, in an alert or as the
+  // connection's last error. Server strings, so byte-identical to the
+  // English in lib/lms.ts, supabase/functions/lms-sync and
+  // supabase/functions/_shared/moodle-calendar.ts.
+  'This LMS connection has no enabled courses.': 'Esta conexión no tiene cursos activados.',
+  'Moodle returned an invalid calendar feed.': 'Moodle devolvió un calendario no válido.',
+  'Moodle did not respond. Try again in a few minutes.': 'Moodle no respondió. Inténtalo de nuevo en unos minutos.',
+  "Your school's Moodle is busy right now. Try again in a few minutes.":
+    'El Moodle de tu universidad está ocupado en este momento. Inténtalo de nuevo en unos minutos.',
+  'Moodle request failed.': 'La solicitud a Moodle falló.',
+  'Moodle token does not expose a user account.': 'El token de Moodle no da acceso a una cuenta de usuario.',
+  'The LMS could not be reached.': 'No se pudo acceder a la plataforma.',
+  'Automatic sync could not be enabled.': 'No se pudo activar la sincronización automática.',
+  'LMS synchronization failed.': 'La sincronización con la plataforma falló.',
+  'LMS connection not found': 'No se encontró la conexión con la plataforma',
+  'Could not create LMS sync record.': 'No se pudo registrar la sincronización.',
+  'School LMS URL is required.': 'Se necesita la URL del LMS de tu institución.',
+  'The LMS URL must use HTTPS.': 'La URL del LMS debe usar HTTPS.',
+  'Private network LMS addresses are not supported.': 'No se admiten direcciones de LMS de redes privadas.',
+  'LMS returned too many redirects.': 'El LMS devolvió demasiadas redirecciones.',
+  'LMS returned an invalid redirect.': 'El LMS devolvió una redirección no válida.',
+  'LMS redirected to an untrusted host.': 'El LMS redirigió a un servidor no confiable.',
+  // Caught by the generic "Reconnect (.+)" rule, which rendered it as
+  // "Volver a conectar this LMS to continue automatic syncing."
+  'Reconnect this LMS to continue automatic syncing.':
+    'Vuelve a conectar esta plataforma para seguir sincronizando automáticamente.',
+  'Canvas Calendar Feed could not be loaded.': 'No se pudo cargar el feed de calendario de Canvas.',
+  'This Canvas Calendar Feed is too large to import safely.':
+    'Este feed de calendario de Canvas es demasiado grande para importarlo de forma segura.',
+  'Canvas returned too many redirects.': 'Canvas devolvió demasiadas redirecciones.',
+  'Canvas returned an invalid redirect.': 'Canvas devolvió una redirección no válida.',
+  'Canvas redirected the calendar feed to an untrusted host.':
+    'Canvas redirigió el feed de calendario a un servidor no confiable.',
+  'Canvas is rate limiting Semora right now. The next sync will pick this up automatically.':
+    'Canvas está limitando las solicitudes de Semora en este momento. La próxima sincronización lo retomará automáticamente.',
+  'Connecting a learning platform is a Pro feature. Upgrade to import your courses and assignments.':
+    'Conectar una plataforma educativa es una función Pro. Mejora a Pro para importar tus cursos y tareas.',
+  // Prompts elsewhere in the app, now naming both platforms. Same words as
+  // their Canvas-only originals above, with Moodle beside Canvas.
+  'Connect Canvas, Pro feature': 'Conectar Canvas, función Pro',
+  'Limited time: Canvas and Moodle sync is free, no Pro needed. Every class you have arrives on its own — or scan a syllabus, or type it yourself.':
+    'Por tiempo limitado: sincronizar con Canvas y Moodle es gratis, sin Pro. Todas tus clases llegan solas, o escanea un programa, o escríbelo tú.',
+  'Limited-time offer: sync Canvas or Moodle free': 'Oferta por tiempo limitado: sincroniza Canvas o Moodle gratis',
+  'School uses Canvas or Moodle? Sync it free': '¿Tu institución usa Canvas o Moodle? Sincronízalo gratis',
+  // With nothing connected, "Or connect Canvas or Moodle" was two ors in four
+  // words; these ask instead.
+  'School on Canvas or Moodle? Connect it free': '¿Tu institución usa Canvas o Moodle? Conéctalo gratis',
+  'On Canvas or Moodle? Every class can import itself': '¿Usas Canvas o Moodle? Cada clase puede importarse sola',
+  // The Pro education sheet, which had no Spanish in its Canvas-only form
+  // either. Faithful to the English "(FREE)": it names the offer, which this
+  // sheet states rather than sells.
+  'NO COURSE LIMIT · WITH CANVAS OR MOODLE (FREE)': 'SIN LÍMITE DE CURSOS · CON CANVAS O MOODLE (GRATIS)',
+  'Never get caught by a changed deadline': 'Que un cambio de fecha nunca te tome por sorpresa',
+  'Connect once. Every dated assignment on your Canvas or Moodle calendar lands in Semora — and when your instructor changes one, Semora changes it too.':
+    'Conéctalo una vez. Cada tarea con fecha de tu calendario de Canvas o Moodle llega a Semora, y cuando tu profesor cambia una, Semora también la cambia.',
+  'Less checking Canvas or Moodle. More knowing what is next.': 'Menos revisar Canvas o Moodle. Más saber qué viene.',
+  'Semora only reads your calendar feed. It never posts, changes or removes anything in Canvas or Moodle.':
+    'Semora solo lee tu feed de calendario. Nunca publica, cambia ni elimina nada en Canvas ni en Moodle.',
+  'Learn more': 'Más información',
+  // Onboarding step 5, addressed to Moodle schools too.
+  'IF YOUR SCHOOL USES CANVAS OR MOODLE': 'SI TU UNIVERSIDAD USA CANVAS O MOODLE',
+  'Semora re-checks Canvas or Moodle every few hours. When an instructor moves a due date, yours moves with it.':
+    'Semora vuelve a consultar Canvas o Moodle cada pocas horas. Si un profesor cambia una fecha de entrega, la tuya cambia con ella.',
+  'Your private Canvas or Moodle calendar link, encrypted on our side. Semora can read your deadlines — never post, submit or change anything.':
+    'Tu enlace privado del calendario de Canvas o Moodle, cifrado de nuestro lado. Semora puede leer tus fechas de entrega, nunca publicar, entregar ni cambiar nada.',
+  'Free on every plan, with no limit on Canvas or Moodle classes. Semora offers the setup right after you sign in.':
+    'Gratis en cualquier plan y sin límite de clases de Canvas o Moodle. Semora te ofrece la configuración justo después de iniciar sesión.',
+  'Free: one AI action (a scan or a lecture), one course you add yourself, unlimited classes from Canvas or Moodle, and same-day reminders. The tools above are part of Pro.':
+    'Gratis: una acción de IA (un escaneo o una clase grabada), un curso que agregas tú, clases ilimitadas desde Canvas o Moodle y recordatorios del mismo día. Las herramientas de arriba son parte de Pro.',
 };

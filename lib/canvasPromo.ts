@@ -192,15 +192,101 @@ export function lmsRepairLabel(connection: { provider?: string | null } | null |
   return `Finish ${LMS_LABELS[connection?.provider ?? ''] ?? 'Canvas'} setup`;
 }
 
+/**
+ * The platform an offer names out loud: "Connect Moodle", "Connect Canvas or
+ * Moodle".
+ *
+ * With a connection, that connection's own platform — a Moodle student told
+ * to "Import new Canvas courses" has been given an instruction they cannot
+ * follow. Without one, the two platforms a student can connect with nobody's
+ * help. "Connect Canvas" used to be the only door on every surface, and a
+ * Moodle student reading it had no reason to think the app was for them: over
+ * one week 296 Canvas offers were shown, and the only tap on any other
+ * platform was a single Blackboard one.
+ *
+ * Blackboard is deliberately not in the fallback. It connects only with a
+ * token from the school's IT team, so naming it in an invitation would be
+ * inviting a dead end.
+ */
+export function lmsOfferName(connection: { provider?: string | null } | null | undefined): string {
+  return LMS_LABELS[connection?.provider ?? ''] ?? 'Canvas or Moodle';
+}
+
+/**
+ * The title of the alert after "Sync now": "Moodle synced", "Canvas synced".
+ *
+ * It said "LMS synced" to everyone, which is Semora's word for the category
+ * rather than the student's word for their school's system — and a student
+ * with two connections could not tell which one had just answered. An
+ * unknown platform keeps the old title rather than inventing a name.
+ */
+export function lmsSyncedTitle(provider: string | null | undefined): string {
+  const name = LMS_LABELS[provider ?? ''];
+  return name ? `${name} synced` : 'LMS synced';
+}
+
+/**
+ * Where the assignments a student hid in Semora still are, for the Hidden
+ * assignments screen.
+ *
+ * That list is the whole account's, not one connection's, so the platform is
+ * named only when every connection is on the same one. A Canvas-only account
+ * reads the sentence it always has; a Moodle student is no longer told their
+ * work is "still in Canvas"; a student with both is told the truth without
+ * either name. `fallback` is the platform of the connection the student came
+ * from, used until the connection list has loaded.
+ */
+export function lmsHiddenIntro(
+  connections: { provider?: string | null }[] | undefined,
+  fallback?: string | null,
+): string {
+  const providers = connections
+    ? [...new Set(connections.map((c) => c.provider ?? '').filter(Boolean))]
+    : [fallback ?? 'canvas'];
+  const name = providers.length === 1 ? LMS_LABELS[providers[0]] : undefined;
+  return name
+    ? `Assignments you have hidden from Semora. They are still in ${name} — hiding one here never changes anything there.`
+    : 'Assignments you have hidden from Semora. They are still in your school’s learning platform — hiding one here never changes anything there.';
+}
+
+/**
+ * The account's LMS prompt, Canvas first. Kept under its old name and its old
+ * three-field shape so every surface that reads it is unchanged — and so a
+ * Canvas-only account gets, byte for byte, the answer it always got. It is
+ * lmsOfferFor with no platform named.
+ */
 export function canvasOfferFor<T extends CanvasConnectionFacts>(
   connections: T[] | undefined,
   isPro?: boolean,
   freePromoActive?: boolean,
 ): { offer: CanvasOffer; connection: T | null; free: boolean } {
+  const { offer, connection, free } = lmsOfferFor(connections, isPro, freePromoActive);
+  return { offer, connection, free };
+}
+
+/**
+ * Which LMS prompt, if any, to show — for the account, or for one platform.
+ *
+ * `provider` narrows it to that platform's connection: `'moodle'` answers "is
+ * this student's Moodle healthy?" whatever else they have connected, and says
+ * 'none' when they have no Moodle at all. Left out, it answers for the account
+ * the way every surface always has: Canvas first, then any platform.
+ * MOODLE_PLAN.md §6.7.
+ *
+ * `provider` in the result is the platform the answer is ABOUT — the chosen
+ * connection's, else the one asked for, else null — which is what the funnel
+ * events carry.
+ */
+export function lmsOfferFor<T extends CanvasConnectionFacts>(
+  connections: T[] | undefined,
+  isPro?: boolean,
+  freePromoActive?: boolean,
+  provider?: string,
+): { offer: CanvasOffer; connection: T | null; free: boolean; provider: string | null } {
   // While the query is loading, offer nothing. Flashing "Connect Canvas" at a
   // student who connected it last term, then swapping it out a beat later, is
   // worse than showing it a moment late.
-  if (!connections) return { offer: 'healthy', connection: null, free: false };
+  if (!connections) return { offer: 'healthy', connection: null, free: false, provider: provider ?? null };
 
   // Canvas first, then ANY connected platform.
   //
@@ -219,10 +305,25 @@ export function canvasOfferFor<T extends CanvasConnectionFacts>(
   //
   // Canvas keeps strict priority, so nothing about a Canvas account changes:
   // the fallback is only reached when there is no Canvas connection at all.
-  const canvas = connections.find((c) => c.provider === 'canvas')
-    ?? connections[0]
-    ?? null;
+  // Asked about one platform, only that platform's connection counts.
+  const canvas = provider
+    ? connections.find((c) => c.provider === provider) ?? null
+    : connections.find((c) => c.provider === 'canvas')
+      ?? connections[0]
+      ?? null;
+  return {
+    ...offerForConnection(connections, canvas, isPro, freePromoActive),
+    provider: canvas?.provider ?? provider ?? null,
+  };
+}
 
+/** The rules themselves, once the connection they are about has been chosen. */
+function offerForConnection<T extends CanvasConnectionFacts>(
+  connections: T[],
+  canvas: T | null,
+  isPro?: boolean,
+  freePromoActive?: boolean,
+): { offer: CanvasOffer; connection: T | null; free: boolean } {
   // Pro, the offer is live, or this account claimed it while it was. See
   // canvasFreeFor — lms_access_allowed answers the same question server-side.
   const free = canvasFreeFor(connections, isPro, freePromoActive);

@@ -36,7 +36,15 @@ export interface LmsSitePrecheck {
   /** 1 = via the app, 2 = browser, 3 = embedded browser. */
   typeoflogin?: number;
   sso?: boolean;
+  /**
+   * Why the check could not confirm, when it could not. Kept so a student who
+   * leaves for the browser and comes back is still told "this does not look
+   * like Moodle" rather than being shown a confident "Found:".
+   */
+  reason?: LmsProbeReason;
 }
+
+export type LmsProbeReason = 'not_moodle' | 'unreachable' | 'blocked';
 
 export interface LmsSetupProgress {
   /** The hostname the student identified, if they got that far. */
@@ -109,6 +117,9 @@ export function parseLmsSetupProgress(
       ...(typeof parsed.precheck.mobile === 'boolean' ? { mobile: parsed.precheck.mobile } : {}),
       ...(Number.isFinite(parsed.precheck.typeoflogin) ? { typeoflogin: Number(parsed.precheck.typeoflogin) } : {}),
       ...(typeof parsed.precheck.sso === 'boolean' ? { sso: parsed.precheck.sso } : {}),
+      ...(['not_moodle', 'unreachable', 'blocked'].includes(parsed.precheck.reason)
+        ? { reason: parsed.precheck.reason as LmsProbeReason }
+        : {}),
     };
   }
 
@@ -142,4 +153,68 @@ export const ESCALATE_AFTER_ATTEMPTS = 2;
 
 export function shouldEscalateLmsSetup(progress: LmsSetupProgress): boolean {
   return progress.attempts >= ESCALATE_AFTER_ATTEMPTS;
+}
+
+/**
+ * Has a Moodle student reached the step where they paste the link?
+ *
+ * On a phone that is a lane choice: "here on my phone" or "on a laptop". On
+ * the web there is no such choice to make — the student IS on the laptop, and
+ * asking them was the loop that sent web users off to open app.semoraai.com
+ * while they were already on it. So on the web, knowing the school is enough.
+ *
+ * The connect screen and the guided card both read this, so they cannot
+ * disagree about whether the paste step is showing.
+ */
+export function moodleLinkStepReady(progress: LmsSetupProgress, isWeb: boolean): boolean {
+  if (!progress.wwwroot) return false;
+  return isWeb || !!progress.setupLane;
+}
+
+/**
+ * Has the student on the connect screen moved past choosing how to do it?
+ *
+ * The heading, subtitle and free-offer card hide once they have, because by
+ * then the page should be instructing rather than pitching. Only the two
+ * calendar-link roads HAVE such a step; read for any other road it is always
+ * false.
+ *
+ * It used to read Canvas's lane for everything that was not Moodle's link
+ * road, so a student who had once picked a Canvas lane and then switched to
+ * Blackboard, or took Moodle's token road, lost the heading and subtitle
+ * there too — a form with nothing above it saying what it was for.
+ */
+export function feedLaneChosenFor(road: {
+  /** Canvas's calendar-link road is on screen. */
+  canvas: boolean;
+  /** Moodle's calendar-link road is on screen. */
+  moodleFeed: boolean;
+  canvasProgress: { setupLane: LmsLaneChoice | null };
+  moodleProgress: LmsSetupProgress;
+  isWeb: boolean;
+}): boolean {
+  if (road.moodleFeed) return moodleLinkStepReady(road.moodleProgress, road.isWeb);
+  if (road.canvas) return !!road.canvasProgress.setupLane;
+  return false;
+}
+
+/**
+ * May a connection exist, and sync, with no courses linked to it yet?
+ *
+ * Only a Moodle calendar feed. Early in a term, before any instructor has set
+ * a date, a Moodle calendar is genuinely empty — so the student saves the link
+ * and the background sync discovers each course the first time a date is
+ * posted. Every sync of that connection runs with zero links by design.
+ *
+ * The server has always allowed this (lms-sync fetchAssignmentsForConnection);
+ * the client did not, so "Save and keep checking" created the connection, ran
+ * the first sync, was refused with "This LMS connection has no enabled
+ * courses.", and rolled the whole thing back. Mirrors the server exactly: every
+ * other provider still needs at least one course.
+ */
+export function lmsConnectionMayBeEmpty(
+  provider: string | null | undefined,
+  connectionMethod: string | null | undefined,
+): boolean {
+  return provider === 'moodle' && connectionMethod === 'calendar_feed';
 }

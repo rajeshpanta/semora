@@ -86,6 +86,7 @@ export function CanvasGuidedPaste({
   working,
   autoAdvancing,
   source,
+  onSwitchToMoodle,
 }: {
   token: string;
   onTokenChange: (value: string) => void;
@@ -95,6 +96,12 @@ export function CanvasGuidedPaste({
   working: boolean;
   autoAdvancing: boolean;
   source: string;
+  /**
+   * The connect screen's own platform switch, set to Moodle. Absent while
+   * reconnecting: that is repairing an existing Canvas connection, and "my
+   * school uses Moodle" is not a question it is asking.
+   */
+  onSwitchToMoodle?: () => void;
 }) {
   const colors = useColors();
   const readClipboard = useClipboardFeed();
@@ -110,9 +117,36 @@ export function CanvasGuidedPaste({
   /** Set when the student comes back from Canvas, so the paste can be offered. */
   const [justReturned, setJustReturned] = useState(false);
 
-  const lane = progress.setupLane;
+  // ── The web has no second device ──────────────────────────
+  // "Do it here on my phone" or "I have a laptop nearby" is a question for
+  // someone holding a phone. Asked in a browser it went in a circle: the
+  // laptop lane told a student already ON app.semoraai.com to go and open
+  // app.semoraai.com, and it has no field to paste into, so the only way on
+  // was back. Seven web devices picked the laptop lane; one gave up there.
+  // So the web goes straight down the phone lane's path, which is simply
+  // "find your school, open Canvas, paste the link" and needs no second
+  // device at all.
+  const onWeb = Platform.OS === 'web';
+  const lane: CanvasLaneChoice | null = onWeb ? 'phone' : progress.setupLane;
   const host = progress.host;
   const escalated = shouldEscalate(progress);
+
+  // The connect screen shows its "Check my link" button only once the STORED
+  // lane is 'phone', and it hides its heading once any lane is stored. So on
+  // the web the lane is written at the student's first real step rather than
+  // on arrival: the heading and the free-offer card stay up while they find
+  // their school, and the button is there by the time there is a link to
+  // check. A 'laptop' left over from an earlier visit is corrected at once —
+  // it would hide that button for good.
+  useEffect(() => {
+    if (onWeb && progress.setupLane === 'laptop') onProgressChange({ ...progress, setupLane: 'phone' });
+  }, [onWeb, progress, onProgressChange]);
+  const withWebLane = (next: CanvasSetupProgress): CanvasSetupProgress =>
+    onWeb && next.setupLane !== 'phone' ? { ...next, setupLane: 'phone' } : next;
+  const changeToken = (value: string) => {
+    onTokenChange(value);
+    if (onWeb && progress.setupLane !== 'phone') onProgressChange(withWebLane(progress));
+  };
 
   // ── School search ─────────────────────────────────────────
   const searchSeq = useRef(0);
@@ -149,14 +183,14 @@ export function CanvasGuidedPaste({
     track('canvas_setup_school_chosen', {
       screen: 'lms_connect', source, lane: 'connect', via: 'directory',
     });
-    onProgressChange({ ...progress, host: school.domain, schoolName: school.name });
+    onProgressChange(withWebLane({ ...progress, host: school.domain, schoolName: school.name }));
   };
 
   const chooseManualHost = () => {
     const resolved = manualCanvasHost(manualHost);
     if (!resolved) return;
     track('canvas_setup_school_chosen', { screen: 'lms_connect', source, lane: 'connect', via: 'manual' });
-    onProgressChange({ ...progress, host: resolved, schoolName: resolved });
+    onProgressChange(withWebLane({ ...progress, host: resolved, schoolName: resolved }));
   };
 
   /**
@@ -388,6 +422,26 @@ export function CanvasGuidedPaste({
                     : 'No match. Your school may use its own Canvas address.'}
                 </Text>
               )}
+              {/* The likeliest reason a school is missing from Instructure's
+                  own directory is that it is not on Canvas at all. Said right
+                  where the search came up empty, on the web as on a phone.
+                  It is the screen's own platform switch, not a second one:
+                  the student stays on this screen with Moodle chosen at the
+                  top, exactly as if they had tapped it there. Not while a
+                  link is being checked — the switch drops the discovery that
+                  is running. */}
+              {!searching && !searchFailed && query.trim().length >= 3 && schools.length === 0
+                && !!onSwitchToMoodle && (
+                <TouchableOpacity
+                  onPress={onSwitchToMoodle}
+                  disabled={working}
+                  style={s.pasteRow}
+                  accessibilityRole="button"
+                >
+                  <FontAwesome name="graduation-cap" size={12} color={colors.brand} />
+                  <Text style={[s.link, { color: colors.brand }]}>My school uses Moodle</Text>
+                </TouchableOpacity>
+              )}
               <TouchableOpacity onPress={() => setManualEntry(true)} style={s.switchLane}>
                 <Text style={[s.link, { color: colors.brand }]}>I know my Canvas web address</Text>
               </TouchableOpacity>
@@ -455,13 +509,22 @@ export function CanvasGuidedPaste({
               menu can follow it without guessing. */}
           <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.line, marginBottom: 14 }]}>
             <Text style={[s.cardTitle, { color: colors.ink }]}>Where to find your link</Text>
+            {/* The last two steps are the ones that differ by device. Step 6
+                used to promise the link "drops into the box below by itself",
+                which stopped being true when the automatic clipboard read was
+                replaced by a button (see above) — a student who waited for it
+                was waiting for nothing. On the web there is no paste button at
+                all (useClipboardFeed does not read a browser's clipboard), so
+                the student pastes into the box like any other. */}
             {[
               'Sign in to your college Canvas account on the page Semora opens.',
               'In the menu down the left side, tap Calendar.',
               'Scroll to the very bottom of the panel on the right.',
               'Tap Calendar Feed. A box opens with a long link starting webcal://',
-              'Press and hold that link, then tap Copy.',
-              'Come back to Semora. The link drops into the box below by itself.',
+              onWeb ? 'Copy that link.' : 'Press and hold that link, then tap Copy.',
+              onWeb
+                ? 'Come back to this tab and paste the link into the box below.'
+                : 'Come back to Semora and tap Paste. The link goes into the box below.',
             ].map((text, i) => (
               <View key={i} style={s.step}>
                 <View style={[s.stepDot, { backgroundColor: colors.brand50 }]}>
@@ -475,7 +538,7 @@ export function CanvasGuidedPaste({
           <View style={s.secretField}>
             <TextInput
               value={token}
-              onChangeText={onTokenChange}
+              onChangeText={changeToken}
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="url"
@@ -521,7 +584,11 @@ export function CanvasGuidedPaste({
               </TouchableOpacity>
             </View>
           )}
-          {(!justReturned || Platform.OS === 'web') && !token && (
+          {/* Native only. useClipboardFeed returns null on the web by design,
+              so this link could only ever answer "nothing on your clipboard"
+              there — to a student who had just copied the link. The web step
+              above says to paste into the box, which a browser does anyway. */}
+          {!justReturned && !onWeb && !token && (
             <TouchableOpacity onPress={pasteFromClipboard} style={s.pasteRow}>
               <FontAwesome name="clipboard" size={12} color={colors.brand} />
               <Text style={[s.link, { color: colors.brand }]}>Paste from clipboard</Text>
@@ -581,14 +648,24 @@ export function CanvasGuidedPaste({
       {escalated && lane !== 'laptop' && (
         <View style={[s.rescue, { backgroundColor: colors.amber50, borderColor: colors.line }]}>
           <Text style={[s.rescueTitle, { color: colors.ink }]}>Not working?</Text>
-          <Text style={[s.rescueText, { color: colors.ink2 }]}>
-            This step trips people up, and it is usually easier on a computer. Nothing you have
-            done so far is lost.
-          </Text>
-          <TouchableOpacity onPress={() => chooseLane('laptop')} style={[s.primary, { backgroundColor: colors.brand }]}>
-            <FontAwesome name="laptop" size={14} color="#fff" />
-            <Text style={s.primaryText}>Show me the laptop steps</Text>
-          </TouchableOpacity>
+          {/* On the web the student IS on the computer; "try it on a
+              computer" would be the same loop the lane card was. */}
+          {onWeb ? (
+            <Text style={[s.rescueText, { color: colors.ink2 }]}>
+              This step trips people up. Nothing you have done so far is lost.
+            </Text>
+          ) : (
+            <>
+              <Text style={[s.rescueText, { color: colors.ink2 }]}>
+                This step trips people up, and it is usually easier on a computer. Nothing you have
+                done so far is lost.
+              </Text>
+              <TouchableOpacity onPress={() => chooseLane('laptop')} style={[s.primary, { backgroundColor: colors.brand }]}>
+                <FontAwesome name="laptop" size={14} color="#fff" />
+                <Text style={s.primaryText}>Show me the laptop steps</Text>
+              </TouchableOpacity>
+            </>
+          )}
           <TouchableOpacity
             onPress={() => {
               track('canvas_setup_help_opened', { screen: 'lms_connect', source, lane: 'connect', attempts: progress.attempts });

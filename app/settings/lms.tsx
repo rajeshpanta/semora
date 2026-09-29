@@ -22,6 +22,7 @@ import {
   canvasFreePromoQuery,
   canvasSourceOf,
   disconnectLms,
+  lmsSyncedTitle,
   disableLmsBackgroundSync,
   enableLmsBackgroundSync,
   listLmsConnections,
@@ -29,6 +30,7 @@ import {
   syncLmsConnection,
 } from '@/lib/lms';
 import { track } from '@/lib/analytics';
+import { LMS_SWITCH_OPTIONS } from '@/lib/canvasLanes';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useResponsive } from '@/lib/responsive';
 import { useColors } from '@/lib/theme';
@@ -63,15 +65,28 @@ function syncTimeLabel(value: string | null) {
  * chose it years ago. So the screen asks which one they have and treats the
  * three answers as equals.
  */
-const PROVIDERS: Array<{ id: LmsProvider; icon: string; detail: string }> = [
-  { id: 'canvas', icon: 'refresh', detail: 'Assignments, exams and due dates' },
-  { id: 'blackboard', icon: 'black-tie', detail: 'Courses and gradebook assignments' },
+const PROVIDER_ROWS: Record<'canvas' | 'moodle' | 'blackboard', { icon: string; detail: string }> = {
+  canvas: { icon: 'refresh', detail: 'Assignments, exams and due dates' },
   // No longer 'Enrolled courses and assignments', which said nothing about
   // the one thing that decided whether anyone finished: the old road needed a
   // token only a school administrator can issue, and zero students ever got
   // one. The calendar link needs nobody. MOODLE_PLAN.md Phase 4.7.
-  { id: 'moodle', icon: 'graduation-cap', detail: 'Deadlines, quizzes and exams from your Moodle calendar — no admin needed' },
-];
+  moodle: { icon: 'graduation-cap', detail: 'Deadlines, quizzes and exams from your Moodle calendar — no admin needed' },
+  // Last, and honest about the catch. Blackboard connects only with an access
+  // token the school's IT team issues, and the row used to describe what it
+  // would import instead — so the first a student heard of the token was a
+  // form asking for one. A real student tapped this row on 2026-09-26 and
+  // left five seconds later. The row now says so before the tap, and a scan
+  // is offered right under it for everyone without a token.
+  blackboard: { icon: 'black-tie', detail: 'Needs an access token from your school’s IT team' },
+};
+/**
+ * In the order the connect screen's own platform switch shows them, from the
+ * one list both read: the two a student can connect alone first, Blackboard
+ * last. See LMS_SWITCH_OPTIONS.
+ */
+const PROVIDERS: Array<{ id: LmsProvider; icon: string; detail: string }> =
+  LMS_SWITCH_OPTIONS.map(({ id }) => ({ id, ...PROVIDER_ROWS[id] }));
 
 export default function LmsSettingsScreen() {
   const colors = useColors();
@@ -134,11 +149,14 @@ export default function LmsSettingsScreen() {
   );
   const sync = useMutation({
     mutationFn: (connectionId: string) => syncLmsConnection(connectionId),
-    onSuccess: (result) => {
+    onSuccess: (result, connectionId) => {
       query.refetch();
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['courses'] });
-      Alert.alert('LMS synced', `${result.processed} assignments updated${result.skipped ? ` · ${result.skipped} skipped without usable due dates` : ''}.`);
+      // Named for the platform that was synced: "LMS" is Semora's word, not
+      // the student's, and a student with two connections could not tell
+      // which one had just answered.
+      Alert.alert(lmsSyncedTitle(query.data?.find((row) => row.id === connectionId)?.provider), `${result.processed} assignments updated${result.skipped ? ` · ${result.skipped} skipped without usable due dates` : ''}.`);
     },
     onError: (error: Error, connectionId) => {
       query.refetch();
@@ -236,7 +254,10 @@ export default function LmsSettingsScreen() {
           <View style={styles.benefits}>
             <View style={styles.benefit}>
               <FontAwesome name="clock-o" size={13} color={colors.brand} />
-              <Text style={[styles.benefitText, { color: colors.ink2 }]}>Uses the calendar link your school already gives you</Text>
+              {/* Scoped to the two it is true of. Blackboard needs a token
+                  from school IT, which is exactly what this line promises a
+                  student will not need. */}
+              <Text style={[styles.benefitText, { color: colors.ink2 }]}>Canvas and Moodle use the calendar link your school already gives you</Text>
             </View>
             <View style={styles.benefit}>
               <FontAwesome name="shield" size={13} color={colors.brand} />
@@ -395,46 +416,60 @@ export default function LmsSettingsScreen() {
           All three are free, with no limit on the number of classes.
         </Text>
         {PROVIDERS.map((provider) => (
-          <TouchableOpacity
-            key={provider.id}
-            // Connecting a platform normally needs Pro; free users get the
-            // locked teaser → paywall instead of opening the connect flow.
-            // While the offer is live nobody is locked out — see lmsAllowed.
-            onPress={() => {
-              // The FIRST step of the funnel, and it was invisible: until now
-              // the earliest Moodle signal was lms_connect_opened, so a student
-              // who tapped the row and bounced straight back looked identical
-              // to one who never opened this screen at all.
-              track('lms_provider_tapped', {
-                screen: 'settings_lms', provider: provider.id, source,
-                allowed: lmsAllowed, funnel_step: 'chose_provider',
-              });
-              return lmsAllowed
-                ? router.push({ pathname: '/settings/lms-connect', params: { provider: provider.id, source } } as any)
-                : openPaywall();
-            }}
-            style={[styles.providerRow, { backgroundColor: colors.card, borderColor: colors.line }]}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-          >
-            <View style={[styles.providerIcon, { backgroundColor: colors.brand50 }]}>
-              <FontAwesome name={provider.icon as any} size={15} color={colors.brand} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.providerName, { color: colors.ink }]}>{LMS_PROVIDER_LABELS[provider.id]}</Text>
-              <Text style={[styles.meta, { color: colors.ink2 }]}>{provider.detail}</Text>
-            </View>
-            {lmsAllowed ? (
-              <View style={[styles.providerGo, { backgroundColor: colors.brand50 }]}>
-                <FontAwesome name="chevron-right" size={11} color={colors.brand} />
+          <View key={provider.id} style={{ gap: 10 }}>
+            <TouchableOpacity
+              // Connecting a platform normally needs Pro; free users get the
+              // locked teaser → paywall instead of opening the connect flow.
+              // While the offer is live nobody is locked out — see lmsAllowed.
+              onPress={() => {
+                // The FIRST step of the funnel, and it was invisible: until now
+                // the earliest Moodle signal was lms_connect_opened, so a student
+                // who tapped the row and bounced straight back looked identical
+                // to one who never opened this screen at all.
+                track('lms_provider_tapped', {
+                  screen: 'settings_lms', provider: provider.id, source,
+                  allowed: lmsAllowed, funnel_step: 'chose_provider',
+                });
+                return lmsAllowed
+                  ? router.push({ pathname: '/settings/lms-connect', params: { provider: provider.id, source } } as any)
+                  : openPaywall();
+              }}
+              style={[styles.providerRow, { backgroundColor: colors.card, borderColor: colors.line }]}
+              activeOpacity={0.75}
+              accessibilityRole="button"
+            >
+              <View style={[styles.providerIcon, { backgroundColor: colors.brand50 }]}>
+                <FontAwesome name={provider.icon as any} size={15} color={colors.brand} />
               </View>
-            ) : (
-              <View style={[styles.proBadge, { backgroundColor: colors.brand }]}>
-                <FontAwesome name="star" size={9} color="#fff" />
-                <Text style={styles.proBadgeText}>PRO</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.providerName, { color: colors.ink }]}>{LMS_PROVIDER_LABELS[provider.id]}</Text>
+                <Text style={[styles.meta, { color: colors.ink2 }]}>{provider.detail}</Text>
               </View>
+              {lmsAllowed ? (
+                <View style={[styles.providerGo, { backgroundColor: colors.brand50 }]}>
+                  <FontAwesome name="chevron-right" size={11} color={colors.brand} />
+                </View>
+              ) : (
+                <View style={[styles.proBadge, { backgroundColor: colors.brand }]}>
+                  <FontAwesome name="star" size={9} color="#fff" />
+                  <Text style={styles.proBadgeText}>PRO</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {/* The way through for a Blackboard student without a token, which
+                is nearly all of them: the syllabus scanner reads the deadlines
+                straight from the document. */}
+            {provider.id === 'blackboard' && (
+              <TouchableOpacity
+                onPress={() => router.push('/scan' as never)}
+                style={styles.scanInstead}
+                accessibilityRole="button"
+              >
+                <FontAwesome name="camera" size={12} color={colors.brand} />
+                <Text style={[styles.textButtonLabel, { color: colors.brand }]}>No token? Scan a syllabus instead</Text>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+          </View>
         ))}
       </ScrollView>
     </SafeAreaView>
@@ -483,6 +518,7 @@ const styles = StyleSheet.create({
   textButton: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 30 },
   textButtonLabel: { fontSize: 13, fontWeight: '800' },
   providerRow: { minHeight: 66, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, padding: 13, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  scanInstead: { flexDirection: 'row', alignItems: 'center', gap: 7, minHeight: 30, paddingHorizontal: 13, marginTop: -4 },
   // Matches the PRO badge treatment on the calendar-sync teaser (calendar.tsx).
   proBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
   proBadgeText: { fontSize: 11, fontWeight: '700', color: '#fff', letterSpacing: 0.5 },

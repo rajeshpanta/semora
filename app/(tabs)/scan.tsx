@@ -38,6 +38,7 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useFreeActionUsed, freeActionUsedQueryOptions } from '@/lib/queries';
 import { FREE_COURSE_LIMIT, FREE_COURSE_PHRASE } from '@/lib/syllabus';
 import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, lmsRepairLabel } from '@/lib/lms';
+import { lmsOfferName } from '@/lib/canvasPromo';
 import { canvasOfferDestination, trackCanvasOfferShown, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 import { MAX_SCAN_PAGES, MAX_SCAN_RAW_BYTES, scanTooLargeMessage, type SyllabusPage } from '@/lib/ai-extraction';
@@ -880,7 +881,7 @@ export default function ScanScreen() {
             buttons would be offering it to someone who has already started the
             slower path. Hidden entirely once Canvas is connected and syncing. */}
         {canvasOffer !== 'healthy' && (
-          <CanvasOfferImpression screen="scan" offer={canvasOffer} free={canvasFree} source="scan_screen" />
+          <CanvasOfferImpression screen="scan" offer={canvasOffer} free={canvasFree} source="scan_screen" provider={canvasConnection?.provider ?? null} />
         )}
         {canvasOffer !== 'healthy' && (
           <TouchableOpacity
@@ -893,13 +894,18 @@ export default function ScanScreen() {
               // locked offer while the badge next to it read PRO — so a student
               // using VoiceOver was the only one not told the price, and found
               // out at the paywall instead.
+              // Named for the student's own platform once they have one, and
+              // for both Canvas and Moodle while they have none.
               canvasOffer === 'needs_attention' ? lmsRepairLabel(canvasConnection)
-              : canvasFree ? 'Connect Canvas free, limited time offer'
-              : canvasOffer === 'locked' ? 'Connect Canvas, Pro feature'
-              : 'Connect Canvas'
+              : canvasFree ? `Connect ${lmsOfferName(canvasConnection)} free, limited time offer`
+              : canvasOffer === 'locked' ? `Connect ${lmsOfferName(canvasConnection)}, Pro feature`
+              : `Connect ${lmsOfferName(canvasConnection)}`
             }
             onPress={() => {
-              trackCanvasOfferTapped({ screen: 'scan', offer: canvasOffer, free: canvasFree, source: 'scan_screen' });
+              trackCanvasOfferTapped({
+                screen: 'scan', offer: canvasOffer, free: canvasFree, source: 'scan_screen',
+                provider: canvasConnection?.provider ?? null,
+              });
               // A free account gets the upgrade SHEET here, not a trip to
               // another screen. The offer and the answer belong in the same
               // place — sending someone to Settings or a full paywall screen
@@ -919,7 +925,9 @@ export default function ScanScreen() {
             <View style={{ flex: 1 }}>
               <View style={styles.canvasTitleRow}>
                 <Text style={[styles.canvasTitle, { color: colors.ink }]}>
-                  {canvasOffer === 'needs_attention' ? lmsRepairLabel(canvasConnection) : 'Connect Canvas instead'}
+                  {canvasOffer === 'needs_attention'
+                    ? lmsRepairLabel(canvasConnection)
+                    : `Connect ${lmsOfferName(canvasConnection)} instead`}
                 </Text>
                 {/* The loudest place in the app to say this. A student on the
                     scan screen is about to spend their one lifetime free AI

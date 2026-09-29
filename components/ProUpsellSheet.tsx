@@ -18,6 +18,7 @@ import {
   canvasPromoPlacementFor,
   lmsConnectionsQuery,
 } from '@/lib/lms';
+import { lmsOfferName } from '@/lib/canvasPromo';
 import { useAppStore } from '@/store/appStore';
 import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
@@ -249,7 +250,12 @@ export function ProUpsellSheet({
   const isPro = useAppStore((st) => st.isPro);
   const { data: lmsConnections } = useQuery(lmsConnectionsQuery);
   const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
-  const { offer: canvasOffer, free: canvasFree } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
+  const { offer: canvasOffer, free: canvasFree, connection: canvasConnection } =
+    canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
+  // "Canvas or Moodle" to a student with nothing connected, their own platform
+  // once they have one. See lmsOfferName.
+  const lmsName = lmsOfferName(canvasConnection);
+  const lmsProvider = canvasConnection?.provider ?? null;
   // One rule, in one testable place — see canvasPromoPlacementFor. The syllabus
   // wall gets the limited-time promotional card BELOW the Pro offer; the course
   // wall keeps the plain escape it has shipped with since 2026-08-21, same
@@ -334,17 +340,17 @@ export function ProUpsellSheet({
                 Suppressed once Canvas is healthy — then the student's classes
                 are already arriving and this wall is about something else. */}
             {canvasEscape && (
-              <CanvasOfferImpression screen="upsell_sheet" offer={canvasOffer} free={true} source="course_upsell" />
+              <CanvasOfferImpression screen="upsell_sheet" offer={canvasOffer} free={true} source="course_upsell" provider={lmsProvider} />
             )}
             {canvasEscape && (
               <TouchableOpacity
                 style={[styles.canvasEscape, { borderColor: colors.teal, backgroundColor: colors.teal50 }]}
                 activeOpacity={0.85}
                 accessibilityRole="button"
-                accessibilityLabel="Connect Canvas free, limited time offer"
+                accessibilityLabel={`Connect ${lmsName} free, limited time offer`}
                 onPress={() => {
                   trackCanvasOfferTapped(
-                    { screen: 'upsell_sheet', offer: canvasOffer, free: true, source: 'course_upsell' },
+                    { screen: 'upsell_sheet', offer: canvasOffer, free: true, source: 'course_upsell', provider: lmsProvider },
                     { reason },
                   );
                   onClose();
@@ -354,7 +360,14 @@ export function ProUpsellSheet({
               >
                 <FontAwesome name="university" size={15} color={colors.teal} />
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.canvasEscapeTitle, { color: colors.ink }]}>Or connect Canvas — free</Text>
+                  {/* A connected student keeps "Or connect Canvas — free" with
+                      their own platform in it. With nothing connected the
+                      same sentence read "Or connect Canvas or Moodle", two
+                      ors in four words, so it asks instead — the same shape
+                      as the promo card below. */}
+                  <Text style={[styles.canvasEscapeTitle, { color: colors.ink }]}>
+                    {canvasConnection ? `Or connect ${lmsName} — free` : 'School on Canvas or Moodle? Connect it free'}
+                  </Text>
                   <Text style={[styles.canvasEscapeText, { color: colors.ink2 }]}>
                     Limited time: every class you have imports itself, no Pro and no limit.
                   </Text>
@@ -452,14 +465,16 @@ export function ProUpsellSheet({
                 thing being sold, and before "Not now" — which is the outcome
                 it exists to convert. */}
             {canvasScanPromo && (
-              <CanvasOfferImpression screen="upsell_sheet" offer={canvasOffer} free={true} source={CANVAS_PROMO_SOURCE} />
+              <CanvasOfferImpression screen="upsell_sheet" offer={canvasOffer} free={true} source={CANVAS_PROMO_SOURCE} provider={lmsProvider} />
             )}
             {canvasScanPromo && (
               <TouchableOpacity
                 style={[styles.canvasPromo, { borderColor: colors.teal, backgroundColor: colors.teal50 }]}
                 activeOpacity={0.85}
                 accessibilityRole="button"
-                accessibilityLabel="Limited-time offer: try Canvas Sync free"
+                accessibilityLabel={canvasConnection
+                  ? `Limited-time offer: try ${lmsName} Sync free`
+                  : 'Limited-time offer: sync Canvas or Moodle free'}
                 onPress={() => {
                   // SAME event name and same existing fields, so every query
                   // written against canvas_offer_tapped keeps working across
@@ -467,7 +482,7 @@ export function ProUpsellSheet({
                   // is what survives into the connect flow — see the params
                   // below and lms-connect's funnel events.
                   trackCanvasOfferTapped(
-                    { screen: 'upsell_sheet', offer: canvasOffer, free: true, source: CANVAS_PROMO_SOURCE },
+                    { screen: 'upsell_sheet', offer: canvasOffer, free: true, source: CANVAS_PROMO_SOURCE, provider: lmsProvider },
                     { reason, promo: true },
                   );
                   onClose();
@@ -481,8 +496,14 @@ export function ProUpsellSheet({
                 <View style={styles.canvasPromoRow}>
                   <FontAwesome name="university" size={15} color={colors.teal} />
                   <View style={{ flex: 1 }}>
+                    {/* A connected student keeps the sentence Canvas students
+                        have always read, with their own platform in it. With
+                        nothing connected, "Try Canvas or Moodle Sync" would be
+                        naming a product that does not exist, so it asks. */}
                     <Text style={[styles.canvasPromoTitle, { color: colors.ink }]}>
-                      School uses Canvas? Try Canvas Sync free
+                      {canvasConnection
+                        ? `School uses ${lmsName}? Try ${lmsName} Sync free`
+                        : 'School uses Canvas or Moodle? Sync it free'}
                     </Text>
                     {/* Deliberately "the deadlines already on your Canvas
                         calendar" and not "your classes". Every connection in
@@ -493,14 +514,13 @@ export function ProUpsellSheet({
                         Promising the class and delivering its deadlines is the
                         version of this that generates refunds. */}
                     <Text style={[styles.canvasPromoText, { color: colors.ink2 }]}>
-                      Import the deadlines already on your Canvas calendar, and Semora keeps them
-                      updated when your instructor moves them.
+                      {`Import the deadlines already on your ${lmsName} calendar, and Semora keeps them updated when your instructor moves them.`}
                     </Text>
                     {/* Said BEFORE the tap, not discovered after it. Connecting
                         means fetching a link out of Canvas in a browser, which
                         is a real errand to hand someone on a phone. */}
                     <Text style={[styles.canvasPromoNote, { color: colors.ink3 }]}>
-                      Takes a minute: you’ll copy your Canvas calendar link.
+                      {`Takes a minute: you’ll copy your ${lmsName} calendar link.`}
                     </Text>
                   </View>
                   <FontAwesome name="chevron-right" size={12} color={colors.teal} />

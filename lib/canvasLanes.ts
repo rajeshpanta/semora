@@ -65,6 +65,17 @@ export interface CanvasOfferFacts {
   free: boolean;
   /** Attribution for everything downstream. Always pass it. */
   source: string;
+  /**
+   * The platform the offer is about: the connection's, or null when the
+   * student has none and is being invited to connect one. The event names stay
+   * canvas_offer_* so every query already written keeps working; this is what
+   * tells a Moodle repair apart from a Canvas one inside them.
+   *
+   * Optional, and left off the event entirely when it is not passed, so an
+   * emitter that has not been taught it yet reports "unknown" rather than
+   * claiming the student has no connection.
+   */
+  provider?: string | null;
 }
 
 /**
@@ -97,6 +108,7 @@ export function canvasFunnelPayload(
     source: facts.source,
     lane: canvasLaneFor(facts.offer),
     funnel_step: step,
+    ...(facts.provider !== undefined ? { provider: facts.provider } : {}),
     ...extra,
   };
 }
@@ -116,7 +128,16 @@ export type CanvasDestination =
   | { kind: 'route'; pathname: string; params: Record<string, string> }
   | { kind: 'upsell' };
 
-export function canvasOfferDestination(offer: CanvasOffer, source: string): CanvasDestination {
+export function canvasOfferDestination(
+  offer: CanvasOffer,
+  source: string,
+  /**
+   * Which setup a 'none' offer opens. Canvas unless a surface is offering one
+   * platform by name; the connect screen's own platform switch is always on
+   * top of the Canvas setup, so the default is a starting point, not a trap.
+   */
+  provider: string = 'canvas',
+): CanvasDestination {
   // Not allowed to connect yet: the upgrade sheet, not a screen they cannot use.
   if (offer === 'locked') return { kind: 'upsell' };
 
@@ -136,6 +157,44 @@ export function canvasOfferDestination(offer: CanvasOffer, source: string): Canv
   return {
     kind: 'route',
     pathname: '/settings/lms-connect',
-    params: { provider: 'canvas', source },
+    params: { provider, source },
   };
+}
+
+/**
+ * The platforms a student can pick on the connect screen and in the Settings
+ * chooser, in the one order both show them.
+ *
+ * Canvas and Moodle first, because a student can connect either of them alone
+ * with a calendar link. Blackboard last, and carrying its catch: it connects
+ * only with a token the school's IT team issues, so presenting it as the
+ * third equal choice would be inviting a dead end. The hint is said on the
+ * control itself, before the tap. Google Classroom is not offered in either
+ * place (see app/settings/lms.tsx).
+ *
+ * Every "Connect Canvas" in the app lands on the Canvas setup, and until the
+ * switch existed a Moodle student there could only back out and guess that
+ * Settings held the way through: over one week 296 Canvas offers were shown,
+ * and the only tap on any other platform all week was a single Blackboard one.
+ */
+export const LMS_SWITCH_OPTIONS: ReadonlyArray<{ id: 'canvas' | 'moodle' | 'blackboard'; hint: string | null }> = [
+  { id: 'canvas', hint: null },
+  { id: 'moodle', hint: null },
+  { id: 'blackboard', hint: 'needs school IT' },
+];
+
+/**
+ * Whether this is the first time `provider` has been opened on this visit to
+ * the connect screen, recording it if so.
+ *
+ * lms_connect_opened is the denominator for discover/choose/connect. A student
+ * who arrives on Canvas and switches to Moodle has opened the Moodle setup
+ * too, and a Moodle funnel that never counted them would show Moodle
+ * connections out of nowhere. Once per platform per visit, so switching back
+ * and forth does not inflate either.
+ */
+export function claimFirstOpen(opened: Set<string>, provider: string): boolean {
+  if (opened.has(provider)) return false;
+  opened.add(provider);
+  return true;
 }

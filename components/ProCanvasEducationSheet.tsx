@@ -112,8 +112,13 @@ export function ProCanvasEducationSheet({
             </View>
 
             {/* Not a badge and not a pill — a quiet label. A badge would read as
-                promotional decoration on a screen that is trying not to sell. */}
-            <Text style={[styles.eyebrow, { color: colors.brand }]}>NO COURSE LIMIT · WITH CANVAS (FREE)</Text>
+                promotional decoration on a screen that is trying not to sell.
+                Moodle is named beside Canvas throughout: this sheet goes only
+                to subscribers with nothing connected, and a Moodle student
+                reading "Canvas" three times would fairly conclude it was not
+                for them. "Learn more" still opens the Canvas setup, which has
+                its own "My school uses Moodle" way across. */}
+            <Text style={[styles.eyebrow, { color: colors.brand }]}>NO COURSE LIMIT · WITH CANVAS OR MOODLE (FREE)</Text>
 
             <Text style={[styles.title, { color: colors.ink }]}>
               Never get caught by a changed deadline
@@ -124,24 +129,27 @@ export function ProCanvasEducationSheet({
                 a class with no dated work never appears in one. The connect
                 screen is held to the same standard. */}
             <Text style={[styles.body, { color: colors.ink2 }]}>
-              Connect once. Every dated assignment on your Canvas calendar lands in Semora —
-              and when your instructor changes one, Semora changes it too.
+              Connect once. Every dated assignment on your Canvas or Moodle calendar lands in
+              Semora — and when your instructor changes one, Semora changes it too.
             </Text>
             <Text style={[styles.body, { color: colors.ink2 }]}>
-              Less checking Canvas. More knowing what is next.
+              Less checking Canvas or Moodle. More knowing what is next.
             </Text>
 
             {/* Verified against supabase/functions/lms-sync/index.ts: the Canvas
                 calendar path is one fetch() with no method, so a GET, carrying
                 no Authorization header and no body, against a single .ics URL,
                 following same-origin redirects only. There is no Canvas write
-                anywhere in that function. This sentence is the strongest claim
-                the implementation actually supports — and no stronger. */}
+                anywhere in that function. The Moodle feed is the same shape:
+                readFeed in supabase/functions/_shared/moodle-calendar.ts is a
+                GET with no body that refuses redirects outright. This sentence
+                is the strongest claim the implementation actually supports —
+                and no stronger. */}
             <View style={[styles.trust, { backgroundColor: colors.brand50 }]}>
               <FontAwesome name="lock" size={13} color={colors.brand} />
               <Text style={[styles.trustText, { color: colors.ink2 }]}>
-                Semora only reads your Canvas calendar feed. It never posts, changes or removes
-                anything in Canvas.
+                Semora only reads your calendar feed. It never posts, changes or removes anything
+                in Canvas or Moodle.
               </Text>
             </View>
 

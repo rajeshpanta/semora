@@ -220,8 +220,10 @@ export function CanvasCourseReview({
       {creating && (
         <View style={[styles.createCard, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <Text style={[styles.createTitle, { color: colors.ink }]}>{t('New semester')}</Text>
+          {/* No platform named: this review serves Canvas and Moodle alike,
+              and it was telling Moodle students their dates came from Canvas. */}
           <Text style={[styles.hint, { color: colors.ink3 }]}>
-            {t('Prefilled from the dates in this Canvas coursework.')}
+            {t('Prefilled from the dates in this coursework.')}
           </Text>
           <TextInput
             value={newName}

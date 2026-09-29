@@ -28,14 +28,25 @@ export function CanvasOfferImpression({
   offer,
   free,
   source,
+  provider,
 }: {
   screen: string;
   offer: CanvasOffer;
   free: boolean;
   source: string;
+  /**
+   * The platform the offer is about: the connection's, or null when there is
+   * none — the same value the matching canvas_offer_tapped carries, so a
+   * shown→tapped rate can be split by platform. Left out, the event says
+   * nothing about it (see CanvasOfferFacts.provider).
+   */
+  provider?: string | null;
 }) {
   useEffect(() => {
-    trackCanvasOfferShown({ screen, offer, free, source });
-  }, [screen, offer, free, source]);
+    trackCanvasOfferShown({
+      screen, offer, free, source,
+      ...(provider !== undefined ? { provider } : {}),
+    });
+  }, [screen, offer, free, source, provider]);
   return null;
 }

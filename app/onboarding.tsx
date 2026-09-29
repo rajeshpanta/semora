@@ -716,7 +716,7 @@ function Toolkit({ colors, isWide, isLandscape }: { colors: C; isWide: boolean; 
           on screen, which was the original reason for hoisting it. All nine
           tools above are Pro, so it can say exactly that. */}
       <Text style={[styles.toolFootnote, { color: colors.ink2, borderColor: colors.line }]}>
-        Free: one AI action (a scan or a lecture), one course you add yourself, unlimited classes from Canvas, and same-day reminders. The tools above are part of Pro.
+        Free: one AI action (a scan or a lecture), one course you add yourself, unlimited classes from Canvas or Moodle, and same-day reminders. The tools above are part of Pro.
       </Text>
     </View>
   );
@@ -746,6 +746,8 @@ function Toolkit({ colors, isWide, isLandscape }: { colors: C; isWide: boolean; 
  *   · "keeps itself right" — background sync is ON from the moment you
  *                            connect, which is what makes a moved deadline
  *                            correct itself without anyone touching it.
+ * Moodle's calendar link takes the same calendar_feed road in lib/lms.ts —
+ * straight to the Vault, read with a plain GET — so every line holds for it.
  */
 const CANVAS_POINTS: {
   icon: React.ComponentProps<typeof FontAwesome>['name'];
@@ -760,19 +762,23 @@ const CANVAS_POINTS: {
   {
     icon: 'refresh',
     label: 'It stays right on its own',
-    note: 'Semora re-checks Canvas every few hours. When an instructor moves a due date, yours moves with it.',
+    note: 'Semora re-checks Canvas or Moodle every few hours. When an instructor moves a due date, yours moves with it.',
   },
   {
     icon: 'lock',
     label: 'Read-only, and private',
-    note: 'Your private Canvas calendar link, encrypted on our side. Semora can read your deadlines — never post, submit or change anything.',
+    note: 'Your private Canvas or Moodle calendar link, encrypted on our side. Semora can read your deadlines — never post, submit or change anything.',
   },
 ];
 
 function CanvasSync({ colors, isWide }: { colors: C; isWide: boolean }) {
   return (
     <View style={styles.stepPad}>
-      <Text style={[styles.kicker, { color: colors.brand }]}>IF YOUR SCHOOL USES CANVAS</Text>
+      {/* Moodle beside Canvas: the step used to be addressed to Canvas
+          schools alone, so a Moodle student learned here that the one
+          hands-off feature was not for them — and it is. Blackboard is left
+          out on purpose; it needs a token from the school's IT team. */}
+      <Text style={[styles.kicker, { color: colors.brand }]}>IF YOUR SCHOOL USES CANVAS OR MOODLE</Text>
       <Text style={[styles.display2, { color: colors.ink }]}>
         {isWide ? 'Connect it once. Then stop thinking about it.' : 'Connect it once.\nThen stop\nthinking about it.'}
       </Text>
@@ -800,7 +806,7 @@ function CanvasSync({ colors, isWide }: { colors: C; isWide: boolean }) {
 
       <Animated.View entering={FadeInDown.delay(460).springify().damping(18)}>
         <Text style={[styles.toolFootnote, { color: colors.ink3, borderTopColor: colors.line }]}>
-          Free on every plan, with no limit on Canvas classes. Semora offers the setup right after you sign in.
+          Free on every plan, with no limit on Canvas or Moodle classes. Semora offers the setup right after you sign in.
         </Text>
       </Animated.View>
     </View>

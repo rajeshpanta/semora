@@ -7,9 +7,11 @@ import {
   MOODLE_FEED_MESSAGES,
   describeMoodleFeedInput,
   extractMoodleFeedCandidate,
+  isCanvasFeedLink,
   moodleCalendarOrigin,
   moodleWwwrootFromPage,
   normalizeMoodleCalendarFeedUrl,
+  readMoodleSiteEntry,
 } from './moodleFeedUrl.ts';
 
 const TOKEN = 'a'.repeat(40);
@@ -107,4 +109,74 @@ Deno.test('no message ever quotes the link or its token', () => {
     assert(!(error as Error).message.includes(TOKEN));
     assert(!(error as Error).message.includes('secret.school.edu'));
   }
+});
+
+Deno.test('the first box: an http:// address is upgraded, not refused', () => {
+  const entry = readMoodleSiteEntry('http://moodle.school.edu');
+  assert(entry.state === 'address');
+  assertEquals(entry.site, 'https://moodle.school.edu');
+  assertEquals(entry.wwwroot, 'https://moodle.school.edu');
+  assertEquals(entry.upgraded, true);
+
+  // Inside pasted text, and with a page path that still reveals the root.
+  const page = readMoodleSiteEntry('it is HTTP://school.edu/moodle/login/index.php thanks');
+  assert(page.state === 'address');
+  assertEquals(page.site, 'https://school.edu/moodle/login/index.php');
+  assertEquals(page.wwwroot, 'https://school.edu/moodle');
+  assertEquals(page.upgraded, true);
+});
+
+Deno.test('the first box: an explicit :80 goes with the http:// it belonged to', () => {
+  // Kept, the guess was 'https://school.edu:80' — HTTPS on the HTTP port.
+  const bare = readMoodleSiteEntry('http://school.edu:80');
+  assert(bare.state === 'address');
+  assertEquals(bare.site, 'https://school.edu');
+  assertEquals(bare.wwwroot, 'https://school.edu');
+
+  const page = readMoodleSiteEntry('HTTP://school.edu:80/moodle/my/');
+  assert(page.state === 'address');
+  assertEquals(page.site, 'https://school.edu/moodle/my/');
+  assertEquals(page.wwwroot, 'https://school.edu/moodle');
+
+  // Any other port is the school's choice and stays; so does anything typed
+  // with https:// already.
+  const other = readMoodleSiteEntry('http://school.edu:8080/moodle');
+  assert(other.state === 'address');
+  assertEquals(other.wwwroot, 'https://school.edu:8080/moodle');
+  const typed = readMoodleSiteEntry('https://school.edu:8443');
+  assert(typed.state === 'address');
+  assertEquals(typed.wwwroot, 'https://school.edu:8443');
+});
+
+Deno.test('the first box: an address is read as one, with or without https', () => {
+  for (const typed of ['moodle.school.edu', 'https://moodle.school.edu/', '  moodle.school.edu  ']) {
+    const entry = readMoodleSiteEntry(typed);
+    assert(entry.state === 'address', typed);
+    assertEquals(entry.wwwroot, 'https://moodle.school.edu', typed);
+    assertEquals(entry.upgraded, false, typed);
+  }
+  const sub = readMoodleSiteEntry('https://school.edu/moodle/my/');
+  assert(sub.state === 'address');
+  assertEquals(sub.wwwroot, 'https://school.edu/moodle');
+});
+
+Deno.test('the first box: a name, or a word with no dot, is said to be one', () => {
+  // Each of these used to spin the button and change nothing.
+  for (const typed of ['State University', 'stateuniversity', 'moodle', 'Universidad de Chile', 'https://192.168.1.4', 'localhost']) {
+    assertEquals(readMoodleSiteEntry(typed).state, 'not_address', typed);
+  }
+  assertEquals(readMoodleSiteEntry('').state, 'empty');
+  assertEquals(readMoodleSiteEntry('   ').state, 'empty');
+  assertEquals(readMoodleSiteEntry(undefined).state, 'empty');
+});
+
+Deno.test('a Canvas feed link is recognised wherever it is pasted', () => {
+  assert(isCanvasFeedLink('webcal://school.instructure.com/feeds/calendars/user_AbC123xyz.ics'));
+  assert(isCanvasFeedLink('https://canvas.school.edu/feeds/calendars/user_AbC123xyz.ics'));
+  assert(isCanvasFeedLink('here: https://bruinlearn.ucla.edu/feeds/calendars/user_AbC.ics thanks'));
+  assert(!isCanvasFeedLink(GOOD));
+  assert(!isCanvasFeedLink('https://school.instructure.com/calendar'));
+  assert(!isCanvasFeedLink(null));
+  // And the Moodle verdict never mistakes one for a Moodle link.
+  assert(describeMoodleFeedInput('webcal://school.instructure.com/feeds/calendars/user_AbC.ics').state === 'problem');
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { router } from 'expo-router';
 import { ActivityIndicator, AppState, Linking, Platform, StyleSheet, View } from 'react-native';
 import { Text, TextInput, TouchableOpacity } from '@/components/LocalizedReactNative';
@@ -8,10 +8,13 @@ import { track } from '@/lib/analytics';
 import { probeLmsSite } from '@/lib/lms';
 import {
   MOODLE_FEED_HINTS,
-  moodleWwwrootFromPage,
+  describeMoodleFeedInput,
+  isCanvasFeedLink,
+  readMoodleSiteEntry,
   type MoodleFeedVerdict,
 } from '@/lib/moodleFeedUrl';
 import {
+  moodleLinkStepReady,
   shouldEscalateLmsSetup,
   type LmsLaneChoice,
   type LmsSetupProgress,
@@ -46,6 +49,11 @@ import {
  *   time, MFA and all. The card says "Sign in if Moodle asks" for that reason,
  *   and points at the laptop lane for the schools whose identity provider
  *   refuses to open in an embedded browser at all.
+ *
+ * On the web there is no lane to choose. The student is already at a
+ * computer, so the phone-or-laptop card is skipped and the Open button is
+ * always there — asking a web user to "open app.semoraai.com on your laptop"
+ * was a loop back to the page they were reading.
  *
  * MOODLE_PLAN.md Phase 4.4.
  */
@@ -83,6 +91,7 @@ export function MoodleGuidedPaste({
   working,
   autoAdvancing,
   source,
+  onSwitchToCanvas,
 }: {
   token: string;
   onTokenChange: (value: string) => void;
@@ -92,14 +101,21 @@ export function MoodleGuidedPaste({
   working: boolean;
   autoAdvancing: boolean;
   source: string;
+  /** Hands a pasted Canvas feed link to the Canvas flow, link and all. */
+  onSwitchToCanvas?: () => void;
 }) {
   const colors = useColors();
   const readClipboard = useClipboardLink();
+  const isWeb = Platform.OS === 'web';
 
   const [siteInput, setSiteInput] = useState('');
   const [checking, setChecking] = useState(false);
-  /** Set when the site check ran and could not confirm — advisory only. */
-  const [unconfirmed, setUnconfirmed] = useState(false);
+  /**
+   * The first box never fails in silence. Set when what was typed cannot be
+   * an address at all — a school's name, a word with no dot — so the screen
+   * says so under the field instead of spinning and changing nothing.
+   */
+  const [siteProblem, setSiteProblem] = useState<'not_address' | 'canvas_link' | null>(null);
   const [clipboardMiss, setClipboardMiss] = useState(false);
   const [justReturned, setJustReturned] = useState(false);
   const [showLink, setShowLink] = useState(false);
@@ -107,6 +123,18 @@ export function MoodleGuidedPaste({
   const lane = progress.setupLane;
   const wwwroot = progress.wwwroot;
   const escalated = shouldEscalateLmsSetup(progress);
+  /** The paste step is showing: a lane was chosen, or this is the web. */
+  const linkStep = moodleLinkStepReady(progress, isWeb);
+  /**
+   * What the site check said, read from saved progress rather than component
+   * state, so a student who leaves for the browser and comes back is not
+   * shown a confident "Found:" for an address that was never confirmed. A
+   * reconnect prefills the site with no check at all; that is a school Semora
+   * has already synced, so it counts as found.
+   */
+  const siteDoubt = progress.precheck && !progress.precheck.isMoodle
+    ? (progress.precheck.reason === 'not_moodle' ? 'not_moodle' : 'unconfirmed')
+    : null;
 
   const patch = useCallback(
     (next: Partial<LmsSetupProgress>) => onProgressChange({ ...progress, ...next }),
@@ -118,19 +146,67 @@ export function MoodleGuidedPaste({
     const typed = siteInput.trim();
     if (!typed || checking) return;
 
+    // The calendar link itself, pasted into the first box. That is exactly
+    // what the laptop steps end with on the web app, and it answers both
+    // questions at once — which Moodle, and the link — so take it rather than
+    // asking the student to paste it a second time one screen later.
+    const direct = describeMoodleFeedInput(typed);
+    if (direct.state === 'ok') {
+      track('lms_setup_site_entered', {
+        screen: 'lms_connect', provider: 'moodle', source, via: 'pasted_link', funnel_step: 'site',
+      });
+      setSiteProblem(null);
+      patch({
+        host: direct.host,
+        wwwroot: direct.wwwroot,
+        schoolName: null,
+        // No check: the link came out of the student's own signed-in Moodle,
+        // which is stronger evidence than anything the probe could add.
+        precheck: null,
+        setupLane: lane ?? (isWeb ? null : 'phone'),
+      });
+      onTokenChange(typed);
+      return;
+    }
+
+    // A Canvas feed link in the first box is the same mistake as in the last
+    // one, and gets the same answer: offer Canvas, not a probe of Instructure.
+    if (onSwitchToCanvas && isCanvasFeedLink(typed)) {
+      setSiteProblem('canvas_link');
+      track('lms_setup_site_rejected', {
+        screen: 'lms_connect', provider: 'moodle', source, funnel_step: 'site', reason: 'canvas_link',
+      });
+      return;
+    }
+
+    // A name, or a word with no dot, is not something the server can check.
+    // Say so here rather than spending a probe on it and then showing nothing.
+    const entry = readMoodleSiteEntry(typed);
+    if (entry.state !== 'address') {
+      setSiteProblem('not_address');
+      track('lms_setup_site_rejected', {
+        screen: 'lms_connect', provider: 'moodle', source, funnel_step: 'site', reason: 'not_address',
+      });
+      return;
+    }
+    setSiteProblem(null);
+
     // A student who pasted a page from inside their Moodle has already
     // answered this; take the site root from it rather than making them retype.
-    const fromPage = moodleWwwrootFromPage(typed);
     track('lms_setup_site_entered', {
       screen: 'lms_connect', provider: 'moodle', source,
-      via: fromPage && /\/\S+\//.test(typed) ? 'pasted_page' : 'typed',
+      via: /\/\S+\//.test(entry.site.replace(/^https:\/\//i, '')) ? 'pasted_page' : 'typed',
+      upgraded_http: entry.upgraded,
       funnel_step: 'site',
     });
 
+    const guessed = entry.wwwroot.replace(/\/+$/, '');
+    const guessedHost = (() => { try { return new URL(guessed).hostname; } catch { return null; } })();
     setChecking(true);
-    setUnconfirmed(false);
     try {
-      const probe = await probeLmsSite({ provider: 'moodle', site: typed });
+      // Always the https form. The probe refuses http:// outright, and every
+      // Moodle a student can sign in to serves https anyway.
+      const probe = await probeLmsSite({ provider: 'moodle', site: entry.site });
       track('lms_setup_probe_result', {
         screen: 'lms_connect', provider: 'moodle', source, funnel_step: 'site',
         result: probe.isMoodle ? 'moodle' : (probe.reason ?? 'not_moodle'),
@@ -153,35 +229,28 @@ export function MoodleGuidedPaste({
         return;
       }
       // ADVISORY. The export fetch is the real test, so a school whose
-      // firewall refuses the check still gets to continue.
-      const guessed = fromPage ?? moodleWwwrootFromPage(typed);
-      if (guessed) {
-        setUnconfirmed(true);
-        patch({
-          host: (() => { try { return new URL(guessed).hostname; } catch { return null; } })(),
-          wwwroot: guessed.replace(/\/+$/, ''),
-          schoolName: null,
-          precheck: { isMoodle: false },
-        });
-      } else {
-        setUnconfirmed(true);
-      }
+      // firewall refuses the check still gets to continue. What the check
+      // said is kept, because "this answered and is not Moodle" (usually the
+      // school's main website) and "this could not be reached" need
+      // different words on the next card.
+      patch({
+        host: guessedHost,
+        wwwroot: guessed,
+        schoolName: null,
+        precheck: { isMoodle: false, reason: probe.reason ?? 'not_moodle' },
+      });
     } catch {
       // A failure to CHECK is not a failure to connect.
-      const guessed = moodleWwwrootFromPage(typed);
-      setUnconfirmed(true);
-      if (guessed) {
-        patch({
-          host: (() => { try { return new URL(guessed).hostname; } catch { return null; } })(),
-          wwwroot: guessed.replace(/\/+$/, ''),
-          schoolName: null,
-          precheck: { isMoodle: false },
-        });
-      }
+      patch({
+        host: guessedHost,
+        wwwroot: guessed,
+        schoolName: null,
+        precheck: { isMoodle: false, reason: 'unreachable' },
+      });
     } finally {
       setChecking(false);
     }
-  }, [siteInput, checking, source, patch]);
+  }, [siteInput, checking, source, patch, lane, isWeb, onTokenChange, onSwitchToCanvas]);
 
   // ── Coming back from the browser ──────────────────────────
   //
@@ -212,13 +281,27 @@ export function MoodleGuidedPaste({
     return () => subscription.remove();
   }, [lane, token, source]);
 
+  /**
+   * The explicit tap takes WHATEVER is on the clipboard, not only a link that
+   * already looks right.
+   *
+   * It used to accept export_execute.php and nothing else, and answer every
+   * other paste with one line — so the student who copied the sign-in page,
+   * the Export page or a Canvas link was told only that nothing fit, while
+   * the hints that name each of those mistakes sat unused under the field.
+   * Putting the paste in the box lets the verdict say what it actually is.
+   * Canvas has always done this; this is the same rule.
+   */
   const pasteFromClipboard = useCallback(async () => {
     track('lms_setup_manual_paste_tapped', { screen: 'lms_connect', provider: 'moodle', source, funnel_step: 'paste' });
     const value = await readClipboard();
-    if (value && /\/calendar\/export_execute\.php/i.test(value)) {
+    if (value && value.trim()) {
       onTokenChange(value.trim());
       setClipboardMiss(false);
-      track('lms_setup_autofilled', { screen: 'lms_connect', provider: 'moodle', source, funnel_step: 'paste' });
+      setJustReturned(false);
+      if (/\/calendar\/export_execute\.php/i.test(value)) {
+        track('lms_setup_autofilled', { screen: 'lms_connect', provider: 'moodle', source, funnel_step: 'paste' });
+      }
     } else {
       setClipboardMiss(true);
     }
@@ -274,7 +357,14 @@ export function MoodleGuidedPaste({
       && !wwwroot.toLowerCase().includes(problem.host.toLowerCase())
       ? problem.host
       : null;
-  const hint = foreignHost
+  // A Canvas calendar feed in particular is not a wrong page to send them back
+  // for. It is a working link for a different platform, so the answer is to
+  // offer that platform — with the link they already have — rather than a
+  // hint that sends a Canvas student into a Moodle they do not use.
+  const canvasLink = !!problem && !!onSwitchToCanvas && isCanvasFeedLink(token);
+  const hint = canvasLink
+    ? null
+    : foreignHost
     ? `That link is from ${foreignHost} — open its calendar export instead`
     : problem ? MOODLE_FEED_HINTS[problem.code] : null;
 
@@ -298,8 +388,80 @@ export function MoodleGuidedPaste({
       screen: 'lms_connect', provider: 'moodle', source, funnel_step: 'paste',
       reason: `moodle_feed_url_${code}`,
       lane: lane ?? null,
+      canvas_link: canvasLink,
     });
-  }, [problem, source, lane, foreignHost]);
+  }, [problem, source, lane, foreignHost, canvasLink]);
+
+  /** The four taps, in the words that fit where the student is doing them. */
+  const phoneSteps = ['Sign in if Moodle asks.', 'Tap Get calendar URL.', 'Tap Copy URL.', 'Come back to Semora.'];
+  const webSteps = ['Sign in if Moodle asks.', 'Click Get calendar URL, then Copy URL.', 'Come back to this tab and paste it below.'];
+  const renderStep = (text: string, index: number, extra?: ReactNode) => (
+    <View key={`${index}-${text}`} style={styles.step}>
+      <View style={[styles.stepDot, { backgroundColor: colors.brand50 }]}>
+        <Text style={[styles.stepDotText, { color: colors.brand }]}>{String(index + 1)}</Text>
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.stepText, { color: colors.ink2 }]}>{text}</Text>
+        {extra}
+      </View>
+    </View>
+  );
+
+  /**
+   * What to expect on Moodle's own export page, said BEFORE it goes wrong.
+   * Read with the Moodle steps, so each lane places it straight after the
+   * step that has the student on that page.
+   */
+  const moodlePageNotes = (
+    <>
+      <Text style={[styles.note, { color: colors.ink2 }]}>
+        Leave the options as they are — Semora sets the date range itself.
+      </Text>
+      <View style={styles.noteRow}>
+        <FontAwesome name="info-circle" size={12} color={colors.ink3} />
+        <Text style={[styles.note, { color: colors.ink2, flex: 1 }]}>
+          If you tapped Export and a calendar file opened, go back and tap Get calendar URL instead.
+        </Text>
+      </View>
+      <View style={styles.noteRow}>
+        <FontAwesome name="info-circle" size={12} color={colors.ink3} />
+        <Text style={[styles.note, { color: colors.ink2, flex: 1 }]}>
+          If the page just says “no export”, your school turned this off. Semora will offer to read your syllabus instead.
+        </Text>
+      </View>
+      {/* A single-sign-on school often drops the student on the
+          dashboard after login rather than on the page Semora opened.
+          This is the way back from there, by the menu. */}
+      <View style={styles.noteRow}>
+        <FontAwesome name="info-circle" size={12} color={colors.ink3} />
+        <Text style={[styles.note, { color: colors.ink2, flex: 1 }]}>
+          <Text style={{ fontWeight: '700' }}>Landed somewhere else? </Text>
+          Go to Calendar → Import or export calendars → Export calendar.
+        </Text>
+      </View>
+    </>
+  );
+
+  /** "Is your school on Canvas?" — the same offer from either box. */
+  const renderCanvasOffer = (onPress: () => void) => (
+    <View style={[styles.rescue, { backgroundColor: colors.brand50, borderColor: colors.brand }]}>
+      <Text style={[styles.rescueTitle, { color: colors.ink }]}>Is your school on Canvas?</Text>
+      <Text style={[styles.rescueText, { color: colors.ink2 }]}>
+        That is a Canvas calendar link, not a Moodle one. Semora can connect Canvas with it instead.
+      </Text>
+      <TouchableOpacity
+        style={[styles.primary, { backgroundColor: working ? colors.line : colors.brand }]}
+        onPress={onPress}
+        // Switching drops whatever check is running; not while one is.
+        disabled={working}
+        accessibilityRole="button"
+        accessibilityLabel="Connect Canvas instead"
+      >
+        <FontAwesome name="exchange" size={14} color="#fff" />
+        <Text style={styles.primaryText}>Connect Canvas instead</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <View style={styles.wrap}>
@@ -310,7 +472,7 @@ export function MoodleGuidedPaste({
           <Text style={[styles.label, { color: colors.ink2 }]}>Your school’s Moodle address</Text>
           <TextInput
             value={siteInput}
-            onChangeText={setSiteInput}
+            onChangeText={(value) => { setSiteInput(value); setSiteProblem(null); }}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
@@ -322,6 +484,22 @@ export function MoodleGuidedPaste({
             onSubmitEditing={findMoodle}
             style={[styles.input, { color: colors.ink, backgroundColor: colors.paper, borderColor: colors.line }]}
           />
+          {/* Said in words, under the box, the moment it happens. Before
+              this a school name or an address with no dot sent the button
+              spinning and then left the screen exactly as it was. */}
+          {siteProblem === 'not_address' && (
+            <View style={styles.noteRow}>
+              <FontAwesome name="exclamation-circle" size={12} color={colors.coral} />
+              <Text style={[styles.note, { color: colors.ink2, flex: 1 }]}>
+                That isn’t a web address yet. Type it like moodle.yourschool.edu, or paste any link from your Moodle.
+              </Text>
+            </View>
+          )}
+          {/* The link goes across with them, so Canvas can use it at once. */}
+          {siteProblem === 'canvas_link' && !!onSwitchToCanvas && renderCanvasOffer(() => {
+            onTokenChange(siteInput.trim());
+            onSwitchToCanvas();
+          })}
           <Text style={[styles.note, { color: colors.ink2 }]}>
             If you are not sure, search “moodle” and your school’s name.
           </Text>
@@ -345,29 +523,54 @@ export function MoodleGuidedPaste({
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
           <View style={styles.rowHead}>
             <FontAwesome
-              name={unconfirmed ? 'question-circle' : 'check-circle'}
+              name={siteDoubt ? 'question-circle' : 'check-circle'}
               size={15}
-              color={unconfirmed ? colors.ink2 : colors.brand}
+              color={siteDoubt ? colors.ink2 : colors.brand}
             />
-            <Text style={[styles.cardTitle, { color: colors.ink, marginBottom: 0 }]}>
-              {unconfirmed
+            <Text style={[styles.cardTitle, { color: colors.ink, marginBottom: 0, flex: 1 }]}>
+              {siteDoubt === 'not_moodle'
+                ? 'This doesn’t look like a Moodle site'
+                : siteDoubt
                 ? 'Couldn’t confirm this address — continue anyway'
                 : `Found: ${progress.schoolName ?? progress.host ?? ''}`}
             </Text>
           </View>
+          {/* The address itself whenever it was not confirmed, so a typo is
+              visible before the student is sent off to it. */}
+          {!!siteDoubt && !!progress.host && (
+            <Text style={[styles.address, { color: colors.ink }]} selectable>{progress.host}</Text>
+          )}
+          {/* Distinct from "couldn't confirm". This address answered and is
+              not a Moodle — most often the school's main website, whose
+              Moodle lives at another address — and continuing to it opens a
+              page that does not exist. Still advisory: some Moodles hide
+              every sign the check looks for. */}
+          {siteDoubt === 'not_moodle' && (
+            <Text style={[styles.note, { color: colors.ink2 }]}>
+              That address answered, but not like Moodle. It may be your school’s main website — check the address, or continue if you’re sure it’s right.
+            </Text>
+          )}
           <TouchableOpacity
             style={styles.switchLane}
-            onPress={() => { setUnconfirmed(false); patch({ host: null, wwwroot: null, schoolName: null, setupLane: null, precheck: null }); }}
+            onPress={() => {
+              setSiteProblem(null);
+              // A link pasted for the old school would only be refused as
+              // "a different Moodle" against the new one.
+              if (token) onTokenChange('');
+              patch({ host: null, wwwroot: null, schoolName: null, setupLane: null, precheck: null });
+            }}
             accessibilityRole="button"
-            accessibilityLabel="Not your school? Change"
+            accessibilityLabel={siteDoubt ? 'Change the address' : 'Not your school? Change'}
           >
-            <Text style={[styles.link, { color: colors.brand }]}>Not your school? Change</Text>
+            <Text style={[styles.link, { color: colors.brand }]}>
+              {siteDoubt ? 'Change the address' : 'Not your school? Change'}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* ── B. Phone or laptop ───────────────────────────── */}
-      {!!wwwroot && !lane && (
+      {/* ── B. Phone or laptop — not asked on the web ───── */}
+      {!!wwwroot && !lane && !isWeb && (
         <View style={{ gap: 10 }}>
           <Text style={[styles.cardTitle, { color: colors.ink }]}>How would you like to do it?</Text>
           <TouchableOpacity
@@ -401,41 +604,56 @@ export function MoodleGuidedPaste({
         </View>
       )}
 
-      {/* ── C. The four taps ─────────────────────────────── */}
-      {!!wwwroot && !!lane && !token && (
+      {/* ── C. The taps ──────────────────────────────────── */}
+      {linkStep && !token && (
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <Text style={[styles.cardTitle, { color: colors.ink }]}>Open your Moodle calendar</Text>
-          {[
-            'Sign in if Moodle asks.',
-            'Tap Get calendar URL.',
-            'Tap Copy URL.',
-            lane === 'phone' ? 'Come back to Semora.' : 'Paste it here, or on app.semoraai.com.',
-          ].map((step, index) => (
-            <View key={step} style={styles.step}>
-              <View style={[styles.stepDot, { backgroundColor: colors.brand50 }]}>
-                <Text style={[styles.stepDotText, { color: colors.brand }]}>{String(index + 1)}</Text>
-              </View>
-              <Text style={[styles.stepText, { color: colors.ink2 }]}>{step}</Text>
-            </View>
-          ))}
-          <Text style={[styles.note, { color: colors.ink2 }]}>
-            Leave the options as they are — Semora sets the date range itself.
-          </Text>
-          {/* The two ways this goes wrong, said BEFORE they happen. */}
-          <View style={styles.noteRow}>
-            <FontAwesome name="info-circle" size={12} color={colors.ink3} />
-            <Text style={[styles.note, { color: colors.ink2, flex: 1 }]}>
-              If you tapped Export and a calendar file opened, go back and tap Get calendar URL instead.
-            </Text>
-          </View>
-          <View style={styles.noteRow}>
-            <FontAwesome name="info-circle" size={12} color={colors.ink3} />
-            <Text style={[styles.note, { color: colors.ink2, flex: 1 }]}>
-              If the page just says “no export”, your school turned this off. Semora will offer to read your syllabus instead.
-            </Text>
-          </View>
-          {lane === 'phone' && (
+          {isWeb || lane === 'phone' ? (
             <>
+              <Text style={[styles.cardTitle, { color: colors.ink }]}>Open your Moodle calendar</Text>
+              {(isWeb ? webSteps : phoneSteps).map((step, index) => renderStep(step, index))}
+              {moodlePageNotes}
+            </>
+          ) : (
+            <>
+              {/* The laptop lane used to be the phone's four taps with a
+                  different last line, and never said WHERE to go on the
+                  laptop. A student cannot type "your Moodle's export page"
+                  into an address bar; they can type this. */}
+              <View style={styles.rowHead}>
+                <FontAwesome name="laptop" size={16} color={colors.brand} />
+                <Text style={[styles.cardTitle, { color: colors.ink, marginBottom: 0 }]}>Get the link on your laptop</Text>
+              </View>
+              {renderStep('On your laptop, open this address:', 0, (
+                <Text style={[styles.address, { color: colors.ink }]} selectable>{moodleExportPageUrl(wwwroot!)}</Text>
+              ))}
+              {renderStep('Sign in if Moodle asks.', 1)}
+              {renderStep('Click Get calendar URL, then Copy URL.', 2)}
+              {/* In the order they are read. These are about the Moodle page
+                  the student has open at step 3, so they sit under step 3 —
+                  after the Semora steps they were being read once the
+                  student had already left that page. */}
+              {moodlePageNotes}
+              <Text style={[styles.subhead, { color: colors.ink }]}>Then paste it into Semora on the web</Text>
+              {/* The whole thing can be finished there: the web app's own
+                  first box takes the calendar link and goes straight on. No
+                  code-and-handoff channel, for the reason CanvasGuidedPaste
+                  gives — the link is a live credential and never needs to
+                  leave the browser it was copied in. */}
+              {renderStep('Open app.semoraai.com in a new tab and sign in.', 3)}
+              {renderStep('Open Settings, then Canvas or LMS Sync, and choose Moodle.', 4)}
+              {/* The step the card used to stop short of. The first box on
+                  the web ("Where is your Moodle?") takes the calendar link
+                  itself and goes straight on to the courses. */}
+              {renderStep('Paste the link into the first box there.', 5)}
+              <Text style={[styles.note, { color: colors.ink2 }]}>
+                Your classes appear here the next time you open Semora.
+              </Text>
+            </>
+          )}
+          {(isWeb || lane === 'phone') && (
+            <>
+              {/* Always on the web: there is no lane there to hide it behind,
+                  and a new tab is exactly the right way to open it. */}
               <TouchableOpacity
                 style={[styles.primary, { backgroundColor: colors.brand }]}
                 onPress={() => openExportPage('button')}
@@ -445,29 +663,52 @@ export function MoodleGuidedPaste({
                 <FontAwesome name="external-link" size={14} color="#fff" />
                 <Text style={styles.primaryText}>{`Open ${progress.host ?? 'Moodle'}`}</Text>
               </TouchableOpacity>
-              <Text style={[styles.note, { color: colors.ink2 }]}>
-                If your school’s sign-in refuses to open here, use the laptop steps.
-              </Text>
+              {!isWeb && (
+                <Text style={[styles.note, { color: colors.ink2 }]}>
+                  If your school’s sign-in refuses to open here, use the laptop steps.
+                </Text>
+              )}
             </>
           )}
-          <TouchableOpacity
-            style={styles.switchLane}
-            onPress={() => chooseLane(lane === 'phone' ? 'laptop' : 'phone')}
-            accessibilityRole="button"
-            accessibilityLabel={lane === 'phone' ? 'I have a laptop nearby' : 'Do it here on my phone'}
-          >
-            <Text style={[styles.link, { color: colors.brand }]}>
-              {lane === 'phone' ? 'I have a laptop nearby' : 'Do it here on my phone'}
-            </Text>
-          </TouchableOpacity>
+          {!isWeb && (
+            <TouchableOpacity
+              style={styles.switchLane}
+              onPress={() => chooseLane(lane === 'phone' ? 'laptop' : 'phone')}
+              accessibilityRole="button"
+              accessibilityLabel={lane === 'phone' ? 'I have a laptop nearby' : 'Do it here on my phone'}
+            >
+              <Text style={[styles.link, { color: colors.brand }]}>
+                {lane === 'phone' ? 'I have a laptop nearby' : 'Do it here on my phone'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
       {/* ── D. The link ──────────────────────────────────── */}
-      {!!wwwroot && !!lane && (
+      {linkStep && (
         <View style={{ gap: 8 }}>
-          {justReturned && !token && (
-            <Text style={[styles.cardTitle, { color: colors.ink }]}>Back already? Paste your link</Text>
+          {/* Back from Moodle with the link in hand. The same block Canvas
+              shows, for the same reason: the read raises iOS's own paste
+              permission alert, and that alert only reads as normal when it
+              answers a tap the student has just made — so the tap is the big
+              button, not a small link under the field. */}
+          {justReturned && !token && !isWeb && (
+            <View style={[styles.rescue, { backgroundColor: colors.brand50, borderColor: colors.brand }]}>
+              <Text style={[styles.rescueTitle, { color: colors.ink }]}>Back already? Paste your link</Text>
+              <Text style={[styles.rescueText, { color: colors.ink2 }]}>
+                Copied the link? Tap below and Semora fills it in. iOS may ask permission to paste — that is expected, and Semora only ever reads the one link.
+              </Text>
+              <TouchableOpacity
+                style={[styles.primary, { backgroundColor: colors.brand }]}
+                onPress={() => { void pasteFromClipboard(); }}
+                accessibilityRole="button"
+                accessibilityLabel="Paste my Moodle link"
+              >
+                <FontAwesome name="clipboard" size={14} color="#fff" />
+                <Text style={styles.primaryText}>Paste my Moodle link</Text>
+              </TouchableOpacity>
+            </View>
           )}
           <Text style={[styles.label, { color: colors.ink2 }]}>Your Moodle calendar link</Text>
           <View style={styles.secretField}>
@@ -495,14 +736,14 @@ export function MoodleGuidedPaste({
             </TouchableOpacity>
           </View>
 
-          {Platform.OS !== 'web' && !token && (
+          {!isWeb && !token && !justReturned && (
             <TouchableOpacity style={styles.pasteRow} onPress={pasteFromClipboard} accessibilityRole="button" accessibilityLabel="Paste from clipboard">
               <FontAwesome name="clipboard" size={13} color={colors.brand} />
               <Text style={[styles.link, { color: colors.brand }]}>Paste from clipboard</Text>
             </TouchableOpacity>
           )}
-          {clipboardMiss && (
-            <Text style={[styles.note, { color: colors.ink2 }]}>Nothing Moodle-shaped on the clipboard yet</Text>
+          {clipboardMiss && !token && (
+            <Text style={[styles.note, { color: colors.ink2 }]}>Nothing to paste yet. Copy the link in Moodle first.</Text>
           )}
 
           {autoAdvancing && (
@@ -523,8 +764,12 @@ export function MoodleGuidedPaste({
               <Text style={[styles.note, { color: colors.ink2, flex: 1 }]}>{hint}</Text>
             </View>
           )}
+          {/* A Canvas link: the student is on the wrong screen, not the
+              wrong page. Switching keeps the link, so Canvas picks it up
+              and goes straight on. */}
+          {canvasLink && !working && renderCanvasOffer(() => onSwitchToCanvas?.())}
           {/* Every rescue offers the way back to the page that has the link. */}
-          {!!problem && !working && (
+          {!!problem && !working && !canvasLink && (
             <TouchableOpacity style={styles.pasteRow} onPress={() => openExportPage('rescue')} accessibilityRole="button" accessibilityLabel="Open it again">
               <FontAwesome name="refresh" size={13} color={colors.brand} />
               <Text style={[styles.link, { color: colors.brand }]}>Open it again</Text>
@@ -545,10 +790,20 @@ export function MoodleGuidedPaste({
       {escalated && (
         <View style={[styles.rescue, { backgroundColor: colors.card, borderColor: colors.coral }]}>
           <Text style={[styles.rescueTitle, { color: colors.ink }]}>Not working?</Text>
-          <Text style={[styles.rescueText, { color: colors.ink2 }]}>
-            Getting the link on a laptop is easier, and you can paste it here afterwards.
-          </Text>
-          {lane !== 'laptop' && (
+          {/* The laptop is the rescue on a phone. On the web the student is
+              already on one, so the offer would be a loop — and the card
+              was left with a title and two links, saying nothing to someone
+              who had just failed twice. Canvas's web card says the same. */}
+          {isWeb ? (
+            <Text style={[styles.rescueText, { color: colors.ink2 }]}>
+              This step trips people up. Nothing you have done so far is lost.
+            </Text>
+          ) : (
+            <Text style={[styles.rescueText, { color: colors.ink2 }]}>
+              Getting the link on a laptop is easier, and you can paste it here afterwards.
+            </Text>
+          )}
+          {lane !== 'laptop' && !isWeb && (
             <TouchableOpacity onPress={() => chooseLane('laptop')} accessibilityRole="button" accessibilityLabel="Show me the laptop steps">
               <Text style={[styles.link, { color: colors.brand }]}>Show me the laptop steps</Text>
             </TouchableOpacity>
@@ -607,6 +862,8 @@ const styles = StyleSheet.create({
   switchLane: { paddingVertical: 8, alignItems: 'center' },
   link: { fontSize: 13, fontWeight: '600' },
   label: { fontSize: 13, fontWeight: '600', marginTop: 4 },
+  address: { fontSize: 13, lineHeight: 19, fontWeight: '700', marginTop: 3 },
+  subhead: { fontSize: 13, fontWeight: '800', marginTop: 6 },
   secretField: { position: 'relative', justifyContent: 'center' },
   secretInput: { paddingRight: 44 },
   secretToggle: { position: 'absolute', right: 6, padding: 10 },

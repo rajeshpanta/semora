@@ -51,6 +51,59 @@ export function getAppLocale(): AppLocale {
   return resolveLocale(useAppStore.getState().languagePreference);
 }
 
+/**
+ * What an LMS prompt calls the platform: "Canvas or Moodle" to a student with
+ * nothing connected, their own platform once they have one (lmsOfferName and
+ * lmsRepairLabel in lib/canvasPromo.ts). Every prompt interpolates it, so none
+ * of these sentences can be a catalogue key.
+ *
+ * The exact Canvas sentences are still keys, and exact keys are looked up
+ * before any pattern — so a Canvas student reads byte for byte the Spanish
+ * they always have, and every other name gets the same words. The one catch
+ * was "Finish Moodle setup": the generic "Finish (.+)" rule further down,
+ * written for a task title, turned it into "Completar Moodle setup".
+ */
+const LMS_NAME = 'Canvas or Moodle|Canvas|Moodle|Blackboard|Google Classroom';
+const LMS_PROMPTS: Array<[RegExp, (name: string) => string]> = [
+  [new RegExp(`^Finish (${LMS_NAME}) setup$`), (n) => `Termina de configurar ${n}`],
+  [new RegExp(`^Finish (${LMS_NAME}) setup — your classes import themselves$`), (n) => `Termina de configurar ${n}: tus clases se importan solas`],
+  [new RegExp(`^Sync (${LMS_NAME}) free, limited time offer$`), (n) => `Sincronizar ${n} gratis, oferta por tiempo limitado`],
+  [new RegExp(`^Sync (${LMS_NAME}), Pro feature$`), (n) => `Sincronizar ${n}, función Pro`],
+  [new RegExp(`^Sync (${LMS_NAME}) free — every class imports itself$`), (n) => `Sincroniza ${n} gratis: cada clase se importa sola`],
+  [new RegExp(`^Or sync (${LMS_NAME}) — every class imports itself$`), (n) => `O sincroniza ${n}: cada clase se importa sola`],
+  [new RegExp(`^Connect (${LMS_NAME})$`), (n) => `Conectar ${n}`],
+  [new RegExp(`^Connect (${LMS_NAME}) \\(Pro\\)$`), (n) => `Conectar ${n} (Pro)`],
+  [new RegExp(`^Connect (${LMS_NAME}) \\(Free\\)$`), (n) => `Conectar ${n} (Gratis)`],
+  [new RegExp(`^Connect (${LMS_NAME}) · Pro$`), (n) => `Conectar ${n} · Pro`],
+  [new RegExp(`^Connect (${LMS_NAME}) free, limited time offer$`), (n) => `Conectar ${n} gratis, oferta por tiempo limitado`],
+  [new RegExp(`^Connect (${LMS_NAME}), Pro feature$`), (n) => `Conectar ${n}, función Pro`],
+  [new RegExp(`^Connect (${LMS_NAME}) instead$`), (n) => `Mejor conecta ${n}`],
+  [new RegExp(`^Or connect (${LMS_NAME}) — free$`), (n) => `O conecta ${n}: gratis`],
+  [new RegExp(`^Connect (${LMS_NAME}) and your classes arrive on their own — or scan a syllabus, or type it yourself\\.$`),
+    (n) => `Conecta ${n} y tus clases llegan solas: o escanea un programa, o escríbelo tú.`],
+  [new RegExp(`^Connect (${LMS_NAME}) and your whole timetable lands here — free, however many classes you take\\.$`),
+    (n) => `Conecta ${n} y todo tu horario aparece aquí: gratis, sin importar cuántas clases tengas.`],
+  [new RegExp(`^Bring every class in from (${LMS_NAME}), free$`), (n) => `Trae todas tus clases desde ${n}, gratis`],
+  [new RegExp(`^Import the deadlines already on your (${LMS_NAME}) calendar, and Semora keeps them updated when your instructor moves them\\.$`),
+    (n) => `Importa las entregas que ya están en tu calendario de ${n}, y Semora las mantiene al día cuando tu profesor cambia una fecha.`],
+  [new RegExp(`^Takes a minute: you[’']ll copy your (${LMS_NAME}) calendar link\\.$`), (n) => `Toma un minuto: copiarás el enlace de tu calendario de ${n}.`],
+  [new RegExp(`^Limited-time offer: try (${LMS_NAME}) Sync free$`), (n) => `Oferta por tiempo limitado: prueba la sincronización con ${n} gratis`],
+  [new RegExp(`^School uses (${LMS_NAME})\\? Try \\1 Sync free$`), (n) => `¿Tu institución usa ${n}? Prueba la sincronización con ${n} gratis`],
+  [new RegExp(`^Import new (${LMS_NAME}) courses$`), (n) => `Importar las materias nuevas de ${n}`],
+  [new RegExp(`^(${LMS_NAME}) has classes Semora has not imported yet$`), (n) => `${n} tiene clases que Semora aún no ha importado`],
+  // The settings hero's badge. Said "— reconnect below" until the provider
+  // name was interpolated; both punctuations are the same sentence.
+  [new RegExp(`^(${LMS_NAME}) sync needs attention(?:\\. Reconnect| — reconnect) below$`),
+    (n) => `La sincronización de ${n} necesita atención; vuelve a conectarla abajo`],
+  [new RegExp(`^(${LMS_NAME}) is connected — manage it below$`), (n) => `${n} está conectado; adminístralo abajo`],
+  // The alert after "Sync now", which names the platform instead of "LMS".
+  [new RegExp(`^(${LMS_NAME}) synced$`), (n) => `${n} sincronizado`],
+  // Hidden assignments: where the hidden work still is. The Canvas sentence
+  // is an exact key and is looked up first, so it reads as it always has.
+  [new RegExp(`^Assignments you have hidden from Semora\\. They are still in (${LMS_NAME}) — hiding one here never changes anything there\\.$`),
+    (n) => `Tareas que ocultaste en Semora. Siguen en ${n}: ocultar una aquí nunca cambia nada allí.`],
+];
+
 function spanishPattern(input: string): string | null {
   let match: RegExpMatchArray | null;
 
@@ -65,6 +118,13 @@ function spanishPattern(input: string): string | null {
   match = input.match(/^Today · (\d+) items?$/i);
   if (match) return `Hoy · ${match[1]} ${match[1] === '1' ? 'elemento' : 'elementos'}`;
 
+  // Every LMS prompt that names the platform (see LMS_PROMPTS above). Only
+  // the name's own "or" needs Spanish; Canvas and Moodle are proper nouns.
+  for (const [pattern, spanish] of LMS_PROMPTS) {
+    match = input.match(pattern);
+    if (match) return spanish(match[1].replace(' or ', ' o '));
+  }
+
   // Moodle setup — every one of these carries a host, a name or a count, so
   // none of them can live in the phrase map. MOODLE_PLAN.md Phase 4.10.
   match = input.match(/^MOODLE SETUP · STEP (\d) OF 2$/);
@@ -75,6 +135,26 @@ function spanishPattern(input: string): string | null {
   if (match) return `Parece correcto: ${match[1]}`;
   match = input.match(/^That link is from (.+?) — open its calendar export instead$/);
   if (match) return `Ese enlace es de ${match[1]}: abre su exportación del calendario`;
+  // Canvas's wrong-page rescue. Both carry the host the student pasted, and
+  // its Text children are all strings, so they reach here joined.
+  match = input.match(/^That link is from (.+?) — the right school, the wrong page\. Semora can open its calendar for you\.$/);
+  if (match) return `Ese enlace es de ${match[1]}: la universidad correcta, pero no la página. Semora puede abrirte su calendario.`;
+  match = input.match(/^Open (\S+\.\S+) calendar$/);
+  if (match) return `Abrir el calendario de ${match[1]}`;
+  // The review step both platforms share. The span, the semester and the
+  // course name are interpolated.
+  match = input.match(/^This work runs (.+), which is outside (.+)\. Importing it here will file it under the wrong term\.$/);
+  if (match) return `Este trabajo va de ${match[1]}, fuera de ${translate(match[2], 'es')}. Si lo importas aquí, quedará en el semestre equivocado.`;
+  match = input.match(/^([\s\S]+)\n\nSome classes may have been added before it stopped — check your course list\.$/);
+  if (match) return `${translate(match[1], 'es')}\n\nPuede que se hayan agregado algunas clases antes de que se detuviera: revisa tu lista de cursos.`;
+  match = input.match(/^Course name: (.+)$/);
+  if (match) return `Nombre del curso: ${match[1]}`;
+  // The connection card on the LMS screen. Every child is a string or a
+  // number, so the count and the noun arrive joined to the label.
+  match = input.match(/^Action required · (\d+) new (course|courses)$/);
+  if (match) return `Acción necesaria · ${match[1]} ${match[1] === '1' ? 'materia nueva' : 'materias nuevas'}`;
+  match = input.match(/^(\d+) (course|courses) · (.+)$/);
+  if (match) return `${match[1]} ${match[1] === '1' ? 'curso' : 'cursos'} · ${translate(match[3], 'es')}`;
   match = input.match(/^Your Moodle shares (\d+) days ahead\. Work due after that arrives as your school[’']s window moves forward\.$/);
   if (match) return `Tu Moodle comparte ${match[1]} días hacia adelante. Lo que venza después llegará conforme avance la ventana de tu universidad.`;
   match = input.match(/^Your Moodle shares (\d+) days ahead, so this covers the rest of the term\.$/);
@@ -635,10 +715,13 @@ function spanishPattern(input: string): string | null {
     if (match) return `Se importaron ${match[1]} ${match[1] === '1' ? 'curso' : 'cursos'} y ${match[3]} ${match[3] === '1' ? 'entrega' : 'entregas'}. Semora seguirá revisando ${match[4]} cada pocas horas.`;
   // Today's held-back-courses banner. Interpolated, so it can never match a
   // catalogue key — the count and both agreements are resolved here instead.
-  match = input.match(/^(\d+) new Canvas (?:course|courses) found — (?:its|their) deadlines are not in Semora yet$/i);
-    if (match) return `Se ${match[1] === '1' ? 'encontró' : 'encontraron'} ${match[1]} ${match[1] === '1' ? 'curso nuevo' : 'cursos nuevos'} de Canvas — sus entregas aún no están en Semora`;
-  match = input.match(/^(\d+) new Canvas courses found, deadlines not imported yet$/i);
-    if (match) return `${match[1]} cursos nuevos de Canvas encontrados, sus entregas aún no se importan`;
+  // Names the student's own platform since Moodle: "3 new Moodle courses".
+  match = input.match(/^(\d+) new (Canvas|Moodle|Blackboard|Google Classroom) (?:course|courses) found — (?:its|their) deadlines are not in Semora yet$/i);
+    if (match) return `Se ${match[1] === '1' ? 'encontró' : 'encontraron'} ${match[1]} ${match[1] === '1' ? 'curso nuevo' : 'cursos nuevos'} de ${match[2]} — sus entregas aún no están en Semora`;
+  // The screen-reader form. Its English is always plural; the Spanish agrees
+  // with the count instead of copying that.
+  match = input.match(/^(\d+) new (Canvas|Moodle|Blackboard|Google Classroom) courses found, deadlines not imported yet$/i);
+    if (match) return `${match[1]} ${match[1] === '1' ? 'curso nuevo' : 'cursos nuevos'} de ${match[2]} ${match[1] === '1' ? 'encontrado' : 'encontrados'}, sus entregas aún no se importan`;
   match = input.match(/^Connect your (.+?) account$/i);
     if (match) return `Conecta tu cuenta de ${match[1]}`;
   match = input.match(/^Updated (\d+)m ago$/i);

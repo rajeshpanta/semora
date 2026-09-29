@@ -88,6 +88,7 @@ import { ProUpsellHost } from '@/components/ProUpsellHost';
 import { CollaborationSyncBridge } from '@/components/CollaborationSyncBridge';
 import { RealtimeSyncBridge } from '@/components/RealtimeSyncBridge';
 import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
+import { LMS_LABELS } from '@/lib/canvasPromo';
 import { WebAppFrame } from '@/components/WebAppFrame';
 import { AppUpdateGate } from '@/components/AppUpdateGate';
 import { noteExternalNavigation } from '@/lib/appUpdate';
@@ -1430,7 +1431,19 @@ function RootLayoutNav() {
               <Stack.Screen name="settings/help" options={{ title: t('Help & FAQ') }} />
               <Stack.Screen name="settings/calendar" options={{ title: t('Calendar Sync') }} />
               <Stack.Screen name="settings/lms" options={{ title: t('Canvas & LMS') }} />
-              <Stack.Screen name="settings/lms-connect" options={{ title: t('Connect Canvas') }} />
+              {/* Read from the route, the way the screen builds its own title.
+                  The screen draws nothing of its own — Stack.Screen included —
+                  while it waits to learn whether the account may connect, so
+                  this default is what a Moodle student read in that window:
+                  "Connect Canvas". A Canvas connect reads exactly as before; a
+                  reconnect now says so from the first frame, as the screen does. */}
+              <Stack.Screen
+                name="settings/lms-connect"
+                options={({ route }) => {
+                  const { provider, connectionId } = (route.params ?? {}) as { provider?: string; connectionId?: string };
+                  return { title: `${t(connectionId ? 'Reconnect' : 'Connect')} ${LMS_LABELS[provider ?? ''] ?? 'Canvas'}` };
+                }}
+              />
               <Stack.Screen name="settings/lms/new-courses" options={{ title: t('New Canvas courses') }} />
               <Stack.Screen name="settings/sync" options={{ title: t('Offline & Sync') }} />
               <Stack.Screen name="settings/widgets" options={{ title: t('Widgets') }} />

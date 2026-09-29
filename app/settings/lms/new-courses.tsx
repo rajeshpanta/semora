@@ -88,9 +88,8 @@ export default function NewCanvasCourses() {
   // until Moodle — and a Moodle student arriving here from a "Moodle has
   // classes waiting" push would have been told, four times on one screen, to
   // look at a platform their school does not use.
-  const providerLabel = LMS_PROVIDER_LABELS[
-    connections?.find((entry) => entry.id === connectionId)?.provider ?? 'canvas'
-  ];
+  const provider = connections?.find((entry) => entry.id === connectionId)?.provider ?? 'canvas';
+  const providerLabel = LMS_PROVIDER_LABELS[provider];
   const courses = useMemo(() => rows.map(pendingAsDiscovered), [rows]);
   const facts = useMemo(() => courses.map(courseFactsOf), [courses]);
   const suggestion = useMemo(() => suggestNewSemester(facts), [facts]);
@@ -362,12 +361,13 @@ export default function NewCanvasCourses() {
       {/* The same limits the connect screen states. A student importing a
           second term is making the same decision again and deserves the same
           facts — stated in one component so the two cannot drift apart.
-          Canvas only: every line of it is a fact about a CANVAS feed ("every
-          item links back to Canvas", "your grades stay in Canvas"), and a
-          Moodle feed carries no item link at all. The connect screen states
-          Moodle's own limits, and shows this component under the same test. */}
-      {providerLabel === 'Canvas' && (
-        <View style={styles.limitsWrap}><CanvasFeedLimits compact /></View>
+          Each calendar-link platform gets its own: Canvas's lines are facts
+          about a CANVAS feed ("every item links back to Canvas"), and a
+          Moodle feed carries no item link at all, so Moodle reads sentences
+          that are true of Moodle. Blackboard is not a calendar link and has
+          no such box. */}
+      {(provider === 'canvas' || provider === 'moodle') && (
+        <View style={styles.limitsWrap}><CanvasFeedLimits compact provider={provider} /></View>
       )}
 
       <CourseLinkChoiceSheet

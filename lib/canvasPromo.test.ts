@@ -24,7 +24,11 @@ import {
   canvasPromoPlacementFor,
   canvasSourceOf,
   lmsFailureCode,
+  lmsOfferFor,
+  lmsHiddenIntro,
+  lmsOfferName,
   lmsRepairLabel,
+  lmsSyncedTitle,
 } from './canvasPromo';
 
 const healthyCanvas: CanvasConnectionFacts = {
@@ -236,4 +240,130 @@ Deno.test('a Moodle-only account is offered repair, not "Connect Canvas"', () =>
   assertEquals(both.connection?.provider, 'canvas');
   assertEquals(lmsRepairLabel(both.connection), 'Finish Canvas setup');
   assertEquals(lmsRepairLabel(null), 'Finish Canvas setup');
+});
+
+// ── 4. One platform at a time (MOODLE_PLAN.md §6.7) ─────────────────────────
+
+const moodleFeed = (overrides: Partial<CanvasConnectionFacts> = {}): CanvasConnectionFacts => ({
+  provider: 'moodle',
+  free_promo_claimed_at: '2026-09-20T00:00:00Z',
+  background_sync_enabled: true,
+  last_sync_status: 'success',
+  last_successful_sync_at: new Date().toISOString(),
+  pending_courses_count: 0,
+  ...overrides,
+});
+
+Deno.test('canvasOfferFor is lmsOfferFor with no platform named, field for field', () => {
+  // The wrapper exists so a Canvas-only account cannot notice the change. Every
+  // shape of Canvas account the tests above use, through both doors.
+  const cases: Array<[CanvasConnectionFacts[] | undefined, boolean | undefined, boolean | undefined]> = [
+    [undefined, false, true],
+    [[], false, undefined],
+    [[], false, true],
+    [[], false, false],
+    [[], true, true],
+    [[healthyCanvas], false, undefined],
+    [[{ ...healthyCanvas, last_sync_status: 'error' }], false, true],
+    [[{ ...healthyCanvas, pending_courses_count: 3 }], false, true],
+    [[{ ...healthyCanvas, background_sync_enabled: false }], true, false],
+  ];
+  for (const [connections, isPro, promo] of cases) {
+    const wrapped = canvasOfferFor(connections, isPro, promo);
+    const { provider: _about, ...general } = lmsOfferFor(connections, isPro, promo);
+    assertEquals(wrapped, general);
+    // And the wrapper's shape did not grow: surfaces spread it.
+    assertEquals(Object.keys(wrapped).sort(), ['connection', 'free', 'offer']);
+  }
+});
+
+Deno.test('asked about Moodle, a healthy Canvas does not hide a dead Moodle feed', () => {
+  // The account-level answer is Canvas's, by design. The per-platform answer is
+  // what lets a Moodle surface say "Finish Moodle setup" anyway.
+  const connections = [healthyCanvas, moodleFeed({ background_sync_enabled: false })];
+  assertEquals(canvasOfferFor(connections, false, true).offer, 'healthy');
+  const moodle = lmsOfferFor(connections, false, true, 'moodle');
+  assertEquals(moodle.offer, 'needs_attention');
+  assertEquals(moodle.provider, 'moodle');
+  assertEquals(lmsRepairLabel(moodle.connection), 'Finish Moodle setup');
+});
+
+Deno.test('asked about Moodle with no Moodle connection, the answer is an invitation', () => {
+  const r = lmsOfferFor([healthyCanvas], false, true, 'moodle');
+  assertEquals(r.offer, 'none');
+  assertEquals(r.connection, null);
+  assertEquals(r.provider, 'moodle');
+  // Still free: the claim is on the account, stamped on the Canvas row.
+  assertEquals(r.free, true);
+});
+
+Deno.test('a Moodle term rollover is new_courses, named as Moodle', () => {
+  const r = lmsOfferFor([moodleFeed({ pending_courses_count: 2 })], false, true);
+  assertEquals(r.offer, 'new_courses');
+  assertEquals(r.provider, 'moodle');
+  assertEquals(lmsOfferName(r.connection), 'Moodle');
+});
+
+Deno.test('the account-level answer reports which platform it is about', () => {
+  assertEquals(lmsOfferFor([healthyCanvas, moodleFeed()], false, true).provider, 'canvas');
+  assertEquals(lmsOfferFor([moodleFeed()], false, true).provider, 'moodle');
+  // Nothing connected: the invitation is about no platform in particular.
+  assertEquals(lmsOfferFor([], false, true).provider, null);
+  // Still loading: the same.
+  assertEquals(lmsOfferFor(undefined, false, true).provider, null);
+});
+
+Deno.test('the promo rules are the same whichever platform is asked about', () => {
+  // Unresolved promo: silence, never a price. Resolved off: locked.
+  assertEquals(lmsOfferFor([], false, undefined, 'moodle').offer, 'healthy');
+  assertEquals(lmsOfferFor([], false, false, 'moodle').offer, 'locked');
+  assertEquals(lmsOfferFor([], true, true, 'moodle').free, false);
+});
+
+Deno.test('an invitation names both platforms a student can connect alone', () => {
+  assertEquals(lmsOfferName(null), 'Canvas or Moodle');
+  assertEquals(lmsOfferName(undefined), 'Canvas or Moodle');
+  // Never Blackboard in the invitation: it needs a token from school IT.
+  assertEquals(lmsOfferName(null).includes('Blackboard'), false);
+});
+
+Deno.test('a connected student hears their own platform, and Canvas is unchanged', () => {
+  assertEquals(lmsOfferName({ provider: 'canvas' }), 'Canvas');
+  assertEquals(lmsOfferName({ provider: 'moodle' }), 'Moodle');
+  assertEquals(lmsOfferName({ provider: 'blackboard' }), 'Blackboard');
+  // A platform this build does not know is an invitation, not a blank.
+  assertEquals(lmsOfferName({ provider: 'sakai' }), 'Canvas or Moodle');
+});
+
+Deno.test('the sync alert names the platform that was synced', () => {
+  assertEquals(lmsSyncedTitle('moodle'), 'Moodle synced');
+  assertEquals(lmsSyncedTitle('canvas'), 'Canvas synced');
+  assertEquals(lmsSyncedTitle('blackboard'), 'Blackboard synced');
+  // Not known (or not loaded): the old title, never an invented name.
+  assertEquals(lmsSyncedTitle(undefined), 'LMS synced');
+  assertEquals(lmsSyncedTitle('sakai'), 'LMS synced');
+});
+
+Deno.test('hidden work is said to be where it actually is', () => {
+  const CANVAS = 'Assignments you have hidden from Semora. They are still in Canvas — hiding one here never changes anything there.';
+  // A Canvas-only account reads, byte for byte, the sentence it always has —
+  // loaded, loading, and with or without the platform in the route.
+  assertEquals(lmsHiddenIntro([{ provider: 'canvas' }]), CANVAS);
+  assertEquals(lmsHiddenIntro([{ provider: 'canvas' }, { provider: 'canvas' }], 'canvas'), CANVAS);
+  assertEquals(lmsHiddenIntro(undefined), CANVAS);
+  assertEquals(lmsHiddenIntro(undefined, 'canvas'), CANVAS);
+
+  // A Moodle student is no longer told it is still in Canvas.
+  assertEquals(
+    lmsHiddenIntro([{ provider: 'moodle' }]),
+    'Assignments you have hidden from Semora. They are still in Moodle — hiding one here never changes anything there.',
+  );
+  assertEquals(lmsHiddenIntro(undefined, 'moodle'), lmsHiddenIntro([{ provider: 'moodle' }]));
+
+  // The list is the whole account's: with two platforms, neither is named.
+  const mixed = lmsHiddenIntro([{ provider: 'canvas' }, { provider: 'moodle' }], 'moodle');
+  assert(!/Canvas|Moodle/.test(mixed), mixed);
+  assert(mixed.includes('your school’s learning platform'), mixed);
+  // Nothing connected any more (the tasks outlived the connection): no name.
+  assert(!/Canvas|Moodle/.test(lmsHiddenIntro([])));
 });

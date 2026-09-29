@@ -40,6 +40,7 @@ import {
   type LmsCredential,
 } from '@/lib/lms';
 import { track } from '@/lib/analytics';
+import { claimFirstOpen, LMS_SWITCH_OPTIONS } from '@/lib/canvasLanes';
 import { CanvasGuidedPaste } from '@/components/CanvasGuidedPaste';
 import { MoodleGuidedPaste } from '@/components/MoodleGuidedPaste';
 import {
@@ -49,6 +50,7 @@ import {
 } from '@/lib/moodleFeedUrl';
 import {
   EMPTY_LMS_PROGRESS,
+  feedLaneChosenFor,
   lmsSetupStorageKey,
   parseLmsSetupProgress,
   serializeLmsSetupProgress,
@@ -94,6 +96,13 @@ const HELP: Record<Exclude<LmsProvider, 'google_classroom' | 'canvas'>, { url: s
   },
 };
 
+/**
+ * The platforms a student can switch between on this screen, in the order the
+ * Settings chooser lists them (LMS_SWITCH_OPTIONS). Google Classroom is not
+ * offered there, so it is not offered here either.
+ */
+const SWITCH_PROVIDERS: LmsProvider[] = LMS_SWITCH_OPTIONS.map((option) => option.id);
+
 export default function LmsConnectScreen() {
   const colors = useColors();
   const { t, locale } = useI18n();
@@ -111,10 +120,24 @@ export default function LmsConnectScreen() {
   // Stamped on every funnel event below so the experiment reads as one journey
   // rather than as two unrelated piles of Canvas events.
   const source = canvasSourceOf(params.source);
-  const provider = (Object.keys(LMS_PROVIDER_LABELS).includes(params.provider ?? '')
+  const routeProvider = (Object.keys(LMS_PROVIDER_LABELS).includes(params.provider ?? '')
     ? params.provider
     : 'canvas') as LmsProvider;
+  /**
+   * Which platform this screen is setting up. Starts as the route's, and the
+   * switch at the top changes it in place.
+   *
+   * It was fixed by the route, and nine call sites across the app route here
+   * with Canvas — so a Moodle student who tapped "Connect" on Today, on the
+   * scan paywall or on the course list landed on Canvas instructions with no
+   * way across. In the week measured, 296 Canvas offers were shown and the
+   * Moodle row was never tapped. The switch is the way out every one of
+   * those entry points was missing, without teaching nine callers about
+   * Moodle.
+   */
+  const [provider, setProvider] = useState<LmsProvider>(routeProvider);
   const reconnecting = !!params.connectionId;
+  const isWeb = Platform.OS === 'web';
   /**
    * Which road a Moodle student is on. The calendar link is the default for
    * everyone; the web-service token stays behind one small link for the rare
@@ -221,6 +244,10 @@ export default function LmsConnectScreen() {
     setMoodleProgress(next);
     if (moodleKey) setDeviceItem(moodleKey, serializeLmsSetupProgress(next));
   }, [moodleKey]);
+  /** A finished Moodle setup leaves nothing to resume. */
+  const clearMoodleProgress = useCallback(() => {
+    if (moodleKey) setDeviceItem(moodleKey, serializeLmsSetupProgress(EMPTY_LMS_PROGRESS));
+  }, [moodleKey]);
 
   // Existing courses in the semester the import is going into — the only place
   // a duplicate can appear. Scoped to that semester on purpose: last term's
@@ -297,11 +324,19 @@ export default function LmsConnectScreen() {
    * Has this provider's student picked a lane yet?
    *
    * The heading, subtitle and free-offer card all hide once they have, because
-   * by then the page should be instructing rather than pitching. Reading the
-   * CURRENT provider's progress is what stops a stale Canvas lane from blanking
-   * the Moodle screen.
+   * by then the page should be instructing rather than pitching. Read from the
+   * road actually on screen: a stale Canvas lane used to blank the Moodle
+   * screen, and — until this was scoped — Blackboard's and Moodle's token
+   * road too. Moodle on the web has no lane card: knowing the school IS the
+   * step. See feedLaneChosenFor.
    */
-  const feedLaneChosen = isMoodleFeed ? !!moodleProgress.setupLane : !!setupProgress.setupLane;
+  const feedLaneChosen = feedLaneChosenFor({
+    canvas: isCanvasCalendar,
+    moodleFeed: isMoodleFeed,
+    canvasProgress: setupProgress,
+    moodleProgress,
+    isWeb,
+  });
   /**
    * Is there anything in the field worth submitting?
    *
@@ -340,13 +375,20 @@ export default function LmsConnectScreen() {
   // connect, so every rate computed from it was quietly too low.
   //
   // Now it waits for `gateResolved` and reports which side the student landed
-  // on. Fired at most once either way — a ref rather than empty deps, because
-  // the condition genuinely changes after mount and the guard has to survive
-  // that.
-  const funnelFired = useRef(false);
+  // on. A ref rather than empty deps, because the condition genuinely changes
+  // after mount and the guard has to survive that.
+  //
+  // ONCE PER PLATFORM, not once per visit. The switch at the top changes the
+  // platform in place, and a student who arrived on Canvas and switched to
+  // Moodle has opened the Moodle setup: counted only once, every Moodle
+  // discover/choose/connect event from a switched student had no 'opened' in
+  // front of it. The arrival's event is exactly what it always was; an open
+  // that came from the switch says so (`via`), so the two can be told apart.
+  const openedProviders = useRef(new Set<string>());
   useEffect(() => {
-    if (!gateResolved || funnelFired.current) return;
-    funnelFired.current = true;
+    if (!gateResolved) return;
+    const arrival = openedProviders.current.size === 0;
+    if (!claimFirstOpen(openedProviders.current, provider)) return;
     const facts = {
       screen: 'lms_connect',
       provider,
@@ -356,7 +398,11 @@ export default function LmsConnectScreen() {
       lane: reconnecting ? 'repair' : 'connect',
     };
     if (lmsAllowed) {
-      track('lms_connect_opened', { ...facts, funnel_step: 'opened' });
+      track('lms_connect_opened', {
+        ...facts,
+        funnel_step: 'opened',
+        ...(arrival ? {} : { via: 'switch' }),
+      });
     } else {
       // The arrival still happened and is still worth counting — it is just
       // not the same thing. Kept as a separate name so no existing query
@@ -445,6 +491,7 @@ export default function LmsConnectScreen() {
           connectionMethod,
         );
         const result = await syncLmsConnection(params.connectionId!);
+        if (isMoodleFeed) clearMoodleProgress();
         Alert.alert('Reconnected', `${result.processed} assignments updated.`);
         router.back();
         return;
@@ -459,10 +506,14 @@ export default function LmsConnectScreen() {
         // remember to come back and do the whole thing again. Saving the link
         // instead means the courses appear on their own, the first time a date
         // is posted. MOODLE_PLAN.md Phase 4.5.
+        //
+        // The copy used to say "Semora saved your link" while asking whether
+        // to save it — true only after the button below, and the button never
+        // succeeded. It now says what the button will do.
         if (isMoodleFeed && !reconnecting) {
           Alert.alert(
             'Nothing dated yet',
-            'Your Moodle calendar has no due dates right now. Semora saved your link and checks every few hours; courses appear as soon as an instructor adds a date — or as soon as your teacher makes the course visible.',
+            'Your Moodle calendar has no due dates right now. Save your link and Semora will check it every few hours, and tell you when a course has a date.',
             [
               { text: 'Cancel', style: 'cancel' },
               { text: 'Save and keep checking', onPress: () => { void saveEmptyMoodle(nextCredential); } },
@@ -573,25 +624,99 @@ export default function LmsConnectScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isCalendarFeed, isMoodleFeed, feedVerdict, moodleVerdict, working, courses.length]);
 
+  // The platform the ROUTE last asked for. Written by the switch below and
+  // read by the effect that follows the route.
+  const lastRouteProvider = useRef(routeProvider);
+  /**
+   * Change platform without leaving the screen.
+   *
+   * Everything a discovery produced is dropped, because it belongs to the
+   * platform being left. Each platform's saved progress is untouched — it
+   * lives under its own key — so switching back returns the student to where
+   * they were. `source` is kept: it answers "which prompt brought them", and
+   * that has not changed.
+   *
+   * `canvas_link` is the Moodle box holding a Canvas feed link. The link is
+   * carried across and the Canvas paste step opened, so the auto-advance
+   * above picks it up and the student goes straight on to their courses.
+   */
+  const resetForProvider = (next: LmsProvider, keepLink: boolean) => {
+    if (keepLink) {
+      if (setupProgress.setupLane !== 'phone') saveProgress({ ...setupProgress, setupLane: 'phone' });
+    } else {
+      setToken('');
+    }
+    autoAdvancedFor.current = null;
+    setCourses([]);
+    setSelected(new Set());
+    setCredential(null);
+    setHorizonDays(null);
+    setBaseUrl('');
+    setMoodleLane('feed');
+    setDisplayName(LMS_PROVIDER_LABELS[next]);
+    setProvider(next);
+  };
+  const switchProvider = (next: LmsProvider, via: 'switch' | 'canvas_link' | 'canvas_no_match') => {
+    // Never in the middle of a check: the discovery that is running belongs to
+    // the platform being left, and its answer would land on the new one. Every
+    // control that calls this is disabled while `working`; this is the
+    // backstop.
+    if (next === provider || working) return;
+    track('lms_provider_tapped', {
+      screen: 'lms_connect', provider: next, from_provider: provider,
+      source: 'connect_switch', entry_source: source, via,
+      allowed: lmsAllowed, funnel_step: 'chose_provider',
+    });
+    resetForProvider(next, via === 'canvas_link' && next === 'canvas');
+    // Into the route as well, so a refresh on the web — or anything else that
+    // rebuilds this screen from its URL — comes back on the platform the
+    // student chose, not the one the prompt that brought them assumed.
+    // Recorded first as the route's own value, so the effect below reads it
+    // as already applied rather than as another screen changing platform.
+    lastRouteProvider.current = next;
+    router.setParams({ provider: next });
+  };
+  // The route can change platform too (another screen replacing this one's
+  // params). Follow it, with the same reset, so the two never disagree.
+  useEffect(() => {
+    if (lastRouteProvider.current === routeProvider) return;
+    lastRouteProvider.current = routeProvider;
+    if (routeProvider !== provider) resetForProvider(routeProvider, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeProvider]);
+
+  /**
+   * Between Moodle's two roads. The token field and the link field share one
+   * value, so whatever was in one is cleared rather than shown, masked, in the
+   * other — a calendar link sitting in the token box would be sent as a token.
+   */
+  const chooseMoodleLane = (next: 'feed' | 'token') => {
+    setToken('');
+    autoAdvancedFor.current = null;
+    setMoodleLane(next);
+  };
+
   /**
    * Save a Moodle link that currently points at an empty calendar.
    *
    * The connection is created with no courses; the background sync then
    * discovers them the moment an instructor dates something, and they surface
    * as "New courses" exactly as a new term does on Canvas.
+   *
+   * NO SEMESTER NEEDED. An empty connection creates no course, so it has
+   * nothing to file anywhere; the semester is chosen when the first course is
+   * offered for review, from that course's own dates. Refusing here — as this
+   * did, with no button to make one — stopped the very students most likely
+   * to be early: a new account, early in term, with nothing set up yet.
    */
   const saveEmptyMoodle = async (nextCredential: LmsCredential) => {
     if (!session || working) return;
-    const target = semesterId || semesters[0]?.id || '';
-    if (!target) {
-      Alert.alert('Semester needed', 'Create or select a semester before importing LMS courses.');
-      return;
-    }
     setWorking(true);
     try {
       await connectLms({
         userId: session.user.id,
-        semesterId: target,
+        // Unused with no courses (connectLms only reads it to insert them).
+        semesterId: semesterId || semesters[0]?.id || '',
         provider,
         connectionMethod,
         displayName: displayName.trim() || LMS_PROVIDER_LABELS[provider],
@@ -604,7 +729,7 @@ export default function LmsConnectScreen() {
         lane: 'connect', funnel_step: 'completed', screen: 'lms_connect',
         provider, method: connectionMethod, source, courses: 0,
       });
-      if (moodleKey) setDeviceItem(moodleKey, serializeLmsSetupProgress(EMPTY_LMS_PROGRESS));
+      clearMoodleProgress();
       Alert.alert(
         'Moodle saved',
         'Semora will keep checking your Moodle every few hours and will tell you when a course has a date.',
@@ -737,6 +862,14 @@ export default function LmsConnectScreen() {
         courses: chosen.length,
         deadlines: result.processed,
       });
+      // Finished: there is nothing left to resume. Canvas clears its progress
+      // when "See my deadlines" is tapped; Moodle's never cleared at all, so a
+      // student who connected and later opened the screen again (a second
+      // Moodle, a reconnect) was dropped back into the finished setup — its
+      // school, its lane and its failed-attempt count — for up to 12 hours.
+      // Cleared here, on success itself, so no way of closing the alert
+      // leaves it behind.
+      if (isMoodleFeed) clearMoodleProgress();
       Alert.alert(
         isCanvasCalendar ? 'Canvas connected' : isMoodleFeed ? 'Moodle connected' : 'Connected',
         isCalendarFeed
@@ -828,11 +961,56 @@ export default function LmsConnectScreen() {
         <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="handled">
           {courses.length === 0 ? (
             <>
+              {/* Which platform, answerable on this screen. Shown for the
+                  whole of step 1, including after a lane is chosen, because
+                  the student who most needs it is the one who followed a
+                  "Connect Canvas" prompt, read three steps and realised their
+                  school is on Moodle. Not while reconnecting: that is a
+                  specific connection, and its platform is not a choice. */}
+              {!reconnecting && SWITCH_PROVIDERS.includes(provider) && (
+                <View style={styles.switchWrap}>
+                  <Text style={[styles.switchLabel, { color: colors.ink2 }]}>Your school uses</Text>
+                  <View style={[styles.switchRow, { backgroundColor: colors.card, borderColor: colors.line }]}>
+                    {LMS_SWITCH_OPTIONS.map(({ id, hint }) => {
+                      const active = id === provider;
+                      return (
+                        <TouchableOpacity
+                          key={id}
+                          onPress={() => switchProvider(id, 'switch')}
+                          // Not mid-check: switching drops the discovery that
+                          // is running, and its answer would land on the new
+                          // platform's screen.
+                          disabled={working}
+                          style={[
+                            styles.switchOption,
+                            active && { backgroundColor: colors.brand },
+                            working && !active && styles.switchDisabled,
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected: active, disabled: working }}
+                          accessibilityLabel={hint ? `${LMS_PROVIDER_LABELS[id]}, ${hint}` : LMS_PROVIDER_LABELS[id]}
+                        >
+                          <Text style={[styles.switchText, { color: active ? '#fff' : colors.ink2 }]}>
+                            {LMS_PROVIDER_LABELS[id]}
+                          </Text>
+                          {/* Blackboard is on the list, and says its catch
+                              before the tap: it connects only with a token
+                              the school's IT team issues. */}
+                          {!!hint && (
+                            // ink2, not ink3: at this size ink3 fails contrast.
+                            <Text style={[styles.switchHint, { color: active ? '#fff' : colors.ink2 }]}>{hint}</Text>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
               {isCanvasCalendar && <Text style={[styles.eyebrow, { color: colors.brand }]}>
                   {setupProgress.setupLane ? 'CANVAS SETUP · STEP 2 OF 2' : 'CANVAS SETUP · STEP 1 OF 2'}
                 </Text>}
               {isMoodleFeed && <Text style={[styles.eyebrow, { color: colors.brand }]}>
-                  {moodleProgress.setupLane ? 'MOODLE SETUP · STEP 2 OF 2' : 'MOODLE SETUP · STEP 1 OF 2'}
+                  {feedLaneChosen ? 'MOODLE SETUP · STEP 2 OF 2' : 'MOODLE SETUP · STEP 1 OF 2'}
                 </Text>}
               {!feedLaneChosen && (
               <Text style={[styles.title, { color: colors.ink }]}>
@@ -875,15 +1053,20 @@ export default function LmsConnectScreen() {
                   time" while quietly meaning "we may switch yours off too" is
                   the version of this that would deserve the App Store review
                   it would get. */}
-              {lmsFree && !reconnecting && !feedLaneChosen && (
+              {/* Named for the platform on screen. It said "Canvas" to every
+                  road that was not Moodle's link, so Moodle's token road and
+                  Blackboard were promised free Canvas sync. Not on Blackboard
+                  at all: a school IT token is not something a student can
+                  lock in before an offer ends. */}
+              {lmsFree && !reconnecting && !feedLaneChosen && provider !== 'blackboard' && (
                 <View style={[styles.freeOffer, { backgroundColor: colors.teal50, borderColor: colors.teal }]}>
                   <FontAwesome name="gift" size={15} color={colors.teal} />
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.freeOfferTitle, { color: colors.ink }]}>
-                      {isMoodleFeed ? 'Lock in free Moodle sync' : 'Lock in free Canvas sync'}
+                      {provider === 'moodle' ? 'Lock in free Moodle sync' : 'Lock in free Canvas sync'}
                     </Text>
                     <Text style={[styles.freeOfferText, { color: colors.ink2 }]}>
-                      {isMoodleFeed
+                      {provider === 'moodle'
                         ? 'Moodle sync is free while this offer runs. Connect before it ends and it stays free on this account.'
                         : 'Canvas sync is free while this offer runs. Connect before it ends and it stays free on this account.'}
                     </Text>
@@ -919,6 +1102,7 @@ export default function LmsConnectScreen() {
                     working={working}
                     autoAdvancing={autoAdvancing}
                     source={source}
+                    onSwitchToMoodle={reconnecting ? undefined : () => switchProvider('moodle', 'canvas_no_match')}
                   />
 
                 </>
@@ -940,6 +1124,7 @@ export default function LmsConnectScreen() {
                     working={working}
                     autoAdvancing={autoAdvancing}
                     source={source}
+                    onSwitchToCanvas={reconnecting ? undefined : () => switchProvider('canvas', 'canvas_link')}
                   />
                   {/* The second door, deliberately small. Zero schools have
                       ever issued a student one of these, but the code that
@@ -947,7 +1132,7 @@ export default function LmsConnectScreen() {
                       should not be turned away. */}
                   <TouchableOpacity
                     style={styles.tokenLaneLink}
-                    onPress={() => setMoodleLane('token')}
+                    onPress={() => chooseMoodleLane('token')}
                     accessibilityRole="button"
                     accessibilityLabel="My school gave me a web-service token"
                   >
@@ -984,6 +1169,38 @@ export default function LmsConnectScreen() {
                     <FontAwesome name="info-circle" size={14} color={colors.brand} />
                     <Text style={[styles.helpText, { color: colors.ink3 }]}>{HELP[provider].note}</Text>
                   </View>
+                  {/* The door back. The token road was one-way: a student
+                      who tapped the small link out of curiosity found a
+                      form they could not fill and no way back to the
+                      calendar link except leaving the screen. */}
+                  {provider === 'moodle' && (
+                    <TouchableOpacity
+                      style={styles.tokenLaneLink}
+                      onPress={() => chooseMoodleLane('feed')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Use my calendar link instead"
+                    >
+                      <Text style={[styles.link, { color: colors.brand }]}>Use my calendar link instead</Text>
+                    </TouchableOpacity>
+                  )}
+                  {/* Blackboard has no student road at all — it needs a token
+                      the school's IT has to approve — so the form says so
+                      above and offers the route that needs nobody. */}
+                  {provider === 'blackboard' && (
+                    <TouchableOpacity
+                      style={styles.tokenLaneLink}
+                      onPress={() => {
+                        track('lms_setup_scan_offered', {
+                          screen: 'lms_connect', provider, source, funnel_step: 'help', reason: 'admin_token',
+                        });
+                        router.push('/scan' as never);
+                      }}
+                      accessibilityRole="button"
+                      accessibilityLabel="Scan a syllabus instead"
+                    >
+                      <Text style={[styles.link, { color: colors.brand }]}>Scan a syllabus instead</Text>
+                    </TouchableOpacity>
+                  )}
                 </>
               )}
 
@@ -1113,6 +1330,15 @@ export default function LmsConnectScreen() {
                     <FontAwesome name="check-circle" size={14} color={colors.brand} />
                     <Text style={[styles.afterConnectText, { color: colors.ink2 }]}>After connecting, Semora keeps watching this feed — including for next semester's courses. You will not have to reconnect Canvas.</Text>
                   </View>
+                ) : isMoodleFeed ? (
+                  // Not Canvas's "you will not have to reconnect". A Moodle
+                  // calendar link is signed with the student's password, so
+                  // changing it ends the link — and the one moment to say so
+                  // is before it happens, not when sync stops.
+                  <View style={[styles.afterConnect, { backgroundColor: colors.brand50 }]}>
+                    <FontAwesome name="info-circle" size={14} color={colors.brand} />
+                    <Text style={[styles.afterConnectText, { color: colors.ink2 }]}>If you change your Moodle password, Semora will ask you for a fresh link.</Text>
+                  </View>
                 ) : null}
               />
 
@@ -1171,6 +1397,13 @@ const styles = StyleSheet.create({
   chipText: { fontSize: 12, fontWeight: '700' },
   link: { fontSize: 12, fontWeight: '800' },
   tokenLaneLink: { paddingVertical: 10, alignItems: 'center' },
+  switchWrap: { marginBottom: 16 },
+  switchLabel: { fontSize: 12, fontWeight: '700', marginBottom: 6 },
+  switchRow: { flexDirection: 'row', borderWidth: StyleSheet.hairlineWidth, borderRadius: 12, padding: 3, gap: 3 },
+  switchOption: { flex: 1, minHeight: 36, borderRadius: 9, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6, paddingVertical: 4 },
+  switchDisabled: { opacity: 0.45 },
+  switchText: { fontSize: 13, fontWeight: '700' },
+  switchHint: { fontSize: 10, fontWeight: '600', marginTop: 1 },
   selectHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, marginBottom: 7 },
   course: { minHeight: 61, borderRadius: 14, borderWidth: 1.2, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 11, marginBottom: 8 },
   checkbox: { width: 23, height: 23, borderRadius: 7, borderWidth: 1.3, alignItems: 'center', justifyContent: 'center' },

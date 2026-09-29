@@ -26,6 +26,7 @@ import {
   listLmsSyncRuns,
   LMS_PROVIDER_LABELS,
   lmsConnectionsQuery,
+  lmsSyncedTitle,
   pendingAsDiscovered,
   pendingLmsCoursesQuery,
   setLmsCourseMapping,
@@ -123,7 +124,7 @@ export default function LmsConnectionDetailScreen() {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       queryClient.invalidateQueries({ queryKey: ['courses'] });
       refresh();
-      Alert.alert('LMS synced', `${result.processed} assignments updated${result.skipped ? ` · ${result.skipped} need attention` : ''}.`);
+      Alert.alert(lmsSyncedTitle(connectionQuery.data?.provider), `${result.processed} assignments updated${result.skipped ? ` · ${result.skipped} need attention` : ''}.`);
     },
     onError: (error: Error) => {
       refresh();
@@ -197,9 +198,14 @@ export default function LmsConnectionDetailScreen() {
           <View style={{ flex: 1 }}>
             <Text style={[styles.heroTitle, { color: colors.ink }]}>{LMS_PROVIDER_LABELS[connection.provider]}</Text>
             <Text style={[styles.heroText, { color: colors.ink2 }]}>
+              {/* Both calendar-feed platforms land here. This said "Canvas
+                  Calendar Feed" to every one of them, under a heading that
+                  reads "Moodle". */}
               {connection.background_sync_enabled
                 ? connection.connection_method === 'calendar_feed'
-                  ? 'Automatic Canvas Calendar Feed sync is on. Semora checks for dated assignment and event changes every few hours.'
+                  ? connection.provider === 'moodle'
+                    ? 'Automatic Moodle calendar sync is on. Semora checks for dated assignment and event changes every few hours.'
+                    : 'Automatic Canvas Calendar Feed sync is on. Semora checks for dated assignment and event changes every few hours.'
                   : 'Automatic background sync is on. Semora checks this connection every few hours.'
                 : needsReconnect
                   ? 'Your school needs you to reconnect before Semora can continue syncing.'
@@ -292,7 +298,9 @@ export default function LmsConnectionDetailScreen() {
             connection it belongs to rather than in a global settings list,
             because "hidden" only means anything for synced assignments. */}
         <TouchableOpacity
-          onPress={() => router.push('/settings/lms/hidden' as any)}
+          // The platform goes along so the screen can name it before the
+          // connection list has loaded (see lmsHiddenIntro).
+          onPress={() => router.push({ pathname: '/settings/lms/hidden', params: { provider: connection.provider } } as any)}
           style={[styles.secondary, { borderColor: colors.line }]}
         >
           <Text style={[styles.secondaryText, { color: colors.ink2 }]}>Hidden assignments</Text>

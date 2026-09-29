@@ -25,7 +25,8 @@ import { calculateCourseGrade, calculateSemesterGpaWithScale, DEFAULT_GPA_SCALE 
 import { useColors } from '@/lib/theme';
 import CourseCard, { formatMeetings, type CourseCardData } from '@/components/CourseCard';
 import AppHeader from '@/components/AppHeader';
-import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, lmsRepairLabel } from '@/lib/lms';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, lmsRepairLabel, LMS_LABELS } from '@/lib/lms';
+import { lmsOfferName } from '@/lib/canvasPromo';
 import { canvasOfferDestination, trackCanvasOfferShown, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
 import { useResponsive } from '@/lib/responsive';
@@ -111,6 +112,10 @@ export default function CoursesScreen() {
     //
     // Suppressed once Canvas is connected and syncing: someone who already did
     // this should not be asked again every time they add a course.
+    //
+    // Named for the student's own platform once they have one, and for both
+    // Canvas and Moodle while they have none — see lmsOfferName.
+    const lmsName = lmsOfferName(canvasConnection);
     const canvasOption =
       canvasOffer === 'healthy'
         ? []
@@ -119,15 +124,19 @@ export default function CoursesScreen() {
               canvasOffer === 'needs_attention' ? lmsRepairLabel(canvasConnection)
               // Adding a course is exactly when someone would want to know
               // Canvas already has classes waiting to be imported.
-              : canvasOffer === 'new_courses' ? 'Import new Canvas courses'
-              : canvasOffer === 'locked' ? 'Connect Canvas (Pro)'
+              : canvasOffer === 'new_courses'
+                ? `Import new ${LMS_LABELS[canvasConnection?.provider ?? ''] ?? 'Canvas'} courses`
+              : canvasOffer === 'locked' ? `Connect ${lmsName} (Pro)`
               // The price is the headline while the offer is on. "(Free)" sits
               // where "(Pro)" sat, so the row reads as the same offer with the
               // wall taken out rather than as a different feature.
-              : canvasFree ? 'Connect Canvas (Free)'
-              : 'Connect Canvas',
+              : canvasFree ? `Connect ${lmsName} (Free)`
+              : `Connect ${lmsName}`,
             onPress: () => {
-              trackCanvasOfferTapped({ screen: 'courses', offer: canvasOffer, free: canvasFree, source: 'courses' });
+              trackCanvasOfferTapped({
+                screen: 'courses', offer: canvasOffer, free: canvasFree, source: 'courses',
+                provider: canvasConnection?.provider ?? null,
+              });
               // Free account: the upgrade sheet, right here. Sending someone
               // to another screen to find out something costs money turns one
               // tap into a journey.
@@ -146,14 +155,17 @@ export default function CoursesScreen() {
     // healthy connection, and counting those would inflate the denominator with
     // dialogs that made no offer.
     if (canvasOption.length) {
-      trackCanvasOfferShown({ screen: 'courses', offer: canvasOffer, free: canvasFree, source: 'courses' });
+      trackCanvasOfferShown({
+        screen: 'courses', offer: canvasOffer, free: canvasFree, source: 'courses',
+        provider: canvasConnection?.provider ?? null,
+      });
     }
     Alert.alert(
       'Add a course',
       canvasFree && canvasOffer === 'none'
-        ? 'Limited time: Canvas sync is free, no Pro needed. Every class you have arrives on its own — or scan a syllabus, or type it yourself.'
+        ? 'Limited time: Canvas and Moodle sync is free, no Pro needed. Every class you have arrives on its own — or scan a syllabus, or type it yourself.'
         : canvasOffer === 'none' || canvasOffer === 'locked'
-        ? 'Connect Canvas and your classes arrive on their own — or scan a syllabus, or type it yourself.'
+        ? `Connect ${lmsName} and your classes arrive on their own — or scan a syllabus, or type it yourself.`
         : 'Scan a syllabus and the AI fills everything in — or type it yourself.',
       [
         ...canvasOption,

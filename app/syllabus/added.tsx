@@ -13,6 +13,7 @@ import { useAppStore } from '@/store/appStore';
 import { useCourses, useSemesters } from '@/lib/queries';
 import { track } from '@/lib/analytics';
 import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, lmsRepairLabel } from '@/lib/lms';
+import { lmsOfferName } from '@/lib/canvasPromo';
 import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 
@@ -63,6 +64,9 @@ export default function SyllabusAddedScreen() {
   const { data: canvasFreePromo } = useQuery(canvasFreePromoQuery);
   const { offer: canvasOffer, free: canvasFree, connection: canvasConnection } = canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
   const showCanvas = canvasOffer !== 'healthy';
+  // "Canvas or Moodle" until they have connected one, then their own. See
+  // lmsOfferName.
+  const lmsName = lmsOfferName(canvasConnection);
 
   const savedCount = Number(params.count) || 0;
   const courseCount = courses.length;
@@ -126,7 +130,10 @@ export default function SyllabusAddedScreen() {
   };
 
   const goCanvas = () => {
-    trackCanvasOfferTapped({ screen: 'syllabus_added', offer: canvasOffer, free: canvasFree, source: 'syllabus_added' });
+    trackCanvasOfferTapped({
+      screen: 'syllabus_added', offer: canvasOffer, free: canvasFree, source: 'syllabus_added',
+      provider: canvasConnection?.provider ?? null,
+    });
     const to = canvasOfferDestination(canvasOffer, 'syllabus_added');
     // A locked offer would send a free student to the upgrade sheet; this
     // screen has no sheet, and the paywall is already what "Done for now"
@@ -220,13 +227,13 @@ export default function SyllabusAddedScreen() {
             at a time. */}
         {showCanvas && (
           <>
-            <CanvasOfferImpression screen="syllabus_added" offer={canvasOffer} free={canvasFree} source="syllabus_added" />
+            <CanvasOfferImpression screen="syllabus_added" offer={canvasOffer} free={canvasFree} source="syllabus_added" provider={canvasConnection?.provider ?? null} />
             <TouchableOpacity
               style={[styles.canvasRow, { backgroundColor: colors.teal50, borderColor: colors.teal }]}
               onPress={goCanvas}
               activeOpacity={0.85}
               accessibilityRole="button"
-              accessibilityLabel={canvasOffer === 'needs_attention' ? lmsRepairLabel(canvasConnection) : 'Bring every class in from Canvas, free'}
+              accessibilityLabel={canvasOffer === 'needs_attention' ? lmsRepairLabel(canvasConnection) : `Bring every class in from ${lmsName}, free`}
             >
               <View style={[styles.canvasIcon, { backgroundColor: colors.teal + '22' }]}>
                 <FontAwesome name={canvasOffer === 'needs_attention' ? 'refresh' : 'university'} size={15} color={colors.teal} />
@@ -236,7 +243,7 @@ export default function SyllabusAddedScreen() {
                   {canvasOffer === 'needs_attention' ? lmsRepairLabel(canvasConnection) : 'Bring every class in at once'}
                 </Text>
                 <Text style={[styles.canvasSub, { color: colors.ink3 }]}>
-                  Connect Canvas and your whole timetable lands here — free, however many classes you take.
+                  {`Connect ${lmsName} and your whole timetable lands here — free, however many classes you take.`}
                 </Text>
               </View>
               <FontAwesome name="chevron-right" size={12} color={colors.ink3} />

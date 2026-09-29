@@ -129,6 +129,59 @@ export function moodleWwwrootFromPage(value: unknown): string | null {
 }
 
 /**
+ * What the student typed into "Where is your Moodle?", read before anything
+ * is sent to the server.
+ *
+ * The first box used to fail in silence for three ordinary inputs: a school's
+ * NAME ("State University"), a word with no dot in it, and an http:// address.
+ * The probe was asked anyway, found nothing, and the screen had nothing to
+ * guess from — so the button spun, stopped, and the box sat there unchanged.
+ *
+ *   · http:// is upgraded to https:// here. Every Moodle serves https, the
+ *     probe refuses anything else, and a student who copied their address bar
+ *     on an old bookmark did nothing wrong.
+ *   · A name, or anything without a public dotted host, is `not_address`, and
+ *     the screen says so in words instead of asking the server about it.
+ *
+ * `site` is what the probe is asked; `wwwroot` is the best guess at the site
+ * root if the probe cannot confirm one.
+ */
+export type MoodleSiteEntry =
+  | { state: 'empty' }
+  | { state: 'not_address' }
+  | { state: 'address'; site: string; wwwroot: string; upgraded: boolean };
+
+export function readMoodleSiteEntry(raw: unknown): MoodleSiteEntry {
+  if (typeof raw !== 'string' || !raw.trim()) return { state: 'empty' };
+  let candidate = extractMoodleFeedCandidate(raw);
+  // Spaces inside what is left mean words, not an address.
+  if (/\s/.test(candidate)) return { state: 'not_address' };
+  const upgraded = /^http:\/\//i.test(candidate);
+  if (upgraded) {
+    // An explicit ':80' was plain HTTP's port and goes with it: kept, the
+    // guess became 'https://school.edu:80', HTTPS on the HTTP port. The
+    // server's probe drops it the same way (moodleProbeCandidates).
+    candidate = `https://${candidate.slice(candidate.indexOf('//') + 2)}`
+      .replace(/^(https:\/\/[^/?#]*?):80(?=[/?#]|$)/i, '$1');
+  }
+  const wwwroot = moodleWwwrootFromPage(candidate);
+  if (!wwwroot) return { state: 'not_address' };
+  return { state: 'address', site: candidate, wwwroot, upgraded };
+}
+
+/**
+ * A Canvas calendar feed, pasted into the Moodle box.
+ *
+ * The likeliest wrong paste on the Moodle screen, because Canvas is the flow
+ * Semora has taught everyone. It is not a Moodle problem to explain — it is a
+ * student on the wrong screen, and the answer is to offer them Canvas.
+ */
+export function isCanvasFeedLink(raw: unknown): boolean {
+  if (typeof raw !== 'string') return false;
+  return /\/feeds\/calendars\/user_[^/\s?#]+\.ics/i.test(raw);
+}
+
+/**
  * What is wrong with this paste, in time for the student to fix it.
  *
  * `expectedWwwroot` is the site they chose at the start; when it is given, a

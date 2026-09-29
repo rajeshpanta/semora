@@ -13,6 +13,7 @@ import { useAppStore } from '@/store/appStore';
 import { useCourses } from '@/lib/queries';
 import { useQuery } from '@tanstack/react-query';
 import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, lmsRepairLabel, LMS_LABELS } from '@/lib/lms';
+import { lmsOfferName } from '@/lib/canvasPromo';
 import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
@@ -246,10 +247,13 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
   const { offer: canvasOffer, free: canvasFree, connection: canvasConnection } =
     canvasOfferFor(lmsConnections, isPro, canvasFreePromo);
   // The two rows below that a student only sees AFTER connecting have to name
-  // the platform they actually connected; the invitation rows keep saying
-  // Canvas, which is the flagship and is the right word for someone who has
-  // connected nothing.
+  // the platform they actually connected. The invitation rows used to say
+  // Canvas alone, as the flagship, and a Moodle student reading "Connect
+  // Canvas" had no reason to think the row was for them; they now name both
+  // platforms a student can connect alone. The tap still opens the Canvas
+  // setup, which has a "My school uses Moodle" way across.
   const lmsLabel = LMS_LABELS[canvasConnection?.provider ?? ''] ?? 'Canvas';
+  const lmsName = lmsOfferName(canvasConnection);
   const [canvasUpsell, setCanvasUpsell] = useState(false);
   // The "+" menu produced NO analytics of any kind — not an impression, not a
   // tap. It was the one Canvas surface that was completely dark, so a zero from
@@ -261,7 +265,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
         ? {
             icon: 'university',
             tint: 'teal',
-            title: 'Connect Canvas',
+            title: `Connect ${lmsName}`,
             sub: 'Pro · every class imports itself and stays up to date',
             // No route: a free account gets the upgrade sheet, not a screen.
             opensUpsell: true,
@@ -292,7 +296,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
         : {
             icon: 'university',
             tint: 'teal',
-            title: 'Connect Canvas',
+            title: `Connect ${lmsName}`,
             // The subtitle carried "Pro ·" for a free account. It now carries
             // the opposite, in the same slot and the same eight characters.
             sub: canvasFree
@@ -357,7 +361,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
         >
           <View style={[styles.sheet, { backgroundColor: colors.card, borderColor: colors.line }]}>
             {canvasRow && rows.includes(canvasRow) && (
-              <CanvasOfferImpression screen="plus_menu" offer={canvasOffer} free={canvasFree} source="plus_menu" />
+              <CanvasOfferImpression screen="plus_menu" offer={canvasOffer} free={canvasFree} source="plus_menu" provider={canvasConnection?.provider ?? null} />
             )}
             {rows.map((a) => (
               <TouchableOpacity
@@ -371,6 +375,7 @@ export function PlusMenu({ visible, onClose }: PlusMenuProps) {
                   if (a.isCanvas) {
                     trackCanvasOfferTapped({
                       screen: 'plus_menu', offer: canvasOffer, free: canvasFree, source: 'plus_menu',
+                      provider: canvasConnection?.provider ?? null,
                     });
                     const to = canvasOfferDestination(canvasOffer, 'plus_menu');
                     if (to.kind === 'upsell') {

@@ -3,9 +3,10 @@ import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { Alert, Text, TouchableOpacity } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { listHiddenLmsTasks, setLmsTaskHidden } from '@/lib/lms';
+import { lmsConnectionsQuery, lmsHiddenIntro, listHiddenLmsTasks, setLmsTaskHidden } from '@/lib/lms';
+import { useI18n } from '@/lib/i18n';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { track } from '@/lib/analytics';
@@ -27,8 +28,14 @@ import { track } from '@/lib/analytics';
  */
 export default function HiddenLmsAssignments() {
   const colors = useColors();
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const [restoring, setRestoring] = useState<string | null>(null);
+  // Which platform the hidden work is still in. It said "Canvas" to every
+  // student, Moodle's included; see lmsHiddenIntro for the rule.
+  const { provider } = useLocalSearchParams<{ provider?: string }>();
+  const { data: connections } = useQuery(lmsConnectionsQuery);
+  const intro = lmsHiddenIntro(connections, provider);
 
   const { data: hidden, isLoading, refetch } = useQuery({
     queryKey: ['lms', 'hidden-tasks'],
@@ -52,13 +59,12 @@ export default function HiddenLmsAssignments() {
 
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']}>
-      <Stack.Screen options={{ title: 'Hidden assignments' }} />
+      {/* A header title is a plain string, not a localized Text, so it was
+          English on a Spanish phone. */}
+      <Stack.Screen options={{ title: t('Hidden assignments') }} />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.inner}>
-          <Text style={[styles.intro, { color: colors.ink2 }]}>
-            Assignments you have hidden from Semora. They are still in Canvas — hiding one here
-            never changes anything there.
-          </Text>
+          <Text style={[styles.intro, { color: colors.ink2 }]}>{intro}</Text>
 
           {isLoading ? (
             <ActivityIndicator style={{ marginTop: 24 }} />

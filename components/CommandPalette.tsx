@@ -66,7 +66,10 @@ const DESTINATIONS: { title: string; subtitle: string; icon: string; route: stri
   { title: 'Courses', subtitle: 'Every class this semester', icon: 'book', route: '/courses', keywords: 'classes subjects clases materias cursos asignaturas' },
   { title: 'Calendar', subtitle: 'Deadlines by month', icon: 'calendar', route: '/calendar', keywords: 'schedule month agenda dates calendario mes fechas horario' },
   { title: 'Import syllabus', subtitle: 'Scan or upload a syllabus', icon: 'magic', route: '/scan', keywords: 'scan upload pdf photo camera ai escanear subir foto camara programa temario' },
-  { title: 'Connect Canvas', subtitle: 'Import every class automatically', icon: 'university', route: '/settings/lms', keywords: 'canvas lms sync blackboard moodle import classes sincronizar importar clases' },
+  // Names the two platforms a student can connect alone. Blackboard stays a
+  // keyword, not a title: it needs a token from school IT, and the chooser this
+  // opens says so on its row.
+  { title: 'Connect Canvas or Moodle', subtitle: 'Import every class automatically', icon: 'university', route: '/settings/lms', keywords: 'canvas lms sync blackboard moodle import classes sincronizar importar clases' },
   { title: 'Plan my week', subtitle: 'Build a study plan', icon: 'list-ul', route: '/planner', keywords: 'planner study smart plan schedule planificador estudio plan semana' },
   { title: 'Workload', subtitle: 'Where the heavy weeks are', icon: 'bar-chart', route: '/dashboard', keywords: 'workload chart busy insights carga trabajo grafico ocupado' },
   { title: 'Progress', subtitle: 'Grades and how the term is going', icon: 'line-chart', route: '/progress', keywords: 'grades gpa marks results insights notas calificaciones promedio resultados progreso' },

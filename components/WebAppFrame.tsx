@@ -52,7 +52,14 @@ const SUPPORT_PATH = '__support__';
 // site's /download page, so it must never match anything isActive() compares.
 const GET_APP_PATH = '__get_app__';
 
-const CANVAS_ITEM: NavigationItem = { label: 'Connect Canvas', icon: 'university', path: '/settings/lms' };
+// Named for both platforms a student can connect alone. It is not the Settings
+// row's name ("Canvas or LMS Sync", the owner's wording, which stays): the rail
+// is the one door a web student sees without opening Settings, and "Connect
+// Canvas" gave a Moodle student no reason to think it was theirs. The tap
+// still opens the Canvas setup (see canvasOfferDestination), which has a "My
+// school uses Moodle" way across.
+// Kept to about twenty characters: the rail wraps anything much longer.
+const CANVAS_ITEM: NavigationItem = { label: 'Canvas & Moodle Sync', icon: 'university', path: '/settings/lms' };
 /**
  * Named for the platform that actually needs attention.
  *
@@ -82,19 +89,29 @@ function lmsNewCoursesItem(connection: { provider?: string | null } | null): Nav
 const CANVAS_UPSELL_PATH = '__canvas_upsell__';
 /** Every LMS sidebar row, named once so none can be added without attribution. */
 const CANVAS_ITEM_LABELS = new Set([
-  'Connect Canvas', 'Connect Canvas · Pro', 'Connect Canvas · Free',
-  // Every platform's form of the two provider-named rows, so a Moodle student
+  'Canvas & Moodle Sync', 'Canvas & Moodle · Pro', 'Canvas & Moodle · Free',
+  // Every platform's form of the provider-named rows, so a Moodle student
   // tapping "Finish Moodle setup" is still attributed to the LMS lane.
-  ...Object.values(LMS_LABELS).flatMap((l) => [`Finish ${l} setup`, `New ${l} courses`]),
+  ...Object.values(LMS_LABELS).flatMap((l) => [`Finish ${l} setup`, `New ${l} courses`, `Connect ${l} · Pro`]),
 ]);
 function isCanvasItem(item: { label: string }) {
   return CANVAS_ITEM_LABELS.has(item.label);
 }
-const CANVAS_PRO_ITEM: NavigationItem = { label: 'Connect Canvas · Pro', icon: 'university', path: CANVAS_UPSELL_PATH };
+const CANVAS_PRO_ITEM: NavigationItem = { label: 'Canvas & Moodle · Pro', icon: 'university', path: CANVAS_UPSELL_PATH };
+/**
+ * Locked, for a student who HAS a connection — a lapsed subscriber, whose sync
+ * the server has stopped. They are not choosing a platform any more; they are
+ * getting their own back, so the row names it.
+ */
+function lmsProItem(connection: { provider?: string | null } | null): NavigationItem {
+  const label = LMS_LABELS[connection?.provider ?? ''];
+  return label ? { ...CANVAS_PRO_ITEM, label: `Connect ${label} · Pro` } : CANVAS_PRO_ITEM;
+}
 // While the canvas_free offer is live the sidebar row says what it now costs.
-// Same position, same icon, one word changed — the rail is glanced at, not
-// read, and moving the row would cost more recognition than the word gains.
-const CANVAS_FREE_ITEM: NavigationItem = { label: 'Connect Canvas · Free', icon: 'university', path: '/settings/lms' };
+// Same position, same icon, the price where "Sync" was — the rail is glanced
+// at, not read, and moving the row would cost more recognition than the word
+// gains.
+const CANVAS_FREE_ITEM: NavigationItem = { label: 'Canvas & Moodle · Free', icon: 'university', path: '/settings/lms' };
 
 const PRIMARY_ITEMS: NavigationItem[] = [
   { label: 'Today', icon: 'sun-o', path: '/', exact: true },
@@ -289,7 +306,7 @@ function DesktopSidebar({ session }: { session: Session }) {
     const item =
       canvasOffer === 'needs_attention' ? lmsFixItem(canvasConnection)
       : canvasOffer === 'new_courses' ? lmsNewCoursesItem(canvasConnection)
-      : canvasOffer === 'locked' ? CANVAS_PRO_ITEM
+      : canvasOffer === 'locked' ? lmsProItem(canvasConnection)
       : canvasFree ? CANVAS_FREE_ITEM
       : CANVAS_ITEM;
     const at = PRIMARY_ITEMS.findIndex((i) => i.path === '/scan');
@@ -391,7 +408,7 @@ function DesktopSidebar({ session }: { session: Session }) {
       >
         <View style={styles.navGroup}>
           {canvasOffer !== 'healthy' && (
-            <CanvasOfferImpression screen="web_sidebar" offer={canvasOffer} free={canvasFree} source="web_sidebar" />
+            <CanvasOfferImpression screen="web_sidebar" offer={canvasOffer} free={canvasFree} source="web_sidebar" provider={canvasConnection?.provider ?? null} />
           )}
           {primaryItems.map((item) => (
             <SidebarItem
@@ -406,6 +423,7 @@ function DesktopSidebar({ session }: { session: Session }) {
                 if (isCanvasItem(item)) {
                   trackCanvasOfferTapped({
                     screen: 'web_sidebar', offer: canvasOffer, free: canvasFree, source: 'web_sidebar',
+                    provider: canvasConnection?.provider ?? null,
                   });
                   const to = canvasOfferDestination(canvasOffer, 'web_sidebar');
                   if (to.kind === 'upsell') { setCanvasUpsellOpen(true); return; }

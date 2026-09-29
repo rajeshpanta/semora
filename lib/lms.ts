@@ -34,11 +34,14 @@ export {
   canvasOfferFor,
   LMS_LABELS,
   lmsRepairLabel,
+  lmsSyncedTitle,
+  lmsHiddenIntro,
   canvasPromoPlacementFor,
 } from '@/lib/canvasPromo';
 export type { CanvasOffer, CanvasConnectionFacts } from '@/lib/canvasPromo';
 import { LMS_LABELS } from '@/lib/canvasPromo';
 import { PRO_CANVAS_EDU_FLAG_KEY } from '@/lib/proCanvasEducation';
+import { lmsConnectionMayBeEmpty } from '@/lib/lmsSetupProgress';
 
 export interface DiscoveredLmsCourse {
   id: string;
@@ -316,7 +319,7 @@ export async function connectLms(input: {
   // student has to remember to come back and do the whole thing again. Saving
   // the link instead means courses appear on their own, the first time a date
   // is posted. Every other provider still needs a choice.
-  const allowsEmpty = input.provider === 'moodle' && input.connectionMethod === 'calendar_feed';
+  const allowsEmpty = lmsConnectionMayBeEmpty(input.provider, input.connectionMethod);
   if (!input.courses.length && !allowsEmpty) {
     throw new Error('Select at least one course to import.');
   }
@@ -584,7 +587,13 @@ export async function syncLmsConnection(
   if (connectionError) throw connectionError;
 
   const links = ((connection as any).links ?? []).filter((link: LmsCourseLink) => link.sync_enabled);
-  if (!links.length) throw new Error('This LMS connection has no enabled courses.');
+  // A Moodle calendar feed is allowed to have no courses yet — that is the
+  // whole of "Save and keep checking", and the server syncs it the same way.
+  // Refusing here threw inside connectLms, whose rollback then deleted the
+  // connection the student had just been told was saved.
+  if (!links.length && !lmsConnectionMayBeEmpty(connection.provider, connection.connection_method)) {
+    throw new Error('This LMS connection has no enabled courses.');
+  }
 
   try {
     let credential = connection.connection_method === 'calendar_feed'

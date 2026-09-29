@@ -49,7 +49,8 @@ import StudySuggestionsCard from '@/components/StudySuggestionsCard';
 import DecisionStrip from '@/components/DecisionStrip';
 import CoursesGlance from '@/components/CoursesGlance';
 import GradesWaitingCard from '@/components/GradesWaitingCard';
-import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, lmsRepairLabel, proCanvasEducationQuery } from '@/lib/lms';
+import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, lmsRepairLabel, LMS_LABELS, proCanvasEducationQuery } from '@/lib/lms';
+import { lmsOfferName } from '@/lib/canvasPromo';
 import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
 import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 import { ProCanvasEducationSheet } from '@/components/ProCanvasEducationSheet';
@@ -140,6 +141,13 @@ export default function TodayScreen() {
   const pendingCanvasCourses = canvasOffer === 'new_courses'
     ? (canvasConnection?.pending_courses_count ?? 0)
     : 0;
+  // What the prompts below call the platform. A connected student hears their
+  // own ("3 new Moodle courses found"); one with nothing connected is invited
+  // to either of the two they can connect alone. See lmsOfferName.
+  const lmsName = lmsOfferName(canvasConnection);
+  const pendingLabel = LMS_LABELS[canvasConnection?.provider ?? ''] ?? 'Canvas';
+  // Stamped on the tap so a Moodle repair is not counted as a Canvas one.
+  const lmsProvider = canvasConnection?.provider ?? null;
 
   // ── "Canvas Sync is already yours" — Pro subscribers only ────────────────
   //
@@ -961,7 +969,7 @@ export default function TodayScreen() {
             courses clears pending_courses_count, so the banner is answered
             rather than hidden. */}
         {pendingCanvasCourses > 0 && (
-          <CanvasOfferImpression screen="today" offer={canvasOffer} free={canvasFree} source="today_pending" />
+          <CanvasOfferImpression screen="today" offer={canvasOffer} free={canvasFree} source="today_pending" provider={lmsProvider} />
         )}
         {pendingCanvasCourses > 0 && (
           <TouchableOpacity
@@ -969,17 +977,18 @@ export default function TodayScreen() {
             onPress={() => {
               trackCanvasOfferTapped({
                 screen: 'today', offer: canvasOffer, free: canvasFree, source: 'today_pending',
+                provider: lmsProvider,
               });
               const to = canvasOfferDestination(canvasOffer, 'today_pending');
               if (to.kind === 'route') router.push({ pathname: to.pathname, params: to.params } as any);
             }}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={`${pendingCanvasCourses} new Canvas courses found, deadlines not imported yet`}
+            accessibilityLabel={`${pendingCanvasCourses} new ${pendingLabel} courses found, deadlines not imported yet`}
           >
             <FontAwesome name="university" size={14} color={colors.teal} />
             <Text style={[styles.notifBannerText, { color: colors.ink }]}>
-              {`${pendingCanvasCourses} new Canvas ${pendingCanvasCourses === 1 ? 'course' : 'courses'} found — ${pendingCanvasCourses === 1 ? 'its' : 'their'} deadlines are not in Semora yet`}
+              {`${pendingCanvasCourses} new ${pendingLabel} ${pendingCanvasCourses === 1 ? 'course' : 'courses'} found — ${pendingCanvasCourses === 1 ? 'its' : 'their'} deadlines are not in Semora yet`}
             </Text>
             <FontAwesome name="chevron-right" size={11} color={colors.teal} />
           </TouchableOpacity>
@@ -1358,13 +1367,16 @@ export default function TodayScreen() {
                     whose Canvas is connected and syncing to "Sync Canvas" —
                     contradicting the banner directly above it. */}
                 {canvasOffer !== 'healthy' && canvasOffer !== 'new_courses' && (
-                  <CanvasOfferImpression screen="today_empty" offer={canvasOffer} free={canvasFree} source="today_empty" />
+                  <CanvasOfferImpression screen="today_empty" offer={canvasOffer} free={canvasFree} source="today_empty" provider={lmsProvider} />
                 )}
                 {canvasOffer !== 'healthy' && canvasOffer !== 'new_courses' && (
                   <TouchableOpacity
                     style={[styles.emptyCanvas, { borderColor: colors.teal, backgroundColor: colors.teal50 }]}
                     onPress={() => {
-                      trackCanvasOfferTapped({ screen: 'today_empty', offer: canvasOffer, free: canvasFree, source: 'today_empty' });
+                      trackCanvasOfferTapped({
+                        screen: 'today_empty', offer: canvasOffer, free: canvasFree, source: 'today_empty',
+                        provider: lmsProvider,
+                      });
                       const to = canvasOfferDestination(canvasOffer, 'today_empty');
                       if (to.kind === 'upsell') { showProUpsell('canvas'); return; }
                       router.push({ pathname: to.pathname, params: to.params } as any);
@@ -1373,8 +1385,8 @@ export default function TodayScreen() {
                     accessibilityRole="button"
                     accessibilityLabel={
                       canvasOffer === 'needs_attention' ? lmsRepairLabel(canvasConnection)
-                      : canvasFree ? 'Sync Canvas free, limited time offer'
-                      : 'Sync Canvas, Pro feature'
+                      : canvasFree ? `Sync ${lmsName} free, limited time offer`
+                      : `Sync ${lmsName}, Pro feature`
                     }
                   >
                     <FontAwesome name="university" size={13} color={colors.teal} />
@@ -1382,8 +1394,12 @@ export default function TodayScreen() {
                       {canvasOffer === 'needs_attention'
                         ? `${lmsRepairLabel(canvasConnection)} — your classes import themselves`
                         : canvasFree
-                          ? 'Sync Canvas free — every class imports itself'
-                          : 'Or sync Canvas — every class imports itself'}
+                          ? `Sync ${lmsName} free — every class imports itself`
+                          // Not "Or sync Canvas or Moodle" to a student with
+                          // nothing connected: two ors in four words.
+                          : canvasConnection
+                            ? `Or sync ${lmsName} — every class imports itself`
+                            : 'On Canvas or Moodle? Every class can import itself'}
                     </Text>
                     {/* Same slot, opposite meaning. A free account used to see
                         PRO here; while the offer is live it sees what it costs
