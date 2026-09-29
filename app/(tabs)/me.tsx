@@ -17,7 +17,8 @@ import { useAppStore, findCurrentSemester } from '@/store/appStore';
 import { useSemesters, useCourses, useTaskStats } from '@/lib/queries';
 import { signOut } from '@/lib/auth';
 import { displayName } from '@/lib/user';
-import { COLORS, PROMO_SURFACE, FONTS, SCREEN_MAX_WIDTH, APP_STORE_REVIEW_URL, PLAY_STORE_REVIEW_URL, MARKETING_URL, SUPPORT_EMAIL } from '@/lib/constants';
+import { COLORS, PROMO_SURFACE, FONTS, SCREEN_MAX_WIDTH, MARKETING_URL, SUPPORT_EMAIL } from '@/lib/constants';
+import { openReviewComposer } from '@/lib/reviewOutcomeRuntime';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { getAppLocale } from '@/lib/i18n';
@@ -103,9 +104,11 @@ export default function MeScreen() {
   // browser visitor who has never installed Semora lands on the listing.
   const handleRate = async () => {
     track('rate_tapped', { screen: 'me' });
-    try {
-      await Linking.openURL(Platform.OS === 'android' ? PLAY_STORE_REVIEW_URL : APP_STORE_REVIEW_URL);
-    } catch {
+    // Same path as the Today card: the storefront-neutral composer link, the
+    // region it resolved to, and how long they were away all come from
+    // lib/reviewOutcome, so a tap here is measurable in the same terms.
+    const opened = await openReviewComposer('me');
+    if (!opened) {
       Alert.alert('Rate Semora', Platform.OS === 'android'
         ? 'Could not open Google Play. You can search for Semora there to leave a review.'
         : 'Could not open the App Store. You can search for Semora there to leave a review.');

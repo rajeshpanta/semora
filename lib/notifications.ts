@@ -53,6 +53,14 @@ import { getOfflineSyncSnapshot } from '@/lib/offlineSync';
 const MAX_SCHEDULED_NOTIFICATIONS = 60;
 export const TASK_NOTIFICATION_CATEGORY = 'semora-task-reminder';
 export const COMPLETE_TASK_ACTION = 'complete-task';
+/**
+ * Class reminders carry a "Record this class" button (Record Lecture plan 4.7):
+ * the reminder that says class starts in 10 minutes is exactly the moment to
+ * start a recording, filed under that course. It opens the app, because iOS
+ * only lets a recording start from the foreground.
+ */
+export const CLASS_NOTIFICATION_CATEGORY = 'semora-class-reminder';
+export const RECORD_CLASS_ACTION = 'record-class';
 export const REVIEW_TASK_ACTION = 'review-task';
 export const SNOOZE_TASK_ACTION = 'snooze-task';
 const NOTIFICATION_HEALTH_KEY = 'semora.notification-health.v2';
@@ -179,6 +187,20 @@ export async function registerTaskNotificationActions(isPro: boolean = false) {
       : []),
   ];
   await Notifications.setNotificationCategoryAsync(TASK_NOTIFICATION_CATEGORY, actions);
+  await registerClassNotificationActions().catch(() => {});
+}
+
+async function registerClassNotificationActions() {
+  // Android shows the button only on a build that can record (its native
+  // recorder); iOS always can.
+  const { isNativeRecorderAvailable } = await import('@/lib/lectureCapture/nativeEngine');
+  const canRecord = Platform.OS === 'ios' || (Platform.OS === 'android' && isNativeRecorderAvailable());
+  await Notifications.setNotificationCategoryAsync(
+    CLASS_NOTIFICATION_CATEGORY,
+    canRecord
+      ? [{ identifier: RECORD_CLASS_ACTION, buttonTitle: translate('Record this class'), options: { opensAppToForeground: true } }]
+      : [],
+  );
 }
 
 function readHealthState(): Pick<NotificationDeliveryHealth, 'lastScheduledAt' | 'lastError'> {
@@ -1272,6 +1294,7 @@ export async function rescheduleClassReminders(userId: string): Promise<number> 
               leadMinutes: trigger.leadMinutes,
               locale,
             }),
+            categoryIdentifier: CLASS_NOTIFICATION_CATEGORY,
             data: {
               [CLASS_REMINDER_KEY]: trigger.meetingId,
               courseId: trigger.courseId,

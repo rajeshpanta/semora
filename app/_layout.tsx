@@ -21,7 +21,7 @@ import { createContext,
   useContext,
   useEffect,
   useRef,
-  useState } from 'react';
+  useState, useSyncExternalStore } from 'react';
 import { ActivityIndicator,
   AppState,
   Platform,
@@ -51,13 +51,14 @@ import { loadLastServerRead, trackServerReads } from '@/lib/dataFreshness';
 import { isServerPush, resolvePushRoute } from '@/lib/pushRouting';
 import { initIAP, refreshProStatus, endIAP, getServerEntitlement, validateAfterPurchase, setupPurchaseListeners } from '@/lib/purchases';
 import {
-  COMPLETE_TASK_ACTION, SNOOZE_TASK_ACTION, cancelAllRemindersOnSignOut,
+  COMPLETE_TASK_ACTION, SNOOZE_TASK_ACTION, cancelAllRemindersOnSignOut, RECORD_CLASS_ACTION, CLASS_REMINDER_KEY,
   cancelTaskReminders, ensureAndroidChannels, registerTaskNotificationActions, rescheduleAllTaskReminders,
   hasTimezoneChanged, rescheduleClassReminders,
   snoozeNotification, startWebDueSoonReminders,
 } from '@/lib/notifications';
 import { registerForPushNotificationsAsync } from '@/lib/push';
 import { track, installErrorTracking, noteAppForegrounded } from '@/lib/analytics';
+import { reportReviewReturn } from '@/lib/reviewOutcomeRuntime';
 import Constants from 'expo-constants';
 import { recordAuthEvent, recordPhase, setAuthTelemetrySink } from '@/lib/authTelemetry';
 import { clearLocalSyncState } from '@/lib/calendarSync';
@@ -67,7 +68,12 @@ import { TaskCompletionFlowProvider } from '@/components/TaskCompletionFlow';
 import { TaskCompletionCelebration } from '@/components/TaskCompletionCelebration';
 import { showTaskCelebration } from '@/lib/taskCelebration';
 import { queryPersister, clearPersistedQueryCache, shouldPersistQuery } from '@/lib/queryPersistence';
-import { isNetworkFailure, clearOfflineUserState } from '@/lib/offlineSync';
+import {
+  isNetworkFailure,
+  clearOfflineUserState,
+  isDeviceOnline,
+  subscribeOfflineSync,
+} from '@/lib/offlineSync';
 import { OfflineSyncBridge } from '@/components/OfflineSyncBridge';
 import {
   readPendingCollaborationToken,
@@ -75,12 +81,16 @@ import {
 } from '@/lib/collaboration';
 import { LmsSyncBridge } from '@/components/LmsSyncBridge';
 import { recoverUnfinishedLectures } from '@/lib/lectureRecovery';
+import { getLectureSession } from '@/lib/lectureSessionRuntime';
+import { LectureRecordingBar } from '@/components/LectureRecordingBar';
+import { LectureInterruptedNotice } from '@/components/LectureInterruptedNotice';
 import { ProUpsellHost } from '@/components/ProUpsellHost';
 import { CollaborationSyncBridge } from '@/components/CollaborationSyncBridge';
 import { RealtimeSyncBridge } from '@/components/RealtimeSyncBridge';
 import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
 import { WebAppFrame } from '@/components/WebAppFrame';
 import { AppUpdateGate } from '@/components/AppUpdateGate';
+import { noteExternalNavigation } from '@/lib/appUpdate';
 import { WebAlertHost } from '@/components/WebAlertHost';
 import { getAppLocale, useI18n } from '@/lib/i18n';
 import { setDefaultOptions } from 'date-fns';
@@ -205,6 +215,21 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   // reschedule all incomplete tasks (throttled) so every signed-in device
   // picks up whatever was added/edited elsewhere. Permission-gated +
   // concurrency-guarded internally; no-op on web.
+  // A student we sent to the App Store's review composer comes back here, and
+  // how long they were gone is the only evidence available that they rated:
+  // Apple reports nothing, so a four-second round trip (the composer never
+  // opened, or opened on the wrong storefront) and a minute away look identical
+  // without it. Reported on mount too, because leaving Semora for the store
+  // often means iOS reclaims it and the return is a cold launch.
+  useEffect(() => {
+    reportReviewReturn();
+    if (Platform.OS === 'web') return;
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') reportReviewReturn();
+    });
+    return () => sub.remove();
+  }, []);
+
   useEffect(() => {
     if (Platform.OS === 'web') return;
     let lastSyncAt = 0;
@@ -601,6 +626,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     //                                     magic-link / email-change emails),
     //                                     since site_url = semora://auth/callback
     const handleDeepLink = async (url: string) => {
+      // A link is a destination: the in-session update must not reload over it.
+      noteExternalNavigation();
       const parsed = Linking.parse(url);
       const path = (parsed.path ?? '').replace(/^\//, '');
       const code = typeof parsed.queryParams?.code === 'string' ? parsed.queryParams.code : null;
@@ -841,11 +868,27 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const inPasswordReset = useAppStore((s) => s.inPasswordReset);
   const hasOnboarded = useAppStore((s) => s.hasOnboarded);
+  const lectureSession = getLectureSession();
+  const recordingPhase = useSyncExternalStore(
+    lectureSession.subscribe,
+    () => lectureSession.getState().phase,
+    () => lectureSession.getState().phase,
+  );
 
   useScreenViewTracking(segments as string[]);
 
   useEffect(() => {
     if (loading) return;
+
+    // A lecture is being recorded. Losing the session mid-class (a locked
+    // phone that cannot read its keychain did exactly this) used to replace
+    // the whole screen stack with the sign-in screen, which closed the
+    // recorder and stopped the microphone. The recording does not need a
+    // session — its parts are saved on the phone and upload once the student
+    // is signed in again — so the redirect waits until the recording ends.
+    if (!session && recordingPhase !== 'idle') {
+      return;
+    }
 
     // Browser OAuth returns to `/callback?code=...` and handleDeepLink
     // exchanges that code for a session. Until it does, `session` is still
@@ -963,7 +1006,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
         router.replace('/(tabs)');
       }
     }
-  }, [session, loading, segments, inPasswordReset, hasOnboarded]);
+  }, [session, loading, segments, inPasswordReset, hasOnboarded, recordingPhase]);
 
   const colors = useColors();
 
@@ -1014,6 +1057,9 @@ function NotificationActionBridge() {
 
     const handle = async (response: Notifications.NotificationResponse) => {
       if (!active) return;
+      // A tap is a destination, even onto the screen the student already had
+      // open: the in-session update must not reload over it (lib/appUpdate.ts).
+      noteExternalNavigation();
       const action = response.actionIdentifier;
 
       // Server-sent pushes (supabase/cron/*) carry a `type` and no taskId, so
@@ -1050,7 +1096,23 @@ function NotificationActionBridge() {
         });
 
         if (route.mode === 'push') globalRouter.push(route.path as any);
-        else globalRouter.replace(route.path as any);
+        // A push this build cannot route replaces the whole stack with the
+        // tabs — which, mid-lecture, closed the recorder. While a recording is
+        // live the tap simply opens the app where it is.
+        else if (!getLectureSession().isActive()) globalRouter.replace(route.path as any);
+        return;
+      }
+
+      // 4.7: "Record this class" on a class reminder. Opens the recorder with the
+      // class preselected; the student still taps Start (a recording is never
+      // started for them). A live recording is left alone.
+      const classData = response.notification.request.content.data ?? {};
+      if (typeof classData[CLASS_REMINDER_KEY] === 'string' && action === RECORD_CLASS_ACTION) {
+        track('class_reminder_record_tapped', { screen: 'notification' });
+        if (!getLectureSession().isActive()) {
+          const courseId = typeof classData.courseId === 'string' ? classData.courseId : undefined;
+          globalRouter.push({ pathname: '/lecture/record', params: courseId ? { courseId } : {} } as any);
+        }
         return;
       }
 
@@ -1313,6 +1375,11 @@ function RootLayoutNav() {
             <RealtimeSyncRuntime />
             <LmsSyncRuntime />
             <CollaborationSyncRuntime />
+            {/* Defined since the lecture recovery work and never rendered, so
+                the once-per-launch pass had never run for a single student.
+                Found 2026-09-14 while tracing four parts lost from one
+                lecture. */}
+            <LectureRecoveryRuntime />
             <AuthGate>
               <NavigationFrame>
               <Stack
@@ -1380,9 +1447,13 @@ function RootLayoutNav() {
               </Stack>
               </NavigationFrame>
             </AuthGate>
+            {/* While a lecture is recording and the recorder screen is not on
+                top, a bar that says so and leads back to it. */}
+            <LectureRecordingBar />
+            <LectureInterruptedNotice />
             {/* Applies a downloaded OTA in the session it arrives rather than
                 the one after. Ships inert: it does nothing until the
-                auto_update_reload flag is switched on. See lib/appUpdate.ts. */}
+                auto_update_reload_v2 flag is switched on. See lib/appUpdate.ts. */}
             <AppUpdateGate />
             <TaskCompletionCelebration />
             <WebAlertHost />
@@ -1424,13 +1495,47 @@ function LectureRecoveryRuntime() {
   const { session } = useSession();
   const userId = session?.user.id ?? null;
   const ranForRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (!userId || ranForRef.current === userId) return;
     ranForRef.current = userId;
     // Deliberately not awaited and never surfaced: this sits behind whatever
-    // the student opened the app to do.
-    void recoverUnfinishedLectures();
+    // the student opened the app to do. Also the "signed in again" trigger:
+    // parts saved while signed out upload now.
+    void recoverUnfinishedLectures('sign_in');
   }, [userId]);
+
+  // Once per launch is not enough.
+  //
+  // A part fails to upload in a lecture hall with no signal. The student keeps
+  // using the app for an hour, walks out onto wifi, and nothing asks again
+  // until the next cold start — which on iOS may be days away, by which point
+  // the launch pass is racing the retention job. So: ask again whenever the
+  // thing that was blocking it might have changed. recoverUnfinishedLectures
+  // is single-flight and an account with nothing stranded costs one indexed
+  // query, so asking often is cheap.
+  useEffect(() => {
+    if (!userId || Platform.OS === 'web') return;
+
+    const appState = AppState.addEventListener('change', (next) => {
+      if (next === 'active') void recoverUnfinishedLectures('foreground');
+    });
+
+    let wasOnline = isDeviceOnline();
+    const connectivity = subscribeOfflineSync(() => {
+      const online = isDeviceOnline();
+      // The edge, not the state: a listener that fires on every snapshot would
+      // ask on each one while the connection is fine.
+      if (online && !wasOnline) void recoverUnfinishedLectures('network');
+      wasOnline = online;
+    });
+
+    return () => {
+      appState.remove();
+      connectivity();
+    };
+  }, [userId]);
+
   return null;
 }
 

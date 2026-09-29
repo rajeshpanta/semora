@@ -32,7 +32,6 @@ import { useColors } from '@/lib/theme';
 import AppHeader from '@/components/AppHeader';
 import { track } from '@/lib/analytics';
 import { ProUpsellSheet } from '@/components/ProUpsellSheet';
-import { FreeScanConfirmSheet, type FreeScanChoice } from '@/components/FreeScanConfirmSheet';
 import { HEIC_HELP, isHeic, transcodeHeicToJpeg } from '@/lib/heic';
 import { useResponsive } from '@/lib/responsive';
 import { useAppStore, findCurrentSemester } from '@/store/appStore';
@@ -195,70 +194,6 @@ export default function ScanScreen() {
   // Alert. The resolver lives in a ref because checkScanLimit's contract is a
   // Promise<boolean> that every caller awaits before opening a picker, and the
   // answer now arrives from a render rather than from inside the call.
-  const [freeScanPromptVisible, setFreeScanPromptVisible] = useState(false);
-  const freeScanResolver = useRef<((allowed: boolean) => void) | null>(null);
-  // The choice is REMEMBERED rather than acted on, and flushed only once the
-  // sheet's view controller is genuinely gone. See waitForTransitions above:
-  // presenting onto a controller that is still `isBeingDismissed` is what
-  // strands expo-document-picker's native context until the app is restarted,
-  // and every branch here presents something — a picker, the Pro sheet, or a
-  // route. Alert.alert never needed this because UIKit fires an alert's handler
-  // after its own dismissal completes; a React Native <Modal> does not.
-  const pendingFreeScanChoice = useRef<FreeScanChoice | null>(null);
-  const freeScanFlushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const flushFreeScanChoice = useCallback(() => {
-    const choice = pendingFreeScanChoice.current;
-    // Idempotent: onDismiss and the backstop timer both call this, and whichever
-    // arrives second must do nothing.
-    if (!choice) return;
-    pendingFreeScanChoice.current = null;
-    if (freeScanFlushTimer.current) {
-      clearTimeout(freeScanFlushTimer.current);
-      freeScanFlushTimer.current = null;
-    }
-    const resolve = freeScanResolver.current;
-    // Cleared before dispatch: a resolver left behind would strand the next
-    // scan attempt on a promise nobody settles.
-    freeScanResolver.current = null;
-
-    if (choice === 'scan') { resolve?.(true); return; }
-    if (choice === 'canvas') {
-      trackCanvasOfferTapped({
-        screen: 'scan_free_action', offer: canvasOffer, free: canvasFree, source: 'scan_free_action',
-      });
-      resolve?.(false);
-      const to = canvasOfferDestination(canvasOffer, 'scan_free_action');
-      if (to.kind === 'route') router.push({ pathname: to.pathname, params: to.params } as any);
-      return;
-    }
-    if (choice === 'pro') {
-      // Reached voluntarily, with the free action still unspent — so the
-      // paywall must sell Pro rather than announce a limit they have not hit.
-      setUpsellReason('scan');
-      setUpsellActionSpent(false);
-      setUpsellVisible(true);
-    }
-    resolve?.(false);
-  }, [canvasOffer, canvasFree, router]);
-
-  const handleFreeScanChoice = (choice: FreeScanChoice) => {
-    pendingFreeScanChoice.current = choice;
-    setFreeScanPromptVisible(false);
-    // Backstop. onDismiss is iOS-only, so on Android and web nothing else would
-    // ever flush this — and even on iOS a callback that never arrives would
-    // leave the picker unopenable for the rest of the session, which is worse
-    // than the race it guards. Whichever fires first wins; the other no-ops.
-    if (freeScanFlushTimer.current) clearTimeout(freeScanFlushTimer.current);
-    freeScanFlushTimer.current = setTimeout(flushFreeScanChoice, Platform.OS === 'ios' ? 700 : 250);
-  };
-
-  // Nothing may outlive the screen: a timer firing into an unmounted component
-  // would push a route from a screen that is no longer there.
-  useEffect(() => () => {
-    if (freeScanFlushTimer.current) clearTimeout(freeScanFlushTimer.current);
-  }, []);
-
   // The free tier has TWO separate caps — scans AND courses-per-semester — and
   // a scan that extracts a NEW course trips the course cap even with scans
   // left. Surfacing the course usage here stops that from reading as a
@@ -312,23 +247,17 @@ export default function ScanScreen() {
       return false;
     }
 
-    // Ask before the student spends the only free action they get, since there
-    // is no monthly reset to fall back on. FreeScanConfirmSheet carries the two
-    // facts that have to be known BEFORE the tap rather than after it: that
-    // scanning is what spends the action, and — at the course cap — that the
-    // action is charged when the syllabus is parsed while the new course is
-    // refused afterwards, so the scan can cost everything and add nothing.
-    return new Promise((resolve) => {
-      freeScanResolver.current = resolve;
-      // The Canvas row inside this sheet is an offer like any other, and it is
-      // shown here rather than rendered in a branch we can mark — so the
-      // impression is recorded at the moment the sheet is presented, which is
-      // the moment it is seen.
-      trackCanvasOfferShown({
-        screen: 'scan_free_action', offer: canvasOffer, free: canvasFree, source: 'scan_free_action',
-      });
-      setFreeScanPromptVisible(true);
-    });
+    // The tap is no longer interrupted. A sheet used to open here, before the
+    // camera or the picker, carrying two facts worth knowing — that scanning
+    // is what spends the one free action, and that Canvas is free — plus a
+    // Canvas row. Measured over 7 days it was shown to 45 devices and 33 of
+    // them tapped the Canvas row instead of scanning; Canvas setup converts 7
+    // of 55, because it sends a student out of the app to find a calendar-feed
+    // URL. Thirty of those thirty-three got nothing at all and did not come
+    // back. The facts now live in a strip ABOVE the buttons, where they can be
+    // read before the tap instead of blocking the thing the student came to
+    // do, and the Canvas card on this same screen is one scroll away.
+    return true;
   };
 
   useEffect(() => {
@@ -920,18 +849,6 @@ export default function ScanScreen() {
         reason={upsellReason}
         onClose={() => setUpsellVisible(false)}
       />
-      <FreeScanConfirmSheet
-        visible={freeScanPromptVisible}
-        // Same rule the promotional card uses: only while the offer is genuinely
-        // live, and never to someone whose Canvas is already healthy. At the
-        // course cap the row still appears, because Canvas classes are uncapped
-        // and it is the only route that still adds the class.
-        canvasAvailable={canvasEscape || atCourseLimit}
-        canvasIsFree={canvasEscape}
-        atCourseLimit={atCourseLimit}
-        onChoose={handleFreeScanChoice}
-        onDismissed={flushFreeScanChoice}
-      />
       <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} showsVerticalScrollIndicator={false}>
         {/* Desktop web only. The sidebar there calls this "Import syllabus"
             while the page called itself "Scan syllabus" — one destination
@@ -1069,6 +986,27 @@ export default function ScanScreen() {
               {!freeActionUsed
                 ? `Your free action is still available, but a free semester holds ${FREE_COURSE_PHRASE} you add yourself, and you are at it. Scanning now can only update a class you already have. Connect Canvas to bring every class across for free, or upgrade to Pro.`
                 : `You've used your free action and a free semester holds ${FREE_COURSE_PHRASE} you add yourself. Connect Canvas free to import every class, or upgrade to Pro.`}
+            </Text>
+          </View>
+        )}
+
+        {/* The cost of the tap, said BEFORE it. A free account gets one AI
+            action for its lifetime — one syllabus scan or one lecture — and
+            the student had no way to know that until they had spent it. This
+            replaced a sheet that opened on the tap itself: it interrupted the
+            action they came for, and 33 of the 45 students it appeared to went
+            to Canvas instead and mostly never came back. Stated here it is a
+            fact they can read and act on; the Canvas card above is the free
+            route, one scroll away, and it is theirs to choose rather than
+            something pushed in front of them. Hidden at the course cap, which
+            has its own stronger notice directly above. */}
+        {!isPro && !freeActionUsed && !freeActionLoading && !atCourseLimit && (
+          <View style={[styles.courseCapNote, { backgroundColor: colors.card, borderColor: colors.line }]}>
+            <FontAwesome name="magic" size={13} color={colors.brand} style={{ marginTop: 1 }} />
+            <Text style={[styles.courseCapText, { color: colors.ink2 }]}>
+              {canvasEscape
+                ? 'Your free AI action is still unused. Scanning a syllabus spends it — connecting Canvas brings every class across for free and leaves it unspent.'
+                : 'Your free AI action is still unused. Scanning a syllabus spends it.'}
             </Text>
           </View>
         )}

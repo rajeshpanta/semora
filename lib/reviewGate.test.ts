@@ -5,6 +5,7 @@
 import { assertEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
 import {
   decideReviewAsk,
+  MAX_CARD_DAYS,
   REVIEW_TASK_MILESTONE,
   type ReviewGateState,
 } from './reviewGate';
@@ -18,7 +19,8 @@ const base: ReviewGateState = {
   ratingCardDismissed: false,
   tasksCompletedCount: 0,
   today: '2026-09-10',
-  paywallShownThisSession: false,
+  moneyJustDiscussed: false,
+  cardDaysShown: 0,
 };
 const S = (o: Partial<ReviewGateState>): ReviewGateState => ({ ...base, ...o });
 
@@ -55,13 +57,54 @@ Deno.test('a month later still qualifies — the gate is a floor, not a window',
 
 // ── Never stacking ──────────────────────────────────────────────────────────
 
-Deno.test('never asks in the same session as the paywall', () => {
+Deno.test('never asks in the same sitting as money', () => {
+  // The flag this replaced was computed from a device-lifetime value and was
+  // false on every device that had ever seen the paywall, so four native
+  // prompts fired within 2.4 seconds of a completed purchase. See
+  // lib/ratingQuiet for the live signal that feeds this now.
   const d = decideReviewAsk(S({
     hasImportedSyllabus: true,
     importedSyllabusDay: '2026-09-01',
-    paywallShownThisSession: true,
+    moneyJustDiscussed: true,
   }));
   assertEquals(d.ask, 'none');
+});
+
+Deno.test('money outranks even a card that is otherwise due', () => {
+  const d = decideReviewAsk(S({
+    hasImportedSyllabus: true,
+    importedSyllabusDay: '2026-09-01',
+    reviewRequested: true,
+    reviewPromptedDay: '2026-09-09',
+    moneyJustDiscussed: true,
+  }));
+  assertEquals(d.ask, 'none');
+});
+
+// ── Ignoring the card is an answer ──────────────────────────────────────────
+
+Deno.test('the card stops after MAX_CARD_DAYS days, dismissed or not', () => {
+  // Production: the card returned every launch until the X was pressed — one
+  // student saw it 32 times across 14 days, and 34 of 45 never pressed
+  // anything at all.
+  const due = {
+    hasImportedSyllabus: true,
+    importedSyllabusDay: '2026-09-01',
+    reviewRequested: true,
+    reviewPromptedDay: '2026-09-09',
+  };
+  assertEquals(decideReviewAsk(S({ ...due, cardDaysShown: MAX_CARD_DAYS - 1 })).ask, 'card');
+  assertEquals(decideReviewAsk(S({ ...due, cardDaysShown: MAX_CARD_DAYS })).ask, 'none');
+  assertEquals(decideReviewAsk(S({ ...due, cardDaysShown: MAX_CARD_DAYS + 9 })).ask, 'none');
+});
+
+Deno.test('the cap never blocks the native ask, which is once ever anyway', () => {
+  const d = decideReviewAsk(S({
+    hasImportedSyllabus: true,
+    importedSyllabusDay: '2026-09-01',
+    cardDaysShown: 99,
+  }));
+  assertEquals(d.ask, 'native');
 });
 
 Deno.test('the card never appears on the day the native prompt was spent', () => {
@@ -214,4 +257,22 @@ Deno.test('a full student lifecycle asks exactly twice, on different days', () =
   asks.push(decideReviewAsk(st).ask);
 
   assertEquals(asks, ['none', 'none', 'native', 'none', 'card', 'none', 'none']);
+});
+
+Deno.test('a student who never dismisses is asked on three days and then left alone', () => {
+  let st = S({
+    today: '2026-09-12',
+    hasImportedSyllabus: true,
+    importedSyllabusDay: '2026-09-10',
+    reviewRequested: true,
+    reviewPromptedDay: '2026-09-11',
+  });
+  const asks: string[] = [];
+  // Each day the card is shown, the screen counts that day and nothing else
+  // changes: the student scrolls past it and says nothing.
+  for (const [day, shown] of [['2026-09-12', 0], ['2026-09-13', 1], ['2026-09-14', 2], ['2026-09-15', 3], ['2026-10-01', 3]] as const) {
+    st = { ...st, today: day, cardDaysShown: shown };
+    asks.push(decideReviewAsk(st).ask);
+  }
+  assertEquals(asks, ['card', 'card', 'card', 'none', 'none']);
 });

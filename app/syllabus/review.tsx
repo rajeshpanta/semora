@@ -299,17 +299,19 @@ export default function SyllabusReviewScreen() {
       // prompt off that branch's flag meant they could never qualify for it.
       if (fullySaved) setHasImportedSyllabus(true);
 
-      // Post-scan offer: at the peak of value (deadlines just imported), offer
-      // Pro once, framed as momentum rather than a block. Only for free users
-      // who haven't seen this prompt yet; `replace` so Back doesn't return here.
-      if (!isPro && !ahaPaywallShown && fullySaved) {
-        setAhaPaywallShown(true);
-        router.replace({
-          pathname: '/paywall',
-          params: { context: 'postScan', count: String(savedCount), courseId: params.courseId },
-        } as any);
-        return;
-      }
+      // The post-scan Pro offer used to happen HERE, replacing this route with
+      // /paywall and returning — which skipped /syllabus/added entirely for the
+      // only people who needed it. Free students, who are capped at one course
+      // they add themselves, were shown a price at the exact moment they had
+      // one class and no idea that Canvas would bring the rest in for free;
+      // 268 accounts sit at one course today. Pro users, who need no such
+      // prompt, were the only ones being asked "what else are you taking?".
+      //
+      // The offer is not removed — it moves one screen later, to the student
+      // who answers "Done for now" (app/syllabus/added.tsx). It carries the
+      // same context, and `ahaPaywallShown` is now burned when the paywall is
+      // actually shown rather than on the way past it.
+      const offerPro = !isPro && !ahaPaywallShown && fullySaved;
 
       // A clean import ends on the next-class prompt, not on an exit. The
       // median account has one course, which is the shape of a to-do list
@@ -322,6 +324,9 @@ export default function SyllabusReviewScreen() {
             courseId: params.courseId,
             courseName: params.courseName,
             count: String(savedCount),
+            // Carries the Pro offer forward rather than jumping the queue with
+            // it. '1' / absent, because route params are strings.
+            ...(offerPro ? { offerPro: '1' } : {}),
           },
         } as any);
         return;

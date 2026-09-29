@@ -45,3 +45,47 @@ Deno.test('the post-import confirmation no longer promises hourly', () => {
   assert(es.includes('cada pocas horas'), es);
   assert(!/cada hora/.test(es), `still promises hourly: ${es}`);
 });
+
+// ── incomplete lecture notes (2026-09-14) ──────────────────────────────────
+// The sentence carrying the count is interpolated, so it can never match a
+// phrase-map key. It has to go through spanishPattern or a Spanish student is
+// told their notes are incomplete in English.
+Deno.test('the incomplete-notes line is translated, singular and plural', () => {
+  assertEquals(
+    translate('These notes are incomplete. 1 part of this recording has not arrived.', 'es'),
+    'Estos apuntes están incompletos. Falta 1 parte de esta grabación.',
+  );
+  assertEquals(
+    translate('These notes are incomplete. 4 parts of this recording have not arrived.', 'es'),
+    'Estos apuntes están incompletos. Faltan 4 partes de esta grabación.',
+  );
+});
+
+Deno.test('the rest of the incomplete-notes wording is in the phrase map', () => {
+  for (const english of [
+    'Trying…',
+    'Try again',
+    'Try the missing parts again',
+    'The missing audio may still be on the phone that recorded it.',
+    'Saving on this phone…',
+    'Keep Semora open for a moment while the last part is written.',
+    'Saved on this phone. Uploading resumes whenever Semora can, and your lecture will be waiting under Lectures.',
+  ]) {
+    const spanish = translate(english, 'es');
+    if (spanish === english) throw new Error(`untranslated: ${english}`);
+  }
+});
+
+// Upload progress: four interpolated sentences, and the one that used to say
+// "safe to close the app" for a lecture that had lost half its audio.
+Deno.test('lecture upload progress is translated in every shape', () => {
+  const cases: [string, string][] = [
+    ['1 part is still on this phone waiting to upload.', 'Queda 1 parte en este teléfono esperando a subirse.'],
+    ['4 parts are still on this phone waiting to upload.', 'Quedan 4 partes en este teléfono esperando a subirse.'],
+    ['1 part uploaded so far.', 'Se ha subido 1 parte hasta ahora.'],
+    ['6 parts uploaded so far.', 'Se han subido 6 partes hasta ahora.'],
+    ['4 of 8 parts uploaded — stay connected until this finishes', '4 de 8 partes subidas: mantén la conexión hasta que termine'],
+    ['All 8 parts uploaded — safe to close the app', 'Las 8 partes están subidas: ya puedes cerrar la app'],
+  ];
+  for (const [english, spanish] of cases) assertEquals(translate(english, 'es'), spanish);
+});

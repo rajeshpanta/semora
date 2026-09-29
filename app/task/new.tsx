@@ -27,19 +27,31 @@ import type { RecurrenceFrequency, TaskPriority } from '@/types/database';
 
 export default function NewTaskScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ courseId?: string; defaultDate?: string }>();
+  // title / type / dueDate (YYYY-MM-DD) / description: optional prefill, used by
+  // a lecture's "Add to your tasks". Absent everywhere else, so every other way
+  // into this screen starts exactly as before.
+  const params = useLocalSearchParams<{
+    courseId?: string; defaultDate?: string; title?: string; type?: string; dueDate?: string; description?: string;
+  }>();
   const createTask = useCreateTask();
   const selectedSemesterId = useAppStore((s) => s.selectedSemesterId);
   const { data: courses = [] } = useCourses(selectedSemesterId);
 
   const [courseId, setCourseId] = useState(params.courseId || '');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [type, setType] = useState<TaskType>('assignment');
+  const [title, setTitle] = useState(typeof params.title === 'string' ? params.title.slice(0, 200) : '');
+  const [description, setDescription] = useState(typeof params.description === 'string' ? params.description : '');
+  const [type, setType] = useState<TaskType>(
+    (TASK_TYPES as readonly string[]).includes(params.type ?? '') ? (params.type as TaskType) : 'assignment',
+  );
   // Optional defaultDate=today prefill for quick-add from the Today tab.
   // Falls through to null otherwise so the existing manual flow is unchanged.
   const [dueDate, setDueDate] = useState<Date | null>(
-    params.defaultDate === 'today' ? new Date() : null,
+    params.defaultDate === 'today'
+      ? new Date()
+      : typeof params.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(params.dueDate)
+        // Local midnight of that day, not UTC's (which is the day before in the Americas).
+        ? new Date(Number(params.dueDate.slice(0, 4)), Number(params.dueDate.slice(5, 7)) - 1, Number(params.dueDate.slice(8, 10)))
+        : null,
   );
   const [dueTime, setDueTime] = useState<Date | null>(null);
   const [weight, setWeight] = useState('');

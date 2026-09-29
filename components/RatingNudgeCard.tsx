@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
-import { Linking, Platform, StyleSheet, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Text, TouchableOpacity } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { APP_STORE_REVIEW_URL, FONTS, PLAY_STORE_REVIEW_URL, WEB_CARD_SHADOW } from '@/lib/constants';
+import { FONTS, WEB_CARD_SHADOW } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { track } from '@/lib/analytics';
+import { bumpCardImpression, cardDaysShown, openReviewComposer } from '@/lib/reviewOutcomeRuntime';
 
 /**
  * The second, quieter ask for a rating.
@@ -20,28 +21,46 @@ import { track } from '@/lib/analytics';
  * Store review composer as a normal link, which has no quota because the
  * student chose to tap it.
  *
- * It is deliberately small, dismissible, and shown once ever, a day after the
- * native prompt at the earliest (lib/reviewGate). Two asks in one sitting is
- * asking twice however politely the second one is worded, and a rating card
- * that reappears is the kind of thing students rate one star.
+ * It is deliberately small, dismissible, and shown on at most MAX_CARD_DAYS
+ * separate days, a day after the native prompt at the earliest
+ * (lib/reviewGate). This comment used to claim "once ever" and the code did not
+ * enforce it: the card came back every launch until the X was pressed, and one
+ * student saw it 32 times across 14 days. Two asks in one sitting is asking
+ * twice however politely the second one is worded, and a rating card that
+ * reappears forever is the kind of thing students rate one star.
+ *
+ * Every outcome is now recorded (lib/reviewOutcome): the impression carries its
+ * number on this device, the X is an event of its own rather than silence, and
+ * the tap is followed by how long the student spent in the store. Without the
+ * dismissal we could not tell "asked and refused" from "never asked", which is
+ * the difference between a card students don't want and a card they never see.
  */
 export default function RatingNudgeCard({ onDismiss }: { onDismiss: () => void }) {
   const colors = useColors();
+  const impression = useRef(0);
 
-  useEffect(() => { track('rating_card_shown', { screen: 'today' }); }, []);
+  useEffect(() => {
+    impression.current = bumpCardImpression();
+    // `impression` counts renders (an over-the-air reload remounts the card),
+    // `day` counts the separate days it has been shown — the number the cap in
+    // lib/reviewGate reads, and the honest denominator for a tap rate.
+    track('rating_card_shown', { screen: 'today', impression: impression.current, day: cardDaysShown() });
+  }, []);
 
   const rate = async () => {
-    track('rating_card_tapped', { screen: 'today' });
-    try {
-      await Linking.openURL(Platform.OS === 'android' ? PLAY_STORE_REVIEW_URL : APP_STORE_REVIEW_URL);
-    } catch {
-      // Nothing to recover: the composer either opens or it does not, and an
-      // apology alert here would be a second interruption for the student who
-      // just did us a favour.
-    }
+    track('rating_card_tapped', { screen: 'today', impression: impression.current });
+    // The composer link, the storefront it resolved to and the return trip are
+    // all handled there; a failure to open is reported rather than apologised
+    // for, since an alert would interrupt the student who just did us a favour.
+    await openReviewComposer('today', { impression: impression.current });
     // Dismissed on tap, not on return. There is no callback telling us whether
     // they actually wrote anything, and asking again would be the one outcome
     // worse than not asking.
+    onDismiss();
+  };
+
+  const dismiss = () => {
+    track('rating_card_dismissed', { screen: 'today', impression: impression.current, day: cardDaysShown() });
     onDismiss();
   };
 
@@ -60,7 +79,7 @@ export default function RatingNudgeCard({ onDismiss }: { onDismiss: () => void }
           </Text>
         </View>
         <TouchableOpacity
-          onPress={onDismiss}
+          onPress={dismiss}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           accessibilityRole="button"
           accessibilityLabel="Dismiss"

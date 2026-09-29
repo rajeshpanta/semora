@@ -5,6 +5,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
+import { useI18n } from '@/lib/i18n';
 import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
 import { supabase } from '@/lib/supabase';
 
@@ -26,7 +27,10 @@ import { supabase } from '@/lib/supabase';
 // Scoped to the ACCOUNT, not the device. The acknowledgement is a specific
 // person accepting responsibility for recording other people; a second student
 // signing into the same phone has not made that promise, and must be asked.
-const consentKey = (userId: string) => `semora_lecture_consent_v1:${userId}`;
+// No ':' — SecureStore accepts only letters, digits, '.', '-' and '_' in a key,
+// and the colon this used to carry made every write throw (silently), so the
+// sheet came back before every single recording.
+const consentKey = (userId: string) => `semora_lecture_consent_v1.${userId}`;
 
 async function currentUserId(): Promise<string | null> {
   const { data: { session } } = await supabase.auth.getSession();
@@ -63,6 +67,11 @@ interface Props {
 export function LectureConsentSheet({ visible, onAccept, onCancel }: Props) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  // The bullets and the backdrop's label go through translate() by hand: the
+  // localized Text handles its children, but a react-native Pressable's
+  // accessibilityLabel does not, and the sheet's three legal sentences were
+  // the one part of this gate that shipped in English to a Spanish student.
+  const { t } = useI18n();
 
   const POINTS: { icon: React.ComponentProps<typeof FontAwesome>['name']; text: string }[] = [
     {
@@ -82,7 +91,7 @@ export function LectureConsentSheet({ visible, onAccept, onCancel }: Props) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onCancel}>
       <View style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onCancel} accessibilityLabel="Cancel" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={onCancel} accessibilityRole="button" accessibilityLabel={t('Cancel')} />
         <View
           style={[
             styles.sheet,
@@ -98,7 +107,7 @@ export function LectureConsentSheet({ visible, onAccept, onCancel }: Props) {
             <View style={[styles.icon, { backgroundColor: colors.coral50 }]}>
               <FontAwesome name="microphone" size={22} color={colors.coral} />
             </View>
-            <Text style={[styles.title, { color: colors.ink }]}>Before you record</Text>
+            <Text style={[styles.title, { color: colors.ink }]} accessibilityRole="header">Before you record</Text>
             <Text style={[styles.lede, { color: colors.ink2 }]}>
               Semora will record the sound around you, including your instructor’s voice and
               anything people near you say.
