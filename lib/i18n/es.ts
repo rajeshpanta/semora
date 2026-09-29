@@ -1624,6 +1624,8 @@ export const ES: Record<string, string> = {
   'AUTO': 'AUTO',
   'before deleting your account. Tap the button below to start.': 'antes de eliminar tu cuenta. Toca el botón de abajo para comenzar.',
   'Cannot verify identity': 'No se pudo verificar tu identidad',
+  'Could not determine your sign-in method. Please sign in again.': 'No pudimos identificar tu método de inicio de sesión. Vuelve a iniciar sesión.',
+  'No Semora password is needed. Use the same Apple or Google account you use to sign in.': 'No necesitas una contraseña de Semora. Usa la misma cuenta de Apple o Google con la que inicias sesión.',
   'CHOOSE YOUR PLAN': 'ELIGE TU PLAN',
   'Confirm with your password': 'Confirma con tu contraseña',
   'Copy the text from a PDF or your LMS page and paste it below — we\'ll pull every deadline, same as a file scan.': 'Copia el texto de un PDF o de tu LMS y pégalo abajo. Extraeremos todas las entregas como si escanearas un archivo.',
