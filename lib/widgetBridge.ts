@@ -96,6 +96,11 @@ export function updateTodayWidget(
       PAYLOAD_KEY,
       JSON.stringify({
         updatedAt: new Date().toISOString(),
+        // The calendar day dueTodayCount was counted for. The lock-screen widget
+        // (1.15.2+) reads it so a count written in Los Angeles is not taken as
+        // "today" in New York the morning after a flight. Additive: older widget
+        // binaries ignore the key.
+        today: todayStr,
         dueTodayCount,
         items,
         streak,

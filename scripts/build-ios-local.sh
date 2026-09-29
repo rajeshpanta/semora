@@ -44,6 +44,17 @@ TEAM_ID="7T9897GFKH"
 # "profile doesn't include the App Groups capability". Removing the key is what
 # fixes it. Only reintroduce one if it has Admin or App Manager access.
 AUTH=(-allowProvisioningUpdates)
+# ...which is what ASC_KEY_ID is for: with no Apple ID in Xcode, an App Manager
+# key (5T4AFQ7J26) signs in instead. It fetches the profiles, adds a capability
+# app.json newly asks for to the App ID, and the local Apple Distribution
+# identity signs. Used for 1.15.2 (62), when Xcode had no account.
+#   ASC_KEY_ID=5T4AFQ7J26 ASC_ISSUER_ID=<uuid> scripts/build-ios-local.sh
+if [[ -n "${ASC_KEY_ID:-}" ]]; then
+  ASC_KEY_PATH="${ASC_KEY_PATH:-$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8}"
+  [[ -f "$ASC_KEY_PATH" ]] || { echo "ASC_KEY_ID set but $ASC_KEY_PATH does not exist" >&2; exit 1; }
+  [[ -n "${ASC_ISSUER_ID:-}" ]] || { echo "ASC_KEY_ID needs ASC_ISSUER_ID" >&2; exit 1; }
+  AUTH+=(-authenticationKeyPath "$ASC_KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+fi
 
 mkdir -p "$OUT"
 cd "$ROOT"
@@ -66,6 +77,26 @@ if ! grep -q "PickerHostBusyException" "$PATCHED_SWIFT" 2>/dev/null; then
   exit 1
 fi
 echo "==> picker patch present in node_modules"
+
+# ── Guard 0: nothing may redirect what gets fingerprinted or bundled ────────
+#
+# The EXUpdates pod's build phase runs `bash -l -c` and honours three overrides:
+# EXPO_UPDATES_FINGERPRINT_OVERRIDE and EXPO_UPDATES_WORKFLOW_OVERRIDE replace
+# the runtime outright, and PROJECT_ROOT makes create-updates-resources-ios.sh
+# fingerprint and bundle a DIFFERENT tree. Any of them set in this shell or in a
+# login shell produces a binary whose runtime no `eas update` from this tree will
+# ever match. Checked in both, because the pod phase uses the login shell.
+for v in EXPO_UPDATES_FINGERPRINT_OVERRIDE EXPO_UPDATES_WORKFLOW_OVERRIDE PROJECT_ROOT; do
+  here="${!v:-}"
+  login="$(bash -l -c "printf %s \"\${$v:-}\"" 2>/dev/null || true)"
+  if [[ -n "$here" || -n "$login" ]]; then
+    echo >&2
+    echo "$v IS SET (shell: '$here', login shell: '$login')." >&2
+    echo "  It would make the embedded runtime differ from what eas update stamps. Unset it." >&2
+    exit 1
+  fi
+done
+echo "==> no fingerprint/bundle overrides in the environment"
 
 # ── Guard 2: is the native runtime the one we think it is? ──────────────────
 #
@@ -224,6 +255,83 @@ if [[ -n "$CERT_IN_APP" ]]; then
   echo "  Remove updates.codeSigningCertificate from app.json, or upgrade." >&2
   rm -rf "$VERIFY2"; exit 1
 fi
+# ── Guard 5: the runtime baked into the .ipa is the one eas update will stamp ─
+#
+# An OTA reaches a phone only if its runtime string equals the one inside the
+# binary. Both come from @expo/fingerprint, but through different doors — the
+# pod's build phase here, `expo-updates runtimeversion:resolve` inside eas-cli
+# later — and anything that differs between those moments (a stray file, an
+# override, a changed dependency) makes every future update for this build
+# silently land nowhere. So compare the artefact with the resolver, now.
+IPA_FP="$(cat "$(dirname "$APP_BIN")/EXUpdates.bundle/fingerprint" 2>/dev/null || true)"
+TREE_FP="$(node node_modules/expo-updates/bin/cli.js runtimeversion:resolve --platform ios --workflow managed 2>/dev/null \
+  | node -pe 'JSON.parse(require("fs").readFileSync(0,"utf8")).runtimeVersion' 2>/dev/null || true)"
+if [[ -z "$IPA_FP" || "$IPA_FP" != "$TREE_FP" ]]; then
+  echo >&2
+  echo "RUNTIME MISMATCH: the .ipa embeds '$IPA_FP' but eas update from this tree would stamp '$TREE_FP'." >&2
+  echo "  No OTA published from this tree could ever reach this binary." >&2
+  rm -rf "$VERIFY2"; exit 1
+fi
+echo "==> embedded runtime $IPA_FP matches what eas update stamps from this tree"
+
+# ── Guard 6: every entitlement app.json promises is in the SIGNED binary ─────
+#
+# `--no-prebuild` reuses an ios/ generated earlier, so an entitlement added to
+# app.json afterwards (associated domains, for Universal Links) can be missing
+# from the archive with no error anywhere — and then every share link opens
+# Safari instead of Semora. Signing can also drop one if the provisioning
+# profile lacks the capability. Read the signature, not the source.
+APP_DIR="$(dirname "$APP_BIN")"
+ENT_FILE="$(mktemp)"
+codesign -d --entitlements - --xml "$APP_DIR" > "$ENT_FILE" 2>/dev/null || true
+WANT_DOMAINS="$(node -e 'const d=(require("./app.json").expo.ios||{}).associatedDomains||[];process.stdout.write(d.join("\n"))')"
+while IFS= read -r dom; do
+  [[ -z "$dom" ]] && continue
+  if [[ "$(grep -c -- "$dom" "$ENT_FILE" || true)" -eq 0 ]]; then
+    echo >&2
+    echo "ENTITLEMENT MISSING: app.json declares associated domain '$dom' but the signed app does not carry it." >&2
+    echo "  Re-run without --no-prebuild; if it persists, enable Associated Domains on the App ID" >&2
+    echo "  (developer.apple.com > Identifiers > com.rajeshpanta.syllabussnap) and rebuild." >&2
+    rm -f "$ENT_FILE"; rm -rf "$VERIFY2"; exit 1
+  fi
+  echo "==> signed app carries $dom"
+done <<< "$WANT_DOMAINS"
+# Every other entitlement app.json asks for, by key. The Time Sensitive one is the
+# reason a "Recording paused" notice breaks through Focus in a lecture hall; if
+# the provisioning profile lacks the capability, signing drops it silently and
+# the notice is quietly delivered to a muted Notification Center instead.
+codesign -d --entitlements - --xml "$APP_DIR" > "$ENT_FILE" 2>/dev/null || true
+WANT_KEYS="$(node -e 'const e=(require("./app.json").expo.ios||{}).entitlements||{};process.stdout.write(Object.keys(e).join("\n"))')"
+while IFS= read -r key; do
+  [[ -z "$key" ]] && continue
+  if [[ "$(grep -c -- "<key>$key</key>" "$ENT_FILE" || true)" -eq 0 ]]; then
+    echo >&2
+    echo "ENTITLEMENT MISSING: app.json declares '$key' but the signed app does not carry it." >&2
+    echo "  Enable the matching capability on the App ID (developer.apple.com > Identifiers >" >&2
+    echo "  com.rajeshpanta.syllabussnap) or let automatic signing add it, then rebuild." >&2
+    rm -f "$ENT_FILE"; rm -rf "$VERIFY2"; exit 1
+  fi
+  echo "==> signed app carries $key"
+done <<< "$WANT_KEYS"
+APPEX="$(find "$APP_DIR/PlugIns" -maxdepth 1 -name 'SemoraToday*.appex' 2>/dev/null | head -1 || true)"
+if [[ -z "$APPEX" ]]; then
+  # Never skip the widget half silently: a build without the extension is
+  # itself the failure (no Home Screen or Lock Screen widget at all).
+  echo >&2
+  echo "WIDGET MISSING: no SemoraToday*.appex in $APP_DIR/PlugIns — the build dropped the widget extension." >&2
+  rm -f "$ENT_FILE"; rm -rf "$VERIFY2"; exit 1
+fi
+for bundle in "$APP_DIR" "$APPEX"; do
+  codesign -d --entitlements - --xml "$bundle" > "$ENT_FILE" 2>/dev/null || true
+  if [[ "$(grep -c 'group.com.rajeshpanta.syllabussnap' "$ENT_FILE" || true)" -eq 0 ]]; then
+    echo >&2
+    echo "APP GROUP MISSING from $(basename "$bundle"): the widget would show no data." >&2
+    rm -f "$ENT_FILE"; rm -rf "$VERIFY2"; exit 1
+  fi
+done
+rm -f "$ENT_FILE"
+echo "==> App Group present in the app and the widget"
+
 rm -rf "$VERIFY2"
 echo "==> picker patch verified in the .ipa; binary can receive OTA updates"
 

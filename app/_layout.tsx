@@ -90,6 +90,7 @@ import { RealtimeSyncBridge } from '@/components/RealtimeSyncBridge';
 import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
 import { WebAppFrame } from '@/components/WebAppFrame';
 import { AppUpdateGate } from '@/components/AppUpdateGate';
+import { noteExternalNavigation } from '@/lib/appUpdate';
 import { WebAlertHost } from '@/components/WebAlertHost';
 import { getAppLocale, useI18n } from '@/lib/i18n';
 import { setDefaultOptions } from 'date-fns';
@@ -625,6 +626,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     //                                     magic-link / email-change emails),
     //                                     since site_url = semora://auth/callback
     const handleDeepLink = async (url: string) => {
+      // A link is a destination: the in-session update must not reload over it.
+      noteExternalNavigation();
       const parsed = Linking.parse(url);
       const path = (parsed.path ?? '').replace(/^\//, '');
       const code = typeof parsed.queryParams?.code === 'string' ? parsed.queryParams.code : null;
@@ -1054,6 +1057,9 @@ function NotificationActionBridge() {
 
     const handle = async (response: Notifications.NotificationResponse) => {
       if (!active) return;
+      // A tap is a destination, even onto the screen the student already had
+      // open: the in-session update must not reload over it (lib/appUpdate.ts).
+      noteExternalNavigation();
       const action = response.actionIdentifier;
 
       // Server-sent pushes (supabase/cron/*) carry a `type` and no taskId, so
@@ -1447,7 +1453,7 @@ function RootLayoutNav() {
             <LectureInterruptedNotice />
             {/* Applies a downloaded OTA in the session it arrives rather than
                 the one after. Ships inert: it does nothing until the
-                auto_update_reload flag is switched on. See lib/appUpdate.ts. */}
+                auto_update_reload_v2 flag is switched on. See lib/appUpdate.ts. */}
             <AppUpdateGate />
             <TaskCompletionCelebration />
             <WebAlertHost />

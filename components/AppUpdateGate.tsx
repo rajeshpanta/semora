@@ -7,10 +7,12 @@ import { useQuery } from '@tanstack/react-query';
 import { track } from '@/lib/analytics';
 import { supabase } from '@/lib/supabase';
 import { getDeviceItem, setDeviceItem } from '@/lib/deviceStore';
+import { markReloading, clearReloading } from '@/lib/reloadMarker';
 import {
   decideUpdate, AUTO_UPDATE_FLAG_KEY, FETCH_TIMEOUT_MS, COLD_START_GRACE_MS,
   TRACK_FLUSH_MS, RELOAD_GUARD_KEY, parseReloadGuard, serializeReloadGuard,
-  reloadBlocked, nextReloadGuard, type UpdateMoment,
+  reloadBlocked, nextReloadGuard, isRealResume, noteBackground, sentFromOutside,
+  type AwayTrip, type UpdateMoment,
 } from '@/lib/appUpdate';
 
 /**
@@ -23,8 +25,21 @@ import {
  * Renders nothing and is mounted once, high in the tree.
  */
 
+// The route the app is on NOW, whichever instance of this component is
+// asking. An attempt awaits (a check, a download, the telemetry flush), and a
+// launch that opens a reminder moves to its task during those awaits — or the
+// tree above remounts and leaves an older instance, with an older route in its
+// ref, still finishing its attempt. Both have to judge the live route.
+let liveRoute: string | null = null;
+// One reload per JS context, across instances. reloadAsync ends the context,
+// so this resets by itself.
+let reloadStarted = false;
+
 const updateFlagQuery = {
-  queryKey: ['promo', AUTO_UPDATE_FLAG_KEY] as const,
+  // 'appUpdateFlag', not 'promo': this key is never persisted to disk
+  // (lib/queryPersistence.ts), so every launch asks the server and turning the
+  // switch off is not undone by a cached "on".
+  queryKey: ['appUpdateFlag', AUTO_UPDATE_FLAG_KEY] as const,
   queryFn: async () => {
     // Fails CLOSED: any error leaves this false, which is exactly today's
     // two-launch behaviour. The safe direction for something that restarts a
@@ -82,14 +97,18 @@ export function AppUpdateGate() {
   // route without being re-created (and re-arming listeners) on every screen.
   const routeRef = useRef(pathname);
   routeRef.current = pathname;
+  liveRoute = pathname;
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
   const pendingRef = useRef(isUpdatePending);
   pendingRef.current = isUpdatePending;
 
-  const attempt = useCallback(async (moment: UpdateMoment) => {
+  // `leftFrom`: for a resume, the screen the student left the app on. A
+  // return that lands somewhere else was sent there — a reminder tapped while
+  // the app was still alive opens its task — and a reload would lose it.
+  const attempt = useCallback(async (moment: UpdateMoment, leftFrom: string | null = null) => {
     const Updates = updatesModule();
-    if (!Updates || applied.current) return;
+    if (!Updates || applied.current || reloadStarted) return;
 
     try {
       // What the native layer already has downloaded and is holding.
@@ -112,15 +131,29 @@ export function AppUpdateGate() {
         }
       }
 
+      // The grace window is a promise about WHEN, so it is kept at the moment
+      // of deciding too: the check and download above can take up to eight
+      // seconds on a slow network, and by then the student is using the app.
+      if (moment === 'cold-start' && Date.now() - mountedAt.current > COLD_START_GRACE_MS) return;
+      // A launch iOS made in the background — "Mark Complete" or "Snooze" on a
+      // reminder — is doing the student's task with no screen to restart.
+      if (AppState.currentState === 'background') return;
       const decision = decideUpdate({
         isUpdatePending: pending,
         enabled: enabledRef.current,
         moment,
-        pathname: routeRef.current,
-        alreadyAppliedThisSession: applied.current,
+        pathname: liveRoute ?? routeRef.current,
+        alreadyAppliedThisSession: applied.current || reloadStarted,
         lectureWorkInFlight: isLectureWorkInFlight(),
       });
       if (!decision.apply) return;
+      // Sent somewhere — a tap or link (on any moment), or a return that
+      // landed on a screen other than the one they left — is known before
+      // anything is logged as applied.
+      if (sentFromOutside(Date.now()) || (moment === 'resumed' && (liveRoute ?? routeRef.current) !== leftFrom)) {
+        track('ota_reload_aborted', { moment, reason: 'launch-destination', screen: liveRoute ?? 'unknown' });
+        return;
+      }
 
       // ── Circuit breaker, across reloads ──────────────────
       // applied.current only survives this session; reloadAsync ends it. If a
@@ -134,11 +167,9 @@ export function AppUpdateGate() {
         track('ota_reload_blocked', { moment, tries: guard?.tries ?? 0 });
         return;
       }
-      if (runningId) {
-        setDeviceItem(RELOAD_GUARD_KEY, serializeReloadGuard(nextReloadGuard(guard, runningId)));
-      }
 
       applied.current = true;
+      reloadStarted = true;
       // track() is fire-and-forget and reloadAsync tears down this JS context
       // immediately, so the insert can die in flight. This event is the ONLY
       // evidence that an update was ever applied — without it, adoption is
@@ -146,9 +177,46 @@ export function AppUpdateGate() {
       //
       // A brief, bounded wait lets the request leave. Best effort by design:
       // delivery is worth a fraction of a second, never a stalled launch.
-      track('ota_applied', { moment, screen: routeRef.current ?? 'unknown' });
+      track('ota_applied', { moment, screen: liveRoute ?? routeRef.current ?? 'unknown' });
       await new Promise((resolve) => setTimeout(resolve, TRACK_FLUSH_MS));
-      await Updates.reloadAsync();
+
+      // Judged again at the last moment: the wait above is long enough for a
+      // reminder tap to open its task, or a recording to start. ota_applied
+      // has already left by now, so an abort is logged against it.
+      const last = decideUpdate({
+        isUpdatePending: pending,
+        enabled: enabledRef.current,
+        moment,
+        pathname: liveRoute ?? routeRef.current,
+        alreadyAppliedThisSession: false,
+        lectureWorkInFlight: isLectureWorkInFlight(),
+      });
+      const here = liveRoute ?? routeRef.current;
+      const sentElsewhere = sentFromOutside(Date.now()) || (moment === 'resumed' && here !== leftFrom);
+      if (!last.apply || sentElsewhere) {
+        track('ota_reload_aborted', {
+          moment, reason: sentElsewhere ? 'launch-destination' : last.reason, screen: here ?? 'unknown',
+        });
+        // Nothing was reloaded, so nothing is spent: a later real resume may
+        // still apply the update. No further cold-start attempt, though — the
+        // student has already moved.
+        applied.current = false;
+        reloadStarted = false;
+        mountedAt.current = Number.NEGATIVE_INFINITY;
+        return;
+      }
+      // Counted only for a reload that is really about to happen, so an
+      // aborted one never uses up the bundle's attempts.
+      if (runningId) {
+        setDeviceItem(RELOAD_GUARD_KEY, serializeReloadGuard(nextReloadGuard(guard, runningId)));
+      }
+      // The launch URL comes back after the reload: stamped so a share link
+      // that opened this session is not opened again (lib/shareLinks.ts).
+      markReloading();
+      await Updates.reloadAsync().catch((err: unknown) => {
+        clearReloading();
+        throw err;
+      });
     } catch {
       // Never let an update attempt break a launch. Falling back to the
       // two-launch path is the whole point of it being a fallback.
@@ -186,9 +254,29 @@ export function AppUpdateGate() {
 
   // Coming back from the background: they already walked away from whatever
   // they were doing, so a restart costs nothing they were in the middle of.
+  //
+  // Only a real departure counts. 'inactive' is a system sheet or the app
+  // switcher on top of the app — Apple's payment sheet, a permission prompt,
+  // the photo picker — so it neither starts nor ends a trip away, and a trip
+  // shorter than MIN_AWAY_MS is someone stepping out mid-task (lib/appUpdate.ts).
+  // A trip that began during lecture work never counts (AwayTrip.countable).
+  // An app launched straight into the background (a background upload, a
+  // notification action) has been away since it started.
+  const trip = useRef<AwayTrip | null>(
+    AppState.currentState === 'background' ? noteBackground(null, Date.now(), isLectureWorkInFlight()) : null,
+  );
+  const leftFrom = useRef<string | null>(AppState.currentState === 'background' ? pathname : null);
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void attempt('resumed');
+      if (state === 'background') {
+        if (!trip.current) leftFrom.current = liveRoute;
+        trip.current = noteBackground(trip.current, Date.now(), isLectureWorkInFlight());
+        return;
+      }
+      if (state !== 'active') return;
+      const ended = trip.current;
+      trip.current = null;
+      if (isRealResume(ended, Date.now())) void attempt('resumed', leftFrom.current);
     });
     return () => sub.remove();
   }, [attempt]);

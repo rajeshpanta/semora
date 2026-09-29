@@ -18,7 +18,7 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Haptics from 'expo-haptics';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  resolveShare, importSharedCourse,
+  resolveShare, importSharedCourse, isMyOwnShare,
   stashPendingShareToken, readPendingShareToken, clearPendingShareToken,
   type SharedCourseSnapshot, type ShareResolveStatus,
 } from '@/lib/shareCourse';
@@ -45,7 +45,7 @@ import { track } from '@/lib/analytics';
 
 type LoadState =
   | { phase: 'loading' }
-  | { phase: 'ready'; snapshot: SharedCourseSnapshot }
+  | { phase: 'ready'; snapshot: SharedCourseSnapshot; own: boolean }
   | { phase: 'invalid'; status: Exclude<ShareResolveStatus, 'ok'> }
   | { phase: 'error'; message: string };
 
@@ -93,13 +93,19 @@ export default function JoinScreen() {
     if (!token) return;
     setState({ phase: 'loading' });
     try {
-      const { status, snapshot } = await resolveShare(token);
+      // In parallel, so a classmate's preview waits no longer than it did
+      // before; isMyOwnShare never throws and answers false on any error.
+      const [{ status, snapshot }, own] = await Promise.all([resolveShare(token), isMyOwnShare(token)]);
       if (status !== 'ok' || !snapshot) {
         setState({ phase: 'invalid', status: status as Exclude<ShareResolveStatus, 'ok'> });
         return;
       }
-      setState({ phase: 'ready', snapshot });
-      track('share_course_join_opened', { screen: 'join', tasks: snapshot.tasks?.length ?? 0 });
+      setState({ phase: 'ready', snapshot, own });
+      track('share_course_join_opened', { screen: 'join', tasks: snapshot.tasks?.length ?? 0, own });
+      // The owner has nothing to import, so THIS token, parked before sign-in,
+      // has done its job: kept, it would reopen this screen after every
+      // sign-in. A different parked token (a friend's) is left alone.
+      if (own && readPendingShareToken() === token) clearPendingShareToken();
     } catch (err: any) {
       setState({ phase: 'error', message: err?.message ?? 'Could not load this shared course.' });
     }
@@ -243,26 +249,44 @@ export default function JoinScreen() {
                   </View>
                 </View>
 
-                <Text style={[styles.blurb, { color: colors.ink3 }]}>
-                  This adds a private copy to your semester — every deadline, ready to
-                  track. You can edit or delete anything after.
-                </Text>
+                {state.own ? (
+                  <>
+                    <Text style={[styles.blurb, { color: colors.ink3 }]}>
+                      This is your own share link. Classmates who open it get a private copy of
+                      this course — it is already in your semester.
+                    </Text>
+                    <TouchableOpacity
+                      style={[styles.primaryBtn, { backgroundColor: colors.brand }]}
+                      onPress={handleClose}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.primaryBtnText}>Done</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <Text style={[styles.blurb, { color: colors.ink3 }]}>
+                      This adds a private copy to your semester — every deadline, ready to
+                      track. You can edit or delete anything after.
+                    </Text>
 
-                <TouchableOpacity
-                  style={[styles.primaryBtn, { backgroundColor: colors.brand }, importing && { opacity: 0.6 }]}
-                  onPress={handleImport}
-                  disabled={importing}
-                  activeOpacity={0.85}
-                >
-                  {importing ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <>
-                      <FontAwesome name="plus" size={14} color="#fff" />
-                      <Text style={styles.primaryBtnText}>Add to my semester</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.primaryBtn, { backgroundColor: colors.brand }, importing && { opacity: 0.6 }]}
+                      onPress={handleImport}
+                      disabled={importing}
+                      activeOpacity={0.85}
+                    >
+                      {importing ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <>
+                          <FontAwesome name="plus" size={14} color="#fff" />
+                          <Text style={styles.primaryBtnText}>Add to my semester</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  </>
+                )}
               </>
             );
           })()}

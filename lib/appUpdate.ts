@@ -31,6 +31,18 @@
  * Anything else waits. An update that arrives mid-session is simply held until
  * one of those two moments comes around, which for most people is their next
  * visit — still strictly better than the launch after that.
+ *
+ * ─── WHAT "LEFT" MEANS ──────────────────────────────────────
+ * The first version counted every return to 'active' as a resume. On iOS the
+ * app also passes through 'inactive' and back while a system sheet sits on
+ * top of it — Apple's payment sheet, the notification and camera prompts, the
+ * photo picker — and none of that is leaving. In the week to 2026-09-24 that
+ * restarted 18 new students in their first minutes: two mid-purchase (the
+ * success screen never showed), three at the notification prompt, four in the
+ * middle of a first scan. So a resume now needs a real trip to the background
+ * AND enough time away that whatever was on screen is plausibly abandoned (see
+ * MIN_AWAY_MS). Android has no 'inactive': its permission dialogs and the Play
+ * purchase sheet report 'background', which is what the time rule is for.
  */
 
 export type UpdateMoment = 'cold-start' | 'resumed' | 'mid-session';
@@ -44,13 +56,38 @@ export type UpdateMoment = 'cold-start' | 'resumed' | 'mid-session';
  * where a restart would strand someone in a half-finished state they would
  * have to begin again — and being bounced to the start of sign-up is exactly
  * the kind of thing that reads as the app breaking.
+ *
+ * The paywall, the scan and the syllabus review hand the student to something
+ * outside the app (the purchase sheet, the camera, Photos or Files, a mail app
+ * for a reset link) and expect them back in the same place, so a restart
+ * there throws away a purchase screen, a picked file or unsaved tasks.
  */
 export const NEVER_RELOAD_ROUTES = [
   '/lecture/record',
   '/lecture/new',
   '/onboarding',
   '/sign-in',
+  '/forgot-password',
+  '/reset-password',
   '/settings/lms-connect',
+  '/paywall',
+  '/scan',
+  '/syllabus',
+  // Forms that hold what the student typed only in memory: someone who went
+  // to Canvas or Safari to copy the details comes back to finish them.
+  '/task/new',
+  '/course/new',
+  '/semester',
+  '/grading',
+  // Where a share link lands (lib/shareLinks.ts): a reload there replays the
+  // link and app/+native-intent.tsx sends the replay to Today, so the invite
+  // the student just tapped would vanish under them. /redeem is reached from
+  // Me, not by a link: a student who leaves to copy a code from Messages and
+  // comes back must not lose what they were typing.
+  '/invite',
+  '/join',
+  '/collaborate',
+  '/redeem',
 ] as const;
 
 export function isProtectedRoute(pathname: string | null | undefined): boolean {
@@ -60,6 +97,17 @@ export function isProtectedRoute(pathname: string | null | undefined): boolean {
   );
 }
 
+/**
+ * Where a cold start may reload: the screen the app opens on by itself.
+ *
+ * A launch that lands anywhere else was sent there — a reminder tap opens its
+ * task, a link opens its page — and a reload restarts at Today, after the
+ * notification that carried the destination has been consumed. In the week to
+ * 2026-09-24, 9 of 21 reminder taps that launched the app ended on Today this
+ * way instead of the task.
+ */
+export const COLD_START_ROUTES = ['/'] as const;
+
 export interface UpdateDecision {
   apply: boolean;
   reason:
@@ -67,6 +115,7 @@ export interface UpdateDecision {
     | 'no-update-pending'
     | 'kill-switch-off'
     | 'protected-route'
+    | 'launch-destination'
     | 'unsafe-moment'
     | 'already-applied'
     | 'recording-in-flight';
@@ -103,6 +152,9 @@ export function decideUpdate(input: {
   if (!input.isUpdatePending) return { apply: false, reason: 'no-update-pending' };
   if (input.moment === 'mid-session') return { apply: false, reason: 'unsafe-moment' };
   if (isProtectedRoute(input.pathname)) return { apply: false, reason: 'protected-route' };
+  if (input.moment === 'cold-start' && !(COLD_START_ROUTES as readonly string[]).includes(input.pathname ?? '')) {
+    return { apply: false, reason: 'launch-destination' };
+  }
   return { apply: true, reason: 'applying' };
 }
 
@@ -116,8 +168,86 @@ export function decideUpdate(input: {
  */
 export const FETCH_TIMEOUT_MS = 4000;
 
-/** The app_promos key that arms this. Absent or inactive means do nothing. */
-export const AUTO_UPDATE_FLAG_KEY = 'auto_update_reload';
+/**
+ * How long the app must have been in the background before coming back counts
+ * as "resumed".
+ *
+ * Every system sheet, and every Android dialog or purchase sheet, is over in
+ * well under this. A student who switched to Messages or Mail for a moment and
+ * came back to finish a task is still in the middle of it; five minutes away is
+ * a new visit.
+ */
+export const MIN_AWAY_MS = 5 * 60 * 1000;
+
+/** One stretch in the background, from the first 'background' report. */
+export interface AwayTrip {
+  since: number;
+  /**
+   * False when the app went to the background in the middle of lecture work.
+   * A locked phone recording a class is the app doing the student's task, not
+   * the student walking away: when they stop from the lock screen and open the
+   * app to see the lecture, a restart would throw them off it. That happened
+   * once in the week to 2026-09-24, after a 57-minute recording.
+   */
+  countable: boolean;
+}
+
+/**
+ * A 'background' report. An open trip is kept, never restarted: iOS also
+ * reports 'background' on its way BACK to the foreground (RCTAppState maps
+ * WillEnterForeground to it), and restarting the clock there would make every
+ * return look like zero seconds away.
+ */
+export function noteBackground(
+  trip: AwayTrip | null,
+  now: number,
+  lectureWorkInFlight: boolean,
+): AwayTrip {
+  return trip ?? { since: now, countable: !lectureWorkInFlight };
+}
+
+// ── Sent here from outside ─────────────────────────────────
+//
+// A notification tap or a link that opens the app on the screen the student
+// already left (the reminder for the task they had open) looks, by route
+// alone, like nobody moved. The tap is still a destination: a reload loses it,
+// because the new JS context never hears about the response. The handlers mark
+// the moment; the gate treats a resume within the window as sent elsewhere.
+let externalNavigationAt = Number.NEGATIVE_INFINITY;
+export const EXTERNAL_NAVIGATION_WINDOW_MS = 5000;
+
+export function noteExternalNavigation(now: number = Date.now()): void {
+  externalNavigationAt = now;
+}
+
+export function sentFromOutside(now: number): boolean {
+  return now - externalNavigationAt < EXTERNAL_NAVIGATION_WINDOW_MS;
+}
+
+/**
+ * Is this return to the foreground a real resume?
+ *
+ * `trip` is the stretch in the background that just ended, or null if the app
+ * never got there — 'inactive' is a sheet or the app switcher on top of the
+ * app, and does not start one.
+ */
+export function isRealResume(trip: AwayTrip | null, now: number): boolean {
+  if (!trip || !trip.countable || !Number.isFinite(trip.since)) return false;
+  return now - trip.since >= MIN_AWAY_MS;
+}
+
+/**
+ * The app_promos key that arms this. Absent or inactive means do nothing.
+ *
+ * v2 because the rule changed under the same switch's feet: every bundle that
+ * counts a system sheet as a resume reads the original 'auto_update_reload',
+ * and that includes the bundle built into the 1.15.1 binary, which is what every
+ * fresh install runs for its whole first session. Migration 155 turns that key
+ * off and this one on, so the old rule stops restarting students as each
+ * app next launches (a running app keeps the value it already read) rather
+ * than when the next binary ships. The old key must never be turned back on.
+ */
+export const AUTO_UPDATE_FLAG_KEY = 'auto_update_reload_v2';
 
 /**
  * How long after mount a reload still counts as a "cold start".

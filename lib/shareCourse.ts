@@ -152,6 +152,30 @@ export async function resolveShare(token: string): Promise<ResolvedShare> {
   return { status, snapshot };
 }
 
+/**
+ * True when the signed-in user is the one who SHARED this link.
+ *
+ * Once Universal Links ship (1.15.2), a sender who taps their own
+ * semoraai.com/join/<token> bubble in Messages opens the app instead of the web
+ * page, and without this would be offered "Add to my semester" for their own
+ * course — a duplicate, and for a free student a course-cap error.
+ * course_shares is owner-only under RLS (migration 026, "owner reads own course
+ * shares"), so this returns a row for the owner and nothing for anyone else.
+ * Any error answers false: the screen then behaves exactly as it did before.
+ */
+export async function isMyOwnShare(token: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('course_shares')
+      .select('token')
+      .eq('token', token)
+      .maybeSingle();
+    return !error && !!data;
+  } catch {
+    return false;
+  }
+}
+
 // Coerce an arbitrary snapshot task `type` to a valid TaskType (the sender
 // could be a newer build). Unknown → 'other', matching the parser's fallback.
 function coerceTaskType(t: unknown): TaskType {

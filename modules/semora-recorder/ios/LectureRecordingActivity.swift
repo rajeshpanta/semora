@@ -192,6 +192,28 @@ final class LectureActivityController {
     }
   }
 
+  /// The microphone could not be restarted: light the screen and show the
+  /// activity (lock screen, expanded Dynamic Island) with a sound, on top of
+  /// "Microphone stopped". Local updates may alert from iOS 16.2.
+  @available(iOS 16.2, *)
+  func alertMicStopped(title: String, body: String) {
+    guard let activity, let last = lastState else { return }
+    // As in setMicStopped: a clock still counting forward on its own is frozen
+    // where it had got to, never set back to the last update's figure.
+    let elapsed = !last.paused && !last.micStopped
+      ? last.elapsedSeconds + max(0, Int(Date().timeIntervalSince(last.measuredAt)))
+      : last.elapsedSeconds
+    let state = LectureRecordingAttributes.ContentState(
+      elapsedSeconds: elapsed, savedSeconds: last.savedSeconds,
+      paused: last.paused, micStopped: true, measuredAt: Date())
+    lastState = state
+    lastSentAt = Date()
+    let alert = AlertConfiguration(title: "\(title)", body: "\(body)", sound: .default)
+    Task {
+      await activity.update(.init(state: state, staleDate: LectureActivityController.staleDate()), alertConfiguration: alert)
+    }
+  }
+
   func end() {
     guard let activity else { return }
     self.activity = nil

@@ -2,7 +2,7 @@
   "expo": {
     "name": "Semora",
     "slug": "semora",
-    "version": "1.15.1",
+    "version": "1.15.2",
     "runtimeVersion": {
       "policy": "fingerprint"
     },
@@ -26,10 +26,14 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.rajeshpanta.syllabussnap",
-      "buildNumber": "61",
+      "buildNumber": "62",
       "appleTeamId": "7T9897GFKH",
       "usesAppleSignIn": true,
+      "associatedDomains": [
+        "applinks:semoraai.com"
+      ],
       "entitlements": {
+        "com.apple.developer.usernotifications.time-sensitive": true,
         "com.apple.security.application-groups": [
           "group.com.rajeshpanta.syllabussnap"
         ]

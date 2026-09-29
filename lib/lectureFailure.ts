@@ -154,3 +154,19 @@ export function segmentSeqFromFilename(name: string): number | null {
   const seq = Number(match[1]);
   return Number.isInteger(seq) && seq >= 0 ? seq : null;
 }
+
+/**
+ * The part of a native error that says what went wrong.
+ *
+ * expo-modules wraps the OS error as "Calling the 'x' function has failed
+ * → Caused by: …", and the OS's own reason (an OSStatus such as 561017449)
+ * comes last. Cutting the whole string at 120 characters kept the wrapper and
+ * dropped the reason. The innermost cause is kept instead; lectureSession
+ * redacts and caps it before it is logged.
+ */
+export function failureText(error: unknown): string {
+  const text = String(error);
+  const marker = '→ Caused by: ';
+  const at = text.lastIndexOf(marker);
+  return (at >= 0 ? text.slice(at + marker.length) : text).slice(0, 300);
+}

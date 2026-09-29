@@ -7,6 +7,12 @@
  */
 export const ES: Record<string, string> = {
   // ── AI tutor: threads, starters, photo attach, sharing (1.8) ───────────
+  // The English was reworded from "Pick a course above" to "Choose a course
+  // from the context bar" and the key went stale, so the Tutor's empty state
+  // rendered in English for every Spanish student. Both forms are kept: the
+  // old one may still be on a screen that has not been rebuilt.
+  'Ask across every course — your deadlines are already here. Choose a course from the context bar to add its syllabus and notes.':
+    'Pregunta sobre todos tus cursos: tus entregas ya están aquí. Elige un curso en la barra de contexto para añadir su programa y tus apuntes.',
   'Ask across every course — your deadlines are already here. Pick a course above to add its syllabus and notes.': 'Pregunta sobre todos tus cursos: tus entregas ya están aquí. Elige un curso arriba para añadir su programa y tus apuntes.',
   'Answers are grounded in this course’s syllabus, deadlines, grades, and any notes you attach above.': 'Las respuestas se basan en el programa, las entregas y las notas de este curso, y en los apuntes que añadas arriba.',
   'What should I work on tonight?': '¿En qué debería trabajar esta noche?',
@@ -1379,6 +1385,10 @@ export const ES: Record<string, string> = {
   'CANVAS SETUP · STEP 1 OF 2': 'CONFIGURAR CANVAS · PASO 1 DE 2',
   'CANVAS SETUP · STEP 2 OF 2': 'CONFIGURAR CANVAS · PASO 2 DE 2',
   'Connect Canvas to Semora': 'Conecta Canvas con Semora',
+  // The Moodle twin was never added, so a Spanish-speaking Moodle student
+  // read an English headline on the one screen that asks them to do something.
+  'Connect Moodle to Semora': 'Conecta Moodle con Semora',
+  'Connect Blackboard to Semora': 'Conecta Blackboard con Semora',
   'Set this up once. Semora will keep your dated Canvas assignments and events updated when an instructor changes a deadline.': 'Configúralo una sola vez. Semora mantendrá actualizadas tus tareas y eventos de Canvas con fecha cuando un profesor cambie una entrega.',
   'First, open Canvas in a web browser': 'Primero, abre Canvas en un navegador web',
   'Use your school’s Canvas website—the place where you normally see courses and assignments. The Canvas Student app does not show this private feed link.': 'Usa el sitio web de Canvas de tu institución, donde normalmente ves tus cursos y tareas. La app Canvas Student no muestra este enlace privado.',
@@ -1407,7 +1417,10 @@ export const ES: Record<string, string> = {
   'Preview Canvas courses': 'Vista previa de cursos de Canvas',
   'Hide Calendar Feed URL': 'Ocultar URL del feed de calendario',
   'Show Calendar Feed URL': 'Mostrar URL del feed de calendario',
-  'Create a semester before connecting so imported courses have a home.': 'Crea un semestre antes de conectar Canvas para guardar los cursos importados.',
+  // The English was made provider-neutral ("before connecting") when Moodle
+  // shipped; the Spanish still named Canvas, so a Moodle student was told to
+  // connect a platform their school may not use.
+  'Create a semester before connecting so imported courses have a home.': 'Crea un semestre antes de conectar para guardar los cursos importados.',
   'Create semester →': 'Crear semestre →',
   'Create a semester before connecting Canvas so Semora knows where to add your courses.': 'Crea un semestre antes de conectar Canvas para que Semora sepa dónde agregar tus cursos.',
   'Choose the Canvas courses to add. Semora will keep their dated assignments and events refreshed automatically.': 'Elige los cursos de Canvas que quieres agregar. Semora mantendrá actualizadas automáticamente sus tareas y eventos con fecha.',
@@ -1429,6 +1442,75 @@ export const ES: Record<string, string> = {
   'Automatic Canvas Calendar Feed sync is on. Semora checks for dated assignment and event changes every few hours.': 'La sincronización automática del feed de Canvas está activada. Semora busca cambios en tareas y eventos con fecha cada pocas horas.',
   ' · Canvas checks every few hours': ' · Canvas se revisa cada pocas horas',
   ' · Reconnect required': ' · Debes volver a conectar',
+  // Every one of these is on the Moodle path and was rendering in English.
+  // Found by translating each user-facing string in that flow and keeping the
+  // ones that came back unchanged — a missing translation is not an error, so
+  // nothing else would have caught them.
+  // ── The Canvas guided paste ─────────────────────────────────────────────
+  // Measured at 24 of 46 strings translated while Moodle sat at 57 of 57, so
+  // the flow most students actually use was the one reading half in English.
+  // "Feed de calendario" matches the wording Canvas itself uses in Spanish and
+  // the instructions already in this catalogue.
+  'Your college or university': 'Tu universidad',
+  'Could not reach the school directory just now.':
+    'No se pudo acceder al directorio de universidades en este momento.',
+  'No match. Your school may use its own Canvas address.':
+    'Sin resultados. Puede que tu universidad use su propia dirección de Canvas.',
+  'Sign in to your college Canvas account on the page Semora opens.':
+    'Inicia sesión en el Canvas de tu universidad en la página que abre Semora.',
+  'In the menu down the left side, tap Calendar.':
+    'En el menú de la izquierda, toca Calendario.',
+  'Scroll to the very bottom of the panel on the right.':
+    'Baja del todo en el panel de la derecha.',
+  'Tap Calendar Feed. A box opens with a long link starting webcal://':
+    'Toca Feed de calendario. Se abre un cuadro con un enlace largo que empieza por webcal://',
+  'Press and hold that link, then tap Copy.':
+    'Mantén pulsado ese enlace y toca Copiar.',
+  'Come back to Semora. The link drops into the box below by itself.':
+    'Vuelve a Semora. El enlace se pega solo en el cuadro de abajo.',
+  'On your laptop, open': 'En tu laptop, abre',
+  'Open Settings, then Canvas or LMS Sync, and choose Canvas.':
+    'Abre Ajustes, luego Canvas o Sincronización LMS, y elige Canvas.',
+  'Actually, let me try on my phone': 'Mejor lo intento en el móvil',
+  'I know my Canvas web address': 'Sé la dirección de mi Canvas',
+  'Use this address': 'Usar esta dirección',
+  'Search for my school instead': 'Mejor buscar mi universidad',
+  'Calendar Feed': 'Feed de calendario',
+  'Open my Canvas calendar': 'Abrir mi calendario de Canvas',
+  'Different school': 'Otra universidad',
+  'Where to find your link': 'Dónde encontrar tu enlace',
+  'Nothing that looks like a Canvas link is on your clipboard yet. Copy it in Canvas first.':
+    'Todavía no hay nada que parezca un enlace de Canvas en el portapapeles. Cópialo primero en Canvas.',
+  'Link looks right — checking Canvas…': 'El enlace parece correcto: comprobando Canvas…',
+  'That is a Canvas page, not the Calendar Feed link.':
+    'Esa es una página de Canvas, no el enlace del Feed de calendario.',
+
+  // Restoring the third option on the language screen. Its label was already
+  // in this catalogue (line ~516) from when the screen last had it, which is
+  // its own small piece of evidence that removing it was not deliberate.
+  'Follow your phone, and switch when it does': 'Sigue a tu teléfono y cambia cuando él cambie',
+  'Hide the link': 'Ocultar el enlace',
+  // The hero on the LMS settings screen, shown to every student whichever
+  // platform they use — so a Moodle student read it in English too.
+  'Connecting takes about a minute, once. Every assignment, exam and due date from your courses arrives in Semora and stays right on its own. You choose which courses come across.':
+    'Conectar lleva alrededor de un minuto, una sola vez. Cada tarea, examen y fecha de entrega de tus asignaturas llega a Semora y se mantiene al día sola. Tú eliges qué asignaturas entran.',
+  'When a due date moves, you already know.': 'Cuando una fecha de entrega cambia, ya lo sabes.',
+  // Canvas-only, and missing for the same reason.
+  'After connecting, Semora keeps watching this feed — including for next semester\u2019s courses. You will not have to reconnect Canvas.':
+    'Después de conectar, Semora sigue revisando este calendario, incluidas las asignaturas del próximo semestre. No tendrás que volver a conectar Canvas.',
+  'Show the link': 'Mostrar el enlace',
+  'Which one does your school use?': '¿Cuál usa tu universidad?',
+  'All three are free, with no limit on the number of classes.':
+    'Las tres son gratis, sin límite de asignaturas.',
+  'Uses the calendar link your school already gives you':
+    'Usa el enlace del calendario que tu universidad ya te da',
+  'Rechecks automatically every few hours': 'Se revisa solo cada pocas horas',
+  'Different semester?': '¿Otro semestre?',
+  'Import anyway': 'Importar de todas formas',
+  'The import failed.': 'La importación falló.',
+  // The Moodle form was translated and the Canvas one never was, which is the
+  // reverse of what anyone would guess.
+  'Lock in free Canvas sync': 'Asegura la sincronización gratis de Canvas',
   'Recent attempts make it clear what changed and what needs attention.': 'Los intentos recientes muestran qué cambió y qué requiere atención.',
   'Reconnected': 'Conexión restablecida',
   'Remind me before due date': 'Recordarme antes de la entrega',
@@ -1477,6 +1559,8 @@ export const ES: Record<string, string> = {
   'The widget reads only the schedule already on your device': 'El widget solo consulta el horario que ya está en tu dispositivo',
   'This account returned no courses Semora can import.': 'Esta cuenta no devolvió cursos que Semora pueda importar.',
   'This adds a private copy to your semester — every deadline, ready to track. You can edit or delete anything after.': 'Esto agrega una copia privada a tu semestre con todas las entregas listas para seguir. Después podrás editar o eliminar lo que quieras.',
+  // app/join.tsx, the sender opening their own share link (Universal Links make that open the app).
+  'This is your own share link. Classmates who open it get a private copy of this course — it is already in your semester.': 'Este es tu propio enlace para compartir. Tus compañeros que lo abran reciben una copia privada de este curso; tú ya lo tienes en tu semestre.',
   'This deck couldn\'t be loaded. It may have been deleted.': 'No se pudo cargar este mazo. Es posible que se haya eliminado.',
   'This flashcard will be permanently removed.': 'Esta tarjeta se eliminará de forma permanente.',
   'This invite link is incomplete.': 'Este enlace de invitación está incompleto.',
@@ -2301,6 +2385,16 @@ export const ES: Record<string, string> = {
   'LMS connection is required': 'Se necesita una conexión con la plataforma.',
   'Reconnect this LMS before enabling automatic sync.': 'Vuelve a conectar esta plataforma antes de activar la sincronización automática.',
   'Invalid action': 'Acción no válida.',
+  // app/redeem.tsx + the Me tab link to it: typing a code / pasting a link
+  // after installing from the App Store, which drops the shared URL.
+  'Have an invite code?': '¿Tienes un código de invitación?',
+  'Invite code': 'Código de invitación',
+  'Enter the code a friend gave you, or paste a Semora link a classmate sent you.':
+    'Escribe el código que te dio un amigo o pega un enlace de Semora que te envió un compañero.',
+  'Code or link': 'Código o enlace',
+  'Invite code or link': 'Código o enlace de invitación',
+  'That doesn\'t look like a Semora code or link. Check it and try again.':
+    'Eso no parece un código o enlace de Semora. Revísalo e inténtalo de nuevo.',
   // Returned by supabase/functions/redeem-referral
   'A referral code is required': 'Falta el código de invitación.',
   'Invalid referral code': 'Código de invitación no válido.',

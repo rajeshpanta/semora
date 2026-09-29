@@ -29,6 +29,8 @@ import {
 } from '@/lib/lectureCaptureRules';
 import type { CaptureEngine, ClosedPart, EngineEvent } from '@/lib/lectureCapture/types';
 import { autoSaveAlert } from '@/lib/lectureAutoSaveCopy';
+import { captureFailureProps, sanitizeCaptureDiagnostics } from '@/lib/lectureCaptureError';
+import { redactSensitiveText } from '@/lib/redact';
 
 export type SessionPhase = 'idle' | 'starting' | 'recording' | 'paused' | 'finishing';
 export type AutoSaveReason = 'limit' | 'wall_clock' | 'storage' | 'lock_screen_stop';
@@ -487,7 +489,13 @@ export class LectureSession {
         const lostSeconds = this.state.micStoppedAt ? Math.round((event.at - this.state.micStoppedAt) / 1000) : null;
         this.micPausedNotified = false;
         this.patch({ micStoppedAt: null, needsDecision: false });
-        d.track('lecture_capture_resumed', { lostSeconds, appActive: d.appIsActive() });
+        // How it came back (native builds that say): the trigger, how many
+        // attempts it took and what the first one was refused with.
+        d.track('lecture_capture_resumed', {
+          ...(sanitizeCaptureDiagnostics(event.info) ?? {}),
+          lostSeconds,
+          appActive: d.appIsActive(),
+        });
         return;
       }
       case 'inputChanged': {
@@ -503,10 +511,22 @@ export class LectureSession {
         return;
       }
       case 'failure':
-        d.track('lecture_capture_failed', { stage: event.stage, code: event.code });
+        // With the step and the OS error, never without: the two 1.15.1
+        // RESTART_FAILED_INTERRUPTION_ENDED of 2026-09 arrived as a bare code,
+        // and which call iOS refused (and with what) could not be told. The
+        // redacted message goes too, under the key the 2026-09-25 OTA builds
+        // already send, so one query reads every version.
+        d.track('lecture_capture_failed', {
+          ...captureFailureProps(event),
+          stage: event.stage,
+          code: event.code,
+          message: event.message ? redactSensitiveText(event.message, { maxLength: 500 }) || null : null,
+        });
         // The recorder could not close or file a part: that audio is gone, and
         // saying so beats a transcript with a silent hole. capture_prepare
-        // failures are start failures and are reported by start() itself.
+        // failures are a start that failed (reported by start() itself) or a
+        // restart that failed (RESTART_FAILED_*: the microphone is marked
+        // stopped, and the parts closed before it are all on disk).
         if (event.stage === 'capture_finalize' || event.stage === 'local_commit') {
           this.patch({ hadGap: true, partLost: true });
         }

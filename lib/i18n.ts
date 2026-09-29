@@ -17,12 +17,30 @@ function lookupKey(value: string) {
 
 const ES_BY_LOWER = new Map(Object.entries(ES).map(([english, spanish]) => [lookupKey(english), spanish]));
 
+/**
+ * The best of the STUDENT'S preferred languages that Semora actually speaks.
+ *
+ * getLocales() is an ordered list, not a single value — iOS and Android both
+ * hand over the whole Settings preference order, and on web it is
+ * navigator.languages. Reading only [0] meant a phone set to French first and
+ * Spanish second got English, which is the worst of the three for that student
+ * and is common in exactly the markets Moodle lives in: Catalan then Spanish in
+ * Barcelona, Dutch then French in Belgium, Basque then Spanish in Bilbao.
+ *
+ * Walking the list is what every platform's own resolver does. The first
+ * supported language wins; if none of them is one of ours, English.
+ */
 function systemLocale(): AppLocale {
   try {
-    return getLocales()[0]?.languageCode?.toLowerCase() === 'es' ? 'es' : 'en';
+    for (const entry of getLocales() ?? []) {
+      const code = entry?.languageCode?.toLowerCase();
+      if (code === 'es') return 'es';
+      if (code === 'en') return 'en';
+    }
   } catch {
-    return 'en';
+    // The bridge is unavailable; English is the base language.
   }
+  return 'en';
 }
 
 export function resolveLocale(preference: AppLanguagePreference): AppLocale {
@@ -93,6 +111,25 @@ function spanishPattern(input: string): string | null {
   }
   match = input.match(/^(Canvas|Moodle) checks every few hours$/);
   if (match) return `${match[1]} revisa cada pocas horas`;
+  // The connection card's sync line, as it is ACTUALLY rendered.
+  //
+  // The catalogue carried ' · Canvas checks every few hours' as a standalone
+  // key, which never matched anything: LocalizedReactNative JOINS a Text's
+  // string children and translates the result, so what reaches here is
+  // "Updated 2h ago · Canvas checks every few hours". The line has therefore
+  // been English for Canvas users as well, not just Moodle ones. The time
+  // prefix is translated on its own and stitched back.
+  match = input.match(/^(.+?) · (Canvas|Moodle|Blackboard|Google Classroom) checks every few hours$/);
+  if (match) return `${translate(match[1], 'es')} · ${match[2]} se revisa cada pocas horas`;
+  match = input.match(/^(.+?) · Reconnect required$/);
+  if (match) return `${translate(match[1], 'es')} · Debes volver a conectar`;
+  match = input.match(/^(.+?) · Automatic sync on$/);
+  if (match) return `${translate(match[1], 'es')} · Sincronización automática activada`;
+  match = input.match(/^(.+?) · Device sync only$/);
+  if (match) return `${translate(match[1], 'es')} · Solo sincronización en el dispositivo`;
+  // The time prefixes those four stitch back in.
+  match = input.match(/^Updated (\d+)([mhd]) ago$/);
+  if (match) return `Actualizado hace ${match[1]}${match[2] === 'm' ? ' min' : match[2] === 'h' ? ' h' : ' d'}`;
   match = input.match(/^Prefilled from the dates in this (Canvas|Moodle) coursework\.$/);
   if (match) return `Precargado con las fechas de este trabajo de ${match[1]}.`;
   match = input.match(/^Open (.+)$/);
