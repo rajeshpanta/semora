@@ -22,7 +22,8 @@ import { useSession } from '@/app/_layout';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
-import { accountSubtitle, hasEmailPassword, primaryProvider } from '@/lib/user';
+import { accountSubtitle } from '@/lib/user';
+import { accountVerificationProvider } from '@/lib/accountVerification';
 import { useAppStore } from '@/store/appStore';
 import { removeLmsCredentials } from '@/lib/lmsCredentialStore';
 
@@ -72,8 +73,8 @@ export default function DeleteAccountScreen() {
   const { session } = useSession();
   const user = session?.user;
   const email = user?.email ?? '';
-  const usesPassword = hasEmailPassword(user);
-  const provider = primaryProvider(user);
+  const provider = accountVerificationProvider(user);
+  const usesPassword = provider === 'email';
   const isPro = useAppStore((s) => s.isPro);
 
   const [password, setPassword] = useState('');
@@ -92,8 +93,16 @@ export default function DeleteAccountScreen() {
   };
 
   const handleDelete = async () => {
-    if (!email) {
+    if (loading) return;
+    // Apple may not supply an email on repeat authorization. OAuth verifies
+    // the account ID; only password verification needs an email address.
+    if (!user?.id || (usesPassword && !email)) {
       Alert.alert('Error', 'Could not determine your account. Please sign in again.');
+      return;
+    }
+
+    if (!provider) {
+      Alert.alert('Cannot verify identity', 'Could not determine your sign-in method. Please sign in again.');
       return;
     }
 
@@ -143,7 +152,7 @@ export default function DeleteAccountScreen() {
       // delete RPC below destroy the wrong account.
       const { data: { session: preAuthSession } } = await supabase.auth.getSession();
       const targetUserId = preAuthSession?.user.id;
-      if (!targetUserId) {
+      if (!targetUserId || targetUserId !== user.id) {
         Alert.alert('Error', 'Could not determine your account. Please sign in again.');
         setLoading(false);
         return;
@@ -162,6 +171,12 @@ export default function DeleteAccountScreen() {
       } else {
         try {
           await reauthOAuth();
+          // Browser Apple OAuth navigates away; starting that redirect is NOT
+          // completed verification. Never run deletion against the old session.
+          if (Platform.OS === 'web' && provider === 'apple') {
+            setLoading(false);
+            return;
+          }
         } catch (err: any) {
           // User cancelled the OAuth sheet — bail silently.
           if (OAUTH_CANCEL_CODES.has(err?.code)) {
@@ -299,9 +314,14 @@ export default function DeleteAccountScreen() {
             </Text>
           </>
         ) : (
-          <Text style={[styles.hint, { color: colors.ink3 }]}>
-            For security, we'll ask you to sign in again with {providerLabel} before deleting your account. Tap the button below to start.
-          </Text>
+          <>
+            <Text style={[styles.hint, { color: colors.ink3 }]}>
+              For security, we'll ask you to sign in again with {providerLabel} before deleting your account. Tap the button below to start.
+            </Text>
+            <Text style={[styles.hint, { color: colors.ink3 }]}>
+              No Semora password is needed. Use the same Apple or Google account you use to sign in.
+            </Text>
+          </>
         )}
 
         <TouchableOpacity
