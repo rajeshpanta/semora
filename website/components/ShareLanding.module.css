@@ -148,3 +148,68 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* ── After-install fallback (code / link to carry across the App Store) ── */
+.afterInstall {
+  position: relative;
+  margin: 26px auto 0;
+  max-width: 360px;
+  padding: 18px 18px 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.codeLabel {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--glow-light);
+}
+
+.code {
+  margin: 0 0 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: clamp(1.25rem, 5vw, 1.55rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #fff;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.copy {
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.copy:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.steps {
+  margin: 14px 0 0;
+  padding-left: 1.2em;
+  text-align: left;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.steps li + li {
+  margin-top: 4px;
+}
+
+.steps strong {
+  color: #fff;
+  font-weight: 650;
+}

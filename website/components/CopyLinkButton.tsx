@@ -19,17 +19,20 @@ export function CopyLinkButton({
   url,
   label,
   copiedLabel,
+  className,
 }: {
   url: string;
   label: string;
   copiedLabel: string;
+  /** Defaults to the DeviceGrid pill; ShareLanding passes its own. */
+  className?: string;
 }) {
   const [copied, setCopied] = useState(false);
 
   return (
     <button
       type="button"
-      className={styles.copy}
+      className={className ?? styles.copy}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(url);

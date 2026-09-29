@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import styles from './ShareLanding.module.css';
+import { CopyLinkButton } from './CopyLinkButton';
 import { downloadPath, APP_URL, APP_STORE_ID, SITE_NAME } from '@/lib/semora-facts';
 
 /**
@@ -51,6 +52,14 @@ const COPY: Record<
   },
 };
 
+/**
+ * The canonical origin every share link is minted on (lib/constants.ts
+ * MARKETING_URL in the app, SHARE_LINK_BASE in share-course). Hardcoded rather
+ * than SITE_URL because a preview deploy's SITE_URL is a vercel.app host the
+ * app does not recognise, and the copied link has to paste into the app.
+ */
+const SHARE_ORIGIN = 'https://semoraai.com';
+
 /** semora://invite?code=... — handled by every app version ever shipped. */
 export function shareDeepLink(kind: ShareKind, value: string): string {
   const copy = COPY[kind];
@@ -73,6 +82,7 @@ export function ShareLanding({ kind, value }: { kind: ShareKind; value: string }
   const encoded = encodeURIComponent(value);
   const deepLink = shareDeepLink(kind, value);
   const webLink = `${APP_URL}/${copy.appPath}?${copy.deepLinkParam}=${encoded}`;
+  const shareUrl = `${SHARE_ORIGIN}/${copy.appPath}/${encoded}`;
 
   return (
     <div className={styles.wrap}>
@@ -97,6 +107,35 @@ export function ShareLanding({ kind, value }: { kind: ShareKind; value: string }
           <a href={deepLink} className={styles.secondary}>
             Already have the app? Open it
           </a>
+        </div>
+
+        {/* The App Store drops the link. A student who installs from here
+            opens Semora with no idea they were invited, and the code is gone.
+            Two ways back, both stated plainly: tap the same link again once
+            the app is installed (it then opens in Semora), or carry the code
+            across by hand. */}
+        <div className={styles.afterInstall}>
+          {kind === 'invite' ? (
+            <>
+              <p className={styles.codeLabel}>Your invite code</p>
+              <p className={styles.code}>{value}</p>
+              <CopyLinkButton url={value} label="Copy code" copiedLabel="Copied" className={styles.copy} />
+            </>
+          ) : (
+            <CopyLinkButton url={shareUrl} label="Copy this link" copiedLabel="Copied" className={styles.copy} />
+          )}
+          <ol className={styles.steps}>
+            <li>Get {SITE_NAME} and create your account.</li>
+            <li>
+              Come back to this link. If it does not open {SITE_NAME} by itself, tap{' '}
+              <strong>Already have the app? Open it</strong>.
+            </li>
+            <li>
+              {kind === 'invite'
+                ? <>Or, in {SITE_NAME}, open <strong>Me</strong> then <strong>Have an invite code?</strong> and enter the code above.</>
+                : <>Or, in {SITE_NAME}, open <strong>Me</strong> then <strong>Have an invite code?</strong> and paste the link.</>}
+            </li>
+          </ol>
         </div>
 
         <p className={styles.fallback}>
