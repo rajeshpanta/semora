@@ -1,0 +1,10 @@
+# SMOKE - the app launches, the runner can see it, and the native probe answers.
+launch
+sleep 6
+clear
+where
+shot smoke
+rootstack smoke expect=1
+tab 5
+sleep 1.5
+shot smoke-me

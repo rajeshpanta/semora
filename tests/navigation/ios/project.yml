@@ -1,0 +1,43 @@
+# XcodeGen spec for the navigation regression runner. Generated project and all
+# build output go OUTSIDE the repo (tools/run.sh passes --project <tmp dir>), so
+# nothing here touches .gitignore or ios/ (both are runtime-fingerprint inputs).
+name: NavGate
+options:
+  bundleIdPrefix: local.semora.navgate
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_STYLE: Automatic
+targets:
+  NavGateHost:
+    type: application
+    platform: iOS
+    sources: [Host]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: local.semora.navgate.host
+        # Generated at build time, so xcodegen writes no Info.plist into the repo.
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: NavGate
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+  NavGateUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: NavGateHost
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: local.semora.navgate.uitests
+        TEST_TARGET_NAME: NavGateHost
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  NavGateUITests:
+    build:
+      targets:
+        NavGateHost: all
+        NavGateUITests: [test]
+    test:
+      targets: [NavGateUITests]

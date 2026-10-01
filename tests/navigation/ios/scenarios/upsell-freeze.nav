@@ -1,0 +1,25 @@
+# NAV-UPSELL - the Pro upgrade sheet hit from inside a sheet screen (New Task's
+# Pro-only reminder chip), then the sheet screen closed: the app must still
+# respond. Needs a FREE (non-Pro) account; skipped otherwise.
+# Labels not yet validated against a free account (Priority 4 does that).
+require-free-account
+launch
+sleep 5
+tapif Cerrar/Close
+tab 3
+sleep 1
+tap Nueva tarea/New task
+tapif No es para una clase concreta/Not for a specific class
+sleep 2.5
+tap 1 día antes/1 day before
+sleep 2
+shot upsell-after-wall
+pulldown 0.12 0.95
+sleep 2
+tab 5
+sleep 1.5
+scroll 0.7 0.5
+sleep 1
+cycle after-upsell|2|Configuración/Settings;Carga académica/Workload|1.5
+expect after-upsell row_not_found=0
+expect after-upsell no_back_button=0

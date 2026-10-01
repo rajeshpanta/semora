@@ -1,0 +1,19 @@
+# NAV-TABFREEZE - Back (or edge swipe) from a first-level screen, then another
+# tab immediately; then check the tab content still responds. Outcomes:
+# CONTENT_RESPONDS, CONTENT_FROZEN (tab bar works, content does not), or
+# POP_UNDONE (the pushed screen is still/again in front; Back then tested).
+# Upstream react-native-screens #4361. Reproduced in a stand-in app; Priority 5
+# is to confirm it in Semora. The row is one the Me tab shows without scrolling.
+# "tap" trials relaunch first, because on iOS 27 the native Back button only
+# works once per launch on 4.16.0.
+launch
+sleep 5
+tapif Cerrar/Close
+tabfreeze tab-freeze-back|4|Carga académica/Workload|1|5|tap|yes
+tabfreeze tab-freeze-swipe|4|Carga académica/Workload|1|5|swipe|no
+expect tab-freeze-back trials=4
+expect tab-freeze-swipe trials=4
+expect tab-freeze-back frozen=0
+expect tab-freeze-swipe frozen=0
+expect tab-freeze-back pop_undone_back_dead=0
+expect tab-freeze-swipe pop_undone_back_dead=0

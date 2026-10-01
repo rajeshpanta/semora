@@ -1,0 +1,38 @@
+name: MProbe
+options:
+  bundleIdPrefix: com.scratch.mprobe
+  deploymentTarget:
+    iOS: "17.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_STYLE: Automatic
+targets:
+  MProbeHost:
+    type: application
+    platform: iOS
+    sources: [Host]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.scratch.mprobe.host
+  MProbeUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [UITests]
+    dependencies:
+      - target: MProbeHost
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.scratch.mprobe.uitests
+        TEST_TARGET_NAME: MProbeHost
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  MProbeUITests:
+    build:
+      targets:
+        MProbeHost: all
+        MProbeUITests: [test]
+    test:
+      targets: [MProbeUITests]

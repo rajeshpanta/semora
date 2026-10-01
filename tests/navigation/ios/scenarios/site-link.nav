@@ -1,0 +1,30 @@
+# NAV-LINK - a semoraai.com link that the app claims (/invite/...) but cannot
+# read (a value over 256 characters), opened while a screen is pushed over the
+# tabs. app/+native-intent.tsx sends it home: the root stack must end at
+# exactly one screen, on the tabs. Needs a build with the applinks entitlement
+# (1.15.2 or later) and the simulator able to fetch semoraai.com's association
+# file; without them iOS opens Safari and this scenario fails at assert-tabs.
+launch
+sleep 5
+tapif Cerrar/Close
+rootstack launch expect=1
+note 1 - from Settings -> Canvas & LMS
+openurl semora://settings/lms
+sleep 4
+rootstack on-settings-lms expect=2
+openurl https://semoraai.com/invite/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+sleep 4
+tapif Cerrar/Close
+assert-tabs site-link-home
+rootstack site-link-home expect=1
+note 2 - again, from a screen two levels deep
+openurl semora://settings/lms
+sleep 3
+openurl semora://settings/lms-connect?provider=blackboard
+sleep 4
+rootstack two-deep expect=3
+openurl https://semoraai.com/invite/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+sleep 4
+tapif Cerrar/Close
+assert-tabs site-link-home-2
+rootstack site-link-home-2 expect=1
