@@ -31,6 +31,7 @@ import { useColors } from '@/lib/theme';
 import { useProUpsell } from '@/components/ProUpsellHost';
 import { useResponsive } from '@/lib/responsive';
 import { getAppLocale } from '@/lib/i18n';
+import { returnToTabs } from '@/lib/tabNavigation';
 import { useAppStore } from '@/store/appStore';
 import { useCourses, useTaskStats, useSemesters } from '@/lib/queries';
 import { track } from '@/lib/analytics';
@@ -61,7 +62,7 @@ export default function ShareSemesterScreen() {
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(tabs)' as any);
+      returnToTabs();
     }
   };
 

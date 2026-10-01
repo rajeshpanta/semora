@@ -23,6 +23,7 @@ import {
   type SharedCourseSnapshot, type ShareResolveStatus,
 } from '@/lib/shareCourse';
 import { isFreeLimitError } from '@/lib/syllabus';
+import { returnToTabs } from '@/lib/tabNavigation';
 import { COLORS, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useProUpsell } from '@/components/ProUpsellHost';
@@ -81,9 +82,9 @@ export default function JoinScreen() {
       stashPendingShareToken(token);
       track('share_course_join_signed_out', { screen: 'join' });
       // Leave this screen so AuthGate's redirect (onboarding / sign-in) takes
-      // over cleanly. Replacing to (tabs) lets AuthGate bounce a signed-out
+      // over cleanly. Returning to the tabs lets AuthGate bounce a signed-out
       // user to the right place without this modal lingering on the stack.
-      router.replace('/(tabs)' as any);
+      returnToTabs();
       return;
     }
   }, [session, sessionLoading, token]);
@@ -181,7 +182,7 @@ export default function JoinScreen() {
 
   const handleClose = () => {
     if (router.canGoBack()) router.back();
-    else router.replace('/(tabs)' as any);
+    else returnToTabs();
   };
 
   // ── Render ────────────────────────────────────────────────

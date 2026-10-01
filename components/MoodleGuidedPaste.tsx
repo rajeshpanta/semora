@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { router } from 'expo-router';
 import { ActivityIndicator, AppState, Linking, Platform, StyleSheet, View } from 'react-native';
 import { Text, TextInput, TouchableOpacity } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useColors } from '@/lib/theme';
 import { track } from '@/lib/analytics';
+import { returnToTabs } from '@/lib/tabNavigation';
 import { probeLmsSite } from '@/lib/lms';
 import {
   MOODLE_FEED_HINTS,
@@ -566,7 +566,7 @@ export function MoodleGuidedPaste({
                 screen: 'lms_connect', provider: 'moodle', source,
                 attempts: progress.attempts, funnel_step: 'help', reason: 'escalation',
               });
-              router.push('/scan' as never);
+              returnToTabs('scan', 'push');
             }}
             accessibilityRole="button"
             accessibilityLabel="Scan a syllabus instead"

@@ -19,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import { format } from 'date-fns';
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
+import { returnToTabs } from '@/lib/tabNavigation';
 import { COLORS, FONTS, TASK_TYPE_LABELS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
@@ -338,7 +339,7 @@ export default function SyllabusReviewScreen() {
         'Saved!',
         `${savedCount} task${savedCount !== 1 ? 's' : ''} added to your course.${savedCount < accepted.length ? ` (${accepted.length - savedCount} failed)` : ''}`,
         [{ text: 'View Course', onPress: () => router.replace(`/course/${params.courseId}` as any) },
-         { text: 'Go Home', onPress: () => router.replace('/(tabs)' as any) }],
+         { text: 'Go Home', onPress: () => returnToTabs() }],
       );
     } catch (error: any) {
       reportError(error, { screen: 'review', title: 'Could Not Save Your Tasks', message: error.message || 'Failed to save tasks.', onRetry: () => { void handleSave(); } });

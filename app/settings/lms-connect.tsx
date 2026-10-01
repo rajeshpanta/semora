@@ -40,6 +40,7 @@ import {
   type LmsCredential,
 } from '@/lib/lms';
 import { track } from '@/lib/analytics';
+import { returnToTabs } from '@/lib/tabNavigation';
 import { CanvasGuidedPaste } from '@/components/CanvasGuidedPaste';
 import { MoodleGuidedPaste } from '@/components/MoodleGuidedPaste';
 import {
@@ -529,7 +530,7 @@ export default function LmsConnectScreen() {
           message,
           deadEnd
             ? [
-                { text: 'Scan a syllabus', onPress: () => router.push('/scan' as never) },
+                { text: 'Scan a syllabus', onPress: () => returnToTabs('scan', 'push') },
                 { text: 'Not now', style: 'cancel' as const },
               ]
             : undefined,
@@ -767,7 +768,7 @@ export default function LmsConnectScreen() {
               screen: 'lms_connect', source, lane: 'connect',
               courses: chosen.length, deadlines: result.processed,
             });
-            router.replace('/(tabs)' as any);
+            returnToTabs();
           },
         }],
       );
