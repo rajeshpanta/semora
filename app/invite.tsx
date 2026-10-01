@@ -17,6 +17,7 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, PROMO_SURFACE, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
+import { returnToTabs } from '@/lib/tabNavigation';
 import { useSession } from '@/app/_layout';
 import { redeem, stashPendingReferral, type RedeemStatus } from '@/lib/referral';
 import { track } from '@/lib/analytics';
@@ -79,7 +80,7 @@ export default function InviteScreen() {
     if (loading) return;
     if (!code) {
       if (router.canGoBack()) router.back();
-      else router.replace('/(tabs)' as any);
+      else returnToTabs();
     }
   }, [loading, code]);
 
@@ -116,7 +117,7 @@ export default function InviteScreen() {
 
   const handleClose = () => {
     if (router.canGoBack()) router.back();
-    else router.replace('/(tabs)' as any);
+    else returnToTabs();
   };
 
   // While the session is resolving, or a blank code is being bounced, show a
@@ -163,7 +164,7 @@ export default function InviteScreen() {
               <TouchableOpacity
                 style={[styles.primaryBtn, { backgroundColor: colors.brand }]}
                 activeOpacity={0.85}
-                onPress={() => router.replace('/(tabs)' as any)}
+                onPress={() => returnToTabs()}
               >
                 <Text style={styles.primaryBtnText}>Start using Pro</Text>
               </TouchableOpacity>

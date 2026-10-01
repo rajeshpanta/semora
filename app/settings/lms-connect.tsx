@@ -41,6 +41,7 @@ import {
 } from '@/lib/lms';
 import { track } from '@/lib/analytics';
 import { claimFirstOpen, LMS_SWITCH_OPTIONS } from '@/lib/canvasLanes';
+import { returnToTabs } from '@/lib/tabNavigation';
 import { CanvasGuidedPaste } from '@/components/CanvasGuidedPaste';
 import { MoodleGuidedPaste } from '@/components/MoodleGuidedPaste';
 import {
@@ -580,7 +581,7 @@ export default function LmsConnectScreen() {
           message,
           deadEnd
             ? [
-                { text: 'Scan a syllabus', onPress: () => router.push('/scan' as never) },
+                { text: 'Scan a syllabus', onPress: () => returnToTabs('scan', 'push') },
                 { text: 'Not now', style: 'cancel' as const },
               ]
             : undefined,
@@ -900,7 +901,7 @@ export default function LmsConnectScreen() {
               screen: 'lms_connect', source, lane: 'connect',
               courses: chosen.length, deadlines: result.processed,
             });
-            router.replace('/(tabs)' as any);
+            returnToTabs();
           },
         }],
       );
@@ -1193,7 +1194,7 @@ export default function LmsConnectScreen() {
                         track('lms_setup_scan_offered', {
                           screen: 'lms_connect', provider, source, funnel_step: 'help', reason: 'admin_token',
                         });
-                        router.push('/scan' as never);
+                        returnToTabs('scan', 'push');
                       }}
                       accessibilityRole="button"
                       accessibilityLabel="Scan a syllabus instead"

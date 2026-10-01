@@ -23,6 +23,7 @@ import type { ProductOrSubscription } from 'react-native-iap';
 import { COLORS, PROMO_SURFACE, FONTS, SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useColors } from '@/lib/theme';
 import { useResponsive } from '@/lib/responsive';
+import { returnToTabs } from '@/lib/tabNavigation';
 import { useAppStore } from '@/store/appStore';
 import { getProducts, purchaseProduct, restorePurchases, validateAfterPurchase, PRODUCT_IDS, setupPurchaseListeners, setPurchaseAnalyticsContext } from '@/lib/purchases';
 import { getServerEntitlement } from '@/lib/entitlementServer';
@@ -438,14 +439,14 @@ export default function PaywallScreen() {
           params: { courseId: params.courseId, count: params.count ?? '' },
         } as any);
       } else {
-        router.replace('/(tabs)' as any);
+        returnToTabs();
       }
       return;
     }
     if (router.canGoBack()) {
       router.back();
     } else {
-      router.replace('/(tabs)' as any);
+      returnToTabs();
     }
   };
 

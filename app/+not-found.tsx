@@ -3,9 +3,20 @@ import { Text } from '@/components/LocalizedReactNative';
 import {
   Link,
   Stack } from 'expo-router';
-import { View,
+import { Platform,
+  View,
   StyleSheet,
 } from 'react-native';
+import { returnToTabs } from '@/lib/tabNavigation';
+
+// On a phone the link returns to the tabs already underneath instead of
+// pushing a second tab navigator (lib/tabNavigation.ts). On the web the Link
+// navigates exactly as it always has.
+const goHome = (e: { preventDefault(): void }) => {
+  if (Platform.OS === 'web') return;
+  e.preventDefault();
+  returnToTabs();
+};
 
 export default function NotFoundScreen() {
   return (
@@ -13,7 +24,7 @@ export default function NotFoundScreen() {
       <Stack.Screen options={{ title: translate('Oops!') }} />
       <View style={styles.container}>
         <Text style={styles.title}>This screen doesn't exist.</Text>
-        <Link href="/" style={styles.link}>
+        <Link href="/" style={styles.link} onPress={goHome}>
           <Text style={styles.linkText}>Go to home screen!</Text>
         </Link>
       </View>

@@ -15,6 +15,7 @@ import { track } from '@/lib/analytics';
 import { canvasFreePromoQuery, canvasOfferFor, lmsConnectionsQuery, lmsRepairLabel } from '@/lib/lms';
 import { lmsOfferName } from '@/lib/canvasPromo';
 import { canvasOfferDestination, trackCanvasOfferTapped } from '@/lib/canvasFunnel';
+import { returnToTabs } from '@/lib/tabNavigation';
 import { CanvasOfferImpression } from '@/components/CanvasOfferImpression';
 
 /**
@@ -104,12 +105,12 @@ export default function SyllabusAddedScreen() {
   const goScan = () => {
     if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     track('next_class_started', { screen: 'syllabus_added', course_count: courseCount });
-    router.replace('/(tabs)/scan' as any);
+    returnToTabs('scan');
   };
 
   const goCourse = () => {
     if (params.courseId) router.replace(`/course/${params.courseId}` as any);
-    else router.replace('/(tabs)' as any);
+    else returnToTabs();
   };
 
   const goHome = () => {
@@ -126,7 +127,7 @@ export default function SyllabusAddedScreen() {
       } as any);
       return;
     }
-    router.replace('/(tabs)' as any);
+    returnToTabs();
   };
 
   const goCanvas = () => {

@@ -1,5 +1,6 @@
 import { readReloadingAt } from '@/lib/reloadMarker';
 import { isSemoraSiteUrl, routeSystemUrl } from '@/lib/shareLinks';
+import { goHomeInPlace } from '@/lib/homeHandler';
 
 /**
  * Universal Links: https://semoraai.com/{invite,join,collaborate}/<value>.
@@ -37,7 +38,12 @@ export function redirectSystemPath({ path, initial }: { path: string; initial: b
     // Every ordinary launch and every semora:// / sign-in URL passes through
     // here too. Answer those without a synchronous keychain read.
     if (!isSemoraSiteUrl(path)) return path;
-    return routeSystemUrl(path, initial, initial ? readReloadingAt() : null, Date.now());
+    const to = routeSystemUrl(path, initial, initial ? readReloadingAt() : null, Date.now());
+    // While the app runs, Today is the tab navigator already there
+    // (lib/homeHandler.ts); '' tells expo-router not to navigate as well.
+    // A cold start, or nothing registered yet, returns '/' as before.
+    if (to === '/' && !initial && goHomeInPlace()) return '';
+    return to;
   } catch {
     // Same rule as routeSystemUrl, without anything that could throw again:
     // our own site goes home, everything else passes through untouched.

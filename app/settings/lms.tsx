@@ -30,6 +30,7 @@ import {
   syncLmsConnection,
 } from '@/lib/lms';
 import { track } from '@/lib/analytics';
+import { returnToTabs } from '@/lib/tabNavigation';
 import { LMS_SWITCH_OPTIONS } from '@/lib/canvasLanes';
 import { SCREEN_MAX_WIDTH } from '@/lib/constants';
 import { useResponsive } from '@/lib/responsive';
@@ -461,7 +462,7 @@ export default function LmsSettingsScreen() {
                 straight from the document. */}
             {provider.id === 'blackboard' && (
               <TouchableOpacity
-                onPress={() => router.push('/scan' as never)}
+                onPress={() => returnToTabs('scan', 'push')}
                 style={styles.scanInstead}
                 accessibilityRole="button"
               >

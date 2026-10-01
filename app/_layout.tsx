@@ -13,6 +13,7 @@ import { useFonts } from 'expo-font';
 import { Stack,
   useRouter,
   useSegments,
+  useNavigationContainerRef,
   router as globalRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
@@ -92,6 +93,8 @@ import { LMS_LABELS } from '@/lib/canvasPromo';
 import { WebAppFrame } from '@/components/WebAppFrame';
 import { AppUpdateGate } from '@/components/AppUpdateGate';
 import { noteExternalNavigation } from '@/lib/appUpdate';
+import { bindTabNavigation, resetToTabs, returnToTabs } from '@/lib/tabNavigation';
+import { setHomeHandler } from '@/lib/homeHandler';
 import { WebAlertHost } from '@/components/WebAlertHost';
 import { getAppLocale, useI18n } from '@/lib/i18n';
 import { setDefaultOptions } from 'date-fns';
@@ -1004,7 +1007,10 @@ function AuthGate({ children }: { children: React.ReactNode }) {
       } else if (pendingShare) {
         router.replace({ pathname: '/join', params: { token: pendingShare } } as any);
       } else {
-        router.replace('/(tabs)');
+        // One tab navigator, freshly mounted for whoever just signed in: not a
+        // second copy on top of the old one, and not the old one reused (it may
+        // hold the previous account's screens).
+        resetToTabs();
       }
     }
   }, [session, loading, segments, inPasswordReset, hasOnboarded, recordingPhase]);
@@ -1097,10 +1103,10 @@ function NotificationActionBridge() {
         });
 
         if (route.mode === 'push') globalRouter.push(route.path as any);
-        // A push this build cannot route replaces the whole stack with the
-        // tabs — which, mid-lecture, closed the recorder. While a recording is
-        // live the tap simply opens the app where it is.
-        else if (!getLectureSession().isActive()) globalRouter.replace(route.path as any);
+        // A push this build cannot route goes home (route.path is always
+        // PUSH_FALLBACK_PATH here) — which, mid-lecture, closed the recorder.
+        // While a recording is live the tap simply opens the app where it is.
+        else if (!getLectureSession().isActive()) returnToTabs();
         return;
       }
 
@@ -1328,6 +1334,12 @@ function RootLayoutNav() {
   const scheme = useResolvedScheme();
   const colors = useColors();
   const { locale, t } = useI18n();
+  // lib/tabNavigation.ts reads and pops the root stack through this container;
+  // the ref is the same stable object on every render.
+  bindTabNavigation(useNavigationContainerRef());
+  // app/+native-intent.tsx sends a semoraai.com link that is not a share link
+  // home through this, instead of letting expo-router push another tab navigator.
+  setHomeHandler(() => { returnToTabs(); return true; });
   // date-fns reads this default for every screen/helper that does not supply
   // an explicit locale, including relative dates and calendar day names.
   setDefaultOptions({ locale: locale === 'es' ? es : enUS });
