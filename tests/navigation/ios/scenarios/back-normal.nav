@@ -1,0 +1,16 @@
+# NAV-BACK-NORMAL - one tab navigator (fresh launch). Open a first-level screen
+# from the Me tab and leave it with the native Back button, 10 times.
+# Known failure on react-native-screens 4.16.0 + iOS 27: Back is dead from the
+# second cycle on (see README "Expected results").
+launch
+sleep 5
+tapif Cerrar/Close
+rootstack start expect=1
+tab 5
+sleep 1.5
+scroll 0.7 0.5
+sleep 1
+cycle back-normal|10|Configuración/Settings;Carga académica/Workload|1.5
+rootstack end expect=1
+expect back-normal dead=0
+expect back-normal stuck=0

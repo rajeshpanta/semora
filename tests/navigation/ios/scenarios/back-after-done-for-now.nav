@@ -1,0 +1,26 @@
+# NAV-BACK-DUP - the iOS 26 trigger. Finish the "added" screen with
+# "Done for now" (app/syllabus/added.tsx), which used to leave a SECOND tab
+# navigator on the root stack, then open/Back 10 times.
+# The deep link reproduces the real stack: [(tabs), syllabus/added].
+# Today's 'Canvas Sync is already yours' sheet opens 1.2 s after a Today mounts
+# (twice per device at most); a fresh tab navigator mounts a fresh Today.
+launch
+sleep 5
+tapif Cerrar/Close
+openurl semora://syllabus/added?count=3
+sleep 4
+scroll 0.7 0.4
+sleep 1.5
+tap Listo por ahora/Done for now
+sleep 3
+tapif Cerrar/Close
+assert-tabs done-for-now
+rootstack after-done-for-now expect=1
+tab 5
+sleep 1.5
+scroll 0.7 0.5
+sleep 1
+cycle back-after-trigger|10|Configuración/Settings;Carga académica/Workload|1.5
+rootstack end expect=1
+expect back-after-trigger dead=0
+expect back-after-trigger stuck=0

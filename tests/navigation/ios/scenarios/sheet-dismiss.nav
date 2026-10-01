@@ -1,0 +1,23 @@
+# NAV-SHEET - open a sheet screen (New Task, presentation 'modal'), dismiss it by
+# swiping down, and check the app still responds (screens open from the Me tab).
+launch
+sleep 5
+tapif Cerrar/Close
+tab 3
+sleep 1
+tap Nueva tarea/New task
+tapif No es para una clase concreta/Not for a specific class
+sleep 2.5
+where
+shot new-task-open
+pulldown 0.12 0.95
+sleep 2
+where
+rootstack after-sheet expect=1
+tab 5
+sleep 1.5
+scroll 0.7 0.5
+sleep 1
+cycle after-sheet|2|Configuración/Settings;Carga académica/Workload|1.5
+expect after-sheet row_not_found=0
+expect after-sheet no_back_button=0

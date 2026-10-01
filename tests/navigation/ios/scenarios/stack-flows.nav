@@ -1,0 +1,43 @@
+# NAV-STACK - every write-free way back to the tabs, one after another in one
+# session. After each, the root stack must hold exactly one screen (the tabs).
+# Before Priority 2 the flows left the root stack at 2, 3, 5 and 6 screens in turn.
+# Today's 'Canvas Sync is already yours' sheet opens 1.2 s after a Today mounts
+# (twice per device at most); a fresh tab navigator mounts a fresh Today.
+launch
+sleep 5
+tapif Cerrar/Close
+rootstack launch expect=1
+note 1 - added.tsx 'Done for now'
+openurl semora://syllabus/added?count=3
+sleep 4
+scroll 0.7 0.4
+sleep 1.5
+tap Listo por ahora/Done for now
+sleep 3
+tapif Cerrar/Close
+assert-tabs done-for-now
+rootstack done-for-now expect=1
+note 2 - added.tsx 'Add another class'
+openurl semora://syllabus/added?count=3
+sleep 4.5
+tap Agregar otra clase/Add another class
+sleep 3
+tapif Cerrar/Close
+assert-tabs add-another-class
+rootstack add-another-class expect=1
+note 3 - +not-found 'Go to home screen!'
+openurl semora://this-screen-does-not-exist
+sleep 3
+tap Ir a la pantalla de inicio/Go to home screen!
+sleep 3
+tapif Cerrar/Close
+assert-tabs not-found-home
+rootstack not-found-home expect=1
+note 4 - paywall post-scan close without a course
+openurl semora://paywall?context=postScan&count=3
+sleep 4
+tap Cerrar/Close
+sleep 3
+tapif Cerrar/Close
+assert-tabs paywall-postscan-close
+rootstack paywall-postscan-close expect=1
