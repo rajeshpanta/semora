@@ -1456,32 +1456,36 @@ export const ES: Record<string, string> = {
     'No se pudo acceder al directorio de universidades en este momento.',
   'No match. Your school may use its own Canvas address.':
     'Sin resultados. Puede que tu universidad use su propia dirección de Canvas.',
-  'Sign in to your college Canvas account on the page Semora opens.':
-    'Inicia sesión en el Canvas de tu universidad en la página que abre Semora.',
-  'In the menu down the left side, tap Calendar.':
-    'En el menú de la izquierda, toca Calendario.',
-  'Scroll to the very bottom of the panel on the right.':
-    'Baja del todo en el panel de la derecha.',
-  'Tap Calendar Feed. A box opens with a long link starting webcal://':
-    'Toca Feed de calendario. Se abre un cuadro con un enlace largo que empieza por webcal://',
-  'Press and hold that link, then tap Copy.':
-    'Mantén pulsado ese enlace y toca Copiar.',
-  'Come back to Semora. The link drops into the box below by itself.':
-    'Vuelve a Semora. El enlace se pega solo en el cuadro de abajo.',
+  'Open your college\'s Canvas and **sign in**. Not sure where it is? Search your college below.':
+    'Abre el Canvas de tu universidad e **inicia sesión**. ¿No sabes dónde está? Busca tu universidad más abajo.',
+  'In the menu down the left side, tap **Calendar**.':
+    'En el menú de la izquierda, toca **Calendario**.',
+  'Scroll to the **very bottom** of the panel on the right.':
+    'Desplázate **hasta el final** del panel de la derecha.',
+  'Tap **Calendar Feed**. A box opens with a long link starting webcal://':
+    'Toca **Feed de calendario**. Se abre un cuadro con un enlace largo que empieza por webcal://',
+  '**Select the whole link** and copy it.':
+    '**Selecciona el enlace completo** y cópialo.',
+  'Come back to this tab and **paste it into the box at the top**.':
+    'Vuelve a esta pestaña y **pégalo en el cuadro de arriba**.',
+  'Come back to Semora and **paste it into the box at the top**. If iOS asks, tap Allow Paste.':
+    'Vuelve a Semora y **pégalo en el cuadro de arriba**. Si iOS lo pide, toca Permitir pegar.',
+  'Come back to Semora and **paste it into the box at the top**.':
+    'Vuelve a Semora y **pégalo en el cuadro de arriba**.',
   'On your laptop, open': 'En tu laptop, abre',
   'Open Settings, then Canvas or LMS Sync, and choose Canvas.':
     'Abre Ajustes, luego Canvas o Sincronización LMS, y elige Canvas.',
-  'Actually, let me try on my phone': 'Mejor lo intento en el móvil',
+  'Actually, let me try on my phone': 'Mejor lo intento en mi teléfono',
   'I know my Canvas web address': 'Sé la dirección de mi Canvas',
   'Use this address': 'Usar esta dirección',
-  'Search for my school instead': 'Mejor buscar mi universidad',
+  'Search for my school instead': 'Prefiero buscar mi universidad',
   'Calendar Feed': 'Feed de calendario',
   'Open my Canvas calendar': 'Abrir mi calendario de Canvas',
   'Different school': 'Otra universidad',
   'Where to find your link': 'Dónde encontrar tu enlace',
   'Nothing that looks like a Canvas link is on your clipboard yet. Copy it in Canvas first.':
     'Todavía no hay nada que parezca un enlace de Canvas en el portapapeles. Cópialo primero en Canvas.',
-  'Link looks right — checking Canvas…': 'El enlace parece correcto: comprobando Canvas…',
+  'Link looks right — checking Canvas…': 'El enlace parece correcto. Verificando Canvas…',
   'That is a Canvas page, not the Calendar Feed link.':
     'Esa es una página de Canvas, no el enlace del Feed de calendario.',
 
@@ -3013,6 +3017,7 @@ export const ES: Record<string, string> = {
   // Canvas-shared strings the Moodle component reuses. None of these existed
   // in this file before, so they were reaching Spanish students in English.
   'Which school?': '\u00bfQu\u00e9 universidad?',
+  "Don't have your link? Search your college to find it": '\u00bfNo tienes tu enlace? Busca tu universidad para encontrarlo',
   'Paste from clipboard': 'Pegar desde el portapapeles',
   'Nice. This takes about a minute.': 'Bien. Esto toma m\u00e1s o menos un minuto.',
   'Check my link': 'Revisar mi enlace',

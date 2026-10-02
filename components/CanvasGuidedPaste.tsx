@@ -3,6 +3,7 @@ import { ActivityIndicator, AppState, Linking, Platform, StyleSheet, View } from
 import { Text, TextInput, TouchableOpacity } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useColors } from '@/lib/theme';
+import { translate, useI18n } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
 import {
   CANVAS_FEED_HINTS,
@@ -97,6 +98,7 @@ export function CanvasGuidedPaste({
   source: string;
 }) {
   const colors = useColors();
+  const { locale } = useI18n();
   const readClipboard = useClipboardFeed();
 
   const [query, setQuery] = useState('');
@@ -348,129 +350,9 @@ export function CanvasGuidedPaste({
         </View>
       )}
 
-      {/* ── Phone lane: which school ──────────────────────── */}
-      {lane === 'phone' && !host && (
-        <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <Text style={[s.cardTitle, { color: colors.ink }]}>Which school?</Text>
-          <Text style={[s.cardIntro, { color: colors.ink2 }]}>
-              Type your college name and pick it from the list. Semora then opens your
-              school's own Canvas page for you, so you never need to know its web address.
-          </Text>
-          {!manualEntry ? (
-            <>
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                autoCapitalize="words"
-                autoCorrect={false}
-                placeholder="Your college or university"
-                placeholderTextColor={colors.ink3}
-                style={[s.input, { color: colors.ink, backgroundColor: colors.paper, borderColor: colors.line }]}
-              />
-              {searching && <ActivityIndicator style={{ marginTop: 10 }} />}
-              {!searching && schools.map((school) => (
-                <TouchableOpacity
-                  key={school.domain}
-                  onPress={() => chooseSchool(school)}
-                  style={[s.schoolRow, { borderColor: colors.line }]}
-                >
-                  <View style={{ flex: 1 }}>
-                    <Text style={[s.schoolName, { color: colors.ink }]} numberOfLines={2}>{school.name}</Text>
-                    <Text style={[s.schoolHost, { color: colors.ink2 }]}>{school.domain}</Text>
-                  </View>
-                  <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
-                </TouchableOpacity>
-              ))}
-              {!searching && query.trim().length >= 3 && schools.length === 0 && (
-                <Text style={[s.note, { color: colors.ink2 }]}>
-                  {searchFailed
-                    ? 'Could not reach the school directory just now.'
-                    : 'No match. Your school may use its own Canvas address.'}
-                </Text>
-              )}
-              <TouchableOpacity onPress={() => setManualEntry(true)} style={s.switchLane}>
-                <Text style={[s.link, { color: colors.brand }]}>I know my Canvas web address</Text>
-              </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <TextInput
-                value={manualHost}
-                onChangeText={setManualHost}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-                placeholder="yourschool.instructure.com"
-                placeholderTextColor={colors.ink3}
-                style={[s.input, { color: colors.ink, backgroundColor: colors.paper, borderColor: colors.line }]}
-              />
-              <TouchableOpacity
-                disabled={!manualCanvasHost(manualHost)}
-                onPress={chooseManualHost}
-                style={[s.primary, { backgroundColor: manualCanvasHost(manualHost) ? colors.brand : colors.line }]}
-              >
-                <Text style={s.primaryText}>Use this address</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => setManualEntry(false)} style={s.switchLane}>
-                <Text style={[s.link, { color: colors.brand }]}>Search for my school instead</Text>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
-      )}
-
-      {/* ── Phone lane: fetch the link ────────────────────── */}
-      {lane === 'phone' && !!host && (
-        <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <View style={s.rowHead}>
-            <FontAwesome name="university" size={15} color={colors.brand} />
-            <Text style={[s.cardTitle, { color: colors.ink, marginBottom: 0 }]} numberOfLines={1}>
-              {progress.schoolName ?? host}
-            </Text>
-          </View>
-          <Text style={[s.cardIntro, { color: colors.ink2 }]}>
-            Semora will open {host}. Sign in if it asks, then find
-            <Text style={{ fontWeight: '700' }}> Calendar Feed</Text> in the calendar sidebar and copy the link.
-          </Text>
-          <TouchableOpacity
-            onPress={() => openCalendar(host, 'phone_lane')}
-            style={[s.primary, { backgroundColor: colors.brand }]}
-          >
-            <FontAwesome name="external-link" size={14} color="#fff" />
-            <Text style={s.primaryText}>Open my Canvas calendar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => onProgressChange({ ...progress, host: null, schoolName: null })} style={s.switchLane}>
-            <Text style={[s.link, { color: colors.brand }]}>Different school</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
       {/* ── The paste field, only once the phone lane is chosen ── */}
       {lane === 'phone' && (
         <>
-          {/* Where "what Canvas sends" used to sit. That fact belongs on the
-              screen before this one. What belongs HERE is the only thing between
-              a student and a finished connection: exactly where the link lives
-              inside Canvas, written so somebody who has never opened a Canvas
-              menu can follow it without guessing. */}
-          <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.line, marginBottom: 14 }]}>
-            <Text style={[s.cardTitle, { color: colors.ink }]}>Where to find your link</Text>
-            {[
-              'Sign in to your college Canvas account on the page Semora opens.',
-              'In the menu down the left side, tap Calendar.',
-              'Scroll to the very bottom of the panel on the right.',
-              'Tap Calendar Feed. A box opens with a long link starting webcal://',
-              'Press and hold that link, then tap Copy.',
-              'Come back to Semora. The link drops into the box below by itself.',
-            ].map((text, i) => (
-              <View key={i} style={s.step}>
-                <View style={[s.stepDot, { backgroundColor: colors.brand50 }]}>
-                  <Text style={[s.stepDotText, { color: colors.brand }]}>{i + 1}</Text>
-                </View>
-                <Text style={[s.stepText, { color: colors.ink2 }]}>{text}</Text>
-              </View>
-            ))}
-          </View>
           <Text style={[s.label, { color: colors.ink2 }]}>Paste your private Calendar Feed link</Text>
           <View style={s.secretField}>
             <TextInput
@@ -574,7 +456,141 @@ export function CanvasGuidedPaste({
               </TouchableOpacity>
             </View>
           )}
+
+          {/* Where "what Canvas sends" used to sit. That fact belongs on the
+              screen before this one. What belongs HERE is the only thing between
+              a student and a finished connection: exactly where the link lives
+              inside Canvas, written so somebody who has never opened a Canvas
+              menu can follow it without guessing. */}
+          <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.line, marginTop: 14 }]}>
+            <Text style={[s.cardTitle, { color: colors.ink }]}>Where to find your link</Text>
+            {/* **Marked** words are what the student looks for on the Canvas
+                page; the translation carries its own marks. Step 6 never said
+                the truth when it promised the link "drops in by itself": Semora
+                stopped reading the clipboard unasked (see the note above
+                absorbClipboard), so the student pastes, and iOS asks first. */}
+            {[
+              'Open your college\'s Canvas and **sign in**. Not sure where it is? Search your college below.',
+              'In the menu down the left side, tap **Calendar**.',
+              'Scroll to the **very bottom** of the panel on the right.',
+              'Tap **Calendar Feed**. A box opens with a long link starting webcal://',
+              '**Select the whole link** and copy it.',
+              Platform.OS === 'web'
+                ? 'Come back to this tab and **paste it into the box at the top**.'
+                : Platform.OS === 'ios'
+                  ? 'Come back to Semora and **paste it into the box at the top**. If iOS asks, tap Allow Paste.'
+                  : 'Come back to Semora and **paste it into the box at the top**.',
+            ].map((text, i) => (
+              <View key={i} style={s.step}>
+                <View style={[s.stepDot, { backgroundColor: colors.brand50 }]}>
+                  <Text style={[s.stepDotText, { color: colors.brand }]}>{i + 1}</Text>
+                </View>
+                <Text style={[s.stepText, { color: colors.ink2 }]}>
+                  {translate(text, locale).split('**').map((part, j) => (j % 2 === 1
+                    ? <Text key={j} style={{ fontWeight: '700', color: colors.ink }}>{part}</Text>
+                    : part))}
+                </Text>
+              </View>
+            ))}
+          </View>
         </>
+      )}
+
+      {/* ── Phone lane: which school ──────────────────────── */}
+      {lane === 'phone' && !host && (
+        <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <Text style={[s.cardTitle, { color: colors.ink }]}>Don't have your link? Search your college to find it</Text>
+          <Text style={[s.cardIntro, { color: colors.ink2 }]}>
+              Type your college name and pick it from the list. Semora then opens your
+              school's own Canvas page for you, so you never need to know its web address.
+          </Text>
+          {!manualEntry ? (
+            <>
+              <TextInput
+                value={query}
+                onChangeText={setQuery}
+                autoCapitalize="words"
+                autoCorrect={false}
+                placeholder="Your college or university"
+                placeholderTextColor={colors.ink3}
+                style={[s.input, { color: colors.ink, backgroundColor: colors.paper, borderColor: colors.line }]}
+              />
+              {searching && <ActivityIndicator style={{ marginTop: 10 }} />}
+              {!searching && schools.map((school) => (
+                <TouchableOpacity
+                  key={school.domain}
+                  onPress={() => chooseSchool(school)}
+                  style={[s.schoolRow, { borderColor: colors.line }]}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.schoolName, { color: colors.ink }]} numberOfLines={2}>{school.name}</Text>
+                    <Text style={[s.schoolHost, { color: colors.ink2 }]}>{school.domain}</Text>
+                  </View>
+                  <FontAwesome name="chevron-right" size={12} color={colors.ink3} />
+                </TouchableOpacity>
+              ))}
+              {!searching && query.trim().length >= 3 && schools.length === 0 && (
+                <Text style={[s.note, { color: colors.ink2 }]}>
+                  {searchFailed
+                    ? 'Could not reach the school directory just now.'
+                    : 'No match. Your school may use its own Canvas address.'}
+                </Text>
+              )}
+              <TouchableOpacity onPress={() => setManualEntry(true)} style={s.switchLane}>
+                <Text style={[s.link, { color: colors.brand }]}>I know my Canvas web address</Text>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TextInput
+                value={manualHost}
+                onChangeText={setManualHost}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                placeholder="yourschool.instructure.com"
+                placeholderTextColor={colors.ink3}
+                style={[s.input, { color: colors.ink, backgroundColor: colors.paper, borderColor: colors.line }]}
+              />
+              <TouchableOpacity
+                disabled={!manualCanvasHost(manualHost)}
+                onPress={chooseManualHost}
+                style={[s.primary, { backgroundColor: manualCanvasHost(manualHost) ? colors.brand : colors.line }]}
+              >
+                <Text style={s.primaryText}>Use this address</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setManualEntry(false)} style={s.switchLane}>
+                <Text style={[s.link, { color: colors.brand }]}>Search for my school instead</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      )}
+
+      {/* ── Phone lane: fetch the link ────────────────────── */}
+      {lane === 'phone' && !!host && (
+        <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
+          <View style={s.rowHead}>
+            <FontAwesome name="university" size={15} color={colors.brand} />
+            <Text style={[s.cardTitle, { color: colors.ink, marginBottom: 0 }]} numberOfLines={1}>
+              {progress.schoolName ?? host}
+            </Text>
+          </View>
+          <Text style={[s.cardIntro, { color: colors.ink2 }]}>
+            Semora will open {host}. Sign in if it asks, then find
+            <Text style={{ fontWeight: '700' }}> Calendar Feed</Text> in the calendar sidebar and copy the link.
+          </Text>
+          <TouchableOpacity
+            onPress={() => openCalendar(host, 'phone_lane')}
+            style={[s.primary, { backgroundColor: colors.brand }]}
+          >
+            <FontAwesome name="external-link" size={14} color="#fff" />
+            <Text style={s.primaryText}>Open my Canvas calendar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => onProgressChange({ ...progress, host: null, schoolName: null })} style={s.switchLane}>
+            <Text style={[s.link, { color: colors.brand }]}>Different school</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {/* ── Escalation ────────────────────────────────────── */}
