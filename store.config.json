@@ -10,47 +10,48 @@
       "es-ES": {
         "description": "Semora es un planificador académico con IA, escáner de temarios, agenda de tareas y grabadora de clases para estudiantes universitarios.\n\nEscanea un temario desde una foto o un PDF, conecta Canvas, Blackboard o Moodle, graba clases, crea transcripciones y apuntes, controla tareas, exámenes y calificaciones, y organiza todas tus fechas importantes.\n\nTú revisas todo antes de guardarlo.\n\nConvierte tu programa de curso en un semestre organizado.\n\nSemora es un planificador académico con IA para organizar tareas, exámenes, calificaciones, fechas de entrega y clases en un solo lugar.\n\nHaz una foto de tu programa de curso (syllabus), sube un PDF o pega el texto. Semora identifica tareas, exámenes, cuestionarios, proyectos, lecturas, fechas límite, horarios y ponderaciones de calificaciones.\n\nTú revisas todo antes de guardarlo.\n\nTU SEMESTRE, ORGANIZADO\n\nAbre Semora y sabrás qué hacer después.\n\n«Lo siguiente» muestra tu próxima tarea importante. Las entregas atrasadas se señalan claramente y puedes ver lo que vence hoy, esta semana y más adelante.\n\nIntroduce una calificación y Semora calcula automáticamente tu porcentaje y nota ponderada utilizando únicamente el trabajo ya evaluado.\n\nTu calendario académico organiza tareas, clases, fechas límite y horas de atención por curso.\n\nCONECTA TUS CLASES\n\nConecta Canvas, Blackboard o Moodle para importar automáticamente tus clases y tareas. Los tres están incluidos en el plan gratuito, sin límite de clases sincronizadas.\n\nComparte y únete a Espacios de Curso para mantener tareas y fechas sincronizadas con tus compañeros.\n\nESTUDIA, NO SOLO PLANIFIQUES\n\nSemora Pro incluye:\n\n• Smart Plan basado en tus fechas reales\n• Tutor con IA que entiende tus cursos y materiales\n• Grabación de clases con transcripción\n• Apuntes de estudio generados con IA\n• Tarjetas con repetición espaciada\n• Cuestionarios de práctica\n• Pronóstico de calificaciones\n• Alertas de riesgo académico\n• Planificación de carga de trabajo\n• Temporizador de enfoque\n• Recordatorios personalizables\n• Sincronización con el calendario\n• Cursos y semestres ilimitados\n• Creación de Espacios de Curso\n\nEN TODOS TUS DISPOSITIVOS\n\nTu semestre se mantiene sincronizado entre iPhone, iPad, Apple Watch y la web con una sola cuenta.\n\nAñade el widget «Lo siguiente» a tu pantalla de inicio para ver tu próxima fecha límite sin abrir Semora.\n\nEL PLAN GRATUITO NO CADUCA\n\nIncluye:\n\n• Clases ilimitadas sincronizadas desde Canvas, Blackboard o Moodle\n• Un curso añadido manualmente dentro de un semestre\n• Una acción de IA durante la vida de tu cuenta\n• Seguimiento de tareas y fechas límite\n• Seguimiento de calificaciones\n• Calendario académico\n• Recordatorios\n• Acceso a Espacios de Curso\n\nActualiza a Semora Pro para obtener cursos y semestres manuales ilimitados, más acciones de IA y herramientas avanzadas de estudio.\n\nEscanea tu temario. Organiza tu semestre. Siempre sabrás qué hacer después.\n\nSEMORA PRO\n\n4,99 $ al mes o 29,99 $ al año.\n\nSemora Pro es una suscripción de renovación automática. El pago se carga a tu Apple ID y la suscripción se renueva automáticamente salvo que desactives la renovación al menos 24 horas antes de finalizar el periodo actual. Puedes gestionarla o cancelarla desde tu Apple ID.\n\nPolítica de privacidad:\nhttps://semoraai.com/es/privacidad\n\nCondiciones de uso:\nhttps://www.apple.com/legal/internet-services/itunes/dev/stdeula/\n\n¿Preguntas?\nsemora365@gmail.com",
         "keywords": [
-          "canvas",
           "planificador",
-          "universidad",
-          "clase",
-          "recordatorio",
-          "grabadora",
-          "transcribir",
-          "tarjetas",
+          "estudio",
+          "organizador",
+          "horario",
+          "clases",
+          "examen",
           "calendario",
-          "moodle"
+          "recordatorio",
+          "resumen",
+          "grabadora"
         ],
         "releaseNotes": "Pequeñas correcciones sobre la versión 1.15:\n\n• La pantalla de bloqueo ya no muestra una clase grabándose después de que Semora se haya cerrado: ahora indica que la grabación se detuvo, para que sepas que debes volver a abrir la aplicación.\n• Valorar Semora desde la aplicación ahora abre la App Store de tu país en lugar de la de Estados Unidos.\n• Menos interrupciones: Semora ya no pide una valoración justo después de mostrarte una pantalla de suscripción.",
         "marketingUrl": "https://semoraai.com/es",
         "supportUrl": "https://semoraai.com/es/ayuda",
-        "title": "Semora: Escáner de temarios",
-        "subtitle": "Tareas, exámenes y apuntes",
+        "title": "Semora: Agenda escolar con IA",
+        "subtitle": "Tareas, apuntes y promedio",
         "privacyPolicyUrl": "https://semoraai.com/es/privacidad",
-        "promoText": "Nuevo: conecta Moodle en un minuto. Copia el enlace del calendario que tu propio Moodle ya te da: sin token y sin permiso de tu universidad. Gratis en todos los planes."
+        "promoText": "Todo tu semestre, organizado con IA. Escanea un temario o conecta Canvas, Blackboard o Moodle, y convierte tus clases en apuntes, tarjetas y cuestionarios."
       },
       "en-US": {
         "description": "Semora is an AI student planner, syllabus scanner, Canvas assignment tracker, lecture recorder, and study-notes app for college students.\n\nScan a syllabus from a photo or PDF, connect Canvas, Blackboard or Moodle, record lectures, create transcripts and notes, track homework, exams and grades, and organize every deadline in one place.\n\nYou review everything before it is saved.\n\nTurn your syllabus into an organized semester.\n\nSemora is an AI student planner for assignments, exams, grades, deadlines, classes, and study planning — all in one place.\n\nTake a photo of your syllabus, upload a PDF, or paste the text. Semora identifies assignments, exams, quizzes, projects, readings, due dates, class meetings, office hours, and grade weights.\n\nYou review everything before it's saved.\n\nSEE YOUR SEMESTER CLEARLY\n\nOpen Semora and know what matters next.\n\nNext Up shows your upcoming work. Overdue assignments are flagged clearly, and you can see what's due today, this week, and later without scrolling through a long task list.\n\nEnter a score and Semora automatically updates your weighted course grade, including your current percentage and letter grade based only on work that has actually been graded.\n\nYour academic calendar organizes deadlines, class meetings, and office hours by course.\n\nCONNECT YOUR CLASSES\n\nConnect Canvas, Blackboard, or Moodle to automatically bring your classes and assignments into Semora. All three are included on the free plan, with no limit on how many classes you sync.\n\nJoin Course Spaces shared by classmates to keep course deadlines and assignments in sync. Pro members can create and host Course Spaces.\n\nSTUDY, DON'T JUST PLAN\n\nSemora Pro includes:\n\n• Smart Plan built around your real deadlines\n• AI Tutor grounded in your syllabus and course materials\n• Lecture recording and AI study notes\n• Flashcards with spaced repetition\n• Practice quizzes\n• Grade forecasting and custom grade scales\n• Academic Risk alerts\n• Workload planning\n• Progress Insights\n• Focus timer\n• Customizable reminders\n• Calendar sync\n• Unlimited courses and semesters\n• Course Space hosting\n\nON ALL YOUR DEVICES\n\nYour semester stays synced across iPhone, iPad, Apple Watch, and the web with one account.\n\nAdd the Next Up widget to your Home Screen to see your next deadline without opening Semora.\n\nTHE FREE PLAN DOESN'T EXPIRE\n\nFree includes:\n\n• Unlimited classes synced from Canvas, Blackboard, or Moodle\n• One manually added course within one semester\n• One lifetime AI action — use it for a syllabus scan, lecture recording, or turning a document into notes\n• Assignment and deadline tracking\n• Weighted grade tracking\n• Academic calendar\n• Same-day reminders\n• Joining shared Course Spaces\n\nUpgrade to Semora Pro for unlimited manually added courses and semesters, more AI actions, and advanced study tools.\n\nScan your syllabus. Organize your semester. Know what to do next.\n\nSEMORA PRO\n\n• Monthly: $4.99/month\n• Annual: $29.99/year\n\nSemora Pro is an auto-renewable subscription. Payment is charged to your Apple ID and renews automatically unless auto-renew is turned off at least 24 hours before the end of the current subscription period. You can manage or cancel your subscription in your Apple ID subscription settings.\n\nPrivacy Policy:\nhttps://semoraai.com/privacy\n\nTerms of Use (EULA):\nhttps://www.apple.com/legal/internet-services/itunes/dev/stdeula/\n\nQuestions or feedback?\nsemora365@gmail.com",
         "keywords": [
-          "canvas",
-          "student",
-          "planner",
-          "deadline",
-          "semester",
-          "reminder",
+          "assignment",
           "lecture",
-          "recorder",
-          "transcript",
-          "flashcards",
-          "moodle"
+          "tutor",
+          "college",
+          "student",
+          "class",
+          "schedule",
+          "school",
+          "deadline",
+          "reminder",
+          "syllabus",
+          "scanner"
         ],
         "releaseNotes": "Small fixes on top of 1.15:\n\n• The Lock Screen no longer shows a lecture still recording after Semora has closed — it now says the recording stopped, so you know to reopen the app.\n• Rating Semora from inside the app now opens your own country's App Store instead of the U.S. one.\n• Fewer interruptions: Semora no longer asks for a rating right after showing you a subscription screen.",
         "marketingUrl": "https://semoraai.com",
         "supportUrl": "https://semoraai.com/support",
-        "title": "Semora: AI Syllabus Scanner",
-        "subtitle": "Homework, Exam & Grade Tracker",
+        "title": "Semora: AI Study Planner",
+        "subtitle": "Homework, Notes & GPA Tracker",
         "privacyPolicyUrl": "https://semoraai.com/privacy",
-        "promoText": "New: connect Moodle in about a minute. Copy the calendar link your own Moodle already gives you — no token, nothing for your school to approve. Free on every plan."
+        "promoText": "Your whole semester, organized by AI. Scan a syllabus or connect Canvas, Blackboard or Moodle, then turn your lectures into notes, flashcards and quizzes."
       },
       "fr-FR": {
         "title": "Semora : Agenda étudiant IA",
