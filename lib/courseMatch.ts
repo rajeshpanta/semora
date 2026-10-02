@@ -99,6 +99,15 @@ export function courseCodeTokens(name: string): string[] {
     if (subject.length === 1 && letterPrefix) continue;
 
     found.add(`${subject}${letterPrefix}${digits}${suffix}`);
+    // A letter that runs straight into more letters is the start of a section
+    // tag, not part of the course number: "MSN6200OL01" is MSN 6200, online
+    // section 01, and reading it only as "MSN6200O" let it miss the student's
+    // own "MSN6200 - Psychopharmacology" (2026-10-02, three classes imported
+    // twice). The plain code is ADDED, never substituted, so every match the
+    // suffixed form already made still holds ("JOURN-1300W-08" keeps
+    // JOURN1300W; "CE180A-01" keeps CE180A).
+    const after = upper.charAt((match.index ?? 0) + match[0].length);
+    if (suffix && /[A-Z]/.test(after)) found.add(`${subject}${letterPrefix}${digits}`);
   }
   return [...found];
 }
