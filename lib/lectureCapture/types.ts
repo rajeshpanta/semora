@@ -22,16 +22,30 @@ export interface ClosedPart {
   hasGap: boolean;
 }
 
+/**
+ * Flat facts a native recorder attaches to a failure or a recovery — which
+ * call failed, the OS error domain / code / four-char code, attempts, app
+ * state. Never personal data; lib/lectureCaptureError.ts whitelists the keys.
+ */
+export type CaptureDiagnostics = Record<string, string | number | boolean>;
+
 export type EngineEvent =
   | { type: 'partClosed'; part: ClosedPart }
   /** Capture stopped without being asked (a call, another app, a dead recorder). */
   | { type: 'micStopped'; at: number }
-  /** Capture is running again after micStopped. */
-  | { type: 'micResumed'; at: number }
+  /** Capture is running again after micStopped. `info`: how it came back (native builds that send it). */
+  | { type: 'micResumed'; at: number; info?: CaptureDiagnostics }
   /** The input device changed or was pinned. */
   | { type: 'inputChanged'; name: string | null; builtIn: boolean }
   /** Something went wrong that the session should record. Never thrown. */
-  | { type: 'failure'; stage: 'capture_prepare' | 'capture_finalize' | 'local_commit'; code: string; message?: string }
+  | {
+    type: 'failure';
+    stage: 'capture_prepare' | 'capture_finalize' | 'local_commit';
+    code: string;
+    message?: string;
+    /** Which call failed and the OS error behind it (native builds that send it). */
+    detail?: CaptureDiagnostics;
+  }
   /** The native recorder's Live Activity / notification asked to stop. */
   | { type: 'stopRequested' }
   /** The Live Activity / notification asked to pause or resume. */
