@@ -1449,8 +1449,10 @@ export const ES: Record<string, string> = {
   // ── The Canvas guided paste ─────────────────────────────────────────────
   // Measured at 24 of 46 strings translated while Moodle sat at 57 of 57, so
   // the flow most students actually use was the one reading half in English.
-  // "Feed de calendario" matches the wording Canvas itself uses in Spanish and
-  // the instructions already in this catalogue.
+  // Canvas's own neutral Spanish names the button "Feed del calendario"
+  // (canvas-lms config/locales/es.yml, calendars.show.calendar_feed; Spain's es-ES
+  // says "Actividad del calendario"). The connect page matches it; older lines
+  // elsewhere still say "feed de calendario".
   'Your college or university': 'Tu universidad',
   'Could not reach the school directory just now.':
     'No se pudo acceder al directorio de universidades en este momento.',
@@ -1473,17 +1475,17 @@ export const ES: Record<string, string> = {
   // Now names the row by its own Spanish, as the Moodle form further down does.
   'Open Settings, then Canvas or LMS Sync, and choose Canvas.':
     'Abre Ajustes, luego Sincronización de Canvas o LMS, y elige Canvas.',
-  'Actually, let me try on my phone': 'Mejor lo intento en el móvil',
+  "Actually, let me try on my phone": "Mejor lo intento en mi teléfono",
   'I know my Canvas web address': 'Sé la dirección de mi Canvas',
   'Use this address': 'Usar esta dirección',
-  'Search for my school instead': 'Mejor buscar mi universidad',
-  'Calendar Feed': 'Feed de calendario',
+  "Search for my school instead": "Prefiero buscar mi universidad",
+  "Calendar Feed": "Feed del calendario",
   'Open my Canvas calendar': 'Abrir mi calendario de Canvas',
   'Different school': 'Otra universidad',
   'Where to find your link': 'Dónde encontrar tu enlace',
   'Nothing that looks like a Canvas link is on your clipboard yet. Copy it in Canvas first.':
     'Todavía no hay nada que parezca un enlace de Canvas en el portapapeles. Cópialo primero en Canvas.',
-  'Link looks right — checking Canvas…': 'El enlace parece correcto: comprobando Canvas…',
+  "Link looks right — checking Canvas…": "El enlace parece correcto. Verificando Canvas…",
   'That is a Canvas page, not the Calendar Feed link.':
     'Esa es una página de Canvas, no el enlace del Feed de calendario.',
 
@@ -1624,8 +1626,6 @@ export const ES: Record<string, string> = {
   'AUTO': 'AUTO',
   'before deleting your account. Tap the button below to start.': 'antes de eliminar tu cuenta. Toca el botón de abajo para comenzar.',
   'Cannot verify identity': 'No se pudo verificar tu identidad',
-  'Could not determine your sign-in method. Please sign in again.': 'No pudimos identificar tu método de inicio de sesión. Vuelve a iniciar sesión.',
-  'No Semora password is needed. Use the same Apple or Google account you use to sign in.': 'No necesitas una contraseña de Semora. Usa la misma cuenta de Apple o Google con la que inicias sesión.',
   'CHOOSE YOUR PLAN': 'ELIGE TU PLAN',
   'Confirm with your password': 'Confirma con tu contraseña',
   'Copy the text from a PDF or your LMS page and paste it below — we\'ll pull every deadline, same as a file scan.': 'Copia el texto de un PDF o de tu LMS y pégalo abajo. Extraeremos todas las entregas como si escanearas un archivo.',
@@ -3253,4 +3253,48 @@ export const ES: Record<string, string> = {
     'Gratis en cualquier plan y sin límite de clases de Canvas o Moodle. Semora te ofrece la configuración justo después de iniciar sesión.',
   'Free: one AI action (a scan or a lecture), one course you add yourself, unlimited classes from Canvas or Moodle, and same-day reminders. The tools above are part of Pro.':
     'Gratis: una acción de IA (un escaneo o una clase grabada), un curso que agregas tú, clases ilimitadas desde Canvas o Moodle y recordatorios del mismo día. Las herramientas de arriba son parte de Pro.',
+  "Open your college's Canvas and **sign in**. Not sure where it is? Search your college below.": "Abre el Canvas de tu universidad e **inicia sesión**. ¿No sabes dónde está? Busca tu universidad más abajo.",
+  "In the menu down the left side, tap **Calendar**.": "En el menú de la izquierda, toca **Calendario**.",
+  "Scroll to the **very bottom** of the panel on the right.": "Desplázate **hasta el final** del panel de la derecha.",
+  "Tap **Calendar Feed**. A box opens with a long link starting webcal://": "Toca **Feed del calendario**. Se abre un cuadro con un enlace largo que empieza por webcal://",
+  "**Select the whole link** and copy it.": "**Selecciona el enlace completo** y cópialo.",
+  "Come back to this tab and **paste it into the box at the top**.": "Vuelve a esta pestaña y **pégalo en el cuadro de arriba**.",
+  "Come back to Semora and **paste it into the box at the top**. If iOS asks, tap Allow Paste.": "Vuelve a Semora y **pégalo en el cuadro de arriba**. Si iOS lo pide, toca Permitir pegar.",
+  "Come back to Semora and **paste it into the box at the top**.": "Vuelve a Semora y **pégalo en el cuadro de arriba**.",
+  "Don't have your link? Search your college to find it": "¿No tienes tu enlace? Busca tu universidad para encontrarlo",
+  "Need to connect another?": "¿Necesitas conectar otra plataforma?",
+  "Questions about connecting?": "¿Tienes preguntas sobre la conexión?",
+  "What is the Calendar Feed link?": "¿Qué es el enlace del Feed del calendario?",
+  "Is it safe to paste it here?": "¿Es seguro pegarlo aquí?",
+  "Can Semora change anything in my Canvas?": "¿Semora puede cambiar algo en mi Canvas?",
+  "Will my classes stay up to date?": "¿Mis clases se mantendrán al día?",
+  "Can I disconnect later?": "¿Puedo desconectarlo después?",
+  "It's a private link Canvas makes for your calendar. It's how your due dates can appear in other apps. You'll find it in Canvas under **Calendar → Calendar Feed** (the steps above show exactly where). Once it's in Semora, every assignment, quiz and exam from your courses comes in automatically.": "Es un enlace privado que Canvas crea para tu calendario y que permite que tus fechas de entrega aparezcan en otras apps. Lo encuentras en Canvas, en **Calendario → Feed del calendario** (los pasos de arriba te muestran exactamente dónde). En cuanto lo agregas a Semora, todas las tareas, cuestionarios y exámenes de tus cursos llegan solos.",
+  "Yes. Semora encrypts your link as soon as you add it and never displays it again, so it stays private to your account. It's the same kind of link students already use to put their Canvas deadlines into Google Calendar or Apple Calendar. Just don't post it anywhere public, like a group chat.": "Sí. Semora cifra tu enlace en cuanto lo agregas y nunca vuelve a mostrarlo, así que se mantiene privado en tu cuenta. Es el mismo tipo de enlace que muchos estudiantes ya usan para ver sus entregas de Canvas en Google Calendar o Apple Calendar. Solo evita publicarlo en lugares públicos, como un chat de grupo.",
+  "No. Semora can only read your due dates. It can't submit assignments, edit anything or see your grades or messages. You still turn in your work in Canvas, and Semora keeps track of what's due and when.": "No. Semora solo puede leer tus fechas de entrega. No puede entregar tareas, editar nada ni ver tus calificaciones o mensajes. Tus trabajos los sigues entregando en Canvas, y Semora lleva la cuenta de qué tienes pendiente y para cuándo.",
+  "Yes, on their own. Semora rechecks Canvas every few hours, so a new assignment or a moved due date shows up without you doing anything. When the next semester starts, Semora spots your new classes and asks if you want to add them.": "Sí, solas. Semora revisa Canvas cada pocas horas, así que una tarea nueva o una fecha de entrega que cambia aparece sin que tengas que hacer nada. Cuando empieza el siguiente semestre, Semora detecta tus clases nuevas y te pregunta si quieres agregarlas.",
+  "Yes, anytime, right on this page. Once you disconnect, updates stop, and everything you've already imported stays in Semora, including your assignments, what you've completed and your grades.": "Sí, cuando quieras, desde esta misma página. Al desconectarlo, las actualizaciones se detienen y todo lo que ya importaste se queda en Semora, incluidas tus tareas, lo que ya completaste y tus calificaciones.",
+  "Questions about connecting? See the answers": "¿Tienes preguntas sobre la conexión? Mira las respuestas",
+  "In the menu down the left side, click **Calendar**.": "En el menú de la izquierda, haz clic en **Calendario**.",
+  "Click **Calendar Feed**. A box opens with a long link starting webcal://": "Haz clic en **Feed del calendario**. Se abre un cuadro con un enlace largo que empieza por webcal://",
+  "What is the Moodle calendar link?": "¿Qué es el enlace del calendario de Moodle?",
+  "It's a private link Moodle makes for your calendar. It's how your due dates can appear in other apps. You'll find it in Moodle under **Calendar → Import or export calendars → Export calendar → Get calendar URL** (the steps above show exactly where). Once it's in Semora, every assignment, quiz and exam from your courses comes in automatically.": "Es un enlace privado que Moodle crea para tu calendario y que permite que tus fechas de entrega aparezcan en otras apps. Lo encuentras en Moodle, en **Calendario → Importar o exportar calendarios → Exportar calendario → Obtener URL del calendario** (los pasos de arriba te muestran exactamente dónde). En cuanto lo agregas a Semora, todas las tareas, cuestionarios y exámenes de tus cursos llegan solos.",
+  "Yes. Semora encrypts your link as soon as you add it and never displays it again, so it stays private to your account. It's the same kind of link students already use to put their Moodle deadlines into Google Calendar or Apple Calendar. Just don't post it anywhere public, like a group chat.": "Sí. Semora cifra tu enlace en cuanto lo agregas y nunca vuelve a mostrarlo, así que se mantiene privado en tu cuenta. Es el mismo tipo de enlace que muchos estudiantes ya usan para ver sus entregas de Moodle en Google Calendar o Apple Calendar. Solo evita publicarlo en lugares públicos, como un chat de grupo.",
+  "Can Semora change anything in my Moodle?": "¿Semora puede cambiar algo en mi Moodle?",
+  "No. Semora can only read your due dates. It can't submit assignments, edit anything or see your grades or messages. You still turn in your work in Moodle, and Semora keeps track of what's due and when.": "No. Semora solo puede leer tus fechas de entrega. No puede entregar tareas, editar nada ni ver tus calificaciones o mensajes. Tus trabajos los sigues entregando en Moodle, y Semora lleva la cuenta de qué tienes pendiente y para cuándo.",
+  "Yes, on their own. Semora rechecks Moodle every few hours, so a new assignment or a moved due date shows up without you doing anything. When the next semester starts, Semora spots your new classes and asks if you want to add them.": "Sí, solas. Semora revisa Moodle cada pocas horas, así que una tarea nueva o una fecha de entrega que cambia aparece sin que tengas que hacer nada. Cuando empieza el siguiente semestre, Semora detecta tus clases nuevas y te pregunta si quieres agregarlas.",
+  "Open Canvas in your **web browser** and sign in. The Canvas app doesn't show this link. Easiest way: search your college below, and Semora opens it for you.": "Abre Canvas en tu **navegador web** e inicia sesión. La app de Canvas no muestra este enlace. Lo más fácil: busca tu universidad más abajo y Semora lo abre por ti.",
+  "If you're not on the calendar yet, tap the menu **☰**, then **Calendar**.": "Si todavía no estás en el calendario, toca el menú **☰** y luego **Calendario**.",
+  "Scroll to the **very bottom** of the page.": "Desplázate **hasta el final** de la página.",
+  "It's a private link Canvas makes for your calendar. It's how your due dates can appear in other apps. It's on the Canvas **website**, not the Canvas app, under **Calendar → Calendar Feed** (the steps above show exactly where). Once it's in Semora, every assignment, quiz and exam from your courses comes in automatically.": "Es un enlace privado que Canvas crea para tu calendario y que permite que tus fechas de entrega aparezcan en otras apps. Está en el **sitio web** de Canvas, no en la app de Canvas, en **Calendario → Feed del calendario** (los pasos de arriba te muestran exactamente dónde). En cuanto lo agregas a Semora, todas las tareas, cuestionarios y exámenes de tus cursos llegan solos.",
+  "connected": "conectado",
+  "CANVAS SETUP": "CONFIGURAR CANVAS",
+  "CANVAS SETUP · LAST STEP": "CONFIGURAR CANVAS · ÚLTIMO PASO",
+  "MOODLE SETUP": "CONFIGURAR MOODLE",
+  "MOODLE SETUP · LAST STEP": "CONFIGURAR MOODLE · ÚLTIMO PASO",
+  "Updates automatically": "Se actualiza solo",
+  "Rename this connection": "Cambiar el nombre de esta conexión",
+  "Name for this connection": "Nombre de esta conexión",
+  'Could not determine your sign-in method. Please sign in again.': 'No pudimos identificar tu método de inicio de sesión. Vuelve a iniciar sesión.',
+  'No Semora password is needed. Use the same Apple or Google account you use to sign in.': 'No necesitas una contraseña de Semora. Usa la misma cuenta de Apple o Google con la que inicias sesión.',
 };

@@ -111,6 +111,21 @@ function spanishPattern(input: string): string | null {
   // appear in the phrase map as whole sentences. Kept at the top of the chain
   // because each is more specific than the generic count patterns below, and a
   // generic rule matching first is how "Next up:" lost its label once already.
+  // The "Sync now" result on the LMS page words its second half differently
+  // ("skipped without usable due dates"); without its own rule the word-by-word
+  // fallback turned it into "skipped without usable · entrega dates".
+  match = input.match(/^(\d+) assignments updated · (\d+) skipped without usable due dates\.$/i);
+  if (match) return `${match[1] === '1' ? 'Se actualizó 1 tarea' : `Se actualizaron ${match[1]} tareas`} · ${match[2] === '1' ? 'se omitió 1 por no tener' : `se omitieron ${match[2]} por no tener`} una fecha de entrega válida.`;
+  // Canvas or LMS Sync page (2026-10-01). Each carries a platform name, a
+  // school's address or a count, so none can be a fixed entry.
+  match = input.match(/^You already have (Canvas|Moodle|Blackboard) connected\. Only continue to add \1 from a second school\. To refresh your current one, use Sync now above\.$/);
+  if (match) return `Ya tienes ${match[1]} conectado. Continúa solo si vas a agregar ${match[1]} de otra universidad. Para actualizar el que ya tienes, usa Sincronizar ahora arriba.`;
+  match = input.match(/^This (Canvas|Moodle|Blackboard) \((.+)\) is already connected, so nothing was added\. To refresh it, use Sync now on your Connected card above\.$/);
+  if (match) return `Este ${match[1]} (${match[2]}) ya está conectado, así que no se agregó nada. Para actualizarlo, usa Sincronizar ahora en la tarjeta Conectado de arriba.`;
+  match = input.match(/^Disconnect (Canvas|Moodle|Blackboard)\?$/);
+  if (match) return `¿Desconectar ${match[1]}?`;
+  match = input.match(/^(\d+) new (course|courses) found · Review$/);
+  if (match) return `${match[1] === '1' ? 'Se encontró 1 materia nueva' : `Se encontraron ${match[1]} materias nuevas`} · Revisar`;
   match = input.match(/^NEXT (\d+) DAYS$/);
   if (match) return `PRÓXIMOS ${match[1]} DÍAS`;
   match = input.match(/^(\d+)m\/day · (\d+)m sessions$/);

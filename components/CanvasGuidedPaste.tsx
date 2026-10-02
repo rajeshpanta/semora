@@ -3,6 +3,7 @@ import { ActivityIndicator, AppState, Linking, Platform, StyleSheet, View } from
 import { Text, TextInput, TouchableOpacity } from '@/components/LocalizedReactNative';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useColors } from '@/lib/theme';
+import { translate, useI18n } from '@/lib/i18n';
 import { track } from '@/lib/analytics';
 import {
   CANVAS_FEED_HINTS,
@@ -104,6 +105,7 @@ export function CanvasGuidedPaste({
   onSwitchToMoodle?: () => void;
 }) {
   const colors = useColors();
+  const { locale } = useI18n();
   const readClipboard = useClipboardFeed();
 
   const [query, setQuery] = useState('');
@@ -382,10 +384,174 @@ export function CanvasGuidedPaste({
         </View>
       )}
 
+      {/* ── The paste field, only once the phone lane is chosen ── */}
+      {lane === 'phone' && (
+        <>
+          <Text style={[s.label, { color: colors.ink2 }]}>Paste your private Calendar Feed link</Text>
+          <View style={s.secretField}>
+            <TextInput
+              value={token}
+              onChangeText={changeToken}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              secureTextEntry={!showPrivateUrl}
+              // secureTextEntry alone tells iOS "this is a password", and with
+              // no content-type hint iOS applies its credential heuristics —
+              // Passwords sheet, QuickType bar, sometimes Face ID. In a step
+              // whose instruction is "paste a calendar link", unexplained Apple
+              // chrome reads as a warning that something is wrong. These three
+              // say what the field is; the masking is unchanged.
+              textContentType="URL"
+              autoComplete="off"
+              importantForAutofill="no"
+              placeholder="webcal://…/feeds/calendars/user_….ics"
+              placeholderTextColor={colors.ink3}
+              style={[s.input, s.secretInput, { color: colors.ink, backgroundColor: colors.card, borderColor: colors.line }]}
+            />
+            <TouchableOpacity
+              accessibilityLabel={showPrivateUrl ? 'Hide Calendar Feed URL' : 'Show Calendar Feed URL'}
+              onPress={() => setShowPrivateUrl((current) => !current)}
+              style={s.secretToggle}
+            >
+              <FontAwesome name={showPrivateUrl ? 'eye-slash' : 'eye'} size={15} color={colors.ink3} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Back from Canvas with the link in hand. Offered as a real button
+              rather than done silently, because the read raises iOS's own paste
+              permission alert and that alert only makes sense as the answer to
+              something the student just tapped. */}
+          {justReturned && !token && Platform.OS !== 'web' && (
+            <View style={[s.rescue, { backgroundColor: colors.brand50, borderColor: colors.brand }]}>
+              <Text style={[s.rescueText, { color: colors.ink2 }]}>
+                Copied the link? Tap below and Semora fills it in. iOS may ask permission to paste —
+                that is expected, and Semora only ever reads the one link.
+              </Text>
+              <TouchableOpacity
+                onPress={() => { void absorbClipboard(); }}
+                style={[s.primary, { backgroundColor: colors.brand }]}
+              >
+                <FontAwesome name="clipboard" size={14} color="#fff" />
+                <Text style={s.primaryText}>Paste my Calendar Feed link</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {/* Native only. useClipboardFeed returns null on the web by design,
+              so this link could only ever answer "nothing on your clipboard"
+              there — to a student who had just copied the link. The web step
+              above says to paste into the box, which a browser does anyway. */}
+          {!justReturned && !onWeb && !token && (
+            <TouchableOpacity onPress={pasteFromClipboard} style={s.pasteRow}>
+              <FontAwesome name="clipboard" size={12} color={colors.brand} />
+              <Text style={[s.link, { color: colors.brand }]}>Paste from clipboard</Text>
+            </TouchableOpacity>
+          )}
+          {clipboardMiss && !token && (
+            <Text style={[s.note, { color: colors.ink2 }]}>
+              Nothing that looks like a Canvas link is on your clipboard yet. Copy it in Canvas first.
+            </Text>
+          )}
+
+          {/* Auto-advance: the student does not have to find a button. */}
+          {autoAdvancing && (
+            <View style={s.autoRow}>
+              <ActivityIndicator size="small" color={colors.teal} />
+              <Text style={[s.note, { color: colors.teal }]}>Link looks right — checking Canvas…</Text>
+            </View>
+          )}
+
+          {/* Silent until they have typed something: an error under an empty
+              box reads as a failure they already made. */}
+          {verdict && verdict.state !== 'empty' && !autoAdvancing && (
+            <View style={s.noteRow}>
+              <FontAwesome
+                name={verdict.state === 'ok' ? 'check-circle' : 'exclamation-circle'}
+                size={12}
+                color={verdict.state === 'ok' ? colors.teal : colors.ink2}
+              />
+              <Text style={[s.note, { color: verdict.state === 'ok' ? colors.teal : colors.ink2, flex: 1 }]}>
+                {verdict.state === 'ok'
+                  ? `Looks right — ${verdict.host}`
+                  : CANVAS_FEED_HINTS[verdict.code]}
+              </Text>
+            </View>
+          )}
+
+          {/* ── Wrong-page rescue ──────────────────────────── */}
+          {!!rescueHost && !working && (
+            <View style={[s.rescue, { backgroundColor: colors.brand50, borderColor: colors.brand }]}>
+              <Text style={[s.rescueText, { color: colors.ink2 }]}>
+                That link is from {rescueHost} — the right school, the wrong page. Semora can open
+                its calendar for you.
+              </Text>
+              <TouchableOpacity
+                onPress={() => openCalendar(rescueHost, 'wrong_page_rescue')}
+                style={[s.primary, { backgroundColor: colors.brand }]}
+              >
+                <FontAwesome name="external-link" size={14} color="#fff" />
+                <Text style={s.primaryText}>Open {rescueHost} calendar</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Where "what Canvas sends" used to sit. That fact belongs on the
+              screen before this one. What belongs HERE is the only thing between
+              a student and a finished connection: exactly where the link lives
+              inside Canvas, written so somebody who has never opened a Canvas
+              menu can follow it without guessing. */}
+          <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.line, marginTop: 14 }]}>
+            <Text style={[s.cardTitle, { color: colors.ink }]}>Where to find your link</Text>
+            {/* The last two steps are the ones that differ by device. Step 6
+                used to promise the link "drops into the box below by itself",
+                which stopped being true when the automatic clipboard read was
+                replaced by a button (see above) — a student who waited for it
+                was waiting for nothing. On the web there is no paste button at
+                all (useClipboardFeed does not read a browser's clipboard), so
+                the student pastes into the box like any other. */}
+            {[
+              // On a phone the link exists only on the Canvas WEBSITE — the
+              // Canvas app has no Calendar Feed — and the website's phone
+              // layout hides the menu behind ☰ and stacks the sidebar under
+              // the calendar. The web keeps the desktop wording.
+              Platform.OS === 'web'
+                ? 'Open your college\'s Canvas and **sign in**. Not sure where it is? Search your college below.'
+                : 'Open Canvas in your **web browser** and sign in. The Canvas app doesn\'t show this link. Easiest way: search your college below, and Semora opens it for you.',
+              Platform.OS === 'web'
+                ? 'In the menu down the left side, click **Calendar**.'
+                : 'If you\'re not on the calendar yet, tap the menu **☰**, then **Calendar**.',
+              Platform.OS === 'web'
+                ? 'Scroll to the **very bottom** of the panel on the right.'
+                : 'Scroll to the **very bottom** of the page.',
+              Platform.OS === 'web'
+                ? 'Click **Calendar Feed**. A box opens with a long link starting webcal://'
+                : 'Tap **Calendar Feed**. A box opens with a long link starting webcal://',
+              '**Select the whole link** and copy it.',
+              Platform.OS === 'web'
+                ? 'Come back to this tab and **paste it into the box at the top**.'
+                : Platform.OS === 'ios'
+                  ? 'Come back to Semora and **paste it into the box at the top**. If iOS asks, tap Allow Paste.'
+                  : 'Come back to Semora and **paste it into the box at the top**.',
+            ].map((text, i) => (
+              <View key={i} style={s.step}>
+                <View style={[s.stepDot, { backgroundColor: colors.brand50 }]}>
+                  <Text style={[s.stepDotText, { color: colors.brand }]}>{i + 1}</Text>
+                </View>
+                <Text style={[s.stepText, { color: colors.ink2 }]}>
+                  {translate(text, locale).split('**').map((part, j) => (j % 2 === 1
+                    ? <Text key={j} style={{ fontWeight: '700', color: colors.ink }}>{part}</Text>
+                    : part))}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </>
+      )}
+
       {/* ── Phone lane: which school ──────────────────────── */}
       {lane === 'phone' && !host && (
         <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.line }]}>
-          <Text style={[s.cardTitle, { color: colors.ink }]}>Which school?</Text>
+          <Text style={[s.cardTitle, { color: colors.ink }]}>Don't have your link? Search your college to find it</Text>
           <Text style={[s.cardIntro, { color: colors.ink2 }]}>
               Type your college name and pick it from the list. Semora then opens your
               school's own Canvas page for you, so you never need to know its web address.
@@ -497,151 +663,6 @@ export function CanvasGuidedPaste({
             <Text style={[s.link, { color: colors.brand }]}>Different school</Text>
           </TouchableOpacity>
         </View>
-      )}
-
-      {/* ── The paste field, only once the phone lane is chosen ── */}
-      {lane === 'phone' && (
-        <>
-          {/* Where "what Canvas sends" used to sit. That fact belongs on the
-              screen before this one. What belongs HERE is the only thing between
-              a student and a finished connection: exactly where the link lives
-              inside Canvas, written so somebody who has never opened a Canvas
-              menu can follow it without guessing. */}
-          <View style={[s.card, { backgroundColor: colors.card, borderColor: colors.line, marginBottom: 14 }]}>
-            <Text style={[s.cardTitle, { color: colors.ink }]}>Where to find your link</Text>
-            {/* The last two steps are the ones that differ by device. Step 6
-                used to promise the link "drops into the box below by itself",
-                which stopped being true when the automatic clipboard read was
-                replaced by a button (see above) — a student who waited for it
-                was waiting for nothing. On the web there is no paste button at
-                all (useClipboardFeed does not read a browser's clipboard), so
-                the student pastes into the box like any other. */}
-            {[
-              'Sign in to your college Canvas account on the page Semora opens.',
-              'In the menu down the left side, tap Calendar.',
-              'Scroll to the very bottom of the panel on the right.',
-              'Tap Calendar Feed. A box opens with a long link starting webcal://',
-              onWeb ? 'Copy that link.' : 'Press and hold that link, then tap Copy.',
-              onWeb
-                ? 'Come back to this tab and paste the link into the box below.'
-                : 'Come back to Semora and tap Paste. The link goes into the box below.',
-            ].map((text, i) => (
-              <View key={i} style={s.step}>
-                <View style={[s.stepDot, { backgroundColor: colors.brand50 }]}>
-                  <Text style={[s.stepDotText, { color: colors.brand }]}>{i + 1}</Text>
-                </View>
-                <Text style={[s.stepText, { color: colors.ink2 }]}>{text}</Text>
-              </View>
-            ))}
-          </View>
-          <Text style={[s.label, { color: colors.ink2 }]}>Paste your private Calendar Feed link</Text>
-          <View style={s.secretField}>
-            <TextInput
-              value={token}
-              onChangeText={changeToken}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              secureTextEntry={!showPrivateUrl}
-              // secureTextEntry alone tells iOS "this is a password", and with
-              // no content-type hint iOS applies its credential heuristics —
-              // Passwords sheet, QuickType bar, sometimes Face ID. In a step
-              // whose instruction is "paste a calendar link", unexplained Apple
-              // chrome reads as a warning that something is wrong. These three
-              // say what the field is; the masking is unchanged.
-              textContentType="URL"
-              autoComplete="off"
-              importantForAutofill="no"
-              placeholder="webcal://…/feeds/calendars/user_….ics"
-              placeholderTextColor={colors.ink3}
-              style={[s.input, s.secretInput, { color: colors.ink, backgroundColor: colors.card, borderColor: colors.line }]}
-            />
-            <TouchableOpacity
-              accessibilityLabel={showPrivateUrl ? 'Hide Calendar Feed URL' : 'Show Calendar Feed URL'}
-              onPress={() => setShowPrivateUrl((current) => !current)}
-              style={s.secretToggle}
-            >
-              <FontAwesome name={showPrivateUrl ? 'eye-slash' : 'eye'} size={15} color={colors.ink3} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Back from Canvas with the link in hand. Offered as a real button
-              rather than done silently, because the read raises iOS's own paste
-              permission alert and that alert only makes sense as the answer to
-              something the student just tapped. */}
-          {justReturned && !token && Platform.OS !== 'web' && (
-            <View style={[s.rescue, { backgroundColor: colors.brand50, borderColor: colors.brand }]}>
-              <Text style={[s.rescueText, { color: colors.ink2 }]}>
-                Copied the link? Tap below and Semora fills it in. iOS may ask permission to paste —
-                that is expected, and Semora only ever reads the one link.
-              </Text>
-              <TouchableOpacity
-                onPress={() => { void absorbClipboard(); }}
-                style={[s.primary, { backgroundColor: colors.brand }]}
-              >
-                <FontAwesome name="clipboard" size={14} color="#fff" />
-                <Text style={s.primaryText}>Paste my Calendar Feed link</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          {/* Native only. useClipboardFeed returns null on the web by design,
-              so this link could only ever answer "nothing on your clipboard"
-              there — to a student who had just copied the link. The web step
-              above says to paste into the box, which a browser does anyway. */}
-          {!justReturned && !onWeb && !token && (
-            <TouchableOpacity onPress={pasteFromClipboard} style={s.pasteRow}>
-              <FontAwesome name="clipboard" size={12} color={colors.brand} />
-              <Text style={[s.link, { color: colors.brand }]}>Paste from clipboard</Text>
-            </TouchableOpacity>
-          )}
-          {clipboardMiss && !token && (
-            <Text style={[s.note, { color: colors.ink2 }]}>
-              Nothing that looks like a Canvas link is on your clipboard yet. Copy it in Canvas first.
-            </Text>
-          )}
-
-          {/* Auto-advance: the student does not have to find a button. */}
-          {autoAdvancing && (
-            <View style={s.autoRow}>
-              <ActivityIndicator size="small" color={colors.teal} />
-              <Text style={[s.note, { color: colors.teal }]}>Link looks right — checking Canvas…</Text>
-            </View>
-          )}
-
-          {/* Silent until they have typed something: an error under an empty
-              box reads as a failure they already made. */}
-          {verdict && verdict.state !== 'empty' && !autoAdvancing && (
-            <View style={s.noteRow}>
-              <FontAwesome
-                name={verdict.state === 'ok' ? 'check-circle' : 'exclamation-circle'}
-                size={12}
-                color={verdict.state === 'ok' ? colors.teal : colors.ink2}
-              />
-              <Text style={[s.note, { color: verdict.state === 'ok' ? colors.teal : colors.ink2, flex: 1 }]}>
-                {verdict.state === 'ok'
-                  ? `Looks right — ${verdict.host}`
-                  : CANVAS_FEED_HINTS[verdict.code]}
-              </Text>
-            </View>
-          )}
-
-          {/* ── Wrong-page rescue ──────────────────────────── */}
-          {!!rescueHost && !working && (
-            <View style={[s.rescue, { backgroundColor: colors.brand50, borderColor: colors.brand }]}>
-              <Text style={[s.rescueText, { color: colors.ink2 }]}>
-                That link is from {rescueHost} — the right school, the wrong page. Semora can open
-                its calendar for you.
-              </Text>
-              <TouchableOpacity
-                onPress={() => openCalendar(rescueHost, 'wrong_page_rescue')}
-                style={[s.primary, { backgroundColor: colors.brand }]}
-              >
-                <FontAwesome name="external-link" size={14} color="#fff" />
-                <Text style={s.primaryText}>Open {rescueHost} calendar</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </>
       )}
 
       {/* ── Escalation ────────────────────────────────────── */}

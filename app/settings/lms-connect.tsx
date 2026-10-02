@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
@@ -82,6 +83,8 @@ import { courseFactsOf } from '@/lib/lms';
 import { formatSpan, matchSemester, spanOf } from '@/lib/termMatch';
 import { useAppStore } from '@/store/appStore';
 import type { LmsProvider } from '@/types/database';
+import { LmsConnectedPanel } from '@/components/LmsConnectedPanel';
+import { LmsConnectFaq } from '@/components/LmsConnectFaq';
 
 const HELP: Record<Exclude<LmsProvider, 'google_classroom' | 'canvas'>, { url: string; token: string; note: string }> = {
   blackboard: {
@@ -136,6 +139,14 @@ export default function LmsConnectScreen() {
    * Moodle.
    */
   const [provider, setProvider] = useState<LmsProvider>(routeProvider);
+  /**
+   * Whatever opened this screen named a platform to connect (Today's card, the
+   * scan paywall, a reconnect). Read once: the switch below writes the route's
+   * provider too, and that is the student choosing, not the caller.
+   */
+  const providerFromCaller = useRef(!!params.provider).current;
+  /** Set when a student who already has a connection taps a platform to add another. */
+  const [addingAnother, setAddingAnother] = useState(false);
   const reconnecting = !!params.connectionId;
   const isWeb = Platform.OS === 'web';
   /**
@@ -176,14 +187,36 @@ export default function LmsConnectScreen() {
   // hundred milliseconds of the screen they were just invited onto — the exact
   // dead end this offer exists to remove. Until the gate resolves, the blank
   // paper screen below is what shows.
-  const { data: lmsConnections, isPending: connectionsPending } = useQuery(lmsConnectionsQuery);
+  const {
+    data: lmsConnections,
+    isPending: connectionsPending,
+    isRefetching: connectionsRefetching,
+    refetch: refetchConnections,
+  } = useQuery(lmsConnectionsQuery);
   const { data: canvasFreePromo, isPending: promoPending } = useQuery(canvasFreePromoQuery);
   const lmsFree = canvasFreeFor(lmsConnections, isPro, canvasFreePromo);
   const lmsAllowed = isPro || lmsFree;
   const gateResolved = isPro || (!promoPending && !connectionsPending);
+  // This is also where a student manages what is already connected (it
+  // replaced the old "Canvas or LMS Sync" page). An account that lost access
+  // keeps seeing its connections, as it did there, with the paywall behind
+  // Sync and behind adding another; only an account with nothing connected is
+  // bounced.
+  const hasConnection = (lmsConnections?.length ?? 0) > 0;
+  /** Platforms this student already has connected. */
+  const connectedProviders = new Set((lmsConnections ?? []).map((connection) => connection.provider));
+  // Not decided until the connection list has answered: opening setup and
+  // then folding it away under a connection that loads a moment later reads
+  // as the page jumping.
+  const setupOpen = lmsAllowed && (reconnecting || providerFromCaller || addingAnother
+    || (!connectionsPending && !hasConnection));
+  const showUpsell = useCallback(() => {
+    track('paywall_open', { screen: 'settings_lms_connect', context: 'lms' });
+    showProUpsell('canvas');
+  }, []);
   useEffect(() => {
-    if (gateResolved && !lmsAllowed) openPaywall();
-  }, [gateResolved, lmsAllowed, openPaywall]);
+    if (gateResolved && !lmsAllowed && !hasConnection) openPaywall();
+  }, [gateResolved, lmsAllowed, hasConnection, openPaywall]);
   // Deliberately NOT seeded from selectedSemesterId.
   //
   // That is what the app happened to be showing, which is not evidence about
@@ -192,6 +225,7 @@ export default function LmsConnectScreen() {
   // Canvas actually returned. See the effect below.
   const [semesterId, setSemesterId] = useState('');
   const [displayName, setDisplayName] = useState(LMS_PROVIDER_LABELS[provider]);
+  const [renamingConnection, setRenamingConnection] = useState(false);
   const [baseUrl, setBaseUrl] = useState(params.baseUrl ?? '');
   const [token, setToken] = useState('');
   const [credential, setCredential] = useState<LmsCredential | null>(null);
@@ -346,6 +380,25 @@ export default function LmsConnectScreen() {
    */
   /** How far ahead the feed reached, when the provider could say. */
   const [horizonDays, setHorizonDays] = useState<number | null>(null);
+  // ── The same school, connected twice ─────────────────────
+  // A link from a site this student has already connected is the SAME
+  // calendar: importing it again doubles every course. A second school's
+  // Canvas or Moodle is a different host and goes through. Stopped before
+  // the check runs, so nothing is created; the note says where the
+  // existing one is managed.
+  const pastedHost = isMoodleFeed
+    ? (moodleVerdict?.state === 'ok' ? moodleVerdict.host : null)
+    : (feedVerdict?.state === 'ok' ? feedVerdict.host : null);
+  const duplicateOf = !reconnecting && pastedHost
+    ? (lmsConnections ?? []).find((connection) => {
+      if (connection.provider !== provider || !connection.base_url) return false;
+      try {
+        return new URL(connection.base_url).hostname.toLowerCase() === pastedHost.toLowerCase();
+      } catch {
+        return false;
+      }
+    })
+    : undefined;
   const feedHasSomething = isMoodleFeed
     ? !!moodleVerdict && moodleVerdict.state !== 'empty'
     : !!feedVerdict && feedVerdict.state !== 'empty';
@@ -432,7 +485,7 @@ export default function LmsConnectScreen() {
   };
 
   const discover = async () => {
-    if (working) return;
+    if (working || duplicateOf) return;
     // No semester yet? Make one, do not refuse.
     //
     // This used to alert "Create a semester before connecting Canvas" and
@@ -609,6 +662,10 @@ export default function LmsConnectScreen() {
     const ready = isMoodleFeed ? moodleVerdict : feedVerdict;
     if (!ready || ready.state !== 'ok') return;
     if (working || courses.length > 0) return;
+    if (duplicateOf) {
+      track('lms_duplicate_blocked', { screen: 'lms_connect', provider, source });
+      return;
+    }
     if (autoAdvancedFor.current === ready.url) return;
     autoAdvancedFor.current = ready.url;
     setAutoAdvancing(true);
@@ -622,7 +679,7 @@ export default function LmsConnectScreen() {
     }, 450);
     return () => { clearTimeout(timer); setAutoAdvancing(false); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isCalendarFeed, isMoodleFeed, feedVerdict, moodleVerdict, working, courses.length]);
+  }, [isCalendarFeed, isMoodleFeed, feedVerdict, moodleVerdict, working, courses.length, duplicateOf]);
 
   // The platform the ROUTE last asked for. Written by the switch below and
   // read by the effect that follows the route.
@@ -942,7 +999,7 @@ export default function LmsConnectScreen() {
   // Either the gate has not resolved yet, or it resolved against this account
   // and the effect above is routing to the paywall. Both render an empty paper
   // screen, so no connect form flashes in front of someone who cannot use it.
-  if (!lmsAllowed) {
+  if (!lmsAllowed && !(gateResolved && hasConnection)) {
     return <SafeAreaView style={[styles.safe, { backgroundColor: colors.paper }]} edges={['bottom']} />;
   }
 
@@ -954,11 +1011,27 @@ export default function LmsConnectScreen() {
           // key and the header stayed English while the screen under it was
           // Spanish. Each half is translated on its own; the provider name is a
           // proper noun and stays as it is.
-          title: `${t(reconnecting ? 'Reconnect' : 'Connect')} ${LMS_PROVIDER_LABELS[provider]}`,
+          title: setupOpen
+            ? `${t(reconnecting ? 'Reconnect' : 'Connect')} ${LMS_PROVIDER_LABELS[provider]}`
+            : t('Canvas or LMS Sync'),
         }}
       />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={[styles.content, { maxWidth: contentMaxWidth }]}
+          keyboardShouldPersistTaps="handled"
+          // Pull to refresh what is connected, as the old "Canvas or LMS
+          // Sync" page did: the Connected card's status, course count and
+          // "new courses" banner. Not while choosing courses — that list is
+          // the result of a check, and a pull would read as redoing it.
+          refreshControl={courses.length === 0 ? (
+            <RefreshControl
+              refreshing={connectionsRefetching}
+              onRefresh={() => { void refetchConnections(); }}
+              tintColor={colors.brand}
+            />
+          ) : undefined}
+        >
           {courses.length === 0 ? (
             <>
               {/* Which platform, answerable on this screen. Shown for the
@@ -967,16 +1040,30 @@ export default function LmsConnectScreen() {
                   "Connect Canvas" prompt, read three steps and realised their
                   school is on Moodle. Not while reconnecting: that is a
                   specific connection, and its platform is not a choice. */}
+              {!reconnecting && hasConnection && (
+                <LmsConnectedPanel lmsAllowed={lmsAllowed} openPaywall={showUpsell} />
+              )}
               {!reconnecting && SWITCH_PROVIDERS.includes(provider) && (
-                <View style={styles.switchWrap}>
-                  <Text style={[styles.switchLabel, { color: colors.ink2 }]}>Your school uses</Text>
+                // Room between the connected card and the question, so the
+                // label reads as its own section rather than a caption on it.
+                <View style={[styles.switchWrap, hasConnection && { marginTop: 24 }]}>
+                  <Text style={[styles.switchLabel, { color: colors.ink2 }]}>
+                    {hasConnection ? 'Need to connect another?' : 'Your school uses'}
+                  </Text>
                   <View style={[styles.switchRow, { backgroundColor: colors.card, borderColor: colors.line }]}>
                     {LMS_SWITCH_OPTIONS.map(({ id, hint }) => {
-                      const active = id === provider;
+                      // Nothing is highlighted until the student picks one:
+                      // with a connection in place, no platform is "the one
+                      // they are setting up" yet.
+                      const active = setupOpen && id === provider;
                       return (
                         <TouchableOpacity
                           key={id}
-                          onPress={() => switchProvider(id, 'switch')}
+                          onPress={() => {
+                            if (!lmsAllowed) { showUpsell(); return; }
+                            setAddingAnother(true);
+                            switchProvider(id, 'switch');
+                          }}
                           // Not mid-check: switching drops the discovery that
                           // is running, and its answer would land on the new
                           // platform's screen.
@@ -996,9 +1083,15 @@ export default function LmsConnectScreen() {
                           {/* Blackboard is on the list, and says its catch
                               before the tap: it connects only with a token
                               the school's IT team issues. */}
-                          {!!hint && (
+                          {/* A platform already connected says so: tapping it
+                              starts a SECOND connection, and a student who
+                              meant to fix the first would import every
+                              course twice. */}
+                          {(connectedProviders.has(id) || !!hint) && (
                             // ink2, not ink3: at this size ink3 fails contrast.
-                            <Text style={[styles.switchHint, { color: active ? '#fff' : colors.ink2 }]}>{hint}</Text>
+                            <Text style={[styles.switchHint, { color: active ? '#fff' : colors.ink2 }]}>
+                              {connectedProviders.has(id) ? 'connected' : hint}
+                            </Text>
                           )}
                         </TouchableOpacity>
                       );
@@ -1006,12 +1099,22 @@ export default function LmsConnectScreen() {
                   </View>
                 </View>
               )}
-              {isCanvasCalendar && <Text style={[styles.eyebrow, { color: colors.brand }]}>
-                  {setupProgress.setupLane ? 'CANVAS SETUP · STEP 2 OF 2' : 'CANVAS SETUP · STEP 1 OF 2'}
-                </Text>}
-              {isMoodleFeed && <Text style={[styles.eyebrow, { color: colors.brand }]}>
-                  {feedLaneChosen ? 'MOODLE SETUP · STEP 2 OF 2' : 'MOODLE SETUP · STEP 1 OF 2'}
-                </Text>}
+              {setupOpen && (<>
+              {!reconnecting && connectedProviders.has(provider) && (
+                <View style={[styles.help, { backgroundColor: colors.card, borderColor: colors.line }]}>
+                  <FontAwesome name="info-circle" size={14} color={colors.brand} />
+                  <Text style={[styles.helpText, { color: colors.ink2 }]}>
+                    {`You already have ${LMS_PROVIDER_LABELS[provider]} connected. Only continue to add ${LMS_PROVIDER_LABELS[provider]} from a second school. To refresh your current one, use Sync now above.`}
+                  </Text>
+                </View>
+              )}
+              {/* No step numbers: the stages differ by platform and device
+                  (the web has no phone-or-laptop choice; Moodle finds its
+                  site first), so "Step 2 of 2" was shown on two different
+                  screens. What is always true: this is the setup, and choosing
+                  courses comes last. */}
+              {isCanvasCalendar && <Text style={[styles.eyebrow, { color: colors.brand }]}>CANVAS SETUP</Text>}
+              {isMoodleFeed && <Text style={[styles.eyebrow, { color: colors.brand }]}>MOODLE SETUP</Text>}
               {!feedLaneChosen && (
               <Text style={[styles.title, { color: colors.ink }]}>
                 {provider === 'google_classroom'
@@ -1141,6 +1244,15 @@ export default function LmsConnectScreen() {
                 </>
               )}
 
+              {!!duplicateOf && !!pastedHost && (
+                <View style={[styles.help, { backgroundColor: `${colors.coral}12`, borderColor: colors.coral }]}>
+                  <FontAwesome name="exclamation-circle" size={14} color={colors.coral} />
+                  <Text style={[styles.helpText, { color: colors.ink2 }]}>
+                    {`This ${LMS_PROVIDER_LABELS[provider]} (${pastedHost}) is already connected, so nothing was added. To refresh it, use Sync now on your Connected card above.`}
+                  </Text>
+                </View>
+              )}
+
               {provider !== 'google_classroom' && !isCalendarFeed && (
                 <>
                   <Text style={[styles.label, { color: colors.ink2 }]}>School LMS URL</Text>
@@ -1243,10 +1355,10 @@ export default function LmsConnectScreen() {
               {(!isCalendarFeed || (isMoodleFeed ? feedLaneChosen : setupProgress.setupLane === 'phone')) && (
               <TouchableOpacity
                 onPress={discover}
-                disabled={working || (isCalendarFeed && !feedHasSomething)}
+                disabled={working || !!duplicateOf || (isCalendarFeed && !feedHasSomething)}
                 style={[
                   styles.primary,
-                  { backgroundColor: working || (isCalendarFeed && !feedHasSomething)
+                  { backgroundColor: working || !!duplicateOf || (isCalendarFeed && !feedHasSomething)
                       ? colors.line
                       : colors.brand },
                 ]}
@@ -1259,11 +1371,17 @@ export default function LmsConnectScreen() {
                 )}
               </TouchableOpacity>
               )}
+              {/* Only before anything is connected: someone managing a
+                  connection already knows all of this. */}
+              {(isCanvasCalendar || isMoodleFeed) && !hasConnection && !reconnecting && (
+                <LmsConnectFaq provider={isCanvasCalendar ? 'canvas' : 'moodle'} source={source} />
+              )}
+              </>)}
             </>
           ) : (
             <>
-              {isCanvasCalendar && <Text style={[styles.eyebrow, { color: colors.brand }]}>CANVAS SETUP · STEP 2 OF 2</Text>}
-              {isMoodleFeed && <Text style={[styles.eyebrow, { color: colors.brand }]}>MOODLE SETUP · STEP 2 OF 2</Text>}
+              {isCanvasCalendar && <Text style={[styles.eyebrow, { color: colors.brand }]}>CANVAS SETUP · LAST STEP</Text>}
+              {isMoodleFeed && <Text style={[styles.eyebrow, { color: colors.brand }]}>MOODLE SETUP · LAST STEP</Text>}
               <Text style={[styles.title, { color: colors.ink }]}>{isCalendarFeed ? 'Choose courses to sync' : 'Choose courses'}</Text>
               <Text style={[styles.subtitle, { color: colors.ink2 }]}>
                 {isCalendarFeed
@@ -1298,12 +1416,23 @@ export default function LmsConnectScreen() {
                     : `Your Moodle shares ${horizonDays} days ahead, so this covers the rest of the term.`}
                 </Text>
               )}
-              <Text style={[styles.label, { color: colors.ink2 }]}>Connection name</Text>
-              <TextInput
-                value={displayName}
-                onChangeText={setDisplayName}
-                style={[styles.input, { color: colors.ink, backgroundColor: colors.card, borderColor: colors.line }]}
-              />
+              {/* Named for the platform by default. Only someone with two
+                  of the same (a second school's Canvas) needs to tell them
+                  apart, so the field waits behind a link. */}
+              {renamingConnection ? (
+                <>
+                  <Text style={[styles.label, { color: colors.ink2 }]}>Name for this connection</Text>
+                  <TextInput
+                    value={displayName}
+                    onChangeText={setDisplayName}
+                    style={[styles.input, { color: colors.ink, backgroundColor: colors.card, borderColor: colors.line }]}
+                  />
+                </>
+              ) : (
+                <TouchableOpacity onPress={() => setRenamingConnection(true)} accessibilityRole="button">
+                  <Text style={[styles.link, { color: colors.brand }]}>Rename this connection</Text>
+                </TouchableOpacity>
+              )}
 
               {/* Everything below — the evidence line, the semester question,
                   the inline create, the course list — is the SAME component the

@@ -145,3 +145,30 @@ Deno.test('a code buried mid-word is not extracted', () => {
   // suggestion being built out of a coincidence inside a longer token.
   assertEquals(courseCodeTokens('SUBPHYS212').includes('PHYS212'), false);
 });
+
+// 2026-10-02: Cumberland's Canvas names a course "MSN6200OL01" (code, then the
+// online-section tag with no separator). It read only as "MSN6200O" and missed
+// the student's scanned "MSN6200 - Psychopharmacology", so all three classes
+// were imported a second time.
+Deno.test('a section tag glued to the number still yields the plain course code', () => {
+  assertEquals(courseCodeTokens('MSN6200OL01').includes('MSN6200'), true);
+  assertEquals(classifyCourseMatch('MSN6200OL01', [
+    { id: 'a', name: 'MSN6210 - Psychiatric Mental Health Across the Lif' },
+    { id: 'b', name: 'MSN6200 - Psychopharmacology' },
+    { id: 'c', name: 'MSN6650 - Psychiatric Mental Health Practicum Expe' },
+  ]), { kind: 'single', candidate: { id: 'b', name: 'MSN6200 - Psychopharmacology' } });
+});
+
+Deno.test('the fix only ever adds a code: real lettered course numbers are unchanged', () => {
+  for (const [name, code] of [
+    ['JOURN-1300W-08-60456-2026FS-FUND OF WRITTEN JOURN-WI', 'JOURN1300W'],
+    ['CE180A-01-74866-2267', 'CE180A'],
+    ['CE 180A - Project Design', 'CE180A'],
+    ['MSN6200OL01', 'MSN6200O'],
+  ] as const) {
+    assertEquals(courseCodeTokens(name).includes(code), true, name);
+  }
+  // A letter at the end, or before a separator, is the course's own letter.
+  assertEquals(courseCodeTokens('MATH 101L').includes('MATH101'), false);
+  assertEquals(courseCodeTokens('CE 180A - Project Design').includes('CE180'), false);
+});
