@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { appStoreUrl } from '@/lib/appStore';
 import { enAlternates } from '@/lib/hreflang';
 import { pageTitle } from '@/lib/title';
 import styles from '@/components/Prose.module.css';
@@ -99,7 +100,7 @@ export default function SupportPage() {
                 <strong>Within a few hours</strong>
                 <small>Monday–Friday</small>
               </div>
-              <a className={heroStyles.detailCard} href="https://apps.apple.com/us/app/semora-ai-syllabus-scanner/id6762589321">
+              <a className={heroStyles.detailCard} href={appStoreUrl('support')}>
                 <span>iOS app</span>
                 <strong>Download on the App Store</strong>
                 <small>iPhone and iPad</small>

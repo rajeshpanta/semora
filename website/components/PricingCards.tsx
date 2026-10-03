@@ -65,11 +65,10 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         compareHref: '/es/comparar',
         ctaFree: 'Empezar gratis',
         ctaPro: 'Obtener Pro',
-        // Exacto, no aspiracional: en la web, /paywall redirige a quien no ha
-        // iniciado sesión, así que la ruta real es cuenta primero y después
-        // «Mejorar a Pro» en la pestaña Mi cuenta. Decirlo aquí evita que el
-        // botón prometa un checkout que no existe todavía.
-        ctaNote: 'Creas tu cuenta gratis y mejoras desde Mi cuenta.',
+        // Exacto: «Obtener Pro» lleva el plan elegido a través del inicio de
+        // sesión (?plan=) y la app abre el pago con ese plan en cuanto existe
+        // la cuenta.
+        ctaNote: 'Creas tu cuenta gratis y el pago se abre con este plan.',
         trust: ['Cancela cuando quieras', 'Pagos con Stripe', 'iPhone, iPad y web en una cuenta'],
       }
     : {
@@ -101,12 +100,10 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
         compareHref: '/compare',
         ctaFree: 'Try it for free',
         ctaPro: 'Get Pro',
-        // Exact rather than aspirational. On web the app redirects a signed-out
-        // visitor away from /paywall (app/_layout.tsx), so a "Get Pro" button
-        // cannot deep-link to checkout today — the real route is account first,
-        // then "Upgrade to Pro" in the Me tab. Saying so under the button costs
-        // one line and stops the button promising a checkout that is not there.
-        ctaNote: 'Create your free account, then upgrade from the Me tab.',
+        // Exact rather than aspirational. "Get Pro" carries the chosen plan
+        // through sign-in (?plan=), and the app opens checkout with it selected
+        // as soon as the account exists — so the note says exactly that.
+        ctaNote: 'Create your free account and checkout opens with this plan.',
         trust: ['Cancel anytime', 'Payments by Stripe', 'iPhone, iPad and web on one account'],
       };
 
@@ -140,6 +137,7 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
           <SignupButton
             className={`${styles.cta} ${styles.ctaPro}`}
             placement="pricing-pro-monthly"
+            plan="monthly"
           >
             {copy.ctaPro}
           </SignupButton>
@@ -166,6 +164,7 @@ export function PricingCards({ locale = 'en' }: { locale?: SiteLocale }) {
           <SignupButton
             className={`${styles.cta} ${styles.ctaPro}`}
             placement="pricing-pro-annual"
+            plan="annual"
           >
             {copy.ctaPro}
           </SignupButton>

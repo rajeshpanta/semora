@@ -1,7 +1,8 @@
 import styles from './DownloadHero.module.css';
 import { DEVICES } from '@/lib/devices';
 import { ContinuityPanel } from './ContinuityPanel';
-import { APP_STORE_URL, APP_URL } from '@/lib/semora-facts';
+import { APP_URL } from '@/lib/semora-facts';
+import { appStoreUrl } from '@/lib/appStore';
 import type { SiteLocale } from '@/lib/i18n';
 
 /**
@@ -54,7 +55,7 @@ export function DownloadHero({ lede, locale = 'en' }: { lede: string; locale?: S
         <p className={styles.lede}>{lede}</p>
 
         <div className={styles.actions}>
-          <a className={styles.primaryBtn} href={APP_STORE_URL}>{t.appStore}</a>
+          <a className={styles.primaryBtn} href={appStoreUrl(`download-hero-${locale}`)}>{t.appStore}</a>
           <a className={styles.secondaryBtn} href={APP_URL}>{t.web}</a>
         </div>
 

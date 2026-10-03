@@ -96,6 +96,20 @@ export function InteractionTelemetry() {
       const y = e.clientY;
       const target = e.target as Element | null;
 
+      // ── App Store taps ──
+      // Every link to Semora's App Store listing reports, wherever it sits —
+      // including the server-rendered ones (download page, device cards,
+      // support page) that cannot carry their own handler. A link whose
+      // component already reported the tap marks itself data-self-reported.
+      const store = target?.closest('a[href*="apps.apple.com"][href*="id6762589321"]') as HTMLAnchorElement | null;
+      if (store && !store.hasAttribute('data-self-reported')) {
+        // Same shape as SignupButton's report: `placement` without the "site-"
+        // prefix, `ct` exactly as App Store Connect will show it.
+        let ct = '';
+        try { ct = new URL(store.href).searchParams.get('ct') || ''; } catch { /* keep */ }
+        report(TELEMETRY_EVENTS.appStoreClick, { via: 'link', placement: ct ? ct.replace(/^site-/, '') : 'untagged', ct: ct || 'untagged' });
+      }
+
       // ── rage ──
       clicks = clicks.filter((c) => now - c.t < RAGE_WINDOW_MS);
       clicks.push({ x, y, t: now });

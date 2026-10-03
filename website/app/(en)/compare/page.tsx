@@ -7,7 +7,7 @@ import { Reveal } from '@/components/Reveal';
 import { Cta } from '@/components/Cta';
 import { COMPETITORS } from '@/lib/competitors';
 import { ALTERNATIVE_BY_COMPETITOR } from '@/lib/routes';
-import { APP_URL } from '@/lib/semora-facts';
+import { SignupButton } from '@/components/SignupButton';
 import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
 import { pageTitle } from '@/lib/title';
@@ -61,9 +61,9 @@ export default function CompareIndexPage() {
             so.
           </p>
           <div className={styles.heroActions}>
-            <Link href={APP_URL} className={styles.primaryBtn}>
+            <SignupButton className={styles.primaryBtn} placement="compare-page-hero">
               Try it for free
-            </Link>
+            </SignupButton>
             <Link href="/pricing" className={styles.secondaryBtn}>
               See pricing
             </Link>

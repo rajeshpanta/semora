@@ -1,4 +1,5 @@
-import { APP_STORE_URL, APP_SIGNUP_URL } from './semora-facts';
+import { APP_SIGNUP_URL } from './semora-facts';
+import { appStoreUrl } from './appStore';
 
 /**
  * Every surface Semora runs on, and honestly what state each one is in.
@@ -35,7 +36,7 @@ export interface DeviceCard {
 }
 
 export const DEVICES: DeviceCard[] = [
-  { id: 'iphone', status: 'available', href: APP_STORE_URL, qr: APP_STORE_URL },
+  { id: 'iphone', status: 'available', href: appStoreUrl('download-iphone'), qr: appStoreUrl('download-qr-iphone', { short: true }) },
 
   // Same App Store URL as iPhone, and deliberately so: it is one universal
   // binary with a single listing, so there is no iPad-specific link to point
@@ -44,7 +45,7 @@ export const DEVICES: DeviceCard[] = [
   // work out that the iPhone card's control is the one that installs it for
   // them too, and a card without the code its neighbours have reads as a
   // surface we support less.
-  { id: 'ipad', status: 'available', href: APP_STORE_URL, qr: APP_STORE_URL },
+  { id: 'ipad', status: 'available', href: appStoreUrl('download-ipad'), qr: appStoreUrl('download-qr-ipad', { short: true }) },
 
   // /sign-in, not the bare root. app.semoraai.com sends a first-time visitor
   // into the APP's onboarding flow — a sequence written for someone who just
@@ -62,7 +63,7 @@ export const DEVICES: DeviceCard[] = [
   // download, and the Watch app installs from the Watch app on the paired
   // phone once Semora is on it. It gets a code like its neighbours rather
   // than an empty panel, for the reason given on the iPad card above.
-  { id: 'watch', status: 'available', href: APP_STORE_URL, qr: APP_STORE_URL },
+  { id: 'watch', status: 'available', href: appStoreUrl('download-watch'), qr: appStoreUrl('download-qr-watch', { short: true }) },
 
   { id: 'android', status: 'soon' },
   { id: 'wearos', status: 'soon' },

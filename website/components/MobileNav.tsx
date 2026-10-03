@@ -118,7 +118,7 @@ export function MobileNav({ links, locale = 'en' }: { links: { href: string; lab
             </SignupButton>
           )}
 
-          <a href={downloadPath(locale)} className={styles.sheetGhost} onClick={() => { report(TELEMETRY_EVENTS.appStoreClick, {}); close(); }}>
+          <a href={downloadPath(locale)} className={styles.sheetGhost} onClick={() => { report(TELEMETRY_EVENTS.ctaClick, { placement: 'mobile-nav-download' }); close(); }}>
             {copy.getApp}
           </a>
           {fromApp ? (

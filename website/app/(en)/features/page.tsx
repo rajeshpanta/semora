@@ -9,7 +9,8 @@ import Link from 'next/link';
 import styles from './features.module.css';
 import { Reveal } from '@/components/Reveal';
 import { FlashcardIcon, TimerIcon, ChatIcon, PeopleIcon, SparkleIcon, MicIcon, WatchIcon } from '@/components/FeatureIcons';
-import { FEATURES, APP_URL, PRICING } from '@/lib/semora-facts';
+import { FEATURES, PRICING } from '@/lib/semora-facts';
+import { SignupButton } from '@/components/SignupButton';
 import { PageSections } from '@/components/PageSections';
 import { getPageContent } from '@/lib/page-content';
 import { Breadcrumb } from '@/components/Breadcrumb';
@@ -158,9 +159,9 @@ export default function FeaturesPage() {
             more.
           </p>
           <div className={styles.heroActions}>
-            <Link href={APP_URL} className={styles.primaryBtn}>
+            <SignupButton className={styles.primaryBtn} placement="features-page-hero">
               Try it for free
-            </Link>
+            </SignupButton>
             <Link href="/pricing" className={styles.secondaryBtn}>
               See pricing
             </Link>
@@ -224,9 +225,9 @@ export default function FeaturesPage() {
               Flashcards, Focus Timer, an AI tutor, and more.
             </p>
             <div className={styles.bannerActions}>
-              <Link href={APP_URL} className={styles.bannerLink}>
+              <SignupButton className={styles.bannerLink} placement="features-page-banner">
                 Try it for free
-              </Link>
+              </SignupButton>
               <Link href="/pricing" className={styles.bannerLinkSecondary}>
                 Compare Free vs Pro
               </Link>
