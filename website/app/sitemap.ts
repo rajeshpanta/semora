@@ -24,6 +24,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${SITE_URL}/privacy`, lastModified: reviewed, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${SITE_URL}/terms`, lastModified: reviewed, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${SITE_URL}/support`, lastModified: reviewed, changeFrequency: 'monthly', priority: 0.4 },
+    // Listed deliberately, low priority. Google Play requires the account-deletion
+    // route to be a public web page a person can reach without the app installed,
+    // and this URL is what the Data safety form points at — so it has to be
+    // crawlable and reachable, not an unlinked orphan.
+    { url: `${SITE_URL}/delete-account`, lastModified: reviewed, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${SITE_URL}/about`, lastModified: reviewed, changeFrequency: 'yearly', priority: 0.4 },
     // Free tools. These are the only pages on the site that do a job for the
     // reader without asking for anything, which makes them the realistic
