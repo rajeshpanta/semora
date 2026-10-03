@@ -16,11 +16,11 @@ import { APP_STORE_ID } from './semora-facts';
  */
 
 /**
- * The provider token. Empty until copied from App Store Connect; while it is
- * empty the links still carry `ct` (harmless) and the click is still reported,
- * but App Store Connect cannot attribute the install.
+ * The provider token, copied from App Store Connect's campaign link generator
+ * (2026-10-03). It identifies the developer account, is the same for every
+ * campaign, and is public by design — it appears in every campaign link.
  */
-export const APP_STORE_PROVIDER_TOKEN = '';
+export const APP_STORE_PROVIDER_TOKEN = '127502258';
 
 /** A campaign name Apple accepts: lowercase, dash-separated, ≤ 30 chars (App Store Connect's limit). */
 export function appStoreCampaign(name: string): string {
